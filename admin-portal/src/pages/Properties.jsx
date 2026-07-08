@@ -1024,12 +1024,12 @@ const Properties = () => {
             <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-t-xl">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold text-gray-900">{viewProperty.name}</h2>
+                  <h2 className="text-xl font-bold text-gray-900">{viewProperty.name || viewProperty.community_name || 'Property'}</h2>
                   <span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                    {getTypeLabel(viewProperty.entryType || viewProperty.propertyType)}
+                    {getTypeLabel(viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type)}
                   </span>
                 </div>
-                <p className="text-sm text-gray-500 mt-1">{viewProperty.propertyId}</p>
+                <p className="text-sm text-gray-500 mt-1">{viewProperty.property_id || viewProperty.propertyId}</p>
               </div>
               <button onClick={handleClosePropertyView} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-gray-500" />
@@ -1044,121 +1044,137 @@ const Properties = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Zone</p>
-                    <p className="text-sm font-medium text-gray-900">{viewProperty.zone || '-'}</p>
+                    <p className="text-sm font-medium text-gray-900">{viewProperty.zone_name || viewProperty.zone || viewProperty.zoneId || viewProperty.zone_id || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Area Name</p>
-                    <p className="text-sm font-medium text-gray-900">{viewProperty.areaName || viewProperty.area || '-'}</p>
+                    <p className="text-sm font-medium text-gray-900">{viewProperty.area || viewProperty.area_name || viewProperty.areaName || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Division</p>
-                    <p className="text-sm font-medium text-gray-900">{viewProperty.division || '-'}</p>
+                    <p className="text-sm font-medium text-gray-900">{viewProperty.division_name || viewProperty.division || viewProperty.division_id || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Property Type</p>
-                    <p className="text-sm font-medium text-gray-900">{getTypeLabel(viewProperty.entryType || viewProperty.propertyType)}</p>
+                    <p className="text-sm font-medium text-gray-900">{getTypeLabel(viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Total Units</p>
                     <p className="text-sm font-medium text-gray-900">
                       {(() => {
-                        const unitsPerBlock = viewProperty.unitsPerBlock || viewProperty.units_per_block;
+                        // Parse units_per_block if string
+                        let unitsPerBlock = viewProperty.units_per_block || viewProperty.unitsPerBlock;
+                        if (typeof unitsPerBlock === 'string') {
+                          try { unitsPerBlock = JSON.parse(unitsPerBlock); } catch { unitsPerBlock = null; }
+                        }
                         if (unitsPerBlock && typeof unitsPerBlock === 'object') {
                           const total = Object.values(unitsPerBlock).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
                           if (total > 0) return total;
                         }
-                        return viewProperty.totalUnits || viewProperty.total_units || '-';
+                        return viewProperty.total_units || viewProperty.totalUnits || viewProperty.units || viewProperty.number_of_units || '-';
                       })()}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Created Date</p>
-                    <p className="text-sm font-medium text-gray-900">{formatDate(viewProperty.createdAt || viewProperty.created_at)}</p>
+                    <p className="text-sm font-medium text-gray-900">{formatDate(viewProperty.created_at || viewProperty.createdAt)}</p>
                   </div>
                 </div>
               </div>
 
               {/* Block Details - For GC */}
-              {(normalizePropertyType(viewProperty.entryType || viewProperty.propertyType) === 'GC') && (
+              {(['gated_community', 'GC', 'Gated Community', 'gated community'].some(t => 
+                (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase() === t.toLowerCase()
+              )) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Block Details</h3>
                   <div className="mb-4">
                     <p className="text-xs text-gray-500 mb-1">Number of Blocks</p>
-                    <p className="text-sm font-medium text-gray-900">{viewProperty.numberOfBlocks || viewProperty.number_of_blocks || 1}</p>
+                    <p className="text-sm font-medium text-gray-900">{viewProperty.number_of_blocks || viewProperty.numberOfBlocks || 1}</p>
                   </div>
                   {(() => {
                     try {
-                      const blockNames = viewProperty.blockNames || (typeof viewProperty.block_names === 'string' ? JSON.parse(viewProperty.block_names) : viewProperty.block_names) || {};
-                      const unitsPerBlock = viewProperty.unitsPerBlock || (typeof viewProperty.units_per_block === 'string' ? JSON.parse(viewProperty.units_per_block) : viewProperty.units_per_block) || {};
-                      const blockUnitTypes = viewProperty.blockUnitTypes || (typeof viewProperty.block_unit_types === 'string' ? JSON.parse(viewProperty.block_unit_types) : viewProperty.block_unit_types) || {};
-                      const numBlocks = viewProperty.numberOfBlocks || viewProperty.number_of_blocks || Object.keys(blockNames).length || Object.keys(unitsPerBlock).length || 1;
+                      const blockNames = typeof viewProperty.block_names === 'string' ? JSON.parse(viewProperty.block_names) : (viewProperty.block_names || viewProperty.blockNames || {});
+                      const unitsPerBlock = typeof viewProperty.units_per_block === 'string' ? JSON.parse(viewProperty.units_per_block) : (viewProperty.units_per_block || viewProperty.unitsPerBlock || {});
+                      const blockUnitTypes = typeof viewProperty.block_unit_types === 'string' ? JSON.parse(viewProperty.block_unit_types) : (viewProperty.block_unit_types || viewProperty.blockUnitTypes || {});
+                      const numBlocks = viewProperty.number_of_blocks || viewProperty.numberOfBlocks || Object.keys(blockNames).length || Object.keys(unitsPerBlock).length || 1;
                       const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK' };
-                      // Always show block table for GC properties
-                      return (
-                        <div className="space-y-3">
-                          {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
-                            const unitTypes = blockUnitTypes[blockNum] || blockUnitTypes[String(blockNum)] || {};
-                            const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
-                            return (
-                              <div key={blockNum} className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="text-sm font-semibold text-blue-600">{blockNames[blockNum] || blockNames[String(blockNum)] || `Block ${blockNum}`}</span>
-                                  <span className="text-sm font-medium text-gray-700">{unitsPerBlock[blockNum] || unitsPerBlock[String(blockNum)] || 0} units</span>
-                                </div>
-                                <div className="pt-2 border-t border-blue-100">
-                                  <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
-                                  {hasUnitTypes ? (
-                                    <div className="flex flex-wrap gap-2">
-                                      {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
-                                        <span key={type} className="px-2 py-1 bg-white text-blue-700 text-xs rounded-full border border-blue-200">
-                                          {unitTypeLabels[type] || type}: {count}
-                                        </span>
-                                      ))}
+                      if (Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0) {
+                        return (
+                          <div className="space-y-4">
+                            {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
+                              const blockName = blockNames[blockNum] || blockNames[String(blockNum)] || `Block ${blockNum}`;
+                              const unitTypes = blockUnitTypes[blockNum] || blockUnitTypes[String(blockNum)] || blockUnitTypes[blockName] || {};
+                              const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
+                              return (
+                                <div key={blockNum} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                  <div className="flex gap-4 mb-3">
+                                    <div>
+                                      <p className="text-xs text-gray-500 mb-1">Block Name</p>
+                                      <p className="text-sm font-medium text-gray-900">{blockName}</p>
                                     </div>
-                                  ) : (
-                                    <p className="text-sm text-gray-400 italic">Not specified</p>
-                                  )}
+                                    <div>
+                                      <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                                      <p className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || unitsPerBlock[String(blockNum)] || 0}</p>
+                                    </div>
+                                  </div>
+                                  <div className="pt-2 border-t border-gray-200">
+                                    <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
+                                    {hasUnitTypes ? (
+                                      <div className="flex flex-wrap gap-2">
+                                        {unitTypes.studio > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">Studio: {unitTypes.studio}</span>}
+                                        {unitTypes.oneBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">1 BHK: {unitTypes.oneBed}</span>}
+                                        {unitTypes.twoBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">2 BHK: {unitTypes.twoBed}</span>}
+                                        {unitTypes.threeBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">3 BHK: {unitTypes.threeBed}</span>}
+                                        {unitTypes.fourBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">4 BHK: {unitTypes.fourBed}</span>}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-gray-400 italic">Not specified</p>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
+                              );
+                            })}
+                          </div>
+                        );
+                      }
+                      return null;
                     } catch { return null; }
                   })()}
                 </div>
               )}
 
               {/* Apartment Details */}
-              {(normalizePropertyType(viewProperty.entryType || viewProperty.propertyType) === 'APT') && (
+              {(['apartment', 'APT', 'Apartment'].some(t => 
+                (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase() === t.toLowerCase()
+              )) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Apartment Details</h3>
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Block Information</p>
-                      <p className="text-sm font-medium text-gray-900">{viewProperty.blockNA ? 'N/A' : (viewProperty.blockInfo || viewProperty.block_info || '-')}</p>
+                      <p className="text-sm font-medium text-gray-900">{viewProperty.block_na ? 'N/A' : (viewProperty.block_info || viewProperty.blockInfo || '-')}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Number of Units</p>
-                      <p className="text-sm font-medium text-gray-900">{viewProperty.numberOfUnits || viewProperty.number_of_units || '-'}</p>
+                      <p className="text-sm font-medium text-gray-900">{viewProperty.number_of_units || viewProperty.numberOfUnits || '-'}</p>
                     </div>
                   </div>
                   {(() => {
                     try {
-                      const blockUnitTypes = viewProperty.blockUnitTypes || (typeof viewProperty.block_unit_types === 'string' ? JSON.parse(viewProperty.block_unit_types) : viewProperty.block_unit_types) || {};
+                      const blockUnitTypes = typeof viewProperty.block_unit_types === 'string' ? JSON.parse(viewProperty.block_unit_types) : (viewProperty.block_unit_types || viewProperty.blockUnitTypes || {});
                       const unitTypes = blockUnitTypes['apt'] || blockUnitTypes['1'] || blockUnitTypes[1] || {};
                       const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
-                      const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK' };
                       return (
-                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                           <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
                           {hasUnitTypes ? (
                             <div className="flex flex-wrap gap-2">
-                              {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
-                                <span key={type} className="px-3 py-1.5 bg-white border border-blue-200 text-blue-700 text-sm rounded-full font-medium">
-                                  {unitTypeLabels[type] || type}: {count}
-                                </span>
-                              ))}
+                              {unitTypes.studio > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">Studio: {unitTypes.studio}</span>}
+                              {unitTypes.oneBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">1 BHK: {unitTypes.oneBed}</span>}
+                              {unitTypes.twoBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">2 BHK: {unitTypes.twoBed}</span>}
+                              {unitTypes.threeBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">3 BHK: {unitTypes.threeBed}</span>}
+                              {unitTypes.fourBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">4 BHK: {unitTypes.fourBed}</span>}
                             </div>
                           ) : (
                             <p className="text-sm text-gray-400 italic">Not specified</p>
@@ -1171,40 +1187,46 @@ const Properties = () => {
               )}
 
               {/* Villa Details */}
-              {(normalizePropertyType(viewProperty.entryType || viewProperty.propertyType) === 'VILLA') && (
+              {(['villa', 'VILLA', 'Villa'].some(t => 
+                (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase() === t.toLowerCase()
+              )) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Villa Details</h3>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Villa Number</p>
-                    <p className="text-sm font-medium text-gray-900">{viewProperty.villaPlotNumber || '-'}</p>
+                    <p className="text-sm font-medium text-gray-900">{viewProperty.villa_plot_number || viewProperty.villaPlotNumber || '-'}</p>
                   </div>
                 </div>
               )}
 
               {/* Flat Details */}
-              {(normalizePropertyType(viewProperty.entryType || viewProperty.propertyType) === 'FLAT') && (
+              {(['flat', 'FLAT', 'Flat'].some(t => 
+                (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase() === t.toLowerCase()
+              )) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Flat Details</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Flat Number</p>
-                      <p className="text-sm font-medium text-gray-900">{viewProperty.villaPlotNumber || '-'}</p>
+                      <p className="text-sm font-medium text-gray-900">{viewProperty.villa_plot_number || viewProperty.villaPlotNumber || '-'}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Block Information</p>
-                      <p className="text-sm font-medium text-gray-900">{viewProperty.flatBlockNA ? 'N/A' : (viewProperty.flatBlockInfo || '-')}</p>
+                      <p className="text-sm font-medium text-gray-900">{viewProperty.flat_block_na ? 'N/A' : (viewProperty.flat_block_info || viewProperty.flatBlockInfo || '-')}</p>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Plot Details */}
-              {(normalizePropertyType(viewProperty.entryType || viewProperty.propertyType) === 'PLOT') && (
+              {(['plot', 'PLOT', 'Plot'].some(t => 
+                (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase() === t.toLowerCase()
+              )) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Plot Details</h3>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Plot Number</p>
-                    <p className="text-sm font-medium text-gray-900">{viewProperty.plotNA ? 'N/A' : (viewProperty.villaPlotNumber || '-')}</p>
+                    <p className="text-sm font-medium text-gray-900">{viewProperty.plot_na ? 'N/A' : (viewProperty.villa_plot_number || viewProperty.villaPlotNumber || '-')}</p>
                   </div>
                 </div>
               )}
@@ -1290,21 +1312,27 @@ const Properties = () => {
               })()}
 
               {/* Watchman Information - For GC and APT */}
-              {(['GC', 'APT'].includes(normalizePropertyType(viewProperty.entryType || viewProperty.propertyType))) && (
+              {(['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes(
+                (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase()
+              )) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Watchman Information</h3>
                   <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Watchman Name</p>
-                        <p className="text-sm font-medium text-gray-900">{viewProperty.watchmanName || viewProperty.watchman_name || 'N/A'}</p>
+                        <p className="text-sm font-medium text-gray-900">{viewProperty.watchman_name || viewProperty.watchmanName || 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Watchman Contact</p>
                         <p className="text-sm font-medium text-gray-900">
                           {(() => {
-                            const contact = viewProperty.watchmanContact || viewProperty.watchman_contact;
+                            const contact = viewProperty.watchman_contact || viewProperty.watchmanContact;
                             if (!contact) return 'N/A';
+                            // Format: +91 followed by space and number
+                            if (contact.startsWith('+91') && !contact.startsWith('+91 ')) {
+                              return `+91 ${contact.slice(3)}`;
+                            }
                             return contact.startsWith('+') ? contact : `+91 ${contact}`;
                           })()}
                         </p>
