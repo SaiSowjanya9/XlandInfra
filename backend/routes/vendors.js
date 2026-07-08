@@ -953,29 +953,42 @@ router.post('/assignments', authenticate, managerOrAdmin, async (req, res) => {
     const numericVendorId = vendor[0].id;
     const assignedServiceType = serviceType || vendor[0].service_type || 'General';
 
-    // Check if same vendor + service type assignment exists
-    const [existing] = await pool.execute(
-      `SELECT id FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND service_type = ? AND is_active = 1`,
-      [propertyId, numericVendorId, assignedServiceType]
+    // Check if this exact vendor is already assigned and active
+    const [existingActive] = await pool.execute(
+      `SELECT id FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND is_active = 1`,
+      [propertyId, numericVendorId]
     );
 
-    if (existing.length > 0) {
-      return res.status(400).json({ success: false, message: 'This vendor is already assigned to this service' });
+    if (existingActive.length > 0) {
+      return res.status(400).json({ success: false, message: 'This vendor is already assigned to this property' });
     }
 
-    // Deactivate existing assignments for this property + service type
-    await pool.execute(
-      `UPDATE property_vendor_assignments SET is_active = 0 WHERE property_id = ? AND service_type = ? AND is_active = 1`,
-      [propertyId, assignedServiceType]
+    // Check if any assignment exists for this property + vendor (active or inactive)
+    const [existingAny] = await pool.execute(
+      `SELECT id FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ?`,
+      [propertyId, numericVendorId]
     );
 
-    // Create or update assignment with service_type
+    // Deactivate existing assignments for this property + service type (other vendors)
     await pool.execute(
-      `INSERT INTO property_vendor_assignments (property_id, vendor_id, service_type, assigned_by, assigned_at, is_active)
-       VALUES (?, ?, ?, ?, NOW(), TRUE)
-       ON DUPLICATE KEY UPDATE service_type = VALUES(service_type), assigned_by = VALUES(assigned_by), assigned_at = NOW(), is_active = TRUE`,
-      [propertyId, numericVendorId, assignedServiceType, req.user.id]
+      `UPDATE property_vendor_assignments SET is_active = 0 WHERE property_id = ? AND service_type = ? AND is_active = 1 AND vendor_id != ?`,
+      [propertyId, assignedServiceType, numericVendorId]
     );
+
+    if (existingAny.length > 0) {
+      // Update existing record instead of inserting
+      await pool.execute(
+        `UPDATE property_vendor_assignments SET service_type = ?, assigned_by = ?, assigned_at = NOW(), is_active = 1 WHERE property_id = ? AND vendor_id = ?`,
+        [assignedServiceType, req.user.id, propertyId, numericVendorId]
+      );
+    } else {
+      // Create new assignment
+      await pool.execute(
+        `INSERT INTO property_vendor_assignments (property_id, vendor_id, service_type, assigned_by, assigned_at, is_active)
+         VALUES (?, ?, ?, ?, NOW(), TRUE)`,
+        [propertyId, numericVendorId, assignedServiceType, req.user.id]
+      );
+    }
 
     // Send email notification
     if (vendor[0].owner_email) {
