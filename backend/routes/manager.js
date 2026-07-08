@@ -203,17 +203,17 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
         [franchisePartnerId, creatorEmail, req.user?.username || '', managerId, ...assignedZones]
       ).then(([r]) => r[0].count).catch(() => 0),
       
-      // Onboarded Properties count (zone-centric + own created)
+      // Onboarded Properties count (zone-centric + own created, ACTIVE only)
       pool.execute(
         `SELECT COUNT(*) as count FROM onboarded_properties 
-         WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR manager_id = ?${zoneList ? ` OR zone IN (${zoneList})` : ''})`,
+         WHERE franchise_partner_id = ? AND status = 'active' AND (created_by = ? OR created_by = ? OR manager_id = ?${zoneList ? ` OR zone IN (${zoneList})` : ''})`,
         [franchisePartnerId, creatorEmail, req.user?.username || '', managerId, ...assignedZones]
       ).then(([r]) => r[0].count).catch(() => 0),
       
-      // Vendors count (zone-centric + own created)
+      // Vendors count (zone-centric + own created, ACTIVE only)
       pool.execute(
         `SELECT COUNT(*) as count FROM onboarded_vendors 
-         WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ?${zoneList ? ` OR zone IN (${zoneList})` : ''})`,
+         WHERE franchise_partner_id = ? AND status = 'active' AND (created_by = ? OR created_by = ?${zoneList ? ` OR zone IN (${zoneList})` : ''})`,
         [franchisePartnerId, creatorEmail, req.user?.username || '', ...assignedZones]
       ).then(([r]) => r[0].count).catch(() => 0),
       
