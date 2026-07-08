@@ -1576,49 +1576,56 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 {/* Selected Package Details - Auto-populated */}
                 {selectedPackage && (
                   <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-center gap-2 mb-3">
+                    {/* Package Header with Name and ID */}
+                    <div className="flex items-center gap-2 mb-4">
                       <Package className="w-5 h-5 text-blue-600" />
-                      <span className="font-semibold text-blue-800">Package Services</span>
+                      <span className="font-semibold text-blue-800">{getPackageName(selectedPackage)}</span>
+                      {(selectedPackage.package_id || selectedPackage.packageId || selectedPackage.id) && (
+                        <span className="px-2 py-0.5 bg-gray-700 text-white text-xs rounded font-mono">
+                          {selectedPackage.package_id || selectedPackage.packageId || `AMC-${selectedPackage.id}`}
+                        </span>
+                      )}
                     </div>
-                    {/* Services Table - Without individual Price column */}
+                    {/* Services Table with Description column */}
                     <div className="bg-white rounded border border-blue-100 overflow-hidden">
                       {/* Table Header */}
-                      <div className="grid grid-cols-10 gap-2 px-3 py-2 bg-blue-100/50 border-b border-blue-200">
-                        <div className="col-span-6 text-xs font-semibold text-blue-800 uppercase">Service</div>
-                        <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Frequency</div>
-                        <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">No.of visits</div>
+                      <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-blue-100/50 border-b border-blue-200">
+                        <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Service</div>
+                        <div className="col-span-5 text-xs font-semibold text-blue-800 uppercase text-center">Description</div>
+                        <div className="col-span-3 text-xs font-semibold text-blue-800 uppercase">Frequency</div>
+                        <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Visits</div>
                       </div>
                       {/* Table Body */}
-                      {selectedPackage.serviceRows && selectedPackage.serviceRows.length > 0 ? (
-                        selectedPackage.serviceRows.filter(s => s.service?.trim()).map((service, idx) => (
-                          <div key={idx} className="grid grid-cols-10 gap-2 px-3 py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                            <div className="col-span-6 text-sm font-medium text-gray-800">{service.service}</div>
-                            <div className="col-span-2 text-sm text-gray-600">{service.frequencyType || 'Monthly'}</div>
-                            <div className="col-span-2 text-sm text-gray-600 text-center">{service.frequencyCount || 1}</div>
+                      {(() => {
+                        // Parse serviceRows from package data
+                        let services = [];
+                        const serviceRows = selectedPackage.service_rows || selectedPackage.serviceRows;
+                        if (serviceRows) {
+                          services = typeof serviceRows === 'string' ? JSON.parse(serviceRows) : serviceRows;
+                        } else if (selectedPackage.services) {
+                          // Fallback to services array
+                          const svcData = typeof selectedPackage.services === 'string' ? selectedPackage.services.split(',') : selectedPackage.services;
+                          services = svcData.map(s => ({ service: typeof s === 'string' ? s.trim() : s.name || s, description: '', frequencyType: 'Monthly', frequencyCount: 1 }));
+                        }
+                        
+                        return services.filter(s => (s.service || s.name)?.trim()).map((service, idx) => (
+                          <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                            <div className="col-span-2 text-sm font-medium text-gray-800">{service.service || service.name}</div>
+                            <div className={`col-span-5 text-xs text-gray-500 ${!service.description ? 'text-center' : ''}`}>{service.description || '-'}</div>
+                            <div className="col-span-3 text-sm text-gray-600">{service.frequencyType || service.frequency_type || 'Monthly'}</div>
+                            <div className="col-span-2 text-sm text-gray-600 text-center">{service.frequencyCount || service.frequency_count || service.visits || 1}</div>
                           </div>
-                        ))
-                      ) : (
-                        (typeof selectedPackage.services === 'string' ? selectedPackage.services.split(',') : 
-                         Array.isArray(selectedPackage.services) ? selectedPackage.services.map(s => s.name || s) : []
-                        ).filter(s => s?.trim()).map((serviceName, idx) => (
-                          <div key={idx} className="grid grid-cols-10 gap-2 px-3 py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                            <div className="col-span-6 text-sm font-medium text-gray-800">{serviceName.trim()}</div>
-                            <div className="col-span-2 text-sm text-gray-400">Monthly</div>
-                            <div className="col-span-2 text-sm text-gray-400 text-center">1</div>
-                          </div>
-                        ))
-                      )}
-                      {/* Total Row - Only shows Total Package Price */}
+                        ));
+                      })()}
+                      {/* Total Row */}
                       <div className="flex justify-between px-3 py-2.5 bg-blue-50 border-t border-blue-200">
-                        <span className="text-sm font-semibold text-blue-800">Total Package Price</span>
-                        <span className="text-sm font-bold text-blue-700">₹{getPackagePrice().toLocaleString()}</span>
+                        <div>
+                          <span className="text-sm font-semibold text-blue-800">Total Package Price</span>
+                          <p className="text-xs text-blue-600">Service Period: {selectedPackage.billing_duration || selectedPackage.billingDuration || 'Yearly'}</p>
+                        </div>
+                        <span className="text-lg font-bold text-blue-700">₹{getPackagePrice().toLocaleString()}</span>
                       </div>
                     </div>
-                    {selectedPackage.billingDuration && (
-                      <p className="text-xs text-blue-600 mt-2">
-                        Service Period: {selectedPackage.billingDuration.charAt(0).toUpperCase() + selectedPackage.billingDuration.slice(1)}
-                      </p>
-                    )}
                   </div>
                 )}
               </div>
@@ -2188,49 +2195,56 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               {/* Selected Package Details - Auto-populated */}
               {directSelectedPackage && (
                 <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center gap-2 mb-3">
+                  {/* Package Header with Name and ID */}
+                  <div className="flex items-center gap-2 mb-4">
                     <Package className="w-5 h-5 text-blue-600" />
-                    <span className="font-semibold text-blue-800">Package Services</span>
+                    <span className="font-semibold text-blue-800">{getPackageName(directSelectedPackage)}</span>
+                    {(directSelectedPackage.package_id || directSelectedPackage.packageId || directSelectedPackage.id) && (
+                      <span className="px-2 py-0.5 bg-gray-700 text-white text-xs rounded font-mono">
+                        {directSelectedPackage.package_id || directSelectedPackage.packageId || `AMC-${directSelectedPackage.id}`}
+                      </span>
+                    )}
                   </div>
-                  {/* Services Table */}
+                  {/* Services Table with Description column */}
                   <div className="bg-white rounded border border-blue-100 overflow-hidden">
                     {/* Table Header */}
-                    <div className="grid grid-cols-10 gap-2 px-3 py-2 bg-blue-100/50 border-b border-blue-200">
-                      <div className="col-span-6 text-xs font-semibold text-blue-800 uppercase">Service</div>
-                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Frequency</div>
-                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">No.of visits</div>
+                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-blue-100/50 border-b border-blue-200">
+                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Service</div>
+                      <div className="col-span-5 text-xs font-semibold text-blue-800 uppercase text-center">Description</div>
+                      <div className="col-span-3 text-xs font-semibold text-blue-800 uppercase">Frequency</div>
+                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Visits</div>
                     </div>
                     {/* Table Body */}
-                    {directSelectedPackage.serviceRows && directSelectedPackage.serviceRows.length > 0 ? (
-                      directSelectedPackage.serviceRows.filter(s => s.service?.trim()).map((service, idx) => (
-                        <div key={idx} className="grid grid-cols-10 gap-2 px-3 py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                          <div className="col-span-6 text-sm font-medium text-gray-800">{service.service}</div>
-                          <div className="col-span-2 text-sm text-gray-600">{service.frequencyType || 'Monthly'}</div>
-                          <div className="col-span-2 text-sm text-gray-600 text-center">{service.frequencyCount || 1}</div>
+                    {(() => {
+                      // Parse serviceRows from package data
+                      let services = [];
+                      const serviceRows = directSelectedPackage.service_rows || directSelectedPackage.serviceRows;
+                      if (serviceRows) {
+                        services = typeof serviceRows === 'string' ? JSON.parse(serviceRows) : serviceRows;
+                      } else if (directSelectedPackage.services) {
+                        // Fallback to services array
+                        const svcData = typeof directSelectedPackage.services === 'string' ? directSelectedPackage.services.split(',') : directSelectedPackage.services;
+                        services = svcData.map(s => ({ service: typeof s === 'string' ? s.trim() : s.name || s, description: '', frequencyType: 'Monthly', frequencyCount: 1 }));
+                      }
+                      
+                      return services.filter(s => (s.service || s.name)?.trim()).map((service, idx) => (
+                        <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                          <div className="col-span-2 text-sm font-medium text-gray-800">{service.service || service.name}</div>
+                          <div className={`col-span-5 text-xs text-gray-500 ${!service.description ? 'text-center' : ''}`}>{service.description || '-'}</div>
+                          <div className="col-span-3 text-sm text-gray-600">{service.frequencyType || service.frequency_type || 'Monthly'}</div>
+                          <div className="col-span-2 text-sm text-gray-600 text-center">{service.frequencyCount || service.frequency_count || service.visits || 1}</div>
                         </div>
-                      ))
-                    ) : (
-                      (typeof directSelectedPackage.services === 'string' ? directSelectedPackage.services.split(',') : 
-                       Array.isArray(directSelectedPackage.services) ? directSelectedPackage.services.map(s => s.name || s) : []
-                      ).filter(s => s?.trim()).map((serviceName, idx) => (
-                        <div key={idx} className="grid grid-cols-10 gap-2 px-3 py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                          <div className="col-span-6 text-sm font-medium text-gray-800">{serviceName.trim()}</div>
-                          <div className="col-span-2 text-sm text-gray-400">Monthly</div>
-                          <div className="col-span-2 text-sm text-gray-400 text-center">1</div>
-                        </div>
-                      ))
-                    )}
+                      ));
+                    })()}
                     {/* Total Row */}
                     <div className="flex justify-between px-3 py-2.5 bg-blue-50 border-t border-blue-200">
-                      <span className="text-sm font-semibold text-blue-800">Total Package Price</span>
-                      <span className="text-sm font-bold text-blue-700">₹{getDirectPackagePrice().toLocaleString()}</span>
+                      <div>
+                        <span className="text-sm font-semibold text-blue-800">Total Package Price</span>
+                        <p className="text-xs text-blue-600">Service Period: {directSelectedPackage.billing_duration || directSelectedPackage.billingDuration || 'Yearly'}</p>
+                      </div>
+                      <span className="text-lg font-bold text-blue-700">₹{getDirectPackagePrice().toLocaleString()}</span>
                     </div>
                   </div>
-                  {directSelectedPackage.billingDuration && (
-                    <p className="text-xs text-blue-600 mt-2">
-                      Service Period: {directSelectedPackage.billingDuration.charAt(0).toUpperCase() + directSelectedPackage.billingDuration.slice(1)}
-                    </p>
-                  )}
                 </div>
               )}
             </div>
