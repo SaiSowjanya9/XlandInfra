@@ -270,9 +270,22 @@ const VendorDetails = () => {
   };
 
   // Derived data - only from ACTIVE vendors for filter dropdowns
-  const activeVendors = vendors.filter(v => (v.status || 'active') === 'active');
-  const divisions = [...new Set(activeVendors.map(v => v.division).filter(Boolean))];
+  const activeVendors = vendors.filter(v => 
+    (v.status || 'active') === 'active' && 
+    v.status !== 'deleted' && 
+    v.status !== 'inactive' && 
+    v.is_active !== 0 && 
+    v.is_active !== false
+  );
   const zones = [...new Set(activeVendors.map(v => v.zone || v.zone_name).filter(Boolean))];
+  // Dynamic service types from ACTIVE vendor data only (sorted alphabetically)
+  const serviceTypes = [...new Set(activeVendors.map(v => v.serviceType || v.service_type).filter(Boolean))].sort();
+  // Get count for each service type (only count ACTIVE vendors with valid service type)
+  const getServiceTypeCount = (serviceType) => {
+    const activeWithServiceType = activeVendors.filter(v => (v.serviceType || v.service_type));
+    if (serviceType === 'all') return activeWithServiceType.length;
+    return activeVendors.filter(v => (v.serviceType || v.service_type) === serviceType).length;
+  };
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const filteredVendors = vendors.filter(v => {
@@ -491,21 +504,10 @@ const VendorDetails = () => {
                 onChange={(e) => setActiveTab(e.target.value)}
                 className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
               >
-                <option value="all">All Service Types ({vendors.length})</option>
-                {TABS.filter(t => t.id !== 'all').map(tab => (
-                  <option key={tab.id} value={tab.id}>{tab.label} ({vendors.filter(v => (v.serviceType || v.service_type) === tab.id).length})</option>
+                <option value="all">All Service Types ({getServiceTypeCount('all')})</option>
+                {serviceTypes.map(st => (
+                  <option key={st} value={st}>{st} ({getServiceTypeCount(st)})</option>
                 ))}
-              </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-            </div>
-            <div className="relative">
-              <select
-                value={divisionFilter}
-                onChange={(e) => setDivisionFilter(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
-              >
-                <option value="">All Divisions</option>
-                {divisions.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             </div>
@@ -534,9 +536,9 @@ const VendorDetails = () => {
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             </div>
-            {(divisionFilter || zoneFilter || searchTerm || statusFilter !== 'active') && (
+            {(zoneFilter || searchTerm || statusFilter !== 'active') && (
               <button
-                onClick={() => { setDivisionFilter(''); setZoneFilter(''); setSearchTerm(''); setStatusFilter('active'); }}
+                onClick={() => { setZoneFilter(''); setSearchTerm(''); setStatusFilter('active'); }}
                 className="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
               >
                 Clear

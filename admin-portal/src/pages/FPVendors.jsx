@@ -87,24 +87,26 @@ const FPVendors = ({ user }) => {
     return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  // Get unique service types, divisions and zones from ACTIVE vendors only
-  const activeVendors = vendors.filter(v => (v.status || 'active') === 'active' && v.is_active !== 0 && v.is_active !== false);
+  // Get unique service types and zones from ACTIVE vendors only
+  const activeVendors = vendors.filter(v => 
+    (v.status || 'active') === 'active' && 
+    v.status !== 'deleted' && 
+    v.status !== 'inactive' && 
+    v.is_active !== 0 && 
+    v.is_active !== false
+  );
   const serviceTypes = [...new Set(activeVendors.map(v => v.serviceType || v.service_type).filter(Boolean))].sort();
-  const divisions = [...new Set(activeVendors.map(v => v.division).filter(Boolean))];
   const zones = [...new Set(activeVendors.map(v => v.zone_name || v.zone).filter(Boolean))];
 
   // Filter vendors
   const filteredVendors = vendors.filter(v => {
     // Status filter
-    const isInactive = v.status === 'deleted' || v.is_active === 0 || v.is_active === false;
+    const isInactive = v.status === 'deleted' || v.status === 'inactive' || v.is_active === 0 || v.is_active === false;
     if (statusFilter === 'active' && isInactive) return false;
     if (statusFilter === 'inactive' && !isInactive) return false;
     
     // Service type filter
     if (selectedServiceType !== 'all' && (v.serviceType || v.service_type) !== selectedServiceType) return false;
-    
-    // Division filter
-    if (divisionFilter && v.division !== divisionFilter) return false;
     
     // Zone filter
     if (zoneFilter && (v.zone_name || v.zone) !== zoneFilter) return false;
@@ -123,10 +125,11 @@ const FPVendors = ({ user }) => {
     return true;
   });
   
-  // Get count for each service type
+  // Get count for each service type (only count ACTIVE vendors with valid service type)
   const getServiceTypeCount = (serviceType) => {
-    if (serviceType === 'all') return vendors.length;
-    return vendors.filter(v => (v.serviceType || v.service_type) === serviceType).length;
+    const activeWithServiceType = activeVendors.filter(v => (v.serviceType || v.service_type));
+    if (serviceType === 'all') return activeWithServiceType.length;
+    return activeVendors.filter(v => (v.serviceType || v.service_type) === serviceType).length;
   };
 
   return (
@@ -187,17 +190,6 @@ const FPVendors = ({ user }) => {
                   >
                     <option value="all">All Service Types ({getServiceTypeCount('all')})</option>
                     {serviceTypes.map(st => <option key={st} value={st}>{st} ({getServiceTypeCount(st)})</option>)}
-                  </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-                </div>
-                <div className="relative">
-                  <select
-                    value={divisionFilter}
-                    onChange={(e) => setDivisionFilter(e.target.value)}
-                    className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
-                  >
-                    <option value="">All Divisions</option>
-                    {divisions.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                   <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                 </div>
