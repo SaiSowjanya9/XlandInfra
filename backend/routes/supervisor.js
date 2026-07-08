@@ -855,20 +855,23 @@ router.get('/work-orders', requireSupervisorScope, async (req, res) => {
     const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
 
     // FP employees see FP work orders, standalone supervisors see their created work orders
+    // Priority: onboarded_properties first, then properties (only if no match in onboarded_properties)
     let query = `
       SELECT wo.*, 
         COALESCE(op.community_name, p.name, wo.property_name) as property_name,
         COALESCE(op.property_id, p.property_id) as property_code,
         COALESCE(op.property_id, p.property_id) as actual_property_id,
         COALESCE(op.property_type, p.property_type, wo.property_type) as property_type,
-        COALESCE(op.zone, z.name, p.zone_id) as zone, COALESCE(op.division, p.division_id) as division,
-        COALESCE(op.address, p.address) as property_address, COALESCE(op.city, p.city) as property_city,
+        COALESCE(op.zone, z.name, p.zone_id) as zone, 
+        COALESCE(op.division, p.division_id) as division,
+        COALESCE(op.address, p.address) as property_address, 
+        COALESCE(op.city, p.city) as property_city,
         op.total_units, op.number_of_blocks as total_blocks,
         COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name
       FROM work_orders wo
-      LEFT JOIN properties p ON wo.property_id = p.id
-      LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
       LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+      LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+      LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'}${zoneFilter.clause}
@@ -912,19 +915,22 @@ router.get('/work-orders/pending', requireSupervisorScope, async (req, res) => {
     const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
 
+    // Priority: onboarded_properties first, then properties (only if no match)
     const query = `SELECT wo.*, 
         COALESCE(op.community_name, p.name, wo.property_name) as property_name,
         COALESCE(op.property_id, p.property_id) as property_code,
         COALESCE(op.property_id, p.property_id) as actual_property_id,
         COALESCE(op.property_type, p.property_type, wo.property_type) as property_type,
-        COALESCE(op.zone, z.name, p.zone_id) as zone, COALESCE(op.division, p.division_id) as division,
-        COALESCE(op.address, p.address) as property_address, COALESCE(op.city, p.city) as property_city,
+        COALESCE(op.zone, z.name, p.zone_id) as zone, 
+        COALESCE(op.division, p.division_id) as division,
+        COALESCE(op.address, p.address) as property_address, 
+        COALESCE(op.city, p.city) as property_city,
         op.total_units, op.number_of_blocks as total_blocks,
         COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name
        FROM work_orders wo
-       LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
        LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+       LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+       LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
        WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('pending', 'under_review', 'assigned', 'accepted', 'in_progress')${zoneFilter.clause}
@@ -961,19 +967,22 @@ router.get('/work-orders/completed', requireSupervisorScope, async (req, res) =>
     const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
 
+    // Priority: onboarded_properties first, then properties (only if no match)
     const query = `SELECT wo.*, 
         COALESCE(op.community_name, p.name, wo.property_name) as property_name,
         COALESCE(op.property_id, p.property_id) as property_code,
         COALESCE(op.property_id, p.property_id) as actual_property_id,
         COALESCE(op.property_type, p.property_type, wo.property_type) as property_type,
-        COALESCE(op.zone, z.name, p.zone_id) as zone, COALESCE(op.division, p.division_id) as division,
-        COALESCE(op.address, p.address) as property_address, COALESCE(op.city, p.city) as property_city,
+        COALESCE(op.zone, z.name, p.zone_id) as zone, 
+        COALESCE(op.division, p.division_id) as division,
+        COALESCE(op.address, p.address) as property_address, 
+        COALESCE(op.city, p.city) as property_city,
         op.total_units, op.number_of_blocks as total_blocks,
         COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name
        FROM work_orders wo
-       LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
        LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+       LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+       LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
        WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('completed', 'closed')${zoneFilter.clause}

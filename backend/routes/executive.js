@@ -668,9 +668,9 @@ router.get('/work-orders', requireExecutiveScope, async (req, res) => {
              COALESCE(cl.name, wo.customer_name) as client_name,
              wo.customer_name, wo.customer_email, wo.customer_phone
       FROM work_orders wo
-      LEFT JOIN properties p ON wo.property_id = p.id
-      LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
       LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+      LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+      LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
       LEFT JOIN clients cl ON wo.client_id = cl.id
@@ -728,9 +728,9 @@ router.get('/work-orders/pending', requireExecutiveScope, async (req, res) => {
              COALESCE(cl.name, wo.customer_name) as client_name,
              wo.customer_name, wo.customer_email, wo.customer_phone
        FROM work_orders wo
-       LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
        LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+       LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+       LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
@@ -781,9 +781,9 @@ router.get('/work-orders/completed', requireExecutiveScope, async (req, res) => 
              COALESCE(cl.name, wo.customer_name) as client_name,
              wo.customer_name, wo.customer_email, wo.customer_phone
        FROM work_orders wo
-       LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
        LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+       LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+       LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id

@@ -803,26 +803,29 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
     const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
     
     // FP employees see FP work orders, standalone managers see their created work orders
+    // Priority: onboarded_properties first, then properties (only if no match)
     let query = `SELECT wo.*, 
                         COALESCE(op.community_name, p.name, wo.property_name) as property_name,
                         COALESCE(op.property_id, p.property_id) as property_code,
                         COALESCE(op.property_id, p.property_id) as actual_property_id,
                         COALESCE(op.property_type, p.property_type, wo.property_type) as property_type,
-                        COALESCE(op.zone, z.name, p.zone_id) as zone, COALESCE(op.division, p.division_id) as division,
-                        COALESCE(op.address, p.address) as property_address, COALESCE(op.city, p.city) as property_city,
+                        COALESCE(op.zone, z.name, p.zone_id) as zone, 
+                        COALESCE(op.division, p.division_id) as division,
+                        COALESCE(op.address, p.address) as property_address, 
+                        COALESCE(op.city, p.city) as property_city,
                         op.total_units, op.number_of_blocks as total_blocks,
                         COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
-                        COALESCE(p.latitude, op.latitude, op.map_lat) as property_latitude,
-                        COALESCE(p.longitude, op.longitude, op.map_lng) as property_longitude,
-                        COALESCE(p.map_location, op.map_location) as property_map_location,
+                        COALESCE(op.latitude, op.map_lat, p.latitude) as property_latitude,
+                        COALESCE(op.longitude, op.map_lng, p.longitude) as property_longitude,
+                        COALESCE(op.map_location, p.map_location) as property_map_location,
                         COALESCE(
                           CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
                           wo.created_by, 'System'
                         ) as created_by_name
                  FROM work_orders wo
-                 LEFT JOIN properties p ON wo.property_id = p.id
-                 LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
                  LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+                 LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+                 LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
                  LEFT JOIN categories c ON wo.category_id = c.id
                  LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
                  LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username
@@ -871,22 +874,25 @@ router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
     const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
     
+    // Priority: onboarded_properties first, then properties (only if no match)
     const query = `SELECT wo.*, 
               COALESCE(op.community_name, p.name, wo.property_name) as property_name,
               COALESCE(op.property_id, p.property_id) as property_code,
               COALESCE(op.property_id, p.property_id) as actual_property_id,
               COALESCE(op.property_type, p.property_type, wo.property_type) as property_type,
-              COALESCE(op.zone, z.name, p.zone_id) as zone, COALESCE(op.division, p.division_id) as division,
-              COALESCE(op.address, p.address) as property_address, COALESCE(op.city, p.city) as property_city,
+              COALESCE(op.zone, z.name, p.zone_id) as zone, 
+              COALESCE(op.division, p.division_id) as division,
+              COALESCE(op.address, p.address) as property_address, 
+              COALESCE(op.city, p.city) as property_city,
               op.total_units, op.number_of_blocks as total_blocks,
               COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
-              COALESCE(p.latitude, op.latitude, op.map_lat) as property_latitude,
-              COALESCE(p.longitude, op.longitude, op.map_lng) as property_longitude,
-              COALESCE(p.map_location, op.map_location) as property_map_location
+              COALESCE(op.latitude, op.map_lat, p.latitude) as property_latitude,
+              COALESCE(op.longitude, op.map_lng, p.longitude) as property_longitude,
+              COALESCE(op.map_location, p.map_location) as property_map_location
        FROM work_orders wo
-       LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
        LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+       LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+       LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
        WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status NOT IN ('completed', 'closed', 'cancelled')${zoneFilter.clause}
@@ -923,22 +929,25 @@ router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
     const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
     
+    // Priority: onboarded_properties first, then properties (only if no match)
     const query = `SELECT wo.*, 
               COALESCE(op.community_name, p.name, wo.property_name) as property_name,
               COALESCE(op.property_id, p.property_id) as property_code,
               COALESCE(op.property_id, p.property_id) as actual_property_id,
               COALESCE(op.property_type, p.property_type, wo.property_type) as property_type,
-              COALESCE(op.zone, z.name, p.zone_id) as zone, COALESCE(op.division, p.division_id) as division,
-              COALESCE(op.address, p.address) as property_address, COALESCE(op.city, p.city) as property_city,
+              COALESCE(op.zone, z.name, p.zone_id) as zone, 
+              COALESCE(op.division, p.division_id) as division,
+              COALESCE(op.address, p.address) as property_address, 
+              COALESCE(op.city, p.city) as property_city,
               op.total_units, op.number_of_blocks as total_blocks,
               COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
-              COALESCE(p.latitude, op.latitude, op.map_lat) as property_latitude,
-              COALESCE(p.longitude, op.longitude, op.map_lng) as property_longitude,
-              COALESCE(p.map_location, op.map_location) as property_map_location
+              COALESCE(op.latitude, op.map_lat, p.latitude) as property_latitude,
+              COALESCE(op.longitude, op.map_lng, p.longitude) as property_longitude,
+              COALESCE(op.map_location, p.map_location) as property_map_location
        FROM work_orders wo
-       LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
        LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+       LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+       LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
        WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('completed', 'closed')${zoneFilter.clause}

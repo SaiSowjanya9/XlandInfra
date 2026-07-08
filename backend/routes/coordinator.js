@@ -727,9 +727,9 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
             wo.created_by, 'System'
           ) as created_by_name
         FROM work_orders wo
-        LEFT JOIN properties p ON wo.property_id = p.id
-        LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
         LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+        LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+        LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
         LEFT JOIN categories c ON wo.category_id = c.id
         LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
         LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username
@@ -757,9 +757,9 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
             wo.created_by, 'System'
           ) as created_by_name
         FROM work_orders wo
-        LEFT JOIN properties p ON wo.property_id = p.id
-        LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
         LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+        LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+        LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
         LEFT JOIN categories c ON wo.category_id = c.id
         LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
         LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username
@@ -823,9 +823,9 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
           COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
          FROM work_orders wo
-         LEFT JOIN properties p ON wo.property_id = p.id
-         LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
          LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+         LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+         LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
          LEFT JOIN categories c ON wo.category_id = c.id
          LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
          LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
@@ -845,9 +845,9 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
           COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
          FROM work_orders wo
-         LEFT JOIN properties p ON wo.property_id = p.id
-         LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
          LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+         LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+         LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
          LEFT JOIN categories c ON wo.category_id = c.id
          LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
          LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
@@ -902,9 +902,9 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
           COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
          FROM work_orders wo
-         LEFT JOIN properties p ON wo.property_id = p.id
-         LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
          LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+         LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+         LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
          LEFT JOIN categories c ON wo.category_id = c.id
          LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
          LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
@@ -924,9 +924,9 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
           COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
          FROM work_orders wo
-         LEFT JOIN properties p ON wo.property_id = p.id
-         LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
          LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+         LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+         LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
          LEFT JOIN categories c ON wo.category_id = c.id
          LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
          LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
