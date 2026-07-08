@@ -333,7 +333,8 @@ router.get('/properties', authenticate, dataEntryRoles, async (req, res) => {
     let onboardedProperties = [];
     try {
       const [rows] = await pool.execute(
-        `SELECT op.id, op.property_id, op.community_name as name, op.property_type, op.entry_type,
+        `SELECT op.id, op.property_id, op.community_name as name, 
+                COALESCE(op.entry_type, op.property_type) as property_type, op.entry_type,
                 op.zone as zone, op.division, op.area_name as area, op.total_units, op.number_of_units, 0 as occupied_units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 op.landmark, COALESCE(op.latitude, op.map_lat) as latitude, COALESCE(op.longitude, op.map_lng) as longitude, op.map_address,
@@ -1620,10 +1621,14 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
     let onboardedProps = [];
     try {
       const [rows] = await pool.execute(
-        `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
+        `SELECT op.id, op.property_id, op.community_name as name, 
+                COALESCE(op.entry_type, op.property_type) as property_type,
+                op.entry_type,
                 op.zone as zone_name, op.area_name as area, op.division,
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 op.number_of_units as total_units, op.total_units as units_count,
+                op.number_of_blocks, op.block_names, op.units_per_block, op.block_unit_types,
+                op.watchman_name, op.watchman_contact,
                 NULL as contact_person, NULL as contact_phone, NULL as contact_email,
                 op.created_at, op.status,
                 COALESCE(
