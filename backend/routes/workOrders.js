@@ -581,15 +581,15 @@ router.patch('/:id/status', async (req, res) => {
         console.log('[Admin] Status changed to completed, sending email...');
         const [workOrder] = await pool.query(
           `SELECT wo.work_order_id, wo.title, 
-                  COALESCE(p.name, op.community_name, wo.property_name) as property_name,
-                  COALESCE(p.property_id, op.property_id, wo.property_id) as property_code,
+                  COALESCE(op.community_name, p.name, wo.property_name) as property_name,
+                  COALESCE(op.property_id, p.property_id, wo.property_id) as property_code,
                   wo.customer_name, wo.customer_email, wo.customer_phone, 
                   wo.category_name, wo.subcategory_name, wo.description, wo.closing_notes, wo.franchise_partner_id,
                   COALESCE(op.zone, p.zone_id) as property_zone,
-                  COALESCE(fd.name, fd2.name, p.division_id, op.division) as division
+                  COALESCE(fd2.name, fd.name, op.division, p.division_id) as division
            FROM work_orders wo
-           LEFT JOIN properties p ON wo.property_id = p.id
            LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+           LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
            LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division_id = fd.name) AND fd.franchise_partner_id = wo.franchise_partner_id
            LEFT JOIN fp_divisions fd2 ON (CAST(op.division AS UNSIGNED) = fd2.id OR op.division = fd2.name) AND fd2.franchise_partner_id = wo.franchise_partner_id
            WHERE wo.id = ?`, [id]

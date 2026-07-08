@@ -24,7 +24,8 @@ import {
   Users,
   ExternalLink,
   ChevronDown,
-  Loader2
+  Loader2,
+  Truck
 } from 'lucide-react';
 import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
