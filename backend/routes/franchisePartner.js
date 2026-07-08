@@ -207,14 +207,14 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
       // Direct Estimates count (non-archived, active only)
       safeCount(`SELECT COUNT(*) as count FROM fp_estimates 
         WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
-        AND status NOT IN ('archived', 'rejected')
-        AND (estimate_type = 'direct' OR property_id IS NULL)`, [fpId]),
+        AND status NOT IN ('archived', 'rejected', 'deleted')
+        AND estimate_type = 'direct'`, [fpId]),
       
       // Property-based Estimates count (non-archived, active only)
       safeCount(`SELECT COUNT(*) as count FROM fp_estimates 
         WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
-        AND status NOT IN ('archived', 'rejected')
-        AND (estimate_type = 'property_based' OR (estimate_type IS NULL AND property_id IS NOT NULL))`, [fpId]),
+        AND status NOT IN ('archived', 'rejected', 'deleted')
+        AND (estimate_type = 'property_based' OR estimate_type = 'property-based')`, [fpId]),
       
       // Employee stats - combined query
       pool.execute(`
