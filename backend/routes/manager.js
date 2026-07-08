@@ -1614,13 +1614,14 @@ router.get('/vendors/assignments', requireManagerScope, async (req, res) => {
     // Get property-vendor assignments with full vendor details
     // Join with both properties and onboarded_properties
     const [propertyAssignments] = await pool.execute(
-      `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
+      `SELECT pva.id, pva.property_id as numeric_property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
+        COALESCE(pva.service_type, v.service_type) as service_type,
         COALESCE(p.name, op.community_name) as property_name, 
-        COALESCE(op.property_id, p.property_id) as propertyId, 
+        COALESCE(op.property_id, p.property_id) as property_code, 
         COALESCE(op.property_type, p.property_type) as property_type, 
         COALESCE(op.address, p.address) as address, 
         COALESCE(op.city, p.city) as city,
-        v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
+        v.owner_name as vendor_name, v.vendor_id as vendor_code,
         v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
         v.zone as zone_name, v.area_name as area, v.rate_per_visit, v.coverage_per_day,
         v.owner_aadhar, v.manager_name, v.manager_mobile, v.manager_email,
@@ -1637,9 +1638,11 @@ router.get('/vendors/assignments', requireManagerScope, async (req, res) => {
     console.log('Vendor assignments found:', propertyAssignments.length);
 
     // Convert to service assignments format for frontend
+    // IMPORTANT: propertyId must be the NUMERIC ID for filtering to work
     const serviceAssignments = propertyAssignments.map(a => ({
       id: a.id,
-      propertyId: a.propertyId || a.property_id,
+      propertyId: a.numeric_property_id,
+      property_id: a.numeric_property_id,
       propertyName: a.property_name,
       propertyType: a.property_type,
       propertyZone: a.zone_name || '',

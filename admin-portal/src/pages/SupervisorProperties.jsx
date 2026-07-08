@@ -91,11 +91,22 @@ const SupervisorProperties = ({ user }) => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
-      if (result.success) {
-        const allAssignments = result.data?.serviceAssignments || result.data || [];
-        const propertyAssignments = allAssignments.filter(a => 
-          String(a.propertyId || a.property_id) === String(propertyId)
-        );
+      
+      if (result.success && result.data) {
+        // Extract assignments from either serviceAssignments or propertyAssignments
+        const allAssignments = Array.isArray(result.data?.serviceAssignments) 
+          ? result.data.serviceAssignments 
+          : (Array.isArray(result.data?.propertyAssignments) 
+            ? result.data.propertyAssignments 
+            : (Array.isArray(result.data) ? result.data : []));
+        
+        // Filter to only this property's assignments
+        const propertyAssignments = allAssignments.filter(a => {
+          const assignmentPropId = String(a.propertyId || a.property_id || '');
+          const targetPropId = String(propertyId);
+          return assignmentPropId === targetPropId;
+        });
+        
         setPropertyVendorAssignments(propertyAssignments);
       } else {
         setPropertyVendorAssignments([]);
