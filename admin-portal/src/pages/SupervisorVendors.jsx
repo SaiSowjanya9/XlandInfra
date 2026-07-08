@@ -50,7 +50,9 @@ const SupervisorVendors = ({ user }) => {
   const getServiceBadgeColor = () => 'bg-gray-100 text-gray-700';
 
   const allVendors = vendors.all || [];
-  const zones = [...new Set(allVendors.map(v => v.zone || v.zone_name).filter(Boolean))];
+  // Filter dropdown values from ACTIVE vendors only
+  const activeVendorsList = allVendors.filter(v => v.status === 'active' || v.is_active);
+  const zones = [...new Set(activeVendorsList.map(v => v.zone || v.zone_name).filter(Boolean))];
   
   const getServiceCount = (type) => {
     if (type === 'all') return allVendors.length;

@@ -176,7 +176,8 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
       vendors,
       customers,
       workOrderStats,
-      estimates,
+      directEstimates,
+      propertyEstimates,
       employeeStats,
       workOrdersByRole,
       recentWorkOrders
@@ -203,8 +204,17 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
       `, [fpId]).then(([[r]]) => ({ total: r.total || 0, pending: r.pending || 0, completed: r.completed || 0 }))
         .catch(() => ({ total: 0, pending: 0, completed: 0 })),
       
-      // Estimates count (only non-archived)
-      safeCount('SELECT COUNT(*) as count FROM fp_estimates WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL)', [fpId]),
+      // Direct Estimates count (non-archived, active only)
+      safeCount(`SELECT COUNT(*) as count FROM fp_estimates 
+        WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
+        AND status NOT IN ('archived', 'rejected')
+        AND (estimate_type = 'direct' OR property_id IS NULL)`, [fpId]),
+      
+      // Property-based Estimates count (non-archived, active only)
+      safeCount(`SELECT COUNT(*) as count FROM fp_estimates 
+        WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
+        AND status NOT IN ('archived', 'rejected')
+        AND (estimate_type = 'property_based' OR (estimate_type IS NULL AND property_id IS NOT NULL))`, [fpId]),
       
       // Employee stats - combined query
       pool.execute(`
@@ -260,7 +270,8 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
             completed: workOrderStats.completed,
             byRole: workOrdersByRole
           },
-          estimates,
+          directEstimates,
+          propertyEstimates,
           employees: employeeStats.total,
           employeeRoles: {
             managers: employeeStats.managers,
@@ -4662,10 +4673,11 @@ router.get('/zones', requireFPScope, async (req, res) => {
       });
     } catch (_) {}
 
-    // Get zones from FP's properties (zone_id column stores zone name)
+    // Get zones from FP's ACTIVE properties only (zone_id column stores zone name)
     try {
       const [propertyZones] = await pool.execute(
-        `SELECT DISTINCT zone_id FROM properties WHERE franchise_partner_id = ? AND zone_id IS NOT NULL AND zone_id != ''`,
+        `SELECT DISTINCT zone_id FROM properties WHERE franchise_partner_id = ? AND zone_id IS NOT NULL AND zone_id != ''
+         AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)`,
         [req.fpId]
       );
       propertyZones.forEach(z => {
@@ -4763,13 +4775,15 @@ router.get('/divisions', requireFPScope, async (req, res) => {
       divisions = fpDivisions;
     }
     
-    // Also get divisions from existing properties/vendors for this FP
+    // Also get divisions from ACTIVE properties/vendors for this FP
     const [propertyDivisions] = await pool.execute(
       `SELECT DISTINCT division as name FROM properties 
        WHERE franchise_partner_id = ? AND division IS NOT NULL AND division != ''
+       AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)
        UNION
        SELECT DISTINCT division as name FROM onboarded_vendors 
-       WHERE franchise_partner_id = ? AND division IS NOT NULL AND division != ''`,
+       WHERE franchise_partner_id = ? AND division IS NOT NULL AND division != ''
+       AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)`,
       [franchisePartnerId || 0, franchisePartnerId || 0]
     );
     

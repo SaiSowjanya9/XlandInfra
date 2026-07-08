@@ -45,7 +45,9 @@ const ExecutiveVendors = ({ user }) => {
     return new Date(dateString).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  const zones = [...new Set(vendors.map(v => v.zone || v.zone_name).filter(Boolean))];
+  // Filter dropdown values from ACTIVE vendors only
+  const activeVendors = vendors.filter(v => v.status === 'active' || v.is_active);
+  const zones = [...new Set(activeVendors.map(v => v.zone || v.zone_name).filter(Boolean))];
   
   const getServiceCount = (type) => {
     if (type === 'all') return vendors.length;

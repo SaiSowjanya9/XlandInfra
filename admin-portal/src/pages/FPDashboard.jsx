@@ -126,12 +126,21 @@ const FPDashboard = ({ user }) => {
       link: '/fp/work-orders?status=completed'
     },
     {
-      title: 'Estimates',
-      value: stats?.estimates || 0,
+      title: 'Direct Estimates',
+      value: stats?.directEstimates || 0,
       icon: FileText,
       color: 'bg-teal-500',
       bgColor: 'bg-teal-50',
       textColor: 'text-teal-600',
+      link: '/fp/estimates'
+    },
+    {
+      title: 'Property Estimates',
+      value: stats?.propertyEstimates || 0,
+      icon: FileText,
+      color: 'bg-cyan-500',
+      bgColor: 'bg-cyan-50',
+      textColor: 'text-cyan-600',
       link: '/fp/estimates'
     }
   ];

@@ -87,10 +87,11 @@ const FPVendors = ({ user }) => {
     return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  // Get unique service types, divisions and zones from vendors
-  const serviceTypes = [...new Set(vendors.map(v => v.serviceType || v.service_type).filter(Boolean))].sort();
-  const divisions = [...new Set(vendors.map(v => v.division).filter(Boolean))];
-  const zones = [...new Set(vendors.map(v => v.zone_name || v.zone).filter(Boolean))];
+  // Get unique service types, divisions and zones from ACTIVE vendors only
+  const activeVendors = vendors.filter(v => (v.status || 'active') === 'active' && v.is_active !== 0 && v.is_active !== false);
+  const serviceTypes = [...new Set(activeVendors.map(v => v.serviceType || v.service_type).filter(Boolean))].sort();
+  const divisions = [...new Set(activeVendors.map(v => v.division).filter(Boolean))];
+  const zones = [...new Set(activeVendors.map(v => v.zone_name || v.zone).filter(Boolean))];
 
   // Filter vendors
   const filteredVendors = vendors.filter(v => {

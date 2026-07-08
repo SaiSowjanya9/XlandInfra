@@ -192,7 +192,8 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
       customersCount,
       employeesCount,
       workOrderStats,
-      estimatesCount,
+      directEstimatesCount,
+      propertyEstimatesCount,
       recentWorkOrders
     ] = await Promise.all([
       // Properties count (zone-centric + own created)
@@ -241,11 +242,21 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
         completed: r.completed || 0 
       })).catch(() => ({ total: 0, pending: 0, completed: 0 })),
       
-      // Estimates count (own created, non-archived only)
+      // Direct Estimates count (own created, non-archived, active)
       pool.execute(
         `SELECT COUNT(*) as count FROM fp_estimates 
          WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR manager_id = ?)
-         AND (is_archived = 0 OR is_archived IS NULL)`,
+         AND (is_archived = 0 OR is_archived IS NULL) AND status NOT IN ('archived', 'rejected')
+         AND (estimate_type = 'direct' OR property_id IS NULL)`,
+        [franchisePartnerId, creatorEmail, req.user?.username || '', managerId]
+      ).then(([r]) => r[0].count).catch(() => 0),
+      
+      // Property-based Estimates count (own created, non-archived, active)
+      pool.execute(
+        `SELECT COUNT(*) as count FROM fp_estimates 
+         WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR manager_id = ?)
+         AND (is_archived = 0 OR is_archived IS NULL) AND status NOT IN ('archived', 'rejected')
+         AND (estimate_type = 'property_based' OR (estimate_type IS NULL AND property_id IS NOT NULL))`,
         [franchisePartnerId, creatorEmail, req.user?.username || '', managerId]
       ).then(([r]) => r[0].count).catch(() => 0),
       
@@ -284,7 +295,8 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
           workOrders: workOrderStats.total,
           pendingWorkOrders: workOrderStats.pending,
           completedWorkOrders: workOrderStats.completed,
-          estimates: estimatesCount
+          directEstimates: directEstimatesCount,
+          propertyEstimates: propertyEstimatesCount
         },
         recentWorkOrders
       }
@@ -2352,12 +2364,13 @@ router.get('/zones', requireManagerScope, async (req, res) => {
     // Get global zones
     const [globalZones] = await pool.execute('SELECT id, name FROM zones WHERE is_active = 1');
     
-    // Get zones from properties (FP-scoped or manager-scoped)
+    // Get zones from ACTIVE properties only (FP-scoped or manager-scoped)
     const scopeColumn = req.franchisePartnerId ? 'franchise_partner_id' : 'manager_id';
     const scopeId = req.franchisePartnerId || req.managerId;
     const [propertyZones] = await pool.execute(
       `SELECT DISTINCT zone_id as name FROM properties 
-       WHERE ${scopeColumn} = ? AND zone_id IS NOT NULL AND zone_id != ''`,
+       WHERE ${scopeColumn} = ? AND zone_id IS NOT NULL AND zone_id != ''
+       AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)`,
       [scopeId]
     );
 
@@ -2472,13 +2485,15 @@ router.get('/divisions', requireManagerScope, async (req, res) => {
       divisions = fpDivisions;
     }
     
-    // Also get divisions from existing properties/vendors for this FP
+    // Also get divisions from ACTIVE properties/vendors for this FP
     const [propertyDivisions] = await pool.execute(
       `SELECT DISTINCT division as name FROM properties 
        WHERE franchise_partner_id = ? AND division IS NOT NULL AND division != ''
+       AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)
        UNION
        SELECT DISTINCT division as name FROM onboarded_vendors 
-       WHERE franchise_partner_id = ? AND division IS NOT NULL AND division != ''`,
+       WHERE franchise_partner_id = ? AND division IS NOT NULL AND division != ''
+       AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)`,
       [franchisePartnerId || 0, franchisePartnerId || 0]
     );
     
