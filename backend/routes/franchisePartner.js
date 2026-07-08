@@ -188,8 +188,8 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
         safeCount('SELECT COUNT(*) as count FROM onboarded_properties WHERE franchise_partner_id = ? AND status = \'active\'', [fpId])
       ]).then(([p1, p2]) => p1 + p2),
       
-      // Vendors count - only this FP's vendors
-      safeCount('SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ? AND vendor_id NOT LIKE \'%SEED%\'', [fpId]),
+      // Vendors count - only this FP's ACTIVE vendors
+      safeCount('SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ? AND status = \'active\' AND vendor_id NOT LIKE \'%SEED%\'', [fpId]),
       
       // Customers count
       safeCount('SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?', [fpId]),
@@ -216,25 +216,39 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
         AND status NOT IN ('archived', 'rejected', 'deleted')
         AND (estimate_type = 'property_based' OR estimate_type = 'property-based')`, [fpId]),
       
-      // Employee stats - combined query
+      // Employee stats - combined query (ACTIVE only)
       pool.execute(`
         SELECT 
-          COUNT(*) as total,
+          SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as total,
           SUM(CASE WHEN role = 'manager' AND is_active = 1 THEN 1 ELSE 0 END) as managers,
           SUM(CASE WHEN role = 'coordinator' AND is_active = 1 THEN 1 ELSE 0 END) as coordinators,
           SUM(CASE WHEN role = 'supervisor' AND is_active = 1 THEN 1 ELSE 0 END) as supervisors,
           SUM(CASE WHEN role = 'executive' AND is_active = 1 THEN 1 ELSE 0 END) as executives
         FROM fp_employees WHERE franchise_partner_id = ?
       `, [fpId]).then(([[r]]) => ({
-        total: r.total || 0,
-        managers: r.managers || 0,
-        coordinators: r.coordinators || 0,
-        supervisors: r.supervisors || 0,
-        executives: r.executives || 0
+        total: Number(r.total) || 0,
+        managers: Number(r.managers) || 0,
+        coordinators: Number(r.coordinators) || 0,
+        supervisors: Number(r.supervisors) || 0,
+        executives: Number(r.executives) || 0
       })).catch(() => ({ total: 0, managers: 0, coordinators: 0, supervisors: 0, executives: 0 })),
       
-      // Work orders by role - simplified without JOIN
-      Promise.resolve({ managers: 0, coordinators: 0, supervisors: 0, executives: 0 }),
+      // Work orders by role - count pending work orders created by each role
+      pool.execute(`
+        SELECT 
+          SUM(CASE WHEN fpe.role = 'manager' THEN 1 ELSE 0 END) as managers,
+          SUM(CASE WHEN fpe.role = 'coordinator' THEN 1 ELSE 0 END) as coordinators,
+          SUM(CASE WHEN fpe.role = 'supervisor' THEN 1 ELSE 0 END) as supervisors,
+          SUM(CASE WHEN fpe.role = 'executive' THEN 1 ELSE 0 END) as executives
+        FROM work_orders wo
+        LEFT JOIN fp_employees fpe ON (wo.created_by = fpe.id OR wo.created_by = fpe.email OR wo.created_by = fpe.username)
+        WHERE wo.franchise_partner_id = ? AND wo.status NOT IN ('completed', 'closed', 'cancelled')
+      `, [fpId]).then(([[r]]) => ({
+        managers: Number(r?.managers) || 0,
+        coordinators: Number(r?.coordinators) || 0,
+        supervisors: Number(r?.supervisors) || 0,
+        executives: Number(r?.executives) || 0
+      })).catch(() => ({ managers: 0, coordinators: 0, supervisors: 0, executives: 0 })),
       
       // Recent work orders with creator name lookup
       pool.execute(

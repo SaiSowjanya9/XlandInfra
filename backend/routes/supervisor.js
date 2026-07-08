@@ -273,17 +273,17 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
       onbZoneParams = [...assignedZones];
     }
 
-    // Count onboarded_properties (zone-centric + own created)
+    // Count onboarded_properties (zone-centric + own created, ACTIVE only)
     const [onboardedPropsCount] = await pool.query(
       `SELECT COUNT(*) as count FROM onboarded_properties op
-       WHERE (op.franchise_partner_id = ? AND (op.created_by = ? OR op.created_by = ? OR op.supervisor_id = ?${onbZoneCondition}))`,
+       WHERE (op.franchise_partner_id = ? AND op.status = 'active' AND (op.created_by = ? OR op.created_by = ? OR op.supervisor_id = ?${onbZoneCondition}))`,
       [franchisePartnerId, creatorEmail, req.user?.username || '', supervisorId, ...onbZoneParams]
     );
 
-    // Vendors - zone-centric + own created
+    // Vendors - zone-centric + own created (ACTIVE only)
     const [vendorsCount] = await pool.query(
       `SELECT COUNT(*) as count FROM onboarded_vendors 
-       WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ?${assignedZones.length > 0 ? ` OR zone IN (${assignedZones.map(() => '?').join(',')})` : ''})`,
+       WHERE franchise_partner_id = ? AND status = 'active' AND (created_by = ? OR created_by = ?${assignedZones.length > 0 ? ` OR zone IN (${assignedZones.map(() => '?').join(',')})` : ''})`,
       [franchisePartnerId, creatorEmail, req.user?.username || '', ...assignedZones]
     );
 
@@ -294,9 +294,9 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
       [franchisePartnerId, creatorEmail, req.user?.username || '', supervisorId]
     );
 
-    // Employees under this FP
+    // Employees under this FP (ACTIVE only)
     const [employeesCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ?`,
+      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND is_active = 1`,
       [franchisePartnerId]
     );
 

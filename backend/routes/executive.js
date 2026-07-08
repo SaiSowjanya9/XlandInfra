@@ -224,10 +224,10 @@ router.get('/dashboard', requireExecutiveScope, async (req, res) => {
       [franchisePartnerId, creatorEmail, req.user?.username || '', executiveId, ...onbZoneParams]
     );
 
-    // Vendors - zone-centric + own created
+    // Vendors - zone-centric + own created (ACTIVE only)
     const [vendorsCount] = await pool.query(
       `SELECT COUNT(*) as count FROM onboarded_vendors 
-       WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ?${assignedZones.length > 0 ? ` OR zone IN (${assignedZones.map(() => '?').join(',')})` : ''})`,
+       WHERE franchise_partner_id = ? AND status = 'active' AND (created_by = ? OR created_by = ?${assignedZones.length > 0 ? ` OR zone IN (${assignedZones.map(() => '?').join(',')})` : ''})`,
       [franchisePartnerId, creatorEmail, req.user?.username || '', ...assignedZones]
     );
 
@@ -238,9 +238,9 @@ router.get('/dashboard', requireExecutiveScope, async (req, res) => {
       [franchisePartnerId, creatorEmail, req.user?.username || '', executiveId]
     );
 
-    // Employees under this FP
+    // Employees under this FP (ACTIVE only)
     const [employeesCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ?`,
+      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND is_active = 1`,
       [franchisePartnerId]
     );
 
