@@ -99,13 +99,26 @@ const VendorDetails = () => {
     }
   };
 
+  // Reset filters and reload data when FP selection changes
   useEffect(() => {
     if (selectedFp) {
+      // Reset filters when FP changes
+      setZoneFilter('');
+      setSearchTerm('');
+      setActiveTab('all');
+      
       loadData();
       const interval = setInterval(loadData, 10000);
       return () => clearInterval(interval);
     }
-  }, [selectedFp, statusFilter]);
+  }, [selectedFp?.id]);
+  
+  // Reload when status filter changes (separate from FP change)
+  useEffect(() => {
+    if (selectedFp) {
+      loadData();
+    }
+  }, [statusFilter]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });

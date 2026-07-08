@@ -72,11 +72,22 @@ const EmployeeDetails = () => {
     setFpDropdownOpen(false);
   };
 
+  // Reset filters and reload data when FP selection changes
+  useEffect(() => {
+    if (selectedFp) {
+      // Reset filters when FP changes
+      setZoneFilter('');
+      setSearchTerm('');
+      loadData();
+    }
+  }, [selectedFp?.id]);
+  
+  // Reload when status filter changes (separate effect)
   useEffect(() => {
     if (selectedFp) {
       loadData();
     }
-  }, [statusFilter, selectedFp]);
+  }, [statusFilter]);
 
   const loadData = async () => {
     if (!selectedFp) {
