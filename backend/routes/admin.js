@@ -1142,11 +1142,13 @@ router.get('/vendors/assignments', async (req, res) => {
     
     const [assignments] = await pool.execute(query);
     
+    // IMPORTANT: propertyId must be the NUMERIC ID for filtering to work
     res.json({
       success: true,
       data: assignments.map(a => ({
         id: a.id,
         propertyId: a.property_id,
+        property_id: a.property_id,
         propertyName: a.property_name || 'Unknown Property',
         propertyType: a.property_type,
         address: a.address,
@@ -1154,10 +1156,14 @@ router.get('/vendors/assignments', async (req, res) => {
         vendorId: a.vendor_id,
         vendorCode: a.vendor_code,
         vendorName: a.vendor_name,
+        vendor_name: a.vendor_name,
         serviceType: a.service_type,
+        service_type: a.service_type,
         vendorPhone: a.vendor_phone,
+        vendor_phone: a.vendor_phone,
         vendorEmail: a.vendor_email,
         zoneName: a.zone_name,
+        zone_name: a.zone_name,
         area: a.area,
         ratePerVisit: a.rate_per_visit,
         assignedAt: a.assigned_at,

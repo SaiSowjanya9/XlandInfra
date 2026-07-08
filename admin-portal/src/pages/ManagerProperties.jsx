@@ -357,11 +357,22 @@ const ManagerProperties = ({ user }) => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
-      if (result.success) {
-        const allAssignments = result.data?.serviceAssignments || result.data || [];
-        const propertyAssignments = allAssignments.filter(a => 
-          String(a.propertyId || a.property_id) === String(propertyId)
-        );
+      
+      if (result.success && result.data) {
+        // Extract assignments from either serviceAssignments or propertyAssignments
+        const allAssignments = Array.isArray(result.data?.serviceAssignments) 
+          ? result.data.serviceAssignments 
+          : (Array.isArray(result.data?.propertyAssignments) 
+            ? result.data.propertyAssignments 
+            : (Array.isArray(result.data) ? result.data : []));
+        
+        // Filter to only this property's assignments
+        const propertyAssignments = allAssignments.filter(a => {
+          const assignmentPropId = String(a.propertyId || a.property_id || '');
+          const targetPropId = String(propertyId);
+          return assignmentPropId === targetPropId;
+        });
+        
         setPropertyVendorAssignments(propertyAssignments);
       } else {
         setPropertyVendorAssignments([]);
@@ -378,19 +389,23 @@ const ManagerProperties = ({ user }) => {
   const fetchAssignedEmployeesForZone = async (zoneName) => {
     setLoadingAssignedEmployees(true);
     try {
-      const response = await fetch('/api/manager/employees/zones', {
+      const response = await fetch('/api/manager/employees', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
       if (result.success) {
         const employeesWithZone = (result.data || []).filter(emp => {
-          const empZones = emp.zones || emp.zone_names || [];
+          const empZones = emp.assigned_zones || emp.assignedZones || emp.zones || emp.zone_names || [];
+          if (!zoneName || !Array.isArray(empZones) || empZones.length === 0) return false;
           return empZones.some(z => 
-            z.toLowerCase() === zoneName?.toLowerCase() || 
-            z.toLowerCase() === 'all'
+            z?.toLowerCase() === zoneName?.toLowerCase() || 
+            z?.toLowerCase() === '__all__' ||
+            z?.toLowerCase() === 'all'
           );
         });
         setAssignedEmployees(employeesWithZone);
+      } else {
+        setAssignedEmployees([]);
       }
     } catch (error) {
       console.error('Fetch assigned employees error:', error);

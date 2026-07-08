@@ -938,11 +938,19 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
     } catch (e) { /* Column exists */ }
 
     // Create new assignment with service type
-    await pool.execute(
+    const [insertResult] = await pool.execute(
       `INSERT INTO property_vendor_assignments (property_id, vendor_id, service_type, assigned_by, assigned_at, is_active)
        VALUES (?, ?, ?, ?, NOW(), TRUE)`,
       [id, numericVendorId, assignedServiceType, req.user.id]
     );
+    
+    console.log('[Assign Vendor] INSERT result:', {
+      insertId: insertResult.insertId,
+      affectedRows: insertResult.affectedRows,
+      propertyId: id,
+      vendorId: numericVendorId,
+      serviceType: assignedServiceType
+    });
 
     // Send email notification to vendor
     if (vendor[0].owner_email) {
@@ -2044,12 +2052,15 @@ router.get('/vendors/assignments', requireFPScope, async (req, res) => {
     );
 
     // Map property assignments to service assignments format (flat list for table display)
+    // IMPORTANT: propertyId must be the NUMERIC ID for filtering to work
     const serviceAssignments = propertyAssignments.map(a => ({
       id: a.id,
       vendorId: a.vendor_code,
       vendorName: a.vendor_name,
+      vendorPhone: a.vendor_phone,
       serviceType: a.service_type,
       propertyId: a.property_id,
+      property_id: a.property_id,
       propertyName: a.property_name,
       propertyType: a.property_type,
       propertyZone: a.property_zone,
