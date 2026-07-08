@@ -603,7 +603,7 @@ const Properties = () => {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const filteredProperties = properties.filter(p => {
-    if (activeTab !== 'all' && normalizePropertyType(p.entryType) !== activeTab) return false;
+    if (activeTab !== 'all' && normalizePropertyType(p.property_type || p.entryType || p.propertyType) !== activeTab) return false;
     if (divisionFilter && p.division !== divisionFilter) return false;
     if (zoneFilter && p.zone !== zoneFilter) return false;
     if (searchTerm) {
@@ -629,8 +629,8 @@ const Properties = () => {
     : properties;
   const statsByType = TABS.filter(t => t.id !== 'all').map(tab => ({
     ...tab,
-    count: zoneFilteredProperties.filter(p => normalizePropertyType(p.entryType) === tab.id).length,
-    units: zoneFilteredProperties.filter(p => normalizePropertyType(p.entryType) === tab.id).reduce((sum, p) => sum + (p.totalUnits || 0), 0)
+    count: zoneFilteredProperties.filter(p => normalizePropertyType(p.property_type || p.entryType || p.propertyType) === tab.id).length,
+    units: zoneFilteredProperties.filter(p => normalizePropertyType(p.property_type || p.entryType || p.propertyType) === tab.id).reduce((sum, p) => sum + (p.totalUnits || p.total_units || 0), 0)
   }));
 
   const formatDate = (iso) => {
@@ -819,7 +819,7 @@ const Properties = () => {
                 <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
                   isActive ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
                 }`}>
-                  {tab.id === 'all' ? properties.length : properties.filter(p => p.entryType === tab.id).length}
+                  {tab.id === 'all' ? properties.length : properties.filter(p => normalizePropertyType(p.property_type || p.entryType || p.propertyType) === tab.id).length}
                 </span>
               </button>
             );
@@ -906,18 +906,19 @@ const Properties = () => {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredProperties.map((property) => {
-                  const style = TYPE_STYLES[normalizePropertyType(property.entryType)] || TYPE_STYLES.GC;
+                  const propType = property.property_type || property.entryType || property.propertyType;
+                  const style = TYPE_STYLES[normalizePropertyType(propType)] || TYPE_STYLES.GC;
                   return (
                     <tr key={property.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
-                        {property.name}
+                        {property.name || property.community_name}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">
-                        {property.propertyId}
+                        {property.property_id || property.propertyId}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${style.badge}`}>
-                          {getTypeLabel(property.entryType)}
+                          {getTypeLabel(propType)}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
@@ -930,7 +931,7 @@ const Properties = () => {
                         {property.division_name || property.division || '-'}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-center">
-                        {property.totalUnits || 0}
+                        {property.total_units || property.totalUnits || 0}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap max-w-[200px] truncate" title={property.address}>
                         {property.address || '-'}
