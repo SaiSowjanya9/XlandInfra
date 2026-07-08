@@ -108,6 +108,10 @@ const FPProperties = ({ user }) => {
   const [assignedEmployees, setAssignedEmployees] = useState([]);
   const [loadingAssignedEmployees, setLoadingAssignedEmployees] = useState(false);
   
+  // Success popup state
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  
   // Derived state for modals based on URL
   const showDetailsModal = !!viewPropertyId;
   const showEditModal = !!editPropertyId;
@@ -421,23 +425,29 @@ const FPProperties = ({ user }) => {
         }
       }
 
-      if (successCount === assignmentsToSave.length) {
-        setMessage({ type: 'success', text: `All ${successCount} vendor assignment(s) saved!` });
-      } else if (successCount > 0) {
-        setMessage({ type: 'success', text: `${successCount} of ${assignmentsToSave.length} saved. Failed: ${failedServices.join(', ')}` });
-      } else {
-        setMessage({ type: 'error', text: `Failed: ${failedServices.join(', ')}` });
-      }
-      
       // Refresh data regardless of partial success
       if (successCount > 0) {
-        if (selectedProperty) {
-          fetchPropertyVendorAssignments(selectedProperty.id);
-        }
+        // Close the assign modal first
         setShowAssignModal(false);
         setSelectedProperty(null);
         setServiceAssignments([]);
         fetchProperties();
+        
+        // Show success popup
+        if (successCount === assignmentsToSave.length) {
+          setSuccessMessage(`${successCount} vendor(s) assigned successfully!`);
+        } else {
+          setSuccessMessage(`${successCount} of ${assignmentsToSave.length} vendor(s) assigned. Some failed.`);
+        }
+        setShowSuccessPopup(true);
+        
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+          setShowSuccessPopup(false);
+          setSuccessMessage('');
+        }, 3000);
+      } else {
+        setMessage({ type: 'error', text: `Failed: ${failedServices.join(', ')}` });
       }
     } catch (error) {
       console.error('Save assignments error:', error);
@@ -2130,9 +2140,9 @@ const FPProperties = ({ user }) => {
       {/* Assigned Employees Modal - View Only */}
       {showAssignedEmployeesModal && assignedEmployeesProperty && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowAssignedEmployeesModal(false); setAssignedEmployeesProperty(null); }}>
-          <div className="bg-white rounded-xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-500 to-green-400">
+          <div className="bg-white rounded-xl w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            {/* Header - Soft teal/emerald gradient */}
+            <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-teal-600 to-emerald-500">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -2140,7 +2150,7 @@ const FPProperties = ({ user }) => {
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-white">Assigned Employees</h2>
-                    <p className="text-sm text-green-100">Zone: {assignedEmployeesProperty.zone_name || assignedEmployeesProperty.zone || 'N/A'}</p>
+                    <p className="text-sm text-teal-100">Zone: {assignedEmployeesProperty.zone_name || assignedEmployeesProperty.zone || 'N/A'}</p>
                   </div>
                 </div>
                 <button 
@@ -2153,19 +2163,19 @@ const FPProperties = ({ user }) => {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
               {/* Property Info */}
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">Property: <span className="font-medium text-gray-900">{assignedEmployeesProperty.name}</span></p>
+              <div className="mb-4 p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+                <p className="text-sm text-gray-600">Property: <span className="font-semibold text-gray-900">{assignedEmployeesProperty.name}</span></p>
               </div>
 
               {loadingAssignedEmployees ? (
                 <div className="text-center py-12">
-                  <RefreshCw className="w-8 h-8 text-green-500 animate-spin mx-auto mb-3" />
+                  <RefreshCw className="w-8 h-8 text-teal-500 animate-spin mx-auto mb-3" />
                   <p className="text-gray-500">Loading assigned employees...</p>
                 </div>
               ) : assignedEmployees.length === 0 ? (
-                <div className="text-center py-8">
+                <div className="text-center py-8 bg-white rounded-lg border border-gray-200">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Users className="w-8 h-8 text-gray-400" />
                   </div>
@@ -2178,35 +2188,50 @@ const FPProperties = ({ user }) => {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div>
                   <p className="text-sm text-gray-600 mb-4">
-                    {assignedEmployees.length} employee(s) assigned to this zone
+                    <span className="font-medium text-teal-700">{assignedEmployees.length}</span> employee(s) assigned to this zone
                   </p>
-                  {assignedEmployees.map((emp) => (
-                    <div key={emp.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-white">
-                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-green-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{emp.first_name} {emp.last_name}</p>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <span className="capitalize px-2 py-0.5 bg-gray-100 rounded text-xs">{emp.role}</span>
-                          {emp.email && <span className="text-xs">{emp.email}</span>}
+                  {/* Grid Layout for Employee Cards */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {assignedEmployees.map((emp) => (
+                      <div key={emp.id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-teal-100 to-emerald-100 rounded-full flex items-center justify-center">
+                            <User className="w-5 h-5 text-teal-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-900 truncate">{emp.first_name} {emp.last_name || ''}</p>
+                            <span className={`inline-block capitalize px-2 py-0.5 rounded text-xs font-medium ${
+                              emp.role === 'manager' ? 'bg-purple-100 text-purple-700' :
+                              emp.role === 'coordinator' ? 'bg-blue-100 text-blue-700' :
+                              emp.role === 'supervisor' ? 'bg-amber-100 text-amber-700' :
+                              emp.role === 'executive' ? 'bg-rose-100 text-rose-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>{emp.role}</span>
+                          </div>
                         </div>
+                        {emp.email && (
+                          <div className="flex items-center gap-2 text-xs text-gray-500 truncate">
+                            <Mail className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">{emp.email}</span>
+                          </div>
+                        )}
+                        {emp.phone && (
+                          <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                            <Phone className="w-3 h-3 flex-shrink-0" />
+                            <span>{emp.phone}</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-400">
-                          {(emp.zones || emp.zone_names || []).join(', ')}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <div className="px-6 py-3 bg-white border-t border-gray-200">
               <p className="text-xs text-gray-500 text-center">
                 Employee zone assignments are managed in the Employee Zone Management section
               </p>
@@ -2610,6 +2635,27 @@ const FPProperties = ({ user }) => {
                 className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
               >
                 Delete Permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Popup */}
+      {showSuccessPopup && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-xl p-8 shadow-2xl transform animate-bounce-in max-w-sm mx-4">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <CheckCircle className="w-10 h-10 text-green-500" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Success!</h3>
+              <p className="text-gray-600">{successMessage}</p>
+              <button
+                onClick={() => { setShowSuccessPopup(false); setSuccessMessage(''); }}
+                className="mt-6 px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
+              >
+                OK
               </button>
             </div>
           </div>
