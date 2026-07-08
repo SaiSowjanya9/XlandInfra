@@ -230,7 +230,12 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
 
   useEffect(() => {
     loadData();
-  }, []);
+    // Reset selections when FP changes
+    setSelectedPackage(null);
+    setDirectSelectedPackage(null);
+    setSelectedAddons([]);
+    setDirectSelectedAddons([]);
+  }, [selectedFp?.id]);
 
   const loadData = async () => {
     // Seed test data if none exists
@@ -239,13 +244,43 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     const props = await getProperties();
     setProperties(props);
     setAvailableServices(getServices());
-    // Fetch packages and addons from API
-    const [packages, addons] = await Promise.all([
-      fetchAMCPackages(),
-      fetchAddons()
-    ]);
-    setAvailablePackages(packages);
-    setAvailableAddons(addons);
+    
+    // Fetch packages and addons from FP-specific API for Admin
+    try {
+      let packagesUrl, addonsUrl;
+      if (admin && selectedFp) {
+        if (selectedFp.id === 'all') {
+          packagesUrl = `${API_BASE}/api/admin/all-amc-packages`;
+          addonsUrl = `${API_BASE}/api/admin/all-addons`;
+        } else {
+          packagesUrl = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/amc-packages`;
+          addonsUrl = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/addons`;
+        }
+        
+        const [pkgRes, addonRes] = await Promise.all([
+          fetch(packagesUrl, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(addonsUrl, { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+        
+        const pkgData = await pkgRes.json();
+        const addonData = await addonRes.json();
+        
+        setAvailablePackages(pkgData.success ? pkgData.data || [] : []);
+        setAvailableAddons(addonData.success ? addonData.data || [] : []);
+      } else {
+        // Non-admin: use default fetchAMCPackages
+        const [packages, addons] = await Promise.all([
+          fetchAMCPackages(),
+          fetchAddons()
+        ]);
+        setAvailablePackages(packages);
+        setAvailableAddons(addons);
+      }
+    } catch (error) {
+      console.error('Error loading packages/addons:', error);
+      setAvailablePackages([]);
+      setAvailableAddons([]);
+    }
   };
 
   const filteredProperties = properties.filter(prop => {
