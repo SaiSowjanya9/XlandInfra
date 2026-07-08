@@ -71,6 +71,8 @@ const Dashboard = () => {
           totalVendors: data.stats?.totalVendors ?? data.totalVendors ?? 0,
           totalEmployees: data.stats?.totalEmployees ?? data.totalEmployees ?? 0,
           totalEstimates: data.stats?.totalEstimates ?? data.totalEstimates ?? 0,
+          directEstimates: data.stats?.directEstimates ?? data.directEstimates ?? 0,
+          propertyEstimates: data.stats?.propertyEstimates ?? data.propertyEstimates ?? 0,
           fpInfo: data.fpInfo || null
         });
         setRecentActivities(Array.isArray(data.recentWorkOrders) ? data.recentWorkOrders : []);

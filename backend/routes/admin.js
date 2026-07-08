@@ -2206,20 +2206,30 @@ router.get('/fp-view/:fpId/dashboard', authenticate, adminOnly, async (req, res)
       return res.status(404).json({ success: false, message: 'FP not found' });
     }
     
-    // Dashboard stats - EXACTLY matching FP dashboard queries
-    // Properties count
-    const [[propCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ?`,
+    // Helper for safe count queries
+    const safeCount = async (query, params = []) => {
+      try {
+        const [[result]] = await pool.execute(query, params);
+        return result?.count || 0;
+      } catch (e) {
+        console.log('Query error:', e.message);
+        return 0;
+      }
+    };
+    
+    // Properties count (exclude deleted)
+    const propCount = await safeCount(
+      `SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ? AND (status IS NULL OR status != 'deleted')`,
       [fpIdNum]
     );
     
-    // Vendors count (same as FP dashboard - no is_active filter)
-    const [[vendorCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ?`,
+    // Vendors count (active only)
+    const vendorCount = await safeCount(
+      `SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ? AND status = 'active'`,
       [fpIdNum]
     );
     
-    // Work orders - combined query (same as FP dashboard)
+    // Work orders - combined query
     const [[workOrderStats]] = await pool.execute(`
       SELECT 
         COUNT(*) as total,
@@ -2228,17 +2238,29 @@ router.get('/fp-view/:fpId/dashboard', authenticate, adminOnly, async (req, res)
       FROM work_orders WHERE franchise_partner_id = ?
     `, [fpIdNum]);
     
-    // Estimates count (from estimates table, non-archived only)
-    const [[estimateCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM estimates WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL)`,
+    // Direct Estimates count (from fp_estimates, non-archived, active only)
+    const directEstimates = await safeCount(
+      `SELECT COUNT(*) as count FROM fp_estimates 
+       WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
+       AND status NOT IN ('archived', 'rejected', 'deleted')
+       AND estimate_type = 'direct'`,
       [fpIdNum]
     );
     
-    // Employee count (same as FP dashboard)
-    const [[employeeStats]] = await pool.execute(`
-      SELECT COUNT(*) as total
-      FROM fp_employees WHERE franchise_partner_id = ?
-    `, [fpIdNum]);
+    // Property-based Estimates count (from fp_estimates, non-archived, active only)
+    const propertyEstimates = await safeCount(
+      `SELECT COUNT(*) as count FROM fp_estimates 
+       WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
+       AND status NOT IN ('archived', 'rejected', 'deleted')
+       AND (estimate_type = 'property_based' OR estimate_type = 'property-based')`,
+      [fpIdNum]
+    );
+    
+    // Employee count (active only)
+    const employeeCount = await safeCount(
+      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND is_active = 1`,
+      [fpIdNum]
+    );
     
     // Recent work orders
     const [recentWorkOrders] = await pool.execute(
@@ -2251,19 +2273,19 @@ router.get('/fp-view/:fpId/dashboard', authenticate, adminOnly, async (req, res)
       [fpIdNum]
     );
     
+    console.log('Admin FP Dashboard:', { fpIdNum, propCount, vendorCount, employeeCount, directEstimates, propertyEstimates });
+    
     res.json({
       success: true,
       data: {
         fpInfo,
-        stats: {
-          totalProperties: propCount?.count || 0,
-          totalWorkOrders: Number(workOrderStats?.total) || 0,
-          pendingWorkOrders: Number(workOrderStats?.pending) || 0,
-          completedWorkOrders: Number(workOrderStats?.completed) || 0,
-          totalVendors: vendorCount?.count || 0,
-          totalEmployees: Number(employeeStats?.total) || 0,
-          totalEstimates: estimateCount?.count || 0
-        },
+        totalProperties: propCount,
+        totalVendors: vendorCount,
+        totalEmployees: employeeCount,
+        pendingWorkOrders: Number(workOrderStats?.pending) || 0,
+        completedWorkOrders: Number(workOrderStats?.completed) || 0,
+        directEstimates: directEstimates,
+        propertyEstimates: propertyEstimates,
         recentWorkOrders
       }
     });
