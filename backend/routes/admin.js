@@ -1496,13 +1496,13 @@ router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
       // Direct Estimates (non-archived, active only)
       safeCount(`SELECT COUNT(*) as count FROM fp_estimates 
         WHERE (is_archived = 0 OR is_archived IS NULL) 
-        AND status NOT IN ('archived', 'rejected')
-        AND (estimate_type = 'direct' OR property_id IS NULL)`),
+        AND status NOT IN ('archived', 'rejected', 'deleted')
+        AND estimate_type = 'direct'`),
       // Property-based Estimates (non-archived, active only)
       safeCount(`SELECT COUNT(*) as count FROM fp_estimates 
         WHERE (is_archived = 0 OR is_archived IS NULL) 
-        AND status NOT IN ('archived', 'rejected')
-        AND (estimate_type = 'property_based' OR (estimate_type IS NULL AND property_id IS NOT NULL))`),
+        AND status NOT IN ('archived', 'rejected', 'deleted')
+        AND (estimate_type = 'property_based' OR estimate_type = 'property-based')`),
       // Recent work orders
       pool.execute(
         `SELECT wo.id, wo.work_order_id, wo.title, wo.status, wo.priority, wo.created_at,

@@ -246,8 +246,8 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
       pool.execute(
         `SELECT COUNT(*) as count FROM fp_estimates 
          WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR manager_id = ?)
-         AND (is_archived = 0 OR is_archived IS NULL) AND status NOT IN ('archived', 'rejected')
-         AND (estimate_type = 'direct' OR property_id IS NULL)`,
+         AND (is_archived = 0 OR is_archived IS NULL) AND status NOT IN ('archived', 'rejected', 'deleted')
+         AND estimate_type = 'direct'`,
         [franchisePartnerId, creatorEmail, req.user?.username || '', managerId]
       ).then(([r]) => r[0].count).catch(() => 0),
       
@@ -255,8 +255,8 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
       pool.execute(
         `SELECT COUNT(*) as count FROM fp_estimates 
          WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR manager_id = ?)
-         AND (is_archived = 0 OR is_archived IS NULL) AND status NOT IN ('archived', 'rejected')
-         AND (estimate_type = 'property_based' OR (estimate_type IS NULL AND property_id IS NOT NULL))`,
+         AND (is_archived = 0 OR is_archived IS NULL) AND status NOT IN ('archived', 'rejected', 'deleted')
+         AND (estimate_type = 'property_based' OR estimate_type = 'property-based')`,
         [franchisePartnerId, creatorEmail, req.user?.username || '', managerId]
       ).then(([r]) => r[0].count).catch(() => 0),
       

@@ -325,8 +325,8 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
     const [directEstimatesCount] = await pool.query(
       `SELECT COUNT(*) as count FROM fp_estimates 
        WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
-       AND status NOT IN ('archived', 'rejected')
-       AND (estimate_type = 'direct' OR property_id IS NULL)`,
+       AND status NOT IN ('archived', 'rejected', 'deleted')
+       AND estimate_type = 'direct'`,
       [franchisePartnerId]
     );
 
@@ -334,8 +334,8 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
     const [propertyEstimatesCount] = await pool.query(
       `SELECT COUNT(*) as count FROM fp_estimates 
        WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
-       AND status NOT IN ('archived', 'rejected')
-       AND (estimate_type = 'property_based' OR (estimate_type IS NULL AND property_id IS NOT NULL))`,
+       AND status NOT IN ('archived', 'rejected', 'deleted')
+       AND (estimate_type = 'property_based' OR estimate_type = 'property-based')`,
       [franchisePartnerId]
     );
 
