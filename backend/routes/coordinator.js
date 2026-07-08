@@ -183,14 +183,13 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
     let zoneParams = [];
     if (assignedZones.length > 0) {
       const zonePlaceholders = assignedZones.map(() => '?').join(',');
-      zoneCondition = ` OR p.zone_id IN (${zonePlaceholders}) OR COALESCE(z.name, p.zone_id) IN (${zonePlaceholders})`;
-      zoneParams = [...assignedZones, ...assignedZones];
+      zoneCondition = ` OR p.zone_id IN (${zonePlaceholders})`;
+      zoneParams = [...assignedZones];
     }
 
     // Count properties (zone-centric + own created)
     const [propertiesCount] = await pool.query(
       `SELECT COUNT(DISTINCT p.id) as count FROM properties p
-       LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
        WHERE (p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted') AND (p.created_by = ? OR p.created_by = ? OR p.coordinator_id = ?${zoneCondition}))`,
       [franchisePartnerId, creatorEmail, req.user?.username || '', coordinatorId, ...zoneParams]
     );
