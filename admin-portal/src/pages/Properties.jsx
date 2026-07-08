@@ -1849,8 +1849,8 @@ const Properties = () => {
       {/* Assigned Employees Modal - View Only */}
       {showAssignedEmployeesModal && assignedEmployeesProperty && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowAssignedEmployeesModal(false); setAssignedEmployeesProperty(null); }}>
-          <div className="bg-white rounded-xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-500 to-green-400">
+          <div className="bg-white rounded-xl w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-teal-600 to-emerald-500">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -1858,7 +1858,7 @@ const Properties = () => {
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-white">Assigned Employees</h2>
-                    <p className="text-sm text-green-100">Zone: {assignedEmployeesProperty.zone || assignedEmployeesProperty.zone_name || 'N/A'}</p>
+                    <p className="text-sm text-teal-100">Zone: {assignedEmployeesProperty.zone || assignedEmployeesProperty.zone_name || 'N/A'}</p>
                   </div>
                 </div>
                 <button onClick={() => { setShowAssignedEmployeesModal(false); setAssignedEmployeesProperty(null); }} className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg">
@@ -1866,17 +1866,17 @@ const Properties = () => {
                 </button>
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">Property: <span className="font-medium text-gray-900">{assignedEmployeesProperty.community_name || assignedEmployeesProperty.name}</span></p>
+            <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+              <div className="mb-4 p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+                <p className="text-sm text-gray-600">Property: <span className="font-semibold text-gray-900">{assignedEmployeesProperty.community_name || assignedEmployeesProperty.name}</span></p>
               </div>
               {loadingAssignedEmployees ? (
                 <div className="text-center py-12">
-                  <RefreshCw className="w-8 h-8 text-green-500 animate-spin mx-auto mb-3" />
+                  <RefreshCw className="w-8 h-8 text-teal-500 animate-spin mx-auto mb-3" />
                   <p className="text-gray-500">Loading assigned employees...</p>
                 </div>
               ) : assignedEmployees.length === 0 ? (
-                <div className="text-center py-8">
+                <div className="text-center py-8 bg-white rounded-lg border border-gray-200">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Users className="w-8 h-8 text-gray-400" />
                   </div>
@@ -1885,29 +1885,45 @@ const Properties = () => {
                   <p className="text-gray-500 text-xs mt-2">Zone assignments are managed in Employee Zone Management.</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-gray-600 mb-4">{assignedEmployees.length} employee(s) assigned to this zone</p>
-                  {assignedEmployees.map((emp) => (
-                    <div key={emp.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-white">
-                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                        <UserCheck className="w-5 h-5 text-green-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{emp.first_name} {emp.last_name}</p>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <span className="capitalize px-2 py-0.5 bg-gray-100 rounded text-xs">{emp.role}</span>
-                          {emp.email && <span className="text-xs">{emp.email}</span>}
+                <div>
+                  <p className="text-sm text-gray-600 mb-4"><span className="font-medium text-teal-700">{assignedEmployees.length}</span> employee(s) assigned to this zone</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {assignedEmployees.map((emp) => (
+                      <div key={emp.id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-teal-100 to-emerald-100 rounded-full flex items-center justify-center">
+                            <UserCheck className="w-5 h-5 text-teal-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-900 truncate">{emp.first_name} {emp.last_name || ''}</p>
+                            <span className={`inline-block capitalize px-2 py-0.5 rounded text-xs font-medium ${
+                              emp.role === 'manager' ? 'bg-purple-100 text-purple-700' :
+                              emp.role === 'coordinator' ? 'bg-blue-100 text-blue-700' :
+                              emp.role === 'supervisor' ? 'bg-amber-100 text-amber-700' :
+                              emp.role === 'executive' ? 'bg-rose-100 text-rose-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>{emp.role}</span>
+                          </div>
                         </div>
+                        {emp.email && (
+                          <div className="flex items-center gap-2 text-xs text-gray-500 truncate">
+                            <Mail className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">{emp.email}</span>
+                          </div>
+                        )}
+                        {emp.phone && (
+                          <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                            <Phone className="w-3 h-3 flex-shrink-0" />
+                            <span>{emp.phone}</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-400">{(emp.zones || emp.zone_names || []).join(', ')}</p>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <div className="px-6 py-3 bg-white border-t border-gray-200">
               <p className="text-xs text-gray-500 text-center">Employee zone assignments are managed in the Employee Zone Management section</p>
             </div>
           </div>
