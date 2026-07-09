@@ -2912,6 +2912,45 @@ router.get('/fp-view/:fpId/addons', authenticate, adminOnly, async (req, res) =>
   }
 });
 
+// Update FP Add-on (Admin can edit any FP's addon)
+router.put('/fp-addons/:id', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { service_name, frequency_type, frequency_count, property_type, price, description } = req.body;
+
+    await pool.execute(
+      `UPDATE fp_addons SET 
+        service_name = COALESCE(?, service_name), 
+        frequency_type = COALESCE(?, frequency_type), 
+        frequency_count = COALESCE(?, frequency_count), 
+        property_type = COALESCE(?, property_type), 
+        price = COALESCE(?, price), 
+        description = COALESCE(?, description)
+       WHERE id = ?`,
+      [service_name, frequency_type, frequency_count || 1, property_type, price || 0, description || '', id]
+    );
+
+    console.log('Admin updated fp_addon:', id);
+    res.json({ success: true, message: 'Add-on updated successfully' });
+  } catch (error) {
+    console.error('Update FP addon error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete FP Add-on (Admin can delete any FP's addon)
+router.delete('/fp-addons/:id', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM fp_addons WHERE id = ?', [id]);
+    console.log('Admin deleted fp_addon:', id);
+    res.json({ success: true, message: 'Add-on deleted successfully' });
+  } catch (error) {
+    console.error('Delete FP addon error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Get FP Portal Links (for Admin to view FP's shared resources)
 router.get('/fp-view/:fpId/portal-links', authenticate, adminOnly, async (req, res) => {
   try {
