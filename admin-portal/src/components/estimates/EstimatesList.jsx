@@ -57,9 +57,14 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
       est.estimateId?.toLowerCase().includes(search) ||
       est.customerName?.toLowerCase().includes(search) ||
       est.propertyName?.toLowerCase().includes(search);
-    const matchType = filters.estimateType === 'all' || est.estimateType === filters.estimateType;
+    
+    // Normalize estimate type for comparison (handle property_based vs property-based)
+    const estType = (est.estimateType || '').toLowerCase().replace(/_/g, '-');
+    const filterType = (filters.estimateType || '').toLowerCase().replace(/_/g, '-');
+    const matchType = filters.estimateType === 'all' || estType === filterType;
+    
     const matchStatus = filters.status === 'all' || est.status === filters.status;
-    const isPropertyBased = est.estimateType === 'property_based' || est.estimateType === 'property-based';
+    const isPropertyBased = estType === 'property-based' || est.propertyId;
     const matchProperty = filters.propertyType === 'all' || (isPropertyBased && est.propertyType && normalizePropertyType(est.propertyType) === filters.propertyType);
     
     // Date filtering
