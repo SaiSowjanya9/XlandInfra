@@ -3072,34 +3072,48 @@ router.post('/cleanup-duplicate-work-orders', authenticate, adminOnly, async (re
 // SERVICE TYPES (for Vendor Management)
 // ============================================
 
-// Get all service types (global + FP-specific for employees)
+// Get all service types (global + FP-specific for employees, ALL for Super Admin)
 router.get('/service-types', authenticate, async (req, res) => {
   try {
-    // Get user's franchise_partner_id if they're an employee
+    // Get user's franchise_partner_id and role
     const userId = req.user?.id || req.user?.userId;
+    const userRole = req.user?.role;
     let fpId = null;
+    let isSuperAdmin = userRole === 'super_admin' || userRole === 'admin';
     
-    if (userId) {
+    if (userId && !isSuperAdmin) {
       const [userRows] = await pool.execute(
-        'SELECT franchise_partner_id FROM users WHERE id = ?',
+        'SELECT franchise_partner_id, role FROM users WHERE id = ?',
         [userId]
       );
-      if (userRows.length > 0 && userRows[0].franchise_partner_id) {
+      if (userRows.length > 0) {
         fpId = userRows[0].franchise_partner_id;
+        if (userRows[0].role === 'super_admin' || userRows[0].role === 'admin') {
+          isSuperAdmin = true;
+        }
       }
     }
 
-    // Fetch global service types + FP-specific if employee belongs to an FP
-    let query = `SELECT id, name, is_global, franchise_partner_id, created_by_user_id, created_at 
-       FROM service_types 
-       WHERE is_active = 1 AND (is_global = 1 OR franchise_partner_id IS NULL`;
+    let query, params = [];
     
-    const params = [];
-    if (fpId) {
-      query += ` OR franchise_partner_id = ?`;
-      params.push(fpId);
+    if (isSuperAdmin) {
+      // Super Admin sees ALL service types (global + all FP-specific)
+      query = `SELECT id, name, is_global, franchise_partner_id, created_by_user_id, created_at 
+         FROM service_types 
+         WHERE is_active = 1
+         ORDER BY name ASC`;
+    } else {
+      // Employees see global + their FP-specific service types
+      query = `SELECT id, name, is_global, franchise_partner_id, created_by_user_id, created_at 
+         FROM service_types 
+         WHERE is_active = 1 AND (is_global = 1 OR franchise_partner_id IS NULL`;
+      
+      if (fpId) {
+        query += ` OR franchise_partner_id = ?`;
+        params.push(fpId);
+      }
+      query += `) ORDER BY name ASC`;
     }
-    query += `) ORDER BY name ASC`;
 
     const [rows] = await pool.execute(query, params);
     res.json({ success: true, data: rows, currentUserId: userId });
