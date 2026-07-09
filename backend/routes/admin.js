@@ -991,6 +991,83 @@ router.get('/work-orders', async (req, res) => {
   }
 });
 
+// Create work order (Admin)
+router.post('/work-orders', authenticate, managerOrAdmin, async (req, res) => {
+  try {
+    const {
+      propertyId, categoryId, subcategoryId, customSubcategory, description, priority,
+      permissionToEnter, hasPet, entryNotes, scheduledDate,
+      propertyName, categoryName, subcategoryName, customerName, customerEmail, customerPhone,
+      franchisePartnerId
+    } = req.body;
+
+    if (!propertyId || !categoryId) {
+      return res.status(400).json({ success: false, message: 'Property and category are required' });
+    }
+
+    // Generate work order ID
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    const workOrderId = `WO-${timestamp}${random}`;
+
+    // Get franchise partner ID from property if not provided
+    let fpId = franchisePartnerId;
+    if (!fpId) {
+      const [propRows] = await pool.execute(
+        `SELECT franchise_partner_id FROM onboarded_properties WHERE id = ? OR property_id = ?
+         UNION
+         SELECT franchise_partner_id FROM properties WHERE id = ? OR property_id = ?`,
+        [propertyId, propertyId, propertyId, propertyId]
+      );
+      if (propRows.length > 0) {
+        fpId = propRows[0].franchise_partner_id;
+      }
+    }
+
+    // Get category and subcategory names from config
+    const categoriesConfig = require('../config/categories');
+    let catName = categoryName;
+    let subCatName = subcategoryName || customSubcategory;
+    
+    if (!catName && categoryId) {
+      const category = categoriesConfig.find(c => c.id === parseInt(categoryId));
+      if (category) {
+        catName = category.name;
+        if (subcategoryId && category.subcategories) {
+          const subcategory = category.subcategories.find(s => s.id === parseInt(subcategoryId));
+          if (subcategory) subCatName = subcategory.name;
+        }
+      }
+    }
+
+    const [result] = await pool.execute(
+      `INSERT INTO work_orders (
+        work_order_id, property_id, category_id, subcategory_id, custom_subcategory,
+        description, priority, status, permission_to_enter, has_pet, entry_notes,
+        scheduled_date, property_name, category_name, subcategory_name,
+        customer_name, customer_email, customer_phone, franchise_partner_id,
+        created_by, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [
+        workOrderId, propertyId, categoryId || null, subcategoryId || null, customSubcategory || null,
+        description || '', priority || 'medium', permissionToEnter || false, hasPet || false, entryNotes || '',
+        scheduledDate || null, propertyName || '', catName || '', subCatName || '',
+        customerName || '', customerEmail || '', customerPhone || '', fpId || null,
+        req.user?.email || 'admin'
+      ]
+    );
+
+    res.json({
+      success: true,
+      message: 'Work order created successfully',
+      data: { id: result.insertId, workOrderId }
+    });
+  } catch (error) {
+    console.error('Error creating work order:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Update work order (Admin, Manager only)
 router.put('/work-orders/:id', authenticate, managerOrAdmin, async (req, res) => {
   try {
