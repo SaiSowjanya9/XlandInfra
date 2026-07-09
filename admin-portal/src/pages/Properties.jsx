@@ -1063,7 +1063,11 @@ const Properties = () => {
                     <p className="text-xs text-gray-500 mb-1">Total Units</p>
                     <p className="text-sm font-medium text-gray-900">
                       {(() => {
-                        // Parse units_per_block if string
+                        // First check direct total_units fields
+                        const directTotal = viewProperty.total_units || viewProperty.totalUnits || viewProperty.number_of_units || viewProperty.numberOfUnits;
+                        if (directTotal && parseInt(directTotal) > 0) return parseInt(directTotal);
+                        
+                        // Fallback to calculating from units_per_block (for GC)
                         let unitsPerBlock = viewProperty.units_per_block || viewProperty.unitsPerBlock;
                         if (typeof unitsPerBlock === 'string') {
                           try { unitsPerBlock = JSON.parse(unitsPerBlock); } catch { unitsPerBlock = null; }
@@ -1072,7 +1076,7 @@ const Properties = () => {
                           const total = Object.values(unitsPerBlock).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
                           if (total > 0) return total;
                         }
-                        return viewProperty.total_units || viewProperty.totalUnits || viewProperty.units || viewProperty.number_of_units || '-';
+                        return '-';
                       })()}
                     </p>
                   </div>
