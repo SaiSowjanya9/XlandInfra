@@ -173,10 +173,11 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   const handleDeleteAddon = async (addon) => {
     if (window.confirm('Are you sure you want to delete this add-on?')) {
       try {
-        // Use admin endpoint for fp_addons (uses numeric id), else use addonId
-        const deleteId = addon.id || addon.addonId;
-        const url = addon.id 
-          ? `${API_BASE}/api/admin/addons/${addon.id}`
+        // Use admin fp-addons endpoint for FP add-ons (have numeric id)
+        // Use generic addons endpoint for global add-ons (have string addonId)
+        const isFpAddon = typeof addon.id === 'number';
+        const url = isFpAddon 
+          ? `${API_BASE}/api/admin/fp-addons/${addon.id}`
           : `${API_BASE}/api/addons/${addon.addonId}`;
         
         const response = await fetch(url, {
@@ -242,15 +243,44 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
     };
 
     try {
-      await updateAddon(editingAddon.addonId, updates);
+      // Use admin fp-addons endpoint for FP add-ons (have numeric id)
+      // Use generic addons endpoint for global add-ons (have string addonId)
+      const addonId = editingAddon.id || editingAddon.addonId;
+      const isFpAddon = typeof editingAddon.id === 'number';
+      
+      if (isFpAddon) {
+        // Update FP-specific addon via admin route
+        const response = await fetch(`${API_BASE}/api/admin/fp-addons/${addonId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            service_name: editForm.serviceName.trim(),
+            frequency_type: editForm.frequencyType,
+            frequency_count: parseInt(editForm.frequencyCount) || 1,
+            property_type: editForm.propertyType,
+            price: parseFloat(editForm.price),
+            description: editForm.description?.trim() || ''
+          })
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.message);
+      } else {
+        // Update global addon
+        await updateAddon(addonId, updates);
+      }
+      
       setAddons(prevAddons => prevAddons.map(addon => 
-        addon.addonId === editingAddon.addonId 
+        (addon.id === editingAddon.id || addon.addonId === editingAddon.addonId)
           ? { ...addon, ...updates }
           : addon
       ));
       setShowEditModal(false);
       setEditingAddon(null);
       showToast('Add-on updated successfully');
+      loadData(); // Refresh to get updated data
     } catch (error) {
       showToast('Failed to update add-on', 'error');
     }
