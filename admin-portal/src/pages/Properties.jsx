@@ -1274,8 +1274,32 @@ const Properties = () => {
 
               {/* Contact Information */}
               {(() => {
-                const contacts = viewProperty.contacts || [];
+                // Parse association_contacts if available (like FP portal)
+                let contacts = [];
+                try {
+                  if (viewProperty.association_contacts) {
+                    contacts = typeof viewProperty.association_contacts === 'string' 
+                      ? JSON.parse(viewProperty.association_contacts) 
+                      : viewProperty.association_contacts;
+                  }
+                } catch { contacts = []; }
+                
+                // Fallback to single contact if no association_contacts
+                if (contacts.length === 0 && (viewProperty.contact_person || viewProperty.contact_email || viewProperty.contact_phone)) {
+                  contacts = [{
+                    name: viewProperty.contact_person,
+                    email: viewProperty.contact_email,
+                    phone: viewProperty.contact_phone
+                  }];
+                }
+                
+                // Also check contacts array directly
+                if (contacts.length === 0 && viewProperty.contacts && viewProperty.contacts.length > 0) {
+                  contacts = viewProperty.contacts;
+                }
+                
                 if (contacts.length === 0) return null;
+                
                 return (
                   <div>
                     <h3 className="text-base font-semibold text-gray-900 mb-4">Contact Information</h3>
@@ -1288,7 +1312,7 @@ const Properties = () => {
                             </div>
                             <span className="text-xs text-gray-500">Contact {index + 1}</span>
                           </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-[1fr_2.5fr_1fr] gap-4">
                             <div className="min-w-0">
                               <p className="text-xs text-gray-500 mb-1">Name</p>
                               <p className="text-sm font-medium text-gray-900">{contact.name || '-'}</p>
@@ -1347,6 +1371,16 @@ const Properties = () => {
                 </div>
               )}
 
+              {/* Additional Notes */}
+              {viewProperty.notes && (
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Additional Notes</h3>
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewProperty.notes}</p>
+                  </div>
+                </div>
+              )}
+
               {/* Estimates Section */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
@@ -1362,24 +1396,32 @@ const Properties = () => {
                 ) : (
                   <div className="space-y-3">
                     {propertyEstimates.map((estimate) => (
-                      <div
-                        key={estimate.estimateId}
-                        onClick={() => setSelectedEstimate(estimate)}
-                        className="p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-sm cursor-pointer transition-all"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                              <Package className="w-5 h-5 text-blue-600" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{estimate.packageName || 'Custom Estimate'}</p>
-                              <p className="text-xs font-mono text-gray-500 mt-0.5">{estimate.estimateId}</p>
-                            </div>
+                      <div key={estimate.estimateId || estimate.estimate_id || estimate.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-mono text-sm text-gray-700">{estimate.estimateId || estimate.estimate_id}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            estimate.status === 'approved' ? 'bg-green-100 text-green-700' :
+                            estimate.status === 'sent' ? 'bg-blue-100 text-blue-700' :
+                            estimate.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>{estimate.status || 'draft'}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <span className="text-gray-500">Package:</span>
+                            <span className="ml-1 font-medium">{estimate.packageName || estimate.package_name || '-'}</span>
                           </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-gray-900">₹{(estimate.totalPrice || 0).toLocaleString('en-IN')}</p>
-                            <p className="text-xs text-gray-500">{formatDate(estimate.createdAt)}</p>
+                          <div>
+                            <span className="text-gray-500">Total:</span>
+                            <span className="ml-1 font-semibold text-green-600">₹{Number(estimate.totalPrice || estimate.total_amount || 0).toLocaleString()}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Created:</span>
+                            <span className="ml-1">{formatDate(estimate.createdAt || estimate.created_at)}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">By:</span>
+                            <span className="ml-1">{estimate.createdByName || estimate.created_by_name || estimate.createdBy || '-'}</span>
                           </div>
                         </div>
                       </div>
