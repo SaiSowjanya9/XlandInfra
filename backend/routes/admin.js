@@ -297,21 +297,6 @@ router.delete('/residents/:id', authenticate, adminOnly, async (req, res) => {
 });
 
 // ============================================
-// CATEGORIES
-// ============================================
-
-// Get all categories (for admin work orders)
-router.get('/categories', authenticate, async (req, res) => {
-  try {
-    const categoriesConfig = require('../config/categories');
-    return res.json({ success: true, data: categoriesConfig });
-  } catch (error) {
-    console.error('Get categories error:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch categories' });
-  }
-});
-
-// ============================================
 // PROPERTIES MANAGEMENT
 // ============================================
 
