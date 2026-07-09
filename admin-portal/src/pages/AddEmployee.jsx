@@ -232,9 +232,9 @@ const AddEmployee = ({ admin }) => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Modal-style Card */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="min-h-[80vh] flex items-center justify-center p-4">
+      {/* Modal-style Card - Centered like FP Portal */}
+      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg border border-gray-100">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h1 className="text-xl font-semibold text-gray-900">Add Employee</h1>

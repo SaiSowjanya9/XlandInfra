@@ -63,9 +63,15 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
     const filterType = (filters.estimateType || '').toLowerCase().replace(/_/g, '-');
     const matchType = filters.estimateType === 'all' || estType === filterType;
     
-    const matchStatus = filters.status === 'all' || est.status === filters.status;
+    // Normalize status for case-insensitive comparison
+    const estStatus = (est.status || '').toLowerCase();
+    const filterStatus = (filters.status || '').toLowerCase();
+    const matchStatus = filters.status === 'all' || estStatus === filterStatus;
+    
     const isPropertyBased = estType === 'property-based' || est.propertyId;
-    const matchProperty = filters.propertyType === 'all' || (isPropertyBased && est.propertyType && normalizePropertyType(est.propertyType) === filters.propertyType);
+    // Property category filter should work for all estimates that have a property type
+    const matchProperty = filters.propertyType === 'all' || 
+      (est.propertyType && normalizePropertyType(est.propertyType) === filters.propertyType);
     
     // Date filtering
     const estDate = new Date(est.createdAt);

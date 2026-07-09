@@ -614,28 +614,31 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 
                 return (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[700px]">
-                      {/* Table Header */}
+                    <table className="w-full min-w-[900px]">
+                      {/* Table Header - Matching FP Portal: SERVICE, DESCRIPTION, FREQUENCY, VISITS, PROPERTY TYPE, PRICE, ACTIONS */}
                       <thead className="bg-slate-50 border-b border-gray-200">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-[25%]">
-                            Add-on Name
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider" style={{ width: '14%' }}>
+                            Service
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-[18%]">
-                            Property Type
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider" style={{ width: '28%' }}>
+                            Description
                           </th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-[18%]">
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider" style={{ width: '14%' }}>
                             Frequency
                           </th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-[10%]">
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider" style={{ width: '8%' }}>
                             Visits
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider w-[15%]">
-                            Total Rate
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider" style={{ width: '16%' }}>
+                            Property Type
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider" style={{ width: '10%' }}>
+                            Price
                           </th>
                           {/* Actions column - Hidden for Operations Manager */}
                           {!isOpsManager && (
-                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-[14%]">
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider" style={{ width: '10%' }}>
                               Actions
                             </th>
                           )}
@@ -645,27 +648,34 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                       <tbody className="divide-y divide-gray-100">
                         {filteredAddons.map((addon) => (
                           <tr key={addon.addonId} className="hover:bg-gray-50 transition-colors">
+                            {/* Service Name */}
                             <td className="px-4 py-4">
                               <span className="font-medium text-gray-900">
-                                {addon.services?.[0]?.name || addon.addonId}
+                                {addon.services?.[0]?.name || addon.service_name || addon.addonId}
                               </span>
                             </td>
+                            {/* Description */}
+                            <td className="px-4 py-4 text-sm text-gray-600">
+                              {addon.description || addon.services?.[0]?.description || '-'}
+                            </td>
+                            {/* Frequency */}
+                            <td className="px-4 py-4 text-sm text-gray-700">
+                              {addon.services?.[0]?.frequencyType || addon.frequency_type || 'Monthly'}
+                            </td>
+                            {/* Visits - No "x" suffix */}
+                            <td className="px-4 py-4 text-center text-sm text-gray-600">
+                              {addon.services?.[0]?.frequency || addon.frequency_count || 1}
+                            </td>
+                            {/* Property Type */}
                             <td className="px-4 py-4">
                               <span className="inline-block px-3 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-md border border-slate-200 whitespace-nowrap">
                                 {PROPERTY_TYPE_OPTIONS.find(t => t.id === normalizePropertyType(addon.propertyType || addon.property_type))?.label || addon.propertyType || addon.property_type || '-'}
                               </span>
                             </td>
-                            <td className="px-4 py-4 text-center">
-                              <span className="inline-block px-3 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-md border border-blue-200 whitespace-nowrap">
-                                {abbreviateFrequency(addon.services?.[0]?.frequencyType)}
-                              </span>
-                            </td>
-                            <td className="px-4 py-4 text-center text-sm text-gray-600">
-                              {addon.services?.[0]?.frequency || 1}x
-                            </td>
+                            {/* Price */}
                             <td className="px-4 py-4 text-right">
-                              <span className="text-lg font-bold text-slate-800">
-                                ₹{(addon.totalPrice || addon.services?.[0]?.price || 0).toLocaleString()}
+                              <span className="font-semibold text-gray-900">
+                                ₹{(addon.totalPrice || addon.services?.[0]?.price || addon.price || 0).toLocaleString()}
                               </span>
                             </td>
                             {/* Actions column - Hidden for Operations Manager */}
