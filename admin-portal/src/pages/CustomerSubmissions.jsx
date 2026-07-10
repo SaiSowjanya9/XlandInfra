@@ -19,6 +19,7 @@ import VendorAssignmentModal from '../components/VendorAssignmentModal';
 import * as XLSX from 'xlsx';
 import { useFP } from '../contexts/FPContext';
 import StaticMapView from '../components/common/StaticMapView';
+import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -112,6 +113,10 @@ const CustomerSubmissions = () => {
   const [viewAMCDetails, setViewAMCDetails] = useState(null); // AMC package details modal
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'cards'
   const [propertiesLoading, setPropertiesLoading] = useState(false);
+  
+  // Vendor assignments for property view
+  const [propertyVendorAssignments, setPropertyVendorAssignments] = useState([]);
+  const [loadingVendorAssignments, setLoadingVendorAssignments] = useState(false);
 
   // Load properties from FP-specific API or all FPs (Admin mode)
   const loadData = useCallback(async (showLoading = true) => {
@@ -163,16 +168,30 @@ const CustomerSubmissions = () => {
             }];
           }
           
+          // Parse block-related JSON fields
+          let blockNames = {};
+          let unitsPerBlock = {};
+          let blockUnitTypes = {};
+          try {
+            if (p.block_names) blockNames = typeof p.block_names === 'string' ? JSON.parse(p.block_names) : p.block_names;
+            if (p.units_per_block) unitsPerBlock = typeof p.units_per_block === 'string' ? JSON.parse(p.units_per_block) : p.units_per_block;
+            if (p.block_unit_types) blockUnitTypes = typeof p.block_unit_types === 'string' ? JSON.parse(p.block_unit_types) : p.block_unit_types;
+          } catch {}
+          
           return {
             id: p.id,
             propertyId: p.property_id,
             name: p.name,
             propertyType: p.property_type,
+            entryType: p.property_type?.toUpperCase() === 'GATED_COMMUNITY' || p.property_type?.toUpperCase() === 'GATED COMMUNITY' ? 'GC' 
+              : p.property_type?.toUpperCase() === 'APARTMENT' ? 'APT'
+              : p.property_type?.toUpperCase() || p.property_type,
             category: p.category || 'residential',
             zone: p.zone_name || p.zone,
             area: p.area || p.area_name,
             division: p.division,
-            units: p.units || 0,
+            units: p.units || p.total_units || p.number_of_units || 0,
+            totalUnits: p.total_units || p.units || p.number_of_units || 0,
             address: p.address,
             city: p.city,
             state: p.state,
@@ -186,7 +205,35 @@ const CustomerSubmissions = () => {
             status: p.status || 'active',
             sourceTable: p.source_table,
             fpId: p.fp_id || p.franchise_partner_id,
-            fpName: p.fp_name || p.company_name
+            fpName: p.fp_name || p.company_name,
+            // Block details for GC
+            numberOfBlocks: p.number_of_blocks || 1,
+            blockNames: blockNames,
+            unitsPerBlock: unitsPerBlock,
+            blockUnitTypes: blockUnitTypes,
+            // APT specific
+            blockInfo: p.block_info || '',
+            blockNA: p.block_na || false,
+            numberOfUnits: p.number_of_units || 0,
+            // Villa/Plot/Flat specific
+            villaPlotNumber: p.villa_plot_number || '',
+            flatBlockInfo: p.flat_block_info || '',
+            flatBlockNA: p.flat_block_na || false,
+            plotNA: p.plot_na || false,
+            // Location
+            latitude: p.latitude || p.map_lat,
+            longitude: p.longitude || p.map_lng,
+            landmark: p.landmark || '',
+            mapLocation: {
+              lat: p.latitude || p.map_lat,
+              lng: p.longitude || p.map_lng,
+              address: p.landmark || `${p.address || ''}, ${p.city || ''}, ${p.state || ''}, ${p.zip_code || ''}`
+            },
+            // Watchman Info (for GC and APT)
+            watchmanName: p.watchman_name || '',
+            watchmanContact: p.watchman_contact || '',
+            // Notes
+            notes: p.notes || ''
           };
         });
         
@@ -242,11 +289,53 @@ const CustomerSubmissions = () => {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Handle viewing property with estimates
+  // Fetch vendor assignments for a property (read-only view)
+  const fetchPropertyVendorAssignments = async (propertyId, fpId) => {
+    setLoadingVendorAssignments(true);
+    try {
+      // Use admin endpoint to get vendor assignments
+      const endpoint = fpId 
+        ? `${API_BASE}/api/admin/fp-view/${fpId}/vendors/assignments`
+        : `${API_BASE}/api/vendors/assignments`;
+      const response = await fetch(endpoint, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        // Extract assignments from either serviceAssignments or propertyAssignments
+        const allAssignments = Array.isArray(result.data?.serviceAssignments) 
+          ? result.data.serviceAssignments 
+          : (Array.isArray(result.data?.propertyAssignments) 
+            ? result.data.propertyAssignments 
+            : (Array.isArray(result.data) ? result.data : []));
+        
+        // Filter to only this property's assignments
+        const propertyAssignments = allAssignments.filter(a => {
+          const assignmentPropId = String(a.propertyId || a.property_id || '');
+          const targetPropId = String(propertyId);
+          return assignmentPropId === targetPropId;
+        });
+        
+        setPropertyVendorAssignments(propertyAssignments);
+      } else {
+        setPropertyVendorAssignments([]);
+      }
+    } catch (error) {
+      console.error('Fetch vendor assignments error:', error);
+      setPropertyVendorAssignments([]);
+    } finally {
+      setLoadingVendorAssignments(false);
+    }
+  };
+
+  // Handle viewing property with estimates and vendor assignments
   const handleViewProperty = (property) => {
     setViewProperty(property);
     const estimates = getEstimatesByPropertyId(property.propertyId);
     setPropertyEstimates(estimates);
+    // Fetch vendor assignments for this property
+    fetchPropertyVendorAssignments(property.id || property.propertyId, property.fpId);
   };
 
   // Delete handler - use admin API endpoint (soft delete - sets status to inactive)
@@ -1130,53 +1219,67 @@ const CustomerSubmissions = () => {
 
       {/* View Property Modal */}
       {viewProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setViewProperty(null)}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setViewProperty(null); setPropertyVendorAssignments([]); }}>
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
+            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-t-xl">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-gray-900">{viewProperty.name}</h2>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${TYPE_STYLES[viewProperty.entryType]?.badge}`}>
-                    {TYPE_LABELS[viewProperty.entryType]}
+                  <h2 className="text-xl font-bold text-gray-900">{viewProperty.name}</h2>
+                  <span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                    {TYPE_LABELS[viewProperty.entryType] || viewProperty.propertyType?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Property'}
                   </span>
                 </div>
-                <p className="text-xs font-mono text-gray-500 mt-0.5">{viewProperty.propertyId}</p>
+                <p className="text-sm text-gray-500 mt-1">{viewProperty.propertyId}</p>
               </div>
-              <button onClick={() => setViewProperty(null)} className="p-2 hover:bg-gray-100 rounded-md transition-colors">
+              <button onClick={() => { setViewProperty(null); setPropertyVendorAssignments([]); }} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
 
-            {/* Modal Content - Form-like layout */}
-            <div className="px-6 py-5 space-y-6">
+            {/* Scrollable Content */}
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* Property Information */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Property Information</h3>
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Property Information</h3>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Zone</label>
-                    <p className="text-sm text-gray-900">{viewProperty.zone || '-'}</p>
+                    <p className="text-xs text-gray-500 mb-1">Zone</p>
+                    <p className="text-sm font-medium text-gray-900">{viewProperty.zone || '-'}</p>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Area Name</label>
-                    <p className="text-sm text-gray-900">{viewProperty.area || '-'}</p>
+                    <p className="text-xs text-gray-500 mb-1">Area Name</p>
+                    <p className="text-sm font-medium text-gray-900">{viewProperty.area || '-'}</p>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Division</label>
-                    <p className="text-sm text-gray-900">{viewProperty.division_name || viewProperty.division || '-'}</p>
+                    <p className="text-xs text-gray-500 mb-1">Division</p>
+                    <p className="text-sm font-medium text-gray-900">{viewProperty.division_name || viewProperty.division || '-'}</p>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Property Type</label>
-                    <p className="text-sm text-gray-900">{viewProperty.propertyType || '-'}</p>
+                    <p className="text-xs text-gray-500 mb-1">Property Type</p>
+                    <p className="text-sm font-medium text-gray-900">{TYPE_LABELS[viewProperty.entryType] || viewProperty.propertyType?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}</p>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Units</label>
-                    <p className="text-sm text-gray-900">{viewProperty.units || 0}</p>
+                    <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {(() => {
+                        // First check direct total_units fields
+                        const directTotal = viewProperty.totalUnits || viewProperty.units || viewProperty.numberOfUnits;
+                        if (directTotal && parseInt(directTotal) > 0) return parseInt(directTotal);
+                        
+                        // Fallback to calculating from unitsPerBlock (for GC)
+                        const unitsPerBlock = viewProperty.unitsPerBlock;
+                        if (unitsPerBlock && typeof unitsPerBlock === 'object') {
+                          const total = Object.values(unitsPerBlock).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+                          if (total > 0) return total;
+                        }
+                        return '-';
+                      })()}
+                    </p>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Created Date</label>
-                    <p className="text-sm text-gray-900">{formatDate(viewProperty.createdAt)}</p>
+                    <p className="text-xs text-gray-500 mb-1">Created Date</p>
+                    <p className="text-sm font-medium text-gray-900">{formatDate(viewProperty.createdAt)}</p>
                   </div>
                 </div>
               </div>
@@ -1184,54 +1287,105 @@ const CustomerSubmissions = () => {
               {/* Gated Community Block Details */}
               {viewProperty.entryType === 'GC' && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Block Details</h3>
-                  <div className="mb-3">
-                    <label className="block text-xs text-gray-500 mb-1">Number of Blocks</label>
-                    <p className="text-sm text-gray-900">{viewProperty.numberOfBlocks || 1}</p>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Block Details</h3>
+                  <div className="mb-4">
+                    <p className="text-xs text-gray-500 mb-1">Number of Blocks</p>
+                    <p className="text-sm font-medium text-gray-900">{viewProperty.numberOfBlocks || 1}</p>
                   </div>
-                  {viewProperty.unitsPerBlock && Object.keys(viewProperty.unitsPerBlock).length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {Object.entries(viewProperty.unitsPerBlock).map(([blockNum, units]) => (
-                        <React.Fragment key={blockNum}>
-                          <div className="p-3 bg-gray-50 rounded-lg">
-                            <label className="block text-xs text-gray-500 mb-1">Block Name</label>
-                            <p className="text-sm text-gray-900">{viewProperty.blockNames?.[blockNum] || `Block ${blockNum}`}</p>
-                          </div>
-                          <div className="p-3 bg-gray-50 rounded-lg">
-                            <label className="block text-xs text-gray-500 mb-1">Units</label>
-                            <p className="text-sm text-gray-900">{units}</p>
-                          </div>
-                        </React.Fragment>
-                      ))}
-                    </div>
-                  )}
+                  {(() => {
+                    const blockNames = viewProperty.blockNames || {};
+                    const unitsPerBlock = viewProperty.unitsPerBlock || {};
+                    const blockUnitTypes = viewProperty.blockUnitTypes || {};
+                    const numBlocks = viewProperty.numberOfBlocks || Object.keys(blockNames).length || Object.keys(unitsPerBlock).length || 1;
+                    if (Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0) {
+                      return (
+                        <div className="space-y-4">
+                          {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
+                            const blockName = blockNames[blockNum] || blockNames[String(blockNum)] || `Block ${blockNum}`;
+                            const unitTypes = blockUnitTypes[blockNum] || blockUnitTypes[String(blockNum)] || blockUnitTypes[blockName] || {};
+                            const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
+                            return (
+                              <div key={blockNum} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                <div className="flex gap-4 mb-3">
+                                  <div>
+                                    <p className="text-xs text-gray-500 mb-1">Block Name</p>
+                                    <p className="text-sm font-medium text-gray-900">{blockName}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                                    <p className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || unitsPerBlock[String(blockNum)] || 0}</p>
+                                  </div>
+                                </div>
+                                <div className="pt-2 border-t border-gray-200">
+                                  <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
+                                  {hasUnitTypes ? (
+                                    <div className="flex flex-wrap gap-2">
+                                      {unitTypes.studio > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">Studio: {unitTypes.studio}</span>}
+                                      {unitTypes.oneBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">1 BHK: {unitTypes.oneBed}</span>}
+                                      {unitTypes.twoBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">2 BHK: {unitTypes.twoBed}</span>}
+                                      {unitTypes.threeBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">3 BHK: {unitTypes.threeBed}</span>}
+                                      {unitTypes.fourBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">4 BHK: {unitTypes.fourBed}</span>}
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-gray-400 italic">Not specified</p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               )}
 
               {/* Apartment Details */}
               {viewProperty.entryType === 'APT' && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Apartment Details</h3>
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Apartment Details</h3>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Block Information</label>
-                      <p className="text-sm text-gray-900">{viewProperty.blockNA ? 'N/A' : (viewProperty.blockInfo || '-')}</p>
+                      <p className="text-xs text-gray-500 mb-1">Block Information</p>
+                      <p className="text-sm font-medium text-gray-900">{viewProperty.blockNA ? 'N/A' : (viewProperty.blockInfo || '-')}</p>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Number of Units</label>
-                      <p className="text-sm text-gray-900">{viewProperty.numberOfUnits || '-'}</p>
+                      <p className="text-xs text-gray-500 mb-1">Number of Units</p>
+                      <p className="text-sm font-medium text-gray-900">{viewProperty.numberOfUnits || '-'}</p>
                     </div>
                   </div>
+                  {(() => {
+                    const blockUnitTypes = viewProperty.blockUnitTypes || {};
+                    const unitTypes = blockUnitTypes['apt'] || blockUnitTypes['1'] || blockUnitTypes[1] || {};
+                    const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
+                    return (
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
+                        {hasUnitTypes ? (
+                          <div className="flex flex-wrap gap-2">
+                            {unitTypes.studio > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">Studio: {unitTypes.studio}</span>}
+                            {unitTypes.oneBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">1 BHK: {unitTypes.oneBed}</span>}
+                            {unitTypes.twoBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">2 BHK: {unitTypes.twoBed}</span>}
+                            {unitTypes.threeBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">3 BHK: {unitTypes.threeBed}</span>}
+                            {unitTypes.fourBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">4 BHK: {unitTypes.fourBed}</span>}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-400 italic">Not specified</p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
               {/* Villa Details */}
               {viewProperty.entryType === 'VILLA' && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Villa Details</h3>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Villa Details</h3>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Villa Number</label>
-                    <p className="text-sm text-gray-900">{viewProperty.villaPlotNumber || '-'}</p>
+                    <p className="text-xs text-gray-500 mb-1">Villa Number</p>
+                    <p className="text-sm font-medium text-gray-900">{viewProperty.villaPlotNumber || '-'}</p>
                   </div>
                 </div>
               )}
@@ -1239,15 +1393,15 @@ const CustomerSubmissions = () => {
               {/* Flat Details */}
               {viewProperty.entryType === 'FLAT' && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Flat Details</h3>
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Flat Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Flat Number</label>
-                      <p className="text-sm text-gray-900">{viewProperty.villaPlotNumber || '-'}</p>
+                      <p className="text-xs text-gray-500 mb-1">Flat Number</p>
+                      <p className="text-sm font-medium text-gray-900">{viewProperty.villaPlotNumber || '-'}</p>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Block Information</label>
-                      <p className="text-sm text-gray-900">{viewProperty.flatBlockNA ? 'N/A' : (viewProperty.flatBlockInfo || '-')}</p>
+                      <p className="text-xs text-gray-500 mb-1">Block Information</p>
+                      <p className="text-sm font-medium text-gray-900">{viewProperty.flatBlockNA ? 'N/A' : (viewProperty.flatBlockInfo || '-')}</p>
                     </div>
                   </div>
                 </div>
@@ -1256,104 +1410,150 @@ const CustomerSubmissions = () => {
               {/* Plot Details */}
               {viewProperty.entryType === 'PLOT' && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Plot Details</h3>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Plot Details</h3>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Plot Number</label>
-                    <p className="text-sm text-gray-900">{viewProperty.plotNA ? 'N/A' : (viewProperty.villaPlotNumber || '-')}</p>
+                    <p className="text-xs text-gray-500 mb-1">Plot Number</p>
+                    <p className="text-sm font-medium text-gray-900">{viewProperty.plotNA ? 'N/A' : (viewProperty.villaPlotNumber || '-')}</p>
                   </div>
                 </div>
               )}
 
               {/* Address */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Address</h3>
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Address</h3>
+                <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
-                    <label className="block text-xs text-gray-500 mb-1">Street Address</label>
-                    <p className="text-sm text-gray-900">{viewProperty.address || '-'}</p>
+                    <p className="text-xs text-gray-500 mb-1">Street Address</p>
+                    <p className="text-sm font-medium text-gray-900">{viewProperty.address || '-'}</p>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Apt/Suite</label>
-                    <p className="text-sm text-gray-900">
-                      {viewProperty.aptSuiteNA ? 'N/A' : (viewProperty.aptSuiteUnit || '-')}
-                    </p>
+                    <p className="text-xs text-gray-500 mb-1">City</p>
+                    <p className="text-sm font-medium text-gray-900">{viewProperty.city || '-'}</p>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">City</label>
-                    <p className="text-sm text-gray-900">{viewProperty.city || '-'}</p>
+                    <p className="text-xs text-gray-500 mb-1">State/Province</p>
+                    <p className="text-sm font-medium text-gray-900">{viewProperty.state || '-'}</p>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">State/Province</label>
-                    <p className="text-sm text-gray-900">{viewProperty.state || '-'}</p>
+                    <p className="text-xs text-gray-500 mb-1">ZIP/Postal Code</p>
+                    <p className="text-sm font-medium text-gray-900">{viewProperty.zipCode || viewProperty.zip_code || viewProperty.postal_code || '-'}</p>
                   </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">ZIP/Postal Code</label>
-                    <p className="text-sm text-gray-900">{viewProperty.zipCode || viewProperty.zip_code || viewProperty.postal_code || '-'}</p>
-                  </div>
-                  {viewProperty.landmark && (
-                    <div className="col-span-2">
-                      <label className="block text-xs text-gray-500 mb-1">Landmark</label>
-                      <p className="text-sm text-gray-900">{viewProperty.landmark}</p>
-                    </div>
-                  )}
                 </div>
               </div>
 
-              {/* Map Location with embedded Google Map */}
-              {viewProperty.mapLocation?.lat && viewProperty.mapLocation?.lng && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Map Location</h3>
-                  <div className="space-y-3">
-                    {viewProperty.mapLocation.address && (
-                      <p className="text-sm text-gray-700">{viewProperty.mapLocation.address}</p>
-                    )}
-                    <StaticMapView lat={viewProperty.mapLocation.lat} lng={viewProperty.mapLocation.lng} height={200} />
-                  </div>
-                </div>
-              )}
+              {/* Property Location with GPS Coordinates */}
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Property Location</h3>
+                <PropertyLocationDisplay 
+                  location={{
+                    lat: viewProperty.mapLocation?.lat || viewProperty.latitude,
+                    lng: viewProperty.mapLocation?.lng || viewProperty.longitude,
+                    address: viewProperty.mapLocation?.address || viewProperty.landmark || `${viewProperty.address || ''}, ${viewProperty.city || ''}, ${viewProperty.state || ''}, ${viewProperty.zipCode || ''}`
+                  }}
+                  propertyName={viewProperty.name || 'Property'}
+                />
+              </div>
 
-              {/* Contacts */}
-              {viewProperty.contacts && viewProperty.contacts.length > 0 && (
+              {/* Contact Information */}
+              {(() => {
+                let contacts = viewProperty.contacts || [];
+                if (contacts.length === 0 && (viewProperty.contactPerson || viewProperty.contactEmail || viewProperty.contactPhone)) {
+                  contacts = [{
+                    name: viewProperty.contactPerson,
+                    email: viewProperty.contactEmail,
+                    phone: viewProperty.contactPhone
+                  }];
+                }
+                
+                if (contacts.length === 0) return null;
+                
+                return (
+                  <div>
+                    <h3 className="text-base font-semibold text-gray-900 mb-4">Contact Information</h3>
+                    <div className="space-y-3">
+                      {contacts.map((contact, index) => (
+                        <div key={index} className="bg-gray-50 rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-medium text-blue-600">{index + 1}</span>
+                            </div>
+                            <span className="text-xs text-gray-500">Contact {index + 1}</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-[1fr_2.5fr_1fr] gap-4">
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-500 mb-1">Name</p>
+                              <p className="text-sm font-medium text-gray-900">{contact.name || '-'}</p>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-500 mb-1">Email</p>
+                              <p className="text-sm font-medium text-gray-900 break-all">{contact.email || '-'}</p>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-500 mb-1">Phone</p>
+                              <p className="text-sm font-medium text-gray-900 whitespace-nowrap">
+                                {(() => {
+                                  if (!contact.phone) return '-';
+                                  const phone = contact.phone.toString().trim();
+                                  if (phone.startsWith('+')) return phone;
+                                  return `+91 ${phone}`;
+                                })()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Watchman Information - Only for GC and APT */}
+              {(['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((viewProperty.entryType || viewProperty.propertyType || '').toLowerCase())) && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Contact Information</h3>
-                  <div className="space-y-3">
-                    {viewProperty.contacts.map((c, i) => (
-                      <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_2fr_1fr] gap-4 p-3 bg-gray-50 rounded-md">
-                        <div className="min-w-0">
-                          <label className="block text-xs text-gray-500 mb-1">Name</label>
-                          <p className="text-sm text-gray-900">{c.name}</p>
-                        </div>
-                        <div className="min-w-0">
-                          <label className="block text-xs text-gray-500 mb-1">Email</label>
-                          <p className="text-sm text-gray-900 break-all" title={c.email}>{c.email}</p>
-                        </div>
-                        <div className="min-w-0">
-                          <label className="block text-xs text-gray-500 mb-1">Phone</label>
-                          <p className="text-sm text-gray-900 whitespace-nowrap">{c.phone?.startsWith('+') ? c.phone : `${c.countryCode || '+91'} ${c.phone}`}</p>
-                        </div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Watchman Information</h3>
+                  <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Watchman Name</p>
+                        <p className="text-sm font-medium text-gray-900">{viewProperty.watchmanName || 'N/A'}</p>
                       </div>
-                    ))}
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Watchman Contact</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {(() => {
+                            const contact = viewProperty.watchmanContact;
+                            if (!contact) return 'N/A';
+                            if (contact.startsWith('+91') && !contact.startsWith('+91 ')) {
+                              return `+91 ${contact.slice(3)}`;
+                            }
+                            return contact.startsWith('+') ? contact : `+91 ${contact}`;
+                          })()}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Notes */}
+              {/* Additional Notes */}
               {viewProperty.notes && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Notes</h3>
-                  <p className="text-sm text-gray-700">{viewProperty.notes}</p>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Additional Notes</h3>
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewProperty.notes}</p>
+                  </div>
                 </div>
               )}
 
               {/* Estimates View Section */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100 flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Estimates ({propertyEstimates.length})
-                </h3>
+                <div className="flex items-center gap-2 mb-4">
+                  <FileText className="w-4 h-4 text-gray-500" />
+                  <h3 className="text-base font-semibold text-gray-900">Estimates ({propertyEstimates.length})</h3>
+                </div>
                 {propertyEstimates.length === 0 ? (
-                  <div className="text-center py-6 bg-gray-50 rounded-lg">
-                    <FileText className="w-8 h-8 mx-auto text-gray-300 mb-2" />
+                  <div className="bg-gray-50 rounded-lg p-8 text-center">
+                    <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                     <p className="text-sm text-gray-500">No estimates for this property</p>
                     <p className="text-xs text-gray-400 mt-1">Create an estimate from the Estimates section</p>
                   </div>
@@ -1404,6 +1604,58 @@ const CustomerSubmissions = () => {
                         )}
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Assigned Vendors Section - Read Only */}
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Truck className="w-4 h-4 text-purple-500" />
+                  <h3 className="text-base font-semibold text-gray-900">Assigned Vendors</h3>
+                </div>
+                {loadingVendorAssignments ? (
+                  <div className="bg-gray-50 rounded-lg p-6 text-center">
+                    <RefreshCw className="w-6 h-6 text-gray-400 mx-auto mb-2 animate-spin" />
+                    <p className="text-sm text-gray-500">Loading vendor assignments...</p>
+                  </div>
+                ) : propertyVendorAssignments.length === 0 ? (
+                  <div className="bg-gray-50 rounded-lg p-6 text-center">
+                    <Truck className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No vendors assigned to this property</p>
+                  </div>
+                ) : (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-purple-50 border-b border-purple-100">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium text-purple-800">Service Type</th>
+                          <th className="px-4 py-3 text-left font-medium text-purple-800">Vendor Name</th>
+                          <th className="px-4 py-3 text-left font-medium text-purple-800">Contact</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {propertyVendorAssignments.map((assignment, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50">
+                            <td className="px-4 py-3">
+                              <span className="font-medium text-gray-900">
+                                {assignment.serviceType || assignment.service_type || 'General'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-gray-800">
+                                {assignment.vendorName || assignment.vendor_name || '-'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-gray-600 text-xs">
+                                {assignment.vendorPhone || assignment.vendor_phone || '-'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
