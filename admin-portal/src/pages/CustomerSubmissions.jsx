@@ -77,7 +77,6 @@ const CustomerSubmissions = () => {
   const [properties, setProperties] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [divisionFilter, setDivisionFilter] = useState('');
   const [zoneFilter, setZoneFilter] = useState('');
   const [toast, setToast] = useState(null);
   const [viewProperty, setViewProperty] = useState(null);
@@ -639,7 +638,6 @@ const CustomerSubmissions = () => {
 
   const filteredProperties = properties.filter(p => {
     if (activeTab !== 'all' && normalizePropertyType(p.entryType) !== activeTab) return false;
-    if (divisionFilter && p.division !== divisionFilter) return false;
     if (zoneFilter && p.zone !== zoneFilter) return false;
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
@@ -992,64 +990,51 @@ const CustomerSubmissions = () => {
           })}
         </div>
 
-        {/* Search + Filters */}
-        <div className="p-3 sm:p-4 border-b border-gray-200 space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        {/* Search and Filters - Same row layout as FP Portal */}
+        <div className="flex flex-col sm:flex-row gap-3 p-4 border-b border-gray-200">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
               placeholder="Search by name, ID, zone, or address..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value.trim())}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-200 focus:border-blue-400 outline-none"
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            <div className="relative flex-shrink-0">
-              <select
-                value={divisionFilter}
-                onChange={(e) => setDivisionFilter(e.target.value)}
-                className="appearance-none pl-3 pr-7 py-2 border border-gray-300 rounded-md text-xs sm:text-sm bg-white focus:ring-1 focus:ring-blue-200 focus:border-blue-400 outline-none whitespace-nowrap"
-              >
-                <option value="">All Divisions</option>
-                {divisions.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
-            </div>
-            <div className="relative flex-shrink-0">
-              <select
-                value={zoneFilter}
-                onChange={(e) => setZoneFilter(e.target.value)}
-                className="appearance-none pl-3 pr-7 py-2 border border-gray-300 rounded-md text-xs sm:text-sm bg-white focus:ring-1 focus:ring-blue-200 focus:border-blue-400 outline-none whitespace-nowrap"
-              >
-                <option value="">All Zones</option>
-                {zones.map(z => <option key={z} value={z}>{z}</option>)}
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
-            </div>
-            <div className="relative flex-shrink-0">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className={`appearance-none pl-3 pr-7 py-2 border rounded-md text-xs sm:text-sm focus:ring-1 focus:ring-blue-200 focus:border-blue-400 outline-none whitespace-nowrap ${
-                  statusFilter === 'inactive' ? 'border-orange-300 bg-orange-50 text-orange-700' : 'border-gray-300 bg-white'
-                }`}
-              >
-                <option value="active" className="bg-white text-gray-900">Active Customers</option>
-                <option value="all" className="bg-white text-gray-900">All Customers</option>
-                <option value="inactive" className="bg-white text-gray-900">Inactive Customers</option>
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
-            </div>
-            {(divisionFilter || zoneFilter || searchTerm || statusFilter !== 'active') && (
-              <button
-                onClick={() => { setDivisionFilter(''); setZoneFilter(''); setSearchTerm(''); setStatusFilter('active'); }}
-                className="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors flex-shrink-0 whitespace-nowrap"
-              >
-                Clear
-              </button>
-            )}
+
+          <div className="relative">
+            <select
+              value={zoneFilter}
+              onChange={(e) => setZoneFilter(e.target.value)}
+              className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+            >
+              <option value="">All Zones</option>
+              {zones.map(z => <option key={z} value={z}>{z}</option>)}
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           </div>
+
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+            >
+              <option value="active">Active Customers</option>
+              <option value="all">All Customers</option>
+              <option value="inactive">Inactive Customers</option>
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          </div>
+
+          <button
+            onClick={() => loadData()}
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Property Table */}
