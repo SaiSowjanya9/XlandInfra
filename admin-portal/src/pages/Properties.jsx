@@ -86,8 +86,8 @@ const Properties = () => {
   const [properties, setProperties] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [divisionFilter, setDivisionFilter] = useState('');
   const [zoneFilter, setZoneFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('active');
   const [toast, setToast] = useState(null);
   const [viewProperty, setViewProperty] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -130,9 +130,12 @@ const Properties = () => {
     if (showLoading) setLoading(true);
     try {
       // Use FP-specific endpoint if an FP is selected, otherwise get all
-      const endpoint = selectedFp && selectedFp.id !== 'all' 
+      const baseEndpoint = selectedFp && selectedFp.id !== 'all' 
         ? `/api/admin/fp-view/${selectedFp.id}/properties`
         : '/api/onboarding';
+      // Add status filter parameter
+      const statusParam = statusFilter ? `?status=${statusFilter}` : '';
+      const endpoint = `${baseEndpoint}${statusParam}`;
       const response = await fetch(endpoint, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -178,8 +181,8 @@ const Properties = () => {
   // Reset filters and reload data when FP selection changes
   useEffect(() => {
     // Reset filters when FP changes
-    setDivisionFilter('');
     setZoneFilter('');
+    setStatusFilter('active');
     setSearchTerm('');
     setActiveTab('all');
     
@@ -187,7 +190,7 @@ const Properties = () => {
     // Poll for new entries every 30 seconds (silent background refresh)
     const interval = setInterval(() => loadData(false), 30000);
     return () => clearInterval(interval);
-  }, [selectedFp?.id]);
+  }, [selectedFp?.id, statusFilter]);
 
   // Show toast helper
   const showToast = (message, type = 'success') => {
@@ -604,7 +607,6 @@ const Properties = () => {
 
   const filteredProperties = properties.filter(p => {
     if (activeTab !== 'all' && normalizePropertyType(p.property_type || p.entryType || p.propertyType) !== activeTab) return false;
-    if (divisionFilter && p.division !== divisionFilter) return false;
     if (zoneFilter && p.zone !== zoneFilter) return false;
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
@@ -838,38 +840,36 @@ const Properties = () => {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-200 focus:border-blue-400 outline-none"
             />
           </div>
-          <div className="flex gap-2">
-            <div className="relative">
-              <select
-                value={divisionFilter}
-                onChange={(e) => setDivisionFilter(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-1 focus:ring-blue-200 focus:border-blue-400 outline-none"
-              >
-                <option value="">All Divisions</option>
-                {divisions.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-            </div>
-            <div className="relative">
-              <select
-                value={zoneFilter}
-                onChange={(e) => setZoneFilter(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-1 focus:ring-blue-200 focus:border-blue-400 outline-none"
-              >
-                <option value="">All Zones</option>
-                {zones.map(z => <option key={z} value={z}>{z}</option>)}
-              </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-            </div>
-            {(divisionFilter || zoneFilter || searchTerm) && (
-              <button
-                onClick={() => { setDivisionFilter(''); setZoneFilter(''); setSearchTerm(''); }}
-                className="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              >
-                Clear
-              </button>
-            )}
+          <div className="relative">
+            <select
+              value={zoneFilter}
+              onChange={(e) => setZoneFilter(e.target.value)}
+              className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+            >
+              <option value="">All Zones</option>
+              {zones.map(z => <option key={z} value={z}>{z}</option>)}
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           </div>
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+            >
+              <option value="active">Active Customers</option>
+              <option value="all">All Customers</option>
+              <option value="inactive">Inactive Customers</option>
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          </div>
+          <button
+            onClick={() => loadData(true)}
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Property Table */}
