@@ -518,27 +518,44 @@ const EstimatesList = ({
                       {(() => {
                         const bn = viewEstimate.blockNames || viewEstimate.block_names;
                         const upb = viewEstimate.unitsPerBlock || viewEstimate.units_per_block;
+                        const but = viewEstimate.blockUnitTypes || viewEstimate.block_unit_types;
                         const blockNames = bn ? (typeof bn === 'string' ? JSON.parse(bn) : bn) : {};
                         const unitsPerBlock = upb ? (typeof upb === 'string' ? JSON.parse(upb) : upb) : {};
+                        const blockUnitTypes = but ? (typeof but === 'string' ? JSON.parse(but) : but) : {};
                         const hasBlockData = Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0;
                         if (!hasBlockData) return null;
+                        
+                        // Get all block keys (from blockNames or unitsPerBlock)
+                        const blockKeys = Object.keys(blockNames).length > 0 ? Object.keys(blockNames) : Object.keys(unitsPerBlock);
+                        
                         return (
                           <div className="col-span-2 mt-2">
                             <p className="text-xs text-gray-500 mb-2">Block Details</p>
-                            <div className="bg-blue-50 p-3 rounded-lg">
-                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                {Object.keys(blockNames).length > 0 ? Object.entries(blockNames).map(([key, name]) => (
-                                  <div key={key} className="bg-white p-2 rounded border border-blue-100">
-                                    <p className="text-xs text-blue-600 font-medium">{name || `Block ${key}`}</p>
-                                    <p className="text-sm text-gray-700">{unitsPerBlock[key] || 0} units</p>
+                            <div className="space-y-3">
+                              {blockKeys.map((key) => {
+                                const blockName = blockNames[key] || `Block ${key}`;
+                                const units = unitsPerBlock[key] || 0;
+                                const unitTypes = blockUnitTypes[key] || {};
+                                const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
+                                
+                                return (
+                                  <div key={key} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                    <div className="flex justify-between items-center mb-2">
+                                      <p className="text-sm text-blue-600 font-semibold">{blockName}</p>
+                                      <p className="text-sm text-gray-700 font-medium">{units} units</p>
+                                    </div>
+                                    {hasUnitTypes && (
+                                      <div className="flex flex-wrap gap-2">
+                                        {Object.entries(unitTypes).filter(([_, count]) => count > 0).map(([type, count]) => (
+                                          <span key={type} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                            {type}: {count}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
-                                )) : Object.entries(unitsPerBlock).map(([key, units]) => (
-                                  <div key={key} className="bg-white p-2 rounded border border-blue-100">
-                                    <p className="text-xs text-blue-600 font-medium">Block {key}</p>
-                                    <p className="text-sm text-gray-700">{units || 0} units</p>
-                                  </div>
-                                ))}
-                              </div>
+                                );
+                              })}
                             </div>
                           </div>
                         );
