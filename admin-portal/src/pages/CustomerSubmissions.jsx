@@ -650,7 +650,7 @@ const CustomerSubmissions = () => {
       );
     }
     return true;
-  }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Sort by latest first
+  }).sort((a, b) => new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0)); // Sort by latest first
 
   // Stats per type (filtered by zone if selected)
   const zoneFilteredProperties = zoneFilter 
