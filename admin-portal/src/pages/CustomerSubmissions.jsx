@@ -1087,7 +1087,7 @@ const CustomerSubmissions = () => {
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${style.badge}`}>
-                          {property.propertyType || '-'}
+                          {TYPE_LABELS[property.entryType] || TYPE_LABELS[normalizePropertyType(property.propertyType)] || property.propertyType || '-'}
                         </span>
                       </td>
                       <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden md:table-cell">
