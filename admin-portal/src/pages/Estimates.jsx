@@ -32,6 +32,9 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
   const [loading, setLoading] = useState(false);
   const [estimates, setEstimates] = useState([]);
   const [archivedEstimates, setArchivedEstimates] = useState([]);
+  const [amcPackagesCount, setAmcPackagesCount] = useState(0);
+  const [addonsCount, setAddonsCount] = useState(0);
+  const [estimateTypeFilter, setEstimateTypeFilter] = useState('all');
   const [stats, setStats] = useState({
     estimates: 0,
     archived: 0,
@@ -94,18 +97,37 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
       
       setEstimates(estArr);
       setArchivedEstimates(archArr);
-      setStats({
-        estimates: estArr.length,
-        archived: archArr.length,
-        amcPackages: pkgArr.length,
-        addons: addArr.length
-      });
+      setAmcPackagesCount(pkgArr.length);
+      setAddonsCount(addArr.length);
+      // Estimate stats will be calculated by the useEffect below based on estimateTypeFilter
     } catch (error) {
       console.error('Load stats error:', error);
     } finally {
       setLoading(false);
     }
   }, [selectedFp, token]);
+
+  // Helper function to filter estimates by type
+  const filterByEstimateType = (arr, filterType) => {
+    if (filterType === 'all') return arr;
+    return arr.filter(est => {
+      const estType = (est.estimateType || est.estimate_type || '').toLowerCase().replace(/_/g, '-');
+      return estType === filterType.toLowerCase().replace(/_/g, '-');
+    });
+  };
+
+  // Recalculate stats when estimates or filter changes
+  useEffect(() => {
+    const filteredEstimates = filterByEstimateType(estimates, estimateTypeFilter);
+    const filteredArchived = filterByEstimateType(archivedEstimates, estimateTypeFilter);
+    
+    setStats({
+      estimates: filteredEstimates.length,
+      archived: filteredArchived.length,
+      amcPackages: amcPackagesCount,
+      addons: addonsCount
+    });
+  }, [estimates, archivedEstimates, estimateTypeFilter, amcPackagesCount, addonsCount]);
 
   useEffect(() => {
     if (selectedFp) {
@@ -144,6 +166,8 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
             estimates={estimates}
             onRefresh={handleRefresh}
             showToast={showToast}
+            estimateTypeFilter={estimateTypeFilter}
+            onEstimateTypeFilterChange={setEstimateTypeFilter}
           />
         );
       case 'amc-manager':

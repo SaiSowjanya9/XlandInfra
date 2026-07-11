@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Search, Filter, Eye, Edit, Download, Send, Trash2, X, ChevronDown,
   Calendar, DollarSign, Building2, User, Home, LayoutGrid, Layers,
@@ -33,14 +33,21 @@ const STATUS_STYLES = {
   archived: 'bg-slate-100 text-slate-700'
 };
 
-const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
+const EstimatesList = ({ 
+  admin, 
+  estimates = [], 
+  onRefresh, 
+  showToast,
+  estimateTypeFilter: externalEstimateTypeFilter,
+  onEstimateTypeFilterChange 
+}) => {
   // Check if user is Operations Manager (restricted access - view only)
   const isOpsManager = admin?.role === 'operations_manager';
   
   const [searchTerm, setSearchTerm] = useState('');
   const [exportingId, setExportingId] = useState(null);
   const [filters, setFilters] = useState({
-    estimateType: 'all',
+    estimateType: externalEstimateTypeFilter || 'all',
     status: 'all',
     propertyType: 'all',
     dateFrom: '',
@@ -49,6 +56,21 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [viewEstimate, setViewEstimate] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  // Sync internal filter with external prop when it changes
+  useEffect(() => {
+    if (externalEstimateTypeFilter !== undefined && externalEstimateTypeFilter !== filters.estimateType) {
+      setFilters(prev => ({ ...prev, estimateType: externalEstimateTypeFilter }));
+    }
+  }, [externalEstimateTypeFilter]);
+
+  // Handler for estimate type filter change - syncs with parent
+  const handleEstimateTypeChange = (value) => {
+    setFilters(prev => ({ ...prev, estimateType: value }));
+    if (onEstimateTypeFilterChange) {
+      onEstimateTypeFilterChange(value);
+    }
+  };
 
   // Filter estimates based on search and filters
   const filteredEstimates = estimates.filter(est => {
@@ -244,6 +266,10 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
       dateTo: ''
     });
     setSearchTerm('');
+    // Sync with parent
+    if (onEstimateTypeFilterChange) {
+      onEstimateTypeFilterChange('all');
+    }
   };
 
   return (
@@ -281,7 +307,7 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                 <label className="block text-xs font-medium text-gray-500 mb-1">Estimate Type</label>
                 <select
                   value={filters.estimateType}
-                  onChange={(e) => setFilters({ ...filters, estimateType: e.target.value })}
+                  onChange={(e) => handleEstimateTypeChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                 >
                   <option value="all">All Estimates</option>
