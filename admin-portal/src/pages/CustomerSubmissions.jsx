@@ -637,6 +637,11 @@ const CustomerSubmissions = () => {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const filteredProperties = properties.filter(p => {
+    // Apply status filter - show only active by default
+    if (statusFilter === 'active' && p.status === 'inactive') return false;
+    if (statusFilter === 'inactive' && p.status !== 'inactive') return false;
+    // 'all' shows everything
+    
     if (activeTab !== 'all' && normalizePropertyType(p.entryType) !== activeTab) return false;
     if (zoneFilter && p.zone !== zoneFilter) return false;
     if (searchTerm) {
