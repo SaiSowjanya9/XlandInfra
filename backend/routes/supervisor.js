@@ -233,95 +233,70 @@ router.use(authenticate);
 router.use(attachSupervisorScope);
 
 // =====================================================
-// DASHBOARD
+// DASHBOARD (FP-scoped - shows ALL FP data)
 // =====================================================
 router.get('/dashboard', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId || req.fpId;
-    const employeeId = getEmployeeIdForZoneLookup(req);
-    const creatorEmail = getCreatorIdentifier(req);
     
-    // Get assigned zones for zone-centric filtering
-    const assignedZones = await getAssignedZones(employeeId, creatorEmail);
-    
-    console.log('[Supervisor Dashboard] supervisorId:', supervisorId, 'fpId:', franchisePartnerId, 'assignedZones:', assignedZones, 'creatorEmail:', creatorEmail);
+    console.log('[Supervisor Dashboard] supervisorId:', supervisorId, 'fpId:', franchisePartnerId);
 
-    // Build zone filter for properties (zone-centric + own created)
-    let zoneCondition = '';
-    let zoneParams = [];
-    if (assignedZones.length > 0) {
-      const zonePlaceholders = assignedZones.map(() => '?').join(',');
-      zoneCondition = ` OR p.zone_id IN (${zonePlaceholders})`;
-      zoneParams = [...assignedZones];
-    }
+    // Helper function to safely get count
+    const safeCount = (query, params) => {
+      return pool.query(query, params)
+        .then(([result]) => result[0]?.count || 0)
+        .catch((e) => {
+          console.log(`Dashboard query error: ${e.message}`);
+          return 0;
+        });
+    };
 
-    // Count properties (zone-centric + own created)
-    const [propertiesCount] = await pool.query(
-      `SELECT COUNT(DISTINCT p.id) as count FROM properties p
-       WHERE (p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted') AND (p.created_by = ? OR p.created_by = ? OR p.supervisor_id = ?${zoneCondition}))`,
-      [franchisePartnerId, creatorEmail, req.user?.username || '', supervisorId, ...zoneParams]
-    );
-    
-    // Build zone filter for onboarded_properties
-    let onbZoneCondition = '';
-    let onbZoneParams = [];
-    if (assignedZones.length > 0) {
-      const zonePlaceholders = assignedZones.map(() => '?').join(',');
-      onbZoneCondition = ` OR op.zone IN (${zonePlaceholders})`;
-      onbZoneParams = [...assignedZones];
-    }
-
-    // Count onboarded_properties (zone-centric + own created, ACTIVE only)
-    const [onboardedPropsCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM onboarded_properties op
-       WHERE (op.franchise_partner_id = ? AND op.status = 'active' AND (op.created_by = ? OR op.created_by = ? OR op.supervisor_id = ?${onbZoneCondition}))`,
-      [franchisePartnerId, creatorEmail, req.user?.username || '', supervisorId, ...onbZoneParams]
+    // Count ALL FP properties (active)
+    const propertiesCount = await safeCount(
+      `SELECT COUNT(*) as count FROM properties 
+       WHERE franchise_partner_id = ? AND (status IS NULL OR status NOT IN ('deleted', 'inactive'))`,
+      [franchisePartnerId]
     );
 
-    // Vendors - zone-centric + own created (ACTIVE only)
-    const [vendorsCount] = await pool.query(
+    // Count ALL FP onboarded_properties (active)
+    const onboardedPropsCount = await safeCount(
+      `SELECT COUNT(*) as count FROM onboarded_properties 
+       WHERE franchise_partner_id = ? AND status = 'active'`,
+      [franchisePartnerId]
+    );
+
+    // Vendors - ALL FP vendors (active)
+    const vendorsCount = await safeCount(
       `SELECT COUNT(*) as count FROM onboarded_vendors 
-       WHERE franchise_partner_id = ? AND status = 'active' AND (created_by = ? OR created_by = ?${assignedZones.length > 0 ? ` OR zone IN (${assignedZones.map(() => '?').join(',')})` : ''})`,
-      [franchisePartnerId, creatorEmail, req.user?.username || '', ...assignedZones]
+       WHERE franchise_partner_id = ? AND status = 'active' AND vendor_id NOT LIKE '%SEED%'`,
+      [franchisePartnerId]
     );
 
-    // Customers - own created
-    const [customersCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM clients 
-       WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR supervisor_id = ?)`,
-      [franchisePartnerId, creatorEmail, req.user?.username || '', supervisorId]
+    // Customers - ALL FP customers
+    const customersCount = await safeCount(
+      `SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?`,
+      [franchisePartnerId]
     );
 
-    // Employees under this FP (ACTIVE only)
-    const [employeesCount] = await pool.query(
+    // Employees - ALL FP employees (active)
+    const employeesCount = await safeCount(
       `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND is_active = 1`,
       [franchisePartnerId]
     );
 
-    // Work orders - own created
-    const [workOrdersCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM work_orders 
-       WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR supervisor_id = ?)`,
-      [franchisePartnerId, creatorEmail, req.user?.username || '', supervisorId]
+    // Work orders - ALL FP work orders
+    const [[workOrderStats]] = await pool.query(
+      `SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status NOT IN ('completed', 'closed', 'cancelled') THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN status IN ('completed', 'closed') THEN 1 ELSE 0 END) as completed
+       FROM work_orders WHERE franchise_partner_id = ?`,
+      [franchisePartnerId]
     );
 
-    const [pendingWOCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM work_orders 
-       WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR supervisor_id = ?)
-       AND status IN ('pending', 'under_review', 'assigned', 'accepted', 'in_progress')`,
-      [franchisePartnerId, creatorEmail, req.user?.username || '', supervisorId]
-    );
-
-    const [completedWOCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM work_orders 
-       WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR supervisor_id = ?)
-       AND status IN ('completed', 'closed')`,
-      [franchisePartnerId, creatorEmail, req.user?.username || '', supervisorId]
-    );
-
-    // Direct Estimates - by FP (non-archived, active only)
-    const [directEstimatesCount] = await pool.query(
+    // Direct Estimates - ALL FP (non-archived, active only)
+    const directEstimatesCount = await safeCount(
       `SELECT COUNT(*) as count FROM fp_estimates 
        WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
        AND status NOT IN ('archived', 'rejected', 'deleted')
@@ -329,8 +304,8 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
       [franchisePartnerId]
     );
 
-    // Property-based Estimates - by FP (non-archived, active only)
-    const [propertyEstimatesCount] = await pool.query(
+    // Property-based Estimates - ALL FP (non-archived, active only)
+    const propertyEstimatesCount = await safeCount(
       `SELECT COUNT(*) as count FROM fp_estimates 
        WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
        AND status NOT IN ('archived', 'rejected', 'deleted')
@@ -338,8 +313,7 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
       [franchisePartnerId]
     );
 
-    // Get recent work orders (own created + zone-centric) with creator name lookup
-    const zonePlaceholders = assignedZones.length > 0 ? assignedZones.map(() => '?').join(',') : null;
+    // Get recent work orders - ALL FP work orders
     const [recentWorkOrders] = await pool.query(
       `SELECT wo.*, p.name as property_name, COALESCE(c.name, wo.category_name) as category_name,
               COALESCE(
@@ -354,25 +328,25 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN fp_employees fpe ON wo.created_by = fpe.id OR wo.created_by = fpe.email
        LEFT JOIN users pma ON wo.created_by = pma.id OR wo.created_by = pma.email
-       WHERE wo.franchise_partner_id = ? AND (wo.created_by = ? OR wo.created_by = ? OR wo.supervisor_id = ?${zonePlaceholders ? ` OR p.zone_id IN (${zonePlaceholders})` : ''})
+       WHERE wo.franchise_partner_id = ?
        ORDER BY wo.created_at DESC
        LIMIT 10`,
-      [franchisePartnerId, creatorEmail, req.user?.username || '', supervisorId, ...assignedZones]
+      [franchisePartnerId]
     );
 
     res.json({
       success: true,
       data: {
         stats: {
-          properties: (propertiesCount[0]?.count || 0) + (onboardedPropsCount[0]?.count || 0),
-          vendors: vendorsCount[0]?.count || 0,
-          customers: customersCount[0]?.count || 0,
-          employees: employeesCount[0]?.count || 0,
-          workOrders: workOrdersCount[0]?.count || 0,
-          pendingWorkOrders: pendingWOCount[0]?.count || 0,
-          completedWorkOrders: completedWOCount[0]?.count || 0,
-          directEstimates: directEstimatesCount[0]?.count || 0,
-          propertyEstimates: propertyEstimatesCount[0]?.count || 0
+          properties: propertiesCount + onboardedPropsCount,
+          vendors: vendorsCount,
+          customers: customersCount,
+          employees: employeesCount,
+          workOrders: workOrderStats?.total || 0,
+          pendingWorkOrders: workOrderStats?.pending || 0,
+          completedWorkOrders: workOrderStats?.completed || 0,
+          directEstimates: directEstimatesCount,
+          propertyEstimates: propertyEstimatesCount
         },
         recentWorkOrders
       }
