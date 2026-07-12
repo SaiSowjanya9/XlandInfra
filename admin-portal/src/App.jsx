@@ -85,6 +85,7 @@ import UserManagement from './pages/UserManagement';
 import QRManagement from './pages/QRManagement';
 import EstimateAction from './pages/EstimateAction';
 import ResetPassword from './pages/ResetPassword';
+import Phase2Documentation from './pages/Phase2Documentation';
 import { FPProvider } from './contexts/FPContext';
 
 // Session timeout in milliseconds (30 minutes)
@@ -262,6 +263,9 @@ function App() {
             
             {/* Estimate Action - Public */}
             <Route path="/estimate-action/:estimateId" element={<EstimateAction />} />
+            
+            {/* Phase 2 Documentation - Public */}
+            <Route path="/phase2-docs" element={<Phase2Documentation />} />
             
             {/* Employee Portal Login - routes to correct portal based on user's role/FP association */}
             <Route path="/employee/login" element={
