@@ -45,13 +45,54 @@ const ExecutiveVendors = ({ user }) => {
     return new Date(dateString).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  // Filter dropdown values from ACTIVE vendors only
-  const activeVendors = vendors.filter(v => v.status === 'active' || v.is_active);
-  const zones = [...new Set(activeVendors.map(v => v.zone || v.zone_name).filter(Boolean))];
+  // Derived data - based on current status filter for dynamic counts
+  const getStatusFilteredVendors = () => {
+    return vendors.filter(v => {
+      const isActive = v.status === 'active' || v.is_active;
+      if (statusFilter === 'active') return isActive;
+      if (statusFilter === 'inactive') return !isActive;
+      return true;
+    });
+  };
   
+  const statusFilteredVendors = getStatusFilteredVendors();
+  const zones = [...new Set(statusFilteredVendors.map(v => v.zone || v.zone_name).filter(Boolean))].sort();
+  
+  // Get count for each service type (based on status + zone filters)
   const getServiceCount = (type) => {
-    if (type === 'all') return vendors.length;
-    return vendors.filter(v => v.service_type?.toLowerCase() === type.toLowerCase()).length;
+    let filtered = statusFilteredVendors;
+    if (zoneFilter !== 'all') {
+      filtered = filtered.filter(v => (v.zone || v.zone_name) === zoneFilter);
+    }
+    if (type === 'all') return filtered.length;
+    return filtered.filter(v => v.service_type?.toLowerCase() === type.toLowerCase()).length;
+  };
+  
+  // Get count for each zone (based on status + service type filters)
+  const getZoneCount = (zone) => {
+    let filtered = statusFilteredVendors;
+    if (serviceFilter !== 'all') {
+      filtered = filtered.filter(v => v.service_type?.toLowerCase() === serviceFilter.toLowerCase());
+    }
+    if (zone === 'all') return filtered.length;
+    return filtered.filter(v => (v.zone || v.zone_name) === zone).length;
+  };
+  
+  // Get count for each status (based on service type + zone filters)
+  const getStatusCount = (status) => {
+    let filtered = vendors.filter(v => {
+      const isActive = v.status === 'active' || v.is_active;
+      if (status === 'active') return isActive;
+      if (status === 'inactive') return !isActive;
+      return true;
+    });
+    if (serviceFilter !== 'all') {
+      filtered = filtered.filter(v => v.service_type?.toLowerCase() === serviceFilter.toLowerCase());
+    }
+    if (zoneFilter !== 'all') {
+      filtered = filtered.filter(v => (v.zone || v.zone_name) === zoneFilter);
+    }
+    return filtered.length;
   };
 
   const filteredVendors = vendors.filter(v => {
@@ -106,13 +147,13 @@ const ExecutiveVendors = ({ user }) => {
           ))}
         </select>
         <select value={zoneFilter} onChange={(e) => setZoneFilter(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-          <option value="all">All Zones</option>
-          {zones.map(z => <option key={z} value={z}>{z}</option>)}
+          <option value="all">All Zones ({getZoneCount('all')})</option>
+          {zones.map(z => <option key={z} value={z}>{z} ({getZoneCount(z)})</option>)}
         </select>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-          <option value="active">Active Vendors</option>
-          <option value="all">All Status</option>
-          <option value="inactive">Inactive</option>
+          <option value="active">Active Vendors ({getStatusCount('active')})</option>
+          <option value="all">All Status ({getStatusCount('all')})</option>
+          <option value="inactive">Inactive ({getStatusCount('inactive')})</option>
         </select>
       </div>
 
