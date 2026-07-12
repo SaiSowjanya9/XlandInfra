@@ -203,6 +203,12 @@ const ManagerVendors = ({ user }) => {
     }
   };
 
+  // Get active vendors count
+  const getActiveVendorCount = () => {
+    const list = getVendorList();
+    return list.filter(v => v.status !== 'deleted' && v.status !== 'inactive' && v.is_active !== 0 && v.is_active !== false).length;
+  };
+
   // Filter vendors based on search and service type tab
   const filteredVendors = getVendorList().filter(v => {
     const matchesSearch = !searchTerm ||
@@ -231,7 +237,7 @@ const ManagerVendors = ({ user }) => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Vendor Details</h1>
-          <p className="text-blue-600 text-sm">{getVendorList().length} total vendors</p>
+          <p className="text-blue-600 text-sm">{getActiveVendorCount()} total vendors</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -396,7 +402,7 @@ const ManagerVendors = ({ user }) => {
             </table>
             {/* Pagination info */}
             <div className="px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
-              Showing {filteredVendors.length} of {getVendorList().length} vendors
+              Showing {filteredVendors.length} of {getActiveVendorCount()} vendors
             </div>
           </div>
         )}
