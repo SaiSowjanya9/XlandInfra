@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link } from 'lucide-react';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
@@ -51,6 +51,22 @@ const BILLING_DURATIONS = [
 
 const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlEstimateStep = searchParams.get('estimateStep');
+  
+  // Helper to update URL params (push new history entry for back button support)
+  const updateUrlParam = useCallback((key, value) => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      if (!value || value === '') {
+        newParams.delete(key);
+      } else {
+        newParams.set(key, String(value));
+      }
+      return newParams;
+    });
+  }, [setSearchParams]);
+  
   const [activeTab, setActiveTab] = useState(defaultTab);
   
   // Sync activeTab with defaultTab when route changes
@@ -259,6 +275,52 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   };
 
   useEffect(() => { fetchData(); }, [activeTab]);
+
+  // Sync estimate creation step with URL for browser back button support
+  useEffect(() => {
+    if (defaultTab === 'create') {
+      if (estimateForm.estimateType === 'property_based' && selectedProperty) {
+        updateUrlParam('estimateStep', 'property-form');
+      } else if (estimateForm.estimateType === 'property_based') {
+        updateUrlParam('estimateStep', 'property-id');
+      } else if (estimateForm.estimateType === 'direct') {
+        updateUrlParam('estimateStep', 'direct-form');
+      } else {
+        updateUrlParam('estimateStep', '');
+      }
+    }
+  }, [estimateForm.estimateType, selectedProperty, defaultTab, updateUrlParam]);
+
+  // Handle browser back button - sync URL to state
+  useEffect(() => {
+    if (defaultTab === 'create') {
+      if (!urlEstimateStep) {
+        // No step in URL = type selection
+        if (estimateForm.estimateType) {
+          setEstimateForm(prev => ({ ...prev, estimateType: '' }));
+          setSelectedProperty(null);
+          setPropertyIdInput('');
+        }
+      } else if (urlEstimateStep === 'property-id') {
+        // Property ID entry step
+        if (estimateForm.estimateType !== 'property_based' || selectedProperty !== null) {
+          setEstimateForm(prev => ({ ...prev, estimateType: 'property_based' }));
+          setSelectedProperty(null);
+          setPropertyIdInput('');
+        }
+      } else if (urlEstimateStep === 'property-form') {
+        // Property form step - keep current state if already there
+        if (estimateForm.estimateType !== 'property_based') {
+          setEstimateForm(prev => ({ ...prev, estimateType: 'property_based' }));
+        }
+      } else if (urlEstimateStep === 'direct-form') {
+        // Direct form step
+        if (estimateForm.estimateType !== 'direct') {
+          setEstimateForm(prev => ({ ...prev, estimateType: 'direct' }));
+        }
+      }
+    }
+  }, [urlEstimateStep, defaultTab]);
 
   const handleEstimateSubmit = async (e) => {
     e.preventDefault();

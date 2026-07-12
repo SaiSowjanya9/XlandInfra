@@ -203,13 +203,117 @@ const isBot = (ua) => {
   return false;
 };
 
-// Get client IP
+// Get client IP - improved detection for proxied requests
 const getClientIP = (req) => {
-  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-         req.headers['x-real-ip'] ||
+  // Check multiple headers in order of reliability
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (forwardedFor) {
+    // Get the first IP (client IP) from the chain
+    const ips = forwardedFor.split(',').map(ip => ip.trim());
+    // Filter out private/local IPs and get the first public one
+    const publicIP = ips.find(ip => !isPrivateIP(ip));
+    if (publicIP) return publicIP;
+    return ips[0];
+  }
+  
+  return req.headers['x-real-ip'] ||
+         req.headers['cf-connecting-ip'] || // Cloudflare
+         req.headers['x-client-ip'] ||
          req.connection?.remoteAddress ||
          req.socket?.remoteAddress ||
          'unknown';
+};
+
+// Check if IP is private/local
+const isPrivateIP = (ip) => {
+  if (!ip) return true;
+  // Remove IPv6 prefix if present
+  ip = ip.replace(/^::ffff:/, '');
+  
+  // Private IPv4 ranges
+  const privateRanges = [
+    /^10\./,
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+    /^192\.168\./,
+    /^127\./,
+    /^localhost$/i,
+    /^::1$/,
+    /^fe80:/i
+  ];
+  
+  return privateRanges.some(range => range.test(ip));
+};
+
+// Get geo location from IP with multiple fallback services
+const getGeoLocation = async (ip) => {
+  // Default to India if IP lookup fails
+  const defaultGeo = { country: 'India', countryCode: 'IN', state: 'Unknown', city: 'Unknown' };
+  
+  // Skip lookup for private IPs
+  if (isPrivateIP(ip) || ip === 'unknown') {
+    console.log(`[GeoIP] Skipping private IP: ${ip}`);
+    return defaultGeo;
+  }
+  
+  // Try multiple services in order of reliability
+  const services = [
+    // Service 1: ipwho.is (free, no key required, accurate)
+    async () => {
+      const res = await fetch(`https://ipwho.is/${ip}`);
+      const data = await res.json();
+      if (data.success) {
+        return {
+          country: data.country || 'Unknown',
+          countryCode: data.country_code || 'XX',
+          state: data.region || 'Unknown',
+          city: data.city || 'Unknown'
+        };
+      }
+      throw new Error('ipwho.is failed');
+    },
+    // Service 2: ip-api.com (free, 45 requests/min)
+    async () => {
+      const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city`);
+      const data = await res.json();
+      if (data.status === 'success') {
+        return {
+          country: data.country || 'Unknown',
+          countryCode: data.countryCode || 'XX',
+          state: data.regionName || 'Unknown',
+          city: data.city || 'Unknown'
+        };
+      }
+      throw new Error('ip-api.com failed');
+    },
+    // Service 3: ipapi.co (free, 1000/day)
+    async () => {
+      const res = await fetch(`https://ipapi.co/${ip}/json/`);
+      const data = await res.json();
+      if (!data.error) {
+        return {
+          country: data.country_name || 'Unknown',
+          countryCode: data.country_code || 'XX',
+          state: data.region || 'Unknown',
+          city: data.city || 'Unknown'
+        };
+      }
+      throw new Error('ipapi.co failed');
+    }
+  ];
+  
+  // Try each service until one succeeds
+  for (const service of services) {
+    try {
+      const result = await service();
+      console.log(`[GeoIP] Located ${ip}: ${result.city}, ${result.state}, ${result.country}`);
+      return result;
+    } catch (e) {
+      continue; // Try next service
+    }
+  }
+  
+  console.log(`[GeoIP] All services failed for ${ip}, using default`);
+  return defaultGeo;
 };
 
 // ============================================
@@ -331,16 +435,8 @@ router.get('/r/:slug', async (req, res) => {
       console.error('[QR Scan] Error checking unique user:', e.message);
     }
     
-    // Get geo data (simplified - in production use MaxMind or similar)
-    let geoData = {
-      country: 'Unknown',
-      countryCode: 'XX',
-      state: 'Unknown',
-      city: 'Unknown',
-      latitude: null,
-      longitude: null,
-      timezone: null
-    };
+    // Get geo data using multiple fallback services
+    const geoData = await getGeoLocation(ip);
     
     // Log scan
     const redirectLatency = Date.now() - startTime;
@@ -894,22 +990,8 @@ router.post('/track-visit', async (req, res) => {
     const visitorId = deviceFingerprint; // Use device fingerprint as visitor ID
     const sessionId = req.cookies?.qr_session || generateSessionId();
     
-    // Try to get geo data from IP (using free API)
-    let geoData = { country: 'India', countryCode: 'IN', state: 'Unknown', city: 'Unknown' };
-    try {
-      const geoResponse = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city`);
-      const geo = await geoResponse.json();
-      if (geo.status === 'success') {
-        geoData = {
-          country: geo.country || 'Unknown',
-          countryCode: geo.countryCode || 'XX',
-          state: geo.regionName || 'Unknown',
-          city: geo.city || 'Unknown'
-        };
-      }
-    } catch (e) {
-      console.log('[QR Track] Geo lookup failed:', e.message);
-    }
+    // Get geo data using multiple fallback services
+    const geoData = await getGeoLocation(ip);
     
     // Log the visit as a scan
     await pool.execute(

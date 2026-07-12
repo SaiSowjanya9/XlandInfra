@@ -64,7 +64,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlEstimateStep = searchParams.get('estimateStep');
   
-  // Helper to update URL params
+  // Helper to update URL params (push new history entry for back button support)
   const updateUrlParam = useCallback((key, value) => {
     setSearchParams(prev => {
       const newParams = new URLSearchParams(prev);
@@ -74,7 +74,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
         newParams.set(key, String(value));
       }
       return newParams;
-    }, { replace: true });
+    });
   }, [setSearchParams]);
   
   // Check if this is an FP-created Manager (has franchisePartnerId)
@@ -124,6 +124,52 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     }, 30000);
     return () => clearInterval(interval);
   }, [defaultTab]);
+
+  // Sync estimate creation step with URL for browser back button support
+  useEffect(() => {
+    if (defaultTab === 'create') {
+      if (estimateType === 'property-based' && selectedProperty) {
+        updateUrlParam('estimateStep', 'property-form');
+      } else if (estimateType === 'property-based') {
+        updateUrlParam('estimateStep', 'property-id');
+      } else if (estimateType === 'direct') {
+        updateUrlParam('estimateStep', 'direct-form');
+      } else {
+        updateUrlParam('estimateStep', '');
+      }
+    }
+  }, [estimateType, selectedProperty, defaultTab, updateUrlParam]);
+
+  // Handle browser back button - sync URL to state
+  useEffect(() => {
+    if (defaultTab === 'create') {
+      if (!urlEstimateStep) {
+        // No step in URL = type selection
+        if (estimateType !== null) {
+          setEstimateType(null);
+          setSelectedProperty(null);
+          setPropertyIdInput('');
+        }
+      } else if (urlEstimateStep === 'property-id') {
+        // Property ID entry step
+        if (estimateType !== 'property-based' || selectedProperty !== null) {
+          setEstimateType('property-based');
+          setSelectedProperty(null);
+          setPropertyIdInput('');
+        }
+      } else if (urlEstimateStep === 'property-form') {
+        // Property form step - keep current state if already there
+        if (estimateType !== 'property-based') {
+          setEstimateType('property-based');
+        }
+      } else if (urlEstimateStep === 'direct-form') {
+        // Direct form step
+        if (estimateType !== 'direct') {
+          setEstimateType('direct');
+        }
+      }
+    }
+  }, [urlEstimateStep, defaultTab]);
 
   const loadData = async (silent = false) => {
     if (!silent) setLoading(true);
