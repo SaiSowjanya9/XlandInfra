@@ -2083,10 +2083,66 @@ router.get('/all-employee-zones', authenticate, adminOnly, async (req, res) => {
       `SELECT fp_employee_id, zone_name FROM fp_employee_zones`
     );
 
-    // Get all zones
-    const [zones] = await pool.execute(
-      `SELECT DISTINCT zone_name as name FROM fp_employee_zones ORDER BY zone_name`
-    );
+    // Get all zones from multiple sources: zones table, fp_zones table, and property zone_id
+    const allZoneNames = new Set();
+    const combinedZones = [];
+    
+    // 1. Get global zones from zones table
+    try {
+      const [globalZones] = await pool.execute(
+        'SELECT id, name FROM zones WHERE is_active = 1'
+      );
+      globalZones.forEach(z => {
+        if (z.name && !allZoneNames.has(z.name)) {
+          allZoneNames.add(z.name);
+          combinedZones.push({ id: z.id, name: z.name });
+        }
+      });
+    } catch (_) {}
+    
+    // 2. Get zones from fp_zones table (FP-created zones)
+    try {
+      const [fpZones] = await pool.execute(
+        'SELECT id, name FROM fp_zones WHERE is_active = 1'
+      );
+      fpZones.forEach(z => {
+        if (z.name && !allZoneNames.has(z.name)) {
+          allZoneNames.add(z.name);
+          combinedZones.push({ id: `fp-${z.id}`, name: z.name });
+        }
+      });
+    } catch (_) {}
+    
+    // 3. Get zones from properties table (zone_id column)
+    try {
+      const [propertyZones] = await pool.execute(
+        `SELECT DISTINCT zone_id FROM properties WHERE zone_id IS NOT NULL AND zone_id != ''
+         AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)`
+      );
+      propertyZones.forEach(z => {
+        if (z.zone_id && !allZoneNames.has(z.zone_id)) {
+          allZoneNames.add(z.zone_id);
+          combinedZones.push({ id: `prop-${z.zone_id}`, name: z.zone_id });
+        }
+      });
+    } catch (_) {}
+    
+    // 4. Also include any zones from fp_employee_zones that might not be in other tables
+    try {
+      const [assignedZones] = await pool.execute(
+        `SELECT DISTINCT zone_name FROM fp_employee_zones WHERE zone_name IS NOT NULL`
+      );
+      assignedZones.forEach(z => {
+        if (z.zone_name && !allZoneNames.has(z.zone_name)) {
+          allZoneNames.add(z.zone_name);
+          combinedZones.push({ id: `assigned-${z.zone_name}`, name: z.zone_name });
+        }
+      });
+    } catch (_) {}
+    
+    // Sort combined zones by name
+    combinedZones.sort((a, b) => a.name.localeCompare(b.name));
+    const zones = combinedZones;
 
     // Build a map of employee zones
     const employeeZonesMap = {};
@@ -2655,12 +2711,68 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
       [fpIdNum, fpIdNum]
     );
     
-    const [zones] = await pool.execute(
-      `SELECT DISTINCT z.name FROM fp_employee_zones ez 
-       JOIN zones z ON ez.zone_id = z.id
-       WHERE ez.franchise_partner_id = ? ORDER BY z.name`,
-      [fpIdNum]
-    );
+    // Get all zones from multiple sources for this FP
+    const allZoneNames = new Set();
+    const combinedZones = [];
+    
+    // 1. Get global zones from zones table
+    try {
+      const [globalZones] = await pool.execute(
+        'SELECT id, name FROM zones WHERE is_active = 1'
+      );
+      globalZones.forEach(z => {
+        if (z.name && !allZoneNames.has(z.name)) {
+          allZoneNames.add(z.name);
+          combinedZones.push({ id: z.id, name: z.name });
+        }
+      });
+    } catch (_) {}
+    
+    // 2. Get zones from fp_zones table for this FP
+    try {
+      const [fpZones] = await pool.execute(
+        'SELECT id, name FROM fp_zones WHERE franchise_partner_id = ? AND is_active = 1',
+        [fpIdNum]
+      );
+      fpZones.forEach(z => {
+        if (z.name && !allZoneNames.has(z.name)) {
+          allZoneNames.add(z.name);
+          combinedZones.push({ id: `fp-${z.id}`, name: z.name });
+        }
+      });
+    } catch (_) {}
+    
+    // 3. Get zones from properties table for this FP
+    try {
+      const [propertyZones] = await pool.execute(
+        `SELECT DISTINCT zone_id FROM properties WHERE franchise_partner_id = ? AND zone_id IS NOT NULL AND zone_id != ''
+         AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)`,
+        [fpIdNum]
+      );
+      propertyZones.forEach(z => {
+        if (z.zone_id && !allZoneNames.has(z.zone_id)) {
+          allZoneNames.add(z.zone_id);
+          combinedZones.push({ id: `prop-${z.zone_id}`, name: z.zone_id });
+        }
+      });
+    } catch (_) {}
+    
+    // 4. Also include any zones from fp_employee_zones for this FP
+    try {
+      const [assignedZones] = await pool.execute(
+        `SELECT DISTINCT zone_name FROM fp_employee_zones WHERE franchise_partner_id = ? AND zone_name IS NOT NULL`,
+        [fpIdNum]
+      );
+      assignedZones.forEach(z => {
+        if (z.zone_name && !allZoneNames.has(z.zone_name)) {
+          allZoneNames.add(z.zone_name);
+          combinedZones.push({ id: `assigned-${z.zone_name}`, name: z.zone_name });
+        }
+      });
+    } catch (_) {}
+    
+    // Sort combined zones by name
+    combinedZones.sort((a, b) => a.name.localeCompare(b.name));
     
     res.json({ 
       success: true, 
@@ -2669,7 +2781,7 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
           ...emp,
           zone_names: emp.zone_names || 'No zones assigned'
         })),
-        zones
+        zones: combinedZones
       }
     });
   } catch (error) {
