@@ -24,7 +24,6 @@ const FPDashboard = ({ user }) => {
   const isFPManager = user?.role === 'manager';
   
   const [stats, setStats] = useState(null);
-  const [recentWorkOrders, setRecentWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -47,7 +46,6 @@ const FPDashboard = ({ user }) => {
       
       if (result.success) {
         setStats(result.data.stats);
-        setRecentWorkOrders(result.data.recentWorkOrders || []);
       } else {
         setError(result.message || 'Failed to load dashboard');
       }
@@ -145,30 +143,6 @@ const FPDashboard = ({ user }) => {
     }
   ];
 
-  const getStatusColor = (status) => {
-    const colors = {
-      draft: 'bg-gray-100 text-gray-700',
-      requested: 'bg-blue-100 text-blue-700',
-      under_review: 'bg-yellow-100 text-yellow-700',
-      assigned: 'bg-purple-100 text-purple-700',
-      accepted: 'bg-indigo-100 text-indigo-700',
-      in_progress: 'bg-orange-100 text-orange-700',
-      completed: 'bg-green-100 text-green-700',
-      verified: 'bg-green-100 text-green-700',
-      closed: 'bg-gray-100 text-gray-700',
-      cancelled: 'bg-red-100 text-red-700'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-700';
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
 
   if (loading) {
     return (
@@ -347,78 +321,6 @@ const FPDashboard = ({ user }) => {
         </div>
       </div>
 
-      {/* Recent Work Orders */}
-      <div className="bg-white rounded-xl border border-gray-100 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Work Orders</h2>
-          <Link
-            to="/fp/work-orders"
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-          >
-            View All
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-        
-        {recentWorkOrders.length === 0 ? (
-          <div className="text-center py-8">
-            <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No work orders yet</p>
-            <Link
-              to="/fp/work-orders"
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium mt-2 inline-block"
-            >
-              Create your first work order
-            </Link>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">ID</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Category</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentWorkOrders.map((wo) => (
-                  <tr key={wo.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-3 px-4">
-                      <span className="text-sm font-medium text-gray-900">{wo.work_order_id}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-gray-600">{wo.property_name || '-'}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-gray-600">{wo.category_name || '-'}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div>
-                        <span className="text-sm text-gray-900">{wo.created_by_name || 'System'}</span>
-                        {wo.created_by_role && (
-                          <span className="block text-xs text-gray-400 capitalize">{wo.created_by_role}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
-                        {wo.status?.replace(/_/g, ' ').toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
     </div>
   );
 };

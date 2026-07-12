@@ -10,13 +10,11 @@ import {
   CheckCircle,
   RefreshCw,
   AlertCircle,
-  ArrowRight,
   MapPin
 } from 'lucide-react';
 
 const ManagerDashboard = ({ user }) => {
   const [stats, setStats] = useState(null);
-  const [recentWorkOrders, setRecentWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -34,7 +32,6 @@ const ManagerDashboard = ({ user }) => {
       const result = await response.json();
       if (result.success) {
         setStats(result.data.stats);
-        setRecentWorkOrders(result.data.recentWorkOrders || []);
       } else {
         setError(result.message || 'Failed to load dashboard');
       }
@@ -132,28 +129,6 @@ const ManagerDashboard = ({ user }) => {
     }
   ];
 
-  const getStatusColor = (status) => {
-    const colors = {
-      draft: 'bg-gray-100 text-gray-700',
-      requested: 'bg-blue-100 text-blue-700',
-      pending: 'bg-yellow-100 text-yellow-700',
-      assigned: 'bg-purple-100 text-purple-700',
-      in_progress: 'bg-orange-100 text-orange-700',
-      completed: 'bg-green-100 text-green-700',
-      closed: 'bg-gray-100 text-gray-700',
-      cancelled: 'bg-red-100 text-red-700'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-700';
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
 
   if (loading) {
     return (
@@ -248,55 +223,6 @@ const ManagerDashboard = ({ user }) => {
           </Link>
         </div>
       </div>
-
-      {/* Recent Work Orders */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Work Orders</h2>
-          <Link to="/manager/work-orders" className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1">
-            View All <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-        {recentWorkOrders.length === 0 ? (
-          <div className="p-8 text-center">
-            <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No recent work orders</p>
-            <Link to="/manager/work-orders" className="text-sm text-blue-600 hover:underline mt-2 inline-block">
-              Create your first work order
-            </Link>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Work Order ID</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Property</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Category</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Created</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {recentWorkOrders.map((wo) => (
-                  <tr key={wo.id} className="hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium text-gray-900">{wo.work_order_id}</td>
-                    <td className="py-3 px-4 text-gray-600">{wo.property_name || '-'}</td>
-                    <td className="py-3 px-4 text-gray-600">{wo.category_name || '-'}</td>
-                    <td className="py-3 px-4">
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusColor(wo.status)}`}>
-                        {wo.status?.replace('_', ' ') || 'pending'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-gray-500 text-sm">{formatDate(wo.created_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
     </div>
   );
 };
