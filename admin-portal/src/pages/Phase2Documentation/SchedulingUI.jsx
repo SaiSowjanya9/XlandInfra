@@ -51,48 +51,51 @@ NOTE: Use "Customers" instead of "Clients"`}
             <div className="w-10 h-10 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">1</div>
             <h3 className="text-lg font-semibold text-gray-800">Customer Details</h3>
           </div>
-          <div className="ml-13 grid md:grid-cols-2 gap-4 pl-12">
-            <div className="bg-gray-50 rounded-lg p-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
               <h4 className="font-medium text-gray-700 mb-3">Form Fields</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between py-1 border-b border-gray-200">
-                  <span>Title</span><span className="text-gray-400">Mr/Mrs/Ms/No title</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-gray-200">
-                  <span>First Name</span><span className="text-gray-400">Text Input</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-gray-200">
-                  <span>Last Name</span><span className="text-gray-400">Text Input</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-gray-200">
-                  <span>Company Name</span><span className="text-gray-400">Text Input</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-gray-200">
-                  <span>Phone</span><span className="text-gray-400">Phone Input</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span>Email</span><span className="text-gray-400">Email Input</span>
-                </div>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
+                <div className="flex justify-between py-1 border-b"><span>Title</span><span className="text-gray-400">Mr/Mrs/Ms</span></div>
+                <div className="flex justify-between py-1 border-b"><span>First Name, Last Name</span><span className="text-gray-400">Text</span></div>
+                <div className="flex justify-between py-1 border-b"><span>Company Name</span><span className="text-gray-400">Text</span></div>
+                <div className="flex justify-between py-1 border-b"><span>Phone, Email</span><span className="text-gray-400">Input</span></div>
+                <div className="flex justify-between py-1 border-b"><span>Lead Source</span><span className="text-gray-400">Dropdown</span></div>
+                <div className="flex justify-between py-1"><span>Address Fields</span><span className="text-gray-400">Text</span></div>
               </div>
             </div>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-medium text-gray-700 mb-3">Additional Fields</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between py-1 border-b border-gray-200">
-                  <span>Lead Source</span><span className="text-gray-400">Dropdown</span>
-                </div>
-                <div className="text-xs text-gray-500 pb-2">Referral, Website, Walk-in, Advertisement</div>
-                <div className="flex justify-between py-1 border-b border-gray-200">
-                  <span>Referrer Name</span><span className="text-gray-400">If Referral</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-gray-200">
-                  <span>Street 1, Street 2</span><span className="text-gray-400">Text</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-gray-200">
-                  <span>City, State</span><span className="text-gray-400">Text</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span>Postal Code, Country</span><span className="text-gray-400">Text</span>
+            <div>
+              <h4 className="font-medium text-gray-700 mb-3">UI Mockup</h4>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
+                <div className="bg-white rounded-lg shadow p-3 space-y-2">
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="font-bold text-sm">New Request - Step 1</span>
+                    <div className="flex gap-1">
+                      <div className="w-6 h-6 bg-green-600 text-white rounded-full text-xs flex items-center justify-center">1</div>
+                      <div className="w-6 h-6 bg-gray-200 rounded-full text-xs flex items-center justify-center">2</div>
+                      <div className="w-6 h-6 bg-gray-200 rounded-full text-xs flex items-center justify-center">3</div>
+                      <div className="w-6 h-6 bg-gray-200 rounded-full text-xs flex items-center justify-center">4</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <select className="h-6 bg-gray-100 rounded px-1 text-xs border-0"><option>Mr</option></select>
+                    <div className="h-6 bg-gray-100 rounded flex items-center px-2 text-xs text-gray-400">First Name</div>
+                    <div className="h-6 bg-gray-100 rounded flex items-center px-2 text-xs text-gray-400">Last Name</div>
+                  </div>
+                  <div className="h-6 bg-gray-100 rounded flex items-center px-2 text-xs text-gray-400">Company Name</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="h-6 bg-gray-100 rounded flex items-center px-2 text-xs text-gray-400">📞 Phone</div>
+                    <div className="h-6 bg-gray-100 rounded flex items-center px-2 text-xs text-gray-400">✉️ Email</div>
+                  </div>
+                  <select className="w-full h-6 bg-gray-100 rounded px-2 text-xs border-0 text-gray-500"><option>Lead Source: Website</option></select>
+                  <div className="h-6 bg-gray-100 rounded flex items-center px-2 text-xs text-gray-400">Street Address</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="h-6 bg-gray-100 rounded flex items-center px-2 text-xs text-gray-400">City</div>
+                    <div className="h-6 bg-gray-100 rounded flex items-center px-2 text-xs text-gray-400">State</div>
+                    <div className="h-6 bg-gray-100 rounded flex items-center px-2 text-xs text-gray-400">Postal</div>
+                  </div>
+                  <div className="flex justify-end pt-2 border-t">
+                    <button className="px-3 py-1 text-xs bg-green-600 text-white rounded">Next →</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -105,33 +108,53 @@ NOTE: Use "Customers" instead of "Clients"`}
             <div className="w-10 h-10 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">2</div>
             <h3 className="text-lg font-semibold text-gray-800">Service Details</h3>
           </div>
-          <div className="ml-13 pl-12">
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div className="space-y-2">
-                  <div className="flex justify-between py-1 border-b border-gray-200">
-                    <span>Service Category</span><span className="text-gray-400">Dropdown</span>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <h4 className="font-medium text-gray-700 mb-3">Form Fields</h4>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
+                <div className="flex justify-between py-1 border-b"><span>Service Category</span><span className="text-gray-400">Dropdown</span></div>
+                <div className="flex justify-between py-1 border-b"><span>Subcategory</span><span className="text-gray-400">Dropdown</span></div>
+                <div className="flex justify-between py-1 border-b"><span>Description</span><span className="text-gray-400">Textarea</span></div>
+                <div className="flex justify-between py-1 border-b"><span>Availability Date</span><span className="text-gray-400">IST Format</span></div>
+                <div className="flex justify-between py-1 border-b"><span>Preferred Time</span><span className="text-gray-400">Anytime/Morning/etc</span></div>
+                <div className="flex justify-between py-1 border-b"><span>Pets</span><span className="text-gray-400">Yes/No Toggle</span></div>
+                <div className="flex justify-between py-1"><span>Comments</span><span className="text-gray-400">Textarea</span></div>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-700 mb-3">UI Mockup</h4>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
+                <div className="bg-white rounded-lg shadow p-3 space-y-2">
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="font-bold text-sm">Service Details - Step 2</span>
+                    <div className="flex gap-1">
+                      <div className="w-6 h-6 bg-green-600 text-white rounded-full text-xs flex items-center justify-center">✓</div>
+                      <div className="w-6 h-6 bg-green-600 text-white rounded-full text-xs flex items-center justify-center">2</div>
+                      <div className="w-6 h-6 bg-gray-200 rounded-full text-xs flex items-center justify-center">3</div>
+                      <div className="w-6 h-6 bg-gray-200 rounded-full text-xs flex items-center justify-center">4</div>
+                    </div>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-gray-200">
-                    <span>Subcategory</span><span className="text-gray-400">Dropdown</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <select className="h-6 bg-gray-100 rounded px-2 text-xs border-0 text-gray-500"><option>Select Category</option></select>
+                    <select className="h-6 bg-gray-100 rounded px-2 text-xs border-0 text-gray-500"><option>Select Subcategory</option></select>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-gray-200">
-                    <span>Description</span><span className="text-gray-400">Textarea</span>
+                  <textarea className="w-full h-12 bg-gray-100 rounded p-2 text-xs resize-none border-0" placeholder="Description of work required..."></textarea>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="h-6 bg-gray-100 rounded flex items-center px-2 text-xs text-gray-400">📅 Availability Date</div>
+                    <select className="h-6 bg-gray-100 rounded px-2 text-xs border-0 text-gray-500"><option>Preferred Time</option></select>
                   </div>
-                  <div className="flex justify-between py-1">
-                    <span>Comments</span><span className="text-gray-400">Textarea</span>
+                  <div className="flex items-center justify-between bg-gray-100 rounded px-2 py-1">
+                    <span className="text-xs text-gray-600">Pets on Property?</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-500">No</span>
+                      <div className="w-8 h-4 bg-gray-300 rounded-full relative"><div className="w-3 h-3 bg-white rounded-full absolute left-0.5 top-0.5"></div></div>
+                      <span className="text-xs text-gray-500">Yes</span>
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between py-1 border-b border-gray-200">
-                    <span>Availability Date</span><span className="text-gray-400">IST Format</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-gray-200">
-                    <span>Preferred Time</span><span className="text-gray-400">Select</span>
-                  </div>
-                  <div className="text-xs text-gray-500 pb-2">Anytime, Morning, Afternoon, Evening</div>
-                  <div className="flex justify-between py-1">
-                    <span>Pets</span><span className="text-gray-400">Yes/No Toggle</span>
+                  <textarea className="w-full h-10 bg-gray-100 rounded p-2 text-xs resize-none border-0" placeholder="Additional comments..."></textarea>
+                  <div className="flex justify-between pt-2 border-t">
+                    <button className="px-3 py-1 text-xs border rounded text-gray-600">← Back</button>
+                    <button className="px-3 py-1 text-xs bg-green-600 text-white rounded">Next →</button>
                   </div>
                 </div>
               </div>
@@ -145,18 +168,58 @@ NOTE: Use "Customers" instead of "Clients"`}
             <div className="w-10 h-10 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">3</div>
             <h3 className="text-lg font-semibold text-gray-800">Upload Images</h3>
           </div>
-          <div className="ml-13 pl-12">
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="flex items-center gap-4">
-                <Camera className="w-8 h-8 text-gray-400" />
-                <div>
-                  <p className="font-medium text-gray-700">Upload images of work area</p>
-                  <p className="text-sm text-gray-500">Supported: JPG, PNG, WEBP (Max 5MB each)</p>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <h4 className="font-medium text-gray-700 mb-3">Requirements</h4>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center gap-4 mb-4">
+                  <Camera className="w-8 h-8 text-gray-400" />
+                  <div>
+                    <p className="font-medium text-gray-700">Upload images of work area</p>
+                    <p className="text-sm text-gray-500">Supported: JPG, PNG, WEBP (Max 5MB each)</p>
+                  </div>
+                </div>
+                <div className="text-sm space-y-2">
+                  <div className="flex justify-between py-1 border-b"><span>Max Files</span><span className="text-gray-400">5 images</span></div>
+                  <div className="flex justify-between py-1 border-b"><span>Max Size</span><span className="text-gray-400">5MB each</span></div>
+                  <div className="flex justify-between py-1"><span>Formats</span><span className="text-gray-400">JPG, PNG, WEBP</span></div>
                 </div>
               </div>
-              <div className="mt-4 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <Camera className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">Drag & drop images or click to browse</p>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-700 mb-3">UI Mockup</h4>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
+                <div className="bg-white rounded-lg shadow p-3 space-y-2">
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="font-bold text-sm">Upload Images - Step 3</span>
+                    <div className="flex gap-1">
+                      <div className="w-6 h-6 bg-green-600 text-white rounded-full text-xs flex items-center justify-center">✓</div>
+                      <div className="w-6 h-6 bg-green-600 text-white rounded-full text-xs flex items-center justify-center">✓</div>
+                      <div className="w-6 h-6 bg-green-600 text-white rounded-full text-xs flex items-center justify-center">3</div>
+                      <div className="w-6 h-6 bg-gray-200 rounded-full text-xs flex items-center justify-center">4</div>
+                    </div>
+                  </div>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-gray-50">
+                    <Camera className="w-8 h-8 text-gray-300 mx-auto mb-1" />
+                    <p className="text-xs text-gray-500">Drag & drop or click to upload</p>
+                    <p className="text-xs text-gray-400">JPG, PNG, WEBP up to 5MB</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="aspect-square bg-gray-200 rounded flex items-center justify-center">
+                      <span className="text-xs text-gray-400">IMG 1</span>
+                    </div>
+                    <div className="aspect-square bg-gray-200 rounded flex items-center justify-center">
+                      <span className="text-xs text-gray-400">IMG 2</span>
+                    </div>
+                    <div className="aspect-square border-2 border-dashed border-gray-300 rounded flex items-center justify-center">
+                      <span className="text-lg text-gray-300">+</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t">
+                    <button className="px-3 py-1 text-xs border rounded text-gray-600">← Back</button>
+                    <button className="px-3 py-1 text-xs bg-green-600 text-white rounded">Next →</button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -168,48 +231,59 @@ NOTE: Use "Customers" instead of "Clients"`}
             <div className="w-10 h-10 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">4</div>
             <h3 className="text-lg font-semibold text-gray-800">On-Site Assessment</h3>
           </div>
-          <div className="ml-13 pl-12">
-            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg p-4 border border-amber-200">
-              <p className="text-sm text-amber-800 mb-4">Visit the property to assess the job before doing the work</p>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="bg-white rounded-lg p-4">
-                  <h4 className="font-medium text-gray-700 mb-3">Schedule Fields</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between py-1 border-b">
-                      <span>Instructions</span><span className="text-gray-400">Textarea</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b">
-                      <span>Start Date</span><span className="text-gray-400">Date Picker</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b">
-                      <span>End Date</span><span className="text-gray-400">Date Picker</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b">
-                      <span>Start Time</span><span className="text-gray-400">Time Picker</span>
-                    </div>
-                    <div className="flex justify-between py-1">
-                      <span>End Time</span><span className="text-gray-400">Time Picker</span>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg p-4 border border-amber-200">
+                <p className="text-sm text-amber-800 mb-3">Visit the property to assess the job</p>
+                <div className="bg-white rounded-lg p-3 space-y-2 text-sm">
+                  <div className="flex justify-between py-1 border-b"><span>Instructions</span><span className="text-gray-400">Textarea</span></div>
+                  <div className="flex justify-between py-1 border-b"><span>Start/End Date</span><span className="text-gray-400">Date Picker</span></div>
+                  <div className="flex justify-between py-1 border-b"><span>Start/End Time</span><span className="text-gray-400">Time Picker</span></div>
+                  <div className="flex justify-between py-1 border-b"><span>Schedule Later</span><span className="text-gray-400">Checkbox</span></div>
+                  <div className="flex justify-between py-1 border-b"><span>Team Assignment</span><span className="text-gray-400">Assign +</span></div>
+                  <div className="flex justify-between py-1 border-b"><span>Checklists</span><span className="text-gray-400">Items</span></div>
+                  <div className="flex justify-between py-1"><span>Notes</span><span className="text-gray-400">Internal</span></div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-700 mb-3">UI Mockup</h4>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
+                <div className="bg-white rounded-lg shadow p-3 space-y-2">
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="font-bold text-sm">On-Site Assessment - Step 4</span>
+                    <div className="flex gap-1">
+                      <div className="w-6 h-6 bg-green-600 text-white rounded-full text-xs flex items-center justify-center">✓</div>
+                      <div className="w-6 h-6 bg-green-600 text-white rounded-full text-xs flex items-center justify-center">✓</div>
+                      <div className="w-6 h-6 bg-green-600 text-white rounded-full text-xs flex items-center justify-center">✓</div>
+                      <div className="w-6 h-6 bg-green-600 text-white rounded-full text-xs flex items-center justify-center">4</div>
                     </div>
                   </div>
-                </div>
-                <div className="bg-white rounded-lg p-4">
-                  <h4 className="font-medium text-gray-700 mb-3">Options & Assignment</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between py-1 border-b">
-                      <span>Schedule Later</span><span className="text-gray-400">Checkbox</span>
+                  <textarea className="w-full h-10 bg-gray-100 rounded p-2 text-xs resize-none border-0" placeholder="Instructions for assessment..."></textarea>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="h-6 bg-gray-100 rounded flex items-center px-2 text-xs text-gray-400">📅 Start Date</div>
+                    <div className="h-6 bg-gray-100 rounded flex items-center px-2 text-xs text-gray-400">📅 End Date</div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="h-6 bg-gray-100 rounded flex items-center px-2 text-xs text-gray-400">🕐 Start Time</div>
+                    <div className="h-6 bg-gray-100 rounded flex items-center px-2 text-xs text-gray-400">🕐 End Time</div>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs">
+                    <label className="flex items-center gap-1"><input type="checkbox" className="rounded" /> Schedule Later</label>
+                    <label className="flex items-center gap-1"><input type="checkbox" className="rounded" /> Anytime</label>
+                  </div>
+                  <div className="bg-gray-100 rounded p-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium">Team Assignment</span>
+                      <button className="text-xs text-green-600">+ Assign</button>
                     </div>
-                    <div className="flex justify-between py-1 border-b">
-                      <span>Anytime</span><span className="text-gray-400">Checkbox</span>
+                    <div className="flex gap-1 mt-1">
+                      <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs">John D.</span>
                     </div>
-                    <div className="flex justify-between py-1 border-b">
-                      <span>Team Assignment</span><span className="text-gray-400">Assign + Button</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b">
-                      <span>Checklists</span><span className="text-gray-400">Customizable Items</span>
-                    </div>
-                    <div className="flex justify-between py-1">
-                      <span>Notes</span><span className="text-gray-400">Internal Notes</span>
-                    </div>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t">
+                    <button className="px-3 py-1 text-xs border rounded text-gray-600">← Back</button>
+                    <button className="px-3 py-1 text-xs bg-green-600 text-white rounded">Create Request</button>
                   </div>
                 </div>
               </div>
@@ -223,98 +297,97 @@ NOTE: Use "Customers" instead of "Clients"`}
         <SectionTitle icon={Calendar} title="Calendar Screen & Behavior" />
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              Unscheduled Sidebar
-            </h4>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-yellow-800 mb-3">If on-site assessment is NOT 100% complete:</p>
-              <ul className="text-sm text-yellow-700 space-y-2">
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-500">•</span>
-                  Request appears in "Unscheduled" panel
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-500">•</span>
-                  Missing: dates not set, team not assigned
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-500">•</span>
-                  Checklists incomplete
-                </li>
-              </ul>
+            <h4 className="font-semibold text-gray-800 mb-3">Behavior Rules</h4>
+            <div className="space-y-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                  <span className="font-semibold text-yellow-800">Unscheduled Sidebar</span>
+                </div>
+                <p className="text-sm text-yellow-700">If assessment NOT 100% complete → appears in sidebar panel</p>
+              </div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span className="font-semibold text-green-800">Calendar Grid</span>
+                </div>
+                <p className="text-sm text-green-700">If assessment IS 100% complete → appears on calendar</p>
+              </div>
+            </div>
+            <div className="mt-4">
+              <h4 className="font-semibold text-gray-800 mb-2">Color Coding</h4>
+              <div className="flex flex-wrap gap-2">
+                <div className="flex items-center gap-2 bg-blue-50 px-2 py-1 rounded">
+                  <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                  <span className="text-xs text-blue-700">Requests</span>
+                </div>
+                <div className="flex items-center gap-2 bg-purple-50 px-2 py-1 rounded">
+                  <div className="w-3 h-3 bg-purple-500 rounded"></div>
+                  <span className="text-xs text-purple-700">Quotes</span>
+                </div>
+                <div className="flex items-center gap-2 bg-green-50 px-2 py-1 rounded">
+                  <div className="w-3 h-3 bg-green-500 rounded"></div>
+                  <span className="text-xs text-green-700">Jobs</span>
+                </div>
+              </div>
             </div>
           </div>
           <div>
-            <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              Calendar Grid
-            </h4>
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-sm text-green-800 mb-3">If on-site assessment IS 100% complete:</p>
-              <ul className="text-sm text-green-700 space-y-2">
-                <li className="flex items-start gap-2">
-                  <span className="text-green-500">•</span>
-                  Request appears on scheduled calendar date
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-500">•</span>
-                  Color-coded by type
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-500">•</span>
-                  Mark as Complete option available
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* Calendar Controls */}
-        <div className="mt-6">
-          <h4 className="font-semibold text-gray-800 mb-3">Calendar Controls</h4>
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex flex-wrap gap-3 mb-4">
-              <button className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded">Month</button>
-              <button className="px-3 py-1.5 bg-gray-200 text-gray-700 text-sm rounded">Week</button>
-              <button className="px-3 py-1.5 bg-gray-200 text-gray-700 text-sm rounded">Day</button>
-            </div>
-            <div className="grid md:grid-cols-4 gap-3 text-sm">
-              <div className="bg-white rounded p-3 border">
-                <p className="text-gray-500 text-xs mb-1">Type Filter</p>
-                <p className="font-medium">All / Requests / Quotes / Jobs</p>
+            <h4 className="font-semibold text-gray-800 mb-3">UI Mockup</h4>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
+              <div className="bg-white rounded-lg shadow p-3 space-y-2">
+                {/* Calendar Header */}
+                <div className="flex justify-between items-center border-b pb-2">
+                  <div className="flex items-center gap-2">
+                    <button className="text-xs px-2 py-1 border rounded">←</button>
+                    <span className="font-bold text-sm">July 2025</span>
+                    <button className="text-xs px-2 py-1 border rounded">→</button>
+                  </div>
+                  <div className="flex gap-1">
+                    <button className="text-xs px-2 py-1 bg-green-600 text-white rounded">Month</button>
+                    <button className="text-xs px-2 py-1 bg-gray-200 rounded">Week</button>
+                    <button className="text-xs px-2 py-1 bg-gray-200 rounded">Day</button>
+                  </div>
+                </div>
+                {/* Filters */}
+                <div className="flex gap-2 text-xs">
+                  <select className="h-5 bg-gray-100 rounded px-1 border-0 text-gray-500"><option>All Types</option></select>
+                  <select className="h-5 bg-gray-100 rounded px-1 border-0 text-gray-500"><option>All Team</option></select>
+                  <button className="px-2 bg-gray-100 rounded text-gray-500">Map View</button>
+                </div>
+                {/* Calendar Grid with Sidebar */}
+                <div className="flex gap-2">
+                  {/* Unscheduled Sidebar */}
+                  <div className="w-24 bg-yellow-50 rounded p-1 text-xs">
+                    <p className="font-semibold text-yellow-800 mb-1">Unscheduled</p>
+                    <div className="bg-yellow-200 rounded p-1 mb-1 text-yellow-800">
+                      <p className="font-medium">Plumbing</p>
+                      <p className="text-yellow-600">No date</p>
+                    </div>
+                  </div>
+                  {/* Calendar Days */}
+                  <div className="flex-1 border rounded">
+                    <div className="grid grid-cols-7 gap-px bg-gray-200 text-xs">
+                      <div className="bg-gray-50 p-1 text-center font-medium">Sun</div>
+                      <div className="bg-gray-50 p-1 text-center font-medium">Mon</div>
+                      <div className="bg-gray-50 p-1 text-center font-medium">Tue</div>
+                      <div className="bg-gray-50 p-1 text-center font-medium">Wed</div>
+                      <div className="bg-gray-50 p-1 text-center font-medium">Thu</div>
+                      <div className="bg-gray-50 p-1 text-center font-medium">Fri</div>
+                      <div className="bg-gray-50 p-1 text-center font-medium">Sat</div>
+                    </div>
+                    <div className="grid grid-cols-7 gap-px bg-gray-200 text-xs">
+                      <div className="bg-white p-1 h-10">1</div>
+                      <div className="bg-white p-1 h-10">2</div>
+                      <div className="bg-white p-1 h-10">3<div className="bg-blue-500 text-white rounded px-1 mt-0.5 truncate">Request</div></div>
+                      <div className="bg-white p-1 h-10">4</div>
+                      <div className="bg-white p-1 h-10">5<div className="bg-green-500 text-white rounded px-1 mt-0.5 truncate">Job</div></div>
+                      <div className="bg-white p-1 h-10">6</div>
+                      <div className="bg-white p-1 h-10">7</div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="bg-white rounded p-3 border">
-                <p className="text-gray-500 text-xs mb-1">Team Filter</p>
-                <p className="font-medium">Select Team Members</p>
-              </div>
-              <div className="bg-white rounded p-3 border">
-                <p className="text-gray-500 text-xs mb-1">Status Filter</p>
-                <p className="font-medium">All Statuses</p>
-              </div>
-              <div className="bg-white rounded p-3 border">
-                <p className="text-gray-500 text-xs mb-1">Actions</p>
-                <p className="font-medium">Find a Time / Map View</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Color Coding */}
-        <div className="mt-6">
-          <h4 className="font-semibold text-gray-800 mb-3">Color Coding</h4>
-          <div className="flex flex-wrap gap-3">
-            <div className="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg">
-              <div className="w-4 h-4 bg-blue-500 rounded"></div>
-              <span className="text-sm text-blue-700">Requests</span>
-            </div>
-            <div className="flex items-center gap-2 bg-purple-50 px-3 py-2 rounded-lg">
-              <div className="w-4 h-4 bg-purple-500 rounded"></div>
-              <span className="text-sm text-purple-700">Quotes</span>
-            </div>
-            <div className="flex items-center gap-2 bg-green-50 px-3 py-2 rounded-lg">
-              <div className="w-4 h-4 bg-green-500 rounded"></div>
-              <span className="text-sm text-green-700">Jobs</span>
             </div>
           </div>
         </div>
@@ -325,71 +398,85 @@ NOTE: Use "Customers" instead of "Clients"`}
         <SectionTitle icon={CheckSquare} title="Assessment Details Modal" />
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <h4 className="font-semibold text-gray-800 mb-3">Modal Tabs</h4>
-            <div className="flex gap-1 mb-4">
-              <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-t">Info</button>
-              <button className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-t">Customer</button>
-              <button className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-t">Notes</button>
-            </div>
+            <h4 className="font-semibold text-gray-800 mb-3">Modal Fields</h4>
             <div className="bg-gray-50 rounded-lg p-4 text-sm space-y-2">
-              <div className="flex justify-between py-1 border-b">
-                <span>Request Title</span><span className="text-gray-400">Text</span>
-              </div>
-              <div className="flex justify-between py-1 border-b">
-                <span>Customer Name</span><span className="text-gray-400">Text</span>
-              </div>
-              <div className="flex justify-between py-1 border-b">
-                <span>Address</span><span className="text-gray-400">Text</span>
-              </div>
-              <div className="flex justify-between py-1 border-b">
-                <span>Status</span><span className="text-gray-400">Badge</span>
-              </div>
-              <div className="flex justify-between py-1 border-b">
-                <span>Directions Link</span><span className="text-gray-400">Link</span>
-              </div>
-              <div className="flex justify-between py-1 border-b">
-                <span>Instructions</span><span className="text-gray-400">Text</span>
-              </div>
-              <div className="flex justify-between py-1 border-b">
-                <span>Request Date</span><span className="text-gray-400">Date</span>
-              </div>
-              <div className="flex justify-between py-1 border-b">
-                <span>Assigned To</span><span className="text-gray-400">Text</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span>Service Details</span><span className="text-gray-400">Text</span>
+              <div className="flex justify-between py-1 border-b"><span>Request Title</span><span className="text-gray-400">Text</span></div>
+              <div className="flex justify-between py-1 border-b"><span>Customer Name</span><span className="text-gray-400">Text</span></div>
+              <div className="flex justify-between py-1 border-b"><span>Address</span><span className="text-gray-400">Text</span></div>
+              <div className="flex justify-between py-1 border-b"><span>Status</span><span className="text-gray-400">Badge</span></div>
+              <div className="flex justify-between py-1 border-b"><span>Directions Link</span><span className="text-gray-400">Link</span></div>
+              <div className="flex justify-between py-1 border-b"><span>Instructions</span><span className="text-gray-400">Text</span></div>
+              <div className="flex justify-between py-1 border-b"><span>Assigned To</span><span className="text-gray-400">Text</span></div>
+              <div className="flex justify-between py-1"><span>Service Details</span><span className="text-gray-400">Text</span></div>
+            </div>
+            <div className="mt-4">
+              <h4 className="font-semibold text-gray-800 mb-2">Status Flow</h4>
+              <div className="flex items-center gap-2 flex-wrap">
+                <StatusBadge status="Unscheduled" color="bg-gray-100 text-gray-700" />
+                <span className="text-gray-400">→</span>
+                <StatusBadge status="Scheduled" color="bg-blue-100 text-blue-700" />
+                <span className="text-gray-400">→</span>
+                <StatusBadge status="In Progress" color="bg-yellow-100 text-yellow-700" />
+                <span className="text-gray-400">→</span>
+                <StatusBadge status="Completed" color="bg-green-100 text-green-700" />
               </div>
             </div>
           </div>
           <div>
-            <h4 className="font-semibold text-gray-800 mb-3">Actions</h4>
-            <div className="space-y-3">
-              <button className="w-full px-4 py-3 bg-green-600 text-white rounded-lg font-medium flex items-center justify-center gap-2">
-                <CheckSquare className="w-5 h-5" />
-                Mark as Complete
-              </button>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm font-medium text-gray-700 mb-2">More Actions:</p>
-                <div className="flex flex-wrap gap-2">
-                  <span className="px-2 py-1 bg-white border rounded text-xs">Edit</span>
-                  <span className="px-2 py-1 bg-white border rounded text-xs">Reschedule</span>
-                  <span className="px-2 py-1 bg-white border rounded text-xs">Create Quote</span>
-                  <span className="px-2 py-1 bg-white border rounded text-xs">Convert to Job</span>
-                  <span className="px-2 py-1 bg-white border rounded text-xs">Cancel</span>
-                  <span className="px-2 py-1 bg-white border rounded text-xs text-red-600">Delete</span>
+            <h4 className="font-semibold text-gray-800 mb-3">UI Mockup</h4>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
+              <div className="bg-white rounded-lg shadow p-3 space-y-2">
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-bold text-sm">Assessment Details</span>
+                  <button className="text-gray-400 text-lg">×</button>
+                </div>
+                {/* Tabs */}
+                <div className="flex gap-1 border-b">
+                  <button className="px-3 py-1 text-xs bg-green-600 text-white rounded-t">Info</button>
+                  <button className="px-3 py-1 text-xs bg-gray-100 rounded-t">Customer</button>
+                  <button className="px-3 py-1 text-xs bg-gray-100 rounded-t">Notes</button>
+                </div>
+                {/* Content */}
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Request</span>
+                    <span className="font-medium">Plumbing Repair</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Customer</span>
+                    <span className="font-medium">John Doe</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Address</span>
+                    <span className="font-medium text-blue-600">📍 123 Main St</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Status</span>
+                    <span className="bg-blue-100 text-blue-700 px-2 rounded">Scheduled</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Assigned</span>
+                    <span className="font-medium">Mike, Sarah</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Date</span>
+                    <span className="font-medium">Jul 15, 2025 - 10:00 AM</span>
+                  </div>
+                </div>
+                {/* Actions */}
+                <div className="border-t pt-2 space-y-2">
+                  <button className="w-full px-3 py-2 bg-green-600 text-white rounded text-xs font-medium flex items-center justify-center gap-1">
+                    <CheckSquare className="w-3 h-3" /> Mark as Complete
+                  </button>
+                  <div className="flex flex-wrap gap-1">
+                    <button className="px-2 py-1 border rounded text-xs">Edit</button>
+                    <button className="px-2 py-1 border rounded text-xs">Reschedule</button>
+                    <button className="px-2 py-1 border rounded text-xs">Create Quote</button>
+                    <button className="px-2 py-1 border rounded text-xs">Convert to Job</button>
+                    <button className="px-2 py-1 border rounded text-xs text-red-600">Delete</button>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <h4 className="font-semibold text-gray-800 mb-3 mt-6">Status Flow</h4>
-            <div className="flex items-center gap-2 flex-wrap">
-              <StatusBadge status="Unscheduled" color="bg-gray-100 text-gray-700" />
-              <span className="text-gray-400">→</span>
-              <StatusBadge status="Scheduled" color="bg-blue-100 text-blue-700" />
-              <span className="text-gray-400">→</span>
-              <StatusBadge status="In Progress" color="bg-yellow-100 text-yellow-700" />
-              <span className="text-gray-400">→</span>
-              <StatusBadge status="Completed" color="bg-green-100 text-green-700" />
             </div>
           </div>
         </div>
