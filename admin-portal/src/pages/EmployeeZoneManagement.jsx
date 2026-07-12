@@ -169,12 +169,21 @@ const EmployeeZoneManagement = () => {
           setZones(freshZones);
           
           setSelectedEmployee(employee);
-          const validZoneNames = freshZones.map(z => z.name);
-          if (employee.assignedZones === 'all') {
+          // Filter out 'all' from zone names - it's a special value, not a zone name
+          const validZoneNames = freshZones.map(z => z.name).filter(n => n !== 'all' && n.toLowerCase() !== 'all');
+          const empZones = employee.assignedZones || employee.assigned_zones || [];
+          
+          // Check if employee has "all" zones assigned
+          const hasAllZones = empZones === 'all' || 
+            (Array.isArray(empZones) && empZones.some(z => z === 'all' || (typeof z === 'string' && z.toLowerCase() === 'all')));
+          
+          if (hasAllZones) {
             setSelectedZones(validZoneNames);
-          } else if (Array.isArray(employee.assignedZones)) {
-            // Only include zones that still exist in the system
-            const filteredZones = employee.assignedZones.filter(z => validZoneNames.includes(z));
+          } else if (Array.isArray(empZones)) {
+            // Only include zones that still exist in the system, filter out 'all'
+            const filteredZones = empZones
+              .filter(z => z !== 'all' && (typeof z !== 'string' || z.toLowerCase() !== 'all'))
+              .filter(z => validZoneNames.includes(z));
             setSelectedZones(filteredZones);
           } else {
             setSelectedZones([]);
@@ -186,12 +195,21 @@ const EmployeeZoneManagement = () => {
     
     // Fallback
     setSelectedEmployee(employee);
-    const validZoneNames = zones.map(z => z.name);
-    if (employee.assignedZones === 'all') {
+    // Filter out 'all' from zone names - it's a special value, not a zone name
+    const validZoneNames = zones.map(z => z.name).filter(n => n !== 'all' && n.toLowerCase() !== 'all');
+    const empZones = employee.assignedZones || employee.assigned_zones || [];
+    
+    // Check if employee has "all" zones assigned
+    const hasAllZones = empZones === 'all' || 
+      (Array.isArray(empZones) && empZones.some(z => z === 'all' || (typeof z === 'string' && z.toLowerCase() === 'all')));
+    
+    if (hasAllZones) {
       setSelectedZones(validZoneNames);
-    } else if (Array.isArray(employee.assignedZones)) {
-      // Only include zones that still exist in the system
-      const filteredZones = employee.assignedZones.filter(z => validZoneNames.includes(z));
+    } else if (Array.isArray(empZones)) {
+      // Only include zones that still exist in the system, filter out 'all'
+      const filteredZones = empZones
+        .filter(z => z !== 'all' && (typeof z !== 'string' || z.toLowerCase() !== 'all'))
+        .filter(z => validZoneNames.includes(z));
       setSelectedZones(filteredZones);
     } else {
       setSelectedZones([]);
@@ -235,13 +253,18 @@ const EmployeeZoneManagement = () => {
   const getAvailableZonesForCurrentEmployee = () => {
     if (!selectedEmployee) return [];
     const empRole = selectedEmployee.role || selectedEmployee.employee_type || 'employee';
-    return zones.filter(zone => !isZoneLockedForEmployee(zone.name, selectedEmployee.id, empRole));
+    // Filter out 'all' - it's a special value, not a zone
+    return zones
+      .filter(zone => zone.name !== 'all' && zone.name?.toLowerCase() !== 'all')
+      .filter(zone => !isZoneLockedForEmployee(zone.name, selectedEmployee.id, empRole));
   };
 
   // "All Zones" should select ALL zones (including locked ones) - All Zones can coexist
   const handleSelectAllAvailable = () => {
-    const allZoneNames = zones.map(z => z.name);
-    const allSelected = allZoneNames.every(name => selectedZones.includes(name));
+    // Filter out 'all' - it's a special value, not a zone
+    const validZones = zones.filter(z => z.name !== 'all' && z.name?.toLowerCase() !== 'all');
+    const allZoneNames = validZones.map(z => z.name);
+    const allSelected = allZoneNames.length > 0 && allZoneNames.every(name => selectedZones.includes(name));
     
     if (allSelected) {
       // Deselect all
@@ -253,9 +276,11 @@ const EmployeeZoneManagement = () => {
   };
 
   const isAllAvailableSelected = () => {
-    if (zones.length === 0) return false;
-    // Check if ALL zones are selected (not just available)
-    return zones.every(zone => selectedZones.includes(zone.name));
+    // Filter out 'all' - it's a special value, not a zone
+    const validZones = zones.filter(z => z.name !== 'all' && z.name?.toLowerCase() !== 'all');
+    if (validZones.length === 0) return false;
+    // Check if ALL valid zones are selected
+    return validZones.every(zone => selectedZones.includes(zone.name));
   };
 
   const handleSaveZones = async () => {
@@ -648,7 +673,7 @@ const EmployeeZoneManagement = () => {
                         All Zones
                       </p>
                       <p className="text-xs text-gray-500">
-                        Select all {zones.length} zones
+                        Select all {zones.filter(z => z.name !== 'all' && z.name?.toLowerCase() !== 'all').length} zones
                       </p>
                     </div>
                   </div>
@@ -664,7 +689,7 @@ const EmployeeZoneManagement = () => {
 
               {/* Zone Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {zones.map((zone) => {
+                {zones.filter(z => z.name !== 'all' && z.name?.toLowerCase() !== 'all').map((zone) => {
                   const empRole = selectedEmployee.role || selectedEmployee.employee_type || 'employee';
                   const isSelected = selectedZones.includes(zone.name);
                   const allZonesSelected = isAllAvailableSelected();
