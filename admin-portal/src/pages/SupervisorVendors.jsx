@@ -119,7 +119,7 @@ const SupervisorVendors = ({ user }) => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Vendor Details</h1>
-          <p className="text-amber-600 text-sm">{activeVendorsList.length} total vendors</p>
+          <p className="text-amber-600 text-sm">{statusFilteredVendors.length} total vendors</p>
         </div>
         <button onClick={fetchVendors} className="p-2 hover:bg-gray-100 rounded-lg" title="Refresh">
           <RefreshCw className={`w-5 h-5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />

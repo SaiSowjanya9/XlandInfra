@@ -182,7 +182,7 @@ const FPVendors = ({ user }) => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Vendor Details</h1>
-          <p className="text-gray-500 text-sm mt-1">{activeVendors.length} total vendors</p>
+          <p className="text-gray-500 text-sm mt-1">{statusFilteredVendors.length} total vendors</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -401,7 +401,7 @@ const FPVendors = ({ user }) => {
               </tbody>
             </table>
             <div className="px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
-              Showing {filteredVendors.length} of {activeVendors.length} vendors
+              Showing {filteredVendors.length} of {statusFilteredVendors.length} vendors
             </div>
           </div>
         )}
