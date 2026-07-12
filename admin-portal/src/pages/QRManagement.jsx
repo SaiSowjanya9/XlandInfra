@@ -8,6 +8,10 @@ import {
 } from 'lucide-react';
 
 const QRManagement = () => {
+  // Check if user is Operations Manager (view-only access)
+  const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');
+  const isOpsManager = currentUser?.role === 'operations_manager';
+  
   const [qrCodes, setQrCodes] = useState([]);
   const [selectedQR, setSelectedQR] = useState(null);
   const [analytics, setAnalytics] = useState(null);
@@ -240,13 +244,15 @@ const QRManagement = () => {
               >
                 <RefreshCw className="w-4 h-4 text-gray-500" />
               </button>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 rounded-xl text-white font-medium hover:bg-indigo-700 transition-all shadow-md"
-              >
-                <Plus className="w-4 h-4" />
-                Create QR
-              </button>
+              {!isOpsManager && (
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 rounded-xl text-white font-medium hover:bg-indigo-700 transition-all shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create QR
+                </button>
+              )}
             </div>
           </div>
 
@@ -367,6 +373,7 @@ const QRManagement = () => {
                     onToggle={() => handleToggleActive(qr)}
                     onCopy={copyToClipboard}
                     onDownload={downloadQR}
+                    isOpsManager={isOpsManager}
                   />
                 ))}
               </div>
@@ -762,7 +769,7 @@ const StatCard = ({ icon: Icon, label, value, subtext, color = 'indigo', pulse =
   );
 };
 
-const QRCard = ({ qr, baseUrl, onSelect, onEdit, onToggle, onCopy, onDownload }) => {
+const QRCard = ({ qr, baseUrl, onSelect, onEdit, onToggle, onCopy, onDownload, isOpsManager }) => {
   const qrUrl = `${baseUrl}/${qr.slug}`;
 
   return (
@@ -816,13 +823,15 @@ const QRCard = ({ qr, baseUrl, onSelect, onEdit, onToggle, onCopy, onDownload })
         >
           <Download className="w-4 h-4 text-gray-500" />
         </button>
-        <button
-          onClick={onEdit}
-          className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all"
-          title="Edit"
-        >
-          <Edit3 className="w-4 h-4 text-gray-500" />
-        </button>
+        {!isOpsManager && (
+          <button
+            onClick={onEdit}
+            className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all"
+            title="Edit"
+          >
+            <Edit3 className="w-4 h-4 text-gray-500" />
+          </button>
+        )}
       </div>
     </div>
   );

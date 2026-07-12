@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   Building2, User, Phone, Mail, Search, FileText, 
   Home, LayoutGrid, Layers, TreePine, Map, Briefcase,
@@ -33,6 +34,23 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   // Check if user is Operations Manager (restricted access - view only)
   const isOpsManager = admin?.role === 'operations_manager';
+  
+  // URL-based navigation for browser back button support
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlEstimateStep = searchParams.get('estimateStep');
+  
+  // Helper to update URL params (push new history entry for back button support)
+  const updateUrlParam = useCallback((key, value) => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      if (!value || value === '') {
+        newParams.delete(key);
+      } else {
+        newParams.set(key, String(value));
+      }
+      return newParams;
+    });
+  }, [setSearchParams]);
   
   // FP Context for Admin mode - to show FP Portal Links
   const { selectedFp } = useFP();
@@ -227,6 +245,50 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     unitsPerBlock: {},
     totalUnits: 0
   });
+
+  // Sync estimate creation step with URL for browser back button support
+  useEffect(() => {
+    if (estimateType === 'property' && selectedProperty) {
+      updateUrlParam('estimateStep', 'property-form');
+    } else if (estimateType === 'property') {
+      updateUrlParam('estimateStep', 'property-id');
+    } else if (estimateType === 'direct') {
+      updateUrlParam('estimateStep', 'direct-form');
+    } else {
+      updateUrlParam('estimateStep', '');
+    }
+  }, [estimateType, selectedProperty, updateUrlParam]);
+
+  // Handle browser back button - sync URL to state
+  useEffect(() => {
+    if (!urlEstimateStep) {
+      // No step in URL = type selection
+      if (estimateType !== null) {
+        setEstimateType(null);
+        setSelectedProperty(null);
+        setPropertyIdInput('');
+        setHasStartedTyping(false);
+      }
+    } else if (urlEstimateStep === 'property-id') {
+      // Property ID entry step
+      if (estimateType !== 'property' || selectedProperty !== null) {
+        setEstimateType('property');
+        setSelectedProperty(null);
+        setPropertyIdInput('');
+        setHasStartedTyping(false);
+      }
+    } else if (urlEstimateStep === 'property-form') {
+      // Property form step - keep current state if already there
+      if (estimateType !== 'property') {
+        setEstimateType('property');
+      }
+    } else if (urlEstimateStep === 'direct-form') {
+      // Direct form step
+      if (estimateType !== 'direct') {
+        setEstimateType('direct');
+      }
+    }
+  }, [urlEstimateStep]);
 
   useEffect(() => {
     loadData();

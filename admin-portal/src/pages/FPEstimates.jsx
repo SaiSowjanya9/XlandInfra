@@ -43,7 +43,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const viewPackageId = searchParams.get('viewPackage');
   const urlEstimateStep = searchParams.get('estimateStep'); // For browser back navigation
   
-  // Helper to update URL params
+  // Helper to update URL params (push new history entry for back button support)
   const updateUrlParam = useCallback((key, value, defaultValue = '') => {
     setSearchParams(prev => {
       const newParams = new URLSearchParams(prev);
@@ -53,7 +53,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         newParams.set(key, String(value));
       }
       return newParams;
-    }, { replace: true });
+    });
   }, [setSearchParams]);
   
   // URL-based modal handlers

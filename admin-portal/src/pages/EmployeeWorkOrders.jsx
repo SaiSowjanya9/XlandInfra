@@ -981,12 +981,14 @@ const EmployeeWorkOrders = ({ admin }) => {
                         <div className="flex flex-col items-center justify-center">
                           <ClipboardList className="w-12 h-12 text-gray-300 mb-3" />
                           <span className="text-gray-500">No work orders found</span>
-                          <button
-                            onClick={() => setActiveTab('create')}
-                            className="mt-3 text-indigo-600 hover:text-indigo-700 font-medium text-sm"
-                          >
-                            Create a new work order →
-                          </button>
+                          {!isOpsManager && (
+                            <button
+                              onClick={() => setActiveTab('create')}
+                              className="mt-3 text-indigo-600 hover:text-indigo-700 font-medium text-sm"
+                            >
+                              Create a new work order →
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1009,20 +1011,26 @@ const EmployeeWorkOrders = ({ admin }) => {
                           </div>
                         </td>
                         <td className="py-4 px-4">
-                          <div className="relative inline-block">
-                            <select
-                              value={wo.status}
-                              onChange={(e) => handleStatusChange(wo.id, e.target.value)}
-                              className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
-                            >
-                              <option value="pending" className="bg-white text-gray-900">Pending</option>
-                              <option value="assigned" className="bg-white text-gray-900">Assigned</option>
-                              <option value="in_progress" className="bg-white text-gray-900">In Progress</option>
-                              <option value="completed" className="bg-white text-gray-900">Completed</option>
-                              <option value="cancelled" className="bg-white text-gray-900">Cancelled</option>
-                            </select>
-                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
-                          </div>
+                          {isOpsManager ? (
+                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
+                              {wo.status === 'pending' ? 'Pending' : wo.status === 'assigned' ? 'Assigned' : wo.status === 'in_progress' ? 'In Progress' : wo.status === 'completed' ? 'Completed' : 'Cancelled'}
+                            </span>
+                          ) : (
+                            <div className="relative inline-block">
+                              <select
+                                value={wo.status}
+                                onChange={(e) => handleStatusChange(wo.id, e.target.value)}
+                                className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
+                              >
+                                <option value="pending" className="bg-white text-gray-900">Pending</option>
+                                <option value="assigned" className="bg-white text-gray-900">Assigned</option>
+                                <option value="in_progress" className="bg-white text-gray-900">In Progress</option>
+                                <option value="completed" className="bg-white text-gray-900">Completed</option>
+                                <option value="cancelled" className="bg-white text-gray-900">Cancelled</option>
+                              </select>
+                              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
+                            </div>
+                          )}
                         </td>
                         <td className="py-4 px-4">
                           <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
@@ -1044,34 +1052,38 @@ const EmployeeWorkOrders = ({ admin }) => {
                             >
                               <Eye className="w-4 h-4 text-gray-500" />
                             </button>
-                            <button
-                              onClick={() => handleEditWorkOrder(wo)}
-                              className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Edit Work Order"
-                            >
-                              <Pencil className="w-4 h-4 text-blue-500" />
-                            </button>
-                            <button
-                              onClick={() => openAssignModal(wo, 'vendor')}
-                              className="p-1.5 hover:bg-purple-50 rounded-lg transition-colors"
-                              title="Assign Vendor"
-                            >
-                              <Truck className="w-4 h-4 text-purple-500" />
-                            </button>
-                            <button
-                              onClick={() => openAssignModal(wo, 'employee')}
-                              className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Assign Employee"
-                            >
-                              <UserPlus className="w-4 h-4 text-green-500" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteWorkOrder(wo.id)}
-                              className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </button>
+                            {!isOpsManager && (
+                              <>
+                                <button
+                                  onClick={() => handleEditWorkOrder(wo)}
+                                  className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="Edit Work Order"
+                                >
+                                  <Pencil className="w-4 h-4 text-blue-500" />
+                                </button>
+                                <button
+                                  onClick={() => openAssignModal(wo, 'vendor')}
+                                  className="p-1.5 hover:bg-purple-50 rounded-lg transition-colors"
+                                  title="Assign Vendor"
+                                >
+                                  <Truck className="w-4 h-4 text-purple-500" />
+                                </button>
+                                <button
+                                  onClick={() => openAssignModal(wo, 'employee')}
+                                  className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
+                                  title="Assign Employee"
+                                >
+                                  <UserPlus className="w-4 h-4 text-green-500" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteWorkOrder(wo.id)}
+                                  className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-500" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>

@@ -70,6 +70,66 @@ const hashIP = (ip) => {
   return crypto.createHash('sha256').update(ip + salt).digest('hex').substring(0, 16);
 };
 
+// Check if IP is private/local
+const isPrivateIP = (ip) => {
+  if (!ip) return true;
+  ip = ip.replace(/^::ffff:/, '');
+  const privateRanges = [
+    /^10\./, /^172\.(1[6-9]|2[0-9]|3[0-1])\./, /^192\.168\./,
+    /^127\./, /^localhost$/i, /^::1$/, /^fe80:/i
+  ];
+  return privateRanges.some(range => range.test(ip));
+};
+
+// Get geo location from IP with multiple fallback services
+const getGeoLocation = async (ip) => {
+  const defaultGeo = { country: 'India', countryCode: 'IN', state: 'Unknown', city: 'Unknown' };
+  
+  if (isPrivateIP(ip) || ip === 'unknown') {
+    return defaultGeo;
+  }
+  
+  const services = [
+    // ipwho.is - most accurate
+    async () => {
+      const res = await fetch(`https://ipwho.is/${ip}`);
+      const data = await res.json();
+      if (data.success) {
+        return { country: data.country, countryCode: data.country_code, state: data.region, city: data.city };
+      }
+      throw new Error('failed');
+    },
+    // ip-api.com fallback
+    async () => {
+      const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city`);
+      const data = await res.json();
+      if (data.status === 'success') {
+        return { country: data.country, countryCode: data.countryCode, state: data.regionName, city: data.city };
+      }
+      throw new Error('failed');
+    },
+    // ipapi.co fallback
+    async () => {
+      const res = await fetch(`https://ipapi.co/${ip}/json/`);
+      const data = await res.json();
+      if (!data.error) {
+        return { country: data.country_name, countryCode: data.country_code, state: data.region, city: data.city };
+      }
+      throw new Error('failed');
+    }
+  ];
+  
+  for (const service of services) {
+    try {
+      const result = await service();
+      console.log(`[GeoIP] ${ip} → ${result.city}, ${result.state}, ${result.country}`);
+      return result;
+    } catch (e) { continue; }
+  }
+  
+  return defaultGeo;
+};
+
 // Generate device fingerprint from request headers
 const generateDeviceFingerprint = (req) => {
   const ua = req.get('User-Agent') || '';
@@ -264,6 +324,9 @@ app.get('/:slug', async (req, res) => {
           
           console.log(`[QR Scan] Device: ${deviceType}, Fingerprint: ${deviceFingerprint.substring(0,8)}..., Unique: ${isUniqueUser}`);
           
+          // Get geo location
+          const geoData = await getGeoLocation(ip);
+          
           // Insert scan record
           await pool.execute(`
             INSERT INTO qr_scans (
@@ -271,15 +334,17 @@ app.get('/:slug', async (req, res) => {
               is_unique_user, is_repeat_scan, user_agent,
               device_type, device_brand, device_model,
               os_name, os_version, browser_name, browser_version,
+              country, country_code, state, city,
               referrer_url, referrer_domain, language,
               redirect_url, redirect_success, redirect_latency_ms
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `, [
             qr.id, scanId, visitorId, sessionId, ipHash,
             isUniqueUser, !isUniqueUser, userAgent,
             deviceType, device.vendor || null, device.model || null,
             os.name || null, os.version || null,
             browser.name || null, browser.version || null,
+            geoData.country, geoData.countryCode, geoData.state, geoData.city,
             referer || null, referer ? new URL(referer).hostname : null,
             language, redirectUrl, true, redirectLatency
           ]);
