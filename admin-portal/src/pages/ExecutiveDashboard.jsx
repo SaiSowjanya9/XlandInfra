@@ -9,14 +9,12 @@ import {
   Clock,
   CheckCircle,
   RefreshCw,
-  ArrowRight,
   Briefcase
 } from 'lucide-react';
 
 const ExecutiveDashboard = ({ user }) => {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
-  const [recentWorkOrders, setRecentWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const token = sessionStorage.getItem('pm_auth_token');
@@ -33,7 +31,6 @@ const ExecutiveDashboard = ({ user }) => {
 
       if (result.success) {
         setStats(result.data.stats);
-        setRecentWorkOrders(result.data.recentWorkOrders || []);
       }
     } catch (error) {
       console.error('Dashboard fetch error:', error);
@@ -75,29 +72,6 @@ const ExecutiveDashboard = ({ user }) => {
     return colors[color] || colors.indigo;
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      draft: 'bg-gray-100 text-gray-600',
-      requested: 'bg-blue-100 text-blue-700',
-      under_review: 'bg-yellow-100 text-yellow-700',
-      assigned: 'bg-purple-100 text-purple-700',
-      accepted: 'bg-indigo-100 text-indigo-700',
-      in_progress: 'bg-orange-100 text-orange-700',
-      completed: 'bg-green-100 text-green-700',
-      closed: 'bg-gray-100 text-gray-600',
-      cancelled: 'bg-red-100 text-red-700'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-600';
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
 
   const quickActions = [
     { label: 'Add Vendor', icon: Store, path: '/executive/vendors/add', color: 'purple' },
@@ -187,65 +161,6 @@ const ExecutiveDashboard = ({ user }) => {
           </button>
         </div>
       </div>
-
-      {/* Recent Work Orders Table */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Work Orders</h2>
-          <button
-            onClick={() => navigate('/executive/work-orders')}
-            className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
-          >
-            View All <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {recentWorkOrders.length === 0 ? (
-          <div className="p-8 text-center">
-            <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No work orders yet</p>
-            <button
-              onClick={() => navigate('/executive/work-orders')}
-              className="mt-3 text-sm text-indigo-600 hover:text-indigo-700"
-            >
-              Create your first work order
-            </button>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Work Order ID</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Property</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Category</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentWorkOrders.slice(0, 5).map((wo) => (
-                  <tr key={wo.id} className="border-t border-gray-50 hover:bg-gray-50">
-                    <td className="py-3 px-4">
-                      <p className="font-medium text-gray-900">{wo.title || wo.work_order_id}</p>
-                      <p className="text-xs text-gray-500">{wo.work_order_id}</p>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-600">{wo.property_name || '-'}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600">{wo.category_name || '-'}</td>
-                    <td className="py-3 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
-                        {wo.status?.replace(/_/g, ' ').toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-500">{formatDate(wo.created_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
     </div>
   );
 };

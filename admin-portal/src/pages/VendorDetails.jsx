@@ -282,23 +282,63 @@ const VendorDetails = () => {
     showToast('All vendors exported successfully');
   };
 
-  // Derived data - only from ACTIVE vendors for filter dropdowns
-  const activeVendors = vendors.filter(v => 
-    (v.status || 'active') === 'active' && 
-    v.status !== 'deleted' && 
-    v.status !== 'inactive' && 
-    v.is_active !== 0 && 
-    v.is_active !== false
-  );
-  const zones = [...new Set(activeVendors.map(v => v.zone || v.zone_name).filter(Boolean))];
-  // Dynamic service types from ACTIVE vendor data only (sorted alphabetically)
-  const serviceTypes = [...new Set(activeVendors.map(v => v.serviceType || v.service_type).filter(Boolean))].sort();
-  // Get count for each service type (only count ACTIVE vendors with valid service type)
-  const getServiceTypeCount = (serviceType) => {
-    const activeWithServiceType = activeVendors.filter(v => (v.serviceType || v.service_type));
-    if (serviceType === 'all') return activeWithServiceType.length;
-    return activeVendors.filter(v => (v.serviceType || v.service_type) === serviceType).length;
+  // Derived data - based on current status filter for dynamic counts
+  const getStatusFilteredVendors = () => {
+    return vendors.filter(v => {
+      const isInactive = v.status === 'deleted' || v.status === 'inactive' || v.is_active === 0 || v.is_active === false;
+      if (statusFilter === 'active') return !isInactive;
+      if (statusFilter === 'inactive') return isInactive;
+      return true; // 'all' shows everything
+    });
   };
+  
+  const statusFilteredVendors = getStatusFilteredVendors();
+  
+  // Zones and service types from status-filtered vendors
+  const zones = [...new Set(statusFilteredVendors.map(v => v.zone || v.zone_name).filter(Boolean))].sort();
+  const serviceTypes = [...new Set(statusFilteredVendors.map(v => v.serviceType || v.service_type).filter(Boolean))].sort();
+  
+  // Get count for each service type (based on status + zone filters)
+  const getServiceTypeCount = (serviceType) => {
+    let filtered = statusFilteredVendors;
+    // Apply zone filter if set
+    if (zoneFilter) {
+      filtered = filtered.filter(v => (v.zone || v.zone_name) === zoneFilter);
+    }
+    if (serviceType === 'all') return filtered.length;
+    return filtered.filter(v => (v.serviceType || v.service_type) === serviceType).length;
+  };
+  
+  // Get count for each zone (based on status + service type filters)
+  const getZoneCount = (zone) => {
+    let filtered = statusFilteredVendors;
+    // Apply service type filter if set
+    if (activeTab !== 'all') {
+      filtered = filtered.filter(v => (v.serviceType || v.service_type) === activeTab);
+    }
+    if (!zone) return filtered.length; // "All Zones"
+    return filtered.filter(v => (v.zone || v.zone_name) === zone).length;
+  };
+  
+  // Get count for each status (based on service type + zone filters)
+  const getStatusCount = (status) => {
+    let filtered = vendors.filter(v => {
+      const isInactive = v.status === 'deleted' || v.status === 'inactive' || v.is_active === 0 || v.is_active === false;
+      if (status === 'active') return !isInactive;
+      if (status === 'inactive') return isInactive;
+      return true; // 'all'
+    });
+    // Apply service type filter if set
+    if (activeTab !== 'all') {
+      filtered = filtered.filter(v => (v.serviceType || v.service_type) === activeTab);
+    }
+    // Apply zone filter if set
+    if (zoneFilter) {
+      filtered = filtered.filter(v => (v.zone || v.zone_name) === zoneFilter);
+    }
+    return filtered.length;
+  };
+  
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const filteredVendors = vendors.filter(v => {
@@ -530,8 +570,8 @@ const VendorDetails = () => {
                 onChange={(e) => setZoneFilter(e.target.value)}
                 className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
               >
-                <option value="">All Zones</option>
-                {zones.map(z => <option key={z} value={z}>{z}</option>)}
+                <option value="">All Zones ({getZoneCount('')})</option>
+                {zones.map(z => <option key={z} value={z}>{z} ({getZoneCount(z)})</option>)}
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             </div>
@@ -543,15 +583,15 @@ const VendorDetails = () => {
                   statusFilter === 'inactive' ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-300 bg-white'
                 }`}
               >
-                <option value="active" className="bg-white text-gray-900">Active Vendors</option>
-                <option value="inactive" className="bg-white text-gray-900">Inactive Vendors</option>
-                <option value="all" className="bg-white text-gray-900">All Vendors</option>
+                <option value="active" className="bg-white text-gray-900">Active Vendors ({getStatusCount('active')})</option>
+                <option value="inactive" className="bg-white text-gray-900">Inactive Vendors ({getStatusCount('inactive')})</option>
+                <option value="all" className="bg-white text-gray-900">All Vendors ({getStatusCount('all')})</option>
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             </div>
-            {(zoneFilter || searchTerm || statusFilter !== 'active') && (
+            {(zoneFilter || searchTerm || statusFilter !== 'active' || activeTab !== 'all') && (
               <button
-                onClick={() => { setZoneFilter(''); setSearchTerm(''); setStatusFilter('active'); }}
+                onClick={() => { setZoneFilter(''); setSearchTerm(''); setStatusFilter('active'); setActiveTab('all'); }}
                 className="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
               >
                 Clear
