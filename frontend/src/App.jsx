@@ -236,9 +236,52 @@ function App() {
     initializeSession();
   }, []);
 
-  // QR scans are tracked only via the QR redirect service (qr.xlandinfra.com)
-  // when users scan printed QR codes with their phone cameras.
-  // Direct website visits are NOT counted as scans.
+  // Track page visits from QR scans (printed materials go directly to this site)
+  useEffect(() => {
+    const trackQRVisit = async () => {
+      // Only track once per session per page type
+      const currentPath = window.location.pathname;
+      
+      // Determine which QR to track based on entry point
+      // "/" = Main Website QR (www.xlandinfra.com)
+      // "/login", "/dashboard", etc. = Customer Portal QR
+      const isMainWebsite = currentPath === '/' || currentPath.startsWith('/services') || 
+                            currentPath === '/privacy-policy' || currentPath === '/terms-of-service' ||
+                            currentPath === '/cookie-policy';
+      const pageType = isMainWebsite ? 'main' : 'customer';
+      
+      // Check if already tracked this page type
+      const trackingKey = `qr_visit_tracked_${pageType}`;
+      const hasTracked = sessionStorage.getItem(trackingKey);
+      if (hasTracked) return;
+      
+      try {
+        const response = await fetch('/api/qr/track-visit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            page: pageType,
+            source: 'direct',
+            path: currentPath,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            language: navigator.language,
+            screenWidth: window.screen.width,
+            screenHeight: window.screen.height
+          })
+        });
+        
+        if (response.ok) {
+          sessionStorage.setItem(trackingKey, 'true');
+          console.log(`[QR Tracking] ${pageType} visit logged successfully`);
+        }
+      } catch (error) {
+        console.log('[QR Tracking] Could not track visit:', error.message);
+      }
+    };
+    
+    // Track visit after a short delay to not block rendering
+    setTimeout(trackQRVisit, 1000);
+  }, []);
 
   // Track user activity to keep session alive
   useEffect(() => {

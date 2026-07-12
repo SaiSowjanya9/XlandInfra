@@ -242,5 +242,5 @@ CREATE TABLE IF NOT EXISTS qr_bot_detections (
 INSERT INTO qr_codes (qr_id, slug, label, description, current_url, original_url, qr_type, foreground_color, background_color, error_correction, style_preset)
 VALUES 
     ('XLAND-MAIN-001', 'main', 'XLAND INFRA Website', 'Official XLAND INFRA main website QR code for marketing and promotional materials', 'https://www.xlandinfra.com', 'https://www.xlandinfra.com', 'website', '#1a1a1a', '#FFFFFF', 'H', 'luxury'),
-    ('XLAND-ADMIN-001', 'admin', 'XLAND INFRA Admin Portal', 'Secure admin portal access QR code for authorized personnel', 'https://admin.xlandinfra.com', 'https://admin.xlandinfra.com', 'admin', '#1a1a1a', '#FFFFFF', 'H', 'luxury')
+    ('XLAND-CUSTOMER-001', 'customer', 'Customer Portal', 'Customer portal QR code for work order requests - used on printed materials', 'https://customer.xlandinfra.com', 'https://customer.xlandinfra.com', 'website', '#1a1a1a', '#FFFFFF', 'H', 'luxury')
 ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP;
