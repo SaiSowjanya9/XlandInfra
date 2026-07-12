@@ -857,7 +857,16 @@ router.post('/track-visit', async (req, res) => {
     }
     
     // Check for rapid duplicate (same device within 30 seconds)
-    const slug = page === 'login' ? 'customer' : 'main';
+    // Map page names to QR slugs
+    let slug = 'main'; // Default to main website
+    if (page === 'customer' || page === 'login' || page === 'portal' || page === 'dashboard') {
+      slug = 'customer';
+    } else if (page === 'main' || page === 'website' || page === 'home') {
+      slug = 'main';
+    }
+    
+    console.log(`[QR Track] Page: ${page}, Slug: ${slug}`);
+    
     if (isDuplicateScan(deviceFingerprint, ipHash, slug)) {
       console.log(`[QR Track] Rapid re-visit blocked: ${slug} from same device within 30s`);
       return res.json({ success: true, tracked: false, reason: 'duplicate' });
