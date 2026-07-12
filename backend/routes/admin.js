@@ -2678,6 +2678,57 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
   }
 });
 
+// Update employee zones (Admin)
+router.put('/employees/:id/zones', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { zones } = req.body;
+    
+    console.log('Admin: Updating zones for employee:', id, 'Zones:', zones);
+    
+    // Get the employee's franchise_partner_id
+    const [[employee]] = await pool.execute(
+      `SELECT franchise_partner_id FROM fp_employees WHERE id = ?`,
+      [id]
+    );
+    
+    if (!employee) {
+      return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+    
+    const fpId = employee.franchise_partner_id;
+    
+    // Delete existing zone assignments
+    await pool.execute(
+      `DELETE FROM fp_employee_zones WHERE fp_employee_id = ? AND franchise_partner_id = ?`,
+      [id, fpId]
+    );
+    
+    // Insert new zone assignments
+    if (zones === 'all') {
+      // Store 'all' as a special value to indicate all zones are assigned
+      await pool.execute(
+        `INSERT INTO fp_employee_zones (franchise_partner_id, fp_employee_id, zone_name) VALUES (?, ?, ?)`,
+        [fpId, id, 'all']
+      );
+      console.log('Admin: Inserted ALL zones assignment:', { fpId, empId: id });
+    } else if (Array.isArray(zones) && zones.length > 0) {
+      for (const zoneName of zones) {
+        await pool.execute(
+          `INSERT INTO fp_employee_zones (franchise_partner_id, fp_employee_id, zone_name) VALUES (?, ?, ?)`,
+          [fpId, id, zoneName]
+        );
+        console.log('Admin: Inserted zone assignment:', { fpId, empId: id, zoneName });
+      }
+    }
+    
+    res.json({ success: true, message: 'Employee zones updated' });
+  } catch (error) {
+    console.error('Admin update employee zones error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Transform AMC package to frontend format
 const transformPackage = (pkg) => {
   let servicesString = '';

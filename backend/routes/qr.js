@@ -23,6 +23,49 @@ const generateVisitorId = () => `vis_${crypto.randomBytes(16).toString('hex')}`;
 // Hash IP for privacy
 const hashIP = (ip) => crypto.createHash('sha256').update(ip + process.env.IP_SALT || 'xland-salt').digest('hex').substring(0, 32);
 
+// Generate device fingerprint from request headers
+// This uniquely identifies a device/browser combination
+const generateDeviceFingerprint = (req) => {
+  const ua = req.headers['user-agent'] || '';
+  const accept = req.headers['accept'] || '';
+  const acceptLang = req.headers['accept-language'] || '';
+  const acceptEnc = req.headers['accept-encoding'] || '';
+  
+  // Create a fingerprint from browser characteristics
+  const fingerprintString = `${ua}|${accept}|${acceptLang}|${acceptEnc}`;
+  return crypto.createHash('sha256').update(fingerprintString).digest('hex').substring(0, 32);
+};
+
+// In-memory deduplication to prevent rapid re-scans from same device
+const recentScans = new Map();
+const SCAN_DEDUP_WINDOW = 30000; // 30 seconds
+
+// Check if this is a duplicate scan within the dedup window
+const isDuplicateScan = (deviceFingerprint, ipHash, slug) => {
+  const now = Date.now();
+  const key = `${deviceFingerprint}-${ipHash}-${slug}`;
+  
+  if (recentScans.has(key)) {
+    const lastScan = recentScans.get(key);
+    if (now - lastScan < SCAN_DEDUP_WINDOW) {
+      return true;
+    }
+  }
+  
+  recentScans.set(key, now);
+  return false;
+};
+
+// Clean up old dedup entries every minute
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of recentScans) {
+    if (now - timestamp > SCAN_DEDUP_WINDOW * 2) {
+      recentScans.delete(key);
+    }
+  }
+}, 60000);
+
 // Parse User Agent
 const parseUserAgent = (ua) => {
   if (!ua) return { device: 'unknown', os: 'unknown', browser: 'unknown' };
@@ -221,11 +264,17 @@ router.get('/r/:slug', async (req, res) => {
     const userAgent = req.headers['user-agent'] || '';
     const ip = getClientIP(req);
     const ipHash = hashIP(ip);
+    const deviceFingerprint = generateDeviceFingerprint(req);
     
     // Bot detection - Skip logging for bots but still redirect them
     if (isBot(userAgent)) {
       console.log(`[QR Bot Filtered] Slug: ${slug}, UA: ${userAgent.substring(0, 100)}`);
-      // Redirect bot without logging scan
+      return res.redirect(302, qr.current_url);
+    }
+    
+    // Check for rapid re-scan from same device (within 30 seconds)
+    if (isDuplicateScan(deviceFingerprint, ipHash, slug)) {
+      console.log(`[QR Dedup] Rapid re-scan blocked: ${slug} from same device within 30s`);
       return res.redirect(302, qr.current_url);
     }
     
@@ -258,25 +307,29 @@ router.get('/r/:slug', async (req, res) => {
     // Parse user agent
     const uaData = parseUserAgent(userAgent);
     
-    // Generate IDs
+    // Generate IDs - Use device fingerprint as visitor ID for accurate tracking
     const scanId = generateScanId();
     const sessionId = req.cookies?.qr_session || generateSessionId();
-    const visitorId = req.cookies?.qr_visitor || generateVisitorId();
+    const visitorId = deviceFingerprint; // Device fingerprint is the visitor ID
     
-    // Check if unique user
+    // Check if unique user based on DEVICE FINGERPRINT (not just IP)
+    // This allows multiple devices on same network to count as separate users
     let isUniqueUser = true;
     let isRepeatScan = false;
     
     try {
       const [[existingScan]] = await pool.execute(
-        'SELECT id FROM qr_scans WHERE qr_id = ? AND ip_hash = ? AND scanned_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)',
-        [qr.id, ipHash]
+        'SELECT id FROM qr_scans WHERE qr_id = ? AND visitor_id = ? LIMIT 1',
+        [qr.id, deviceFingerprint]
       );
       if (existingScan) {
         isUniqueUser = false;
         isRepeatScan = true;
       }
-    } catch (e) {}
+      console.log(`[QR Scan] Device fingerprint: ${deviceFingerprint.substring(0, 8)}..., Unique: ${isUniqueUser}`);
+    } catch (e) {
+      console.error('[QR Scan] Error checking unique user:', e.message);
+    }
     
     // Get geo data (simplified - in production use MaxMind or similar)
     let geoData = {
@@ -355,7 +408,7 @@ router.get('/r/:slug', async (req, res) => {
         [qr.id, sessionId, visitorId, ip, uaData.device, uaData.browserName, uaData.osName, geoData.country, geoData.city]
       );
       
-    console.log(`[QR Scan] Successfully logged scan for QR ID: ${qr.id}`);
+    console.log(`[QR Scan] Successfully logged scan for QR ID: ${qr.id}, Unique: ${isUniqueUser}, Device: ${uaData.device}`);
     } catch (e) {
       console.error('[QR Scan] Error logging scan:', e.message);
     }
@@ -796,31 +849,40 @@ router.post('/track-visit', async (req, res) => {
     const userAgent = req.headers['user-agent'] || '';
     const ip = getClientIP(req);
     const ipHash = hashIP(ip);
+    const deviceFingerprint = generateDeviceFingerprint(req);
     
     // Skip bots
     if (isBot(userAgent)) {
       return res.json({ success: true, tracked: false });
     }
     
-    // Find QR code by slug
+    // Check for rapid duplicate (same device within 30 seconds)
     const slug = page === 'login' ? 'customer' : 'main';
+    if (isDuplicateScan(deviceFingerprint, ipHash, slug)) {
+      console.log(`[QR Track] Rapid re-visit blocked: ${slug} from same device within 30s`);
+      return res.json({ success: true, tracked: false, reason: 'duplicate' });
+    }
+    
+    // Find QR code by slug
     const [[qr]] = await pool.execute('SELECT * FROM qr_codes WHERE slug = ?', [slug]);
     
     if (!qr) {
       return res.json({ success: true, tracked: false, reason: 'QR not found' });
     }
     
-    // Check if this is a unique user (first time from this IP)
+    // Check if this is a unique user based on device fingerprint (not just IP)
     const [[existingUser]] = await pool.execute(
-      'SELECT id FROM qr_scans WHERE qr_id = ? AND ip_hash = ?',
-      [qr.id, ipHash]
+      'SELECT id FROM qr_scans WHERE qr_id = ? AND visitor_id = ?',
+      [qr.id, deviceFingerprint]
     );
     const isUniqueUser = !existingUser; // First time = unique
     const isRepeatScan = !!existingUser; // Has scanned before = repeat
     
+    console.log(`[QR Track] Device fingerprint: ${deviceFingerprint.substring(0, 8)}..., Unique: ${isUniqueUser}`);
+    
     const uaData = parseUserAgent(userAgent);
     const scanId = generateScanId();
-    const visitorId = req.cookies?.qr_visitor || generateVisitorId();
+    const visitorId = deviceFingerprint; // Use device fingerprint as visitor ID
     const sessionId = req.cookies?.qr_session || generateSessionId();
     
     // Try to get geo data from IP (using free API)

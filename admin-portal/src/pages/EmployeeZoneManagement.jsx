@@ -290,7 +290,8 @@ const EmployeeZoneManagement = () => {
       // If ALL zones are selected, save as 'all' so new zones are auto-included
       const zonesToSave = isAllAvailableSelected() ? 'all' : selectedZones;
       
-      const response = await fetch(`/api/staff/${selectedEmployee.id}/zones`, {
+      // Use admin API endpoint
+      const response = await fetch(`${API_BASE}/api/admin/employees/${selectedEmployee.id}/zones`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
