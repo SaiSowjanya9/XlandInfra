@@ -260,9 +260,27 @@ const CoordinatorVendors = ({ user }) => {
     const list = getVendorList();
     return list.filter(v => v.status !== 'deleted' && v.status !== 'inactive' && v.is_active !== 0 && v.is_active !== false).length;
   };
+  
+  // Get status-filtered vendors for dynamic counts
+  const getStatusFilteredVendors = () => {
+    const list = getVendorList();
+    return list.filter(v => {
+      const isInactive = v.status === 'deleted' || v.status === 'inactive' || v.is_active === 0 || v.is_active === false;
+      if (statusFilter === 'active') return !isInactive;
+      if (statusFilter === 'inactive') return isInactive;
+      return true;
+    });
+  };
+  
+  const statusFilteredVendors = getStatusFilteredVendors();
 
   // Filter vendors based on search and service type tab
   const filteredVendors = getVendorList().filter(v => {
+    // Status filter
+    const isInactive = v.status === 'deleted' || v.status === 'inactive' || v.is_active === 0 || v.is_active === false;
+    if (statusFilter === 'active' && isInactive) return false;
+    if (statusFilter === 'inactive' && !isInactive) return false;
+    
     const matchesSearch = !searchTerm ||
       v.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       v.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -276,11 +294,41 @@ const CoordinatorVendors = ({ user }) => {
     return matchesSearch && matchesTab && matchesZone;
   });
 
-  // Get count for each service tab
+  // Get count for each service tab (based on status + zone filters)
   const getTabCount = (tabId) => {
-    const list = getVendorList();
-    if (tabId === 'all') return list.length;
-    return list.filter(v => v.service_type?.toLowerCase() === tabId).length;
+    let filtered = statusFilteredVendors;
+    if (zoneFilter !== 'all') {
+      filtered = filtered.filter(v => v.zone_id?.toString() === zoneFilter);
+    }
+    if (tabId === 'all') return filtered.length;
+    return filtered.filter(v => v.service_type?.toLowerCase() === tabId).length;
+  };
+  
+  // Get count for each zone (based on status + service type filters)
+  const getZoneCount = (zoneId) => {
+    let filtered = statusFilteredVendors;
+    if (activeTab !== 'all') {
+      filtered = filtered.filter(v => v.service_type?.toLowerCase() === activeTab);
+    }
+    if (zoneId === 'all') return filtered.length;
+    return filtered.filter(v => v.zone_id?.toString() === zoneId).length;
+  };
+  
+  // Get count for each status (based on service type + zone filters)
+  const getStatusCount = (status) => {
+    let filtered = getVendorList().filter(v => {
+      const isInactive = v.status === 'deleted' || v.status === 'inactive' || v.is_active === 0 || v.is_active === false;
+      if (status === 'active') return !isInactive;
+      if (status === 'inactive') return isInactive;
+      return true;
+    });
+    if (activeTab !== 'all') {
+      filtered = filtered.filter(v => v.service_type?.toLowerCase() === activeTab);
+    }
+    if (zoneFilter !== 'all') {
+      filtered = filtered.filter(v => v.zone_id?.toString() === zoneFilter);
+    }
+    return filtered.length;
   };
 
   return (
@@ -356,9 +404,9 @@ const CoordinatorVendors = ({ user }) => {
             onChange={(e) => setZoneFilter(e.target.value)}
             className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-teal-500"
           >
-            <option value="all">All Zones</option>
+            <option value="all">All Zones ({getZoneCount('all')})</option>
             {zones.map(z => (
-              <option key={z.id} value={z.id}>{z.name}</option>
+              <option key={z.id} value={z.id}>{z.name} ({getZoneCount(z.id?.toString())})</option>
             ))}
           </select>
           <select
@@ -366,9 +414,9 @@ const CoordinatorVendors = ({ user }) => {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-teal-500"
           >
-            <option value="active">Active Vendors</option>
-            <option value="inactive">Inactive Vendors</option>
-            <option value="all">All Vendors</option>
+            <option value="active">Active Vendors ({getStatusCount('active')})</option>
+            <option value="inactive">Inactive Vendors ({getStatusCount('inactive')})</option>
+            <option value="all">All Vendors ({getStatusCount('all')})</option>
           </select>
         </div>
       </div>
