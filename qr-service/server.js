@@ -70,6 +70,18 @@ const hashIP = (ip) => {
   return crypto.createHash('sha256').update(ip + salt).digest('hex').substring(0, 16);
 };
 
+// Generate device fingerprint from request headers
+const generateDeviceFingerprint = (req) => {
+  const ua = req.get('User-Agent') || '';
+  const accept = req.get('Accept') || '';
+  const acceptLang = req.get('Accept-Language') || '';
+  const acceptEnc = req.get('Accept-Encoding') || '';
+  
+  // Create a fingerprint from browser characteristics
+  const fingerprintString = `${ua}|${accept}|${acceptLang}|${acceptEnc}`;
+  return crypto.createHash('sha256').update(fingerprintString).digest('hex').substring(0, 32);
+};
+
 // Generate unique IDs
 const generateId = () => crypto.randomBytes(16).toString('hex');
 
@@ -78,9 +90,10 @@ const rateLimits = new Map();
 const RATE_LIMIT = 60; // requests per minute
 const RATE_WINDOW = 60000; // 1 minute
 
-// Scan deduplication store - prevent duplicate scans within 5 seconds
+// Scan deduplication store - prevent duplicate scans within 30 seconds
+// Key: ip_hash + device_fingerprint + slug
 const recentScans = new Map();
-const SCAN_DEDUP_WINDOW = 5000; // 5 seconds
+const SCAN_DEDUP_WINDOW = 30000; // 30 seconds - prevents rapid re-scans from same device
 
 const checkRateLimit = (ip) => {
   const now = Date.now();
@@ -121,14 +134,17 @@ setInterval(() => {
   }
 }, 60000);
 
-// Check if this is a duplicate scan (same IP + slug within 5 seconds)
-const isDuplicateScan = (ip, slug) => {
+// Check if this is a duplicate scan (same device fingerprint + IP + slug within 30 seconds)
+// This prevents rapid re-scans but allows different devices on same network
+const isDuplicateScan = (ip, deviceFingerprint, slug) => {
   const now = Date.now();
-  const key = `${hashIP(ip)}-${slug}`;
+  // Use device fingerprint + IP hash + slug for precise deduplication
+  const key = `${deviceFingerprint}-${hashIP(ip)}-${slug}`;
   
   if (recentScans.has(key)) {
     const lastScan = recentScans.get(key);
     if (now - lastScan < SCAN_DEDUP_WINDOW) {
+      console.log(`[QR Dedup] Rapid re-scan blocked: ${slug} from same device within ${SCAN_DEDUP_WINDOW/1000}s`);
       return true; // Duplicate scan within window
     }
   }
@@ -215,8 +231,11 @@ app.get('/:slug', async (req, res) => {
     const redirectUrl = qr.current_url;
     const redirectLatency = Date.now() - startTime;
     
+    // Generate device fingerprint for this request
+    const deviceFingerprint = generateDeviceFingerprint(req);
+    
     // Log analytics (non-blocking, skip for bots and duplicates)
-    const isDuplicate = isDuplicateScan(ip, slug);
+    const isDuplicate = isDuplicateScan(ip, deviceFingerprint, slug);
     if (!isBotRequest && !isDuplicate) {
       setImmediate(async () => {
         try {
@@ -231,16 +250,19 @@ app.get('/:slug', async (req, res) => {
           else if (device.type === 'tablet') deviceType = 'tablet';
           
           const scanId = generateId();
-          const visitorId = hashIP(ip);
+          const visitorId = deviceFingerprint; // Use device fingerprint as visitor ID
           const sessionId = generateId();
           const ipHash = hashIP(ip);
           
-          // Check if unique user (first scan from this IP hash for this QR)
+          // Check if unique user based on DEVICE FINGERPRINT (not just IP)
+          // This allows multiple devices on same network to count as separate users
           const [existingScans] = await pool.execute(
-            'SELECT id FROM qr_scans WHERE qr_id = ? AND ip_hash = ? LIMIT 1',
-            [qr.id, ipHash]
+            'SELECT id FROM qr_scans WHERE qr_id = ? AND visitor_id = ? LIMIT 1',
+            [qr.id, deviceFingerprint]
           );
           const isUniqueUser = existingScans.length === 0;
+          
+          console.log(`[QR Scan] Device: ${deviceType}, Fingerprint: ${deviceFingerprint.substring(0,8)}..., Unique: ${isUniqueUser}`);
           
           // Insert scan record
           await pool.execute(`
@@ -294,13 +316,15 @@ app.get('/:slug', async (req, res) => {
             VALUES (?, ?, ?, ?, ?, ?)
           `, [qr.id, sessionId, visitorId, deviceType, browser.name || 'Unknown', os.name || 'Unknown']);
           
-          console.log(`✅ Scan logged: ${slug} → ${redirectUrl} (${deviceType}, ${redirectLatency}ms)`);
+          console.log(`✅ Scan logged: ${slug} → ${redirectUrl} (${deviceType}, unique=${isUniqueUser}, ${redirectLatency}ms})`);
         } catch (err) {
           console.error('Analytics logging error:', err.message);
         }
       });
-    } else {
+    } else if (isBotRequest) {
       console.log(`🤖 Bot scan skipped: ${slug} from ${userAgent.substring(0, 50)}`);
+    } else {
+      console.log(`⏱️ Duplicate scan skipped: ${slug} (same device within ${SCAN_DEDUP_WINDOW/1000}s)`);
     }
     
     // Perform redirect
