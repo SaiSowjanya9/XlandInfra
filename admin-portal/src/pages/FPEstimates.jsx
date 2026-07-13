@@ -802,8 +802,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     type="text" 
                     value={propertyIdInput} 
                     onChange={(e) => { 
-                      setPropertyIdInput(e.target.value); 
-                      const m = properties.find(p => p.property_id?.toLowerCase() === e.target.value.toLowerCase()); 
+                      const v = e.target.value.trim();
+                      setPropertyIdInput(v); 
+                      const m = properties.find(p => p.property_id?.toLowerCase() === v.toLowerCase()); 
                       if (m) {
                         const totalUnits = computeTotalUnits(m);
                         setSelectedProperty({ ...m, total_units: totalUnits, units: totalUnits });
