@@ -4765,7 +4765,7 @@ router.get('/zones', requireFPScope, async (req, res) => {
     try {
       const [propertyZones] = await pool.execute(
         `SELECT DISTINCT zone_id FROM properties WHERE franchise_partner_id = ? AND zone_id IS NOT NULL AND zone_id != ''
-         AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)`,
+         AND (status = 'active' OR status IS NULL)`,
         [req.fpId]
       );
       propertyZones.forEach(z => {
