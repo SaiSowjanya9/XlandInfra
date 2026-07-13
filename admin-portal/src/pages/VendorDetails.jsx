@@ -235,10 +235,10 @@ const VendorDetails = () => {
       'Zone': vendor.zone || vendor.zone_name || '-',
       'Area': vendor.areaName || vendor.area_name || vendor.area || '-',
       'Division': vendor.division || '-',
-      'Owner Name': vendor.ownerName || vendor.owner_name || vendor.company_name,
-      'Owner Mobile': (() => { const mobile = vendor.ownerMobile || vendor.owner_mobile || vendor.phone || '-'; return mobile.startsWith('+') ? mobile : `${vendor.ownerCountryCode || vendor.owner_country_code || '+91'} ${mobile}`; })(),
-      'Owner Email': vendor.ownerEmail || vendor.owner_email || vendor.email || '-',
-      'Owner Aadhar': vendor.ownerAadhar || vendor.owner_aadhar || '-',
+      'Vendor Name': vendor.ownerName || vendor.owner_name || vendor.company_name,
+      'Vendor Mobile': (() => { const mobile = vendor.ownerMobile || vendor.owner_mobile || vendor.phone || '-'; return mobile.startsWith('+') ? mobile : `${vendor.ownerCountryCode || vendor.owner_country_code || '+91'} ${mobile}`; })(),
+      'Vendor Email': vendor.ownerEmail || vendor.owner_email || vendor.email || '-',
+      'Vendor Aadhar': vendor.ownerAadhar || vendor.owner_aadhar || '-',
       'Manager Name': vendor.managerName || vendor.manager_name || '-',
       'Manager Mobile': (() => { const mobile = vendor.managerMobile || vendor.manager_mobile; if (!mobile) return '-'; return mobile.startsWith('+') ? mobile : `${vendor.managerCountryCode || vendor.manager_country_code || '+91'} ${mobile}`; })(),
       'Manager Email': vendor.managerEmail || vendor.manager_email || '-',
@@ -266,8 +266,8 @@ const VendorDetails = () => {
       'Zone': v.zone || v.zone_name || '-',
       'Area': v.areaName || v.area_name || v.area || '-',
       'Division': v.division || '-',
-      'Owner Name': v.ownerName || v.owner_name || v.company_name,
-      'Owner Mobile': (() => { const mobile = v.ownerMobile || v.owner_mobile || v.phone || '-'; return mobile.startsWith('+') ? mobile : `${v.ownerCountryCode || v.owner_country_code || '+91'} ${mobile}`; })(),
+      'Vendor Name': v.ownerName || v.owner_name || v.company_name,
+      'Vendor Mobile': (() => { const mobile = v.ownerMobile || v.owner_mobile || v.phone || '-'; return mobile.startsWith('+') ? mobile : `${v.ownerCountryCode || v.owner_country_code || '+91'} ${mobile}`; })(),
       'Rate Per Visit': `₹${v.ratePerVisit || v.rate_per_visit || 0}`,
       'Coverage Per Day': v.coveragePerDay || v.coverage_per_day || 0,
       'Created By': v.created_by_name || v.createdBy || 'System',
@@ -814,7 +814,7 @@ const VendorDetails = () => {
               </div>
               {/* Owner */}
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-3">Owner Details</h3>
+                <h3 className="text-sm font-medium text-gray-500 mb-3">Vendor Details</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div><span className="text-xs text-gray-400">Name</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerName || viewVendor.owner_name || viewVendor.company_name || '-'}</p></div>
                   <div><span className="text-xs text-gray-400">Mobile</span><p className="text-sm font-medium text-gray-900">{(() => { const mobile = viewVendor.ownerMobile || viewVendor.owner_mobile || viewVendor.phone || '-'; return mobile.startsWith('+') ? mobile : `${viewVendor.ownerCountryCode || viewVendor.owner_country_code || '+91'} ${mobile}`; })()}</p></div>
@@ -1039,15 +1039,15 @@ const VendorDetails = () => {
                 </div>
               </div>
 
-              {/* Owner Details */}
+              {/* Vendor Details */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
                   <Shield className="w-4 h-4 text-amber-600" />
-                  Owner Details
+                  Vendor Details
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Owner Name *</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Vendor Name *</label>
                     <input
                       type="text"
                       value={editForm.ownerName}
@@ -1057,7 +1057,7 @@ const VendorDetails = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Owner Mobile *</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Vendor Mobile *</label>
                     <div className="flex gap-2">
                       <select
                         value={editForm.ownerCountryCode}
@@ -1078,7 +1078,7 @@ const VendorDetails = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Owner Email</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Vendor Email</label>
                     <input
                       type="email"
                       value={editForm.ownerEmail}
@@ -1088,7 +1088,7 @@ const VendorDetails = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Owner Aadhar</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Vendor Aadhar</label>
                     <input
                       type="text"
                       value={editForm.ownerAadhar}

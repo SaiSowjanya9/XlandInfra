@@ -660,7 +660,7 @@ const CoordinatorVendors = ({ user }) => {
                   </span>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Owner Name</p>
+                  <p className="text-sm text-gray-500">Vendor Name</p>
                   <p className="font-medium text-gray-900">{selectedVendor.owner_name || selectedVendor.company_name || '-'}</p>
                 </div>
                 <div>

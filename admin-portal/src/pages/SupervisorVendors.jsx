@@ -279,9 +279,9 @@ const SupervisorVendors = ({ user }) => {
                 </div>
               </div>
 
-              {/* Owner Details */}
+              {/* Vendor Details */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Owner Details</h3>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Vendor Details</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-500">Name</p>
