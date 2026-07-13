@@ -62,13 +62,20 @@ const generateEstimatePDF = async (estimate) => {
       doc.fontSize(16).fillColor(gold).text('XLAND INFRA', 95, 20);
       const mainTextWidth = doc.widthOfString('XLAND INFRA');
       doc.fontSize(7);
-      const subTextWidth = doc.widthOfString('— PVT LTD —');
-      const subTextX = 95 + (mainTextWidth - subTextWidth) / 2;
-      doc.fillColor(gold).text('— PVT LTD —', subTextX, 38);
+      const pvtLtdText = 'PVT LTD';
+      const pvtLtdWidth = doc.widthOfString(pvtLtdText);
+      const pvtLtdX = 95 + (mainTextWidth - pvtLtdWidth) / 2;
+      doc.fillColor(gold).text(pvtLtdText, pvtLtdX, 38);
+      // Draw equal-length lines on both sides
+      const lineY = 43;
+      const lineGap = 4;
+      doc.strokeColor(gold).lineWidth(0.5);
+      doc.moveTo(95, lineY).lineTo(pvtLtdX - lineGap, lineY).stroke();
+      doc.moveTo(pvtLtdX + pvtLtdWidth + lineGap, lineY).lineTo(95 + mainTextWidth, lineY).stroke();
       
-      // ESTIMATE badge on the right
-      doc.rect(470, 15, 95, 28).fill(gold);
-      doc.fontSize(12).fillColor(black).text('ESTIMATE', 488, 23);
+      // ESTIMATE badge on the right (rounded corners to match frontend)
+      doc.roundedRect(480, 12, 70, 26, 4).fill(gold);
+      doc.fontSize(10).fillColor(black).text('ESTIMATE', 480, 20, { width: 70, align: 'center', lineBreak: false });
 
       let y = 90;
 

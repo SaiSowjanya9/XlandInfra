@@ -114,9 +114,17 @@ const generatePDF = (data, type, filename) => {
     const mainTextWidth = doc.getTextWidth('XLAND INFRA');
     doc.setFontSize(5);
     doc.setFont('helvetica', 'normal');
-    const subTextWidth = doc.getTextWidth('— PVT LTD —');
-    const subTextX = textX + (mainTextWidth - subTextWidth) / 2;
-    doc.text('— PVT LTD —', subTextX, 17);
+    const pvtLtdText = 'PVT LTD';
+    const pvtLtdWidth = doc.getTextWidth(pvtLtdText);
+    const pvtLtdX = textX + (mainTextWidth - pvtLtdWidth) / 2;
+    doc.text(pvtLtdText, pvtLtdX, 17);
+    // Draw equal-length lines on both sides
+    const lineY = 16;
+    const lineGap = 1.5;
+    doc.setDrawColor(...gold);
+    doc.setLineWidth(0.2);
+    doc.line(textX, lineY, pvtLtdX - lineGap, lineY); // Left line
+    doc.line(pvtLtdX + pvtLtdWidth + lineGap, lineY, textX + mainTextWidth, lineY); // Right line
 
     // Document Badge (right side)
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
