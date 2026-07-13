@@ -78,6 +78,8 @@ const ExecutiveAddVendor = ({ user }) => {
   const [zoneSuggestions, setZoneSuggestions] = useState([]);
   const [areaSuggestions, setAreaSuggestions] = useState([]);
   const [divisions, setDivisions] = useState([]);
+  const [showZoneDropdown, setShowZoneDropdown] = useState(false);
+  const [showAreaDropdown, setShowAreaDropdown] = useState(false);
   const [showDivisionDropdown, setShowDivisionDropdown] = useState(false);
   const [showAddDivisionModal, setShowAddDivisionModal] = useState(false);
   const [newDivision, setNewDivision] = useState('');
