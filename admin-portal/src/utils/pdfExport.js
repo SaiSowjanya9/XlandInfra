@@ -234,14 +234,23 @@ const generatePDF = (data, type, filename) => {
       doc.text(typeLabel, margin + cardWidth/2 + 6, py);
       py += 7;
       
-      // Row 2: Zone
+      // Row 2: Zone | Division (Division only for property-based estimates)
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
       doc.text('Zone', margin + 6, py);
+      // Show Division label only for property-based estimates with division value
+      const isPropertyBased = data.estimateType === 'property_based' || data.estimate_type === 'property_based' || data.propertyId || data.property_id;
+      const hasDivision = isPropertyBased && (data.division || data.divisionName || data.division_name);
+      if (hasDivision) {
+        doc.text('Division', margin + cardWidth/2 + 6, py);
+      }
       py += 5;
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
       doc.text(String(data.zone || '-'), margin + 6, py);
+      if (hasDivision) {
+        doc.text(String(data.division || data.divisionName || data.division_name), margin + cardWidth/2 + 6, py);
+      }
       
       // Property-type specific fields - use consistent x-coordinates (margin + 6 for left, margin + cardWidth/2 + 6 for right)
       const leftCol = margin + 6;
