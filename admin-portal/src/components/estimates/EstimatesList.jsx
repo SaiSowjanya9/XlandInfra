@@ -90,8 +90,7 @@ const EstimatesList = ({
     const filterStatus = (filters.status || '').toLowerCase();
     const matchStatus = filters.status === 'all' || estStatus === filterStatus;
     
-    const isPropertyBased = estType === 'property-based' || est.propertyId;
-    // Property category filter should work for all estimates that have a property type
+    // Property category filter should work for ALL estimates that have a property type (both direct and property-based)
     const matchProperty = filters.propertyType === 'all' || 
       (est.propertyType && normalizePropertyType(est.propertyType) === filters.propertyType);
     
