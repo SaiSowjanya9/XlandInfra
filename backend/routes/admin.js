@@ -2092,57 +2092,71 @@ router.get('/all-employee-zones', authenticate, adminOnly, async (req, res) => {
       const [globalZones] = await pool.execute(
         'SELECT id, name FROM zones WHERE is_active = 1'
       );
+      console.log('[Admin] Global zones from zones table:', globalZones.length, globalZones.map(z => z.name));
       globalZones.forEach(z => {
         if (z.name && !allZoneNames.has(z.name)) {
           allZoneNames.add(z.name);
           combinedZones.push({ id: z.id, name: z.name });
         }
       });
-    } catch (_) {}
+    } catch (e) {
+      console.log('[Admin] Error fetching zones table:', e.message);
+    }
     
-    // 2. Get zones from fp_zones table (FP-created zones)
+    // 2. Get zones from fp_zones table (FP-created zones) - table may not exist
     try {
       const [fpZones] = await pool.execute(
         'SELECT id, name FROM fp_zones WHERE is_active = 1'
       );
+      console.log('[Admin] FP zones from fp_zones table:', fpZones.length, fpZones.map(z => z.name));
       fpZones.forEach(z => {
         if (z.name && !allZoneNames.has(z.name)) {
           allZoneNames.add(z.name);
           combinedZones.push({ id: `fp-${z.id}`, name: z.name });
         }
       });
-    } catch (_) {}
+    } catch (e) {
+      console.log('[Admin] fp_zones table may not exist:', e.message);
+    }
     
-    // 3. Get zones from properties table (zone_id column)
+    // 3. Get zones from properties table (zone_id column - may be string zone name)
     try {
       const [propertyZones] = await pool.execute(
         `SELECT DISTINCT zone_id FROM properties WHERE zone_id IS NOT NULL AND zone_id != ''
          AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)`
       );
+      console.log('[Admin] Property zones:', propertyZones.length, propertyZones.map(z => z.zone_id));
       propertyZones.forEach(z => {
-        if (z.zone_id && !allZoneNames.has(z.zone_id)) {
-          allZoneNames.add(z.zone_id);
-          combinedZones.push({ id: `prop-${z.zone_id}`, name: z.zone_id });
+        const zoneName = String(z.zone_id);
+        if (zoneName && !allZoneNames.has(zoneName)) {
+          allZoneNames.add(zoneName);
+          combinedZones.push({ id: `prop-${zoneName}`, name: zoneName });
         }
       });
-    } catch (_) {}
+    } catch (e) {
+      console.log('[Admin] Error fetching property zones:', e.message);
+    }
     
-    // 4. Also include any zones from fp_employee_zones that might not be in other tables
+    // 4. MOST IMPORTANT: Get zones from fp_employee_zones (where zones are actually stored)
     try {
       const [assignedZones] = await pool.execute(
-        `SELECT DISTINCT zone_name FROM fp_employee_zones WHERE zone_name IS NOT NULL`
+        `SELECT DISTINCT zone_name FROM fp_employee_zones WHERE zone_name IS NOT NULL AND zone_name != 'all'`
       );
+      console.log('[Admin] Assigned zones from fp_employee_zones:', assignedZones.length, assignedZones.map(z => z.zone_name));
       assignedZones.forEach(z => {
         if (z.zone_name && !allZoneNames.has(z.zone_name)) {
           allZoneNames.add(z.zone_name);
           combinedZones.push({ id: `assigned-${z.zone_name}`, name: z.zone_name });
         }
       });
-    } catch (_) {}
+    } catch (e) {
+      console.log('[Admin] Error fetching fp_employee_zones:', e.message);
+    }
     
     // Sort combined zones by name
     combinedZones.sort((a, b) => a.name.localeCompare(b.name));
     const zones = combinedZones;
+    console.log('[Admin] Final combined zones:', zones.length, zones.map(z => z.name));
 
     // Build a map of employee zones
     const employeeZonesMap = {};
@@ -2720,27 +2734,33 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
       const [globalZones] = await pool.execute(
         'SELECT id, name FROM zones WHERE is_active = 1'
       );
+      console.log(`[Admin FP ${fpIdNum}] Global zones:`, globalZones.length, globalZones.map(z => z.name));
       globalZones.forEach(z => {
         if (z.name && !allZoneNames.has(z.name)) {
           allZoneNames.add(z.name);
           combinedZones.push({ id: z.id, name: z.name });
         }
       });
-    } catch (_) {}
+    } catch (e) {
+      console.log(`[Admin FP ${fpIdNum}] Error fetching zones:`, e.message);
+    }
     
-    // 2. Get zones from fp_zones table for this FP
+    // 2. Get zones from fp_zones table for this FP - table may not exist
     try {
       const [fpZones] = await pool.execute(
         'SELECT id, name FROM fp_zones WHERE franchise_partner_id = ? AND is_active = 1',
         [fpIdNum]
       );
+      console.log(`[Admin FP ${fpIdNum}] FP zones:`, fpZones.length, fpZones.map(z => z.name));
       fpZones.forEach(z => {
         if (z.name && !allZoneNames.has(z.name)) {
           allZoneNames.add(z.name);
           combinedZones.push({ id: `fp-${z.id}`, name: z.name });
         }
       });
-    } catch (_) {}
+    } catch (e) {
+      console.log(`[Admin FP ${fpIdNum}] fp_zones table may not exist:`, e.message);
+    }
     
     // 3. Get zones from properties table for this FP
     try {
@@ -2749,30 +2769,38 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
          AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)`,
         [fpIdNum]
       );
+      console.log(`[Admin FP ${fpIdNum}] Property zones:`, propertyZones.length, propertyZones.map(z => z.zone_id));
       propertyZones.forEach(z => {
-        if (z.zone_id && !allZoneNames.has(z.zone_id)) {
-          allZoneNames.add(z.zone_id);
-          combinedZones.push({ id: `prop-${z.zone_id}`, name: z.zone_id });
+        const zoneName = String(z.zone_id);
+        if (zoneName && !allZoneNames.has(zoneName)) {
+          allZoneNames.add(zoneName);
+          combinedZones.push({ id: `prop-${zoneName}`, name: zoneName });
         }
       });
-    } catch (_) {}
+    } catch (e) {
+      console.log(`[Admin FP ${fpIdNum}] Error fetching property zones:`, e.message);
+    }
     
-    // 4. Also include any zones from fp_employee_zones for this FP
+    // 4. MOST IMPORTANT: Get zones from fp_employee_zones for this FP
     try {
       const [assignedZones] = await pool.execute(
-        `SELECT DISTINCT zone_name FROM fp_employee_zones WHERE franchise_partner_id = ? AND zone_name IS NOT NULL`,
+        `SELECT DISTINCT zone_name FROM fp_employee_zones WHERE franchise_partner_id = ? AND zone_name IS NOT NULL AND zone_name != 'all'`,
         [fpIdNum]
       );
+      console.log(`[Admin FP ${fpIdNum}] Assigned zones:`, assignedZones.length, assignedZones.map(z => z.zone_name));
       assignedZones.forEach(z => {
         if (z.zone_name && !allZoneNames.has(z.zone_name)) {
           allZoneNames.add(z.zone_name);
           combinedZones.push({ id: `assigned-${z.zone_name}`, name: z.zone_name });
         }
       });
-    } catch (_) {}
+    } catch (e) {
+      console.log(`[Admin FP ${fpIdNum}] Error fetching fp_employee_zones:`, e.message);
+    }
     
     // Sort combined zones by name
     combinedZones.sort((a, b) => a.name.localeCompare(b.name));
+    console.log(`[Admin FP ${fpIdNum}] Final zones:`, combinedZones.length, combinedZones.map(z => z.name));
     
     res.json({ 
       success: true, 
