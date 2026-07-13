@@ -144,6 +144,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Estimate ID</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Division</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Client</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Archived On</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Total</th>
@@ -165,6 +166,12 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                           {estimate.estimateType === 'property-based' ? estimate.propertyType : 'Direct-Based'}
                         </span>
                       </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-gray-600">
+                        {(estimate.estimateType === 'property-based' || estimate.estimateType === 'property_based' || estimate.propertyId || estimate.property_id) && (estimate.division || '-')}
+                        {!(estimate.estimateType === 'property-based' || estimate.estimateType === 'property_based' || estimate.propertyId || estimate.property_id) && '-'}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm text-gray-800">
@@ -285,6 +292,10 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                   )}
                   {viewEstimate.propertyId && (
                     <p className="text-sm text-gray-500">ID: {viewEstimate.propertyId}</p>
+                  )}
+                  {/* Division for property-based estimates */}
+                  {(viewEstimate.estimateType === 'property-based' || viewEstimate.estimateType === 'property_based' || viewEstimate.propertyId || viewEstimate.property_id) && (viewEstimate.division || viewEstimate.Division) && (
+                    <p className="text-sm text-gray-600">📍 Division: {viewEstimate.division || viewEstimate.Division}</p>
                   )}
                   {/* GC-specific fields */}
                   {['GC', 'gated_community', 'Gated Community'].includes(viewEstimate.propertyType || viewEstimate.property_type) && (
