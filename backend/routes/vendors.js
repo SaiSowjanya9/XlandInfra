@@ -18,6 +18,7 @@ const {
 } = require('../middleware/rbac');
 const { ROLE_NAMES, WORK_ORDER_STATUS } = require('../config/roles');
 const { sendVendorAssignmentEmail } = require('../services/emailService');
+const { loginRateLimiter } = require('../middleware/security');
 
 // ============================================
 // VENDOR LOGIN
@@ -37,8 +38,8 @@ const DEMO_VENDORS = [
   }
 ];
 
-// Vendor Login
-router.post('/login', async (req, res) => {
+// Vendor Login (rate limited: 5 attempts per 15 minutes)
+router.post('/login', loginRateLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 

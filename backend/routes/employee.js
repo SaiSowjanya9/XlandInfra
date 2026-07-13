@@ -8,8 +8,10 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../config/database');
+const { loginRateLimiter } = require('../middleware/security');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'xland-infra-secret-key-2024';
+// Use JWT_SECRET from auth middleware (secure handling)
+const { JWT_SECRET } = require('../middleware/auth');
 
 // Generate JWT token
 const generateToken = (user) => {
@@ -43,8 +45,8 @@ const generateToken = (user) => {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
 };
 
-// Unified Employee Login - Auto detects role
-router.post('/login', async (req, res) => {
+// Unified Employee Login - Auto detects role (rate limited: 5 attempts per 15 minutes)
+router.post('/login', loginRateLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 
