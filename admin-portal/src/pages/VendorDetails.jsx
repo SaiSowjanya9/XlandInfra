@@ -234,7 +234,6 @@ const VendorDetails = () => {
       'Verified': (vendor.serviceVerified || vendor.service_verified) ? 'Yes' : 'No',
       'Zone': vendor.zone || vendor.zone_name || '-',
       'Area': vendor.areaName || vendor.area_name || vendor.area || '-',
-      'Division': vendor.division || '-',
       'Vendor Name': vendor.ownerName || vendor.owner_name || vendor.company_name,
       'Vendor Mobile': (() => { const mobile = vendor.ownerMobile || vendor.owner_mobile || vendor.phone || '-'; return mobile.startsWith('+') ? mobile : `${vendor.ownerCountryCode || vendor.owner_country_code || '+91'} ${mobile}`; })(),
       'Vendor Email': vendor.ownerEmail || vendor.owner_email || vendor.email || '-',
@@ -265,7 +264,6 @@ const VendorDetails = () => {
       'Service Type': v.serviceType || v.service_type,
       'Zone': v.zone || v.zone_name || '-',
       'Area': v.areaName || v.area_name || v.area || '-',
-      'Division': v.division || '-',
       'Vendor Name': v.ownerName || v.owner_name || v.company_name,
       'Vendor Mobile': (() => { const mobile = v.ownerMobile || v.owner_mobile || v.phone || '-'; return mobile.startsWith('+') ? mobile : `${v.ownerCountryCode || v.owner_country_code || '+91'} ${mobile}`; })(),
       'Rate Per Visit': `₹${v.ratePerVisit || v.rate_per_visit || 0}`,
@@ -806,8 +804,7 @@ const VendorDetails = () => {
               {/* Location */}
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-3">Location</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div><span className="text-xs text-gray-400">Division</span><p className="text-sm font-medium text-gray-900">{viewVendor.division || '-'}</p></div>
+                <div className="grid grid-cols-2 gap-4">
                   <div><span className="text-xs text-gray-400">Zone</span><p className="text-sm font-medium text-gray-900">{viewVendor.zone || viewVendor.zone_name || '-'}</p></div>
                   <div><span className="text-xs text-gray-400">Area</span><p className="text-sm font-medium text-gray-900">{viewVendor.areaName || viewVendor.area_name || viewVendor.area || '-'}</p></div>
                 </div>
@@ -977,19 +974,6 @@ const VendorDetails = () => {
                       <option value="Pest Control">Pest Control</option>
                       <option value="Painting">Painting</option>
                       <option value="Carpentry">Carpentry</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Division</label>
-                    <select
-                      value={editForm.division}
-                      onChange={(e) => handleEditFormChange('division', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
-                    >
-                      <option value="">Select Division</option>
-                      <option value="Residential">Residential</option>
-                      <option value="Commercial">Commercial</option>
-                      <option value="Industrial">Industrial</option>
                     </select>
                   </div>
                   <div className="flex items-center gap-3 pt-5">
