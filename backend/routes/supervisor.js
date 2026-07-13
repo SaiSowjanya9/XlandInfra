@@ -13,6 +13,7 @@ const multer = require('multer');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const { sendCustomerActivationEmail } = require('../services/emailService');
+const { loginRateLimiter } = require('../middleware/security');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -71,10 +72,10 @@ const {
 } = require('../middleware/zoneHelper');
 
 // =====================================================
-// SUPERVISOR LOGIN (No auth required)
+// SUPERVISOR LOGIN (No auth required, rate limited: 5 attempts per 15 minutes)
 // Handles both standalone supervisors and FP-created supervisors
 // =====================================================
-router.post('/login', async (req, res) => {
+router.post('/login', loginRateLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 

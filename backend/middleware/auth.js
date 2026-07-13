@@ -7,8 +7,22 @@ const jwt = require('jsonwebtoken');
 const { pool } = require('../config/database');
 const { ROLES } = require('../config/roles');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'pm-software-secret-key-2024';
+// JWT Configuration - MUST be set in environment variables for production
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
+
+// Validate JWT_SECRET is set (critical for security)
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('FATAL: JWT_SECRET environment variable is not set!');
+    process.exit(1);
+  } else {
+    console.warn('WARNING: JWT_SECRET not set. Using insecure default for development only.');
+  }
+}
+
+// Use a development fallback ONLY in non-production
+const EFFECTIVE_JWT_SECRET = JWT_SECRET || 'dev-only-insecure-secret-do-not-use-in-production';
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -36,13 +50,13 @@ const generateToken = (user) => {
   if (user.supervisorId) payload.supervisorId = user.supervisorId;
   if (user.executiveId) payload.executiveId = user.executiveId;
   
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign(payload, EFFECTIVE_JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 };
 
 // Verify JWT Token
 const verifyToken = (token) => {
   try {
-    return jwt.verify(token, JWT_SECRET);
+    return jwt.verify(token, EFFECTIVE_JWT_SECRET);
   } catch (error) {
     return null;
   }
@@ -211,6 +225,6 @@ module.exports = {
   authenticate,
   optionalAuth,
   isAuthenticated,
-  JWT_SECRET,
+  JWT_SECRET: EFFECTIVE_JWT_SECRET,
   JWT_EXPIRES_IN
 };

@@ -21,6 +21,7 @@ const {
   buildScopedQuery 
 } = require('../middleware/fpScope');
 const { sendFPEmployeeWelcomeEmail, sendVendorAssignmentEmail, sendCustomerActivationEmail } = require('../services/emailService');
+const { loginRateLimiter } = require('../middleware/security');
 
 // Constants for customer activation
 const ACTIVATION_EXPIRY_HOURS = 72;
@@ -59,8 +60,8 @@ const upload = multer({
 // FP AUTHENTICATION (Public - No Auth Required)
 // ============================================
 
-// FP Login
-router.post('/login', async (req, res) => {
+// FP Login (rate limited: 5 attempts per 15 minutes)
+router.post('/login', loginRateLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 

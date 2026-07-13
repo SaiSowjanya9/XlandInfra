@@ -10,6 +10,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { sendCustomerActivationEmail } = require('../services/emailService');
+const { loginRateLimiter } = require('../middleware/security');
 
 // Constants for customer activation
 const ACTIVATION_EXPIRY_HOURS = 72;
@@ -50,9 +51,9 @@ const {
 } = require('../middleware/zoneHelper');
 
 // =====================================================
-// EXECUTIVE LOGIN (No auth required)
+// EXECUTIVE LOGIN (No auth required, rate limited: 5 attempts per 15 minutes)
 // =====================================================
-router.post('/login', async (req, res) => {
+router.post('/login', loginRateLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 

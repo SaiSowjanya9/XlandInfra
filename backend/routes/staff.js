@@ -12,6 +12,7 @@ const { authenticate, generateToken } = require('../middleware/auth');
 const { adminOnly, managerOrAdmin, requireRole, ROLES } = require('../middleware/rbac');
 const { ROLE_NAMES } = require('../config/roles');
 const { sendEmployeeWelcomeEmail, sendPasswordResetEmail, sendPasswordResetSuccess, sendPasswordUpdatedByAdminEmail } = require('../services/emailService');
+const { loginRateLimiter } = require('../middleware/security');
 
 // Password reset expiry (48 hours)
 const PASSWORD_RESET_EXPIRY_HOURS = 48;
@@ -144,8 +145,8 @@ const DEMO_USERS = DEMO_MODE_ENABLED ? [
   { id: 4, username: 'demo_executive', email: 'demo.executive@pmportal.com', firstName: 'Demo', lastName: 'Executive', role: 'executive' }
 ] : [];
 
-// Staff Login
-router.post('/login', async (req, res) => {
+// Staff Login (rate limited: 5 attempts per 15 minutes)
+router.post('/login', loginRateLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 

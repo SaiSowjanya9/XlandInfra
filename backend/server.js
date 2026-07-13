@@ -5,6 +5,17 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 
+// Security Middleware
+const {
+  helmetConfig,
+  apiRateLimiter,
+  xssSanitizer,
+  hpp,
+  bodyParserLimits,
+  securityErrorHandler,
+  configureTrustProxy,
+} = require('./middleware/security');
+
 // Real-time sync (WebSocket)
 const { initRealtimeServer } = require('./config/realtime');
 
@@ -39,6 +50,9 @@ const estimatesSyncRouter = require('./routes/estimatesSync');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Configure trust proxy (required when behind Nginx reverse proxy)
+configureTrustProxy(app);
+
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -65,7 +79,14 @@ const allowedOrigins = [
   'https://api.xlandinfra.com'
 ];
 
-// Middleware
+// =============================================================================
+// SECURITY MIDDLEWARE (Order matters!)
+// =============================================================================
+
+// 1. Helmet - HTTP Security Headers (must be first)
+app.use(helmetConfig);
+
+// 2. CORS Configuration
 app.use(cors({
   origin: function(origin, callback) {
     // Allow requests with no origin (mobile apps, curl, etc.)
@@ -86,8 +107,19 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// 3. Body Parsers with size limits (prevent large payload attacks)
+app.use(express.json(bodyParserLimits.json));
+app.use(express.urlencoded(bodyParserLimits.urlencoded));
+
+// 4. HTTP Parameter Pollution prevention
+app.use(hpp);
+
+// 5. XSS Sanitization
+app.use(xssSanitizer);
+
+// 6. Rate Limiting (applied to all /api routes)
+app.use('/api/', apiRateLimiter);
 
 // Serve uploaded files
 app.use('/uploads', express.static(uploadsDir));
@@ -129,13 +161,20 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Error handling middleware
+// Security Error Handler (CORS, rate limit, payload errors)
+app.use(securityErrorHandler);
+
+// General Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
+  
+  // Don't leak error details in production
+  const isProduction = process.env.NODE_ENV === 'production';
+  
   res.status(err.status || 500).json({
     success: false,
-    message: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    message: isProduction ? 'Internal Server Error' : (err.message || 'Internal Server Error'),
+    ...(!isProduction && { stack: err.stack })
   });
 });
 
