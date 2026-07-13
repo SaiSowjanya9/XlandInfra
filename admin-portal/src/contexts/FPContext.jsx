@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { safeSessionStorage, safeJSONParse } from '../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -31,7 +32,7 @@ export const FPProvider = ({ children }) => {
 
   const fetchFpList = useCallback(async () => {
     // Get token fresh each time to handle login state changes
-    const token = sessionStorage.getItem('pm_auth_token');
+    const token = safeSessionStorage.getItem('pm_auth_token');
     
     if (!token) {
       setLoading(false);
@@ -43,9 +44,9 @@ export const FPProvider = ({ children }) => {
     // Check user role - only admin/operations_manager should fetch FP list
     // FP users and other employees should use their own portal endpoints
     try {
-      const savedUser = sessionStorage.getItem('adminUser');
+      const savedUser = safeSessionStorage.getItem('adminUser');
       if (savedUser) {
-        const user = JSON.parse(savedUser);
+        const user = safeJSONParse(savedUser);
         const isAdmin = user?.role === 'admin' || user?.role === 'operations_manager';
         if (!isAdmin) {
           // Non-admin users don't need FP list - they use their own portal
@@ -85,7 +86,7 @@ export const FPProvider = ({ children }) => {
         setFpList(result.data);
         
         // Restore previously selected FP or default to Admin (All FPs)
-        const savedFpId = sessionStorage.getItem('selectedFpId');
+        const savedFpId = safeSessionStorage.getItem('selectedFpId');
         if (savedFpId === 'all') {
           setSelectedFp({ id: 'all', fpId: 'ADMIN', companyName: 'All FPs' });
         } else if (savedFpId && result.data.length > 0) {
@@ -95,12 +96,12 @@ export const FPProvider = ({ children }) => {
           } else {
             // Saved FP not found, default to Admin mode
             setSelectedFp({ id: 'all', fpId: 'ADMIN', companyName: 'All FPs' });
-            sessionStorage.setItem('selectedFpId', 'all');
+            safeSessionStorage.setItem('selectedFpId', 'all');
           }
         } else {
           // No saved selection, default to Admin (All FPs)
           setSelectedFp({ id: 'all', fpId: 'ADMIN', companyName: 'All FPs' });
-          sessionStorage.setItem('selectedFpId', 'all');
+          safeSessionStorage.setItem('selectedFpId', 'all');
         }
       } else {
         setFpList([]);
@@ -149,10 +150,10 @@ export const FPProvider = ({ children }) => {
   const selectFp = useCallback((fp) => {
     if (fp && fp.id) {
       setSelectedFp(fp);
-      sessionStorage.setItem('selectedFpId', fp.id.toString()); // stores 'all' or numeric id
+      safeSessionStorage.setItem('selectedFpId', fp.id.toString()); // stores 'all' or numeric id
     } else {
       setSelectedFp({ id: 'all', fpId: 'ADMIN', companyName: 'All FPs' });
-      sessionStorage.setItem('selectedFpId', 'all');
+      safeSessionStorage.setItem('selectedFpId', 'all');
     }
   }, []);
 

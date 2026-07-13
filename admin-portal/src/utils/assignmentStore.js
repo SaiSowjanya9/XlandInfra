@@ -1,4 +1,5 @@
 // Assignment store – manages vendor and employee assignments to properties
+import { safeStorage, safeJSONParse } from './safeStorage';
 
 const VENDOR_ASSIGNMENT_KEY = 'xland_vendor_assignments';
 const EMPLOYEE_ASSIGNMENT_KEY = 'xland_employee_assignments';
@@ -10,7 +11,7 @@ const EMPLOYEE_ASSIGNMENT_KEY = 'xland_employee_assignments';
 // Get all vendor assignments
 export const getVendorAssignments = (status = 'active') => {
   try {
-    const data = localStorage.getItem(VENDOR_ASSIGNMENT_KEY);
+    const data = safeStorage.getItem(VENDOR_ASSIGNMENT_KEY);
     const assignments = data ? JSON.parse(data) : [];
     if (status === 'all') return assignments;
     return assignments.filter(a => a.status === status);
@@ -60,7 +61,7 @@ export const assignVendorToProperty = (assignmentData) => {
   };
   
   assignments.push(newAssignment);
-  localStorage.setItem(VENDOR_ASSIGNMENT_KEY, JSON.stringify(assignments));
+  safeStorage.setItem(VENDOR_ASSIGNMENT_KEY, JSON.stringify(assignments));
   
   return { success: true, data: newAssignment };
 };
@@ -76,7 +77,7 @@ export const removeVendorAssignment = (assignmentId) => {
   
   assignments[index].status = 'removed';
   assignments[index].removedAt = new Date().toISOString();
-  localStorage.setItem(VENDOR_ASSIGNMENT_KEY, JSON.stringify(assignments));
+  safeStorage.setItem(VENDOR_ASSIGNMENT_KEY, JSON.stringify(assignments));
   
   return { success: true };
 };
@@ -96,7 +97,7 @@ export const reassignVendor = (oldAssignmentId, newAssignmentData) => {
 // Get all employee assignments
 export const getEmployeeAssignments = (status = 'active') => {
   try {
-    const data = localStorage.getItem(EMPLOYEE_ASSIGNMENT_KEY);
+    const data = safeStorage.getItem(EMPLOYEE_ASSIGNMENT_KEY);
     const assignments = data ? JSON.parse(data) : [];
     if (status === 'all') return assignments;
     return assignments.filter(a => a.status === status);
@@ -145,7 +146,7 @@ export const assignEmployeeToProperty = (assignmentData) => {
   };
   
   assignments.push(newAssignment);
-  localStorage.setItem(EMPLOYEE_ASSIGNMENT_KEY, JSON.stringify(assignments));
+  safeStorage.setItem(EMPLOYEE_ASSIGNMENT_KEY, JSON.stringify(assignments));
   
   return { success: true, data: newAssignment };
 };
@@ -161,7 +162,7 @@ export const removeEmployeeAssignment = (assignmentId) => {
   
   assignments[index].status = 'removed';
   assignments[index].removedAt = new Date().toISOString();
-  localStorage.setItem(EMPLOYEE_ASSIGNMENT_KEY, JSON.stringify(assignments));
+  safeStorage.setItem(EMPLOYEE_ASSIGNMENT_KEY, JSON.stringify(assignments));
   
   return { success: true };
 };
@@ -188,8 +189,8 @@ export const getPropertyAssignments = (propertyId) => {
 
 // Clear all assignments (for testing)
 export const clearAllAssignments = () => {
-  localStorage.removeItem(VENDOR_ASSIGNMENT_KEY);
-  localStorage.removeItem(EMPLOYEE_ASSIGNMENT_KEY);
+  safeStorage.removeItem(VENDOR_ASSIGNMENT_KEY);
+  safeStorage.removeItem(EMPLOYEE_ASSIGNMENT_KEY);
 };
 
 // ============================================
@@ -201,7 +202,7 @@ const SERVICE_VENDOR_ASSIGNMENT_KEY = 'xland_service_vendor_assignments';
 // Get all service-wise vendor assignments
 export const getServiceVendorAssignments = (status = 'active') => {
   try {
-    const data = localStorage.getItem(SERVICE_VENDOR_ASSIGNMENT_KEY);
+    const data = safeStorage.getItem(SERVICE_VENDOR_ASSIGNMENT_KEY);
     const assignments = data ? JSON.parse(data) : [];
     if (status === 'all') return assignments;
     return assignments.filter(a => a.status === status);
@@ -290,8 +291,8 @@ export const saveServiceVendorAssignments = (propertyId, estimateId, serviceAssi
       }
     });
     
-    // Save to localStorage
-    localStorage.setItem(SERVICE_VENDOR_ASSIGNMENT_KEY, JSON.stringify(assignments));
+    // Save to safeStorage
+    safeStorage.setItem(SERVICE_VENDOR_ASSIGNMENT_KEY, JSON.stringify(assignments));
     
     // Log for debugging
     console.log('[AssignmentStore] Saved assignments:', {
@@ -322,7 +323,7 @@ export const removeServiceVendorAssignment = (assignmentId) => {
   
   assignments[index].status = 'removed';
   assignments[index].removedAt = new Date().toISOString();
-  localStorage.setItem(SERVICE_VENDOR_ASSIGNMENT_KEY, JSON.stringify(assignments));
+  safeStorage.setItem(SERVICE_VENDOR_ASSIGNMENT_KEY, JSON.stringify(assignments));
   
   return { success: true };
 };
@@ -343,7 +344,7 @@ export const updateServiceVendorAssignment = (assignmentId, updates) => {
       updatedAt: new Date().toISOString()
     };
     
-    localStorage.setItem(SERVICE_VENDOR_ASSIGNMENT_KEY, JSON.stringify(assignments));
+    safeStorage.setItem(SERVICE_VENDOR_ASSIGNMENT_KEY, JSON.stringify(assignments));
     
     console.log('[AssignmentStore] Updated assignment:', assignments[index]);
     

@@ -21,13 +21,23 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
+      const handleClearAndReload = () => {
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch (e) {
+          console.warn('Storage clear failed:', e.message);
+        }
+        window.location.href = '/employee/login';
+      };
+      
       return (
         <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'system-ui' }}>
           <h1 style={{ color: '#dc2626' }}>Something went wrong</h1>
           <p style={{ color: '#666', marginTop: '10px' }}>{this.state.error?.message}</p>
           <button 
-            onClick={() => { localStorage.clear(); window.location.reload(); }}
-            style={{ marginTop: '20px', padding: '10px 20px', cursor: 'pointer' }}
+            onClick={handleClearAndReload}
+            style={{ marginTop: '20px', padding: '10px 20px', cursor: 'pointer', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '6px' }}
           >
             Clear Cache & Reload
           </button>
