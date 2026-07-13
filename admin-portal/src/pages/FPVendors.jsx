@@ -18,8 +18,10 @@ import {
   Edit2,
   Trash2,
   Save,
+  Download,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 
 // Service Type Icons mapping
 const SERVICE_ICONS = {
@@ -167,6 +169,36 @@ const FPVendors = ({ user }) => {
     return true;
   });
 
+  // Export all vendors to Excel
+  const exportAllVendors = () => {
+    if (filteredVendors.length === 0) {
+      showToastMessage('No vendors to export', 'error');
+      return;
+    }
+    const exportData = filteredVendors.map(v => ({
+      'Vendor ID': v.vendorId || v.vendor_id || '-',
+      'Service Type': v.serviceType || v.service_type || '-',
+      'Zone': v.zone_name || v.zone || '-',
+      'Area': v.area || v.areaName || v.area_name || '-',
+      'Vendor Name': v.ownerName || v.owner_name || '-',
+      'Vendor Mobile': v.owner_mobile || v.ownerMobile || v.phone || '-',
+      'Vendor Email': v.owner_email || v.ownerEmail || v.email || '-',
+      'Manager Name': v.manager_name || v.managerName || '-',
+      'Manager Mobile': v.manager_mobile || v.managerMobile || '-',
+      'POC Name': v.poc_name || v.pocName || '-',
+      'POC Mobile': v.poc_mobile || v.pocMobile || '-',
+      'Rate Per Visit': v.rate_per_visit || v.ratePerVisit || 0,
+      'Coverage Per Day': v.coverage_per_day || v.coveragePerDay || 0,
+      'Status': v.status || 'active',
+      'Created': v.created_at ? new Date(v.created_at).toLocaleDateString('en-IN') : '-'
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Vendors');
+    XLSX.writeFile(wb, `All_Vendors_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToastMessage('Vendors exported successfully');
+  };
+
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
@@ -191,6 +223,14 @@ const FPVendors = ({ user }) => {
             title="Refresh"
           >
             <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={exportAllVendors}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+            title="Export All Vendors"
+          >
+            <Download className="w-4 h-4" />
+            <span>Export All</span>
           </button>
           <button
             onClick={() => navigate('/fp/vendors/add')}
