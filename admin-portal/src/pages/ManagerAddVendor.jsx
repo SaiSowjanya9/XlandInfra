@@ -394,14 +394,14 @@ const ManagerAddVendor = ({ user }) => {
           </div>
         </div>
 
-        {/* Owner Details */}
+        {/* Vendor Details */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
               <User className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Owner Details</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Vendor Details</h2>
               <p className="text-sm text-gray-500">Vendor owner's information</p>
             </div>
           </div>

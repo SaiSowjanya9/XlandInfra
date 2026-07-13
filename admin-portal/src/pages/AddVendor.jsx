@@ -492,20 +492,20 @@ const AddVendor = ({ admin }) => {
           </div>
         </div>
 
-        {/* Owner Details */}
+        {/* Vendor Details */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
               <User className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Owner Details</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Vendor Details</h2>
               <p className="text-sm text-gray-500">Vendor owner's information</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Owner Name */}
+            {/* Vendor Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Full Name <span className="text-red-500">*</span>
@@ -522,7 +522,7 @@ const AddVendor = ({ admin }) => {
               {errors.ownerName && <p className="text-xs text-red-500 mt-1">{errors.ownerName}</p>}
             </div>
 
-            {/* Owner Mobile */}
+            {/* Vendor Mobile */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Mobile Number <span className="text-red-500">*</span>
@@ -550,7 +550,7 @@ const AddVendor = ({ admin }) => {
               {errors.ownerMobile && <p className="text-xs text-red-500 mt-1">{errors.ownerMobile}</p>}
             </div>
 
-            {/* Owner Email */}
+            {/* Vendor Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Email Address <span className="text-red-500">*</span>
@@ -567,7 +567,7 @@ const AddVendor = ({ admin }) => {
               {errors.ownerEmail && <p className="text-xs text-red-500 mt-1">{errors.ownerEmail}</p>}
             </div>
 
-            {/* Owner Aadhar */}
+            {/* Vendor Aadhar */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Aadhar Number <span className="text-red-500">*</span>

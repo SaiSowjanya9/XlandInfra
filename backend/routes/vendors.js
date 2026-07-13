@@ -541,12 +541,7 @@ router.post('/', authenticate, managerOrAdmin, async (req, res) => {
 router.put('/:id', authenticate, managerOrAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { 
-      username, email, password, companyName, contactPerson,
-      phone, alternatePhone, address, city, state, zipCode,
-      serviceCategories, gstNumber, panNumber, licenseNumber,
-      isActive, isVerified
-    } = req.body;
+    const body = req.body;
 
     // Check if vendor exists
     const [existing] = await pool.execute(
@@ -561,43 +556,77 @@ router.put('/:id', authenticate, managerOrAdmin, async (req, res) => {
       });
     }
 
-    // Build update query
+    // Build update query - handle both camelCase and snake_case field names
     let updateFields = [];
     let params = [];
 
-    if (username) { updateFields.push('username = ?'); params.push(username); }
-    if (email) { updateFields.push('email = ?'); params.push(email); }
-    if (companyName) { updateFields.push('company_name = ?'); params.push(companyName); }
-    if (contactPerson !== undefined) { updateFields.push('contact_person = ?'); params.push(contactPerson); }
-    if (phone) { updateFields.push('phone = ?'); params.push(phone); }
-    if (alternatePhone !== undefined) { updateFields.push('alternate_phone = ?'); params.push(alternatePhone); }
-    if (address !== undefined) { updateFields.push('address = ?'); params.push(address); }
-    if (city !== undefined) { updateFields.push('city = ?'); params.push(city); }
-    if (state !== undefined) { updateFields.push('state = ?'); params.push(state); }
-    if (zipCode !== undefined) { updateFields.push('zip_code = ?'); params.push(zipCode); }
-    if (serviceCategories !== undefined) { 
-      updateFields.push('service_categories = ?'); 
-      params.push(JSON.stringify(serviceCategories)); 
-    }
+    // Service & Location fields
+    const serviceType = body.serviceType || body.service_type;
+    const serviceVerified = body.serviceVerified !== undefined ? body.serviceVerified : body.service_verified;
+    const zone = body.zone || body.zone_name;
+    const areaName = body.areaName || body.area_name || body.area;
+    const division = body.division;
+
+    // Owner details
+    const ownerName = body.ownerName || body.owner_name || body.companyName || body.company_name;
+    const ownerMobile = body.ownerMobile || body.owner_mobile || body.phone;
+    const ownerEmail = body.ownerEmail || body.owner_email || body.email;
+    const ownerAadhar = body.ownerAadhar || body.owner_aadhar;
+
+    // Manager details
+    const managerName = body.managerName || body.manager_name;
+    const managerMobile = body.managerMobile || body.manager_mobile;
+    const managerEmail = body.managerEmail || body.manager_email;
+
+    // POC details
+    const pocName = body.pocName || body.poc_name;
+    const pocMobile = body.pocMobile || body.poc_mobile;
+    const pocEmail = body.pocEmail || body.poc_email;
+
+    // Other fields
+    const ratePerVisit = body.ratePerVisit || body.rate_per_visit;
+    const coveragePerDay = body.coveragePerDay || body.coverage_per_day;
+    const gstNumber = body.gstNumber || body.gst_number;
+    const panNumber = body.panNumber || body.pan_number;
+    const licenseNumber = body.licenseNumber || body.license_number;
+    const isActive = body.isActive !== undefined ? body.isActive : body.is_active;
+    const isVerified = body.isVerified !== undefined ? body.isVerified : body.is_verified;
+
+    // Add fields to update
+    if (serviceType !== undefined) { updateFields.push('service_type = ?'); params.push(serviceType); }
+    if (serviceVerified !== undefined) { updateFields.push('service_verified = ?'); params.push(serviceVerified ? 1 : 0); }
+    if (zone !== undefined) { updateFields.push('zone = ?'); params.push(zone); }
+    if (areaName !== undefined) { updateFields.push('area_name = ?'); params.push(areaName); }
+    if (division !== undefined) { updateFields.push('division = ?'); params.push(division); }
+    if (ownerName !== undefined) { updateFields.push('owner_name = ?'); params.push(ownerName); }
+    if (ownerMobile !== undefined) { updateFields.push('owner_mobile = ?'); params.push(ownerMobile); }
+    if (ownerEmail !== undefined) { updateFields.push('owner_email = ?'); params.push(ownerEmail); }
+    if (ownerAadhar !== undefined) { updateFields.push('owner_aadhar = ?'); params.push(ownerAadhar); }
+    if (managerName !== undefined) { updateFields.push('manager_name = ?'); params.push(managerName); }
+    if (managerMobile !== undefined) { updateFields.push('manager_mobile = ?'); params.push(managerMobile); }
+    if (managerEmail !== undefined) { updateFields.push('manager_email = ?'); params.push(managerEmail); }
+    if (pocName !== undefined) { updateFields.push('poc_name = ?'); params.push(pocName); }
+    if (pocMobile !== undefined) { updateFields.push('poc_mobile = ?'); params.push(pocMobile); }
+    if (pocEmail !== undefined) { updateFields.push('poc_email = ?'); params.push(pocEmail); }
+    if (ratePerVisit !== undefined) { updateFields.push('rate_per_visit = ?'); params.push(ratePerVisit); }
+    if (coveragePerDay !== undefined) { updateFields.push('coverage_per_day = ?'); params.push(coveragePerDay); }
     if (gstNumber !== undefined) { updateFields.push('gst_number = ?'); params.push(gstNumber); }
     if (panNumber !== undefined) { updateFields.push('pan_number = ?'); params.push(panNumber); }
     if (licenseNumber !== undefined) { updateFields.push('license_number = ?'); params.push(licenseNumber); }
     if (isActive !== undefined) { updateFields.push('is_active = ?'); params.push(isActive); }
     if (isVerified !== undefined) { updateFields.push('is_verified = ?'); params.push(isVerified); }
 
-    if (password) {
-      const passwordHash = await bcrypt.hash(password, 10);
+    if (body.password) {
+      const passwordHash = await bcrypt.hash(body.password, 10);
       updateFields.push('password_hash = ?');
       params.push(passwordHash);
     }
 
     if (updateFields.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'No fields to update'
-      });
+      return res.json({ success: true, message: 'No changes to update' });
     }
 
+    updateFields.push('updated_at = NOW()');
     params.push(id);
 
     await pool.execute(
