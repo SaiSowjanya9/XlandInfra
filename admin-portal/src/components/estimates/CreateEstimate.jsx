@@ -354,17 +354,18 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   });
 
   const handlePropertyIdChange = (value) => {
-    setPropertyIdInput(value);
+    const trimmedValue = value.trim();
+    setPropertyIdInput(trimmedValue);
     setShowPropertySuggestions(true);
     
     // Mark that user has started typing - hide estimate type selection
-    if (value.length > 0 && !hasStartedTyping) {
+    if (trimmedValue.length > 0 && !hasStartedTyping) {
       setHasStartedTyping(true);
     }
     
     // Try to find exact match
     const exactMatch = properties.find(
-      p => p.propertyId?.toLowerCase() === value.toLowerCase()
+      p => p.propertyId?.toLowerCase() === trimmedValue.toLowerCase()
     );
     
     if (exactMatch) {
