@@ -4736,7 +4736,18 @@ router.get('/zones', requireFPScope, async (req, res) => {
     const allZoneNames = new Set();
     const combinedZones = [];
 
-    // Get zones from fp_zones table
+    // 1. Get global zones from zones table
+    try {
+      const [globalZones] = await pool.execute('SELECT id, name FROM zones WHERE is_active = 1');
+      globalZones.forEach(z => {
+        if (!allZoneNames.has(z.name)) {
+          allZoneNames.add(z.name);
+          combinedZones.push({ id: z.id, name: z.name });
+        }
+      });
+    } catch (_) {}
+
+    // 2. Get zones from fp_zones table (FP-specific zones)
     try {
       const [fpZones] = await pool.execute(
         'SELECT id, name FROM fp_zones WHERE franchise_partner_id = ? AND is_active = 1 ORDER BY name',
@@ -4745,12 +4756,12 @@ router.get('/zones', requireFPScope, async (req, res) => {
       fpZones.forEach(z => {
         if (!allZoneNames.has(z.name)) {
           allZoneNames.add(z.name);
-          combinedZones.push({ id: z.id, name: z.name });
+          combinedZones.push({ id: `fp-${z.id}`, name: z.name });
         }
       });
     } catch (_) {}
 
-    // Get zones from FP's ACTIVE properties only (zone_id column stores zone name)
+    // 3. Get zones from FP's ACTIVE properties (zone_id column stores zone name)
     try {
       const [propertyZones] = await pool.execute(
         `SELECT DISTINCT zone_id FROM properties WHERE franchise_partner_id = ? AND zone_id IS NOT NULL AND zone_id != ''
