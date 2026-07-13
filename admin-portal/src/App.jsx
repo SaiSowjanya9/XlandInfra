@@ -114,9 +114,51 @@ function App() {
   const [portal, setPortal] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Safe storage helper - handles cases where storage is blocked
+  const safeGetItem = (key) => {
+    try {
+      return sessionStorage.getItem(key);
+    } catch (e) {
+      console.warn('Storage access blocked:', e.message);
+      return null;
+    }
+  };
+
+  const safeSetItem = (key, value) => {
+    try {
+      sessionStorage.setItem(key, value);
+    } catch (e) {
+      console.warn('Storage write blocked:', e.message);
+    }
+  };
+
+  const safeRemoveItem = (key) => {
+    try {
+      sessionStorage.removeItem(key);
+    } catch (e) {
+      console.warn('Storage remove blocked:', e.message);
+    }
+  };
+
+  const safeClear = () => {
+    try {
+      sessionStorage.clear();
+    } catch (e) {
+      console.warn('Storage clear blocked:', e.message);
+    }
+  };
+
+  const safeLocalRemove = (key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      console.warn('localStorage remove blocked:', e.message);
+    }
+  };
+
   // Check if session is still valid
   const isSessionValid = () => {
-    const lastActivity = sessionStorage.getItem('lastActivity');
+    const lastActivity = safeGetItem('lastActivity');
     if (!lastActivity) return false;
     const elapsed = Date.now() - parseInt(lastActivity, 10);
     return elapsed < SESSION_TIMEOUT;
@@ -124,7 +166,7 @@ function App() {
 
   // Update last activity timestamp
   const updateActivity = () => {
-    sessionStorage.setItem('lastActivity', Date.now().toString());
+    safeSetItem('lastActivity', Date.now().toString());
   };
 
   useEffect(() => {
@@ -132,8 +174,8 @@ function App() {
     
     try {
       // Check if session is still valid (not expired)
-      const savedUser = sessionStorage.getItem('adminUser');
-      const savedPortal = sessionStorage.getItem('activePortal');
+      const savedUser = safeGetItem('adminUser');
+      const savedPortal = safeGetItem('activePortal');
       
       if (savedUser && savedPortal && isSessionValid()) {
         setUser(JSON.parse(savedUser));
@@ -141,11 +183,11 @@ function App() {
         updateActivity(); // Refresh activity on load
       } else {
         // Session expired or invalid - clear everything
-        sessionStorage.clear();
+        safeClear();
       }
     } catch (error) {
       console.error('Error loading saved state:', error);
-      sessionStorage.clear();
+      safeClear();
     }
     setLoading(false);
   }, []);
@@ -184,13 +226,13 @@ function App() {
     setUser(userData);
     setPortal(portalType);
     // Use sessionStorage for session-based auth (expires on browser close)
-    sessionStorage.setItem('adminUser', JSON.stringify(userData));
-    sessionStorage.setItem('activePortal', portalType);
-    sessionStorage.setItem('lastActivity', Date.now().toString()); // Start session timer
+    safeSetItem('adminUser', JSON.stringify(userData));
+    safeSetItem('activePortal', portalType);
+    safeSetItem('lastActivity', Date.now().toString()); // Start session timer
     
     // Store token if provided
     if (userData.token) {
-      sessionStorage.setItem('pm_auth_token', userData.token);
+      safeSetItem('pm_auth_token', userData.token);
       // Dispatch event to trigger FP list refresh
       window.dispatchEvent(new Event('fp-refresh'));
     }
@@ -198,29 +240,29 @@ function App() {
 
   const handleLogout = useCallback(() => {
     // Clear all storage
-    sessionStorage.removeItem('adminUser');
-    sessionStorage.removeItem('activePortal');
-    sessionStorage.removeItem('pm_auth_token');
-    sessionStorage.removeItem('pm_current_user');
-    localStorage.removeItem('adminUser');
-    localStorage.removeItem('activePortal');
-    localStorage.removeItem('pm_auth_token');
-    localStorage.removeItem('pm_current_user');
-    localStorage.removeItem('pm_demo_mode');
+    safeRemoveItem('adminUser');
+    safeRemoveItem('activePortal');
+    safeRemoveItem('pm_auth_token');
+    safeRemoveItem('pm_current_user');
+    safeLocalRemove('adminUser');
+    safeLocalRemove('activePortal');
+    safeLocalRemove('pm_auth_token');
+    safeLocalRemove('pm_current_user');
+    safeLocalRemove('pm_demo_mode');
     // Redirect IMMEDIATELY to employee login - BEFORE state changes to prevent flash
     window.location.replace('/employee/login');
   }, []);
 
   const handleSelectPortal = useCallback((portalKey) => {
     setPortal(portalKey);
-    sessionStorage.setItem('activePortal', portalKey);
+    safeSetItem('activePortal', portalKey);
   }, []);
 
   const handleBackToPortals = useCallback(() => {
     setPortal(null);
     setUser(null);
-    sessionStorage.removeItem('adminUser');
-    sessionStorage.removeItem('activePortal');
+    safeRemoveItem('adminUser');
+    safeRemoveItem('activePortal');
   }, []);
 
   if (loading) {

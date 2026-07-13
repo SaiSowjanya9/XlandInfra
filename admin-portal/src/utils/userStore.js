@@ -2,6 +2,8 @@
 // Roles: Admin, Operations Manager, Franchise Partner
 // NOTE: In production, authentication should be handled via backend API
 
+import { safeStorage, safeJSONParse } from './safeStorage';
+
 const USER_STORAGE_KEY = 'pm_users';
 const CURRENT_USER_KEY = 'pm_current_user';
 const AUTH_TOKEN_KEY = 'pm_auth_token';
@@ -43,20 +45,20 @@ const CURRENT_VERSION = '3'; // Increment this when roles change - v3: cleared t
 
 // Initialize users in localStorage
 export const initializeUsers = () => {
-  const storedVersion = localStorage.getItem(USER_VERSION_KEY);
-  const existingUsers = localStorage.getItem(USER_STORAGE_KEY);
+  const storedVersion = safeStorage.getItem(USER_VERSION_KEY);
+  const existingUsers = safeStorage.getItem(USER_STORAGE_KEY);
   
   // Reset users if version changed or no users exist
   if (!existingUsers || storedVersion !== CURRENT_VERSION) {
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
-    localStorage.setItem(USER_VERSION_KEY, CURRENT_VERSION);
+    safeStorage.setItem(USER_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
+    safeStorage.setItem(USER_VERSION_KEY, CURRENT_VERSION);
   }
 };
 
 // Get all users
 export const getUsers = () => {
   initializeUsers();
-  return JSON.parse(localStorage.getItem(USER_STORAGE_KEY) || '[]');
+  return safeJSONParse(safeStorage.getItem(USER_STORAGE_KEY), []);
 };
 
 // Get users by role
@@ -113,9 +115,9 @@ export const authenticateUser = async (username, password, role = null) => {
       
       // Store token and user data
       if (result.data.token) {
-        localStorage.setItem(AUTH_TOKEN_KEY, result.data.token);
+        safeStorage.setItem(AUTH_TOKEN_KEY, result.data.token);
       }
-      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+      safeStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
       
       // Return user with detected portal type
       const portalType = getPortalTypeFromRole(userRole);
@@ -150,19 +152,19 @@ export const getPortalTypeFromRole = (role) => {
 
 // Get current logged in user
 export const getCurrentUser = () => {
-  const userData = localStorage.getItem(CURRENT_USER_KEY);
-  return userData ? JSON.parse(userData) : null;
+  const userData = safeStorage.getItem(CURRENT_USER_KEY);
+  return safeJSONParse(userData, null);
 };
 
 // Logout user
 export const logoutUser = () => {
-  localStorage.removeItem(CURRENT_USER_KEY);
-  localStorage.removeItem(AUTH_TOKEN_KEY);
+  safeStorage.removeItem(CURRENT_USER_KEY);
+  safeStorage.removeItem(AUTH_TOKEN_KEY);
 };
 
 // Get auth token
 export const getAuthToken = () => {
-  return localStorage.getItem(AUTH_TOKEN_KEY);
+  return safeStorage.getItem(AUTH_TOKEN_KEY);
 };
 
 // Generate unique User ID based on role
@@ -234,7 +236,7 @@ export const addUser = (userData) => {
   }
   
   users.push(newUser);
-  localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(users));
+  safeStorage.setItem(USER_STORAGE_KEY, JSON.stringify(users));
   return { success: true, user: newUser };
 };
 
@@ -256,13 +258,13 @@ export const updateUser = (id, updates) => {
   }
   
   users[index] = { ...users[index], ...updates };
-  localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(users));
+  safeStorage.setItem(USER_STORAGE_KEY, JSON.stringify(users));
   
   // Update current user if they updated their own profile
   const currentUser = getCurrentUser();
   if (currentUser && currentUser.id === id) {
     const { password: _, ...userWithoutPassword } = users[index];
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userWithoutPassword));
+    safeStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userWithoutPassword));
   }
   
   return { success: true, user: users[index] };
@@ -284,7 +286,7 @@ export const deleteUser = (id) => {
   }
   
   users.splice(index, 1);
-  localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(users));
+  safeStorage.setItem(USER_STORAGE_KEY, JSON.stringify(users));
   return { success: true };
 };
 
@@ -298,7 +300,7 @@ export const toggleUserStatus = (id) => {
   }
   
   users[index].status = users[index].status === 'active' ? 'inactive' : 'active';
-  localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(users));
+  safeStorage.setItem(USER_STORAGE_KEY, JSON.stringify(users));
   return { success: true, user: users[index] };
 };
 
