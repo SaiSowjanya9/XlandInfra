@@ -111,9 +111,12 @@ const generatePDF = (data, type, filename) => {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text('XLAND INFRA', textX, 12);
+    const mainTextWidth = doc.getTextWidth('XLAND INFRA');
     doc.setFontSize(5);
     doc.setFont('helvetica', 'normal');
-    doc.text('— PVT LTD —', textX, 17);
+    const subTextWidth = doc.getTextWidth('— PVT LTD —');
+    const subTextX = textX + (mainTextWidth - subTextWidth) / 2;
+    doc.text('— PVT LTD —', subTextX, 17);
 
     // Document Badge (right side)
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';

@@ -9,6 +9,7 @@ import {
   PROPERTY_TYPES, ESTIMATE_STATUSES, normalizePropertyType
 } from '../../utils/estimateStore';
 import { exportEstimateToPDF } from '../../utils/pdfExport';
+import * as XLSX from 'xlsx';
 
 const PROPERTY_ICONS = {
   APT: Home,
@@ -101,6 +102,34 @@ const EstimatesList = ({
     
     return matchSearch && matchType && matchStatus && matchProperty && matchFromDate && matchToDate;
   });
+
+  // Export all estimates to Excel
+  const exportAllEstimates = () => {
+    if (filteredEstimates.length === 0) {
+      showToast('No estimates to export', 'error');
+      return;
+    }
+    const exportData = filteredEstimates.map(e => ({
+      'Estimate ID': e.estimateId || e.estimate_id || '-',
+      'Type': e.estimateType === 'property_based' || e.estimateType === 'property-based' ? 'Property Based' : 'Direct',
+      'Client Name': e.clientName || e.client_name || '-',
+      'Property': e.propertyName || e.property_name || '-',
+      'Property Type': e.propertyType || e.property_type || '-',
+      'AMC Package': e.packageName || e.package_name || '-',
+      'Subtotal': e.subtotal || 0,
+      'Discount': e.discount || 0,
+      'GST': e.gst || 0,
+      'Total': e.total || 0,
+      'Status': e.status || '-',
+      'Created By': e.createdByName || e.created_by_name || '-',
+      'Created Date': e.createdAt || e.created_at ? new Date(e.createdAt || e.created_at).toLocaleDateString('en-IN') : '-'
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Estimates');
+    XLSX.writeFile(wb, `All_Estimates_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast('Estimates exported successfully');
+  };
 
   const handleSendEstimate = async (estimate) => {
     try {
@@ -296,6 +325,13 @@ const EstimatesList = ({
             Filters
             <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
           </button>
+          <button
+            onClick={exportAllEstimates}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+          >
+            <Download className="w-4 h-4" />
+            Export All
+          </button>
         </div>
 
         {/* Filter Options */}
@@ -384,6 +420,7 @@ const EstimatesList = ({
               <tr>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Estimate ID</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap hidden sm:table-cell">Type</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap hidden md:table-cell">Division</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Client</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap hidden md:table-cell">Date</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Total</th>
@@ -412,6 +449,13 @@ const EstimatesList = ({
                             : 'Direct'}
                         </span>
                       </div>
+                    </td>
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 hidden md:table-cell">
+                      <span className="text-sm text-gray-600">
+                        {(estimate.estimateType === 'property-based' || estimate.estimateType === 'property_based' || estimate.propertyId) 
+                          ? (estimate.division || estimate.property_division || '-') 
+                          : '-'}
+                      </span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <p className="text-xs sm:text-sm text-gray-800 truncate max-w-[100px] sm:max-w-none">

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { FREQUENCY_TYPES, FREQUENCY_COUNT_MAP } from '../utils/estimateStore';
 import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
+import * as XLSX from 'xlsx';
 
 const PROPERTY_TYPE_OPTIONS = [
   { id: 'GC', label: 'Gated Community' },
@@ -1796,6 +1797,34 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     </div>
   );
 
+  // Export all estimates to Excel
+  const exportAllEstimates = () => {
+    if (filteredEstimates.length === 0) {
+      showToast('No estimates to export', 'error');
+      return;
+    }
+    const exportData = filteredEstimates.map(e => ({
+      'Estimate ID': e.estimate_id || '-',
+      'Type': e.estimate_type === 'property_based' || e.estimate_type === 'property-based' ? 'Property Based' : 'Direct',
+      'Client Name': e.client_name || '-',
+      'Property': e.property_name || '-',
+      'Property Type': e.property_type || '-',
+      'AMC Package': e.package_name || '-',
+      'Subtotal': e.subtotal || 0,
+      'Discount': e.discount || 0,
+      'GST': e.gst || 0,
+      'Total': e.total || 0,
+      'Status': e.status || '-',
+      'Created By': e.created_by_name || '-',
+      'Created Date': e.created_at ? new Date(e.created_at).toLocaleDateString('en-IN') : '-'
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Estimates');
+    XLSX.writeFile(wb, `All_Estimates_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast('Estimates exported successfully');
+  };
+
   // ALL ESTIMATES
   const filteredEstimates = estimates.filter(e => {
     const matchSearch = (e.title || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.estimate_id || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.client_name || '').toLowerCase().includes(searchTerm.toLowerCase());
@@ -1828,6 +1857,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         <div className="flex gap-3">
           <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input type="text" placeholder="Search estimates..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm" /></div>
           <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 hover:bg-gray-50"><Filter className="w-4 h-4" />Filters<ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} /></button>
+          <button onClick={exportAllEstimates} className="px-4 py-2 bg-emerald-600 text-white rounded-lg flex items-center gap-2 hover:bg-emerald-700 transition-colors text-sm font-medium"><Download className="w-4 h-4" />Export All</button>
         </div>
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-gray-200">
@@ -1882,6 +1912,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Estimate ID</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Type</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Division</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Client</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Date</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Total</th>
@@ -1899,6 +1930,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         <Link2 className="w-3 h-3" />
                         {est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}
                       </span>
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-600">
+                      {(est.estimate_type === 'property_based' || est.estimate_type === 'property-based') 
+                        ? (est.division || est.property_division || '-') 
+                        : '-'}
                     </td>
                     <td className="px-4 py-4">
                       <div className="font-medium text-gray-900">{est.client_name}</div>

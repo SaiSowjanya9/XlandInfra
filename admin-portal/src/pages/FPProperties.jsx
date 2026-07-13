@@ -1295,6 +1295,15 @@ const FPProperties = ({ user }) => {
         >
           <RefreshCw className="w-5 h-5" />
         </button>
+
+        <button
+          onClick={exportAllProperties}
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+          title="Export All Properties"
+        >
+          <Download className="w-4 h-4" />
+          Export All
+        </button>
       </div>
 
       {/* Properties Table */}
