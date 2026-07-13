@@ -32,12 +32,24 @@ const AssignedVendors = ({ user }) => {
   const isAdmin = user?.role === 'admin' || user?.role === 'operations_manager';
   const isOpsManager = user?.role === 'operations_manager';
   const isCoordinator = user?.role === 'coordinator' || user?.role === 'coord_supervisor' || user?.role === 'coord_executive';
+  const isSupervisor = user?.role === 'supervisor' || user?.role === 'coord_supervisor';
+  const isExecutive = user?.role === 'executive' || user?.role === 'coord_executive';
   const isFPManager = user?.role === 'manager';
   const isFPUser = user?.role === 'franchise_partner' || user?.role === 'manager' || user?.role === 'fp_coordinator';
-  // Coordinator uses /api/coordinator, Manager uses /api/manager, FP uses /api/fp
-  const apiPrefix = isCoordinator ? '/api/coordinator' : (isFPManager ? '/api/manager' : (isFPUser ? '/api/fp' : '/api'));
-  // Coordinators, FP Managers, and Ops Manager are view-only
-  const isViewOnly = isCoordinator || isFPManager || isOpsManager;
+  
+  // Determine API prefix based on role
+  const getApiPrefix = () => {
+    if (isCoordinator) return '/api/coordinator';
+    if (isSupervisor) return '/api/supervisor';
+    if (isExecutive) return '/api/executive';
+    if (isFPManager) return '/api/manager';
+    if (isFPUser) return '/api/fp';
+    return '/api';
+  };
+  const apiPrefix = getApiPrefix();
+  
+  // Coordinators, Supervisors, Executives, FP Managers, and Ops Manager are view-only
+  const isViewOnly = isCoordinator || isSupervisor || isExecutive || isFPManager || isOpsManager;
   
   // Get selected FP from context (for admin users)
   const { selectedFp, fpList, selectFp } = useFP();
@@ -56,6 +68,7 @@ const AssignedVendors = ({ user }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [zoneFilter, setZoneFilter] = useState('');
   const [serviceTypeFilter, setServiceTypeFilter] = useState('');
+  const [propertyFilter, setPropertyFilter] = useState('');
   const [toast, setToast] = useState(null);
   const [viewAssignment, setViewAssignment] = useState(null);
   const [removeConfirm, setRemoveConfirm] = useState(null);
@@ -278,7 +291,19 @@ const AssignedVendors = ({ user }) => {
     ...serviceAssignments.map(a => a.propertyZone)
   ].filter(Boolean))];
 
-  const allServiceTypes = [...new Set(serviceAssignments.map(a => a.serviceType).filter(Boolean))];
+  const allServiceTypes = [...new Set(serviceAssignments.map(a => a.serviceType || a.service_type).filter(Boolean))];
+
+  // Get unique properties from all assignments
+  const allProperties = [...new Set([
+    ...assignments.map(a => a.propertyId || a.property_id),
+    ...serviceAssignments.map(a => a.propertyId || a.property_id)
+  ].filter(Boolean))].map(propId => {
+    const assignment = [...assignments, ...serviceAssignments].find(a => (a.propertyId || a.property_id) === propId);
+    return {
+      id: propId,
+      name: assignment?.propertyName || assignment?.property_name || propId
+    };
+  });
 
   // Filter property assignments
   const filteredAssignments = assignments.filter(a => {
@@ -309,8 +334,9 @@ const AssignedVendors = ({ user }) => {
         a.estimateId?.toLowerCase().includes(q);
       if (!matchesSearch) return false;
     }
-    if (zoneFilter && a.propertyZone !== zoneFilter) return false;
-    if (serviceTypeFilter && a.serviceType !== serviceTypeFilter) return false;
+    if (zoneFilter && a.propertyZone !== zoneFilter && a.property_zone !== zoneFilter) return false;
+    if (serviceTypeFilter && a.serviceType !== serviceTypeFilter && a.service_type !== serviceTypeFilter) return false;
+    if (propertyFilter && (a.propertyId || a.property_id) !== propertyFilter) return false;
     return true;
   });
 
@@ -476,9 +502,22 @@ const AssignedVendors = ({ user }) => {
             </select>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
           </div>
-          {(searchTerm || zoneFilter || serviceTypeFilter) && (
+          <div className="relative">
+            <select
+              value={propertyFilter}
+              onChange={(e) => setPropertyFilter(e.target.value)}
+              className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-200 focus:border-amber-500 outline-none"
+            >
+              <option value="">All Properties</option>
+              {allProperties.map(p => (
+                <option key={p.id} value={p.id}>{p.id}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+          </div>
+          {(searchTerm || zoneFilter || serviceTypeFilter || propertyFilter) && (
             <button
-              onClick={() => { setSearchTerm(''); setZoneFilter(''); setServiceTypeFilter(''); }}
+              onClick={() => { setSearchTerm(''); setZoneFilter(''); setServiceTypeFilter(''); setPropertyFilter(''); }}
               className="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Clear
@@ -513,7 +552,7 @@ const AssignedVendors = ({ user }) => {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Rate</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property ID</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Assigned</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
@@ -546,7 +585,7 @@ const AssignedVendors = ({ user }) => {
                         <span className="text-sm text-gray-900">{assignment.coverage_per_day || assignment.coverage || '0'}</span>
                       </td>
                       <td className="py-4 px-4">
-                        <span className="text-sm text-gray-600">{assignment.property_name || assignment.propertyName || '-'}</span>
+                        <span className="text-sm font-mono text-gray-700">{assignment.property_id || assignment.propertyId || '-'}</span>
                       </td>
                       <td className="py-4 px-4">
                         <span className="text-sm text-gray-600">
@@ -726,11 +765,18 @@ const AssignedVendors = ({ user }) => {
               <div>
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Assigned Property</h3>
                 <div className="bg-blue-50 rounded-lg p-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-5 h-5 text-blue-600" />
-                    <span className="font-medium text-gray-900">{viewAssignment.property_name || viewAssignment.propertyName || '-'}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-blue-600" />
+                      <span className="font-medium text-gray-900">{viewAssignment.property_name || viewAssignment.propertyName || '-'}</span>
+                    </div>
+                    <span className="text-xs font-mono bg-blue-100 text-blue-700 px-2 py-1 rounded">{viewAssignment.property_id || viewAssignment.propertyId || '-'}</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 mt-2">
+                  <div className="grid grid-cols-3 gap-3 mt-2">
+                    <div>
+                      <p className="text-xs text-gray-400">Property ID</p>
+                      <p className="text-sm font-mono text-gray-700">{viewAssignment.property_id || viewAssignment.propertyId || '-'}</p>
+                    </div>
                     <div>
                       <p className="text-xs text-gray-400">Type</p>
                       <p className="text-sm text-gray-700">{viewAssignment.property_type || viewAssignment.propertyType || '-'}</p>
