@@ -1383,30 +1383,50 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     </span>
                   </h4>
                   
-                  {/* Apartment (APT) - Block Information + Number of Units */}
+                  {/* Apartment (APT) - Block Breakdown */}
                   {estimateForm.entryType === 'APT' && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Block Information                         </label>
-                        <input
-                          type="text"
-                          value={estimateForm.blockTower}
-                          readOnly
-                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Number of Units                         </label>
-                        <input
-                          type="text"
-                          value={estimateForm.numberOfUnits ? `${estimateForm.numberOfUnits} Units` : '-'}
-                          readOnly
-                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed"
-                        />
-                      </div>
-                    </div>
+                    (() => {
+                      let blockNames = selectedProperty?.block_names || selectedProperty?.blockNames;
+                      let unitsPerBlock = selectedProperty?.units_per_block || selectedProperty?.unitsPerBlock;
+                      if (typeof blockNames === 'string') try { blockNames = JSON.parse(blockNames); } catch(e) { blockNames = {}; }
+                      if (typeof unitsPerBlock === 'string') try { unitsPerBlock = JSON.parse(unitsPerBlock); } catch(e) { unitsPerBlock = {}; }
+                      const numBlocks = selectedProperty?.number_of_blocks || selectedProperty?.numberOfBlocks || Object.keys(blockNames || {}).length || 1;
+                      
+                      if (numBlocks > 1 || Object.keys(blockNames || {}).length > 0) {
+                        return (
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => (
+                              <div key={blockNum} className="bg-white border border-gray-200 rounded-lg p-3">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Block Name</label>
+                                    <p className="text-sm font-semibold text-gray-800">{blockNames?.[blockNum] || blockNames?.[String(blockNum)] || `Block ${blockNum}`}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Units</label>
+                                    <p className="text-sm font-medium text-gray-700">{unitsPerBlock?.[blockNum] || unitsPerBlock?.[String(blockNum)] || 0}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      } else {
+                        // Fallback to simple display if no block data
+                        return (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Block Information</label>
+                              <input type="text" value={estimateForm.blockTower || '-'} readOnly className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Number of Units</label>
+                              <input type="text" value={estimateForm.numberOfUnits ? `${estimateForm.numberOfUnits} Units` : '-'} readOnly className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed" />
+                            </div>
+                          </div>
+                        );
+                      }
+                    })()
                   )}
 
                   {/* Flats - Flat Number (Auto-populated) */}
@@ -1499,30 +1519,50 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     </div>
                   )}
 
-                  {/* Gated Community (GC) - Block Name + Number of Units */}
+                  {/* Gated Community (GC) - Block Breakdown */}
                   {estimateForm.entryType === 'GC' && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Block Name                         </label>
-                        <input
-                          type="text"
-                          value={estimateForm.blockTower}
-                          readOnly
-                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Number of Units                         </label>
-                        <input
-                          type="text"
-                          value={estimateForm.numberOfUnits ? `${estimateForm.numberOfUnits} Units` : '-'}
-                          readOnly
-                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed"
-                        />
-                      </div>
-                    </div>
+                    (() => {
+                      let blockNames = selectedProperty?.block_names || selectedProperty?.blockNames;
+                      let unitsPerBlock = selectedProperty?.units_per_block || selectedProperty?.unitsPerBlock;
+                      if (typeof blockNames === 'string') try { blockNames = JSON.parse(blockNames); } catch(e) { blockNames = {}; }
+                      if (typeof unitsPerBlock === 'string') try { unitsPerBlock = JSON.parse(unitsPerBlock); } catch(e) { unitsPerBlock = {}; }
+                      const numBlocks = selectedProperty?.number_of_blocks || selectedProperty?.numberOfBlocks || Object.keys(blockNames || {}).length || 1;
+                      
+                      if (numBlocks > 1 || Object.keys(blockNames || {}).length > 0) {
+                        return (
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => (
+                              <div key={blockNum} className="bg-white border border-gray-200 rounded-lg p-3">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Block Name</label>
+                                    <p className="text-sm font-semibold text-gray-800">{blockNames?.[blockNum] || blockNames?.[String(blockNum)] || `Block ${blockNum}`}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Units</label>
+                                    <p className="text-sm font-medium text-gray-700">{unitsPerBlock?.[blockNum] || unitsPerBlock?.[String(blockNum)] || 0}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      } else {
+                        // Fallback to simple display if no block data
+                        return (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Block Name</label>
+                              <input type="text" value={estimateForm.blockTower || '-'} readOnly className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Number of Units</label>
+                              <input type="text" value={estimateForm.numberOfUnits ? `${estimateForm.numberOfUnits} Units` : '-'} readOnly className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed" />
+                            </div>
+                          </div>
+                        );
+                      }
+                    })()
                   )}
 
                   {/* Default for other/unknown types - exclude all known property types including uppercase variants */}

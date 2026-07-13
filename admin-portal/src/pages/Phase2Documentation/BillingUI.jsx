@@ -28,7 +28,7 @@ const BillingUI = () => {
             <pre className="text-gray-700">
 {`Billing & Payments
 │
-├── Generate Invoice
+├── Generated Invoices
 ├── Invoices – All invoices listed here
 ├── Payments – View all payments
 ├── Payment Link – Auto-send payment links
