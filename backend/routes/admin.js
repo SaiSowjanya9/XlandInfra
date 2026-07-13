@@ -572,6 +572,26 @@ router.delete('/properties/:id', authenticate, adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
     let updated = false;
+    let contactEmail = null;
+
+    // Get contact email before soft-deleting (for customer account deactivation)
+    try {
+      const [props] = await pool.execute(
+        `SELECT contact_email FROM properties WHERE id = ?`,
+        [id]
+      );
+      if (props.length > 0) contactEmail = props[0].contact_email;
+    } catch (e) {}
+    
+    if (!contactEmail) {
+      try {
+        const [props] = await pool.execute(
+          `SELECT contact_email FROM onboarded_properties WHERE id = ?`,
+          [id]
+        );
+        if (props.length > 0) contactEmail = props[0].contact_email;
+      } catch (e) {}
+    }
 
     // Try to soft-delete from properties table first (set status to 'inactive')
     try {
@@ -598,6 +618,17 @@ router.delete('/properties/:id', authenticate, adminOnly, async (req, res) => {
       });
     }
 
+    // Deactivate customer account if email exists
+    if (contactEmail) {
+      try {
+        await pool.execute(
+          `UPDATE customer_accounts SET is_active = 0, updated_at = NOW() WHERE email = ?`,
+          [contactEmail.toLowerCase()]
+        );
+        console.log('👤 [Admin] Deactivated customer account for:', contactEmail);
+      } catch (e) { console.log('Customer account deactivation skipped:', e.message); }
+    }
+
     console.log('📋 [Admin] Soft-deleted (set inactive) property:', id);
 
     res.json({
@@ -619,6 +650,26 @@ router.put('/properties/:id/restore', authenticate, adminOnly, async (req, res) 
   try {
     const { id } = req.params;
     let restored = false;
+    let contactEmail = null;
+
+    // Get contact email before restoring (for customer account reactivation)
+    try {
+      const [props] = await pool.execute(
+        `SELECT contact_email FROM properties WHERE id = ?`,
+        [id]
+      );
+      if (props.length > 0) contactEmail = props[0].contact_email;
+    } catch (e) {}
+    
+    if (!contactEmail) {
+      try {
+        const [props] = await pool.execute(
+          `SELECT contact_email FROM onboarded_properties WHERE id = ?`,
+          [id]
+        );
+        if (props.length > 0) contactEmail = props[0].contact_email;
+      } catch (e) {}
+    }
 
     // Try to restore from properties table first
     try {
@@ -643,6 +694,17 @@ router.put('/properties/:id/restore', authenticate, adminOnly, async (req, res) 
         success: false,
         message: 'Property not found or already active'
       });
+    }
+
+    // Reactivate customer account if email exists
+    if (contactEmail) {
+      try {
+        await pool.execute(
+          `UPDATE customer_accounts SET is_active = 1, updated_at = NOW() WHERE email = ?`,
+          [contactEmail.toLowerCase()]
+        );
+        console.log('👤 [Admin] Reactivated customer account for:', contactEmail);
+      } catch (e) { console.log('Customer account reactivation skipped:', e.message); }
     }
 
     console.log('📋 [Admin] Restored property:', id);

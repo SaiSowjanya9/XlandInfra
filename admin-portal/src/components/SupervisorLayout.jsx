@@ -48,6 +48,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
   const vendorSubItems = [
     { path: '/supervisor/vendors/add', icon: UserPlus, label: 'Add New Vendor' },
     { path: '/supervisor/vendors', icon: Hammer, label: 'Vendor Details' },
+    { path: '/supervisor/vendors/assigned', icon: ClipboardList, label: 'Assigned Vendors' },
   ];
 
   // Estimates sub-items (without Hide Pricing, Create Packages, Create Add-On)

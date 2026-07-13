@@ -472,6 +472,7 @@ function App() {
                     <Route path="customers/add" element={<SupervisorCustomers user={user} defaultTab="add" />} />
                     <Route path="vendors" element={<SupervisorVendors user={user} />} />
                     <Route path="vendors/add" element={<SupervisorAddVendor user={user} />} />
+                    <Route path="vendors/assigned" element={<AssignedVendors user={user} />} />
                     <Route path="estimates" element={<SupervisorEstimates user={user} defaultTab="list" />} />
                     <Route path="estimates/create" element={<SupervisorEstimates user={user} defaultTab="create" />} />
                     <Route path="estimates/amc" element={<SupervisorEstimates user={user} defaultTab="amc" />} />

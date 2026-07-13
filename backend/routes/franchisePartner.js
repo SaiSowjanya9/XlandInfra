@@ -746,6 +746,26 @@ router.delete('/properties/:id', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
     let updated = false;
+    let contactEmail = null;
+
+    // Get contact email before soft-deleting (for customer account deactivation)
+    try {
+      const [props] = await pool.execute(
+        `SELECT contact_email FROM properties WHERE id = ? AND franchise_partner_id = ?`,
+        [id, req.fpId]
+      );
+      if (props.length > 0) contactEmail = props[0].contact_email;
+    } catch (e) {}
+    
+    if (!contactEmail) {
+      try {
+        const [props] = await pool.execute(
+          `SELECT contact_email FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
+          [id, req.fpId]
+        );
+        if (props.length > 0) contactEmail = props[0].contact_email;
+      } catch (e) {}
+    }
 
     // Try to soft-delete from properties table first
     try {
@@ -769,6 +789,17 @@ router.delete('/properties/:id', requireFPScope, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Property not found' });
     }
 
+    // Deactivate customer account if email exists
+    if (contactEmail) {
+      try {
+        await pool.execute(
+          `UPDATE customer_accounts SET is_active = 0, updated_at = NOW() WHERE email = ?`,
+          [contactEmail.toLowerCase()]
+        );
+        console.log('👤 [FP] Deactivated customer account for:', contactEmail);
+      } catch (e) { console.log('Customer account deactivation skipped:', e.message); }
+    }
+
     console.log('📋 [FP] Soft-deleted (set inactive) property:', id);
     res.json({ success: true, message: 'Customer moved to inactive. Can be restored from Inactive Customers.' });
   } catch (error) {
@@ -782,6 +813,26 @@ router.put('/properties/:id/restore', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
     let restored = false;
+    let contactEmail = null;
+
+    // Get contact email before restoring (for customer account reactivation)
+    try {
+      const [props] = await pool.execute(
+        `SELECT contact_email FROM properties WHERE id = ? AND franchise_partner_id = ?`,
+        [id, req.fpId]
+      );
+      if (props.length > 0) contactEmail = props[0].contact_email;
+    } catch (e) {}
+    
+    if (!contactEmail) {
+      try {
+        const [props] = await pool.execute(
+          `SELECT contact_email FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
+          [id, req.fpId]
+        );
+        if (props.length > 0) contactEmail = props[0].contact_email;
+      } catch (e) {}
+    }
 
     // Try to restore from properties table first
     try {
@@ -803,6 +854,17 @@ router.put('/properties/:id/restore', requireFPScope, async (req, res) => {
 
     if (!restored) {
       return res.status(404).json({ success: false, message: 'Property not found or already active' });
+    }
+
+    // Reactivate customer account if email exists
+    if (contactEmail) {
+      try {
+        await pool.execute(
+          `UPDATE customer_accounts SET is_active = 1, updated_at = NOW() WHERE email = ?`,
+          [contactEmail.toLowerCase()]
+        );
+        console.log('👤 [FP] Reactivated customer account for:', contactEmail);
+      } catch (e) { console.log('Customer account reactivation skipped:', e.message); }
     }
 
     console.log('📋 [FP] Restored property:', id);

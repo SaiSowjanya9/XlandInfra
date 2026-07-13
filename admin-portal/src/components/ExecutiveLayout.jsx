@@ -57,7 +57,8 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
 
   const vendorSubItems = [
     { path: '/executive/vendors/add', icon: UserPlus, label: 'Add New Vendor' },
-    { path: '/executive/vendors', icon: Hammer, label: 'Vendor Details' }
+    { path: '/executive/vendors', icon: Hammer, label: 'Vendor Details' },
+    { path: '/executive/vendors/assigned', icon: ClipboardList, label: 'Assigned Vendors' }
   ];
 
   const estimatesSubItems = [
