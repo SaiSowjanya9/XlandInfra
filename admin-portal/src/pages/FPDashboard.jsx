@@ -18,6 +18,7 @@ import {
   Shield
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 
 const FPDashboard = ({ user }) => {
   // Check if user is FP Manager (restricted access)
@@ -34,7 +35,7 @@ const FPDashboard = ({ user }) => {
     setError(null);
     
     try {
-      const token = sessionStorage.getItem('pm_auth_token');
+      const token = getAuthToken();
       const response = await fetch('/api/fp/dashboard', {
         headers: {
           'Authorization': `Bearer ${token}`,

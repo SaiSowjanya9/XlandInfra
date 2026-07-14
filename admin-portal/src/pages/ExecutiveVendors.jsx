@@ -21,7 +21,7 @@ const ExecutiveVendors = ({ user }) => {
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const fetchVendors = async () => {
     setLoading(true);

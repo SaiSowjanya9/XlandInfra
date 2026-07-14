@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getAuthToken } from '../../utils/safeStorage';
 import {
   Package,
   Plus,
@@ -59,7 +60,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   // Check if user is Operations Manager (restricted access - view only)
   const isOpsManager = admin?.role === 'operations_manager';
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
   
   // Operations Manager defaults to 'all-packages' tab (no create access)
   const [activeTab, setActiveTab] = useState(isOpsManager ? 'all-packages' : 'create'); // 'create' or 'all-packages'

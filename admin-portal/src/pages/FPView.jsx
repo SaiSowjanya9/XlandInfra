@@ -32,7 +32,7 @@ const FPView = ({ admin }) => {
   const [addons, setAddons] = useState([]);
   const [customers, setCustomers] = useState([]);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   // Fetch FP list on mount
   useEffect(() => {

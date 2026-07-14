@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getAuthToken } from '../../utils/safeStorage';
 import {
   Archive, RotateCcw, Trash2, Eye, X, Calendar, Building2, User,
   Home, LayoutGrid, Layers, TreePine, Map, Briefcase
@@ -28,7 +29,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
   // Check if user is Operations Manager (restricted access - view only)
   const isOpsManager = admin?.role === 'operations_manager';
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
   
   const [archivedEstimates, setArchivedEstimates] = useState([]);
   const [viewEstimate, setViewEstimate] = useState(null);

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import { Store, Search, RefreshCw, X, AlertCircle, CheckCircle, Eye, Wrench, Zap, Wind, Sparkles, Shield } from 'lucide-react';
 
 const SERVICE_TYPES = [
@@ -23,7 +24,7 @@ const SupervisorVendors = ({ user }) => {
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const fetchVendors = async () => {
     setLoading(true);

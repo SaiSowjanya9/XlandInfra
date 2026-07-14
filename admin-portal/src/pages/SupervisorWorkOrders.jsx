@@ -59,7 +59,7 @@ const SupervisorWorkOrders = ({ user }) => {
     description: '', priority: 'medium', permissionToEnter: 'yes', hasPet: 'no', entryNotes: ''
   });
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const priorityOptions = [
     { value: 'low', label: 'Low', color: 'bg-green-100 text-green-700 border-green-400' },

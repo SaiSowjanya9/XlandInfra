@@ -59,7 +59,7 @@ const FPUserManagement = ({ user }) => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const initialFormData = {
     role: 'manager',

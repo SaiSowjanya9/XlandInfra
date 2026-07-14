@@ -75,7 +75,7 @@ const AssignedVendors = ({ user }) => {
   const [editAssignment, setEditAssignment] = useState(null);
   const [editModalData, setEditModalData] = useState(null);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const loadData = useCallback(async () => {
     // For admin users, use FP-specific or all-FPs endpoint

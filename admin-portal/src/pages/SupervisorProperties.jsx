@@ -61,7 +61,7 @@ const SupervisorProperties = ({ user }) => {
   const [propertyVendorAssignments, setPropertyVendorAssignments] = useState([]);
   const [loadingVendorAssignments, setLoadingVendorAssignments] = useState(false);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const fetchPropertyEstimates = async (propertyId) => {
     setLoadingEstimates(true);

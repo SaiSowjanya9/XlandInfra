@@ -60,7 +60,7 @@ const FPEmployeeZones = ({ user }) => {
   const [newZoneName, setNewZoneName] = useState('');
   const [creatingZone, setCreatingZone] = useState(false);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   useEffect(() => {
     loadData();

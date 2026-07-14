@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import {
   FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
   List, ChevronDown, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
@@ -114,7 +115,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const [viewAddon, setViewAddon] = useState(null);
   const [fpPortalLinks, setFpPortalLinks] = useState([]);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   // Auto-refresh every 30 seconds to sync with FP updates
   useEffect(() => { 

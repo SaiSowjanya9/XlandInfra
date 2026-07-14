@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getAuthToken } from '../utils/safeStorage';
 import { 
   X, Users, Check, AlertCircle, Building2, MapPin, 
   ChevronDown, Save, Loader2, UserCheck, Package, UserX
@@ -576,7 +577,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     setSaving(true);
     setError(null);
     
-    const token = sessionStorage.getItem('pm_auth_token');
+    const token = getAuthToken();
     
     try {
       // Get assignments with vendors

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getAuthToken } from '../utils/safeStorage';
 import { Users, MapPin, Eye, X, RefreshCw, Search } from 'lucide-react';
 
 const FPEmployeeZonesView = ({ apiEndpoint, title = "Team Zone Assignments" }) => {
@@ -10,7 +11,7 @@ const FPEmployeeZonesView = ({ apiEndpoint, title = "Team Zone Assignments" }) =
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const fetchData = async () => {
     setLoading(true);

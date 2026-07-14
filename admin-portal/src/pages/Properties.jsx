@@ -116,7 +116,7 @@ const Properties = () => {
   const [assignedEmployees, setAssignedEmployees] = useState([]);
   const [loadingAssignedEmployees, setLoadingAssignedEmployees] = useState(false);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
   
   // Check if user is Operations Manager (view-only access)
   const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');

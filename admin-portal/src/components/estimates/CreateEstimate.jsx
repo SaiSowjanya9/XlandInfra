@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { getAuthToken } from '../../utils/safeStorage';
 import { 
   Building2, User, Phone, Mail, Search, FileText, 
   Home, LayoutGrid, Layers, TreePine, Map, Briefcase,
@@ -56,7 +57,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   const { selectedFp } = useFP();
   const [fpPortalLinks, setFpPortalLinks] = useState([]);
   const [allFpPortalLinks, setAllFpPortalLinks] = useState([]); // Aggregated from all FPs
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
   
   // Fetch FP Portal Links based on selection
   useEffect(() => {

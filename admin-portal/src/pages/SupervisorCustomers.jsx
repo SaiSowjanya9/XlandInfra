@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import {
   Users,
   Plus,
@@ -236,7 +237,7 @@ const SupervisorCustomers = ({ user, defaultTab = 'list' }) => {
   const [newDivision, setNewDivision] = useState('');
   const formRef = useRef(null);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const fetchCustomers = async () => {
     setLoading(true);

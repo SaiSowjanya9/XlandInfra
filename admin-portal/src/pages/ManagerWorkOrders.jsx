@@ -91,7 +91,7 @@ const ManagerWorkOrders = ({ user }) => {
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const statusOptions = [
     { value: 'pending', label: 'Pending', color: 'bg-yellow-100 text-yellow-700' },

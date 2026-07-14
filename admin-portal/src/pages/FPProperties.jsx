@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import {
   Building2,
   Plus,
@@ -116,7 +117,7 @@ const FPProperties = ({ user }) => {
   const showDetailsModal = !!viewPropertyId;
   const showEditModal = !!editPropertyId;
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const fetchProperties = async () => {
     setLoading(true);

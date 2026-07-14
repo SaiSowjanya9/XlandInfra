@@ -7,6 +7,7 @@ import {
   Save,
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 
 const EMPLOYEE_ROLES = [
   { value: 'manager', label: 'Manager' },
@@ -32,7 +33,7 @@ const FPEditEmployee = ({ user }) => {
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   useEffect(() => {
     const fetchEmployee = async () => {

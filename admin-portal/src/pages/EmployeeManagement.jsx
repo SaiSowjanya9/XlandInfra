@@ -63,7 +63,7 @@ const EmployeeManagement = () => {
   const [submitting, setSubmitting] = useState(false);
   const [createdEmployee, setCreatedEmployee] = useState(null);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const initialFormData = {
     role: 'manager',

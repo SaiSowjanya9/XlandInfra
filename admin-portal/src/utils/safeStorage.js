@@ -95,4 +95,25 @@ export const safeJSONParse = (str, defaultValue = null) => {
   }
 };
 
+// Quick helper for auth token - most commonly used
+export const getAuthToken = () => {
+  try {
+    return sessionStorage.getItem('pm_auth_token');
+  } catch (e) {
+    console.warn('Cannot access auth token:', e.message);
+    return null;
+  }
+};
+
+// Quick helper for admin user
+export const getAdminUser = () => {
+  try {
+    const user = sessionStorage.getItem('adminUser');
+    return user ? JSON.parse(user) : null;
+  } catch (e) {
+    console.warn('Cannot access admin user:', e.message);
+    return null;
+  }
+};
+
 export default safeStorage;

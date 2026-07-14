@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import {
   LayoutDashboard,
   Building2,
@@ -41,7 +42,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   
   // Ensure FP list is loaded when layout mounts with a valid session
   useEffect(() => {
-    const token = sessionStorage.getItem('pm_auth_token');
+    const token = getAuthToken();
     const isAdmin = admin?.role === 'admin' || admin?.role === 'operations_manager' || admin?.isSuperAdmin;
     
     // If we have a token, admin role, but no FP list - trigger refresh

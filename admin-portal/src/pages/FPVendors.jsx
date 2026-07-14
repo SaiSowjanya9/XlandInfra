@@ -21,6 +21,7 @@ import {
   Download,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import * as XLSX from 'xlsx';
 
 // Service Type Icons mapping
@@ -51,7 +52,7 @@ const FPVendors = ({ user }) => {
   const [permanentDeleteConfirm, setPermanentDeleteConfirm] = useState(null);
   const [toast, setToast] = useState(null);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   // Fetch vendors from API
   const fetchVendors = async () => {
