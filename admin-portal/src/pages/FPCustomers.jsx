@@ -29,6 +29,8 @@ import {
   Triangle,
   Map
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import GPSLocationCapture from '../components/common/GPSLocationCapture';
 
 // Category options matching Admin Portal
@@ -278,7 +280,7 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/fp/customers', {
+      const response = await fetch(`${API_BASE}/api/fp/customers`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -294,7 +296,7 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
 
   const fetchProperties = async () => {
     try {
-      const response = await fetch('/api/fp/properties', {
+      const response = await fetch(`${API_BASE}/api/fp/properties`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -308,7 +310,7 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
 
   const fetchZones = async () => {
     try {
-      const response = await fetch('/api/fp/zones', {
+      const response = await fetch(`${API_BASE}/api/fp/zones`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -325,7 +327,7 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
     const exists = zones.some(z => z.name?.toLowerCase() === zoneName.toLowerCase());
     if (!exists) {
       try { 
-        await fetch('/api/fp/zones', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); 
+        await fetch(`${API_BASE}/api/fp/zones`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); 
         // Refresh zones list to include the new zone
         fetchZones();
       } catch (e) {}
@@ -359,7 +361,7 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
       // Auto-save zone if new
       if (formData.zone) await autoSaveZone(formData.zone);
       
-      const response = await fetch('/api/fp/customers', {
+      const response = await fetch(`${API_BASE}/api/fp/customers`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

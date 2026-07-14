@@ -9,6 +9,8 @@ import {
   MapPin,
   ChevronDown,
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 
@@ -102,7 +104,7 @@ const FPAddEmployee = ({ user }) => {
         createdBy: user?.username || 'FP',
       };
 
-      const response = await fetch('/api/fp/employees', {
+      const response = await fetch(`${API_BASE}/api/fp/employees`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

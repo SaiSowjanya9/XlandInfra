@@ -19,6 +19,8 @@ import {
   Shield
 } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const ManagerVendors = ({ user }) => {
   // Check if this is an FP-created Manager (has franchisePartnerId)
   const isFPManager = !!user?.franchisePartnerId;
@@ -71,7 +73,7 @@ const ManagerVendors = ({ user }) => {
   const fetchVendors = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/manager/vendors', {
+      const response = await fetch(`${API_BASE}/api/manager/vendors`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -150,7 +152,7 @@ const ManagerVendors = ({ user }) => {
 
   const handleExport = async () => {
     try {
-      const response = await fetch('/api/manager/export/vendors', {
+      const response = await fetch(`${API_BASE}/api/manager/export/vendors`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();

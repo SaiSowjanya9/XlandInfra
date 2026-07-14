@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Eye, EyeOff, AlertCircle, ArrowLeft, Home } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const CustomerLogin = ({ onLogin, onBack }) => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -12,7 +14,7 @@ const CustomerLogin = ({ onLogin, onBack }) => {
     setError('');
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/login', {
+      const response = await fetch(`${API_BASE}/api/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

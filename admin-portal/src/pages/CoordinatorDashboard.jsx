@@ -14,6 +14,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const CoordinatorDashboard = ({ user }) => {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
@@ -29,7 +31,7 @@ const CoordinatorDashboard = ({ user }) => {
       setLoading(true);
     }
     try {
-      const response = await fetch('/api/coordinator/dashboard', {
+      const response = await fetch(`${API_BASE}/api/coordinator/dashboard`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();

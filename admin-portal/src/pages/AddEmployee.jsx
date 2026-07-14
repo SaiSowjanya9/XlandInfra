@@ -9,6 +9,8 @@ import {
   MapPin,
   Info,
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { checkDuplicateEmployee } from '../utils/employeeStore';
@@ -152,7 +154,7 @@ const AddEmployee = ({ admin }) => {
       };
 
       // Call backend API to create employee
-      const response = await fetch('/api/staff', {
+      const response = await fetch(`${API_BASE}/api/staff`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -8,6 +8,8 @@ import {
   Loader2
 } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 // FP Staff role definitions with colors
 const FP_STAFF_ROLES = {
   manager: {
@@ -84,7 +86,7 @@ const FPUserManagement = ({ user }) => {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/fp/staff', {
+      const response = await fetch(`${API_BASE}/api/fp/staff`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -232,7 +234,7 @@ const FPUserManagement = ({ user }) => {
           sendEmail: true
         };
         
-        const response = await fetch('/api/fp/staff', {
+        const response = await fetch(`${API_BASE}/api/fp/staff`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

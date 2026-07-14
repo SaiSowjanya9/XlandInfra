@@ -13,6 +13,8 @@ import {
   Briefcase
 } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const ExecutiveDashboard = ({ user }) => {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
@@ -25,7 +27,7 @@ const ExecutiveDashboard = ({ user }) => {
       setLoading(true);
     }
     try {
-      const response = await fetch('/api/executive/dashboard', {
+      const response = await fetch(`${API_BASE}/api/executive/dashboard`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();

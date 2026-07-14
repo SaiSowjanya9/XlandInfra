@@ -7,6 +7,8 @@ import {
   UserPlus, CheckCircle, XCircle, MapPin, AlertCircle,
   Landmark, Percent, Send, Key, Loader2
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import { USER_ROLES } from '../utils/userStore';
 
 const UserManagement = () => {
@@ -67,7 +69,7 @@ const UserManagement = () => {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/staff', {
+      const response = await fetch(`${API_BASE}/api/staff`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -256,7 +258,7 @@ const UserManagement = () => {
           userData.commissionRate = formData.commissionRate;
         }
         
-        const response = await fetch('/api/staff', {
+        const response = await fetch(`${API_BASE}/api/staff`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

@@ -6,8 +6,7 @@ import {
   ChevronDown, Pencil, Truck, UserPlus, Store, User
 } from 'lucide-react';
 
-// Use empty string for relative URLs - uploads are served at /uploads on same domain
-const API_BASE = '';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const SupervisorWorkOrders = ({ user }) => {
   const [activeTab, setActiveTab] = useState('all');
@@ -73,7 +72,7 @@ const SupervisorWorkOrders = ({ user }) => {
     setLoading(true);
     try {
       // Always fetch ALL work orders for accurate tab counts
-      const response = await fetch('/api/supervisor/work-orders', { headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch(`${API_BASE}/api/supervisor/work-orders`, { headers: { 'Authorization': `Bearer ${token}` } });
       const result = await response.json();
       if (result.success) setWorkOrders(result.data || []);
     } catch (error) {
@@ -86,10 +85,10 @@ const SupervisorWorkOrders = ({ user }) => {
   const fetchDependencies = async () => {
     try {
       const [propRes, catRes, vendRes, empRes] = await Promise.all([
-        fetch('/api/supervisor/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/supervisor/categories', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/supervisor/vendors', { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ json: () => ({ success: false }) })),
-        fetch('/api/supervisor/employees', { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ json: () => ({ success: false }) }))
+        fetch(`${API_BASE}/api/supervisor/properties`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/supervisor/categories`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/supervisor/vendors`, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ json: () => ({ success: false }) })),
+        fetch(`${API_BASE}/api/supervisor/employees`, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ json: () => ({ success: false }) }))
       ]);
       const [propData, catData, vendData, empData] = await Promise.all([propRes.json(), catRes.json(), vendRes.json(), empRes.json()]);
       if (propData.success) setProperties(propData.data || []);
@@ -276,7 +275,7 @@ const SupervisorWorkOrders = ({ user }) => {
         submitData.append('attachments', att.file);
       });
 
-      const response = await fetch('/api/supervisor/work-orders', {
+      const response = await fetch(`${API_BASE}/api/supervisor/work-orders`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: submitData

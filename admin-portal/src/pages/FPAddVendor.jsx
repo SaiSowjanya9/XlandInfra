@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   X
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 
@@ -82,12 +84,12 @@ const FPAddVendor = ({ user }) => {
   const token = getAuthToken();
 
   const fetchZones = () => {
-    fetch('/api/fp/zones', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(`${API_BASE}/api/fp/zones`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json()).then(res => { if (res.success) setZoneSuggestions(res.data || []); }).catch(() => {});
   };
 
   const fetchServiceTypes = () => {
-    fetch('/api/fp/service-types', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(`${API_BASE}/api/fp/service-types`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json())
       .then(res => { 
         if (res.success && res.data?.length > 0) {
@@ -120,7 +122,7 @@ const FPAddVendor = ({ user }) => {
   useEffect(() => {
     fetchZones();
     fetchServiceTypes();
-    fetch('/api/onboarding/suggestions/areas', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(`${API_BASE}/api/onboarding/suggestions/areas`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json()).then(res => { if (res.success) setAreaSuggestions(res.data || []); }).catch(() => {});
   }, [token]);
 
@@ -128,7 +130,7 @@ const FPAddVendor = ({ user }) => {
     if (!zoneName?.trim()) return;
     const exists = zoneSuggestions.some(z => z.name?.toLowerCase() === zoneName.toLowerCase());
     if (!exists) {
-      try { await fetch('/api/fp/zones', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); } catch (e) {}
+      try { await fetch(`${API_BASE}/api/fp/zones`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); } catch (e) {}
     }
   };
 
@@ -152,7 +154,7 @@ const FPAddVendor = ({ user }) => {
     }
     
     try {
-      const response = await fetch('/api/fp/service-types', {
+      const response = await fetch(`${API_BASE}/api/fp/service-types`, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -216,7 +218,7 @@ const FPAddVendor = ({ user }) => {
       // Auto-save zone if new
       if (formData.zone) await autoSaveZone(formData.zone);
       
-      const response = await fetch('/api/fp/vendors', {
+      const response = await fetch(`${API_BASE}/api/fp/vendors`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -5,6 +5,8 @@ import {
   X, Users, Check, AlertCircle, Building2, MapPin, 
   ChevronDown, Save, Loader2, UserCheck, Package, UserX
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import { getVendors } from '../utils/vendorStore';
 import { getEstimatesByPropertyId, seedTestEstimateForProperty } from '../utils/estimateStore';
 import { 
@@ -595,7 +597,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
       
       for (const assignment of assignmentsToSave) {
         try {
-          const response = await fetch('/api/vendors/assignments', {
+          const response = await fetch(`${API_BASE}/api/vendors/assignments`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,

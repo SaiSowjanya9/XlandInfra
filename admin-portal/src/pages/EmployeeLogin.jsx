@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { 
   Eye, EyeOff, AlertCircle, ArrowLeft, Briefcase, User, Lock
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import { initializeUsers, getPortalTypeFromRole } from '../utils/userStore';
 import SetPassword from './SetPassword';
 import ForgotPassword from './ForgotPassword';
@@ -27,7 +29,7 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
     
     try {
       // Authenticate via unified employee login API
-      const response = await fetch('/api/employee/login', {
+      const response = await fetch(`${API_BASE}/api/employee/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: formData.username, password: formData.password })

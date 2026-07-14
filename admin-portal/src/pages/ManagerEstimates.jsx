@@ -6,6 +6,8 @@ import {
   List, ChevronDown, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
   DollarSign, Layers, Filter, Download, Mail, Save, Edit, RefreshCw, FolderOpen, ExternalLink, Link
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import { FREQUENCY_TYPES, FREQUENCY_COUNT_MAP } from '../utils/estimateStore';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
@@ -176,12 +178,12 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     if (!silent) setLoading(true);
     try {
       const [estRes, amcRes, addRes, propRes, archivedRes, linksRes] = await Promise.all([
-        fetch('/api/manager/estimates?archived=false', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/manager/amc-packages', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/manager/addons', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/manager/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/manager/estimates?archived=true', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/manager/fp-portal-links', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`${API_BASE}/api/manager/estimates?archived=false`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/manager/amc-packages`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/manager/addons`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/manager/properties`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/manager/estimates?archived=true`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/manager/fp-portal-links`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
       const [estData, amcData, addData, propData, archivedData, linksData] = await Promise.all([estRes.json(), amcRes.json(), addRes.json(), propRes.json(), archivedRes.json(), linksRes.json()]);
       const estArr = estData.success ? (Array.isArray(estData.data) ? estData.data : []) : [];
@@ -376,7 +378,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
         total_amount: priceSummary.totalAmount
       };
 
-      const res = await fetch('/api/manager/estimates', {
+      const res = await fetch(`${API_BASE}/api/manager/estimates`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -1103,7 +1105,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     const validSvc = amcForm.serviceRows.filter(r => r.service.trim());
     if (validSvc.length === 0) { showToast('Add at least one service', 'error'); return; }
     try {
-      const res = await fetch('/api/manager/amc-packages', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, property_type: selectedPropertyType, services: validSvc.map(r => ({ name: r.service, frequency_count: parseInt(r.frequencyCount) || 1, frequency_type: r.frequencyType })), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
+      const res = await fetch(`${API_BASE}/api/manager/amc-packages`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, property_type: selectedPropertyType, services: validSvc.map(r => ({ name: r.service, frequency_count: parseInt(r.frequencyCount) || 1, frequency_type: r.frequencyType })), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
       const result = await res.json();
       if (result.success) { showToast('AMC Package created!'); setAmcForm({ packageName: '', serviceRows: [{ service: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' }); setSelectedPropertyType(null); loadData(); setAmcActiveTab('all-packages'); }
       else showToast(result.message || 'Failed', 'error');
@@ -1519,7 +1521,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     if (!addonForm.serviceName.trim()) { showToast('Enter service name', 'error'); return; }
     if (!addonForm.price || parseFloat(addonForm.price) <= 0) { showToast('Enter valid price', 'error'); return; }
     try {
-      const res = await fetch('/api/manager/addons', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ property_type: addonSelectedPropertyType, service_name: addonForm.serviceName, frequency_count: parseInt(addonForm.frequencyCount) || 1, frequency_type: addonForm.frequencyType, billing_cycle: addonForm.billingCycle, price: parseFloat(addonForm.price), description: addonForm.description || '' }) });
+      const res = await fetch(`${API_BASE}/api/manager/addons`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ property_type: addonSelectedPropertyType, service_name: addonForm.serviceName, frequency_count: parseInt(addonForm.frequencyCount) || 1, frequency_type: addonForm.frequencyType, billing_cycle: addonForm.billingCycle, price: parseFloat(addonForm.price), description: addonForm.description || '' }) });
       const result = await res.json();
       if (result.success) { showToast('Add-on created!'); setAddonForm({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' }); setAddonSelectedPropertyType(null); loadData(); setAddonActiveTab('all-addons'); }
       else showToast(result.message || 'Failed', 'error');

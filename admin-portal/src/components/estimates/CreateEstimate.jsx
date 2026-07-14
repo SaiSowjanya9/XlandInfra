@@ -44,13 +44,21 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   const updateUrlParam = useCallback((key, value) => {
     setSearchParams(prev => {
       const newParams = new URLSearchParams(prev);
-      if (!value || value === '') {
+      const currentValue = newParams.get(key);
+      const newValue = (!value || value === '') ? null : String(value);
+      
+      // Don't update if value hasn't changed (prevents infinite loops)
+      if (currentValue === newValue || (currentValue === null && newValue === null)) {
+        return prev; // Return unchanged params
+      }
+      
+      if (!newValue) {
         newParams.delete(key);
       } else {
-        newParams.set(key, String(value));
+        newParams.set(key, newValue);
       }
       return newParams;
-    });
+    }, { replace: true }); // Use replace to avoid adding to history on every render
   }, [setSearchParams]);
   
   // FP Context for Admin mode - to show FP Portal Links

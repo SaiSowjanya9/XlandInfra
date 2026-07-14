@@ -19,6 +19,8 @@ import {
   Lock
 } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const ManagerEmployees = ({ user }) => {
   // Check if this is an FP-created Manager (has franchisePartnerId)
   const isFPManager = !!user?.franchisePartnerId;
@@ -54,7 +56,7 @@ const ManagerEmployees = ({ user }) => {
   const fetchEmployees = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/manager/employees', {
+      const response = await fetch(`${API_BASE}/api/manager/employees`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -70,7 +72,7 @@ const ManagerEmployees = ({ user }) => {
 
   const fetchZones = async () => {
     try {
-      const response = await fetch('/api/manager/zones', {
+      const response = await fetch(`${API_BASE}/api/manager/zones`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -148,7 +150,7 @@ const ManagerEmployees = ({ user }) => {
 
   const handleExport = async () => {
     try {
-      const response = await fetch('/api/manager/export/employees', {
+      const response = await fetch(`${API_BASE}/api/manager/export/employees`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();

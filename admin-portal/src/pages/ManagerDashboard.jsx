@@ -14,6 +14,8 @@ import {
   MapPin
 } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const ManagerDashboard = ({ user }) => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,7 +29,7 @@ const ManagerDashboard = ({ user }) => {
     }
     setError(null);
     try {
-      const response = await fetch('/api/manager/dashboard', {
+      const response = await fetch(`${API_BASE}/api/manager/dashboard`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();

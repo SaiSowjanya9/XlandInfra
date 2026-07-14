@@ -13,6 +13,8 @@ import {
   MapPin
 } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const SupervisorDashboard = ({ user }) => {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
@@ -25,7 +27,7 @@ const SupervisorDashboard = ({ user }) => {
       setLoading(true);
     }
     try {
-      const response = await fetch('/api/supervisor/dashboard', {
+      const response = await fetch(`${API_BASE}/api/supervisor/dashboard`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();

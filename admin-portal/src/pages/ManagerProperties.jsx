@@ -28,6 +28,8 @@ import {
   Loader2,
   Truck
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
 
@@ -138,10 +140,10 @@ const ManagerProperties = ({ user }) => {
       const statusParam = statusFilter ? `?status=${statusFilter}` : '';
       const [propRes, zoneRes, divRes, vendRes, empRes] = await Promise.all([
         fetch(`/api/manager/properties${statusParam}`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/manager/zones', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/manager/divisions', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/manager/vendors', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/manager/employees', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`${API_BASE}/api/manager/zones`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/manager/divisions`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/manager/vendors`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/manager/employees`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
       const [propData, zoneData, divData, vendData, empData] = await Promise.all([
@@ -172,7 +174,7 @@ const ManagerProperties = ({ user }) => {
   // Fetch zones separately for refreshing after creation
   const fetchZones = async () => {
     try {
-      const response = await fetch('/api/manager/zones', { headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch(`${API_BASE}/api/manager/zones`, { headers: { 'Authorization': `Bearer ${token}` } });
       const result = await response.json();
       if (result.success) setZones(result.data);
     } catch (e) {}
@@ -184,7 +186,7 @@ const ManagerProperties = ({ user }) => {
     const exists = zones.some(z => z.name?.toLowerCase() === zoneName.toLowerCase());
     if (!exists) {
       try { 
-        await fetch('/api/manager/zones', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); 
+        await fetch(`${API_BASE}/api/manager/zones`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); 
         fetchZones();
       } catch (e) {}
     }
@@ -282,7 +284,7 @@ const ManagerProperties = ({ user }) => {
 
   const handleExport = async () => {
     try {
-      const response = await fetch('/api/manager/export/properties', {
+      const response = await fetch(`${API_BASE}/api/manager/export/properties`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -354,7 +356,7 @@ const ManagerProperties = ({ user }) => {
   const fetchPropertyVendorAssignments = async (propertyId) => {
     setLoadingVendorAssignments(true);
     try {
-      const response = await fetch('/api/manager/vendors/assignments', {
+      const response = await fetch(`${API_BASE}/api/manager/vendors/assignments`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -390,7 +392,7 @@ const ManagerProperties = ({ user }) => {
   const fetchAssignedEmployeesForZone = async (zoneName) => {
     setLoadingAssignedEmployees(true);
     try {
-      const response = await fetch('/api/manager/employees', {
+      const response = await fetch(`${API_BASE}/api/manager/employees`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();

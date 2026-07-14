@@ -19,6 +19,8 @@ import {
   Edit2,
   AtSign,
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 
@@ -45,7 +47,7 @@ const FPEmployees = ({ user }) => {
     try {
       const [empResponse, zoneResponse] = await Promise.all([
         fetch(`/api/fp/employees?status=${statusFilter}`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/fp/zones', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`${API_BASE}/api/fp/zones`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
       
       const empResult = await empResponse.json();

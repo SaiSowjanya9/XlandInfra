@@ -36,6 +36,8 @@ import {
   RotateCcw,
   Loader2
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import * as XLSX from 'xlsx';
 import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
@@ -140,7 +142,7 @@ const FPProperties = ({ user }) => {
 
   const fetchZones = async () => {
     try {
-      const response = await fetch('/api/fp/zones', {
+      const response = await fetch(`${API_BASE}/api/fp/zones`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -158,7 +160,7 @@ const FPProperties = ({ user }) => {
     const exists = zones.some(z => z.name?.toLowerCase() === zoneName.toLowerCase());
     if (!exists) {
       try { 
-        await fetch('/api/fp/zones', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); 
+        await fetch(`${API_BASE}/api/fp/zones`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); 
         fetchZones();
       } catch (e) {}
     }
@@ -166,7 +168,7 @@ const FPProperties = ({ user }) => {
 
   const fetchVendors = async () => {
     try {
-      const response = await fetch('/api/fp/vendors', {
+      const response = await fetch(`${API_BASE}/api/fp/vendors`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -180,7 +182,7 @@ const FPProperties = ({ user }) => {
 
   const fetchEmployees = async () => {
     try {
-      const response = await fetch('/api/fp/employees', {
+      const response = await fetch(`${API_BASE}/api/fp/employees`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -196,7 +198,7 @@ const FPProperties = ({ user }) => {
   const fetchAssignedEmployeesForZone = async (zoneName) => {
     setLoadingAssignedEmployees(true);
     try {
-      const response = await fetch('/api/fp/employees?status=active', {
+      const response = await fetch(`${API_BASE}/api/fp/employees?status=active`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -267,7 +269,7 @@ const FPProperties = ({ user }) => {
   const fetchPropertyVendorAssignments = async (propertyId) => {
     setLoadingVendorAssignments(true);
     try {
-      const response = await fetch('/api/fp/vendors/assignments', {
+      const response = await fetch(`${API_BASE}/api/fp/vendors/assignments`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
