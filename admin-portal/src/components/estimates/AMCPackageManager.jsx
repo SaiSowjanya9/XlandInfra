@@ -735,7 +735,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                             min="1"
                             value={row.frequencyCount}
                             readOnly={row.frequencyType !== 'Other'}
-                            onChange={(e) => row.frequencyType === 'Other' && handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
+                            onChange={(e) => handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
                             title={row.frequencyType === 'Other' ? 'Enter custom visit count' : `Auto-set to ${FREQUENCY_COUNT_MAP[row.frequencyType] || 1} visits`}
                             placeholder={row.frequencyType === 'Other' ? 'Enter visits' : ''}
                             className={`w-full px-2 py-2 border border-gray-300 rounded-lg text-sm ${row.frequencyType === 'Other' ? 'bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400' : 'bg-gray-100 cursor-not-allowed'}`}
@@ -1018,7 +1018,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                           min="1"
                           value={row.frequencyCount}
                           readOnly={row.frequencyType !== 'Other'}
-                          onChange={(e) => row.frequencyType === 'Other' && handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
+                          onChange={(e) => handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
                           className={`w-full px-2 py-2 border border-gray-300 rounded-lg text-sm ${row.frequencyType === 'Other' ? 'bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400' : 'bg-gray-100 cursor-not-allowed'}`}
                         />
                       </div>
