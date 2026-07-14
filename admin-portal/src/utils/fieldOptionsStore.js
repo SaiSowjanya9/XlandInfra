@@ -1,3 +1,4 @@
+import { safeStorage, getAuthToken } from './safeStorage';
 /**
  * Field Options Store
  * Manages custom options for Categories, Sub-categories, Divisions, and Service Types
@@ -21,7 +22,7 @@ const DEFAULT_OPTIONS = {
 // Get all field options
 export const getFieldOptions = () => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = safeStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
       // Merge with defaults to ensure all keys exist
@@ -41,13 +42,13 @@ export const getFieldOptions = () => {
 
 // Save field options
 const saveFieldOptions = (options) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(options));
+  safeStorage.setItem(STORAGE_KEY, JSON.stringify(options));
 };
 
 // Add a new category (saves to database)
 export const addCategory = async (category) => {
   try {
-    const token = localStorage.getItem('token');
+    const token = safeStorage.getItem('token');
     const response = await fetch(`${API_URL}/categories`, {
       method: 'POST',
       headers: {
@@ -84,7 +85,7 @@ export const addCategory = async (category) => {
 // Add a new subcategory (saves to database)
 export const addSubcategory = async (category, subcategory, categoryId) => {
   try {
-    const token = localStorage.getItem('token');
+    const token = safeStorage.getItem('token');
     const response = await fetch(`${API_URL}/categories/${categoryId}/subcategories`, {
       method: 'POST',
       headers: {

@@ -1,3 +1,4 @@
+import { safeStorage, getAuthToken } from './safeStorage';
 // Property store – talks to backend API (/api/onboarding)
 // Notifications remain in localStorage (UI-only concern)
 
@@ -124,7 +125,7 @@ const createCustomerAccounts = async (contacts, propertyData, createdBy) => {
     if (contact.email && contact.email.includes('@')) {
       console.log('📧 Valid email found, calling /api/customers/create for:', contact.email);
       try {
-        const token = sessionStorage.getItem('pm_auth_token');
+        const token = getAuthToken();
         const res = await fetch('/api/customers/create', {
           method: 'POST',
           headers: { 
@@ -174,7 +175,7 @@ const createCustomerAccounts = async (contacts, propertyData, createdBy) => {
 // Save a new property via backend API
 export const saveProperty = async (formData, entryType, category, createdBy = 'system') => {
   try {
-    const token = sessionStorage.getItem('pm_auth_token');
+    const token = getAuthToken();
     const res = await fetch(API_BASE, {
       method: 'POST',
       headers: { 
@@ -273,7 +274,7 @@ export const deleteProperty = async (id) => {
 
 export const getNotifications = () => {
   try {
-    const data = localStorage.getItem(NOTIFICATION_KEY);
+    const data = safeStorage.getItem(NOTIFICATION_KEY);
     return data ? JSON.parse(data) : [];
   } catch {
     return [];
@@ -284,19 +285,19 @@ export const addNotification = (notification) => {
   const notifications = getNotifications();
   notifications.unshift(notification);
   if (notifications.length > 50) notifications.length = 50;
-  localStorage.setItem(NOTIFICATION_KEY, JSON.stringify(notifications));
+  safeStorage.setItem(NOTIFICATION_KEY, JSON.stringify(notifications));
 };
 
 export const markNotificationRead = (id) => {
   const notifications = getNotifications().map(n =>
     n.id === id ? { ...n, read: true } : n
   );
-  localStorage.setItem(NOTIFICATION_KEY, JSON.stringify(notifications));
+  safeStorage.setItem(NOTIFICATION_KEY, JSON.stringify(notifications));
 };
 
 export const markAllNotificationsRead = () => {
   const notifications = getNotifications().map(n => ({ ...n, read: true }));
-  localStorage.setItem(NOTIFICATION_KEY, JSON.stringify(notifications));
+  safeStorage.setItem(NOTIFICATION_KEY, JSON.stringify(notifications));
 };
 
 export const getUnreadCount = () => {

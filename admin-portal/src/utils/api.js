@@ -1,3 +1,4 @@
+import { safeStorage, getAuthToken } from './safeStorage';
 /**
  * API Configuration
  * Uses VITE_API_URL environment variable in production
@@ -20,7 +21,7 @@ export const apiRequest = async (endpoint, options = {}) => {
   };
 
   // Add auth token if available (check sessionStorage first, then localStorage for backwards compatibility)
-  const token = sessionStorage.getItem('pm_auth_token') || localStorage.getItem('pm_auth_token');
+  const token = getAuthToken() || safeStorage.getItem('pm_auth_token');
   if (token) {
     defaultHeaders['Authorization'] = `Bearer ${token}`;
   }
