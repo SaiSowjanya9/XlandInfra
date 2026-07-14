@@ -1,3 +1,4 @@
+import { safeStorage } from '../utils/safeStorage';
 import { useState, useEffect } from 'react';
 import { 
   Eye, EyeOff, AlertCircle, ArrowLeft, Briefcase, User, Lock
@@ -75,9 +76,9 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
         } else {
           // Store token and user data
           if (result.data.token) {
-            sessionStorage.setItem('pm_auth_token', result.data.token);
+            safeStorage.setItem('pm_auth_token', result.data.token);
           }
-          sessionStorage.setItem('pm_current_user', JSON.stringify(user));
+          safeStorage.setItem('pm_current_user', JSON.stringify(user));
           onLogin(user);
         }
       } else {

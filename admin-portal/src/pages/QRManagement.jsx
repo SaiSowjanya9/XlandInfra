@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { safeStorage, getAuthToken } from '../utils/safeStorage';
 import {
   QrCode, Download, Copy, ExternalLink, Edit3, Trash2, Plus,
   BarChart3, Users, Activity, Globe, Smartphone, Monitor, Tablet,
@@ -9,7 +10,7 @@ import {
 
 const QRManagement = () => {
   // Check if user is Operations Manager (view-only access)
-  const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');
+  const currentUser = JSON.parse(safeStorage.getItem('pm_current_user') || '{}');
   const isOpsManager = currentUser?.role === 'operations_manager';
   
   const [qrCodes, setQrCodes] = useState([]);

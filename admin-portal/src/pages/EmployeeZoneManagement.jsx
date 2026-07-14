@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { safeStorage, getAuthToken } from '../utils/safeStorage';
 import {
   Search,
   X,
@@ -64,7 +65,7 @@ const EmployeeZoneManagement = () => {
   const token = getAuthToken();
   
   // Check if user is Operations Manager (view-only access)
-  const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');
+  const currentUser = JSON.parse(safeStorage.getItem('pm_current_user') || '{}');
   const isOpsManager = currentUser?.role === 'operations_manager';
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
   

@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { safeStorage } from '../utils/safeStorage';
 import {
   LayoutDashboard,
   Building2,
@@ -153,11 +154,11 @@ const FPLayout = ({ admin, onLogout, children }) => {
     const handleClick = (e) => {
       if (mobile) setSidebarOpen(false);
 
-      if (localStorage.getItem('formDirty') === 'true') {
+      if (safeStorage.getItem('formDirty') === 'true') {
         e.preventDefault();
         const confirmed = window.confirm("You haven't submitted the form yet. Are you sure you want to leave this page?");
         if (confirmed) {
-          localStorage.removeItem('formDirty');
+          safeStorage.removeItem('formDirty');
           navigate(item.path);
         }
       }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { safeStorage } from '../utils/safeStorage';
 import {
   LayoutDashboard,
   Building2,
@@ -112,8 +113,8 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('pm_auth_token');
-    localStorage.removeItem('pm_current_user');
+    safeStorage.removeItem('pm_auth_token');
+    safeStorage.removeItem('pm_current_user');
     onLogout();
   };
 
