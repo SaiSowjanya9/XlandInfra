@@ -1011,14 +1011,15 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                           ))}
                         </select>
                       </div>
-                      {/* Visits - Auto-set based on frequency */}
+                      {/* Visits - Auto-set based on frequency, editable for Other */}
                       <div className="sm:col-span-2">
                         <input
                           type="number"
                           min="1"
                           value={row.frequencyCount}
-                          readOnly
-                          className="w-full px-2 py-2 border border-gray-300 bg-gray-100 rounded-lg text-sm cursor-not-allowed"
+                          readOnly={row.frequencyType !== 'Other'}
+                          onChange={(e) => row.frequencyType === 'Other' && handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
+                          className={`w-full px-2 py-2 border border-gray-300 rounded-lg text-sm ${row.frequencyType === 'Other' ? 'bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400' : 'bg-gray-100 cursor-not-allowed'}`}
                         />
                       </div>
                       <div className="sm:col-span-1 flex justify-end sm:justify-center">
