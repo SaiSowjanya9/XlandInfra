@@ -482,7 +482,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                       return (
                         <tr key={idx}>
                           <td className="px-3 py-2.5 text-gray-800">{svc.service || svc.name || '-'}</td>
-                          <td className={`px-3 py-2.5 text-gray-600 ${!hasDesc ? 'text-center' : ''}`}>{svc.description?.trim() || '-'}</td>
+                          <td className={`px-3 py-2.5 text-gray-600 text-center`}>{svc.description?.trim() || '-'}</td>
                           <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
                           <td className="px-3 py-2.5 text-center text-gray-600">{svc.frequencyCount || svc.frequency_count || getFrequencyVisits(freqType)}</td>
                         </tr>
@@ -547,7 +547,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                     return (
                       <tr key={idx}>
                         <td className="px-3 py-2.5 text-gray-800">{getAddonName(addon)}</td>
-                        <td className={`px-3 py-2.5 text-gray-600 ${!addon.description ? 'text-center' : ''}`}>{addon.description || '-'}</td>
+                        <td className={`px-3 py-2.5 text-gray-600 text-center`}>{addon.description || '-'}</td>
                         <td className="px-3 py-2.5 text-center text-gray-600">{freqType}</td>
                         <td className="px-5 py-2.5 text-center text-gray-600">{addon.frequency_count || addon.frequencyCount || getFrequencyVisits(freqType)}</td>
                         <td className="px-5 py-2.5 text-center">
@@ -1819,7 +1819,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                                 <p className="font-medium text-gray-800 text-sm">{svc.name || svc.service}</p>
                               </div>
                               <div className="col-span-5">
-                                <p className={`text-xs text-gray-500 break-words whitespace-normal ${!(svc.description && svc.description.trim() && svc.description.trim() !== '-') ? 'text-center' : ''}`}>{svc.description?.trim() || '-'}</p>
+                                <p className={`text-xs text-gray-500 break-words whitespace-normal text-center`}>{svc.description?.trim() || '-'}</p>
                               </div>
                               <div className="col-span-2 text-center">
                                 <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
@@ -1980,7 +1980,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                           <p className="font-medium text-gray-900 text-sm">{svc.name || svc.service || 'Service'}</p>
                         </div>
                         <div className="col-span-5">
-                          <p className={`text-sm text-gray-600 ${!(svc.description && svc.description.trim() && svc.description.trim() !== '-') ? 'text-center' : ''}`}>
+                          <p className={`text-sm text-gray-600 text-center`}>
                             {svc.description?.trim() || '-'}
                           </p>
                         </div>
