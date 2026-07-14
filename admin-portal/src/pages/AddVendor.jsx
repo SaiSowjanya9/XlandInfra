@@ -105,7 +105,7 @@ const AddVendor = ({ admin }) => {
   // Service Types
   const [serviceTypes, setServiceTypes] = useState([
     'Plumbing', 'Electrical', 'Carpentry', 'Painting', 'HVAC', 'Cleaning', 
-    'Landscaping', 'Pest Control', 'Security', 'General Maintenance'
+    'Landscaping', 'Pest Control', 'Security', 'Lift', 'General Maintenance'
   ]);
   const [serviceTypeData, setServiceTypeData] = useState([]);
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
@@ -390,7 +390,7 @@ const AddVendor = ({ admin }) => {
                   }}
                   className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
                 >
-                  + Add
+                  Add
                 </button>
               </div>
               {errors.serviceType && <p className="text-xs text-red-500 mt-1">{errors.serviceType}</p>}

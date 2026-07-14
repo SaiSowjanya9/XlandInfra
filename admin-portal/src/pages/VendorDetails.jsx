@@ -975,6 +975,8 @@ const VendorDetails = () => {
                       <option value="Pest Control">Pest Control</option>
                       <option value="Painting">Painting</option>
                       <option value="Carpentry">Carpentry</option>
+                      <option value="Lift">Lift</option>
+                      <option value="General Maintenance">General Maintenance</option>
                     </select>
                   </div>
                   <div className="flex items-center gap-3 pt-5">
