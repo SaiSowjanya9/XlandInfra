@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { getAuthToken } from '../utils/safeStorage';
 import {
   Search,
   X,
