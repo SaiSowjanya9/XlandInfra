@@ -222,7 +222,8 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
           showToast?.(editingPackage ? 'AMC Package updated successfully!' : 'AMC Package created successfully!', 'success');
           if (editingPackage) setShowEditModal(false);
           resetForm();
-          loadData();
+          await loadData();
+          setActiveTab('all-packages'); // Switch to All Packages tab after creation
         } else {
           showToast?.(result.message || 'Failed to save package', 'error');
         }
@@ -663,9 +664,8 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
               <h2 className="text-lg font-semibold text-gray-900">Package Configuration</h2>
               <button
                 onClick={handleAddServiceRow}
-                className="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2"
+                className="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 transition-colors"
               >
-                <Plus className="w-4 h-4" />
                 Add Row
               </button>
             </div>
@@ -699,10 +699,10 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     <div className="col-span-4">
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Description</span>
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-3">
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency</span>
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1">
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Visits</span>
                     </div>
                     <div className="col-span-1">
@@ -737,7 +737,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         </div>
                         
                         {/* Frequency Type - First to trigger auto-calculation */}
-                        <div className="md:col-span-2 relative">
+                        <div className="md:col-span-3 relative">
                           <select
                             value={row.frequencyType}
                             onChange={(e) => handleUpdateServiceRow(index, 'frequencyType', e.target.value)}
@@ -751,7 +751,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         </div>
                         
                         {/* Visits - Auto-set based on frequency */}
-                        <div className="md:col-span-2">
+                        <div className="md:col-span-1">
                           <input
                             type="number"
                             min="1"
@@ -983,9 +983,8 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                   <h4 className="text-sm font-semibold text-gray-700">Service Configuration</h4>
                   <button
                     onClick={handleAddServiceRow}
-                    className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-1"
+                    className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
                   >
-                    <Plus className="w-3 h-3" />
                     Add Row
                   </button>
                 </div>

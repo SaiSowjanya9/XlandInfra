@@ -37,6 +37,7 @@ const SERVICE_TYPES = [
   'Painting',
   'Pest Control',
   'Landscaping',
+  'Lift',
   'General Maintenance'
 ];
 
@@ -361,7 +362,7 @@ const SupervisorAddVendor = ({ user }) => {
                   onClick={() => setShowAddServiceModal(true)}
                   className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
                 >
-                  + Add
+                  Add
                 </button>
               </div>
               {errors.serviceType && <p className="text-xs text-red-500 mt-1">{errors.serviceType}</p>}
