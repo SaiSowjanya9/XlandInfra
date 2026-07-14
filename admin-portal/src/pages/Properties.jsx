@@ -1920,6 +1920,66 @@ const Properties = () => {
                   </div>
                 </div>
               )}
+              {/* Flat Details - Only for FLAT type */}
+              {(['flat', 'FLAT', 'Flat'].some(t => 
+                editFormData.propertyType?.toLowerCase().includes(t.toLowerCase()) || 
+                editFormData.entryType === 'FLAT'
+              )) && (
+                <div className="pt-4 border-t border-gray-200">
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Flat Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Flat Number</label>
+                      <input type="text" value={editFormData.villaPlotNumber || ''} onChange={(e) => setEditFormData({ ...editFormData, villaPlotNumber: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter flat number" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Block Information</label>
+                      <div className="flex items-center gap-3">
+                        <input type="text" value={editFormData.flatBlockInfo || ''} disabled={editFormData.flatBlockNA} onChange={(e) => setEditFormData({ ...editFormData, flatBlockInfo: e.target.value })} className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter block info" />
+                        <label className="flex items-center gap-2 text-sm text-gray-600 whitespace-nowrap">
+                          <input type="checkbox" checked={editFormData.flatBlockNA || false} onChange={(e) => setEditFormData({ ...editFormData, flatBlockNA: e.target.checked })} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                          N/A
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Address Section */}
+              <div className="pt-4 border-t border-gray-200">
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Address</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+                    <textarea value={editFormData.address || ''} onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })} rows={2} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Enter street address" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                      <input type="text" value={editFormData.city || ''} onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter city" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                      <input type="text" value={editFormData.state || ''} onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter state" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">ZIP/Postal Code</label>
+                      <input type="text" value={editFormData.zipCode || ''} onChange={(e) => setEditFormData({ ...editFormData, zipCode: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter ZIP code" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Landmark</label>
+                      <input type="text" value={editFormData.landmark || ''} onChange={(e) => setEditFormData({ ...editFormData, landmark: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Near landmark" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Notes */}
+              <div className="pt-4 border-t border-gray-200">
+                <h3 className="text-base font-semibold text-gray-900 mb-1">Additional Notes <span className="text-gray-400 text-sm font-normal">(Optional)</span></h3>
+                <textarea value={editFormData.notes || ''} onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })} rows={3} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Enter any additional notes or comments..." />
+              </div>
             </div>
             
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
