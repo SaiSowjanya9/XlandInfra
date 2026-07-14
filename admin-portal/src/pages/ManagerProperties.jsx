@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { getAuthToken } from '../utils/safeStorage';
 import {
   Building2,
   Plus,

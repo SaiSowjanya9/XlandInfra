@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getAuthToken } from '../utils/safeStorage';
 import {
   Shield,
   Plus,

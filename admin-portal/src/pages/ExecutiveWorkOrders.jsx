@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { getAuthToken } from '../utils/safeStorage';
 import {
   ClipboardList, Plus, Search, RefreshCw, X, XCircle, AlertCircle,
   CheckCircle, Clock, Eye, Building2, User, Camera, Upload, FileText, Image, List

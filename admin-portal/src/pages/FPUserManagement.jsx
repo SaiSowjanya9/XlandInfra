@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getAuthToken } from '../utils/safeStorage';
 import { 
   Users, Search, Briefcase, UserCog, ClipboardList, FileSpreadsheet,
   Edit2, Trash2, ToggleLeft, ToggleRight, X, Eye, EyeOff,

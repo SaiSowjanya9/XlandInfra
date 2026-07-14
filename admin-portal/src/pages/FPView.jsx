@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getAuthToken } from '../utils/safeStorage';
 import { 
   Building2, Users, ClipboardList, Wrench, UserCheck, MapPin, 
   FileText, Package, PlusCircle, Archive, ChevronDown, Search,
