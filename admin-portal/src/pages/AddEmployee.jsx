@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { safeStorage } from '../utils/safeStorage';
 import {
   User,
   CheckCircle2,
@@ -49,7 +50,7 @@ const AddEmployee = ({ admin }) => {
   const [createdEmployee, setCreatedEmployee] = useState(null);
   
   // Check if user is Operations Manager (view-only access)
-  const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');
+  const currentUser = JSON.parse(safeStorage.getItem('pm_current_user') || '{}');
   const isOpsManager = currentUser?.role === 'operations_manager';
   
   // Show view-only message for Ops Manager

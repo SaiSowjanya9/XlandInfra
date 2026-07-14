@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { safeStorage } from '../utils/safeStorage';
 import { getAuthToken } from '../utils/safeStorage';
 import { 
   X, Users, Check, AlertCircle, Building2, MapPin, 
@@ -425,7 +426,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     
     // Load linked package data if available
     if (estimate.packageId) {
-      packageData = JSON.parse(localStorage.getItem('xland_amc_packages') || '[]')
+      packageData = JSON.parse(safeStorage.getItem('xland_amc_packages') || '[]')
         .find(p => p.packageId === estimate.packageId);
       debug('[ExtractServices] Package found:', packageData?.packageName);
       debug('[ExtractServices] Package serviceRows:', packageData?.serviceRows);

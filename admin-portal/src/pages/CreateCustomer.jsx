@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { safeStorage } from '../utils/safeStorage';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { 
@@ -183,7 +184,7 @@ const CreateCustomer = ({ admin }) => {
   const [searchParams] = useSearchParams();
   
   // Check if user is Operations Manager (view-only access)
-  const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');
+  const currentUser = JSON.parse(safeStorage.getItem('pm_current_user') || '{}');
   const isOpsManager = currentUser?.role === 'operations_manager';
   
   // Show view-only message for Ops Manager
@@ -323,16 +324,16 @@ const CreateCustomer = ({ admin }) => {
   // Set localStorage flag for dirty state (used by sidebar)
   useEffect(() => {
     if (isFormDirty()) {
-      localStorage.setItem('formDirty', 'true');
+      safeStorage.setItem('formDirty', 'true');
     } else {
-      localStorage.removeItem('formDirty');
+      safeStorage.removeItem('formDirty');
     }
   }, [isFormDirty]);
 
   // Clean up on unmount
   useEffect(() => {
     return () => {
-      localStorage.removeItem('formDirty');
+      safeStorage.removeItem('formDirty');
     };
   }, []);
 
@@ -495,7 +496,7 @@ const CreateCustomer = ({ admin }) => {
       const property = await saveProperty(formData, selectedEntryType, selectedCategory);
       setCreatedProperty(property);
       setSubmitted(true);
-      localStorage.removeItem('formDirty'); // Clear dirty flag on successful submit
+      safeStorage.removeItem('formDirty'); // Clear dirty flag on successful submit
     } catch (err) {
       console.error('Submit error:', err);
       alert(`Failed to save: ${err.message || 'Please check the server connection and try again.'}`);

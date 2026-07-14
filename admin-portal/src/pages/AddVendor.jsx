@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { safeStorage } from '../utils/safeStorage';
 import { 
   Truck,
   MapPin,
@@ -71,7 +72,7 @@ const AddVendor = ({ admin }) => {
   const [createdVendor, setCreatedVendor] = useState(null);
   
   // Check if user is Operations Manager (view-only access)
-  const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');
+  const currentUser = JSON.parse(safeStorage.getItem('pm_current_user') || '{}');
   const isOpsManager = currentUser?.role === 'operations_manager';
   
   // Redirect Ops Manager to Vendor Details (view-only)

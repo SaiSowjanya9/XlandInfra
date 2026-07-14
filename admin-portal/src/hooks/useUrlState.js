@@ -3,6 +3,7 @@
  * Enables browser back/forward button navigation and state persistence
  */
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { safeStorage } from '../utils/safeStorage';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 
 /**
@@ -272,14 +273,14 @@ export function useScrollRestore(key) {
   
   useEffect(() => {
     // Restore scroll position on mount
-    const savedPosition = sessionStorage.getItem(`scroll_${key}_${location.pathname}`);
+    const savedPosition = safeStorage.getItem(`scroll_${key}_${location.pathname}`);
     if (savedPosition) {
       window.scrollTo(0, parseInt(savedPosition, 10));
     }
     
     // Save scroll position before unload or navigation
     const saveScroll = () => {
-      sessionStorage.setItem(`scroll_${key}_${location.pathname}`, String(window.scrollY));
+      safeStorage.setItem(`scroll_${key}_${location.pathname}`, String(window.scrollY));
     };
     
     window.addEventListener('beforeunload', saveScroll);

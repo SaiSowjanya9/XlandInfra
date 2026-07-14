@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { safeStorage } from '../utils/safeStorage';
 import { Building2, FileText, Users, Briefcase, TrendingUp, ArrowUpRight, Clock, CheckCircle2, ClipboardList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
@@ -15,7 +16,7 @@ const VendorDashboard = ({ user }) => {
       setLoading(true);
     }
     try {
-      const token = getAuthToken() || localStorage.getItem('pm_auth_token');
+      const token = getAuthToken() || safeStorage.getItem('pm_auth_token');
       const response = await fetch('/api/vendors/dashboard', {
         headers: {
           'Authorization': `Bearer ${token}`,
