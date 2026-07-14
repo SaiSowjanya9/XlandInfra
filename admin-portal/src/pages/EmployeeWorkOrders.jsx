@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { safeStorage, getAuthToken } from '../utils/safeStorage';
 import {
   Search,
   Eye,
@@ -115,7 +116,7 @@ const EmployeeWorkOrders = ({ admin }) => {
   const token = getAuthToken();
   
   // Check if user is Operations Manager (view-only access)
-  const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');
+  const currentUser = JSON.parse(safeStorage.getItem('pm_current_user') || '{}');
   const isOpsManager = currentUser?.role === 'operations_manager';
   const { loading: fpLoading } = useFP();
 
