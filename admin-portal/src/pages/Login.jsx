@@ -1,4 +1,4 @@
-import { safeStorage } from '../utils/safeStorage';
+import { safeSessionStorage } from '../utils/safeStorage';
 import { useState } from 'react';
 import { Shield, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import SetPassword from './SetPassword';
@@ -45,7 +45,7 @@ const Login = ({ onLogin }) => {
         } else {
           // Store token and proceed
           if (userData.token) {
-            safeStorage.setItem('pm_auth_token', userData.token);
+            safeSessionStorage.setItem('pm_auth_token', userData.token);
             // Dispatch event to trigger FP list refresh
             window.dispatchEvent(new Event('fp-refresh'));
           }
@@ -54,7 +54,7 @@ const Login = ({ onLogin }) => {
             name: `${userData.user.firstName || ''} ${userData.user.lastName || ''}`.trim(),
             portal: 'admin'
           };
-          safeStorage.setItem('pm_current_user', JSON.stringify(user));
+          safeSessionStorage.setItem('pm_current_user', JSON.stringify(user));
           onLogin(user);
         }
       } else {

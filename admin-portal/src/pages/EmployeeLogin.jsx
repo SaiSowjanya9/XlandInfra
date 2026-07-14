@@ -1,4 +1,4 @@
-import { safeStorage } from '../utils/safeStorage';
+import { safeSessionStorage } from '../utils/safeStorage';
 import { useState, useEffect } from 'react';
 import { 
   Eye, EyeOff, AlertCircle, ArrowLeft, Briefcase, User, Lock
@@ -74,11 +74,11 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
           });
           setShowSetPassword(true);
         } else {
-          // Store token and user data
+          // Store token and user data in sessionStorage
           if (result.data.token) {
-            safeStorage.setItem('pm_auth_token', result.data.token);
+            safeSessionStorage.setItem('pm_auth_token', result.data.token);
           }
-          safeStorage.setItem('pm_current_user', JSON.stringify(user));
+          safeSessionStorage.setItem('pm_current_user', JSON.stringify(user));
           onLogin(user);
         }
       } else {
