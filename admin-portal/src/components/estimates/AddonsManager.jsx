@@ -32,7 +32,6 @@ const abbreviateFrequency = (freq) => {
   if (!freq) return 'Monthly';
   const map = {
     'Every 2 Months': 'Bi-Monthly',
-    'Every 3 Months': 'Quarterly',
     'Half-Yearly': 'Half-Yr',
     'Half-yearly': 'Half-Yr',
   };
