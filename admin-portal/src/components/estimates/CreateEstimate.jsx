@@ -1615,16 +1615,40 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                         });
                       }
                       
-                      const unitTypeEntries = Object.entries(unitTypeTotals).filter(([k, v]) => v > 0);
+                      // Define order and labels for unit types
+                      const unitTypeOrder = [
+                        { key: 'studio', label: 'Studio' },
+                        { key: 'oneBed', label: '1 BHK' },
+                        { key: 'twoBed', label: '2 BHK' },
+                        { key: 'threeBed', label: '3 BHK' },
+                        { key: 'fourBed', label: '4 BHK' }
+                      ];
                       
-                      if (unitTypeEntries.length > 0) {
+                      // Normalize keys and get ordered entries
+                      const normalizedTotals = {};
+                      Object.entries(unitTypeTotals).forEach(([key, value]) => {
+                        const lowerKey = key.toLowerCase().replace(/[\s-_]/g, '');
+                        if (lowerKey.includes('studio')) normalizedTotals['studio'] = (normalizedTotals['studio'] || 0) + value;
+                        else if (lowerKey.includes('1b') || lowerKey.includes('onebed') || lowerKey === '1bhk') normalizedTotals['oneBed'] = (normalizedTotals['oneBed'] || 0) + value;
+                        else if (lowerKey.includes('2b') || lowerKey.includes('twobed') || lowerKey === '2bhk') normalizedTotals['twoBed'] = (normalizedTotals['twoBed'] || 0) + value;
+                        else if (lowerKey.includes('3b') || lowerKey.includes('threebed') || lowerKey === '3bhk') normalizedTotals['threeBed'] = (normalizedTotals['threeBed'] || 0) + value;
+                        else if (lowerKey.includes('4b') || lowerKey.includes('fourbed') || lowerKey === '4bhk') normalizedTotals['fourBed'] = (normalizedTotals['fourBed'] || 0) + value;
+                        else normalizedTotals[key] = (normalizedTotals[key] || 0) + value; // Keep original for unknown types
+                      });
+                      
+                      // Get ordered entries with proper labels
+                      const orderedEntries = unitTypeOrder
+                        .filter(ut => normalizedTotals[ut.key] > 0)
+                        .map(ut => ({ label: ut.label, count: normalizedTotals[ut.key] }));
+                      
+                      if (orderedEntries.length > 0) {
                         return (
                           <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="text-xs font-medium text-gray-600">Unit Types:</span>
-                              {unitTypeEntries.map(([type, count]) => (
-                                <span key={type} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                  {type}: {count}
+                              {orderedEntries.map(({ label, count }) => (
+                                <span key={label} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                  {label}: {count}
                                 </span>
                               ))}
                             </div>
