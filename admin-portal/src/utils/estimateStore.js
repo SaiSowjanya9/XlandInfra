@@ -1,5 +1,6 @@
 // Estimate store – manages estimates, AMC packages, and add-ons
-// Uses localStorage for persistence (similar pattern to other stores)
+// Uses safeStorage for persistence (similar pattern to other stores)
+import { safeStorage, getAuthToken } from './safeStorage';
 
 const ESTIMATES_KEY = 'xland_estimates';
 const AMC_PACKAGES_KEY = 'xland_amc_packages';
@@ -13,12 +14,12 @@ const CURRENT_ADDONS_VERSION = 2; // Increment this to force re-migration
 // Auto-migrate addons on load - clears old data and regenerates with correct frequency counts
 (function migrateAddonsData() {
   try {
-    const storedVersion = parseInt(localStorage.getItem(ADDONS_VERSION_KEY) || '0', 10);
+    const storedVersion = parseInt(safeStorage.getItem(ADDONS_VERSION_KEY) || '0', 10);
     if (storedVersion < CURRENT_ADDONS_VERSION) {
       // Clear old addons data
-      localStorage.removeItem(ADDONS_KEY);
+      safeStorage.removeItem(ADDONS_KEY);
       // Set new version
-      localStorage.setItem(ADDONS_VERSION_KEY, CURRENT_ADDONS_VERSION.toString());
+      safeStorage.setItem(ADDONS_VERSION_KEY, CURRENT_ADDONS_VERSION.toString());
       // Migration complete - addons data updated to current version
     }
   } catch (e) {
@@ -98,8 +99,8 @@ export const ESTIMATE_STATUSES = ['Draft', 'Sent', 'Approved', 'Rejected', 'Expi
 // ============================================
 
 const generateEstimateId = () => {
-  const counter = parseInt(localStorage.getItem(ESTIMATE_COUNTER_KEY) || '0', 10) + 1;
-  localStorage.setItem(ESTIMATE_COUNTER_KEY, counter.toString());
+  const counter = parseInt(safeStorage.getItem(ESTIMATE_COUNTER_KEY) || '0', 10) + 1;
+  safeStorage.setItem(ESTIMATE_COUNTER_KEY, counter.toString());
   const date = new Date();
   const dateStr = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
   return `EST-${dateStr}-${String(counter).padStart(3, '0')}`;
@@ -107,7 +108,7 @@ const generateEstimateId = () => {
 
 const getStorageData = (key, defaultValue = []) => {
   try {
-    const data = localStorage.getItem(key);
+    const data = safeStorage.getItem(key);
     return data ? JSON.parse(data) : defaultValue;
   } catch {
     return defaultValue;
@@ -115,7 +116,7 @@ const getStorageData = (key, defaultValue = []) => {
 };
 
 const setStorageData = (key, data) => {
-  localStorage.setItem(key, JSON.stringify(data));
+  safeStorage.setItem(key, JSON.stringify(data));
 };
 
 // ============================================
@@ -409,7 +410,7 @@ export const getAddons = () => {
 // Uses admin endpoint for transformed data with proper property types
 export const fetchAddons = async () => {
   try {
-    const token = sessionStorage.getItem('pm_auth_token');
+    const token = getAuthToken();
     // Use admin endpoint if token available (admin portal)
     const endpoint = token ? `${API_URL}/api/admin/all-addons` : `${API_URL}/api/addons`;
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
@@ -729,7 +730,7 @@ const DEFAULT_GST_RATE = 0;
 
 export const getGSTConfig = () => {
   try {
-    const stored = localStorage.getItem(GST_CONFIG_KEY);
+    const stored = safeStorage.getItem(GST_CONFIG_KEY);
     return stored ? parseFloat(stored) : DEFAULT_GST_RATE;
   } catch {
     return DEFAULT_GST_RATE;
@@ -738,7 +739,7 @@ export const getGSTConfig = () => {
 
 export const setGSTConfig = (rate) => {
   try {
-    localStorage.setItem(GST_CONFIG_KEY, rate.toString());
+    safeStorage.setItem(GST_CONFIG_KEY, rate.toString());
     return true;
   } catch {
     return false;
@@ -855,7 +856,7 @@ export const seedTestEstimateForProperty = (propertyId, propertyName, zone) => {
 // Seed multiple test estimates for testing
 export const seedMultipleTestEstimates = () => {
   const estimates = getStorageData(ESTIMATES_KEY);
-  const properties = JSON.parse(localStorage.getItem('xland_properties') || '[]');
+  const properties = JSON.parse(safeStorage.getItem('xland_properties') || '[]');
   
   if (properties.length === 0) {
     console.warn('No properties found to create estimates for');

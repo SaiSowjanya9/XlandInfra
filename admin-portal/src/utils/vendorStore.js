@@ -1,3 +1,4 @@
+import { safeStorage, getAuthToken } from './safeStorage';
 // Vendor store – localStorage based (works offline without backend)
 // Uses localStorage for vendor data persistence
 
@@ -7,7 +8,7 @@ const NOTIFICATION_KEY = 'xland_vendor_notifications';
 // Helper to get data from localStorage
 const getStorageData = (key) => {
   try {
-    const data = localStorage.getItem(key);
+    const data = safeStorage.getItem(key);
     return data ? JSON.parse(data) : [];
   } catch {
     return [];
@@ -16,7 +17,7 @@ const getStorageData = (key) => {
 
 // Helper to save data to localStorage
 const setStorageData = (key, data) => {
-  localStorage.setItem(key, JSON.stringify(data));
+  safeStorage.setItem(key, JSON.stringify(data));
 };
 
 // Generate unique vendor ID
@@ -301,7 +302,7 @@ autoCleanupSampleVendors();
 
 export const getVendorNotifications = () => {
   try {
-    const data = localStorage.getItem(NOTIFICATION_KEY);
+    const data = safeStorage.getItem(NOTIFICATION_KEY);
     return data ? JSON.parse(data) : [];
   } catch {
     return [];
@@ -312,19 +313,19 @@ export const addVendorNotification = (notification) => {
   const notifications = getVendorNotifications();
   notifications.unshift(notification);
   if (notifications.length > 50) notifications.length = 50;
-  localStorage.setItem(NOTIFICATION_KEY, JSON.stringify(notifications));
+  safeStorage.setItem(NOTIFICATION_KEY, JSON.stringify(notifications));
 };
 
 export const markVendorNotificationRead = (id) => {
   const notifications = getVendorNotifications().map(n =>
     n.id === id ? { ...n, read: true } : n
   );
-  localStorage.setItem(NOTIFICATION_KEY, JSON.stringify(notifications));
+  safeStorage.setItem(NOTIFICATION_KEY, JSON.stringify(notifications));
 };
 
 export const markAllVendorNotificationsRead = () => {
   const notifications = getVendorNotifications().map(n => ({ ...n, read: true }));
-  localStorage.setItem(NOTIFICATION_KEY, JSON.stringify(notifications));
+  safeStorage.setItem(NOTIFICATION_KEY, JSON.stringify(notifications));
 };
 
 export const getVendorUnreadCount = () => {

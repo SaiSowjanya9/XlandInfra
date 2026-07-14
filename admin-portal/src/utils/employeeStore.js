@@ -1,3 +1,4 @@
+import { safeStorage, getAuthToken } from './safeStorage';
 // Employee store – manages employees in localStorage (can be migrated to backend later)
 
 const EMPLOYEE_STORAGE_KEY = 'xland_employees';
@@ -8,7 +9,7 @@ const EMPLOYEE_NOTIFICATION_KEY = 'xland_employee_notifications';
 const generateEmployeeId = () => {
   try {
     // Get all employees to find the highest sequence number
-    const data = localStorage.getItem(EMPLOYEE_STORAGE_KEY);
+    const data = safeStorage.getItem(EMPLOYEE_STORAGE_KEY);
     const employees = data ? JSON.parse(data) : [];
     
     // Find max sequence from all employees with numeric IDs
@@ -32,7 +33,7 @@ const generateEmployeeId = () => {
 // Get all employees
 export const getEmployees = (status = 'active') => {
   try {
-    const data = localStorage.getItem(EMPLOYEE_STORAGE_KEY);
+    const data = safeStorage.getItem(EMPLOYEE_STORAGE_KEY);
     const employees = data ? JSON.parse(data) : [];
     if (status === 'all') return employees;
     return employees.filter(e => e.status === status);
@@ -117,7 +118,7 @@ export const createEmployee = (employeeData) => {
   };
   
   employees.push(newEmployee);
-  localStorage.setItem(EMPLOYEE_STORAGE_KEY, JSON.stringify(employees));
+  safeStorage.setItem(EMPLOYEE_STORAGE_KEY, JSON.stringify(employees));
   
   // Add notification
   addEmployeeNotification({
@@ -157,7 +158,7 @@ export const updateEmployee = (id, updates) => {
   }
   
   employees[index] = { ...employees[index], ...updates, updatedAt: new Date().toISOString() };
-  localStorage.setItem(EMPLOYEE_STORAGE_KEY, JSON.stringify(employees));
+  safeStorage.setItem(EMPLOYEE_STORAGE_KEY, JSON.stringify(employees));
   
   return { success: true, data: employees[index] };
 };
@@ -176,7 +177,7 @@ export const reactivateEmployee = (id) => {
 export const deleteEmployee = (id) => {
   const employees = getEmployees('all');
   const filtered = employees.filter(e => e.id !== id && e.employeeId !== id);
-  localStorage.setItem(EMPLOYEE_STORAGE_KEY, JSON.stringify(filtered));
+  safeStorage.setItem(EMPLOYEE_STORAGE_KEY, JSON.stringify(filtered));
   return { success: true };
 };
 
@@ -229,7 +230,7 @@ export const getAvailableZonesForEmployee = (allZones, excludeEmployeeId = null)
 
 export const getEmployeeNotifications = () => {
   try {
-    const data = localStorage.getItem(EMPLOYEE_NOTIFICATION_KEY);
+    const data = safeStorage.getItem(EMPLOYEE_NOTIFICATION_KEY);
     return data ? JSON.parse(data) : [];
   } catch {
     return [];
@@ -240,12 +241,12 @@ export const addEmployeeNotification = (notification) => {
   const notifications = getEmployeeNotifications();
   notifications.unshift(notification);
   if (notifications.length > 50) notifications.length = 50;
-  localStorage.setItem(EMPLOYEE_NOTIFICATION_KEY, JSON.stringify(notifications));
+  safeStorage.setItem(EMPLOYEE_NOTIFICATION_KEY, JSON.stringify(notifications));
 };
 
 export const markAllEmployeeNotificationsRead = () => {
   const notifications = getEmployeeNotifications().map(n => ({ ...n, read: true }));
-  localStorage.setItem(EMPLOYEE_NOTIFICATION_KEY, JSON.stringify(notifications));
+  safeStorage.setItem(EMPLOYEE_NOTIFICATION_KEY, JSON.stringify(notifications));
 };
 
 export const getEmployeeUnreadCount = () => {

@@ -1,3 +1,4 @@
+import { safeStorage, getAuthToken } from './safeStorage';
 // Zone store – manages zones in localStorage (can be migrated to backend later)
 
 const ZONE_STORAGE_KEY = 'xland_zones';
@@ -13,9 +14,9 @@ const DEFAULT_ZONES = [
 
 // Initialize zones if not present
 const initializeZones = () => {
-  const existing = localStorage.getItem(ZONE_STORAGE_KEY);
+  const existing = safeStorage.getItem(ZONE_STORAGE_KEY);
   if (!existing) {
-    localStorage.setItem(ZONE_STORAGE_KEY, JSON.stringify(DEFAULT_ZONES));
+    safeStorage.setItem(ZONE_STORAGE_KEY, JSON.stringify(DEFAULT_ZONES));
   }
 };
 
@@ -23,7 +24,7 @@ const initializeZones = () => {
 export const getZones = (status = 'active') => {
   initializeZones();
   try {
-    const data = localStorage.getItem(ZONE_STORAGE_KEY);
+    const data = safeStorage.getItem(ZONE_STORAGE_KEY);
     const zones = data ? JSON.parse(data) : [];
     if (status === 'all') return zones;
     return zones.filter(z => z.status === status);
@@ -56,7 +57,7 @@ export const createZone = (zoneName) => {
   };
   
   zones.push(newZone);
-  localStorage.setItem(ZONE_STORAGE_KEY, JSON.stringify(zones));
+  safeStorage.setItem(ZONE_STORAGE_KEY, JSON.stringify(zones));
   
   return { success: true, data: newZone };
 };
@@ -83,7 +84,7 @@ export const updateZone = (id, updates) => {
   }
   
   zones[index] = { ...zones[index], ...updates, updatedAt: new Date().toISOString() };
-  localStorage.setItem(ZONE_STORAGE_KEY, JSON.stringify(zones));
+  safeStorage.setItem(ZONE_STORAGE_KEY, JSON.stringify(zones));
   
   return { success: true, data: zones[index] };
 };
@@ -102,7 +103,7 @@ export const reactivateZone = (id) => {
 export const deleteZone = (id) => {
   const zones = getZones('all');
   const filtered = zones.filter(z => z.id !== id);
-  localStorage.setItem(ZONE_STORAGE_KEY, JSON.stringify(filtered));
+  safeStorage.setItem(ZONE_STORAGE_KEY, JSON.stringify(filtered));
   return { success: true };
 };
 
