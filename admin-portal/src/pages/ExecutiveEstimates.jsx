@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link } from 'lucide-react';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
@@ -164,7 +165,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
 
   // Save estimate
   const handleSaveEstimate = async () => {
-    const authToken = sessionStorage.getItem('pm_auth_token');
+    const authToken = getAuthToken();
     if (estimateForm.estimateType === 'property_based' && !propertyIdInput) {
       setMessage({ type: 'error', text: 'Enter Property ID' }); return;
     }
@@ -235,7 +236,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
     }
   };
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const tabs = [
     { id: 'list', label: 'All Estimates', icon: List },

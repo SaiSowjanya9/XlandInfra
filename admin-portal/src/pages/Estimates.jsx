@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import {
   FileText, Plus, List, Package, PlusCircle, Archive, Check, X, AlertCircle,
   ChevronDown, RefreshCw, Users
@@ -45,7 +46,7 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
   // FP Context for Admin mode
   const { selectedFp, fpList, selectFp } = useFP();
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
   
   const handleFpSelect = (fp) => {
     selectFp(fp);

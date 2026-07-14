@@ -46,7 +46,7 @@ const ExecutiveWorkOrders = ({ user }) => {
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const priorityOptions = [
     { value: 'low', label: 'Low', color: 'bg-green-100 text-green-700' },

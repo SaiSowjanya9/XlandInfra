@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import { 
   Building2, 
   Home, 
@@ -342,7 +343,7 @@ const CreateCustomer = ({ admin }) => {
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
   const [showAddressDetails, setShowAddressDetails] = useState(false);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const fetchZones = async () => {
     try {

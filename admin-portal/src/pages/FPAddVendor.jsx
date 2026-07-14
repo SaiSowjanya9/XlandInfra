@@ -12,6 +12,7 @@ import {
   X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 
 // Country codes with flag emojis
 const COUNTRY_CODES = [
@@ -78,7 +79,7 @@ const FPAddVendor = ({ user }) => {
   const [showZoneDropdown, setShowZoneDropdown] = useState(false);
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
   
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const fetchZones = () => {
     fetch('/api/fp/zones', { headers: { 'Authorization': `Bearer ${token}` } })

@@ -128,7 +128,7 @@ const ManagerProperties = ({ user }) => {
     zoneId: ''
   });
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const fetchData = async () => {
     setLoading(true);

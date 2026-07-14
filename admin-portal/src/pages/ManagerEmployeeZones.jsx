@@ -55,7 +55,7 @@ const ManagerEmployeeZones = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [viewZonesEmployee, setViewZonesEmployee] = useState(null);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   useEffect(() => {
     loadData();

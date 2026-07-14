@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import {
   Building2,
   Store,
@@ -18,7 +19,7 @@ const ManagerDashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const fetchDashboardData = async (isInitialLoad = false) => {
     if (isInitialLoad) {

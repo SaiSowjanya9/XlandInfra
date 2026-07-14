@@ -20,6 +20,7 @@ import {
   AtSign,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 
 const FPEmployees = ({ user }) => {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ const FPEmployees = ({ user }) => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [toast, setToast] = useState(null);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const loadData = async () => {
     setLoading(true);

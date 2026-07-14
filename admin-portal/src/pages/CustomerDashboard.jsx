@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import {
   ClipboardList,
   CreditCard,
@@ -29,7 +30,7 @@ const CustomerDashboard = ({ user }) => {
       setLoading(true);
     }
     try {
-      const token = localStorage.getItem('customer_token') || sessionStorage.getItem('pm_auth_token');
+      const token = localStorage.getItem('customer_token') || getAuthToken();
       const response = await fetch(`${API_BASE}/customers/dashboard`, {
         headers: {
           'Authorization': `Bearer ${token}`,

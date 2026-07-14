@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import {
   Store,
   Plus,
@@ -72,7 +73,7 @@ const CoordinatorVendors = ({ user }) => {
                  : location.pathname.includes('/assigned') ? 'assigned' 
                  : 'all';
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const fetchVendors = async () => {
     setLoading(true);

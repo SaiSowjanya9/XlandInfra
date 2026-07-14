@@ -34,6 +34,7 @@ const EMPLOYEE_ROLES = {
   executive: { label: 'Executive', color: 'bg-orange-100 text-orange-700' }
 };
 import { useNavigate } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import {
   getEmployees,
   updateEmployee,
@@ -60,7 +61,7 @@ const EmployeeDetails = () => {
 
   // Get selected FP from context
   const { selectedFp, fpList, selectFp } = useFP();
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
   
   // Check if user is Operations Manager (view-only access)

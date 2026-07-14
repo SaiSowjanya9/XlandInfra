@@ -10,6 +10,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 
 const EMPLOYEE_ROLES = [
   { value: 'manager', label: 'Manager', description: 'Manages work orders, vendors, estimates, and schedules' },
@@ -34,7 +35,7 @@ const FPAddEmployee = ({ user }) => {
   const [errors, setErrors] = useState({});
   const [createdEmployee, setCreatedEmployee] = useState(null);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const updateField = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));

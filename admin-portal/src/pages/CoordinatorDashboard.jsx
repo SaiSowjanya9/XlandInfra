@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import {
   Building2,
   Store,
@@ -21,7 +22,7 @@ const CoordinatorDashboard = ({ user }) => {
   // Check if this is an FP-created Coordinator (has franchisePartnerId)
   const isFPCoordinator = !!user?.franchisePartnerId;
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const fetchDashboard = async (isInitialLoad = false) => {
     if (isInitialLoad) {

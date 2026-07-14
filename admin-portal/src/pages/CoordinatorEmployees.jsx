@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import {
   Users,
   Plus,
@@ -48,7 +49,7 @@ const CoordinatorEmployees = ({ user }) => {
                  : location.pathname.includes('/zones') ? 'zones' 
                  : 'all';
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const roleOptions = [
     { value: 'coord_supervisor', label: 'Supervisor' },

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getAuthToken } from '../../utils/safeStorage';
 import { Trash2, PlusCircle, ChevronDown, Plus, Layers, Edit2, X } from 'lucide-react';
 import {
   getAddons, createAddon, deleteAddon, updateAddon, fetchAddons,
@@ -43,7 +44,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   // Check if user is Operations Manager (restricted access - view only)
   const isOpsManager = admin?.role === 'operations_manager';
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
   
   // Operations Manager defaults to 'all-addons' tab (no create access)
   const [activeTab, setActiveTab] = useState(isOpsManager ? 'all-addons' : 'create'); // 'create' or 'all-addons'

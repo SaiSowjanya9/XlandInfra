@@ -42,7 +42,7 @@ const WorkOrders = ({ admin }) => {
   
   // FP Context
   const { fpList, selectedFp, selectFp, loading: fpLoading } = useFP();
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
 
   const fetchWorkOrders = useCallback(async () => {

@@ -18,6 +18,7 @@ import {
   X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import SelectWithAdd from '../components/SelectWithAdd';
 
 // Zone options
@@ -106,7 +107,7 @@ const AddVendor = ({ admin }) => {
   const [serviceTypeData, setServiceTypeData] = useState([]);
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const getServiceTypes = () => serviceTypes;
   
@@ -224,7 +225,7 @@ const AddVendor = ({ admin }) => {
     }
 
     setSubmitting(true);
-    const token = sessionStorage.getItem('pm_auth_token');
+    const token = getAuthToken();
     
     try {
       const vendorData = {

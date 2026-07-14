@@ -6,6 +6,7 @@ import {
   QrCode, Download, ChevronDown, Shield, ArrowLeft
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import { useFP } from '../contexts/FPContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -32,7 +33,7 @@ const Dashboard = () => {
     }
     
     // Get fresh token for each request
-    const token = sessionStorage.getItem('pm_auth_token');
+    const token = getAuthToken();
     if (!token) {
       console.warn('No auth token available');
       return;

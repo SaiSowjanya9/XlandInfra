@@ -94,7 +94,7 @@ const FPWorkOrders = ({ user }) => {
     attachments: []
   });
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   // File input refs
   const galleryInputRef = useRef(null);

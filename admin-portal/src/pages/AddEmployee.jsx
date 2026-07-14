@@ -9,6 +9,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 import { checkDuplicateEmployee } from '../utils/employeeStore';
 
 // Employee roles with descriptions
@@ -154,7 +155,7 @@ const AddEmployee = ({ admin }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionStorage.getItem('pm_auth_token')}`
+          'Authorization': `Bearer ${getAuthToken()}`
         },
         body: JSON.stringify(employeeData)
       });

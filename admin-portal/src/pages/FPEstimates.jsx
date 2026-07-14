@@ -7,6 +7,7 @@ import {
   FolderOpen, ExternalLink, Link
 } from 'lucide-react';
 import { FREQUENCY_TYPES, FREQUENCY_COUNT_MAP } from '../utils/estimateStore';
+import { getAuthToken } from '../utils/safeStorage';
 import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
 import * as XLSX from 'xlsx';
 
@@ -135,7 +136,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   });
   const [linkErrors, setLinkErrors] = useState({ 1: '', 2: '' });
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   useEffect(() => { loadData(); }, [defaultTab]);
   

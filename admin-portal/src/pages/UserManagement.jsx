@@ -26,7 +26,7 @@ const UserManagement = () => {
   const [createdUser, setCreatedUser] = useState(null);
   const [visiblePasswords, setVisiblePasswords] = useState({});
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const initialFormData = {
     role: 'operations_manager',

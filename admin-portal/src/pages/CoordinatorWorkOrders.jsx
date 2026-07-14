@@ -36,6 +36,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getAuthToken } from '../utils/safeStorage';
 
 // Use empty string for relative URLs - uploads are served at /uploads on same domain
 const API_BASE = '';
@@ -110,7 +111,7 @@ const CoordinatorWorkOrders = ({ user }) => {
                  : location.pathname.includes('/create') ? 'create'
                  : 'all'; // Default to all
 
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
 
   const statusOptions = [
     { value: '', label: 'All Status' },

@@ -87,7 +87,7 @@ const CustomerSubmissions = () => {
   
   // Get FP list and selection from context
   const { fpList, selectedFp, selectFp, selectedPropertyType, setSelectedPropertyType, loading: fpLoading, refreshFpList } = useFP();
-  const token = sessionStorage.getItem('pm_auth_token');
+  const token = getAuthToken();
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
   
   // Assignment states
