@@ -1,4 +1,4 @@
-import { safeStorage } from '../utils/safeStorage';
+import { safeSessionStorage } from '../utils/safeStorage';
 import { useState } from 'react';
 import { Briefcase, Lock, ArrowLeft, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import SetPassword from './SetPassword';
@@ -39,8 +39,8 @@ const ExecutiveLogin = ({ onLogin, onBack }) => {
           });
           setShowSetPassword(true);
         } else {
-          safeStorage.setItem('pm_auth_token', userData.token);
-          safeStorage.setItem('pm_current_user', JSON.stringify({
+          safeSessionStorage.setItem('pm_auth_token', userData.token);
+          safeSessionStorage.setItem('pm_current_user', JSON.stringify({
             ...userData.user,
             portal: 'executive'
           }));
