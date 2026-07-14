@@ -2344,10 +2344,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <div className="col-span-4">
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Description</span>
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-3">
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency</span>
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-1">
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Visits</span>
                       </div>
                       <div className="col-span-1">
@@ -2382,7 +2382,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           </div>
                           
                           {/* Frequency Type */}
-                          <div className="col-span-2 relative">
+                          <div className="col-span-3 relative">
                             <select
                               value={row.frequencyType}
                               onChange={(e) => handleUpdateServiceRow(index, 'frequencyType', e.target.value)}
@@ -2396,7 +2396,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           </div>
                           
                           {/* Frequency Count */}
-                          <div className="col-span-2">
+                          <div className="col-span-1">
                             <input
                               type="number"
                               min="1"
