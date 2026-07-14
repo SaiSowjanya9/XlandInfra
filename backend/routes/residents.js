@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
-const { loginRateLimiter } = require('../middleware/security');
+// Rate limiting disabled
+// const { loginRateLimiter } = require('../middleware/security');
 
 // Verify resident for registration (match against pre-registered data)
 router.post('/verify', async (req, res) => {
@@ -133,8 +134,8 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Resident login (rate limited: 5 attempts per 15 minutes)
-router.post('/login', loginRateLimiter, async (req, res) => {
+// Resident login
+router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 

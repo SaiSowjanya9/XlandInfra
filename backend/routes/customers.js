@@ -5,7 +5,8 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { sendCustomerActivationEmail, sendPasswordResetConfirmation, sendPasswordResetEmail, sendPasswordResetSuccess } = require('../services/emailService');
-const { loginRateLimiter, passwordResetLimiter } = require('../middleware/security');
+// Rate limiting disabled
+// const { loginRateLimiter, passwordResetLimiter } = require('../middleware/security');
 const { JWT_SECRET } = require('../middleware/auth');
 
 // Constants
@@ -469,9 +470,9 @@ router.post('/set-password', async (req, res) => {
 });
 
 // ============================================
-// POST /api/customers/login - Customer login (rate limited: 5 attempts per 15 minutes)
+// POST /api/customers/login - Customer login
 // ============================================
-router.post('/login', loginRateLimiter, async (req, res) => {
+router.post('/login', async (req, res) => {
   try {
     // Ensure customer_activity_log table exists
     try {
@@ -714,9 +715,9 @@ router.post('/verify-session', async (req, res) => {
 });
 
 // ============================================
-// POST /api/customers/forgot-password - Request password reset (rate limited: 3 per hour)
+// POST /api/customers/forgot-password - Request password reset
 // ============================================
-router.post('/forgot-password', passwordResetLimiter, async (req, res) => {
+router.post('/forgot-password', async (req, res) => {
   try {
     // Ensure required columns exist
     const columnsToAdd = [

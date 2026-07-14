@@ -3,7 +3,8 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
 const { authenticate, generateToken } = require('../middleware/auth');
-const { loginRateLimiter } = require('../middleware/security');
+// Rate limiting disabled
+// const { loginRateLimiter } = require('../middleware/security');
 const { 
   adminOnly, 
   managerOrAdmin, 
@@ -20,8 +21,8 @@ const {
 // ADMIN AUTH
 // ============================================
 
-// Admin login (rate limited: 5 attempts per 15 minutes)
-router.post('/login', loginRateLimiter, async (req, res) => {
+// Admin login
+router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
