@@ -56,7 +56,7 @@ router.post('/login', async (req, res) => {
     // Try database first - use onboarded_vendors table
     try {
       const [vendors] = await pool.execute(
-        `SELECT * FROM onboarded_vendors WHERE (username = ? OR email = ? OR owner_email = ?) AND (is_active = 1 OR is_active IS NULL)`,
+        `SELECT * FROM onboarded_vendors WHERE (username = ? OR email = ? OR owner_email = ?)`,
         [username, username, username]
       );
       if (vendors.length > 0) {

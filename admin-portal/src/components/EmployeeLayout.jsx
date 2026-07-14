@@ -196,7 +196,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
         title={sidebarCollapsed ? item.label : ''}
       >
         <Icon className="w-5 h-5 flex-shrink-0" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
-        {!sidebarCollapsed && <span className="whitespace-nowrap text-sm">{item.label}</span>}
+        {!sidebarCollapsed && <span className="text-sm leading-tight">{item.label}</span>}
       </Link>
     );
   };
@@ -276,7 +276,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <Store className="w-5 h-5 flex-shrink-0" style={{ color: isVendorSectionActive ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="whitespace-nowrap text-sm">Vendor Management</span>}
+                  {!sidebarCollapsed && <span className="text-sm leading-tight">Vendor Management</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${vendorOpen ? 'rotate-180' : ''}`} />
@@ -303,7 +303,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <Users className="w-5 h-5 flex-shrink-0" style={{ color: isEmployeeSectionActive ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="whitespace-nowrap text-sm">Employee Management</span>}
+                  {!sidebarCollapsed && <span className="text-sm leading-tight">Employee Management</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${employeeOpen ? 'rotate-180' : ''}`} />
@@ -330,7 +330,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <FileText className="w-5 h-5 flex-shrink-0" style={{ color: isEstimatesSectionActive ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="whitespace-nowrap text-sm">Estimates / AMC</span>}
+                  {!sidebarCollapsed && <span className="text-sm leading-tight">Estimates / AMC</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${estimatesOpen ? 'rotate-180' : ''}`} />
