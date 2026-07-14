@@ -1574,6 +1574,63 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     })()
                   )}
 
+                  {/* Unit Types Breakdown - Display for GC and APT */}
+                  {(estimateForm.entryType === 'GC' || estimateForm.entryType === 'APT') && (
+                    (() => {
+                      let blockUnitTypes = selectedProperty?.block_unit_types || selectedProperty?.blockUnitTypes;
+                      let unitsPerBlock = selectedProperty?.units_per_block || selectedProperty?.unitsPerBlock;
+                      if (typeof blockUnitTypes === 'string') try { blockUnitTypes = JSON.parse(blockUnitTypes); } catch(e) { blockUnitTypes = null; }
+                      if (typeof unitsPerBlock === 'string') try { unitsPerBlock = JSON.parse(unitsPerBlock); } catch(e) { unitsPerBlock = null; }
+                      
+                      // Aggregate unit types from all blocks
+                      const unitTypeTotals = {};
+                      
+                      // Try blockUnitTypes first (direct unit type mapping)
+                      if (blockUnitTypes && typeof blockUnitTypes === 'object') {
+                        Object.values(blockUnitTypes).forEach(blockData => {
+                          if (typeof blockData === 'object' && blockData !== null) {
+                            Object.entries(blockData).forEach(([type, count]) => {
+                              if (type !== 'total' && type !== 'units' && typeof count === 'number') {
+                                unitTypeTotals[type] = (unitTypeTotals[type] || 0) + count;
+                              }
+                            });
+                          }
+                        });
+                      }
+                      
+                      // Also check unitsPerBlock for nested unit type data
+                      if (Object.keys(unitTypeTotals).length === 0 && unitsPerBlock && typeof unitsPerBlock === 'object') {
+                        Object.values(unitsPerBlock).forEach(blockData => {
+                          if (typeof blockData === 'object' && blockData !== null) {
+                            Object.entries(blockData).forEach(([type, count]) => {
+                              if (type !== 'total' && type !== 'units' && typeof count === 'number') {
+                                unitTypeTotals[type] = (unitTypeTotals[type] || 0) + count;
+                              }
+                            });
+                          }
+                        });
+                      }
+                      
+                      const unitTypeEntries = Object.entries(unitTypeTotals).filter(([k, v]) => v > 0);
+                      
+                      if (unitTypeEntries.length > 0) {
+                        return (
+                          <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-medium text-gray-600">Unit Types:</span>
+                              {unitTypeEntries.map(([type, count]) => (
+                                <span key={type} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                  {type}: {count}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()
+                  )}
+
                   {/* Default for other/unknown types - exclude all known property types including uppercase variants */}
                   {!['APT', 'Flats', 'FLAT', 'Villas', 'VILLA', 'Plots', 'PLOT', 'Commercial', 'Factory', 'GC'].includes(estimateForm.entryType) && estimateForm.entryType && (
                     <div className="grid grid-cols-2 gap-4">
