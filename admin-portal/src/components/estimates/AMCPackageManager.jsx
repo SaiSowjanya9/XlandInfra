@@ -161,7 +161,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   };
 
   // Form actions
-  const handleSavePackage = () => {
+  const handleSavePackage = async () => {
     if (!amcForm.packageName.trim()) {
       showToast?.('Please enter a package name', 'error');
       return;
@@ -184,34 +184,56 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       return;
     }
 
-    const packageData = {
-      packageName: amcForm.packageName.trim(),
-      propertyType: selectedPropertyType, // Link package to property type
-      serviceRows: validServices.map(row => ({
-        service: row.service.trim(),
-        description: row.description || '',
-        frequencyCount: parseInt(row.frequencyCount) || 1,
-        frequencyType: row.frequencyType
-      })),
-      services: validServices.map(r => r.service).join(', '), // For backward compatibility
-      rate: parseFloat(amcForm.price),
-      billingDuration: amcForm.billingDuration,
-      totalRate: getPrice(),
-      status: 'active',
-      description: amcForm.description?.trim() || ''
-    };
+    // Check if FP is selected (required for admin mode)
+    if (selectedFp?.id && selectedFp.id !== 'all') {
+      // Use admin API endpoint to save to fp_amc_packages table
+      const packageData = {
+        fpId: selectedFp.id,
+        packageName: amcForm.packageName.trim(),
+        propertyType: selectedPropertyType,
+        serviceRows: validServices.map(row => ({
+          service: row.service.trim(),
+          description: row.description || '',
+          frequencyCount: parseInt(row.frequencyCount) || 1,
+          frequencyType: row.frequencyType
+        })),
+        rate: parseFloat(amcForm.price),
+        billingDuration: amcForm.billingDuration,
+        description: amcForm.description?.trim() || ''
+      };
 
-    if (editingPackage) {
-      updateAMCPackage(editingPackage.packageId, packageData);
-      showToast?.('AMC Package updated successfully!', 'success');
-      setShowEditModal(false);
+      try {
+        const url = editingPackage 
+          ? `${API_BASE}/api/admin/amc-packages/${editingPackage.id || editingPackage.packageId}`
+          : `${API_BASE}/api/admin/amc-packages`;
+        const method = editingPackage ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+          method,
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(packageData)
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          showToast?.(editingPackage ? 'AMC Package updated successfully!' : 'AMC Package created successfully!', 'success');
+          if (editingPackage) setShowEditModal(false);
+          resetForm();
+          loadData();
+        } else {
+          showToast?.(result.message || 'Failed to save package', 'error');
+        }
+      } catch (error) {
+        console.error('Save package error:', error);
+        showToast?.('Failed to save package', 'error');
+      }
     } else {
-      createAMCPackage(packageData);
-      showToast?.('AMC Package created successfully!', 'success');
+      // No FP selected - show error
+      showToast?.('Please select a Franchise Partner first', 'error');
     }
-
-    resetForm();
-    loadData();
   };
 
   const handleOpenEditModal = (pkg) => {

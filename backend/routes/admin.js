@@ -3036,6 +3036,88 @@ router.delete('/amc-packages/:id', authenticate, adminOnly, async (req, res) => 
   }
 });
 
+// CREATE AMC Package (Admin mode) - creates in fp_amc_packages table
+router.post('/amc-packages', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { fpId, packageName, propertyType, serviceRows, services, rate, billingDuration, description } = req.body;
+    
+    if (!fpId) {
+      return res.status(400).json({ success: false, message: 'Franchise Partner ID is required' });
+    }
+    
+    if (!packageName) {
+      return res.status(400).json({ success: false, message: 'Package name is required' });
+    }
+    
+    const packageCode = `FP${fpId}-AMC-${Date.now()}`;
+    
+    const [result] = await pool.execute(
+      `INSERT INTO fp_amc_packages (
+        franchise_partner_id, package_code, name, description, 
+        base_price, services
+      ) VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        fpId, 
+        packageCode, 
+        packageName, 
+        description || '',
+        rate || 0, 
+        JSON.stringify({ 
+          property_type: propertyType, 
+          billing_duration: billingDuration || 'yearly',
+          serviceRows: serviceRows || [] 
+        })
+      ]
+    );
+    
+    console.log('Admin created AMC package:', packageCode, 'for FP:', fpId);
+    res.status(201).json({ 
+      success: true, 
+      message: 'AMC Package created successfully',
+      data: { id: result.insertId, packageCode }
+    });
+  } catch (error) {
+    console.error('Error creating AMC package:', error);
+    res.status(500).json({ success: false, message: 'Failed to create AMC package' });
+  }
+});
+
+// UPDATE AMC Package (Admin mode) - updates fp_amc_packages table
+router.put('/amc-packages/:id', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { packageName, propertyType, serviceRows, rate, billingDuration, description } = req.body;
+    
+    const [result] = await pool.execute(
+      `UPDATE fp_amc_packages 
+       SET name = ?, description = ?, base_price = ?, 
+           services = ?, updated_at = NOW()
+       WHERE id = ?`,
+      [
+        packageName,
+        description || '',
+        rate || 0,
+        JSON.stringify({ 
+          property_type: propertyType, 
+          billing_duration: billingDuration || 'yearly',
+          serviceRows: serviceRows || [] 
+        }),
+        id
+      ]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'AMC Package not found' });
+    }
+    
+    console.log('Admin updated AMC package:', id);
+    res.json({ success: true, message: 'AMC Package updated successfully' });
+  } catch (error) {
+    console.error('Error updating AMC package:', error);
+    res.status(500).json({ success: false, message: 'Failed to update AMC package' });
+  }
+});
+
 // Get FP AMC Packages
 router.get('/fp-view/:fpId/amc-packages', authenticate, adminOnly, async (req, res) => {
   try {
