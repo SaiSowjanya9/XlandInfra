@@ -435,7 +435,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                       min="1"
                       value={addonForm.frequencyCount}
                       readOnly={addonForm.frequencyType !== 'Other'}
-                      onChange={(e) => addonForm.frequencyType === 'Other' && setAddonForm({ ...addonForm, frequencyCount: e.target.value })}
+                      onChange={(e) => setAddonForm({ ...addonForm, frequencyCount: e.target.value })}
                       placeholder={addonForm.frequencyType === 'Other' ? 'Enter' : ''}
                       className={`w-full px-2 py-2.5 border border-gray-300 rounded-lg text-sm text-center ${addonForm.frequencyType === 'Other' ? 'bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400' : 'bg-gray-100 cursor-not-allowed'}`}
                     />
@@ -805,7 +805,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     min="1"
                     value={editForm.frequencyCount}
                     readOnly={editForm.frequencyType !== 'Other'}
-                    onChange={(e) => editForm.frequencyType === 'Other' && setEditForm({ ...editForm, frequencyCount: e.target.value })}
+                    onChange={(e) => setEditForm({ ...editForm, frequencyCount: e.target.value })}
                     placeholder={editForm.frequencyType === 'Other' ? 'Enter' : ''}
                     className={`w-full px-4 py-2.5 border border-gray-200 rounded-xl outline-none ${editForm.frequencyType === 'Other' ? 'bg-white focus:ring-2 focus:ring-stone-500' : 'bg-gray-100 cursor-not-allowed'}`}
                   />
