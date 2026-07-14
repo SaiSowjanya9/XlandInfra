@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { safeStorage } from '../utils/safeStorage';
 import { 
   Search, Trash2, X, Check, Building2, Home, TreePine, Map,
   Eye, ChevronDown, AlertCircle, Bell, Clock, Briefcase, Lock, 
@@ -119,7 +120,7 @@ const Properties = () => {
   const token = getAuthToken();
   
   // Check if user is Operations Manager (view-only access)
-  const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');
+  const currentUser = JSON.parse(safeStorage.getItem('pm_current_user') || '{}');
   const isOpsManager = currentUser?.role === 'operations_manager';
   // Admin and super_admin should always have full access
   const hasFullAccess = !isOpsManager || currentUser?.role === 'admin' || currentUser?.role === 'super_admin';

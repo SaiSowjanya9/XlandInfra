@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { safeStorage } from '../utils/safeStorage';
 import { Link } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import {
@@ -30,7 +31,7 @@ const CustomerDashboard = ({ user }) => {
       setLoading(true);
     }
     try {
-      const token = localStorage.getItem('customer_token') || getAuthToken();
+      const token = safeStorage.getItem('customer_token') || getAuthToken();
       const response = await fetch(`${API_BASE}/customers/dashboard`, {
         headers: {
           'Authorization': `Bearer ${token}`,
