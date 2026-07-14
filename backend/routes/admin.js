@@ -2187,7 +2187,7 @@ router.get('/all-employee-zones', authenticate, adminOnly, async (req, res) => {
     try {
       const [propertyZones] = await pool.execute(
         `SELECT DISTINCT zone_id FROM properties WHERE zone_id IS NOT NULL AND zone_id != ''
-         AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)`
+         AND (status = 'active' OR status IS NULL)`
       );
       console.log('[Admin] Property zones:', propertyZones.length, propertyZones.map(z => z.zone_id));
       propertyZones.forEach(z => {
@@ -2830,7 +2830,7 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
     try {
       const [propertyZones] = await pool.execute(
         `SELECT DISTINCT zone_id FROM properties WHERE franchise_partner_id = ? AND zone_id IS NOT NULL AND zone_id != ''
-         AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)`,
+         AND (status = 'active' OR status IS NULL)`,
         [fpIdNum]
       );
       console.log(`[Admin FP ${fpIdNum}] Property zones:`, propertyZones.length, propertyZones.map(z => z.zone_id));

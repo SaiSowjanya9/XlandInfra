@@ -2388,7 +2388,7 @@ router.get('/zones', requireManagerScope, async (req, res) => {
     const [propertyZones] = await pool.execute(
       `SELECT DISTINCT zone_id as name FROM properties 
        WHERE ${scopeColumn} = ? AND zone_id IS NOT NULL AND zone_id != ''
-       AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)`,
+       AND (status = 'active' OR status IS NULL)`,
       [scopeId]
     );
 
@@ -2507,11 +2507,11 @@ router.get('/divisions', requireManagerScope, async (req, res) => {
     const [propertyDivisions] = await pool.execute(
       `SELECT DISTINCT division as name FROM properties 
        WHERE franchise_partner_id = ? AND division IS NOT NULL AND division != ''
-       AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)
+       AND (status = 'active' OR status IS NULL)
        UNION
        SELECT DISTINCT division as name FROM onboarded_vendors 
        WHERE franchise_partner_id = ? AND division IS NOT NULL AND division != ''
-       AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)`,
+       AND (status = 'active' OR status IS NULL)`,
       [franchisePartnerId || 0, franchisePartnerId || 0]
     );
     
