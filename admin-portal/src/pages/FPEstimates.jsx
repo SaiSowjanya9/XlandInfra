@@ -2401,8 +2401,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               type="number"
                               min="1"
                               value={row.frequencyCount}
-                              readOnly
-                              className="w-full px-2 py-2 border border-gray-300 bg-gray-100 rounded-lg text-sm cursor-not-allowed"
+                              readOnly={row.frequencyType !== 'Other'}
+                              onChange={(e) => row.frequencyType === 'Other' && handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
+                              placeholder={row.frequencyType === 'Other' ? 'Enter' : ''}
+                              className={`w-full px-2 py-2 border border-gray-300 rounded-lg text-sm ${row.frequencyType === 'Other' ? 'bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400' : 'bg-gray-100 cursor-not-allowed'}`}
                             />
                           </div>
                           
@@ -2658,8 +2660,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <input 
                     type="number" 
                     value={addonForm.frequencyCount} 
-                    readOnly 
-                    className="w-full px-2 py-2.5 border border-gray-300 bg-gray-50 rounded-lg text-sm text-center" 
+                    readOnly={addonForm.frequencyType !== 'Other'}
+                    onChange={(e) => addonForm.frequencyType === 'Other' && setAddonForm({ ...addonForm, frequencyCount: e.target.value })}
+                    className={`w-full px-2 py-2.5 border border-gray-300 rounded-lg text-sm text-center ${addonForm.frequencyType === 'Other' ? 'bg-white focus:ring-2 focus:ring-gray-100' : 'bg-gray-50 cursor-not-allowed'}`} 
                   />
                 </div>
                 <div className="w-24">
@@ -2861,7 +2864,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     onChange={(e) => {
                       const v = e.target.value;
                       const auto = FREQUENCY_COUNT_MAP[v];
-                      setEditingAddon({ ...editingAddon, frequencyType: v, frequencyCount: auto !== null ? auto : editingAddon.frequencyCount });
+                      setEditingAddon({ ...editingAddon, frequencyType: v, frequencyCount: auto !== null ? auto : '' });
                     }}
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
                   >
@@ -2873,8 +2876,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <input
                     type="number"
                     value={editingAddon.frequencyCount}
-                    readOnly
-                    className="w-full px-3 py-2.5 border border-gray-300 bg-gray-50 rounded-lg text-sm"
+                    readOnly={editingAddon.frequencyType !== 'Other'}
+                    onChange={(e) => editingAddon.frequencyType === 'Other' && setEditingAddon({ ...editingAddon, frequencyCount: e.target.value })}
+                    className={`w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm ${editingAddon.frequencyType === 'Other' ? 'bg-white focus:ring-2 focus:ring-gray-200' : 'bg-gray-50 cursor-not-allowed'}`}
                   />
                 </div>
               </div>

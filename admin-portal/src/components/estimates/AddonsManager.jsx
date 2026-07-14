@@ -414,7 +414,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                           setAddonForm({ 
                             ...addonForm, 
                             frequencyType: newType,
-                            frequencyCount: autoCount || 1
+                            frequencyCount: autoCount !== null ? autoCount : ''
                           });
                         }}
                         className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 bg-white appearance-none"
@@ -427,15 +427,17 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     </div>
                   </div>
 
-                  {/* No. of visits */}
+                  {/* No. of visits - editable for "Other" */}
                   <div className="sm:col-span-1 lg:col-span-1 relative">
                     <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider whitespace-nowrap">Visits</label>
                     <input
                       type="number"
                       min="1"
                       value={addonForm.frequencyCount}
-                      readOnly
-                      className="w-full px-2 py-2.5 border border-gray-300 bg-gray-100 rounded-lg text-sm text-center cursor-not-allowed"
+                      readOnly={addonForm.frequencyType !== 'Other'}
+                      onChange={(e) => addonForm.frequencyType === 'Other' && setAddonForm({ ...addonForm, frequencyCount: e.target.value })}
+                      placeholder={addonForm.frequencyType === 'Other' ? 'Enter' : ''}
+                      className={`w-full px-2 py-2.5 border border-gray-300 rounded-lg text-sm text-center ${addonForm.frequencyType === 'Other' ? 'bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400' : 'bg-gray-100 cursor-not-allowed'}`}
                     />
                   </div>
 
@@ -786,7 +788,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                       setEditForm({ 
                         ...editForm, 
                         frequencyType: newType,
-                        frequencyCount: autoCount || 1
+                        frequencyCount: autoCount !== null ? autoCount : ''
                       });
                     }}
                     className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-stone-500 outline-none"
@@ -802,8 +804,10 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     type="number"
                     min="1"
                     value={editForm.frequencyCount}
-                    readOnly
-                    className="w-full px-4 py-2.5 border border-gray-200 bg-gray-100 rounded-xl outline-none"
+                    readOnly={editForm.frequencyType !== 'Other'}
+                    onChange={(e) => editForm.frequencyType === 'Other' && setEditForm({ ...editForm, frequencyCount: e.target.value })}
+                    placeholder={editForm.frequencyType === 'Other' ? 'Enter' : ''}
+                    className={`w-full px-4 py-2.5 border border-gray-200 rounded-xl outline-none ${editForm.frequencyType === 'Other' ? 'bg-white focus:ring-2 focus:ring-stone-500' : 'bg-gray-100 cursor-not-allowed'}`}
                   />
                 </div>
               </div>
