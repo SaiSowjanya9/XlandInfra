@@ -1585,11 +1585,15 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       // Aggregate unit types from all blocks
                       const unitTypeTotals = {};
                       
-                      // Try blockUnitTypes first (direct unit type mapping)
+                      // Try blockUnitTypes first
                       if (blockUnitTypes && typeof blockUnitTypes === 'object') {
-                        Object.values(blockUnitTypes).forEach(blockData => {
-                          if (typeof blockData === 'object' && blockData !== null) {
-                            Object.entries(blockData).forEach(([type, count]) => {
+                        Object.entries(blockUnitTypes).forEach(([key, value]) => {
+                          if (typeof value === 'number') {
+                            // Flat structure: {"Studio": 2, "1 BHK": 3}
+                            unitTypeTotals[key] = (unitTypeTotals[key] || 0) + value;
+                          } else if (typeof value === 'object' && value !== null) {
+                            // Nested structure: {"Block A": {"Studio": 2}}
+                            Object.entries(value).forEach(([type, count]) => {
                               if (type !== 'total' && type !== 'units' && typeof count === 'number') {
                                 unitTypeTotals[type] = (unitTypeTotals[type] || 0) + count;
                               }
@@ -1600,9 +1604,9 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       
                       // Also check unitsPerBlock for nested unit type data
                       if (Object.keys(unitTypeTotals).length === 0 && unitsPerBlock && typeof unitsPerBlock === 'object') {
-                        Object.values(unitsPerBlock).forEach(blockData => {
-                          if (typeof blockData === 'object' && blockData !== null) {
-                            Object.entries(blockData).forEach(([type, count]) => {
+                        Object.entries(unitsPerBlock).forEach(([key, value]) => {
+                          if (typeof value === 'object' && value !== null) {
+                            Object.entries(value).forEach(([type, count]) => {
                               if (type !== 'total' && type !== 'units' && typeof count === 'number') {
                                 unitTypeTotals[type] = (unitTypeTotals[type] || 0) + count;
                               }

@@ -8,7 +8,6 @@ require('dotenv').config();
 // Security Middleware
 const {
   helmetConfig,
-  apiRateLimiter,
   xssSanitizer,
   hpp,
   bodyParserLimits,
@@ -118,8 +117,8 @@ app.use(hpp);
 // 5. XSS Sanitization
 app.use(xssSanitizer);
 
-// 6. Rate Limiting (applied to all /api routes)
-app.use('/api/', apiRateLimiter);
+// 6. Rate Limiting - DISABLED
+// app.use('/api/', apiRateLimiter);
 
 // Serve uploaded files
 app.use('/uploads', express.static(uploadsDir));

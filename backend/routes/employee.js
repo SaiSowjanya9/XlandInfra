@@ -8,7 +8,8 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../config/database');
-const { loginRateLimiter } = require('../middleware/security');
+// Rate limiting disabled
+// const { loginRateLimiter } = require('../middleware/security');
 
 // Use JWT_SECRET from auth middleware (secure handling)
 const { JWT_SECRET } = require('../middleware/auth');
@@ -45,8 +46,8 @@ const generateToken = (user) => {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
 };
 
-// Unified Employee Login - Auto detects role (rate limited: 5 attempts per 15 minutes)
-router.post('/login', loginRateLimiter, async (req, res) => {
+// Unified Employee Login - Auto detects role
+router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 

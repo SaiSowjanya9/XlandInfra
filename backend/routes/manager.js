@@ -9,7 +9,8 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { pool } = require('../config/database');
 const { sendCustomerActivationEmail } = require('../services/emailService');
-const { loginRateLimiter } = require('../middleware/security');
+// Rate limiting disabled
+// const { loginRateLimiter } = require('../middleware/security');
 
 // Constants for customer activation
 const ACTIVATION_EXPIRY_HOURS = 72;
@@ -55,8 +56,8 @@ const {
 // MANAGER AUTHENTICATION (Public - No Auth Required)
 // ============================================
 
-// Manager Login (rate limited: 5 attempts per 15 minutes)
-router.post('/login', loginRateLimiter, async (req, res) => {
+// Manager Login
+router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
