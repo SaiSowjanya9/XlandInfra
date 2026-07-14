@@ -68,14 +68,13 @@ export const normalizePropertyType = (type) => {
 };
 
 // Frequency types (how often service occurs)
-export const FREQUENCY_TYPES = ['Monthly', 'Every 2 Months', 'Every 3 Months', 'Quarterly', 'Half-Yearly', 'Yearly'];
+export const FREQUENCY_TYPES = ['Monthly', 'Every 2 Months', 'Quarterly', 'Half-Yearly', 'Yearly'];
 
 // Auto-calculate No. of visits per year based on frequency
 export const FREQUENCY_COUNT_MAP = {
   'Monthly': 12,
   'Every 2 Months': 6,
-  'Every 3 Months': 4,
-  'Quarterly': 3,
+  'Quarterly': 4,
   'Half-Yearly': 2,
   'Yearly': 1
 };
