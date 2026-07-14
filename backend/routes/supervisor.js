@@ -199,7 +199,7 @@ router.post('/login', async (req, res) => {
         fpEmployeeId: fpEmployeeId,
         franchisePartnerId: franchisePartnerId || null
       },
-      process.env.JWT_SECRET || 'your-secret-key',
+      process.env.JWT_SECRET || 'dev-only-insecure-secret-do-not-use-in-production',
       { expiresIn: '24h' }
     );
 
