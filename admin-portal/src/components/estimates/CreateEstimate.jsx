@@ -1391,21 +1391,25 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       let unitsPerBlock = selectedProperty?.units_per_block || selectedProperty?.unitsPerBlock;
                       if (typeof blockNames === 'string') try { blockNames = JSON.parse(blockNames); } catch(e) { blockNames = {}; }
                       if (typeof unitsPerBlock === 'string') try { unitsPerBlock = JSON.parse(unitsPerBlock); } catch(e) { unitsPerBlock = {}; }
-                      const numBlocks = selectedProperty?.number_of_blocks || selectedProperty?.numberOfBlocks || Object.keys(blockNames || {}).length || 1;
+                      // Get block keys from the data (could be "1", "2" or "A", "B", etc.)
+                      const blockKeys = blockNames && typeof blockNames === 'object' ? Object.keys(blockNames) : [];
+                      const unitKeys = unitsPerBlock && typeof unitsPerBlock === 'object' ? Object.keys(unitsPerBlock) : [];
+                      const allKeys = unitKeys.length > 0 ? unitKeys : blockKeys;
+                      const hasBlockData = allKeys.length > 0;
                       
-                      if (numBlocks > 1 || Object.keys(blockNames || {}).length > 0) {
+                      if (hasBlockData) {
                         return (
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => (
-                              <div key={blockNum} className="bg-white border border-gray-200 rounded-lg p-3">
+                            {allKeys.map((blockKey) => (
+                              <div key={blockKey} className="bg-white border border-gray-200 rounded-lg p-3">
                                 <div className="flex justify-between items-start">
                                   <div>
                                     <label className="block text-xs font-medium text-gray-500 mb-1">Block Name</label>
-                                    <p className="text-sm font-semibold text-gray-800">{blockNames?.[blockNum] || blockNames?.[String(blockNum)] || `Block ${blockNum}`}</p>
+                                    <p className="text-sm font-semibold text-gray-800">{blockNames?.[blockKey] || `Block ${blockKey}`}</p>
                                   </div>
                                   <div className="text-right">
                                     <label className="block text-xs font-medium text-gray-500 mb-1">Units</label>
-                                    <p className="text-sm font-medium text-gray-700">{unitsPerBlock?.[blockNum] || unitsPerBlock?.[String(blockNum)] || 0}</p>
+                                    <p className="text-sm font-medium text-gray-700">{(() => { let u = unitsPerBlock?.[blockKey]; if (typeof u === 'object' && u !== null) u = u.total || u.units || 0; return u || 0; })()}</p>
                                   </div>
                                 </div>
                               </div>
@@ -1527,21 +1531,25 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       let unitsPerBlock = selectedProperty?.units_per_block || selectedProperty?.unitsPerBlock;
                       if (typeof blockNames === 'string') try { blockNames = JSON.parse(blockNames); } catch(e) { blockNames = {}; }
                       if (typeof unitsPerBlock === 'string') try { unitsPerBlock = JSON.parse(unitsPerBlock); } catch(e) { unitsPerBlock = {}; }
-                      const numBlocks = selectedProperty?.number_of_blocks || selectedProperty?.numberOfBlocks || Object.keys(blockNames || {}).length || 1;
+                      // Get block keys from the data (could be "1", "2" or "A", "B", etc.)
+                      const blockKeys = blockNames && typeof blockNames === 'object' ? Object.keys(blockNames) : [];
+                      const unitKeys = unitsPerBlock && typeof unitsPerBlock === 'object' ? Object.keys(unitsPerBlock) : [];
+                      const allKeys = unitKeys.length > 0 ? unitKeys : blockKeys;
+                      const hasBlockData = allKeys.length > 0;
                       
-                      if (numBlocks > 1 || Object.keys(blockNames || {}).length > 0) {
+                      if (hasBlockData) {
                         return (
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => (
-                              <div key={blockNum} className="bg-white border border-gray-200 rounded-lg p-3">
+                            {allKeys.map((blockKey) => (
+                              <div key={blockKey} className="bg-white border border-gray-200 rounded-lg p-3">
                                 <div className="flex justify-between items-start">
                                   <div>
                                     <label className="block text-xs font-medium text-gray-500 mb-1">Block Name</label>
-                                    <p className="text-sm font-semibold text-gray-800">{blockNames?.[blockNum] || blockNames?.[String(blockNum)] || `Block ${blockNum}`}</p>
+                                    <p className="text-sm font-semibold text-gray-800">{blockNames?.[blockKey] || `Block ${blockKey}`}</p>
                                   </div>
                                   <div className="text-right">
                                     <label className="block text-xs font-medium text-gray-500 mb-1">Units</label>
-                                    <p className="text-sm font-medium text-gray-700">{unitsPerBlock?.[blockNum] || unitsPerBlock?.[String(blockNum)] || 0}</p>
+                                    <p className="text-sm font-medium text-gray-700">{(() => { let u = unitsPerBlock?.[blockKey]; if (typeof u === 'object' && u !== null) u = u.total || u.units || 0; return u || 0; })()}</p>
                                   </div>
                                 </div>
                               </div>
