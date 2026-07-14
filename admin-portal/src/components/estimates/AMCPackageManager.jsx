@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { getAuthToken } from '../../utils/safeStorage';
 import {
   Package,
@@ -535,7 +535,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                               </td>
                               <td className="px-3 md:px-4 py-4 text-right">
                                 <span className="text-base md:text-lg font-bold text-slate-800 whitespace-nowrap">
-                                  â‚¹{totalRate.toLocaleString()}
+                                  ₹{totalRate.toLocaleString()}
                                 </span>
                               </td>
                               {/* Actions column - Hidden for Operations Manager */}
@@ -734,7 +734,12 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                             type="number"
                             min="1"
                             value={row.frequencyCount}
-                            readOnly={row.frequencyType !== 'Other'}`n                            onChange={(e) => row.frequencyType === 'Other' && handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}`n                            title={row.frequencyType === 'Other' ? 'Enter custom visit count' : `Auto-set to ${FREQUENCY_COUNT_MAP[row.frequencyType] || 1} visits`}`n                            placeholder={row.frequencyType === 'Other' ? 'Enter visits' : ''}`n                            className={`w-full px-2 py-2 border border-gray-300 rounded-lg text-sm ${row.frequencyType === 'Other' ? 'bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400' : 'bg-gray-100 cursor-not-allowed'}`}`n                          />
+                            readOnly={row.frequencyType !== 'Other'}
+                            onChange={(e) => row.frequencyType === 'Other' && handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
+                            title={row.frequencyType === 'Other' ? 'Enter custom visit count' : `Auto-set to ${FREQUENCY_COUNT_MAP[row.frequencyType] || 1} visits`}
+                            placeholder={row.frequencyType === 'Other' ? 'Enter visits' : ''}
+                            className={`w-full px-2 py-2 border border-gray-300 rounded-lg text-sm ${row.frequencyType === 'Other' ? 'bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400' : 'bg-gray-100 cursor-not-allowed'}`}
+                            />
                         </div>
                         
                         {/* Delete Button */}
@@ -764,9 +769,9 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     
                     {/* Price Input */}
                     <div className="mb-6">
-                      <label className="text-gray-600 text-xs mb-2 block font-medium">Price (â‚¹) <span className="text-red-500">*</span></label>
+                      <label className="text-gray-600 text-xs mb-2 block font-medium">Price (₹) <span className="text-red-500">*</span></label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">â‚¹</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">₹</span>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -804,7 +809,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     <div className="border-t border-gray-200 pt-4 space-y-3">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Package</span>
-                        <span className="font-medium text-gray-800 truncate ml-2">{amcForm.packageName || 'â€”'}</span>
+                        <span className="font-medium text-gray-800 truncate ml-2">{amcForm.packageName || '—'}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Services</span>
@@ -812,7 +817,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                       </div>
                       <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                         <span className="text-sm font-semibold text-gray-700">Total Rate</span>
-                        <span className="text-2xl font-bold text-gray-800">â‚¹{getPrice().toLocaleString()}</span>
+                        <span className="text-2xl font-bold text-gray-800">₹{getPrice().toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
@@ -914,10 +919,10 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                      Price (â‚¹) <span className="text-red-500">*</span>
+                      Price (₹) <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">â‚¹</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
                       <input
                         type="text"
                         inputMode="numeric"
@@ -1044,7 +1049,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                   </div>
                   <div className="sm:text-right">
                     <span className="text-gray-500 text-xs">Total Rate</span>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-800">â‚¹{getPrice().toLocaleString()}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-800">₹{getPrice().toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -1106,7 +1111,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 </div>
                 <div className="bg-green-50 p-3 rounded-lg">
                   <p className="text-xs text-gray-500">Total Price</p>
-                  <p className="font-bold text-lg text-green-700">â‚¹{(viewAmcPackage.price || viewAmcPackage.rate || 0).toLocaleString()}</p>
+                  <p className="font-bold text-lg text-green-700">₹{(viewAmcPackage.price || viewAmcPackage.rate || 0).toLocaleString()}</p>
                 </div>
               </div>
 
@@ -1154,15 +1159,15 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Subtotal:</span>
-                    <span className="font-semibold text-gray-900">â‚¹{(viewAmcPackage.price || viewAmcPackage.rate || 0).toLocaleString()}</span>
+                    <span className="font-semibold text-gray-900">₹{(viewAmcPackage.price || viewAmcPackage.rate || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">GST (0%):</span>
-                    <span className="font-semibold text-gray-900">â‚¹0</span>
+                    <span className="font-semibold text-gray-900">₹0</span>
                   </div>
                   <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                     <span className="font-bold text-gray-800">TOTAL:</span>
-                    <span className="font-bold text-lg text-green-700">â‚¹{(viewAmcPackage.price || viewAmcPackage.rate || 0).toLocaleString()}</span>
+                    <span className="font-bold text-lg text-green-700">₹{(viewAmcPackage.price || viewAmcPackage.rate || 0).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
