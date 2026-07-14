@@ -16,6 +16,8 @@ import {
   UserX
 } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const FPUsers = ({ user }) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +47,7 @@ const FPUsers = ({ user }) => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/fp/users', {
+      const response = await fetch(`${API_BASE}/api/fp/users`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -73,7 +75,7 @@ const FPUsers = ({ user }) => {
     }
 
     try {
-      const response = await fetch('/api/fp/users', {
+      const response = await fetch(`${API_BASE}/api/fp/users`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

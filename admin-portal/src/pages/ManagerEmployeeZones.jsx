@@ -17,6 +17,8 @@ import {
   Layers,
 } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 // Helper function to format role display name
 const formatRoleName = (role) => {
   const roleMap = {
@@ -66,7 +68,7 @@ const ManagerEmployeeZones = ({ user }) => {
     setLoading(true);
     try {
       // Fetch employees
-      const empResponse = await fetch('/api/manager/employees', {
+      const empResponse = await fetch(`${API_BASE}/api/manager/employees`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!empResponse.ok) {
@@ -80,7 +82,7 @@ const ManagerEmployeeZones = ({ user }) => {
       const allEmployees = empResult.success ? (Array.isArray(empResult.data) ? empResult.data : []) : [];
       
       // Fetch zones
-      const zoneResponse = await fetch('/api/manager/zones', {
+      const zoneResponse = await fetch(`${API_BASE}/api/manager/zones`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!zoneResponse.ok) {
@@ -143,7 +145,7 @@ const ManagerEmployeeZones = ({ user }) => {
   const openAssignModal = async (employee) => {
     // Refresh zones to get any newly created zones
     try {
-      const zoneResponse = await fetch('/api/manager/zones', { headers: { 'Authorization': `Bearer ${token}` } });
+      const zoneResponse = await fetch(`${API_BASE}/api/manager/zones`, { headers: { 'Authorization': `Bearer ${token}` } });
       const zoneResult = await zoneResponse.json();
       if (zoneResult.success) {
         const freshZones = Array.isArray(zoneResult.data) ? zoneResult.data : [];

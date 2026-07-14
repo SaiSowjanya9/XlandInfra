@@ -27,6 +27,8 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const CoordinatorVendors = ({ user }) => {
   // Check if this is an FP-created Coordinator (has franchisePartnerId)
   const isFPCoordinator = !!user?.franchisePartnerId;
@@ -78,7 +80,7 @@ const CoordinatorVendors = ({ user }) => {
   const fetchVendors = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/coordinator/vendors', {
+      const response = await fetch(`${API_BASE}/api/coordinator/vendors`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -161,7 +163,7 @@ const CoordinatorVendors = ({ user }) => {
 
   const handleExport = async () => {
     try {
-      const response = await fetch('/api/coordinator/export/vendors', {
+      const response = await fetch(`${API_BASE}/api/coordinator/export/vendors`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();

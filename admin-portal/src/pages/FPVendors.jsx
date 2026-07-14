@@ -20,6 +20,8 @@ import {
   Save,
   Download,
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import * as XLSX from 'xlsx';
@@ -58,7 +60,7 @@ const FPVendors = ({ user }) => {
   const fetchVendors = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/fp/vendors?include_deleted=true', {
+      const response = await fetch(`${API_BASE}/api/fp/vendors?include_deleted=true`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();

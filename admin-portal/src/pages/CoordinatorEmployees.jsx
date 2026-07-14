@@ -21,6 +21,8 @@ import {
   Lock
 } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const CoordinatorEmployees = ({ user }) => {
   // Check if this is an FP-created Coordinator (has franchisePartnerId)
   const isFPCoordinator = !!user?.franchisePartnerId;
@@ -62,7 +64,7 @@ const CoordinatorEmployees = ({ user }) => {
       if (isFPCoordinator) {
         // FP Coordinator: Fetch all FP employees with zones (view-only)
         console.log('[CoordinatorEmployees] Fetching FP employees...');
-        const response = await fetch('/api/coordinator/fp-employee-zones', {
+        const response = await fetch(`${API_BASE}/api/coordinator/fp-employee-zones`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const result = await response.json();
@@ -85,10 +87,10 @@ const CoordinatorEmployees = ({ user }) => {
       } else {
         // Standalone Coordinator: Fetch own employees
         const [empRes, zoneRes] = await Promise.all([
-          fetch('/api/coordinator/employees', {
+          fetch(`${API_BASE}/api/coordinator/employees`, {
             headers: { 'Authorization': `Bearer ${token}` }
           }),
-          fetch('/api/coordinator/zones', {
+          fetch(`${API_BASE}/api/coordinator/zones`, {
             headers: { 'Authorization': `Bearer ${token}` }
           })
         ]);
@@ -199,7 +201,7 @@ const CoordinatorEmployees = ({ user }) => {
 
   const handleExport = async () => {
     try {
-      const response = await fetch('/api/coordinator/export/employees', {
+      const response = await fetch(`${API_BASE}/api/coordinator/export/employees`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();

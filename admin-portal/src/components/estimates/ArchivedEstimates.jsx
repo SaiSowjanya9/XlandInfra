@@ -50,7 +50,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
         url = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/estimates?archived=true`;
       } else {
         // Fallback to default
-        const response = await fetch('/api/estimates-sync?archived=true');
+        const response = await fetch(`${API_BASE}/api/estimates-sync?archived=true`);
         const result = await response.json();
         if (result.success) {
           setArchivedEstimates(result.data || []);
@@ -102,7 +102,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
 
   const handleDeleteAllArchived = async () => {
     try {
-      const response = await fetch('/api/estimates-sync/archived/delete-all', { method: 'DELETE' });
+      const response = await fetch(`${API_BASE}/api/estimates-sync/archived/delete-all`, { method: 'DELETE' });
       const result = await response.json();
       if (result.success) {
         showToast(`${result.deletedCount || archivedEstimates.length} archived estimates deleted`);

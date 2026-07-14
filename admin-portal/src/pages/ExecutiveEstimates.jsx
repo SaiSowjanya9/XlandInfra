@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
 const PROPERTY_TYPE_OPTIONS = [
@@ -210,7 +212,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           total_amount: priceSummary.totalAmount
       };
       console.log('Saving estimate payload:', payload);
-      const res = await fetch('/api/executive/estimates', {
+      const res = await fetch(`${API_BASE}/api/executive/estimates`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -250,14 +252,14 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
     setLoading(true);
     try {
       const [estRes, archivedRes, amcRes, addRes, custRes, propRes, catRes, linksRes] = await Promise.all([
-        fetch('/api/executive/estimates?archived=false', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/executive/estimates?archived=true', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/executive/amc-packages', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/executive/addons', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/executive/customers', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/executive/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/executive/categories', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/executive/fp-portal-links', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`${API_BASE}/api/executive/estimates?archived=false`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/executive/estimates?archived=true`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/executive/amc-packages`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/executive/addons`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/executive/customers`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/executive/properties`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/executive/categories`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/executive/fp-portal-links`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
       const [estData, archivedData, amcData, addData, custData, propData, catData, linksData] = await Promise.all([estRes.json(), archivedRes.json(), amcRes.json(), addRes.json(), custRes.json(), propRes.json(), catRes.json(), linksRes.json()]);
       if (estData.success) setEstimates(estData.data || []);
@@ -328,7 +330,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
     setMessage({ type: '', text: '' });
     const subtotal = estimateForm.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
     try {
-      const response = await fetch('/api/executive/estimates', {
+      const response = await fetch(`${API_BASE}/api/executive/estimates`, {
         method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...estimateForm, subtotal, items: estimateForm.items.map(item => ({ ...item, totalPrice: item.quantity * item.unitPrice })) })
       });
@@ -342,7 +344,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
     e.preventDefault();
     setMessage({ type: '', text: '' });
     try {
-      const response = await fetch('/api/executive/amc-packages', {
+      const response = await fetch(`${API_BASE}/api/executive/amc-packages`, {
         method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...amcForm, services: amcForm.services.split(',').map(s => s.trim()).filter(Boolean) })
       });
@@ -356,7 +358,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
     e.preventDefault();
     setMessage({ type: '', text: '' });
     try {
-      const response = await fetch('/api/executive/addons', {
+      const response = await fetch(`${API_BASE}/api/executive/addons`, {
         method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(addonForm)
       });

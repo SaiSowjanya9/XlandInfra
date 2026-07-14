@@ -27,6 +27,8 @@ import {
   LayoutGrid,
   X
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import { saveProperty } from '../utils/propertyStore';
 import SelectWithAdd from '../components/SelectWithAdd';
 import StateSelect from '../components/common/StateSelect';
@@ -348,7 +350,7 @@ const CreateCustomer = ({ admin }) => {
 
   const fetchZones = async () => {
     try {
-      const res = await fetch('/api/fp/zones', { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`${API_BASE}/api/fp/zones`, { headers: { 'Authorization': `Bearer ${token}` } });
       const json = await res.json();
       if (json.success) setZoneSuggestions(json.data || []);
     } catch {
@@ -362,7 +364,7 @@ const CreateCustomer = ({ admin }) => {
     if (!zoneName?.trim()) return;
     const exists = zoneSuggestions.some(z => z.name?.toLowerCase() === zoneName.toLowerCase());
     if (!exists) {
-      try { await fetch('/api/fp/zones', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); } catch (e) {}
+      try { await fetch(`${API_BASE}/api/fp/zones`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); } catch (e) {}
     }
   };
 
@@ -373,7 +375,7 @@ const CreateCustomer = ({ admin }) => {
 
   useEffect(() => {
     fetchZones();
-    fetch('/api/onboarding/suggestions/areas')
+    fetch(`${API_BASE}/api/onboarding/suggestions/areas`)
       .then(r => r.json())
       .then(res => { if (res.success) setAreaSuggestions(res.data || []); })
       .catch(() => {});

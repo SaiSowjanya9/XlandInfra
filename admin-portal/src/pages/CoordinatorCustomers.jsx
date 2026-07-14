@@ -29,6 +29,8 @@ import {
   Triangle,
   Map
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import GPSLocationCapture from '../components/common/GPSLocationCapture';
 
 // Category options matching Admin Portal
@@ -242,7 +244,7 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/coordinator/customers', {
+      const response = await fetch(`${API_BASE}/api/coordinator/customers`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -258,7 +260,7 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
 
   const fetchProperties = async () => {
     try {
-      const response = await fetch('/api/coordinator/properties', {
+      const response = await fetch(`${API_BASE}/api/coordinator/properties`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -272,7 +274,7 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
 
   const fetchZones = async () => {
     try {
-      const response = await fetch('/api/coordinator/zones', {
+      const response = await fetch(`${API_BASE}/api/coordinator/zones`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -289,7 +291,7 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
     const exists = zones.some(z => z.name?.toLowerCase() === zoneName.toLowerCase());
     if (!exists) {
       try { 
-        await fetch('/api/coordinator/zones', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); 
+        await fetch(`${API_BASE}/api/coordinator/zones`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); 
         fetchZones();
       } catch (e) {}
     }
@@ -322,7 +324,7 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
       // Auto-save zone if new
       if (formData.zone) await autoSaveZone(formData.zone);
       
-      const response = await fetch('/api/coordinator/customers', {
+      const response = await fetch(`${API_BASE}/api/coordinator/customers`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

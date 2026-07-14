@@ -31,8 +31,7 @@ import {
   Trash2
 } from 'lucide-react';
 
-// Use empty string for relative URLs - uploads are served at /uploads on same domain
-const API_BASE = '';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const ManagerWorkOrders = ({ user }) => {
   const [workOrders, setWorkOrders] = useState([]);
@@ -113,7 +112,7 @@ const ManagerWorkOrders = ({ user }) => {
   const fetchWorkOrders = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/manager/work-orders', {
+      const response = await fetch(`${API_BASE}/api/manager/work-orders`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -130,10 +129,10 @@ const ManagerWorkOrders = ({ user }) => {
   const fetchDependencies = async () => {
     try {
       const [propRes, catRes, custRes, vendRes] = await Promise.all([
-        fetch('/api/manager/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/manager/categories', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/manager/customers', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/manager/vendors', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`${API_BASE}/api/manager/properties`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/manager/categories`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/manager/customers`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/manager/vendors`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
       const [propData, catData, custData, vendData] = await Promise.all([
@@ -151,7 +150,7 @@ const ManagerWorkOrders = ({ user }) => {
 
   const fetchEmployees = async () => {
     try {
-      const response = await fetch('/api/manager/employees', {
+      const response = await fetch(`${API_BASE}/api/manager/employees`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -252,7 +251,7 @@ const ManagerWorkOrders = ({ user }) => {
         submitData.subcategoryName = selectedSubcat?.name || '';
       }
       
-      const response = await fetch('/api/manager/work-orders', {
+      const response = await fetch(`${API_BASE}/api/manager/work-orders`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -19,6 +19,8 @@ import {
   Trash2,
 } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 // Helper function to format role display name
 const formatRoleName = (role) => {
   const roleMap = {
@@ -71,7 +73,7 @@ const FPEmployeeZones = ({ user }) => {
     setLoading(true);
     try {
       // Fetch employees
-      const empResponse = await fetch('/api/fp/employees', {
+      const empResponse = await fetch(`${API_BASE}/api/fp/employees`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!empResponse.ok) {
@@ -85,7 +87,7 @@ const FPEmployeeZones = ({ user }) => {
       const allEmployees = empResult.success ? (Array.isArray(empResult.data) ? empResult.data : []) : [];
       
       // Fetch zones
-      const zoneResponse = await fetch('/api/fp/zones', {
+      const zoneResponse = await fetch(`${API_BASE}/api/fp/zones`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!zoneResponse.ok) {
@@ -162,7 +164,7 @@ const FPEmployeeZones = ({ user }) => {
     
     setCreatingZone(true);
     try {
-      const response = await fetch('/api/fp/zones', {
+      const response = await fetch(`${API_BASE}/api/fp/zones`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -213,7 +215,7 @@ const FPEmployeeZones = ({ user }) => {
   const openAssignModal = async (employee) => {
     // Refresh zones to get any newly created zones
     try {
-      const zoneResponse = await fetch('/api/fp/zones', { headers: { 'Authorization': `Bearer ${token}` } });
+      const zoneResponse = await fetch(`${API_BASE}/api/fp/zones`, { headers: { 'Authorization': `Bearer ${token}` } });
       const zoneResult = await zoneResponse.json();
       if (zoneResult.success) {
         const freshZones = Array.isArray(zoneResult.data) ? zoneResult.data : [];

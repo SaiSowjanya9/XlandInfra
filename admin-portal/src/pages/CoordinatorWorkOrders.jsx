@@ -35,11 +35,10 @@ import {
   UserPlus,
   XCircle
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import { Link } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
-
-// Use empty string for relative URLs - uploads are served at /uploads on same domain
-const API_BASE = '';
 
 const CoordinatorWorkOrders = ({ user }) => {
   // Check if this is an FP-created Coordinator (has franchisePartnerId)
@@ -136,7 +135,7 @@ const CoordinatorWorkOrders = ({ user }) => {
     setLoading(true);
     try {
       // Always fetch ALL work orders for accurate tab counts
-      const response = await fetch('/api/coordinator/work-orders', {
+      const response = await fetch(`${API_BASE}/api/coordinator/work-orders`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -153,11 +152,11 @@ const CoordinatorWorkOrders = ({ user }) => {
   const fetchDependencies = async () => {
     try {
       const [propRes, catRes, custRes, vendRes, empRes] = await Promise.all([
-        fetch('/api/coordinator/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/coordinator/categories', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/coordinator/customers', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/coordinator/vendors', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/coordinator/employees', { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ json: () => ({ success: false }) }))
+        fetch(`${API_BASE}/api/coordinator/properties`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/coordinator/categories`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/coordinator/customers`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/coordinator/vendors`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/coordinator/employees`, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ json: () => ({ success: false }) }))
       ]);
 
       const [propData, catData, custData, vendData, empData] = await Promise.all([
@@ -227,7 +226,7 @@ const CoordinatorWorkOrders = ({ user }) => {
         submitData.subcategoryName = selectedSubcat?.name || '';
       }
       
-      const response = await fetch('/api/coordinator/work-orders', {
+      const response = await fetch(`${API_BASE}/api/coordinator/work-orders`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

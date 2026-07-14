@@ -30,6 +30,8 @@ import {
   MapPin,
   Calendar
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import * as XLSX from 'xlsx';
 import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
@@ -88,7 +90,7 @@ const CoordinatorProperties = ({ user }) => {
   const fetchPropertyVendorAssignments = async (propertyId) => {
     setLoadingVendorAssignments(true);
     try {
-      const response = await fetch('/api/coordinator/vendors/assignments', {
+      const response = await fetch(`${API_BASE}/api/coordinator/vendors/assignments`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -141,7 +143,7 @@ const CoordinatorProperties = ({ user }) => {
 
   const fetchZones = async () => {
     try {
-      const response = await fetch('/api/coordinator/zones', {
+      const response = await fetch(`${API_BASE}/api/coordinator/zones`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -159,7 +161,7 @@ const CoordinatorProperties = ({ user }) => {
     const exists = zones.some(z => z.name?.toLowerCase() === zoneName.toLowerCase());
     if (!exists) {
       try { 
-        await fetch('/api/coordinator/zones', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); 
+        await fetch(`${API_BASE}/api/coordinator/zones`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); 
         fetchZones();
       } catch (e) {}
     }
@@ -167,7 +169,7 @@ const CoordinatorProperties = ({ user }) => {
 
   const fetchVendors = async () => {
     try {
-      const response = await fetch('/api/coordinator/vendors', {
+      const response = await fetch(`${API_BASE}/api/coordinator/vendors`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -181,7 +183,7 @@ const CoordinatorProperties = ({ user }) => {
 
   const fetchEmployees = async () => {
     try {
-      const response = await fetch('/api/coordinator/employees', {
+      const response = await fetch(`${API_BASE}/api/coordinator/employees`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();

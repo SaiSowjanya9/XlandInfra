@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, X, Check, AlertCircle } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const Residents = ({ admin }) => {
   const [residents, setResidents] = useState([]);
   const [units, setUnits] = useState([]);
@@ -28,7 +30,7 @@ const Residents = ({ admin }) => {
 
   const fetchResidents = async () => {
     try {
-      const response = await fetch('/api/admin/residents');
+      const response = await fetch(`${API_BASE}/api/admin/residents`);
       const result = await response.json();
       if (result.success) {
         setResidents(result.data);
@@ -42,7 +44,7 @@ const Residents = ({ admin }) => {
 
   const fetchUnits = async () => {
     try {
-      const response = await fetch('/api/admin/units');
+      const response = await fetch(`${API_BASE}/api/admin/units`);
       const result = await response.json();
       if (result.success) {
         setUnits(result.data);

@@ -27,8 +27,7 @@ import {
   List
 } from 'lucide-react';
 
-// Use empty string for relative URLs - uploads are served at /uploads on same domain
-const API_BASE = '';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const FPWorkOrders = ({ user }) => {
   const [workOrders, setWorkOrders] = useState([]);
@@ -159,7 +158,7 @@ const FPWorkOrders = ({ user }) => {
   const fetchWorkOrders = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/fp/work-orders', {
+      const response = await fetch(`${API_BASE}/api/fp/work-orders`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -176,9 +175,9 @@ const FPWorkOrders = ({ user }) => {
   const fetchDependencies = async () => {
     try {
       const [propRes, catRes, vendRes] = await Promise.all([
-        fetch('/api/fp/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/fp/categories', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/fp/vendors', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`${API_BASE}/api/fp/properties`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/fp/categories`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/fp/vendors`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
       const [propData, catData, vendData] = await Promise.all([
@@ -197,7 +196,7 @@ const FPWorkOrders = ({ user }) => {
 
   const fetchEmployees = async () => {
     try {
-      const response = await fetch('/api/fp/employees', {
+      const response = await fetch(`${API_BASE}/api/fp/employees`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -280,7 +279,7 @@ const FPWorkOrders = ({ user }) => {
         submitData.append('attachments', attachment.file);
       });
 
-      const response = await fetch('/api/fp/work-orders', {
+      const response = await fetch(`${API_BASE}/api/fp/work-orders`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -381,7 +380,7 @@ const FPWorkOrders = ({ user }) => {
     if (!newCategoryName.trim()) return;
     
     try {
-      const res = await fetch('/api/fp/categories', {
+      const res = await fetch(`${API_BASE}/api/fp/categories`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newCategoryName.trim(), subcategoryName: newSubcategoryName.trim() })
@@ -389,7 +388,7 @@ const FPWorkOrders = ({ user }) => {
       const data = await res.json();
       if (data.success) {
         // Refresh categories
-        const catRes = await fetch('/api/fp/categories', { headers: { 'Authorization': `Bearer ${token}` } });
+        const catRes = await fetch(`${API_BASE}/api/fp/categories`, { headers: { 'Authorization': `Bearer ${token}` } });
         const catData = await catRes.json();
         if (catData.success) setCategories(catData.data);
         setNewCategoryName('');

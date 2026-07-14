@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import { Users, Plus, Search, Edit, Trash2, Download, RefreshCw, X, Save, AlertCircle, CheckCircle, Phone, Mail, Eye, MapPin } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const SupervisorEmployees = ({ user }) => {
   const [employees, setEmployees] = useState([]);
   const [zones, setZones] = useState([]);
@@ -20,8 +22,8 @@ const SupervisorEmployees = ({ user }) => {
     setLoading(true);
     try {
       const [empRes, zoneRes] = await Promise.all([
-        fetch('/api/supervisor/employees', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/supervisor/zones', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`${API_BASE}/api/supervisor/employees`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/supervisor/zones`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
       const [empData, zoneData] = await Promise.all([empRes.json(), zoneRes.json()]);
       if (empData.success) setEmployees(empData.data);
@@ -73,7 +75,7 @@ const SupervisorEmployees = ({ user }) => {
 
   const handleExport = async () => {
     try {
-      const response = await fetch('/api/supervisor/export/employees', { headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch(`${API_BASE}/api/supervisor/export/employees`, { headers: { 'Authorization': `Bearer ${token}` } });
       const result = await response.json();
       const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);

@@ -6,6 +6,8 @@ import {
   DollarSign, Layers, Filter, Download, Mail, Save, Edit, Send, Link2, RefreshCw,
   FolderOpen, ExternalLink, Link
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import { FREQUENCY_TYPES, FREQUENCY_COUNT_MAP } from '../utils/estimateStore';
 import { getAuthToken } from '../utils/safeStorage';
 import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
@@ -221,12 +223,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     setLoading(true);
     try {
       const [estRes, amcRes, addRes, propRes, archivedRes, linksRes] = await Promise.all([
-        fetch('/api/fp/estimates?archived=false', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/fp/amc-packages', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/fp/addons', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/fp/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/fp/estimates?archived=true', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/fp/portal-links', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`${API_BASE}/api/fp/estimates?archived=false`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/fp/amc-packages`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/fp/addons`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/fp/properties`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/fp/estimates?archived=true`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/fp/portal-links`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
       const [estData, amcData, addData, propData, archivedData, linksData] = await Promise.all([estRes.json(), amcRes.json(), addRes.json(), propRes.json(), archivedRes.json(), linksRes.json()]);
       const estArr = estData.success ? (Array.isArray(estData.data) ? estData.data : []) : [];
@@ -334,7 +336,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     setLinkForms(prev => ({ ...prev, [slot]: { ...prev[slot], isSaving: true } }));
 
     try {
-      const res = await fetch('/api/fp/portal-links', {
+      const res = await fetch(`${API_BASE}/api/fp/portal-links`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ link_slot: slot, heading: form.heading.trim(), url: form.url.trim() })
@@ -590,7 +592,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     setSendingEmailId(estimate.id);
     
     try {
-      const res = await fetch('/api/fp/estimates/send-email', {
+      const res = await fetch(`${API_BASE}/api/fp/estimates/send-email`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ estimateId: estimate.id, email: clientEmail })
@@ -738,7 +740,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         description: estimateForm.description || ''
       };
 
-      const res = await fetch('/api/fp/estimates', {
+      const res = await fetch(`${API_BASE}/api/fp/estimates`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -2520,7 +2522,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     if (!addonForm.serviceName.trim()) { showToast('Enter service name', 'error'); return; }
     if (!addonForm.price || parseFloat(addonForm.price) <= 0) { showToast('Enter valid price', 'error'); return; }
     try {
-      const res = await fetch('/api/fp/addons', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ property_type: addonSelectedPropertyType, service_name: addonForm.serviceName, frequency_count: parseInt(addonForm.frequencyCount) || 1, frequency_type: addonForm.frequencyType, billing_cycle: addonForm.billingCycle, price: parseFloat(addonForm.price), description: addonForm.description || '' }) });
+      const res = await fetch(`${API_BASE}/api/fp/addons`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ property_type: addonSelectedPropertyType, service_name: addonForm.serviceName, frequency_count: parseInt(addonForm.frequencyCount) || 1, frequency_type: addonForm.frequencyType, billing_cycle: addonForm.billingCycle, price: parseFloat(addonForm.price), description: addonForm.description || '' }) });
       const result = await res.json();
       if (res.ok || result.success) { showToast('Add-on created!'); setAddonForm({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' }); setAddonSelectedPropertyType(null); loadData(); setAddonActiveTab('all-addons'); }
       else showToast(result.message || 'Failed', 'error');
@@ -2952,7 +2954,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const handleArchiveEstimate = async (id) => { try { const res = await fetch(`/api/fp/estimates/${id}/archive`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Estimate archived'); loadData(); } } catch (e) { showToast('Failed to archive', 'error'); } };
   const handleRestoreEstimate = async (id) => { try { const res = await fetch(`/api/fp/estimates/${id}/restore`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Estimate restored'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
   const handleDeletePermanent = async (id) => { try { const res = await fetch(`/api/fp/estimates/${id}/permanent`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted permanently'); setDeleteConfirm(null); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
-  const handleDeleteAllArchived = async () => { try { const res = await fetch('/api/fp/estimates/archived/delete-all', { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); const result = await res.json(); if (result.success || res.status === 201) { showToast(`${result.deletedCount || archivedEstimates.length} archived deleted`); setShowDeleteAllConfirm(false); loadData(); } else { showToast(result.message || 'Failed', 'error'); } } catch (e) { showToast('Failed to delete all', 'error'); } };
+  const handleDeleteAllArchived = async () => { try { const res = await fetch(`${API_BASE}/api/fp/estimates/archived/delete-all`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); const result = await res.json(); if (result.success || res.status === 201) { showToast(`${result.deletedCount || archivedEstimates.length} archived deleted`); setShowDeleteAllConfirm(false); loadData(); } else { showToast(result.message || 'Failed', 'error'); } } catch (e) { showToast('Failed to delete all', 'error'); } };
   const handleDownloadPDF = (estimate) => { 
     try { 
       // Use the same export logic as handleExportPDF for consistency

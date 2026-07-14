@@ -1,6 +1,8 @@
 import { safeSessionStorage } from '../utils/safeStorage';
 import { useState } from 'react';
 import { Shield, Eye, EyeOff, AlertCircle } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import SetPassword from './SetPassword';
 import ForgotPassword from './ForgotPassword';
 
@@ -22,7 +24,7 @@ const Login = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/staff/login', {
+      const response = await fetch(`${API_BASE}/api/staff/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

@@ -3,6 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { Store, Search, RefreshCw, X, AlertCircle, CheckCircle, Eye, Wrench, Zap, Wind, Sparkles, Shield } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const SERVICE_TYPES = [
   { id: 'all', label: 'All Vendors', icon: Store },
   { id: 'Plumbing', label: 'Plumbing', icon: Wrench },
@@ -29,7 +31,7 @@ const SupervisorVendors = ({ user }) => {
   const fetchVendors = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/supervisor/vendors', { headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch(`${API_BASE}/api/supervisor/vendors`, { headers: { 'Authorization': `Bearer ${token}` } });
       const result = await response.json();
       if (result.success) setVendors(result.data);
     } catch (error) {

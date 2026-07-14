@@ -8,6 +8,8 @@ import {
   Package, Plus, Calendar, DollarSign, Receipt, Tag, Users, UserCheck, RefreshCw,
   Edit2, Save, Truck, UserPlus
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import VendorAssignmentModal from '../components/VendorAssignmentModal';
 import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
@@ -419,7 +421,7 @@ const Properties = () => {
   const fetchPropertyVendorAssignments = async (propertyId) => {
     setLoadingVendorAssignments(true);
     try {
-      const response = await fetch('/api/vendors/assignments', {
+      const response = await fetch(`${API_BASE}/api/vendors/assignments`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();

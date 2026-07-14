@@ -5,8 +5,7 @@ import {
   CheckCircle, Clock, Eye, Building2, User, Camera, Upload, FileText, Image, List
 } from 'lucide-react';
 
-// Use empty string for relative URLs - uploads are served at /uploads on same domain
-const API_BASE = '';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const ExecutiveWorkOrders = ({ user }) => {
   const [workOrders, setWorkOrders] = useState([]);
@@ -59,7 +58,7 @@ const ExecutiveWorkOrders = ({ user }) => {
   const fetchWorkOrders = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/executive/work-orders', { headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch(`${API_BASE}/api/executive/work-orders`, { headers: { 'Authorization': `Bearer ${token}` } });
       const result = await response.json();
       if (result.success) setWorkOrders(result.data || []);
     } catch (error) {
@@ -72,9 +71,9 @@ const ExecutiveWorkOrders = ({ user }) => {
   const fetchDependencies = async () => {
     try {
       const [propRes, catRes, custRes] = await Promise.all([
-        fetch('/api/executive/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/executive/categories', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/executive/customers', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`${API_BASE}/api/executive/properties`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/executive/categories`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/executive/customers`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
       const [propData, catData, custData] = await Promise.all([propRes.json(), catRes.json(), custRes.json()]);
       if (propData.success) setProperties(propData.data);
@@ -162,7 +161,7 @@ const ExecutiveWorkOrders = ({ user }) => {
         submitData.subcategoryName = selectedSubcat?.name || '';
       }
       
-      const response = await fetch('/api/executive/work-orders', {
+      const response = await fetch(`${API_BASE}/api/executive/work-orders`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(submitData)

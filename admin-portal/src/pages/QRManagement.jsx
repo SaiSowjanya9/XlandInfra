@@ -8,6 +8,8 @@ import {
   Check, AlertCircle, Filter, Search, Settings, Share2
 } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const QRManagement = () => {
   // Check if user is Operations Manager (view-only access)
   const currentUser = JSON.parse(safeStorage.getItem('pm_current_user') || '{}');
@@ -56,7 +58,7 @@ const QRManagement = () => {
 
   const fetchQRCodes = async () => {
     try {
-      const response = await fetch('/api/qr/codes');
+      const response = await fetch(`${API_BASE}/api/qr/codes`);
       const result = await response.json();
       if (result.success) {
         setQrCodes(result.data);
@@ -74,7 +76,7 @@ const QRManagement = () => {
   const fetchOverview = async (silent = false) => {
     try {
       if (!silent) setRefreshing(true);
-      const response = await fetch('/api/qr/analytics/overview');
+      const response = await fetch(`${API_BASE}/api/qr/analytics/overview`);
       const result = await response.json();
       if (result.success) {
         setOverview(result.data);
@@ -103,7 +105,7 @@ const QRManagement = () => {
 
   const handleCreateQR = async (formData) => {
     try {
-      const response = await fetch('/api/qr/codes', {
+      const response = await fetch(`${API_BASE}/api/qr/codes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

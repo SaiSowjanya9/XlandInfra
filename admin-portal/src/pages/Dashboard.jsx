@@ -94,7 +94,7 @@ const Dashboard = () => {
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch('/api/admin/notifications');
+      const response = await fetch(`${API_BASE}/api/admin/notifications`);
       const result = await response.json();
       if (result.success && result.data) {
         setNotifications(result.data);
@@ -148,7 +148,7 @@ const Dashboard = () => {
 
   const markAllAsRead = async () => {
     try {
-      await fetch('/api/admin/notifications/read-all', { method: 'PUT' });
+      await fetch(`${API_BASE}/api/admin/notifications/read-all`, { method: 'PUT' });
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (error) {

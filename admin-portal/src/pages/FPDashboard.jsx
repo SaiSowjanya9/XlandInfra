@@ -17,6 +17,8 @@ import {
   Briefcase,
   Shield
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 import { Link } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 
@@ -36,7 +38,7 @@ const FPDashboard = ({ user }) => {
     
     try {
       const token = getAuthToken();
-      const response = await fetch('/api/fp/dashboard', {
+      const response = await fetch(`${API_BASE}/api/fp/dashboard`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, AlertCircle, CheckCircle, Lock, Key, Shield, ArrowLeft } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const BackgroundEffects = () => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none">
     <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-gradient-to-br from-amber-500/20 via-yellow-400/10 to-transparent rounded-full blur-[100px] animate-pulse" />
@@ -79,7 +81,7 @@ const ResetPassword = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/staff/reset-password', {
+      const response = await fetch(`${API_BASE}/api/staff/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

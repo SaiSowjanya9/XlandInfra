@@ -8,6 +8,8 @@ import {
   Loader2
 } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 // Employee role definitions with colors
 const EMPLOYEE_ROLES = {
   manager: {
@@ -88,7 +90,7 @@ const EmployeeManagement = () => {
   const loadEmployees = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/staff', {
+      const response = await fetch(`${API_BASE}/api/staff`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -239,7 +241,7 @@ const EmployeeManagement = () => {
           sendEmail: true
         };
         
-        const response = await fetch('/api/staff', {
+        const response = await fetch(`${API_BASE}/api/staff`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
