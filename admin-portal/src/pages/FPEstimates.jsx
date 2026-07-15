@@ -145,19 +145,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   
   // Sync estimate creation step with URL for browser back button support
   useEffect(() => {
-    // When state changes, update URL
+    // When state changes, update URL - only if URL doesn't already match
     if (defaultTab === 'create') {
+      let targetStep = '';
       if (estimateType === 'property-based' && selectedProperty) {
-        updateUrlParam('estimateStep', 'property-form');
+        targetStep = 'property-form';
       } else if (estimateType === 'property-based') {
-        updateUrlParam('estimateStep', 'property-id');
+        targetStep = 'property-id';
       } else if (estimateType === 'direct') {
-        updateUrlParam('estimateStep', 'direct-form');
-      } else {
-        updateUrlParam('estimateStep', '');
+        targetStep = 'direct-form';
+      }
+      // Only update if different from current URL to prevent infinite loop
+      if ((urlEstimateStep || '') !== targetStep) {
+        updateUrlParam('estimateStep', targetStep);
       }
     }
-  }, [estimateType, selectedProperty, defaultTab]);
+  }, [estimateType, selectedProperty, defaultTab, urlEstimateStep]);
   
   // Handle browser back button - sync URL to state
   useEffect(() => {
