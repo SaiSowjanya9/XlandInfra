@@ -338,7 +338,7 @@ const AssignedVendors = ({ user }) => {
     }
     if (zoneFilter && a.propertyZone !== zoneFilter && a.property_zone !== zoneFilter) return false;
     if (serviceTypeFilter && a.serviceType !== serviceTypeFilter && a.service_type !== serviceTypeFilter) return false;
-    if (propertyFilter && (a.property_code || a.propertyCode) !== propertyFilter) return false;
+    if (propertyFilter && !(a.property_code || a.propertyCode || '').toLowerCase().includes(propertyFilter.toLowerCase())) return false;
     return true;
   });
 
@@ -554,7 +554,6 @@ const AssignedVendors = ({ user }) => {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Rate</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property ID</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property Code</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Assigned</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
@@ -586,9 +585,6 @@ const AssignedVendors = ({ user }) => {
                       </td>
                       <td className="py-4 px-4 text-center">
                         <span className="text-sm text-gray-900">{assignment.coverage_per_day || assignment.coverage || '0'}</span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="text-sm font-mono text-gray-700">{assignment.property_id || assignment.propertyId || '-'}</span>
                       </td>
                       <td className="py-4 px-4">
                         <span className="text-sm font-mono text-blue-600">{assignment.property_code || assignment.propertyCode || '-'}</span>
