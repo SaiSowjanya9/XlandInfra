@@ -331,13 +331,14 @@ const AssignedVendors = ({ user }) => {
         a.vendorId?.toLowerCase().includes(q) ||
         a.propertyName?.toLowerCase().includes(q) ||
         a.propertyId?.toLowerCase().includes(q) ||
+        (a.property_code || a.propertyCode || '').toLowerCase().includes(q) ||
         a.serviceType?.toLowerCase().includes(q) ||
         a.estimateId?.toLowerCase().includes(q);
       if (!matchesSearch) return false;
     }
     if (zoneFilter && a.propertyZone !== zoneFilter && a.property_zone !== zoneFilter) return false;
     if (serviceTypeFilter && a.serviceType !== serviceTypeFilter && a.service_type !== serviceTypeFilter) return false;
-    if (propertyFilter && (a.propertyId || a.property_id) !== propertyFilter) return false;
+    if (propertyFilter && (a.property_code || a.propertyCode) !== propertyFilter) return false;
     return true;
   });
 
@@ -511,7 +512,7 @@ const AssignedVendors = ({ user }) => {
             >
               <option value="">All Properties</option>
               {allProperties.map(p => (
-                <option key={p.id} value={p.id}>{p.id}</option>
+                <option key={p.code} value={p.code}>{p.code}</option>
               ))}
             </select>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
@@ -554,6 +555,7 @@ const AssignedVendors = ({ user }) => {
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Rate</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property ID</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property Code</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Assigned</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
@@ -587,6 +589,9 @@ const AssignedVendors = ({ user }) => {
                       </td>
                       <td className="py-4 px-4">
                         <span className="text-sm font-mono text-gray-700">{assignment.property_id || assignment.propertyId || '-'}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm font-mono text-blue-600">{assignment.property_code || assignment.propertyCode || '-'}</span>
                       </td>
                       <td className="py-4 px-4">
                         <span className="text-sm text-gray-600">
