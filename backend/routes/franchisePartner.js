@@ -2141,7 +2141,7 @@ router.get('/vendors/assignments', requireFPScope, async (req, res) => {
         COALESCE(op.address, p.address) as address, 
         COALESCE(op.city, p.city) as city, 
         COALESCE(op.zone, p.zone_id) as property_zone,
-        COALESCE(p.property_code, op.property_code) as property_code,
+        op.property_code as property_code,
         v.owner_name as vendor_name, v.vendor_id as vendor_code, 
         v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
         v.zone as zone_name, v.area_name as area, v.rate_per_visit, v.coverage_per_day
