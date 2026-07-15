@@ -539,7 +539,6 @@ const SupervisorCustomers = ({ user, defaultTab = 'list' }) => {
             onClick={() => setActiveView('add')}
             className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
           >
-            <Plus className="w-5 h-5" />
             Add Customer
           </button>
         </div>
@@ -848,8 +847,7 @@ const SupervisorCustomers = ({ user, defaultTab = 'list' }) => {
                       onClick={() => setShowAddDivisionModal(true)}
                       className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium flex items-center gap-1"
                     >
-                      <Plus className="w-4 h-4" />
-                      Add
+                      Add 
                     </button>
                   </div>
                   <FieldError show={hasError && !formData.division} message="Please select a division" />
@@ -902,7 +900,6 @@ const SupervisorCustomers = ({ user, defaultTab = 'list' }) => {
                   onClick={addAssociationContact}
                   className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm font-medium"
                 >
-                  <Plus className="w-4 h-4" />
                   Add Contact
                 </button>
               </div>

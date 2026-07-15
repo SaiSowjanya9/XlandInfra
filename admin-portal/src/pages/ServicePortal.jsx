@@ -1024,7 +1024,6 @@ const Onboarding = ({ admin }) => {
               onClick={addAssociationContact}
               className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm font-medium"
             >
-              <Plus className="w-4 h-4" />
               Add Contact
             </button>
           </div>

@@ -22,6 +22,20 @@ import {
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+// Service Types - shared with Add Vendor section
+const SERVICE_TYPES = [
+  'Plumbing',
+  'Electrical',
+  'HVAC',
+  'Cleaning',
+  'Security',
+  'Landscaping',
+  'Pest Control',
+  'Painting',
+  'Carpentry',
+  'Lift',
+  'General Maintenance'
+];
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import * as XLSX from 'xlsx';
@@ -239,7 +253,6 @@ const FPVendors = ({ user }) => {
             onClick={() => navigate('/fp/vendors/add')}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
-            <Plus className="w-4 h-4" />
             <span>Add Vendor</span>
           </button>
         </div>
@@ -603,7 +616,12 @@ const FPVendors = ({ user }) => {
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Service Type</label>
-                    <input name="serviceType" defaultValue={editVendor.service_type || editVendor.serviceType} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                    <select name="serviceType" defaultValue={editVendor.service_type || editVendor.serviceType} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none">
+                      <option value="">Select Service</option>
+                      {SERVICE_TYPES.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Zone</label>

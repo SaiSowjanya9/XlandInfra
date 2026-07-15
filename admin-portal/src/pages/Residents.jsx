@@ -149,7 +149,6 @@ const Residents = ({ admin }) => {
           onClick={() => { resetForm(); setShowModal(true); }}
           className="btn-primary mt-4 sm:mt-0 flex items-center space-x-2"
         >
-          <Plus className="w-5 h-5" />
           <span>Add Resident</span>
         </button>
       </div>

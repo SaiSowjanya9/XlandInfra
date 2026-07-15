@@ -11,6 +11,20 @@ import * as XLSX from 'xlsx';
 import { useFP } from '../contexts/FPContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+// Service Types - shared with Add Vendor section
+const SERVICE_TYPES = [
+  'Plumbing',
+  'Electrical',
+  'HVAC',
+  'Cleaning',
+  'Security',
+  'Landscaping',
+  'Pest Control',
+  'Painting',
+  'Carpentry',
+  'Lift',
+  'General Maintenance'
+];
 
 // Service Type Tabs (like Client Submissions tabs)
 const TABS = [
@@ -966,17 +980,9 @@ const VendorDetails = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
                     >
                       <option value="">Select Service</option>
-                      <option value="Plumbing">Plumbing</option>
-                      <option value="Electrical">Electrical</option>
-                      <option value="HVAC">HVAC</option>
-                      <option value="Cleaning">Cleaning</option>
-                      <option value="Security">Security</option>
-                      <option value="Landscaping">Landscaping</option>
-                      <option value="Pest Control">Pest Control</option>
-                      <option value="Painting">Painting</option>
-                      <option value="Carpentry">Carpentry</option>
-                      <option value="Lift">Lift</option>
-                      <option value="General Maintenance">General Maintenance</option>
+                      {SERVICE_TYPES.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="flex items-center gap-3 pt-5">

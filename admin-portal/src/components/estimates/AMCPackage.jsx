@@ -438,7 +438,7 @@ const AMCPackage = ({ showToast }) => {
                 }}
                 className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-200 focus:border-green-500 appearance-none bg-white"
               >
-                <option value="">+ Add Service from Add-ons</option>
+                <option value="">Add Service from Add-ons</option>
                 {availableAddons.map(addon => (
                     <option key={addon.addonId} value={addon.addonId}>
                       {addon.addonId} - {addon.services?.map(s => s.name).join(', ')} (₹{(addon.totalPrice || 0).toLocaleString()})

@@ -177,7 +177,6 @@ const ZoneManagement = () => {
           onClick={() => { setShowAddModal(true); setNewZoneName(''); }}
           className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
         >
-          <Plus className="w-4 h-4" />
           Add Zone
         </button>
       </div>
@@ -426,7 +425,6 @@ const ZoneManagement = () => {
                   onClick={() => setShowAddEmployeeToZone(!showAddEmployeeToZone)} 
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                 >
-                  <Plus className="w-4 h-4" />
                   Add Employee
                 </button>
                 <button onClick={() => { setViewEmployeesZone(null); setShowAddEmployeeToZone(false); }} className="p-2 hover:bg-gray-100 rounded-lg">
