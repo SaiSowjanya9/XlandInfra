@@ -2141,6 +2141,7 @@ router.get('/vendors/assignments', requireFPScope, async (req, res) => {
         COALESCE(op.address, p.address) as address, 
         COALESCE(op.city, p.city) as city, 
         COALESCE(op.zone, p.zone_id) as property_zone,
+        COALESCE(p.property_code, op.property_code) as property_code,
         v.owner_name as vendor_name, v.vendor_id as vendor_code, 
         v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
         v.zone as zone_name, v.area_name as area, v.rate_per_visit, v.coverage_per_day
@@ -2163,6 +2164,8 @@ router.get('/vendors/assignments', requireFPScope, async (req, res) => {
       serviceType: a.service_type,
       propertyId: a.property_id,
       property_id: a.property_id,
+      propertyCode: a.property_code,
+      property_code: a.property_code,
       propertyName: a.property_name,
       propertyType: a.property_type,
       propertyZone: a.property_zone,
@@ -4774,6 +4777,21 @@ router.get('/zones', requireFPScope, async (req, res) => {
         if (z.zone_id && !allZoneNames.has(z.zone_id)) {
           allZoneNames.add(z.zone_id);
           combinedZones.push({ id: `prop-${z.zone_id}`, name: z.zone_id });
+        }
+      });
+    } catch (_) {}
+
+    // 4. Get zones from onboarded_properties table (customer zones)
+    try {
+      const [onboardedZones] = await pool.execute(
+        `SELECT DISTINCT zone FROM onboarded_properties WHERE franchise_partner_id = ? AND zone IS NOT NULL AND zone != ''
+         AND (status = 'active' OR status IS NULL)`,
+        [req.fpId]
+      );
+      onboardedZones.forEach(z => {
+        if (z.zone && !allZoneNames.has(z.zone)) {
+          allZoneNames.add(z.zone);
+          combinedZones.push({ id: `onboarded-${z.zone}`, name: z.zone });
         }
       });
     } catch (_) {}

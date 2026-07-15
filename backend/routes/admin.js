@@ -2201,6 +2201,24 @@ router.get('/all-employee-zones', authenticate, adminOnly, async (req, res) => {
       console.log('[Admin] Error fetching property zones:', e.message);
     }
     
+    // 3b. Get zones from onboarded_properties table (customer zones)
+    try {
+      const [onboardedZones] = await pool.execute(
+        `SELECT DISTINCT zone FROM onboarded_properties WHERE zone IS NOT NULL AND zone != ''
+         AND (status = 'active' OR status IS NULL)`
+      );
+      console.log('[Admin] Onboarded property zones:', onboardedZones.length, onboardedZones.map(z => z.zone));
+      onboardedZones.forEach(z => {
+        const zoneName = String(z.zone);
+        if (zoneName && !allZoneNames.has(zoneName)) {
+          allZoneNames.add(zoneName);
+          combinedZones.push({ id: `onboarded-${zoneName}`, name: zoneName });
+        }
+      });
+    } catch (e) {
+      console.log('[Admin] Error fetching onboarded property zones:', e.message);
+    }
+    
     // 4. MOST IMPORTANT: Get zones from fp_employee_zones (where zones are actually stored)
     try {
       const [assignedZones] = await pool.execute(
@@ -2337,6 +2355,7 @@ router.get('/all-vendor-assignments', authenticate, adminOnly, async (req, res) 
               ov.poc_name, ov.poc_mobile, ov.poc_email, ov.service_verified,
               COALESCE(p.name, op.community_name) as property_name, 
               COALESCE(p.property_id, op.property_id) as propertyId,
+              COALESCE(p.property_code, op.property_code) as property_code,
               COALESCE(p.property_type, op.property_type) as property_type, 
               COALESCE(p.zone_id, op.zone) as property_zone,
               COALESCE(p.franchise_partner_id, op.franchise_partner_id) as fp_id,
@@ -2691,6 +2710,7 @@ router.get('/fp-view/:fpId/vendor-assignments', authenticate, adminOnly, async (
       `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at as assigned_date, pva.is_active,
               COALESCE(p.name, op.community_name) as property_name,
               COALESCE(p.property_id, op.property_id) as propertyId,
+              COALESCE(p.property_code, op.property_code) as property_code,
               COALESCE(p.zone_id, op.zone) as property_zone,
               COALESCE(p.property_type, op.property_type) as property_type,
               v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
@@ -2843,6 +2863,25 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
       });
     } catch (e) {
       console.log(`[Admin FP ${fpIdNum}] Error fetching property zones:`, e.message);
+    }
+    
+    // 3b. Get zones from onboarded_properties table for this FP (customer zones)
+    try {
+      const [onboardedZones] = await pool.execute(
+        `SELECT DISTINCT zone FROM onboarded_properties WHERE franchise_partner_id = ? AND zone IS NOT NULL AND zone != ''
+         AND (status = 'active' OR status IS NULL)`,
+        [fpIdNum]
+      );
+      console.log(`[Admin FP ${fpIdNum}] Onboarded property zones:`, onboardedZones.length, onboardedZones.map(z => z.zone));
+      onboardedZones.forEach(z => {
+        const zoneName = String(z.zone);
+        if (zoneName && !allZoneNames.has(zoneName)) {
+          allZoneNames.add(zoneName);
+          combinedZones.push({ id: `onboarded-${zoneName}`, name: zoneName });
+        }
+      });
+    } catch (e) {
+      console.log(`[Admin FP ${fpIdNum}] Error fetching onboarded property zones:`, e.message);
     }
     
     // 4. MOST IMPORTANT: Get zones from fp_employee_zones for this FP
