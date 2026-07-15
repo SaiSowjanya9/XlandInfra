@@ -3099,10 +3099,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       })()}
                     </>
                   )}
-                  {/* Apartment-specific: Tower/Building Name, Block Number, Number of Units with Bedroom Counts */}
+                  {/* Apartment-specific: Block Details with Unit Type Breakdown - Same UI as GC */}
                   {['APT', 'apartment', 'Apartment'].includes(viewEstimate.property_type) && (
                     <>
-                      {viewEstimate.tower_name && <div><p className="text-xs text-gray-500">Tower/Building Name</p><p className="font-medium text-sm">{viewEstimate.tower_name}</p></div>}
                       {viewEstimate.block_number && <div><p className="text-xs text-gray-500">Block Number</p><p className="font-medium text-sm">{viewEstimate.block_number}</p></div>}
                       <div><p className="text-xs text-gray-500">Number of Units</p><p className="font-medium text-sm">{viewEstimate.total_units || viewEstimate.number_of_units || '-'}</p></div>
                       {(() => {
@@ -3111,15 +3110,25 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
                         if (!hasUnitTypes) return null;
                         const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK' };
+                        const buildingName = viewEstimate.tower_name || viewEstimate.block_name || 'Building';
+                        const totalUnits = viewEstimate.total_units || viewEstimate.number_of_units || 0;
                         return (
                           <div className="col-span-2 mt-2">
-                            <p className="text-xs text-gray-500 mb-2">Unit Type Breakdown</p>
-                            <div className="flex flex-wrap gap-2 p-3 bg-blue-50 rounded-lg">
-                              {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
-                                <span key={type} className="px-3 py-1.5 bg-white border border-blue-200 text-blue-700 text-sm rounded-full font-medium">
-                                  {unitTypeLabels[type] || type}: {count}
-                                </span>
-                              ))}
+                            <p className="text-xs text-gray-500 mb-2">Block Details</p>
+                            <div className="bg-blue-50 p-3 rounded-lg space-y-3">
+                              <div className="bg-white p-3 rounded border border-blue-100">
+                                <div className="flex justify-between items-center mb-2">
+                                  <p className="text-sm text-blue-600 font-semibold">{buildingName}</p>
+                                  <p className="text-sm text-gray-700 font-medium">{totalUnits} units</p>
+                                </div>
+                                <div className="flex flex-wrap gap-2 pt-2 border-t border-blue-50">
+                                  {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
+                                    <span key={type} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                      {unitTypeLabels[type] || type}: {count}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         );
