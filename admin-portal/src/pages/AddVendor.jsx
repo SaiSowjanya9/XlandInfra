@@ -109,13 +109,15 @@ const AddVendor = ({ admin }) => {
   ]);
   const [serviceTypeData, setServiceTypeData] = useState([]);
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
+  const [showAddServiceModal, setShowAddServiceModal] = useState(false);
+  const [newServiceType, setNewServiceType] = useState('');
 
   const token = getAuthToken();
 
   const getServiceTypes = () => serviceTypes;
   
-  const addServiceType = async (newType) => {
-    if (!newType || serviceTypes.some(s => s.toLowerCase() === newType.toLowerCase())) {
+  const handleAddServiceType = async () => {
+    if (!newServiceType.trim() || serviceTypes.some(s => s.toLowerCase() === newServiceType.toLowerCase())) {
       return;
     }
     
@@ -127,14 +129,19 @@ const AddVendor = ({ admin }) => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ name: newType.trim() })
+        body: JSON.stringify({ name: newServiceType.trim() })
       });
       const result = await response.json();
       if (result.success) {
         fetchServiceTypes();
+        updateField('serviceType', newServiceType.trim());
+        setNewServiceType('');
+        setShowAddServiceModal(false);
       }
     } catch (error) {
       console.error('Error adding service type:', error);
+      setNewServiceType('');
+      setShowAddServiceModal(false);
     }
   };
 
@@ -384,10 +391,7 @@ const AddVendor = ({ admin }) => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    const newType = prompt('Enter new service type:');
-                    if (newType) addServiceType(newType);
-                  }}
+                  onClick={() => setShowAddServiceModal(true)}
                   className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
                 >
                   Add
@@ -787,6 +791,52 @@ const AddVendor = ({ admin }) => {
           </button>
         </div>
       </form>
+      {/* Add Service Type Modal */}
+      {showAddServiceModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">Add New Service Type</h2>
+                <button 
+                  onClick={() => { setShowAddServiceModal(false); setNewServiceType(''); }}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <span className="text-xl">&times;</span>
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Service Type Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={newServiceType}
+                onChange={(e) => setNewServiceType(e.target.value)}
+                placeholder="Enter service type name"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                onKeyDown={(e) => e.key === 'Enter' && handleAddServiceType()}
+              />
+            </div>
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+              <button
+                onClick={() => { setShowAddServiceModal(false); setNewServiceType(''); }}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddServiceType}
+                disabled={!newServiceType.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                Add Service Type
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
