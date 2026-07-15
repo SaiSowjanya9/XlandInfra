@@ -41,6 +41,21 @@ const Layout = ({ admin, onLogout, children }) => {
     { path: '/create-customer', icon: FileInput, label: 'Create Customer' },
   ];
 
+  // Color constants for sidebar
+  const colors = {
+    sidebarBg: 'linear-gradient(180deg, #23201B 0%, #1C1A17 50%, #141210 100%)',
+    hoverBg: '#2A241D',
+    activeBg: 'linear-gradient(90deg, #6B5228 0%, #43351F 100%)',
+    activeText: '#FFFFFF',
+    primaryText: '#F5F5F5',
+    secondaryText: '#B8B8B8',
+    primaryGold: '#D4AF37',
+    iconGold: '#D9B650',
+    richGold: '#C9A227',
+    divider: '#3A3127',
+    profileBg: '#1F1C18',
+  };
+
   const NavLink = ({ item, mobile = false, collapsed = false }) => {
     const Icon = item.icon;
     const isActive = location.pathname === item.path;
@@ -48,15 +63,14 @@ const Layout = ({ admin, onLogout, children }) => {
       <Link
         to={item.path}
         onClick={() => mobile && setSidebarOpen(false)}
-        className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-4 py-2.5 rounded-xl transition-all duration-200 ${
-          isActive
-            ? 'bg-amber-500/20 text-amber-400 font-semibold border border-amber-500/30'
-            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-        }`}
+        className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+        style={{ background: isActive ? colors.activeBg : 'transparent', color: isActive ? colors.activeText : colors.primaryText }}
+        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }}
+        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
         title={collapsed ? item.label : ''}
       >
-        <Icon className="w-5 h-5 flex-shrink-0" />
-        {!collapsed && <span className="font-medium">{item.label}</span>}
+        <Icon className="w-5 h-5 flex-shrink-0" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
+        {!collapsed && <span>{item.label}</span>}
       </Link>
     );
   };
@@ -87,16 +101,27 @@ const Layout = ({ admin, onLogout, children }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full bg-slate-900 shadow-xl z-50 transform transition-all duration-300 lg:translate-x-0 ${
+        className={`fixed top-0 left-0 h-full shadow-xl z-50 transform transition-all duration-300 lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64`}
+        style={{ background: colors.sidebarBg }}
       >
         <div className="flex flex-col h-full">
           {/* Logo Header */}
-          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-start'} px-3 h-24 border-b border-slate-700/50`}>
-            <img src="/logo.png" alt="XLAND INFRA" className={`${sidebarCollapsed ? 'h-12' : 'h-16'} w-auto object-contain`} />
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden ml-auto p-2 rounded-xl hover:bg-slate-800 transition-colors">
-              <X className="w-5 h-5 text-slate-400" />
+          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-start'} px-3 h-20`} style={{ borderBottom: `1px solid ${colors.divider}` }}>
+            <img src="/logo.webp" alt="XLAND INFRA" className={`${sidebarCollapsed ? 'h-10' : 'h-12'} w-auto object-contain`} />
+            {!sidebarCollapsed && (
+              <div className="flex flex-col ml-2">
+                <span className="text-lg font-bold tracking-wider" style={{ background: 'linear-gradient(180deg, #D4AF37 0%, #C9A227 50%, #B8960F 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>XLAND INFRA</span>
+                <div className="flex items-center gap-1.5 -mt-0.5">
+                  <div className="w-6 h-[1px]" style={{ background: 'linear-gradient(90deg, transparent, #C9A227)' }}></div>
+                  <span className="text-[9px] tracking-[0.2em] font-medium" style={{ color: '#A08520' }}>PVT LTD</span>
+                  <div className="w-6 h-[1px]" style={{ background: 'linear-gradient(90deg, #C9A227, transparent)' }}></div>
+                </div>
+              </div>
+            )}
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden ml-auto p-2 rounded-xl transition-colors" style={{ color: colors.secondaryText }} onMouseEnter={(e) => e.currentTarget.style.background = colors.hoverBg} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+              <X className="w-5 h-5" />
             </button>
           </div>
 
@@ -107,45 +132,29 @@ const Layout = ({ admin, onLogout, children }) => {
             ))}
           </nav>
 
-          {/* User Info */}
-          <div className="px-3 py-3 border-t border-slate-700/50">
-            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
-              {!sidebarCollapsed && (
+          {/* User Info & Logout */}
+          <div className="px-3 py-4" style={{ borderTop: `1px solid ${colors.divider}` }}>
+            {!sidebarCollapsed ? (
+              <div className="flex items-center justify-between px-3 py-2 rounded-xl" style={{ background: colors.profileBg }}>
                 <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-white">
-                    {admin?.firstName} {admin?.lastName}
-                  </span>
-                  <span className="text-xs text-amber-400 font-medium">
-                    {getRoleDisplay()}
-                  </span>
+                  <span className="text-sm font-semibold" style={{ color: colors.primaryText }}>{admin?.firstName} {admin?.lastName}</span>
+                  <span className="text-xs font-medium" style={{ color: colors.primaryGold }}>{getRoleDisplay()}</span>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Logout Button at Bottom */}
-          <div className="px-3 py-4 border-t border-slate-700/50">
-            <button
-              onClick={onLogout}
-              className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-slate-800 text-amber-400 font-medium 
-                       hover:bg-slate-700 transition-all duration-300 border border-slate-700`}
-              title={sidebarCollapsed ? 'Logout' : ''}
-            >
-              <LogOut className="w-4 h-4" />
-              {!sidebarCollapsed && <span>Logout</span>}
-            </button>
+                <button onClick={onLogout} className="flex items-center justify-center p-2.5 rounded-xl transition-all duration-300" style={{ border: `1px solid ${colors.richGold}`, color: colors.primaryGold }} onMouseEnter={(e) => e.currentTarget.style.background = colors.hoverBg} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title="Logout">
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              <button onClick={onLogout} className="flex items-center justify-center p-2.5 w-full rounded-xl transition-all duration-300" style={{ border: `1px solid ${colors.richGold}`, color: colors.primaryGold }} onMouseEnter={(e) => e.currentTarget.style.background = colors.hoverBg} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title="Logout">
+                <LogOut className="w-5 h-5" />
+              </button>
+            )}
           </div>
         </div>
       </aside>
 
       {/* Collapse Toggle Button - Outside Sidebar */}
-      <button
-        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-        className={`hidden lg:flex fixed top-1/2 -translate-y-1/2 z-50 items-center justify-center w-6 h-12 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-r-lg border border-l-0 border-slate-700 transition-all duration-300 shadow-md ${
-          sidebarCollapsed ? 'left-20' : 'left-64'
-        }`}
-        title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      >
+      <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className={`hidden lg:flex fixed top-1/2 -translate-y-1/2 z-50 items-center justify-center w-6 h-12 rounded-r-lg transition-all duration-300 shadow-md ${sidebarCollapsed ? 'left-20' : 'left-64'}`} style={{ background: '#1C1A17', border: `1px solid ${colors.divider}`, borderLeft: 'none', color: colors.iconGold }} onMouseEnter={(e) => e.currentTarget.style.background = colors.hoverBg} onMouseLeave={(e) => e.currentTarget.style.background = '#1C1A17'} title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
         {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
       </button>
 
