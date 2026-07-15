@@ -48,7 +48,7 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
     { path: '/coordinator/properties', icon: Building2, label: 'Property Management' },
     { path: '/coordinator/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/coordinator/customers/add', icon: UserPlus, label: 'Add Customer' },
-    { path: '/coordinator/employees/zones', icon: Users, label: 'Employee Management', multiLine: true },
+    { path: '/coordinator/employees/zones', icon: MapPin, label: 'Employee Zone Management' },
   ];
 
   // FP Coordinator nav items - same structure as regular coordinator
@@ -57,7 +57,7 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
     { path: '/coordinator/properties', icon: Building2, label: 'Property Management' },
     { path: '/coordinator/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/coordinator/customers/add', icon: UserPlus, label: 'Add Customer' },
-    { path: '/coordinator/employees/zones', icon: Users, label: 'Employee Management', multiLine: true },
+    { path: '/coordinator/employees/zones', icon: MapPin, label: 'Employee Zone Management' },
   ];
 
   const vendorSubItems = [
@@ -135,16 +135,7 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
         title={sidebarCollapsed ? item.label : ''}
       >
         <Icon className="w-5 h-5 flex-shrink-0" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
-        {!sidebarCollapsed && (
-          item.multiLine ? (
-            <span className="text-sm leading-tight">
-              <span className="block">Employee</span>
-              <span className="block">Management</span>
-            </span>
-          ) : (
-            <span className="text-sm max-w-[160px] leading-tight">{item.label}</span>
-          )
-        )}
+        {!sidebarCollapsed && <span className="text-sm max-w-[160px] leading-tight">{item.label}</span>}
       </Link>
     );
   };
