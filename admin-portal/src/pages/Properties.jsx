@@ -225,6 +225,10 @@ const Properties = () => {
 
   // Open edit modal - comprehensive like FP portal
   const openEditModal = (property) => {
+    // Close view modal if open to prevent overlap
+    setViewProperty(null);
+    setPropertyEstimates([]);
+    
     // Parse association_contacts JSON if available
     let contacts = [];
     try {
@@ -1515,7 +1519,7 @@ const Properties = () => {
                 )}
                 {hasFullAccess && (
                   <button
-                    onClick={() => { openEditModal(viewProperty); handleClosePropertyView(); }}
+                    onClick={() => openEditModal(viewProperty)}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
                   >
                     <Edit2 className="w-4 h-4" /> Modify
@@ -1733,7 +1737,7 @@ const Properties = () => {
 
       {/* Edit Property Modal - Comprehensive like FP Portal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
               <div>
