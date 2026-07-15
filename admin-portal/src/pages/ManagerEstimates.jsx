@@ -87,6 +87,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const [loading, setLoading] = useState(true);
   const [estimates, setEstimates] = useState([]);
   const [archivedEstimates, setArchivedEstimates] = useState([]);
+  const [archivedTypeFilter, setArchivedTypeFilter] = useState('all');
   const [amcPackages, setAmcPackages] = useState([]);
   const [addons, setAddons] = useState([]);
   const [properties, setProperties] = useState([]);

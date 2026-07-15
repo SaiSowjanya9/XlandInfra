@@ -35,6 +35,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
   const [viewEstimate, setViewEstimate] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [typeFilter, setTypeFilter] = useState('all');
 
   useEffect(() => {
     loadData();
@@ -119,16 +120,31 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
 
   return (
     <div className="space-y-4">
-      {/* Header with Delete All button */}
-      {archivedEstimates.length > 0 && !isOpsManager && (
-        <div className="flex justify-end">
-          <button
-            onClick={() => setShowDeleteAllConfirm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete All ({archivedEstimates.length})
-          </button>
+      {/* Header with Filter and Delete All button */}
+      {archivedEstimates.length > 0 && (
+        <div className="flex items-center justify-between gap-4">
+          {/* Type Filter */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600">Filter by Type:</label>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Types</option>
+              <option value="property-based">Property Based</option>
+              <option value="direct">Direct</option>
+            </select>
+          </div>
+          {!isOpsManager && (
+            <button
+              onClick={() => setShowDeleteAllConfirm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete All ({archivedEstimates.length})
+            </button>
+          )}
         </div>
       )}
 
@@ -153,7 +169,14 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {archivedEstimates.map((estimate) => {
+              {archivedEstimates
+              .filter(est => {
+                if (typeFilter === 'all') return true;
+                if (typeFilter === 'property-based') return est.estimateType === 'property-based' || est.estimateType === 'property_based' || est.propertyId || est.property_id;
+                if (typeFilter === 'direct') return est.estimateType === 'direct' && !est.propertyId && !est.property_id;
+                return true;
+              })
+              .map((estimate) => {
                 const Icon = PROPERTY_ICONS[estimate.propertyType] || (estimate.estimateType === 'direct' ? User : Building2);
                 return (
                   <tr key={estimate.estimateId} className="hover:bg-gray-50">
@@ -164,7 +187,9 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                       <div className="flex items-center gap-2">
                         <Icon className="w-4 h-4 text-gray-400" />
                         <span className="text-sm text-gray-600">
-                          {estimate.estimateType === 'property-based' ? estimate.propertyType : 'Direct-Based'}
+                          {(estimate.estimateType === 'property-based' || estimate.estimateType === 'property_based' || estimate.propertyId || estimate.property_id) 
+                            ? 'Property Based' 
+                            : 'Direct'}
                         </span>
                       </div>
                     </td>

@@ -1,8 +1,8 @@
 const PDFDocument = require('pdfkit');
 const path = require('path');
 
-// Logo file path - icon only (without text) for horizontal layout
-const LOGO_PATH = path.join(__dirname, '../assets/logo-icon.png');
+// Logo file path - icon only (without text) for horizontal layout - OPTIMIZED for smaller PDF size
+const LOGO_PATH = path.join(__dirname, '../assets/logo-icon-optimized.png');
 
 // Generate estimate PDF and return as buffer
 const generateEstimatePDF = async (estimate) => {
