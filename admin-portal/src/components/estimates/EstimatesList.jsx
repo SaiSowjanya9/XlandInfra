@@ -591,11 +591,14 @@ const EstimatesList = ({
                                     </div>
                                     {hasUnitTypes && (
                                       <div className="flex flex-wrap gap-2">
-                                        {Object.entries(unitTypes).filter(([_, count]) => count > 0).map(([type, count]) => (
-                                          <span key={type} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                                            {type}: {count}
-                                          </span>
-                                        ))}
+                                        {Object.entries(unitTypes).filter(([_, count]) => count > 0).map(([type, count]) => {
+                                          const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK', fiveBed: '5 BHK' };
+                                          return (
+                                            <span key={type} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                              {unitTypeLabels[type] || type}: {count}
+                                            </span>
+                                          );
+                                        })}
                                       </div>
                                     )}
                                   </div>
