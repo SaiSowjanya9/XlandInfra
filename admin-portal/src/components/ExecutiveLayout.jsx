@@ -121,7 +121,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
         title={sidebarCollapsed ? item.label : ''}
       >
         <Icon className="w-5 h-5 flex-shrink-0" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
-        {!sidebarCollapsed && <span className="text-sm">{item.label}</span>}
+        {!sidebarCollapsed && <span className="text-sm max-w-[160px] leading-tight">{item.label}</span>}
       </Link>
     );
   };
