@@ -431,7 +431,6 @@ const FPEmployeeZones = ({ user }) => {
           onClick={() => setShowCreateZone(true)}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium shadow-sm"
         >
-          <Plus className="w-4 h-4" />
           Add Zone
         </button>
       </div>

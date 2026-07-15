@@ -2311,7 +2311,7 @@ const FPProperties = ({ user }) => {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-base font-semibold text-gray-900">Contact Information</h3>
                   <button type="button" onClick={addEditContact} className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm font-medium">
-                    <Plus className="w-4 h-4" /> Add Contact
+                    Add Contact
                   </button>
                 </div>
                 <div className="space-y-4">

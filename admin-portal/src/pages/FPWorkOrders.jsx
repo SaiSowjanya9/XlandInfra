@@ -1054,7 +1054,7 @@ const FPWorkOrders = ({ user }) => {
                     )}
                   </div>
                   <button type="button" onClick={() => setShowAddCategoryModal(true)} className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
-                    <Plus className="w-4 h-4" /><span>Add</span>
+                    <span>Add</span>
                   </button>
                 </div>
               </div>

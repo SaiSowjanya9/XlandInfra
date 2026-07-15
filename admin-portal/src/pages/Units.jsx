@@ -124,7 +124,7 @@ const Units = ({ admin }) => {
         </div>
         {admin.role === 'admin' && (
           <button onClick={() => { resetForm(); setShowModal(true); }} className="btn-primary mt-4 sm:mt-0 flex items-center space-x-2">
-            <Plus className="w-5 h-5" /><span>Add Unit</span>
+            <span>Add Unit</span>
           </button>
         )}
       </div>

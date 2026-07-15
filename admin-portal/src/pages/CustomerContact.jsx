@@ -518,7 +518,7 @@ const CustomerContact = ({ user }) => {
                       {services.map(s => (
                         <option key={s} value={s}>{s}</option>
                       ))}
-                      <option value="__add_new__">+ Add New Service</option>
+                      <option value="__add_new__">Add New Service</option>
                     </select>
                   </div>
                   <div className="col-span-2">
@@ -584,7 +584,6 @@ const CustomerContact = ({ user }) => {
               onClick={addServiceRow}
               className="mt-4 flex items-center gap-2 px-4 py-2 text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors"
             >
-              <Plus className="w-4 h-4" />
               Add Service
             </button>
             </div>
