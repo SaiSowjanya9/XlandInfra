@@ -4,7 +4,7 @@ import {
   Search, Trash2, X, Check, Building2, Home, TreePine, Map,
   Eye, ChevronDown, AlertCircle, Bell, Clock, Hammer, Lock, 
   ArrowLeft, Download, ExternalLink, Layers, LayoutGrid, UserPlus, Users,
-  FileText, Store, Package, Shield, RefreshCw, Edit2, Truck, RotateCcw
+  FileText, Store, Package, Shield, RefreshCw, Edit2, Truck, RotateCcw, Save
 } from 'lucide-react';
 import { getProperties, deleteProperty, getNotifications, markAllNotificationsRead } from '../utils/propertyStore';
 import { getZoneNames, createZone } from '../utils/zoneStore';
@@ -117,6 +117,11 @@ const CustomerSubmissions = () => {
   // Vendor assignments for property view
   const [propertyVendorAssignments, setPropertyVendorAssignments] = useState([]);
   const [loadingVendorAssignments, setLoadingVendorAssignments] = useState(false);
+
+  // Edit property state
+  const [editProperty, setEditProperty] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Load properties from FP-specific API or all FPs (Admin mode)
   const loadData = useCallback(async (showLoading = true) => {
@@ -417,6 +422,101 @@ const CustomerSubmissions = () => {
     }
     setPermanentDeleteConfirm(null);
   };
+
+  // Open edit property modal
+  const openEditModal = (property) => {
+    let contacts = [];
+    try {
+      if (property.association_contacts) {
+        contacts = typeof property.association_contacts === 'string' 
+          ? JSON.parse(property.association_contacts) 
+          : property.association_contacts;
+      }
+    } catch (e) { contacts = []; }
+    
+    if (contacts.length === 0 && (property.contactPerson || property.contactEmail || property.contactPhone)) {
+      contacts = [{ name: property.contactPerson || '', email: property.contactEmail || '', phone: property.contactPhone?.replace(/^\+91\s?/, '') || '' }];
+    }
+    if (contacts.length === 0) contacts = [{ name: '', email: '', phone: '' }];
+    
+    setEditFormData({
+      id: property.id,
+      name: property.name || '',
+      propertyType: property.propertyType || property.entryType || '',
+      entryType: property.entryType || '',
+      address: property.address || '',
+      city: property.city || '',
+      state: property.state || '',
+      zipCode: property.zipCode || '',
+      zone: property.zone || '',
+      division: property.division || '',
+      area: property.area || '',
+      contacts: contacts,
+      blockInfo: property.blockInfo || '',
+      numberOfUnits: property.numberOfUnits || 0,
+      villaPlotNumber: property.villaPlotNumber || '',
+      flatBlockInfo: property.flatBlockInfo || '',
+      watchmanName: property.watchmanName || '',
+      watchmanContact: property.watchmanContact?.replace(/^\+91\s?/, '') || '',
+      notes: property.notes || '',
+      landmark: property.landmark || '',
+      fpId: property.fpId
+    });
+    setEditProperty(property);
+  };
+
+  const closeEditModal = () => {
+    setEditProperty(null);
+    setEditFormData({});
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editFormData.id) return;
+    setSavingEdit(true);
+    try {
+      const primaryContact = editFormData.contacts?.[0] || {};
+      const response = await fetch(`${API_BASE}/api/admin/properties/${editFormData.id}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editFormData.name,
+          address: editFormData.address,
+          city: editFormData.city,
+          state: editFormData.state,
+          zipCode: editFormData.zipCode,
+          contactPerson: primaryContact.name || '',
+          contactPhone: primaryContact.phone ? `+91${primaryContact.phone}` : '',
+          contactEmail: primaryContact.email || '',
+          notes: editFormData.notes,
+          landmark: editFormData.landmark,
+          blockInfo: editFormData.blockInfo,
+          numberOfUnits: editFormData.numberOfUnits,
+          villaPlotNumber: editFormData.villaPlotNumber,
+          flatBlockInfo: editFormData.flatBlockInfo,
+          watchmanName: editFormData.watchmanName,
+          watchmanContact: editFormData.watchmanContact ? `+91${editFormData.watchmanContact}` : '',
+          associationContacts: editFormData.contacts
+        })
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast('Property updated successfully!');
+        closeEditModal();
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to update property', 'error');
+      }
+    } catch (error) {
+      console.error('Update property error:', error);
+      showToast('Failed to update property', 'error');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const addEditContact = () => setEditFormData(prev => ({ ...prev, contacts: [...(prev.contacts || []), { name: '', email: '', phone: '' }] }));
+  const removeEditContact = (index) => { if (editFormData.contacts?.length > 1) setEditFormData(prev => ({ ...prev, contacts: prev.contacts.filter((_, i) => i !== index) })); };
+  const updateEditContact = (index, field, value) => setEditFormData(prev => ({ ...prev, contacts: prev.contacts.map((c, i) => i === index ? { ...c, [field]: value } : c) }));
 
   // Mark all notifications as read
   const handleMarkAllRead = () => {
@@ -1143,7 +1243,7 @@ const CustomerSubmissions = () => {
                             <Download className="w-4 h-4 text-gray-400 hover:text-emerald-600" />
                           </button>
                           <button
-                            onClick={() => handleViewProperty(property)}
+                            onClick={() => openEditModal(property)}
                             className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Edit Property"
                           >
@@ -1707,6 +1807,88 @@ const CustomerSubmissions = () => {
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Property Modal */}
+      {editProperty && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Edit Property</h2>
+                <p className="text-sm text-gray-500 mt-0.5">{TYPE_LABELS[editFormData.entryType] || editFormData.propertyType || 'Property'}</p>
+              </div>
+              <button onClick={closeEditModal} className="p-2 hover:bg-gray-200 rounded-lg"><X className="w-5 h-5 text-gray-500" /></button>
+            </div>
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Property Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Property/Community Name *</label>
+                    <input type="text" value={editFormData.name || ''} onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                    <input type="text" value={editFormData.zone || ''} onChange={(e) => setEditFormData({ ...editFormData, zone: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Area Name</label>
+                    <input type="text" value={editFormData.area || ''} onChange={(e) => setEditFormData({ ...editFormData, area: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Division</label>
+                    <input type="text" value={editFormData.division || ''} onChange={(e) => setEditFormData({ ...editFormData, division: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Property Type</label>
+                    <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">{TYPE_LABELS[editFormData.entryType] || editFormData.propertyType || '-'}</div>
+                  </div>
+                </div>
+              </div>
+              <div className="pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-semibold text-gray-900">Contact Information</h3>
+                  <button type="button" onClick={addEditContact} className="text-blue-600 hover:text-blue-700 text-sm font-medium">Add Contact</button>
+                </div>
+                <div className="space-y-4">
+                  {(editFormData.contacts || []).map((contact, index) => (
+                    <div key={index} className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center"><span className="text-xs font-medium text-blue-600">{index + 1}</span></div>
+                        <span className="text-sm text-gray-600">Contact {index + 1}</span>
+                        {editFormData.contacts.length > 1 && (<button type="button" onClick={() => removeEditContact(index)} className="ml-auto p-1 text-red-400 hover:text-red-600 rounded"><Trash2 className="w-4 h-4" /></button>)}
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div><label className="block text-xs text-gray-500 mb-1">Name</label><input type="text" value={contact.name || ''} onChange={(e) => updateEditContact(index, 'name', e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+                        <div><label className="block text-xs text-gray-500 mb-1">Email</label><input type="email" value={contact.email || ''} onChange={(e) => updateEditContact(index, 'email', e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+                        <div><label className="block text-xs text-gray-500 mb-1">Phone</label><div className="flex gap-1"><div className="w-12 px-2 py-2 border border-gray-200 rounded-lg text-xs bg-gray-100 flex items-center justify-center">+91</div><input type="tel" maxLength={10} value={contact.phone || ''} onChange={(e) => updateEditContact(index, 'phone', e.target.value.replace(/\D/g, '').slice(0, 10))} className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="pt-4 border-t border-gray-200">
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Address</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label><textarea value={editFormData.address || ''} onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg" rows={2} /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1">City</label><input type="text" value={editFormData.city || ''} onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1">State</label><input type="text" value={editFormData.state || ''} onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label><input type="text" value={editFormData.zipCode || ''} onChange={(e) => setEditFormData({ ...editFormData, zipCode: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Landmark</label><input type="text" value={editFormData.landmark || ''} onChange={(e) => setEditFormData({ ...editFormData, landmark: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg" /></div>
+                </div>
+              </div>
+              <div className="pt-4 border-t border-gray-200">
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Additional Notes</h3>
+                <textarea value={editFormData.notes || ''} onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg" rows={3} />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+              <button onClick={closeEditModal} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Cancel</button>
+              <button onClick={handleSaveEdit} disabled={savingEdit} className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"><Save className="w-4 h-4" />{savingEdit ? 'Saving...' : 'Save Changes'}</button>
             </div>
           </div>
         </div>
