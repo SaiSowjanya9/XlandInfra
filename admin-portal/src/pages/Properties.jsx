@@ -126,7 +126,8 @@ const Properties = () => {
   const currentUser = JSON.parse(safeStorage.getItem('pm_current_user') || '{}');
   const isOpsManager = currentUser?.role === 'operations_manager';
   // Admin and super_admin should always have full access
-  const hasFullAccess = !isOpsManager || currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
+  // Check both role field and isSuperAdmin flag for maximum compatibility
+  const hasFullAccess = !isOpsManager || currentUser?.role === 'admin' || currentUser?.role === 'super_admin' || currentUser?.isSuperAdmin === true;
 
   // Load properties from backend API based on selected FP
   const loadData = async (showLoading = false) => {
@@ -1033,7 +1034,7 @@ const Properties = () => {
       </div>
 
       {/* View Property Modal - Clean Single View (FP Style) */}
-      {viewProperty && !selectedEstimate && (
+      {viewProperty && !selectedEstimate && !showEditModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleClosePropertyView}>
           <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             {/* Modal Header */}

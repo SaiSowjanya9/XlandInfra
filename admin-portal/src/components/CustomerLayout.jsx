@@ -41,7 +41,7 @@ const CustomerLayout = ({ admin, onLogout, children }) => {
       >
         <div className="flex items-center gap-3">
           <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-teal-400'}`} />
-          <span className="font-medium whitespace-nowrap text-sm">{item.label}</span>
+          <span className="font-medium text-sm">{item.label}</span>
         </div>
         {isActive && <ChevronRight className="w-4 h-4 opacity-60" />}
       </Link>
@@ -129,14 +129,14 @@ const CustomerLayout = ({ admin, onLogout, children }) => {
           <div className="p-4 border-t border-white/5 space-y-2">
             <button className="flex items-center gap-3 w-full px-4 py-3 text-slate-400 hover:bg-white/5 hover:text-white rounded-xl transition-all duration-300">
               <Settings className="w-5 h-5" />
-              <span className="font-medium whitespace-nowrap text-sm">Settings</span>
+              <span className="font-medium text-sm">Settings</span>
             </button>
             <button
               onClick={onLogout}
               className="flex items-center gap-3 w-full px-4 py-3 text-red-400 hover:bg-red-500/10 rounded-xl transition-all duration-300"
             >
               <LogOut className="w-5 h-5" />
-              <span className="font-medium whitespace-nowrap text-sm">Sign Out</span>
+              <span className="font-medium text-sm">Sign Out</span>
             </button>
           </div>
         </div>
