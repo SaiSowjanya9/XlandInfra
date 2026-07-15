@@ -785,7 +785,6 @@ const EmployeeZoneManagement = () => {
                   onClick={handleSaveZones}
                   className="px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors flex items-center gap-2"
                 >
-                  <Check className="w-4 h-4" />
                   Save Changes
                 </button>
               </div>
