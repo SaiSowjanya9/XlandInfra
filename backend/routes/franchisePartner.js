@@ -936,6 +936,17 @@ router.delete('/properties/:id/permanent', requireFPScope, async (req, res) => {
       console.log('📋 [FP] Deleted clients for property_id:', id);
     } catch (e) {}
 
+    // Archive related estimates in fp_estimates (not delete - move to archived)
+    try {
+      const [estResult] = await pool.execute(
+        'UPDATE fp_estimates SET is_archived = 1, archived_at = NOW() WHERE property_id = ? AND franchise_partner_id = ?',
+        [id, req.fpId]
+      );
+      if (estResult.affectedRows > 0) {
+        console.log('📋 [FP] Archived', estResult.affectedRows, 'estimates for property_id:', id);
+      }
+    } catch (e) { console.log('fp_estimates archive skipped:', e.message); }
+
     console.log('📋 [FP] Permanently deleted property:', id);
     res.json({ success: true, message: 'Customer permanently deleted. This action cannot be undone.' });
   } catch (error) {
