@@ -283,7 +283,7 @@ const QRManagement = () => {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <StatCard
                 icon={QrCode}
                 label="Total QR Codes"
@@ -299,11 +299,18 @@ const QRManagement = () => {
                 color="blue"
               />
               <StatCard
+                icon={Smartphone}
+                label="Verified Scans"
+                value={formatNumber(overview?.totals?.verified_scans || 0)}
+                subtext="Mobile only (real users)"
+                color="emerald"
+              />
+              <StatCard
                 icon={Users}
                 label="Unique Users"
                 value={formatNumber(overview?.totals?.unique_users || 0)}
                 subtext="Distinct visitors"
-                color="emerald"
+                color="purple"
               />
               <StatCard
                 icon={Activity}
@@ -430,7 +437,7 @@ const QRManagement = () => {
             {analytics && (
               <>
                 {/* Key Metrics */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                   <StatCard
                     icon={BarChart3}
                     label="Total Scans"

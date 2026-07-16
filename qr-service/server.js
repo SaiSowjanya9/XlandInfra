@@ -52,16 +52,63 @@ app.use(express.json());
 // Trust proxy for accurate IP detection behind load balancer
 app.set('trust proxy', true);
 
-// Bot detection patterns
+// Bot detection patterns - Enhanced to catch more crawlers
 const BOT_PATTERNS = [
-  /bot/i, /crawler/i, /spider/i, /scraper/i, /curl/i, /wget/i,
-  /python/i, /java\//i, /apache/i, /http/i, /fetch/i, /node/i,
-  /phantom/i, /headless/i, /selenium/i, /puppeteer/i, /playwright/i
+  // Search engine bots
+  /googlebot/i, /bingbot/i, /slurp/i, /duckduckbot/i, /baiduspider/i,
+  /yandexbot/i, /sogou/i, /exabot/i, /facebot/i, /ia_archiver/i,
+  // Social media crawlers & link previews
+  /facebookexternalhit/i, /twitterbot/i, /linkedinbot/i, /pinterest/i,
+  /whatsapp/i, /telegrambot/i, /slackbot/i, /discordbot/i, /skype/i,
+  // Generic bot patterns
+  /bot/i, /crawl/i, /spider/i, /scrape/i, /fetch/i,
+  // Tools and libraries
+  /curl/i, /wget/i, /python/i, /java\//i, /httpclient/i, /libwww/i,
+  /node/i, /axios/i, /request/i, /http/i, /apache/i,
+  // Headless browsers
+  /headless/i, /phantom/i, /selenium/i, /puppeteer/i, /playwright/i, /chromium/i,
+  // Preview generators
+  /preview/i, /thumb/i, /snap/i, /embed/i, /unfurl/i, /render/i,
+  // Monitoring and uptime
+  /pingdom/i, /uptimerobot/i, /statuscake/i, /newrelic/i, /datadog/i,
+  /site24x7/i, /monitis/i, /gtmetrix/i, /pagespeed/i,
+  // SEO tools
+  /ahrefs/i, /semrush/i, /moz/i, /majestic/i, /screaming/i,
+  // Other
+  /mediapartners/i, /adsbot/i, /apis-google/i, /feedfetcher/i
 ];
+
+// Suspicious device patterns - Desktop Linux scans are likely bots
+const isSuspiciousDevice = (userAgent) => {
+  if (!userAgent) return true;
+  const ua = userAgent.toLowerCase();
+  // Desktop Linux with Chrome is suspicious for QR scans (common bot signature)
+  if (ua.includes('linux') && !ua.includes('android') && ua.includes('chrome')) {
+    return true;
+  }
+  return false;
+};
 
 const isBot = (userAgent) => {
   if (!userAgent) return true;
-  return BOT_PATTERNS.some(pattern => pattern.test(userAgent));
+  if (userAgent.length < 30) return true; // Very short UAs are bots
+  if (BOT_PATTERNS.some(pattern => pattern.test(userAgent))) return true;
+  // Check for suspicious device patterns
+  if (isSuspiciousDevice(userAgent)) {
+    console.log(`[Bot Filter] Suspicious device pattern: ${userAgent.substring(0, 80)}`);
+    return true;
+  }
+  return false;
+};
+
+// Check if scan is from a real mobile device (verified scan)
+const isVerifiedScan = (userAgent) => {
+  if (!userAgent) return false;
+  const ua = userAgent.toLowerCase();
+  // Must be mobile or tablet AND not detected as bot
+  const isMobileOrTablet = ua.includes('iphone') || ua.includes('ipad') || 
+    ua.includes('android') || ua.includes('mobile') || ua.includes('tablet');
+  return isMobileOrTablet && !isBot(userAgent);
 };
 
 // Hash IP for privacy

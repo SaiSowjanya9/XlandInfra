@@ -667,13 +667,15 @@ router.delete('/codes/:id', async (req, res) => {
 // Get analytics overview for all QR codes
 router.get('/analytics/overview', async (req, res) => {
   try {
-    // Total stats
+    // Total stats - includes verified_scans (mobile/tablet only - real QR users)
     const [[totals]] = await pool.execute(`
       SELECT 
         COUNT(DISTINCT qr_id) as total_qr_codes,
         COUNT(*) as total_scans,
         SUM(CASE WHEN is_unique_user = TRUE THEN 1 ELSE 0 END) as unique_users,
-        SUM(CASE WHEN is_repeat_scan = TRUE THEN 1 ELSE 0 END) as repeat_scans
+        SUM(CASE WHEN is_repeat_scan = TRUE THEN 1 ELSE 0 END) as repeat_scans,
+        SUM(CASE WHEN device_type IN ('mobile', 'tablet') THEN 1 ELSE 0 END) as verified_scans,
+        SUM(CASE WHEN device_type IN ('mobile', 'tablet') AND is_unique_user = TRUE THEN 1 ELSE 0 END) as verified_unique_users
       FROM qr_scans
     `);
     
@@ -681,7 +683,8 @@ router.get('/analytics/overview', async (req, res) => {
     const [[today]] = await pool.execute(`
       SELECT 
         COUNT(*) as scans_today,
-        SUM(CASE WHEN is_unique_user = TRUE THEN 1 ELSE 0 END) as unique_today
+        SUM(CASE WHEN is_unique_user = TRUE THEN 1 ELSE 0 END) as unique_today,
+        SUM(CASE WHEN device_type IN ('mobile', 'tablet') THEN 1 ELSE 0 END) as verified_today
       FROM qr_scans
       WHERE DATE(scanned_at) = CURDATE()
     `);
@@ -737,12 +740,14 @@ router.get('/analytics/:qrId', async (req, res) => {
     else if (period === '30d') daysBack = 30;
     else if (period === '90d') daysBack = 90;
     
-    // Total stats for period
+    // Total stats for period - includes verified_scans (mobile/tablet only)
     const [[stats]] = await pool.execute(`
       SELECT 
         COUNT(*) as total_scans,
         SUM(CASE WHEN is_unique_user = TRUE THEN 1 ELSE 0 END) as unique_users,
         SUM(CASE WHEN is_repeat_scan = TRUE THEN 1 ELSE 0 END) as repeat_users,
+        SUM(CASE WHEN device_type IN ('mobile', 'tablet') THEN 1 ELSE 0 END) as verified_scans,
+        SUM(CASE WHEN device_type IN ('mobile', 'tablet') AND is_unique_user = TRUE THEN 1 ELSE 0 END) as verified_unique,
         AVG(session_duration) as avg_session_duration
       FROM qr_scans
       WHERE qr_id = ? AND scanned_at > DATE_SUB(NOW(), INTERVAL ? DAY)
