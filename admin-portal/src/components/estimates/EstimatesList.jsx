@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  Search, Filter, Eye, Edit, Download, Send, Trash2, X, ChevronDown,
+  Search, Filter, Eye, Edit, Edit2, Download, Send, Trash2, X, ChevronDown, Save, RefreshCw,
   Calendar, DollarSign, Building2, User, Home, LayoutGrid, Layers,
   TreePine, Map, Briefcase
 } from 'lucide-react';
@@ -10,6 +10,9 @@ import {
 } from '../../utils/estimateStore';
 import { exportEstimateToPDF } from '../../utils/pdfExport';
 import * as XLSX from 'xlsx';
+import { getAuthToken } from '../../utils/safeStorage';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const PROPERTY_ICONS = {
   APT: Home,
@@ -57,6 +60,12 @@ const EstimatesList = ({
   const [showFilters, setShowFilters] = useState(false);
   const [viewEstimate, setViewEstimate] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [editEstimate, setEditEstimate] = useState(null);
+  const [editEstimateForm, setEditEstimateForm] = useState(null);
+  const [savingEstimate, setSavingEstimate] = useState(false);
+  const [amcPackages, setAmcPackages] = useState([]);
+  const [addons, setAddons] = useState([]);
+  const token = getAuthToken();
 
   // Sync internal filter with external prop when it changes
   useEffect(() => {
@@ -64,6 +73,147 @@ const EstimatesList = ({
       setFilters(prev => ({ ...prev, estimateType: externalEstimateTypeFilter }));
     }
   }, [externalEstimateTypeFilter]);
+  // Load AMC packages and addons for edit modal
+  useEffect(() => {
+    const loadPackagesAndAddons = async () => {
+      try {
+        const [pkgRes, addRes] = await Promise.all([
+          fetch(`${API_BASE}/api/admin/all-amc-packages`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_BASE}/api/admin/all-addons`, { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+        const pkgData = await pkgRes.json();
+        const addData = await addRes.json();
+        if (pkgData.success) setAmcPackages(pkgData.data || []);
+        if (addData.success) setAddons(addData.data || []);
+      } catch (e) { console.log('Load packages/addons error:', e); }
+    };
+    loadPackagesAndAddons();
+  }, [token]);
+
+  // Open edit estimate modal
+  const openEditEstimate = (estimate) => {
+    let selectedAddonIds = [];
+    if (estimate.addons_data || estimate.addons) {
+      try {
+        const addonsData = estimate.addons || (typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data);
+        selectedAddonIds = (addonsData || []).map(a => a.id || a.addon_id).filter(Boolean);
+      } catch (e) { console.log('Addon parse error:', e); }
+    }
+    setEditEstimate(estimate);
+    setEditEstimateForm({
+      client_name: estimate.client_name || estimate.clientName || '',
+      client_phone: estimate.client_phone || estimate.clientPhone || '',
+      client_email: estimate.client_email || estimate.clientEmail || '',
+      property_name: estimate.property_name || estimate.propertyName || '',
+      zone: estimate.zone || '',
+      city: estimate.city || '',
+      address: estimate.address || '',
+      package_id: estimate.package_id || '',
+      selectedAddons: selectedAddonIds,
+      discount_percent: estimate.discount_percent || estimate.discountPercent || 0,
+      gst_percent: estimate.gst_percent || estimate.gstPercent || 0,
+      description: estimate.description || ''
+    });
+  };
+
+  // Calculate pricing for edit form
+  const calculateEditPricing = () => {
+    if (!editEstimateForm) return { subtotal: 0, discountAmt: 0, gstAmt: 0, total: 0 };
+    const pkg = amcPackages.find(p => p.id == editEstimateForm.package_id);
+    const pkgPrice = parseFloat(pkg?.price) || parseFloat(editEstimate?.package_price) || 0;
+    const addonsPrice = (editEstimateForm.selectedAddons || []).reduce((sum, id) => {
+      const addon = addons.find(a => a.id == id);
+      return sum + (parseFloat(addon?.price) || 0);
+    }, 0);
+    const subtotal = pkgPrice + addonsPrice;
+    const discount = parseFloat(editEstimateForm.discount_percent) || 0;
+    const gst = parseFloat(editEstimateForm.gst_percent) || 0;
+    const discountAmt = (subtotal * discount) / 100;
+    const gstAmt = ((subtotal - discountAmt) * gst) / 100;
+    const total = subtotal - discountAmt + gstAmt;
+    return { subtotal, discountAmt, gstAmt, total };
+  };
+
+  // Format currency
+  const formatCurrency = (amt) => {
+    const num = parseFloat(amt);
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(isNaN(num) ? 0 : Math.round(num));
+  };
+
+  // Handle update estimate
+  const handleUpdateEstimate = async () => {
+    if (!editEstimate || !editEstimateForm) return;
+    if (!editEstimateForm.client_name?.trim()) { showToast('Customer name is required', 'error'); return; }
+    setSavingEstimate(true);
+    try {
+      const pkg = amcPackages.find(p => p.id == editEstimateForm.package_id);
+      const pricing = calculateEditPricing();
+      
+      // Get package services if package changed
+      let packageServices = null;
+      if (pkg && pkg.services) {
+        packageServices = typeof pkg.services === 'string' ? JSON.parse(pkg.services) : pkg.services;
+      }
+      
+      // Build addons data with descriptions
+      const selectedAddonsList = (editEstimateForm.selectedAddons || []).map(id => {
+        const addon = addons.find(a => a.id == id);
+        return addon ? { 
+          id: addon.id, 
+          name: addon.service_name, 
+          description: addon.description || '',
+          price: addon.price, 
+          frequency_type: addon.frequency_type, 
+          frequency_count: addon.frequency_count 
+        } : null;
+      }).filter(Boolean);
+      
+      const payload = {
+        client_name: editEstimateForm.client_name, 
+        client_phone: editEstimateForm.client_phone, 
+        client_email: editEstimateForm.client_email,
+        property_name: editEstimateForm.property_name, 
+        zone: editEstimateForm.zone, 
+        city: editEstimateForm.city, 
+        address: editEstimateForm.address,
+        package_id: editEstimateForm.package_id, 
+        package_name: pkg?.name || editEstimate.package_name || editEstimate.packageName, 
+        package_price: pkg?.price || editEstimate.package_price || editEstimate.packagePrice,
+        amc_package_description: pkg?.description || editEstimate.amc_package_description,
+        package_services: packageServices,
+        billing_duration: pkg?.billing_duration || editEstimate.billing_duration,
+        subtotal: pricing.subtotal, 
+        discount_percent: editEstimateForm.discount_percent, 
+        discount_amount: pricing.discountAmt,
+        gst_percent: editEstimateForm.gst_percent, 
+        gst_amount: pricing.gstAmt, 
+        total_amount: pricing.total,
+        addons_data: selectedAddonsList, 
+        description: editEstimateForm.description
+      };
+      
+      const res = await fetch(`${API_BASE}/api/admin/estimates/${editEstimate.id}`, {
+        method: 'PUT', 
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(payload)
+      });
+      const result = await res.json();
+      if (result.success) { 
+        showToast('Estimate updated successfully'); 
+        setEditEstimate(null); 
+        setEditEstimateForm(null); 
+        onRefresh(); 
+      } else { 
+        showToast(result.message || 'Failed to update estimate', 'error'); 
+      }
+    } catch (e) { 
+      console.error('Update estimate error:', e); 
+      showToast('Failed to update estimate', 'error'); 
+    } finally { 
+      setSavingEstimate(false); 
+    }
+  };
+
 
   // Handler for estimate type filter change - syncs with parent
   const handleEstimateTypeChange = (value) => {
@@ -490,6 +640,9 @@ const EstimatesList = ({
                         >
                           <Eye className="w-4 h-4" />
                         </button>
+                        {!isOpsManager && (
+                          <button onClick={() => openEditEstimate(estimate)} className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg" title="Edit"><Edit2 className="w-4 h-4" /></button>
+                        )}
                         {/* All other actions hidden for Operations Manager */}
                         {!isOpsManager && (
                           <>
@@ -815,6 +968,26 @@ const EstimatesList = ({
               >
                 Archive
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Estimate Modal */}
+      {editEstimate && editEstimateForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }}>
+          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
+              <div><h3 className="text-lg font-semibold">Edit Estimate</h3><p className="text-sm text-gray-500">{editEstimate.estimateId || editEstimate.estimate_id}</p></div>
+              <button onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div><p className="text-sm font-semibold mb-3">Customer Details</p><div className="grid grid-cols-3 gap-4"><div><label className="block text-xs mb-1">Name *</label><input type="text" value={editEstimateForm.client_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_name: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">Phone</label><input type="text" value={editEstimateForm.client_phone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_phone: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">Email</label><input type="email" value={editEstimateForm.client_email} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_email: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div></div></div>
+              <div><p className="text-sm font-semibold mb-3">Property</p><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs mb-1">Name</label><input type="text" value={editEstimateForm.property_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, property_name: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">Zone</label><input type="text" value={editEstimateForm.zone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, zone: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">City</label><input type="text" value={editEstimateForm.city} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, city: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">Address</label><input type="text" value={editEstimateForm.address} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, address: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div></div></div>
+              <div><p className="text-sm font-semibold mb-3">Package</p><select value={editEstimateForm.package_id || ''} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, package_id: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg"><option value="">Select</option>{amcPackages.filter(p => normalizePropertyType(p.property_type) === normalizePropertyType(editEstimate.propertyType || editEstimate.property_type)).map(pkg => (<option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>))}</select></div>
+              <div><p className="text-sm font-semibold mb-3">Pricing</p><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs mb-1">Discount %</label><input type="number" value={editEstimateForm.discount_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, discount_percent: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">GST %</label><input type="number" value={editEstimateForm.gst_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, gst_percent: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div></div><div className="mt-4 bg-gray-50 p-4 rounded-lg"><div className="flex justify-between"><span>Total</span><span className="font-bold text-amber-600">{formatCurrency(calculateEditPricing().total)}</span></div></div></div>
+              <div><label className="block text-xs mb-1">Notes</label><textarea value={editEstimateForm.description} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, description: e.target.value })} rows={2} className="w-full px-3 py-2 text-sm border rounded-lg" /></div>
+              <div className="flex justify-end gap-3 pt-4 border-t"><button onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="px-4 py-2 text-sm border rounded-lg">Cancel</button><button onClick={handleUpdateEstimate} disabled={savingEstimate} className="px-4 py-2 text-sm text-white bg-amber-600 rounded-lg flex items-center gap-2">{savingEstimate ? 'Saving...' : 'Save'}</button></div>
             </div>
           </div>
         </div>

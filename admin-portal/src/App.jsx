@@ -442,7 +442,7 @@ function App() {
                     <Route path="vendors" element={<ManagerVendors user={user} />} />
                     <Route path="vendors/add" element={<ManagerAddVendor user={user} />} />
                     <Route path="vendors/assigned" element={<AssignedVendors user={user} />} />
-                    <Route path="employees/zones" element={<ManagerEmployeeZones user={user} viewOnly={true} />} />
+                    <Route path="employees/zones" element={<ManagerEmployeeZones user={user} />} />
                     <Route path="estimates" element={<ManagerEstimates user={user} defaultTab="list" />} />
                     <Route path="estimates/create" element={<ManagerEstimates user={user} defaultTab="create" />} />
                     <Route path="estimates/amc" element={<ManagerEstimates user={user} defaultTab="amc" />} />

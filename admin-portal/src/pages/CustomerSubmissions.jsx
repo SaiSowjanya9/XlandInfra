@@ -1862,10 +1862,22 @@ const CustomerSubmissions = () => {
                         <span className="text-sm text-gray-600">Contact {index + 1}</span>
                         {editFormData.contacts.length > 1 && (<button type="button" onClick={() => removeEditContact(index)} className="ml-auto p-1 text-red-400 hover:text-red-600 rounded"><Trash2 className="w-4 h-4" /></button>)}
                       </div>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div><label className="block text-xs text-gray-500 mb-1">Name</label><input type="text" value={contact.name || ''} onChange={(e) => updateEditContact(index, 'name', e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-                        <div><label className="block text-xs text-gray-500 mb-1">Email</label><input type="email" value={contact.email || ''} onChange={(e) => updateEditContact(index, 'email', e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-                        <div><label className="block text-xs text-gray-500 mb-1">Phone</label><div className="flex gap-1"><div className="w-12 px-2 py-2 border border-gray-200 rounded-lg text-xs bg-gray-100 flex items-center justify-center">+91</div><input type="tel" maxLength={10} value={contact.phone || ''} onChange={(e) => updateEditContact(index, 'phone', e.target.value.replace(/\D/g, '').slice(0, 10))} className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div></div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Name</label>
+                          <input type="text" value={contact.name || ''} onChange={(e) => updateEditContact(index, 'name', e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="Contact name" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Email</label>
+                          <input type="email" value={contact.email || ''} onChange={(e) => updateEditContact(index, 'email', e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="email@example.com" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Phone</label>
+                          <div className="flex gap-2">
+                            <div className="w-14 flex-shrink-0 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-600 flex items-center justify-center">+91</div>
+                            <input type="tel" maxLength={10} value={contact.phone || ''} onChange={(e) => updateEditContact(index, 'phone', e.target.value.replace(/\D/g, '').slice(0, 10))} className="flex-1 min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="10-digit number" />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1873,12 +1885,27 @@ const CustomerSubmissions = () => {
               </div>
               <div className="pt-4 border-t border-gray-200">
                 <h3 className="text-base font-semibold text-gray-900 mb-4">Address</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label><textarea value={editFormData.address || ''} onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg" rows={2} /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1">City</label><input type="text" value={editFormData.city || ''} onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1">State</label><input type="text" value={editFormData.state || ''} onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label><input type="text" value={editFormData.zipCode || ''} onChange={(e) => setEditFormData({ ...editFormData, zipCode: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Landmark</label><input type="text" value={editFormData.landmark || ''} onChange={(e) => setEditFormData({ ...editFormData, landmark: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg" /></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+                    <textarea value={editFormData.address || ''} onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" rows={2} placeholder="Enter street address" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                    <input type="text" value={editFormData.city || ''} onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="City" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                    <input type="text" value={editFormData.state || ''} onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="State" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
+                    <input type="text" value={editFormData.zipCode || ''} onChange={(e) => setEditFormData({ ...editFormData, zipCode: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="ZIP Code" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Landmark</label>
+                    <input type="text" value={editFormData.landmark || ''} onChange={(e) => setEditFormData({ ...editFormData, landmark: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Nearby landmark" />
+                  </div>
                 </div>
               </div>
               <div className="pt-4 border-t border-gray-200">
