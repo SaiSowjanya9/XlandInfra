@@ -111,13 +111,99 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const [discountPercent, setDiscountPercent] = useState('');
   const [gstPercent, setGstPercent] = useState('');
   const [viewEstimate, setViewEstimate] = useState(null);
+  const [editEstimate, setEditEstimate] = useState(null);
+  const [editEstimateForm, setEditEstimateForm] = useState(null);
+  const [savingEstimate, setSavingEstimate] = useState(false);
   const [viewAmcPackage, setViewAmcPackage] = useState(null);
   
   // Direct estimate form
   const [directForm, setDirectForm] = useState({ customerName: '', phone: '', countryCode: '+91', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', numberOfBlocks: '', blockNumber: '', blockName: '', numberOfUnits: '', villaNumber: '', flatNumber: '', plotNumber: '' });
 
   // Helper functions (must be defined before calculatePriceSummary)
-  const formatCurrency = (amt) => { const num = parseFloat(amt); return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(isNaN(num) ? 0 : Math.round(num)); };
+    const formatCurrency = (amt) => { const num = parseFloat(amt); return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(isNaN(num) ? 0 : Math.round(num)); };
+
+  // Edit estimate functions for DIRECT estimates only
+  const openEditEstimate = (estimate) => {
+    if (estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based') {
+      showToast('Property-based estimates cannot be edited here', 'error');
+      return;
+    }
+    let selectedAddonIds = [];
+    if (estimate.addons_data || estimate.addons) {
+      try {
+        const addonsData = estimate.addons || (typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data);
+        selectedAddonIds = (addonsData || []).map(a => a.id || a.addon_id).filter(Boolean);
+      } catch (e) { console.log('Addon parse error:', e); }
+    }
+    setEditEstimate(estimate);
+    setEditEstimateForm({
+      client_name: estimate.client_name || '',
+      client_phone: estimate.client_phone || '',
+      client_email: estimate.client_email || '',
+      property_name: estimate.property_name || '',
+      property_type: estimate.property_type || '',
+      zone: estimate.zone || '',
+      city: estimate.city || '',
+      address: estimate.address || '',
+      package_id: estimate.package_id || '',
+      selectedAddons: selectedAddonIds,
+      discount_percent: estimate.discount_percent || 0,
+      gst_percent: estimate.gst_percent || 0,
+      description: estimate.description || ''
+    });
+  };
+
+  const calculateEditPricing = () => {
+    if (!editEstimateForm) return { subtotal: 0, discountAmt: 0, gstAmt: 0, total: 0 };
+    const pkg = amcPackages.find(p => p.id == editEstimateForm.package_id);
+    const pkgPrice = parseFloat(pkg?.price) || parseFloat(editEstimate?.package_price) || 0;
+    const addonsPrice = (editEstimateForm.selectedAddons || []).reduce((sum, id) => {
+      const addon = addons.find(a => a.id == id);
+      return sum + (parseFloat(addon?.price) || 0);
+    }, 0);
+    const subtotal = pkgPrice + addonsPrice;
+    const discount = parseFloat(editEstimateForm.discount_percent) || 0;
+    const gst = parseFloat(editEstimateForm.gst_percent) || 0;
+    const discountAmt = (subtotal * discount) / 100;
+    const gstAmt = ((subtotal - discountAmt) * gst) / 100;
+    const total = subtotal - discountAmt + gstAmt;
+    return { subtotal, discountAmt, gstAmt, total };
+  };
+
+  const handleUpdateEstimate = async () => {
+    if (!editEstimate || !editEstimateForm) return;
+    if (!editEstimateForm.client_name?.trim()) { showToast('Customer name is required', 'error'); return; }
+    setSavingEstimate(true);
+    try {
+      const pkg = amcPackages.find(p => p.id == editEstimateForm.package_id);
+      const pricing = calculateEditPricing();
+      let packageServices = null;
+      if (pkg && pkg.services) {
+        packageServices = typeof pkg.services === 'string' ? JSON.parse(pkg.services) : pkg.services;
+      }
+      const selectedAddonsList = (editEstimateForm.selectedAddons || []).map(id => {
+        const addon = addons.find(a => a.id == id);
+        return addon ? { id: addon.id, name: addon.service_name, description: addon.description || '', price: addon.price, frequency_type: addon.frequency_type, frequency_count: addon.frequency_count } : null;
+      }).filter(Boolean);
+      const payload = {
+        client_name: editEstimateForm.client_name, client_phone: editEstimateForm.client_phone, client_email: editEstimateForm.client_email,
+        property_name: editEstimateForm.property_name, property_type: editEstimateForm.property_type, zone: editEstimateForm.zone, city: editEstimateForm.city, address: editEstimateForm.address,
+        package_id: editEstimateForm.package_id, package_name: pkg?.name || editEstimate.package_name, package_price: pkg?.price || editEstimate.package_price,
+        amc_package_description: pkg?.description || editEstimate.amc_package_description, package_services: packageServices, billing_duration: pkg?.billing_duration || editEstimate.billing_duration,
+        subtotal: pricing.subtotal, discount_percent: editEstimateForm.discount_percent, discount_amount: pricing.discountAmt,
+        gst_percent: editEstimateForm.gst_percent, gst_amount: pricing.gstAmt, total_amount: pricing.total,
+        addons_data: selectedAddonsList, description: editEstimateForm.description
+      };
+      const res = await fetch(`${API_BASE}/api/executive/estimates/${editEstimate.id}`, {
+        method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+      });
+      const result = await res.json();
+      if (result.success) { showToast('Estimate updated successfully'); setEditEstimate(null); setEditEstimateForm(null); loadData(); }
+      else { showToast(result.message || 'Failed to update estimate', 'error'); }
+    } catch (e) { console.error('Update estimate error:', e); showToast('Failed to update estimate', 'error'); }
+    finally { setSavingEstimate(false); }
+  };
+
   const getAddonId = (addon) => (addon.id ?? addon.addonId)?.toString();
   const getAddonName = (addon) => addon.service_name || addon.name || addon.serviceName || addon.services?.[0]?.name || 'Add-on Service';
   const getAddonPrice = (addon) => parseFloat(addon.price ?? addon.totalPrice ?? addon.services?.[0]?.price) || 0;
@@ -652,7 +738,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                               <td className="py-4 px-4"><div className="flex items-center gap-1.5 text-gray-600"><Calendar className="w-4 h-4" />{estimate.created_at ? new Date(estimate.created_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : '-'}</div></td>
                               <td className="py-4 px-4"><div><p className="font-medium text-gray-900">{estimate.created_by_name || (estimate.created_by_role ? estimate.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</p>{estimate.created_by_name && estimate.created_by_role && <p className="text-xs text-gray-400 capitalize">{estimate.created_by_role.replace(/_/g, ' ')}</p>}</div></td>
                               <td className="py-4 px-4"><span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(estimate.status)}`}>{estimate.status?.charAt(0).toUpperCase() + estimate.status?.slice(1) || 'Draft'}</span></td>
-                              <td className="py-4 px-4"><div className="flex items-center justify-center gap-1"><button onClick={() => setViewEstimate(estimate)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button></div></td>
+                              <td className="py-4 px-4"><div className="flex items-center justify-center gap-1"><button onClick={() => setViewEstimate(estimate)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button>{(estimate.estimate_type === 'direct' || (estimate.estimate_type && !estimate.estimate_type.includes('property'))) && <button onClick={() => openEditEstimate(estimate)} className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>}</div></td>
                             </tr>
                           );
                         })}
@@ -1561,6 +1647,25 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Edit Estimate Modal - Direct Estimates Only */}
+      {editEstimate && editEstimateForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }}>
+          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
+              <div><h3 className="text-lg font-semibold text-gray-800">Edit Direct Estimate</h3><p className="text-sm text-gray-500">{editEstimate.estimate_id}</p></div>
+              <button onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5 text-gray-500" /></button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div><p className="text-sm font-semibold text-gray-700 mb-3">Customer Details</p><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label className="block text-xs font-medium text-gray-600 mb-1">Customer Name *</label><input type="text" value={editEstimateForm.client_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_name: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Phone</label><input type="text" value={editEstimateForm.client_phone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_phone: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Email</label><input type="email" value={editEstimateForm.client_email} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_email: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div></div></div>
+              <div><p className="text-sm font-semibold text-gray-700 mb-3">Property Details</p><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="block text-xs font-medium text-gray-600 mb-1">Property Name</label><input type="text" value={editEstimateForm.property_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, property_name: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Property Type</label><select value={editEstimateForm.property_type} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, property_type: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"><option value="">Select</option>{PROPERTY_TYPE_OPTIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Zone</label><input type="text" value={editEstimateForm.zone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, zone: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">City</label><input type="text" value={editEstimateForm.city} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, city: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div></div></div>
+              <div><p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p><select value={editEstimateForm.package_id || ''} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, package_id: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white"><option value="">Select Package</option>{amcPackages.filter(p => !editEstimateForm.property_type || normalizePropertyType(getPackagePropertyType(p)) === normalizePropertyType(editEstimateForm.property_type)).map(pkg => (<option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>))}</select></div>
+              <div><p className="text-sm font-semibold text-gray-700 mb-3">Pricing</p><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-medium text-gray-600 mb-1">Discount (%)</label><input type="number" min="0" max="100" value={editEstimateForm.discount_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, discount_percent: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">GST (%)</label><input type="number" min="0" max="100" value={editEstimateForm.gst_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, gst_percent: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div></div><div className="mt-4 bg-gray-50 p-4 rounded-lg space-y-2"><div className="flex justify-between text-sm"><span>Subtotal</span><span>{formatCurrency(calculateEditPricing().subtotal)}</span></div><div className="flex justify-between text-sm"><span>Discount</span><span className="text-red-500">-{formatCurrency(calculateEditPricing().discountAmt)}</span></div><div className="flex justify-between text-sm"><span>GST</span><span>{formatCurrency(calculateEditPricing().gstAmt)}</span></div><div className="flex justify-between font-semibold pt-2 border-t"><span>Total</span><span className="text-amber-600">{formatCurrency(calculateEditPricing().total)}</span></div></div></div>
+              <div><label className="block text-xs font-medium text-gray-600 mb-1">Description</label><textarea value={editEstimateForm.description} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, description: e.target.value })} rows={3} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div>
+              <div className="flex justify-end gap-3 pt-4 border-t"><button onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="px-5 py-2.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100">Cancel</button><button onClick={handleUpdateEstimate} disabled={savingEstimate} className="px-6 py-2.5 text-sm text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2">{savingEstimate ? (<><RefreshCw className="w-4 h-4 animate-spin" />Saving...</>) : (<><Save className="w-4 h-4" />Save</>)}</button></div>
             </div>
           </div>
         </div>

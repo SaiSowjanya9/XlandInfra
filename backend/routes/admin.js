@@ -2139,6 +2139,79 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
   }
 });
 
+// Update estimate details (full update for property-based estimates)
+router.put('/estimates/:id', authenticate, adminOnly, async (req, res) => {
+  try {
+    const estimateId = req.params.id;
+    
+    // Verify estimate exists
+    const [[existing]] = await pool.execute(
+      'SELECT * FROM fp_estimates WHERE id = ?',
+      [estimateId]
+    );
+    
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Estimate not found' });
+    }
+    
+    const {
+      client_name, client_phone, client_email,
+      property_name, property_code, property_type, zone, division, city, address,
+      number_of_blocks, units_per_block, block_names, block_unit_types, total_units,
+      tower_name, block_number, villa_plot_number,
+      package_id, package_name, package_price, amc_package_description, package_services, billing_duration,
+      subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
+      addons_data, description
+    } = req.body;
+    
+    // Convert JSON objects to strings
+    const safeNum = (v, d) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
+    const unitsPerBlockJson = units_per_block ? JSON.stringify(units_per_block) : null;
+    const blockNamesJson = block_names ? JSON.stringify(block_names) : null;
+    const blockUnitTypesJson = block_unit_types ? JSON.stringify(block_unit_types) : null;
+    const packageServicesJson = package_services ? JSON.stringify(package_services) : null;
+    const addonsJson = addons_data ? JSON.stringify(addons_data) : null;
+    
+    // Calculate amounts
+    const finalSubtotal = safeNum(subtotal, 0);
+    const finalDiscountPercent = safeNum(discount_percent, 0);
+    const finalDiscountAmount = safeNum(discount_amount, 0);
+    const finalGstPercent = safeNum(gst_percent, 0);
+    const finalGstAmount = safeNum(gst_amount, 0);
+    const finalTotal = safeNum(total_amount, 0);
+    
+    await pool.execute(
+      `UPDATE fp_estimates SET
+        client_name = ?, client_phone = ?, client_email = ?,
+        property_name = ?, property_code = ?, property_type = ?, zone = ?, division = ?, city = ?, address = ?,
+        number_of_blocks = ?, units_per_block = ?, block_names = ?, block_unit_types = ?, total_units = ?,
+        tower_name = ?, block_number = ?, villa_plot_number = ?,
+        package_id = ?, package_name = ?, package_price = ?, amc_package_description = ?, package_services = ?, billing_duration = ?,
+        subtotal = ?, discount_percent = ?, discount_amount = ?, gst_percent = ?, gst_amount = ?, total_amount = ?,
+        addons_data = ?, description = ?, updated_at = NOW()
+      WHERE id = ?`,
+      [
+        client_name || existing.client_name, client_phone || existing.client_phone, client_email || existing.client_email,
+        property_name || existing.property_name, property_code || existing.property_code, property_type || existing.property_type,
+        zone || existing.zone, division || existing.division, city || existing.city, address || existing.address,
+        safeNum(number_of_blocks, existing.number_of_blocks), unitsPerBlockJson || existing.units_per_block,
+        blockNamesJson || existing.block_names, blockUnitTypesJson || existing.block_unit_types, safeNum(total_units, existing.total_units),
+        tower_name || existing.tower_name, block_number || existing.block_number, villa_plot_number || existing.villa_plot_number,
+        package_id || existing.package_id, package_name || existing.package_name, safeNum(package_price, existing.package_price),
+        amc_package_description || existing.amc_package_description, packageServicesJson || existing.package_services, billing_duration || existing.billing_duration,
+        finalSubtotal, finalDiscountPercent, finalDiscountAmount, finalGstPercent, finalGstAmount, finalTotal,
+        addonsJson || existing.addons_data, description !== undefined ? description : existing.description,
+        estimateId
+      ]
+    );
+    
+    res.json({ success: true, message: 'Estimate updated successfully' });
+  } catch (error) {
+    console.error('Update estimate error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Get ALL employee zones from ALL FPs (Admin mode)
 router.get('/all-employee-zones', authenticate, adminOnly, async (req, res) => {
   try {

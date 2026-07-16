@@ -126,6 +126,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [editingAddon, setEditingAddon] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [viewEstimate, setViewEstimate] = useState(null);
+  const [editEstimate, setEditEstimate] = useState(null);
+  const [editEstimateForm, setEditEstimateForm] = useState(null);
+  const [savingEstimate, setSavingEstimate] = useState(false);
   const [viewAmcPackage, setViewAmcPackage] = useState(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [archivedTypeFilter, setArchivedTypeFilter] = useState('all');
@@ -615,7 +618,137 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     }
   };
 
-  // Helper to get package property type (parses services JSON)
+  // Open edit estimate modal for property-based estimates
+  const openEditEstimate = (estimate) => {
+    // Allow editing both property-based and direct estimates
+    
+    // Parse addons data
+    let selectedAddonIds = [];
+    if (estimate.addons_data) {
+      try {
+        const addonsData = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
+        selectedAddonIds = addonsData.map(a => a.id || a.addon_id).filter(Boolean);
+      } catch (e) { console.log('Addon parse error:', e); }
+    }
+    
+    setEditEstimate(estimate);
+    setEditEstimateForm({
+      client_name: estimate.client_name || '',
+      client_phone: estimate.client_phone || '',
+      client_email: estimate.client_email || '',
+      property_name: estimate.property_name || '',
+      zone: estimate.zone || '',
+      city: estimate.city || '',
+      address: estimate.address || '',
+      package_id: estimate.package_id || '',
+      selectedAddons: selectedAddonIds,
+      discount_percent: estimate.discount_percent || 0,
+      gst_percent: estimate.gst_percent || 0,
+      description: estimate.description || ''
+    });
+  };
+
+  // Calculate pricing for edit form
+  const calculateEditPricing = () => {
+    if (!editEstimateForm) return { subtotal: 0, discountAmt: 0, gstAmt: 0, total: 0 };
+    const pkg = amcPackages.find(p => p.id == editEstimateForm.package_id);
+    const pkgPrice = parseFloat(pkg?.price) || parseFloat(editEstimate?.package_price) || 0;
+    const addonsPrice = (editEstimateForm.selectedAddons || []).reduce((sum, id) => {
+      const addon = addons.find(a => a.id == id);
+      return sum + (parseFloat(addon?.price) || 0);
+    }, 0);
+    const subtotal = pkgPrice + addonsPrice;
+    const discount = parseFloat(editEstimateForm.discount_percent) || 0;
+    const gst = parseFloat(editEstimateForm.gst_percent) || 0;
+    const discountAmt = (subtotal * discount) / 100;
+    const gstAmt = ((subtotal - discountAmt) * gst) / 100;
+    const total = subtotal - discountAmt + gstAmt;
+    return { subtotal, discountAmt, gstAmt, total };
+  };
+
+  // Handle update estimate
+  const handleUpdateEstimate = async () => {
+    if (!editEstimate || !editEstimateForm) return;
+    
+    if (!editEstimateForm.client_name?.trim()) {
+      showToast('Customer name is required', 'error');
+      return;
+    }
+    
+    setSavingEstimate(true);
+    
+    try {
+      const pkg = amcPackages.find(p => p.id == editEstimateForm.package_id);
+      const pricing = calculateEditPricing();
+      
+      // Get package services if package changed
+      let packageServices = null;
+      if (pkg && pkg.services) {
+        packageServices = typeof pkg.services === 'string' ? JSON.parse(pkg.services) : pkg.services;
+      }
+      
+      // Build addons data with descriptions
+      const selectedAddonsList = (editEstimateForm.selectedAddons || []).map(id => {
+        const addon = addons.find(a => a.id == id);
+        return addon ? {
+          id: addon.id,
+          name: addon.service_name,
+          description: addon.description || '',
+          price: addon.price,
+          frequency_type: addon.frequency_type,
+          frequency_count: addon.frequency_count
+        } : null;
+      }).filter(Boolean);
+      
+      const payload = {
+        client_name: editEstimateForm.client_name,
+        client_phone: editEstimateForm.client_phone,
+        client_email: editEstimateForm.client_email,
+        property_name: editEstimateForm.property_name,
+        zone: editEstimateForm.zone,
+        city: editEstimateForm.city,
+        address: editEstimateForm.address,
+        package_id: editEstimateForm.package_id,
+        package_name: pkg?.name || editEstimate.package_name,
+        package_price: pkg?.price || editEstimate.package_price,
+        amc_package_description: pkg?.description || editEstimate.amc_package_description,
+        package_services: packageServices,
+        billing_duration: pkg?.billing_duration || editEstimate.billing_duration,
+        subtotal: pricing.subtotal,
+        discount_percent: editEstimateForm.discount_percent,
+        discount_amount: pricing.discountAmt,
+        gst_percent: editEstimateForm.gst_percent,
+        gst_amount: pricing.gstAmt,
+        total_amount: pricing.total,
+        addons_data: selectedAddonsList,
+        description: editEstimateForm.description
+      };
+      
+      const res = await fetch(`${API_BASE}/api/fp/estimates/${editEstimate.id}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      const result = await res.json();
+      
+      if (result.success) {
+        showToast('Estimate updated successfully');
+        setEditEstimate(null);
+        setEditEstimateForm(null);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to update estimate', 'error');
+      }
+    } catch (e) {
+      console.error('Update estimate error:', e);
+      showToast('Failed to update estimate', 'error');
+    } finally {
+      setSavingEstimate(false);
+    }
+  };
+
+    // Helper to get package property type (parses services JSON)
   const getPkgPropertyType = (pkg) => {
     let svc = pkg.services;
     if (typeof svc === 'string') { try { svc = JSON.parse(svc); } catch(e) { svc = null; } }
@@ -1984,6 +2117,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={() => openViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View"><Eye className="w-4 h-4" /></button>
+                        {!isFPManager && (
+                          <button onClick={() => openEditEstimate(est)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="Edit"><Edit2 className="w-4 h-4" /></button>
+                        )}
                         <button onClick={() => handleExportPDF(est)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button>
                         <button onClick={() => handleSendEmail(est)} disabled={sendingEmailId === est.id} className={`p-1.5 rounded ${sendingEmailId === est.id ? 'text-indigo-400 cursor-wait' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`} title="Send Email"><Send className={`w-4 h-4 ${sendingEmailId === est.id ? 'animate-pulse' : ''}`} /></button>
                         <button onClick={() => handleArchiveEstimate(est.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
@@ -3411,6 +3547,27 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Estimate Modal */}
+      {editEstimate && editEstimateForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }}>
+          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
+              <div><h3 className="text-lg font-semibold text-gray-800">Edit Estimate</h3><p className="text-sm text-gray-500">{editEstimate.estimate_id} - {editEstimate.estimate_type === 'property_based' || editEstimate.estimate_type === 'property-based' ? 'Property Based' : 'Direct'}</p></div>
+              <button onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5 text-gray-500" /></button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div><p className="text-sm font-semibold text-gray-700 mb-3">Customer Details</p><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label className="block text-xs font-medium text-gray-600 mb-1">Customer Name *</label><input type="text" value={editEstimateForm.client_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_name: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Phone</label><input type="text" value={editEstimateForm.client_phone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_phone: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Email</label><input type="email" value={editEstimateForm.client_email} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_email: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div></div></div>
+              <div><p className="text-sm font-semibold text-gray-700 mb-3">Property Details</p><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="block text-xs font-medium text-gray-600 mb-1">Property Name</label><input type="text" value={editEstimateForm.property_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, property_name: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Zone</label><input type="text" value={editEstimateForm.zone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, zone: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">City</label><input type="text" value={editEstimateForm.city} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, city: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Address</label><input type="text" value={editEstimateForm.address} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, address: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div></div></div>
+              <div><p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p><select value={editEstimateForm.package_id || ''} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, package_id: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white"><option value="">Select Package</option>{amcPackages.filter(p => normalizePropertyType(getPkgPropertyType(p)) === normalizePropertyType(editEstimate.property_type)).map(pkg => (<option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>))}</select></div>
+              <div><p className="text-sm font-semibold text-gray-700 mb-3">Add-ons</p><div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3">{addons.filter(a => normalizePropertyType(a.property_type) === normalizePropertyType(editEstimate.property_type)).map(addon => (<label key={addon.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded"><input type="checkbox" checked={(editEstimateForm.selectedAddons || []).includes(addon.id)} onChange={(e) => { const current = editEstimateForm.selectedAddons || []; if (e.target.checked) { setEditEstimateForm({ ...editEstimateForm, selectedAddons: [...current, addon.id] }); } else { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.filter(id => id !== addon.id) }); } }} className="w-4 h-4 text-amber-600 rounded" /><span className="text-sm text-gray-700">{addon.service_name}</span></label>))}</div></div>
+              <div><p className="text-sm font-semibold text-gray-700 mb-3">Pricing</p><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-medium text-gray-600 mb-1">Discount (%)</label><input type="number" min="0" max="100" value={editEstimateForm.discount_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, discount_percent: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">GST (%)</label><input type="number" min="0" max="100" value={editEstimateForm.gst_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, gst_percent: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div></div><div className="mt-4 bg-gray-50 p-4 rounded-lg space-y-2"><div className="flex justify-between text-sm"><span>Subtotal</span><span>{formatCurrency(calculateEditPricing().subtotal)}</span></div><div className="flex justify-between text-sm"><span>Discount</span><span className="text-red-500">-{formatCurrency(calculateEditPricing().discountAmt)}</span></div><div className="flex justify-between text-sm"><span>GST</span><span>{formatCurrency(calculateEditPricing().gstAmt)}</span></div><div className="flex justify-between font-semibold pt-2 border-t"><span>Total</span><span className="text-amber-600">{formatCurrency(calculateEditPricing().total)}</span></div></div></div>
+              <div><label className="block text-xs font-medium text-gray-600 mb-1">Description</label><textarea value={editEstimateForm.description} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, description: e.target.value })} rows={3} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div>
+              <div className="flex justify-end gap-3 pt-4 border-t"><button onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="px-5 py-2.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100">Cancel</button><button onClick={handleUpdateEstimate} disabled={savingEstimate} className="px-6 py-2.5 text-sm text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2">{savingEstimate ? (<><RefreshCw className="w-4 h-4 animate-spin" />Saving...</>) : (<><Save className="w-4 h-4" />Save</>)}</button></div>
             </div>
           </div>
         </div>

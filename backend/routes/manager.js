@@ -2245,6 +2245,88 @@ router.put('/estimates/:id/archive', requireManagerScope, async (req, res) => {
   }
 });
 
+// Update estimate details (for direct estimates)
+router.put('/estimates/:id', requireManagerScope, async (req, res) => {
+  try {
+    const estimateId = req.params.id;
+    const scopeId = getScopeId(req);
+    
+    // Verify estimate exists and belongs to this manager's scope
+    let existing;
+    if (req.isFPManager) {
+      [[existing]] = await pool.execute(
+        'SELECT * FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?',
+        [estimateId, scopeId]
+      );
+    } else {
+      [[existing]] = await pool.execute(
+        'SELECT * FROM estimates WHERE id = ? AND manager_id = ?',
+        [estimateId, scopeId]
+      );
+    }
+    
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Estimate not found' });
+    }
+    
+    const {
+      client_name, client_phone, client_email,
+      property_name, property_type, zone, city, address,
+      package_id, package_name, package_price, amc_package_description, package_services, billing_duration,
+      subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
+      addons_data, description
+    } = req.body;
+    
+    const safeNum = (v, d) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
+    const packageServicesJson = package_services ? JSON.stringify(package_services) : null;
+    const addonsJson = addons_data ? JSON.stringify(addons_data) : null;
+    
+    if (req.isFPManager) {
+      await pool.execute(
+        `UPDATE fp_estimates SET
+          client_name = ?, client_phone = ?, client_email = ?,
+          property_name = ?, property_type = ?, zone = ?, city = ?, address = ?,
+          package_id = ?, package_name = ?, package_price = ?, amc_package_description = ?, package_services = ?, billing_duration = ?,
+          subtotal = ?, discount_percent = ?, discount_amount = ?, gst_percent = ?, gst_amount = ?, total_amount = ?,
+          addons_data = ?, description = ?, updated_at = NOW()
+        WHERE id = ? AND franchise_partner_id = ?`,
+        [
+          client_name || existing.client_name, client_phone || existing.client_phone, client_email || existing.client_email,
+          property_name || existing.property_name, property_type || existing.property_type, zone || existing.zone, city || existing.city, address || existing.address,
+          package_id || existing.package_id, package_name || existing.package_name, safeNum(package_price, existing.package_price),
+          amc_package_description || existing.amc_package_description, packageServicesJson || existing.package_services, billing_duration || existing.billing_duration,
+          safeNum(subtotal, 0), safeNum(discount_percent, 0), safeNum(discount_amount, 0), safeNum(gst_percent, 0), safeNum(gst_amount, 0), safeNum(total_amount, 0),
+          addonsJson || existing.addons_data, description !== undefined ? description : existing.description,
+          estimateId, scopeId
+        ]
+      );
+    } else {
+      await pool.execute(
+        `UPDATE estimates SET
+          customer_name = ?, customer_phone = ?, customer_email = ?,
+          property_name = ?, property_type = ?, zone = ?, city = ?, address = ?,
+          package_id = ?, package_name = ?, package_price = ?,
+          subtotal = ?, discount = ?, tax = ?, total = ?,
+          addons = ?, notes = ?, updated_at = NOW()
+        WHERE id = ? AND manager_id = ?`,
+        [
+          client_name || existing.customer_name, client_phone || existing.customer_phone, client_email || existing.customer_email,
+          property_name || existing.property_name, property_type || existing.property_type, zone || existing.zone, city || existing.city, address || existing.address,
+          package_id || existing.package_id, package_name || existing.package_name, safeNum(package_price, existing.package_price),
+          safeNum(subtotal, 0), safeNum(discount_amount, 0), safeNum(gst_amount, 0), safeNum(total_amount, 0),
+          addonsJson || existing.addons, description !== undefined ? description : existing.notes,
+          estimateId, scopeId
+        ]
+      );
+    }
+    
+    res.json({ success: true, message: 'Estimate updated successfully' });
+  } catch (error) {
+    console.error('Update estimate error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ============================================
 // AMC PACKAGES - FP Managers use FP packages (read-only), standalone use manager packages
 // ============================================
