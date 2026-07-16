@@ -211,11 +211,11 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
       showToast('Property-based estimates cannot be edited here', 'error');
       return;
     }
-    let selectedAddonIds = [];
+    let selectedAddonsWithQty = [];
     if (estimate.addons_data || estimate.addons) {
       try {
         const addonsData = estimate.addons || (typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data);
-        selectedAddonIds = (addonsData || []).map(a => a.id || a.addon_id).filter(Boolean);
+        selectedAddonsWithQty = (addonsData || []).map(a => ({ id: a.id || a.addon_id, quantity: a.quantity || 1 })).filter(a => a.id);
       } catch (e) { console.log('Addon parse error:', e); }
     }
     setEditEstimate(estimate);
@@ -229,7 +229,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
       city: estimate.city || '',
       address: estimate.address || '',
       package_id: estimate.package_id || '',
-      selectedAddons: selectedAddonIds,
+      selectedAddons: selectedAddonsWithQty,
       discount_percent: estimate.discount_percent || 0,
       gst_percent: estimate.gst_percent || 0,
       description: estimate.description || ''
@@ -240,9 +240,10 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
     if (!editEstimateForm) return { subtotal: 0, discountAmt: 0, gstAmt: 0, total: 0 };
     const pkg = amcPackages.find(p => p.id == editEstimateForm.package_id);
     const pkgPrice = parseFloat(pkg?.price) || parseFloat(editEstimate?.package_price) || 0;
-    const addonsPrice = (editEstimateForm.selectedAddons || []).reduce((sum, id) => {
-      const addon = addons.find(a => a.id == id);
-      return sum + (parseFloat(addon?.price) || 0);
+    const addonsPrice = (editEstimateForm.selectedAddons || []).reduce((sum, item) => {
+      const addon = addons.find(a => a.id == item.id);
+      const qty = item.quantity || 1;
+      return sum + ((parseFloat(addon?.price) || 0) * qty);
     }, 0);
     const subtotal = pkgPrice + addonsPrice;
     const discount = parseFloat(editEstimateForm.discount_percent) || 0;
@@ -264,9 +265,9 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
       if (pkg && pkg.services) {
         packageServices = typeof pkg.services === 'string' ? JSON.parse(pkg.services) : pkg.services;
       }
-      const selectedAddonsList = (editEstimateForm.selectedAddons || []).map(id => {
-        const addon = addons.find(a => a.id == id);
-        return addon ? { id: addon.id, name: addon.service_name, description: addon.description || '', price: addon.price, frequency_type: addon.frequency_type, frequency_count: addon.frequency_count } : null;
+      const selectedAddonsList = (editEstimateForm.selectedAddons || []).map(item => {
+        const addon = addons.find(a => a.id == item.id);
+        return addon ? { id: addon.id, name: addon.service_name, description: addon.description || '', price: addon.price, frequency_type: addon.frequency_type, frequency_count: addon.frequency_count, quantity: item.quantity || 1 } : null;
       }).filter(Boolean);
       const payload = {
         client_name: editEstimateForm.client_name, client_phone: editEstimateForm.client_phone, client_email: editEstimateForm.client_email,
@@ -618,7 +619,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
 
       {/* Footer Note & Buttons */}
       <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500">* Currency: INR (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹) | GST applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section</p>
+        <p className="text-xs text-gray-500">* Currency: INR (ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹) | GST applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section</p>
         <div className="flex gap-3">
           <button onClick={handleBackFromEstimate} className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Back</button>
           {showSaveButton && (
@@ -685,7 +686,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
           <div className="bg-white rounded-xl border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-semibold text-gray-900">Estimate Details</h2>
-              <button onClick={handleBackFromEstimate} className="text-sm text-gray-500 hover:text-gray-700">ÃƒÂ¢Ã¢â‚¬Â Ã‚Â Back</button>
+              <button onClick={handleBackFromEstimate} className="text-sm text-gray-500 hover:text-gray-700">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Back</button>
             </div>
             <div className="p-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">Property ID <span className="text-red-500">*</span></label>
@@ -887,7 +888,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
           <div className="bg-white rounded-xl border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-semibold text-gray-900">Customer Information</h2>
-              <button onClick={() => setEstimateType(null)} className="text-sm text-gray-500 hover:text-gray-700">ÃƒÂ¢Ã¢â‚¬Â Ã‚Â Back</button>
+              <button onClick={() => setEstimateType(null)} className="text-sm text-gray-500 hover:text-gray-700">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Back</button>
             </div>
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1445,9 +1446,9 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                       
                       {/* Price Input */}
                       <div className="mb-6">
-                        <label className="text-gray-600 text-xs mb-2 block font-medium">Price (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹) <span className="text-red-500">*</span></label>
+                        <label className="text-gray-600 text-xs mb-2 block font-medium">Price (ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹) <span className="text-red-500">*</span></label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹</span>
                           <input
                             type="text"
                             inputMode="numeric"
@@ -1480,7 +1481,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                       <div className="border-t border-gray-200 pt-4 space-y-3">
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-500">Package</span>
-                          <span className="font-medium text-gray-800 truncate ml-2">{amcForm.packageName || 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â'}</span>
+                          <span className="font-medium text-gray-800 truncate ml-2">{amcForm.packageName || 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â'}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-500">Services</span>
@@ -1488,7 +1489,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                         </div>
                         <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                           <span className="text-sm font-semibold text-gray-700">Total Rate</span>
-                          <span className="text-2xl font-bold text-gray-800">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹{getPrice().toLocaleString()}</span>
+                          <span className="text-2xl font-bold text-gray-800">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹{getPrice().toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -1561,7 +1562,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                   <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Frequency</label><select value={addonForm.frequencyType} onChange={(e) => { const v = e.target.value; const auto = FREQUENCY_COUNT_MAP[v]; setAddonForm({ ...addonForm, frequencyType: v, frequencyCount: auto !== null ? auto : '' }); }} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white">{FREQUENCY_TYPES.map(f => <option key={f} value={f}>{f}</option>)}</select></div>
                   <div className="col-span-1"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider whitespace-nowrap">Visits</label><input type="number" value={addonForm.frequencyCount} readOnly className="w-full px-2 py-2.5 border border-gray-300 bg-gray-100 rounded-lg text-sm text-center" /></div>
                   <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Period</label><select value={addonForm.billingCycle} onChange={(e) => setAddonForm({ ...addonForm, billingCycle: e.target.value })} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"><option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option><option value="Half-Yearly">Half-Yearly</option><option value="Yearly">Yearly</option></select></div>
-                  <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Price (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹)</label><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹</span><input type="text" value={addonForm.price} onChange={(e) => setAddonForm({ ...addonForm, price: e.target.value.replace(/[^0-9]/g, '') })} placeholder="0" className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm" /></div></div>
+                  <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Price (ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹)</label><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹</span><input type="text" value={addonForm.price} onChange={(e) => setAddonForm({ ...addonForm, price: e.target.value.replace(/[^0-9]/g, '') })} placeholder="0" className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm" /></div></div>
                   <div className="col-span-2"><button onClick={handleSaveAddon} className="w-full px-4 py-2.5 bg-stone-700 text-white rounded-lg hover:bg-stone-800 font-medium flex items-center justify-center">Save</button></div>
                 </div>
                 <div className="mt-3"><input type="text" value={addonForm.description} onChange={(e) => setAddonForm({ ...addonForm, description: e.target.value })} placeholder="Add description/notes (optional)" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" /></div>
@@ -1808,7 +1809,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                         <div>
                           <p className="text-xs text-indigo-600">{viewEstimate.billing_duration ? viewEstimate.billing_duration.charAt(0).toUpperCase() + viewEstimate.billing_duration.slice(1).replace('-', ' ') : 'Yearly'} Billing</p>
                         </div>
-                        <p className="text-lg font-bold text-indigo-700">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹{Number(viewEstimate.package_price || 0).toLocaleString()}</p>
+                        <p className="text-lg font-bold text-indigo-700">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹{Number(viewEstimate.package_price || 0).toLocaleString()}</p>
                       </div>
                       {pkgDescription && (
                         <p className="text-sm text-indigo-700 mt-2 pt-2 border-t border-indigo-100">{pkgDescription}</p>
@@ -1900,7 +1901,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                     </div>
                     <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-lg">
                       <p className="font-semibold text-green-800">Total Add-ons Price</p>
-                      <p className="font-bold text-green-700">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹{viewEstimate.addons.reduce((sum, a) => sum + Number(a.price || 0), 0).toLocaleString()}</p>
+                      <p className="font-bold text-green-700">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹{viewEstimate.addons.reduce((sum, a) => sum + Number(a.price || 0), 0).toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
@@ -1910,12 +1911,12 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">Price Summary</p>
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹{Number(viewEstimate.subtotal || 0).toLocaleString()}</span></div>
-                  {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">Discount ({viewEstimate.discount_percent || 0}%)</span><span>-ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹{Number(viewEstimate.discount_amount).toLocaleString()}</span></div>}
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 0}%)</span><span>ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹{Number(viewEstimate.gst_amount || 0).toLocaleString()}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹{Number(viewEstimate.subtotal || 0).toLocaleString()}</span></div>
+                  {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">Discount ({viewEstimate.discount_percent || 0}%)</span><span>-ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹{Number(viewEstimate.discount_amount).toLocaleString()}</span></div>}
+                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 0}%)</span><span>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹{Number(viewEstimate.gst_amount || 0).toLocaleString()}</span></div>
                   <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                     <p className="text-lg font-semibold">Total</p>
-                    <p className="text-2xl font-bold text-indigo-600">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹{Number(viewEstimate.total_amount || 0).toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-indigo-600">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹{Number(viewEstimate.total_amount || 0).toLocaleString()}</p>
                   </div>
                 </div>
               </div>

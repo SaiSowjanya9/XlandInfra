@@ -128,11 +128,11 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
       showToast('Property-based estimates cannot be edited here', 'error');
       return;
     }
-    let selectedAddonIds = [];
+    let selectedAddonsWithQty = [];
     if (estimate.addons_data || estimate.addons) {
       try {
         const addonsData = estimate.addons || (typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data);
-        selectedAddonIds = (addonsData || []).map(a => a.id || a.addon_id).filter(Boolean);
+        selectedAddonsWithQty = (addonsData || []).map(a => ({ id: a.id || a.addon_id, quantity: a.quantity || 1 })).filter(a => a.id);
       } catch (e) { console.log('Addon parse error:', e); }
     }
     setEditEstimate(estimate);
@@ -146,7 +146,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
       city: estimate.city || '',
       address: estimate.address || '',
       package_id: estimate.package_id || '',
-      selectedAddons: selectedAddonIds,
+      selectedAddons: selectedAddonsWithQty,
       discount_percent: estimate.discount_percent || 0,
       gst_percent: estimate.gst_percent || 0,
       description: estimate.description || ''
@@ -625,7 +625,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
       </div>
 
       <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500">* Currency: INR (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹) | GST applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section</p>
+        <p className="text-xs text-gray-500">* Currency: INR (ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹) | GST applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section</p>
         <div className="flex gap-3">
           <button onClick={handleBackFromEstimate} className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Back</button>
           {showSaveButton && <button onClick={handleSaveEstimate} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Save</button>}
@@ -841,7 +841,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                   <div className="bg-white rounded-xl border border-gray-200">
                     <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                       <h2 className="font-semibold text-gray-900">Estimate Details</h2>
-                      <button onClick={handleBackFromEstimate} className="text-sm text-gray-500 hover:text-gray-700">ÃƒÂ¢Ã¢â‚¬Â Ã‚Â Back</button>
+                      <button onClick={handleBackFromEstimate} className="text-sm text-gray-500 hover:text-gray-700">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Back</button>
                     </div>
                     <div className="p-6">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Property ID <span className="text-red-500">*</span></label>
@@ -1004,7 +1004,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                   <div className="bg-white rounded-xl border border-gray-200">
                     <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                       <h2 className="font-semibold text-gray-900">Customer Information</h2>
-                      <button onClick={resetEstimateForm} className="text-sm text-gray-500 hover:text-gray-700">ÃƒÂ¢Ã¢â‚¬Â Ã‚Â Back</button>
+                      <button onClick={resetEstimateForm} className="text-sm text-gray-500 hover:text-gray-700">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Back</button>
                     </div>
                     <div className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
