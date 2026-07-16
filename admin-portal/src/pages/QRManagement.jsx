@@ -252,7 +252,6 @@ const QRManagement = () => {
                   onClick={() => setShowCreateModal(true)}
                   className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 rounded-xl text-white font-medium hover:bg-indigo-700 transition-all shadow-md"
                 >
-                  <Plus className="w-4 h-4" />
                   Create QR
                 </button>
               )}
