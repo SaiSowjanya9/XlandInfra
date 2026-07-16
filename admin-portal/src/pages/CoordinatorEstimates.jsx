@@ -618,7 +618,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
 
       {/* Footer Note & Buttons */}
       <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500">* Currency: INR (â‚¹) | GST applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section</p>
+        <p className="text-xs text-gray-500">* Currency: INR (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹) | GST applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section</p>
         <div className="flex gap-3">
           <button onClick={handleBackFromEstimate} className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Back</button>
           {showSaveButton && (
@@ -685,7 +685,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
           <div className="bg-white rounded-xl border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-semibold text-gray-900">Estimate Details</h2>
-              <button onClick={handleBackFromEstimate} className="text-sm text-gray-500 hover:text-gray-700">â† Back</button>
+              <button onClick={handleBackFromEstimate} className="text-sm text-gray-500 hover:text-gray-700">ÃƒÂ¢Ã¢â‚¬Â Ã‚Â Back</button>
             </div>
             <div className="p-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">Property ID <span className="text-red-500">*</span></label>
@@ -887,7 +887,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
           <div className="bg-white rounded-xl border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-semibold text-gray-900">Customer Information</h2>
-              <button onClick={() => setEstimateType(null)} className="text-sm text-gray-500 hover:text-gray-700">â† Back</button>
+              <button onClick={() => setEstimateType(null)} className="text-sm text-gray-500 hover:text-gray-700">ÃƒÂ¢Ã¢â‚¬Â Ã‚Â Back</button>
             </div>
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1445,9 +1445,9 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                       
                       {/* Price Input */}
                       <div className="mb-6">
-                        <label className="text-gray-600 text-xs mb-2 block font-medium">Price (â‚¹) <span className="text-red-500">*</span></label>
+                        <label className="text-gray-600 text-xs mb-2 block font-medium">Price (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹) <span className="text-red-500">*</span></label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">â‚¹</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹</span>
                           <input
                             type="text"
                             inputMode="numeric"
@@ -1480,7 +1480,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                       <div className="border-t border-gray-200 pt-4 space-y-3">
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-500">Package</span>
-                          <span className="font-medium text-gray-800 truncate ml-2">{amcForm.packageName || 'â€”'}</span>
+                          <span className="font-medium text-gray-800 truncate ml-2">{amcForm.packageName || 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â'}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-500">Services</span>
@@ -1488,7 +1488,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                         </div>
                         <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                           <span className="text-sm font-semibold text-gray-700">Total Rate</span>
-                          <span className="text-2xl font-bold text-gray-800">â‚¹{getPrice().toLocaleString()}</span>
+                          <span className="text-2xl font-bold text-gray-800">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹{getPrice().toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -1561,7 +1561,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                   <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Frequency</label><select value={addonForm.frequencyType} onChange={(e) => { const v = e.target.value; const auto = FREQUENCY_COUNT_MAP[v]; setAddonForm({ ...addonForm, frequencyType: v, frequencyCount: auto !== null ? auto : '' }); }} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white">{FREQUENCY_TYPES.map(f => <option key={f} value={f}>{f}</option>)}</select></div>
                   <div className="col-span-1"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider whitespace-nowrap">Visits</label><input type="number" value={addonForm.frequencyCount} readOnly className="w-full px-2 py-2.5 border border-gray-300 bg-gray-100 rounded-lg text-sm text-center" /></div>
                   <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Period</label><select value={addonForm.billingCycle} onChange={(e) => setAddonForm({ ...addonForm, billingCycle: e.target.value })} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"><option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option><option value="Half-Yearly">Half-Yearly</option><option value="Yearly">Yearly</option></select></div>
-                  <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Price (â‚¹)</label><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">â‚¹</span><input type="text" value={addonForm.price} onChange={(e) => setAddonForm({ ...addonForm, price: e.target.value.replace(/[^0-9]/g, '') })} placeholder="0" className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm" /></div></div>
+                  <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Price (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹)</label><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹</span><input type="text" value={addonForm.price} onChange={(e) => setAddonForm({ ...addonForm, price: e.target.value.replace(/[^0-9]/g, '') })} placeholder="0" className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm" /></div></div>
                   <div className="col-span-2"><button onClick={handleSaveAddon} className="w-full px-4 py-2.5 bg-stone-700 text-white rounded-lg hover:bg-stone-800 font-medium flex items-center justify-center">Save</button></div>
                 </div>
                 <div className="mt-3"><input type="text" value={addonForm.description} onChange={(e) => setAddonForm({ ...addonForm, description: e.target.value })} placeholder="Add description/notes (optional)" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" /></div>
@@ -1808,7 +1808,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                         <div>
                           <p className="text-xs text-indigo-600">{viewEstimate.billing_duration ? viewEstimate.billing_duration.charAt(0).toUpperCase() + viewEstimate.billing_duration.slice(1).replace('-', ' ') : 'Yearly'} Billing</p>
                         </div>
-                        <p className="text-lg font-bold text-indigo-700">â‚¹{Number(viewEstimate.package_price || 0).toLocaleString()}</p>
+                        <p className="text-lg font-bold text-indigo-700">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹{Number(viewEstimate.package_price || 0).toLocaleString()}</p>
                       </div>
                       {pkgDescription && (
                         <p className="text-sm text-indigo-700 mt-2 pt-2 border-t border-indigo-100">{pkgDescription}</p>
@@ -1900,7 +1900,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                     </div>
                     <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-lg">
                       <p className="font-semibold text-green-800">Total Add-ons Price</p>
-                      <p className="font-bold text-green-700">â‚¹{viewEstimate.addons.reduce((sum, a) => sum + Number(a.price || 0), 0).toLocaleString()}</p>
+                      <p className="font-bold text-green-700">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹{viewEstimate.addons.reduce((sum, a) => sum + Number(a.price || 0), 0).toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
@@ -1910,12 +1910,12 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">Price Summary</p>
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>â‚¹{Number(viewEstimate.subtotal || 0).toLocaleString()}</span></div>
-                  {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">Discount ({viewEstimate.discount_percent || 0}%)</span><span>-â‚¹{Number(viewEstimate.discount_amount).toLocaleString()}</span></div>}
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 0}%)</span><span>â‚¹{Number(viewEstimate.gst_amount || 0).toLocaleString()}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹{Number(viewEstimate.subtotal || 0).toLocaleString()}</span></div>
+                  {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">Discount ({viewEstimate.discount_percent || 0}%)</span><span>-ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹{Number(viewEstimate.discount_amount).toLocaleString()}</span></div>}
+                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 0}%)</span><span>ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹{Number(viewEstimate.gst_amount || 0).toLocaleString()}</span></div>
                   <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                     <p className="text-lg font-semibold">Total</p>
-                    <p className="text-2xl font-bold text-indigo-600">â‚¹{Number(viewEstimate.total_amount || 0).toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-indigo-600">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹{Number(viewEstimate.total_amount || 0).toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -2087,7 +2087,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
             <div className="p-6 space-y-6">
               <div><p className="text-sm font-semibold text-gray-700 mb-3">Customer Details</p><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label className="block text-xs font-medium text-gray-600 mb-1">Customer Name *</label><input type="text" value={editEstimateForm.client_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_name: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Phone</label><input type="text" value={editEstimateForm.client_phone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_phone: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Email</label><input type="email" value={editEstimateForm.client_email} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_email: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div></div></div>
-              <div><p className="text-sm font-semibold text-gray-700 mb-3">Property Details</p><div className="grid grid-cols-1 md:grid-cols-2 gap-4">{editEstimate.property_code && <div><label className="block text-xs font-medium text-gray-600 mb-1">Property Code</label><input type="text" value={editEstimate.property_code || ""} readOnly disabled className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed" /></div>}<div><label className="block text-xs font-medium text-gray-600 mb-1">Property Name</label><input type="text" value={editEstimateForm.property_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, property_name: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Property Type</label><select value={editEstimateForm.property_type} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, property_type: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"><option value="">Select</option>{PROPERTY_TYPE_OPTIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Zone</label><input type="text" value={editEstimateForm.zone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, zone: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">City</label><input type="text" value={editEstimateForm.city} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, city: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div></div></div>
+              <div><p className="text-sm font-semibold text-gray-700 mb-3">Property Details</p><div className="grid grid-cols-1 md:grid-cols-2 gap-4">{editEstimate.property_code && <div><label className="block text-xs font-medium text-gray-600 mb-1">Property Code</label><input type="text" value={editEstimate.property_code} readOnly disabled className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed" /></div>}<div><label className="block text-xs font-medium text-gray-600 mb-1">Property Name</label><input type="text" value={editEstimateForm.property_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, property_name: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Property Type</label><select value={editEstimateForm.property_type} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, property_type: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"><option value="">Select</option>{PROPERTY_TYPE_OPTIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Zone</label><input type="text" value={editEstimateForm.zone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, zone: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">City</label><input type="text" value={editEstimateForm.city} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, city: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div></div></div>
               <div><p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p><select value={editEstimateForm.package_id || ''} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, package_id: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white"><option value="">Select Package</option>{amcPackages.filter(p => !editEstimateForm.property_type || normalizePropertyType(getPackagePropertyType(p)) === normalizePropertyType(editEstimateForm.property_type)).map(pkg => (<option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>))}</select></div>
               <div><p className="text-sm font-semibold text-gray-700 mb-3">Pricing</p><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-medium text-gray-600 mb-1">Discount (%)</label><input type="number" min="0" max="100" value={editEstimateForm.discount_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, discount_percent: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">GST (%)</label><input type="number" min="0" max="100" value={editEstimateForm.gst_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, gst_percent: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div></div><div className="mt-4 bg-gray-50 p-4 rounded-lg space-y-2"><div className="flex justify-between text-sm"><span>Subtotal</span><span>{formatCurrency(calculateEditPricing().subtotal)}</span></div><div className="flex justify-between text-sm"><span>Discount</span><span className="text-red-500">-{formatCurrency(calculateEditPricing().discountAmt)}</span></div><div className="flex justify-between text-sm"><span>GST</span><span>{formatCurrency(calculateEditPricing().gstAmt)}</span></div><div className="flex justify-between font-semibold pt-2 border-t"><span>Total</span><span className="text-amber-600">{formatCurrency(calculateEditPricing().total)}</span></div></div></div>
               <div><label className="block text-xs font-medium text-gray-600 mb-1">Description</label><textarea value={editEstimateForm.description} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, description: e.target.value })} rows={3} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div>
