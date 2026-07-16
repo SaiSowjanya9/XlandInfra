@@ -623,7 +623,7 @@ const EstimatesList = ({
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <span className="font-semibold text-gray-800 text-xs sm:text-sm whitespace-nowrap">
-                        ₹{(estimate.totalPrice || calculateEstimateTotal(estimate)).toLocaleString()}
+                        â‚¹{(estimate.totalPrice || calculateEstimateTotal(estimate)).toLocaleString()}
                       </span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 hidden lg:table-cell">
@@ -810,7 +810,7 @@ const EstimatesList = ({
                         <div>
                           <p className="text-xs text-indigo-600">{viewEstimate.amcPackage?.billingDuration || viewEstimate.billingDuration || 'Yearly'} Billing</p>
                         </div>
-                        <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.amcPackage?.rate || viewEstimate.amcPackage?.totalRate || viewEstimate.amcPrice || viewEstimate.packagePrice || viewEstimate.package_price || viewEstimate.subtotal || 0).toLocaleString()}</p>
+                        <p className="text-lg font-bold text-indigo-700">â‚¹{Number(viewEstimate.amcPackage?.rate || viewEstimate.amcPackage?.totalRate || viewEstimate.amcPrice || viewEstimate.packagePrice || viewEstimate.package_price || viewEstimate.subtotal || 0).toLocaleString()}</p>
                       </div>
                       {pkgDescription && (
                         <p className="text-sm text-indigo-700 mt-2 pt-2 border-t border-indigo-100">{pkgDescription}</p>
@@ -866,7 +866,7 @@ const EstimatesList = ({
                             <p className="text-xs text-gray-500">{service.frequencyType} - {service.frequency || service.frequencyCount} visits</p>
                           )}
                         </div>
-                        <p className="font-semibold">₹{Number(service.price || service.rate || 0).toLocaleString()}</p>
+                        <p className="font-semibold">â‚¹{Number(service.price || service.rate || 0).toLocaleString()}</p>
                       </div>
                     ))}
                   </div>
@@ -914,7 +914,7 @@ const EstimatesList = ({
                     </div>
                     <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-lg">
                       <p className="font-semibold text-green-800">Total Add-ons Price</p>
-                      <p className="font-bold text-green-700">₹{viewEstimate.addons.reduce((sum, a) => sum + Number(typeof a === 'number' ? a : (a.price || 0)), 0).toLocaleString()}</p>
+                      <p className="font-bold text-green-700">â‚¹{viewEstimate.addons.reduce((sum, a) => sum + Number(typeof a === 'number' ? a : (a.price || 0)), 0).toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
@@ -924,12 +924,12 @@ const EstimatesList = ({
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">Price Summary</p>
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>₹{Number(viewEstimate.subtotal || viewEstimate.package_price || 0).toLocaleString()}</span></div>
-                  {(viewEstimate.discount > 0 || viewEstimate.discount_amount > 0) && <div className="flex justify-between text-sm text-green-600"><span>Discount</span><span>-₹{Number(viewEstimate.discount || viewEstimate.discount_amount || 0).toLocaleString()}</span></div>}
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 0}%)</span><span>₹{Number(viewEstimate.tax || viewEstimate.gst || viewEstimate.gst_amount || 0).toLocaleString()}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>â‚¹{Number(viewEstimate.subtotal || viewEstimate.package_price || 0).toLocaleString()}</span></div>
+                  {(viewEstimate.discount > 0 || viewEstimate.discount_amount > 0) && <div className="flex justify-between text-sm text-green-600"><span>Discount</span><span>-â‚¹{Number(viewEstimate.discount || viewEstimate.discount_amount || 0).toLocaleString()}</span></div>}
+                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 0}%)</span><span>â‚¹{Number(viewEstimate.tax || viewEstimate.gst || viewEstimate.gst_amount || 0).toLocaleString()}</span></div>
                   <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                     <p className="text-lg font-semibold">Total</p>
-                    <p className="text-2xl font-bold text-indigo-600">₹{Number(viewEstimate.total || viewEstimate.totalPrice || viewEstimate.total_amount || calculateEstimateTotal(viewEstimate) || 0).toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-indigo-600">â‚¹{Number(viewEstimate.total || viewEstimate.totalPrice || viewEstimate.total_amount || calculateEstimateTotal(viewEstimate) || 0).toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -983,7 +983,7 @@ const EstimatesList = ({
             </div>
             <div className="p-6 space-y-6">
               <div><p className="text-sm font-semibold mb-3">Customer Details</p><div className="grid grid-cols-3 gap-4"><div><label className="block text-xs mb-1">Name *</label><input type="text" value={editEstimateForm.client_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_name: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">Phone</label><input type="text" value={editEstimateForm.client_phone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_phone: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">Email</label><input type="email" value={editEstimateForm.client_email} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_email: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div></div></div>
-              <div><p className="text-sm font-semibold mb-3">Property</p><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs mb-1">Name</label><input type="text" value={editEstimateForm.property_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, property_name: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">Zone</label><input type="text" value={editEstimateForm.zone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, zone: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">City</label><input type="text" value={editEstimateForm.city} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, city: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">Address</label><input type="text" value={editEstimateForm.address} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, address: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div></div></div>
+              <div><p className="text-sm font-semibold mb-3">Property</p><div className="grid grid-cols-2 gap-4">{(editEstimate.property_code || editEstimate.propertyId) && <div><label className="block text-xs mb-1">Property Code</label><input type="text" value={editEstimate.property_code || editEstimate.propertyId || ""} readOnly disabled className="w-full px-3 py-2 text-sm border rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed" /></div>}<div><label className="block text-xs mb-1">Name</label><input type="text" value={editEstimateForm.property_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, property_name: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">Zone</label><input type="text" value={editEstimateForm.zone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, zone: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">City</label><input type="text" value={editEstimateForm.city} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, city: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">Address</label><input type="text" value={editEstimateForm.address} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, address: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div></div></div>
               <div><p className="text-sm font-semibold mb-3">Package</p><select value={editEstimateForm.package_id || ''} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, package_id: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg"><option value="">Select</option>{amcPackages.filter(p => normalizePropertyType(p.property_type) === normalizePropertyType(editEstimate.propertyType || editEstimate.property_type)).map(pkg => (<option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>))}</select></div>
               <div><p className="text-sm font-semibold mb-3">Pricing</p><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs mb-1">Discount %</label><input type="number" value={editEstimateForm.discount_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, discount_percent: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">GST %</label><input type="number" value={editEstimateForm.gst_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, gst_percent: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div></div><div className="mt-4 bg-gray-50 p-4 rounded-lg"><div className="flex justify-between"><span>Total</span><span className="font-bold text-amber-600">{formatCurrency(calculateEditPricing().total)}</span></div></div></div>
               <div><label className="block text-xs mb-1">Notes</label><textarea value={editEstimateForm.description} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, description: e.target.value })} rows={2} className="w-full px-3 py-2 text-sm border rounded-lg" /></div>
