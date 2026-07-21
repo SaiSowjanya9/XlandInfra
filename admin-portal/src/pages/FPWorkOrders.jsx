@@ -1428,6 +1428,14 @@ const FPWorkOrders = ({ user }) => {
               >
                 <RefreshCw className="w-4 h-4" />
               </button>
+              <button
+                onClick={exportAllWorkOrders}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+                title="Export All Work Orders"
+              >
+                <Download className="w-4 h-4" />
+                Export All
+              </button>
             </div>
           </div>
 
