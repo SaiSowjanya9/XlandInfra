@@ -571,7 +571,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                       const hasDesc = svc.description && svc.description.trim() && svc.description.trim() !== '-';
                       return (
                         <tr key={idx}>
-                          <td className="px-3 py-2.5 text-gray-800">{svc.service || svc.name || '-'}</td>
+                          <td className="px-3 py-2.5 text-gray-800">{decodeHtml(svc.service || svc.name) || '-'}</td>
                           <td className={`px-3 py-2.5 text-gray-600 text-center`}>{svc.description?.trim() || '-'}</td>
                           <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
                           <td className="px-3 py-2.5 text-center text-gray-600">{svc.frequencyCount || svc.frequency_count || getFrequencyVisits(freqType)}</td>

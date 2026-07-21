@@ -13,6 +13,14 @@ import { getAuthToken } from '../utils/safeStorage';
 import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
 import * as XLSX from 'xlsx';
 
+// Decode HTML entities (e.g., &#x2F; -> /)
+const decodeHtml = (html) => {
+  if (!html || typeof html !== 'string') return html;
+  const txt = document.createElement('textarea');
+  txt.innerHTML = html;
+  return txt.value;
+};
+
 const PROPERTY_TYPE_OPTIONS = [
   { id: 'GC', label: 'Gated Community' },
   { id: 'APT', label: 'Apartment' },
@@ -1203,7 +1211,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           const visits = FREQUENCY_COUNT_MAP?.[freqType] || 12;
                           return (
                             <tr key={idx} className="align-top">
-                              <td className="px-3 py-2.5 text-gray-800 font-medium">{svc.service || svc.name || '-'}</td>
+                              <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(svc.service || svc.name) || '-'}</td>
                               <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{svc.description?.trim() || '-'}</td>
                               <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
                               <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
@@ -1545,7 +1553,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           const visits = FREQUENCY_COUNT_MAP?.[freqType] || 12;
                           return (
                             <tr key={idx} className="align-top">
-                              <td className="px-3 py-2.5 text-gray-800 font-medium">{svc.service || svc.name || '-'}</td>
+                              <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(svc.service || svc.name) || '-'}</td>
                               <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{svc.description?.trim() || '-'}</td>
                               <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
                               <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
@@ -3436,7 +3444,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                 <span className="w-5 h-5 bg-indigo-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                               </div>
                               <div className="col-span-3">
-                                <p className="font-medium text-gray-800 text-sm">{svc.name || svc.service}</p>
+                                <p className="font-medium text-gray-800 text-sm">{decodeHtml(svc.name || svc.service)}</p>
                               </div>
                               <div className="col-span-5">
                                 <p className={`text-xs text-gray-500 break-words whitespace-normal text-center`}>{svc.description?.trim() || '-'}</p>
@@ -3602,7 +3610,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <span className="w-7 h-7 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                         </div>
                         <div className="col-span-2">
-                          <p className="font-medium text-gray-900 text-sm">{svc.name || svc.service || 'Service'}</p>
+                          <p className="font-medium text-gray-900 text-sm">{decodeHtml(svc.name || svc.service) || 'Service'}</p>
                         </div>
                         <div className="col-span-5">
                           <p className={`text-sm text-gray-600 text-center`}>
