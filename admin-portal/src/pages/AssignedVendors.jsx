@@ -288,8 +288,8 @@ const AssignedVendors = ({ user }) => {
 
   // Get unique zones and service types from all assignments
   const allZones = [...new Set([
-    ...assignments.map(a => a.propertyZone),
-    ...serviceAssignments.map(a => a.propertyZone)
+    ...assignments.map(a => a.propertyZone || a.property_zone || a.zone_name),
+    ...serviceAssignments.map(a => a.propertyZone || a.property_zone || a.zone_name)
   ].filter(Boolean))];
 
   const allServiceTypes = [...new Set(serviceAssignments.map(a => a.serviceType || a.service_type).filter(Boolean))];

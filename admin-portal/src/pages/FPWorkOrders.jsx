@@ -24,8 +24,10 @@ import {
   Store,
   ChevronDown,
   Pencil,
-  List
+  List,
+  Download
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -604,6 +606,33 @@ const FPWorkOrders = ({ user }) => {
     setSearchInput('');
     setSearchTerm('');
     fetchWorkOrders();
+  };
+
+  // Export all work orders to Excel
+  const exportAllWorkOrders = () => {
+    if (filteredWorkOrders.length === 0) {
+      setMessage({ type: 'error', text: 'No work orders to export' });
+      return;
+    }
+
+    const exportData = filteredWorkOrders.map(wo => ({
+      'Order ID': wo.work_order_id || '',
+      'Resident': wo.customer_name || '',
+      'Property': wo.property_name || '',
+      'Category': wo.category_name || '',
+      'Subcategory': wo.subcategory_name || '',
+      'Status': wo.status?.replace('_', ' ') || '',
+      'Priority': wo.priority || '',
+      'Description': wo.description || '',
+      'Assigned To': wo.assigned_to_name || wo.vendor_name || '',
+      'Created Date': wo.created_at ? new Date(wo.created_at).toLocaleDateString('en-IN') : ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Work Orders');
+    XLSX.writeFile(wb, `fp_work_orders_${new Date().toISOString().split('T')[0]}.xlsx`);
+    setMessage({ type: 'success', text: `Exported ${filteredWorkOrders.length} work orders` });
   };
 
   const handleViewDetail = (wo) => {

@@ -261,62 +261,6 @@ const CustomerDashboard = ({ user }) => {
           </div>
         </div>
 
-        {/* Recent Work Orders */}
-        <div className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">Recent Orders</h2>
-            <Link
-              to="/customer/work-order"
-              className="text-sm text-teal-400 hover:text-teal-300 font-medium flex items-center gap-1 transition-colors"
-            >
-              <span>View All</span>
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-          
-          <div className="bg-slate-900/50 border border-white/5 rounded-xl overflow-hidden">
-            {loading ? (
-              <div className="p-8 text-center">
-                <div className="w-8 h-8 border-2 border-teal-500/30 border-t-teal-500 rounded-full animate-spin mx-auto"></div>
-                <p className="mt-3 text-slate-500 text-sm">Loading...</p>
-              </div>
-            ) : recentOrders.length === 0 ? (
-              <div className="p-8 text-center">
-                <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center mx-auto mb-3">
-                  <ClipboardList className="w-6 h-6 text-slate-600" />
-                </div>
-                <p className="text-slate-400 font-medium">No work orders yet</p>
-                <Link
-                  to="/customer/work-order"
-                  className="inline-block mt-3 text-teal-400 hover:text-teal-300 font-medium text-sm transition-colors"
-                >
-                  Submit your first order →
-                </Link>
-              </div>
-            ) : (
-              <div className="divide-y divide-white/5">
-                {recentOrders.map((order) => (
-                  <div key={order.id} className="p-4 hover:bg-white/[0.02] transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-white text-sm">{order.category_name}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{order.subcategory_name}</p>
-                      </div>
-                      <div className="text-right">
-                        <span className={`inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full ${getStatusColor(order.status)}`}>
-                          {order.status?.replace('_', ' ')}
-                        </span>
-                        <p className="text-[10px] text-slate-600 mt-1">
-                          {new Date(order.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* Emergency Banner */}
