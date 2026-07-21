@@ -328,26 +328,6 @@ const FPView = ({ admin }) => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border p-4">
-          <h3 className="font-semibold mb-4">Recent Work Orders</h3>
-          {recentWorkOrders.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No recent work orders</p>
-          ) : (
-            <div className="space-y-2">
-              {recentWorkOrders.map(wo => (
-                <div key={wo.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                  <div>
-                    <div className="font-medium">{wo.work_order_id}</div>
-                    <div className="text-sm text-gray-500">{wo.title}</div>
-                  </div>
-                  <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(wo.status)}`}>
-                    {wo.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
     );
   };

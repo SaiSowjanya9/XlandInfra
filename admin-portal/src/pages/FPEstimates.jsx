@@ -4,7 +4,7 @@ import {
   FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
   List, ChevronDown, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
   DollarSign, Layers, Filter, Download, Mail, Save, Edit, Send, Link2, RefreshCw,
-  FolderOpen, ExternalLink, Link
+  FolderOpen, ExternalLink, Link, CheckSquare, Square
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -133,6 +133,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [archivedTypeFilter, setArchivedTypeFilter] = useState('all');
   const [sendingEmailId, setSendingEmailId] = useState(null); // Track which estimate email is being sent
+  const [selectedEstimates, setSelectedEstimates] = useState([]);
+  const [archivingSelected, setArchivingSelected] = useState(false);
   
   // FP Portal Links state
   const [portalLinks, setPortalLinks] = useState([]);
@@ -2000,6 +2002,17 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input type="text" placeholder="Search estimates..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm" /></div>
           <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 hover:bg-gray-50"><Filter className="w-4 h-4" />Filters<ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} /></button>
           <button onClick={exportAllEstimates} className="px-4 py-2 bg-emerald-600 text-white rounded-lg flex items-center gap-2 hover:bg-emerald-700 transition-colors text-sm font-medium"><Download className="w-4 h-4" />Export All</button>
+          {/* Archive Selected button - only visible when items are selected and not FP Manager */}
+          {!isFPManager && selectedEstimates.length > 0 && (
+            <button
+              onClick={handleBulkArchive}
+              disabled={archivingSelected}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg flex items-center gap-2 hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50"
+            >
+              <Archive className="w-4 h-4" />
+              {archivingSelected ? 'Archiving...' : `Archive Selected (${selectedEstimates.length})`}
+            </button>
+          )}
         </div>
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-gray-200">
@@ -2052,6 +2065,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             <table className="w-full text-sm min-w-[900px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
+                  {/* Checkbox column - hidden for FP Manager */}
+                  {!isFPManager && (
+                    <th className="px-3 py-3 text-center w-10">
+                      <button
+                        onClick={handleSelectAll}
+                        className="p-1 hover:bg-gray-200 rounded transition-colors"
+                        title={selectedEstimates.length === filteredEstimates.length ? 'Deselect all' : 'Select all'}
+                      >
+                        {selectedEstimates.length === filteredEstimates.length && filteredEstimates.length > 0 ? (
+                          <CheckSquare className="w-4 h-4 text-indigo-600" />
+                        ) : (
+                          <Square className="w-4 h-4 text-gray-400" />
+                        )}
+                      </button>
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Estimate ID</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Type</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Division</th>
@@ -2064,8 +2093,25 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredEstimates.map((est) => (
-                  <tr key={est.id} className="hover:bg-gray-50">
+                {filteredEstimates.map((est) => {
+                  const isSelected = selectedEstimates.includes(est.id);
+                  return (
+                  <tr key={est.id} className={`hover:bg-gray-50 ${isSelected ? 'bg-indigo-50' : ''}`}>
+                    {/* Checkbox cell - hidden for FP Manager */}
+                    {!isFPManager && (
+                      <td className="px-3 py-4 text-center">
+                        <button
+                          onClick={() => handleSelectEstimate(est.id)}
+                          className="p-1 hover:bg-gray-200 rounded transition-colors"
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="w-4 h-4 text-indigo-600" />
+                          ) : (
+                            <Square className="w-4 h-4 text-gray-400" />
+                          )}
+                        </button>
+                      </td>
+                    )}
                     <td className="px-4 py-4 font-mono text-sm text-gray-900">{est.estimate_id}</td>
                     <td className="px-4 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
@@ -2128,7 +2174,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -3097,9 +3144,54 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   };
 
   // ARCHIVED
-  const handleArchiveEstimate = async (id) => { try { const res = await fetch(`/api/fp/estimates/${id}/archive`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Estimate archived'); loadData(); } } catch (e) { showToast('Failed to archive', 'error'); } };
-  const handleRestoreEstimate = async (id) => { try { const res = await fetch(`/api/fp/estimates/${id}/restore`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Estimate restored'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
-  const handleDeletePermanent = async (id) => { try { const res = await fetch(`/api/fp/estimates/${id}/permanent`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted permanently'); setDeleteConfirm(null); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
+  const handleArchiveEstimate = async (id) => { try { const res = await fetch(`${API_BASE}/api/fp/estimates/${id}/archive`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Estimate archived'); loadData(); } } catch (e) { showToast('Failed to archive', 'error'); } };
+  
+  // Multi-select handlers
+  const handleSelectEstimate = (id) => {
+    setSelectedEstimates(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedEstimates.length === filteredEstimates.length) {
+      setSelectedEstimates([]);
+    } else {
+      setSelectedEstimates(filteredEstimates.map(e => e.id));
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    if (selectedEstimates.length === 0) {
+      showToast('No estimates selected', 'error');
+      return;
+    }
+    
+    setArchivingSelected(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/fp/estimates/bulk-archive`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedEstimates })
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast(`${result.archivedCount || selectedEstimates.length} estimate(s) archived`);
+        setSelectedEstimates([]);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to archive estimates', 'error');
+      }
+    } catch (error) {
+      console.error('Bulk archive error:', error);
+      showToast('Failed to archive estimates', 'error');
+    } finally {
+      setArchivingSelected(false);
+    }
+  };
+
+  const handleRestoreEstimate = async (id) => { try { const res = await fetch(`${API_BASE}/api/fp/estimates/${id}/restore`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Estimate restored'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
+  const handleDeletePermanent = async (id) => { try { const res = await fetch(`${API_BASE}/api/fp/estimates/${id}/permanent`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted permanently'); setDeleteConfirm(null); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
   const handleDeleteAllArchived = async () => { try { const res = await fetch(`${API_BASE}/api/fp/estimates/archived/delete-all`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); const result = await res.json(); if (result.success || res.status === 201) { showToast(`${result.deletedCount || archivedEstimates.length} archived deleted`); setShowDeleteAllConfirm(false); loadData(); } else { showToast(result.message || 'Failed', 'error'); } } catch (e) { showToast('Failed to delete all', 'error'); } };
   const handleDownloadPDF = (estimate) => { 
     try { 

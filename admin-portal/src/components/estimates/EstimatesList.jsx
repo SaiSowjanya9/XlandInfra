@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Search, Filter, Eye, Edit, Edit2, Download, Send, Trash2, X, ChevronDown, Save, RefreshCw,
   Calendar, DollarSign, Building2, User, Home, LayoutGrid, Layers,
-  TreePine, Map, Briefcase
+  TreePine, Map, Briefcase, Archive, CheckSquare, Square
 } from 'lucide-react';
 import {
   searchEstimates, updateEstimate, deleteEstimate, calculateEstimateTotal,
@@ -50,6 +50,8 @@ const EstimatesList = ({
   
   const [searchTerm, setSearchTerm] = useState('');
   const [exportingId, setExportingId] = useState(null);
+  const [selectedEstimates, setSelectedEstimates] = useState([]);
+  const [archivingSelected, setArchivingSelected] = useState(false);
   const [filters, setFilters] = useState({
     estimateType: externalEstimateTypeFilter || 'all',
     status: 'all',
@@ -317,6 +319,50 @@ const EstimatesList = ({
     setDeleteConfirm(null);
   };
 
+  // Multi-select handlers
+  const handleSelectEstimate = (id) => {
+    setSelectedEstimates(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedEstimates.length === filteredEstimates.length) {
+      setSelectedEstimates([]);
+    } else {
+      setSelectedEstimates(filteredEstimates.map(e => e.id));
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    if (selectedEstimates.length === 0) {
+      showToast('No estimates selected', 'error');
+      return;
+    }
+    
+    setArchivingSelected(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/estimates/bulk-archive`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedEstimates })
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast(`${result.archivedCount || selectedEstimates.length} estimate(s) archived`);
+        setSelectedEstimates([]);
+        onRefresh();
+      } else {
+        showToast(result.message || 'Failed to archive estimates', 'error');
+      }
+    } catch (error) {
+      console.error('Bulk archive error:', error);
+      showToast('Failed to archive estimates', 'error');
+    } finally {
+      setArchivingSelected(false);
+    }
+  };
+
   const handleDownloadPDF = (e, estimate) => {
     e.stopPropagation();
     e.preventDefault();
@@ -484,6 +530,17 @@ const EstimatesList = ({
             <Download className="w-4 h-4" />
             Export All
           </button>
+          {/* Archive Selected button - only visible when items are selected and not ops manager */}
+          {!isOpsManager && selectedEstimates.length > 0 && (
+            <button
+              onClick={handleBulkArchive}
+              disabled={archivingSelected}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50"
+            >
+              <Archive className="w-4 h-4" />
+              {archivingSelected ? 'Archiving...' : `Archive Selected (${selectedEstimates.length})`}
+            </button>
+          )}
         </div>
 
         {/* Filter Options */}
@@ -570,6 +627,22 @@ const EstimatesList = ({
           <table className="w-full min-w-[700px]">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
+                {/* Checkbox column - hidden for ops manager */}
+                {!isOpsManager && (
+                  <th className="px-3 py-3 text-center w-10">
+                    <button
+                      onClick={handleSelectAll}
+                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                      title={selectedEstimates.length === filteredEstimates.length ? 'Deselect all' : 'Select all'}
+                    >
+                      {selectedEstimates.length === filteredEstimates.length && filteredEstimates.length > 0 ? (
+                        <CheckSquare className="w-4 h-4 text-indigo-600" />
+                      ) : (
+                        <Square className="w-4 h-4 text-gray-400" />
+                      )}
+                    </button>
+                  </th>
+                )}
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Estimate ID</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap hidden sm:table-cell">Type</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap hidden md:table-cell">Division</th>
@@ -583,8 +656,24 @@ const EstimatesList = ({
             <tbody className="divide-y divide-gray-100">
               {filteredEstimates.map((estimate) => {
                 const Icon = PROPERTY_ICONS[estimate.propertyType] || (estimate.estimateType === 'direct' ? User : Building2);
+                const isSelected = selectedEstimates.includes(estimate.id);
                 return (
-                  <tr key={estimate.estimateId} className="hover:bg-gray-50">
+                  <tr key={estimate.estimateId} className={`hover:bg-gray-50 ${isSelected ? 'bg-indigo-50' : ''}`}>
+                    {/* Checkbox cell - hidden for ops manager */}
+                    {!isOpsManager && (
+                      <td className="px-3 py-3 sm:py-4 text-center">
+                        <button
+                          onClick={() => handleSelectEstimate(estimate.id)}
+                          className="p-1 hover:bg-gray-200 rounded transition-colors"
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="w-4 h-4 text-indigo-600" />
+                          ) : (
+                            <Square className="w-4 h-4 text-gray-400" />
+                          )}
+                        </button>
+                      </td>
+                    )}
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <span className="font-medium text-gray-800 text-xs sm:text-sm">{estimate.estimateId}</span>
                     </td>

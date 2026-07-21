@@ -2540,6 +2540,44 @@ router.delete('/vendors/:id/permanent', requireFPScope, async (req, res) => {
   }
 });
 
+// Bulk archive vendors (soft delete multiple)
+router.put('/vendors/bulk-archive', requireFPScope, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'No vendor IDs provided' });
+    }
+    
+    // Create placeholders for SQL IN clause
+    const placeholders = ids.map(() => '?').join(',');
+    const params = [...ids, req.fpId];
+    
+    const [result] = await pool.execute(
+      `UPDATE onboarded_vendors SET is_active = 0, status = 'inactive', updated_at = NOW() WHERE id IN (${placeholders}) AND franchise_partner_id = ?`,
+      params
+    );
+    
+    res.json({ success: true, message: `${result.affectedRows} vendor(s) archived`, archivedCount: result.affectedRows });
+  } catch (error) {
+    console.error('Bulk archive vendors error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete all archived/inactive vendors permanently
+router.delete('/vendors/archived/delete-all', requireFPScope, async (req, res) => {
+  try {
+    const [result] = await pool.execute(
+      `DELETE FROM onboarded_vendors WHERE franchise_partner_id = ? AND (status = 'inactive' OR status = 'deleted' OR is_active = 0)`,
+      [req.fpId]
+    );
+    res.json({ success: true, message: `${result.affectedRows} archived vendors deleted`, deletedCount: result.affectedRows });
+  } catch (error) {
+    console.error('Delete all archived vendors error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ============================================
 // EMPLOYEE MANAGEMENT
 // ============================================
@@ -4118,6 +4156,30 @@ router.post('/estimates', requireFPScope, async (req, res) => {
       error: error.message,
       code: error.code
     });
+  }
+});
+
+// Bulk archive estimates
+router.put('/estimates/bulk-archive', requireFPScope, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'No estimate IDs provided' });
+    }
+    
+    // Create placeholders for SQL IN clause
+    const placeholders = ids.map(() => '?').join(',');
+    const params = [...ids, req.fpId];
+    
+    const [result] = await pool.execute(
+      `UPDATE fp_estimates SET is_archived = 1, archived_at = NOW() WHERE id IN (${placeholders}) AND franchise_partner_id = ?`,
+      params
+    );
+    
+    res.json({ success: true, message: `${result.affectedRows} estimate(s) archived`, archivedCount: result.affectedRows });
+  } catch (error) {
+    console.error('Bulk archive estimates error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

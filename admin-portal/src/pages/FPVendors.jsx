@@ -19,6 +19,9 @@ import {
   Trash2,
   Save,
   Download,
+  Archive,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -67,6 +70,9 @@ const FPVendors = ({ user }) => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [permanentDeleteConfirm, setPermanentDeleteConfirm] = useState(null);
   const [toast, setToast] = useState(null);
+  const [selectedVendors, setSelectedVendors] = useState([]);
+  const [archivingSelected, setArchivingSelected] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
 
   const token = getAuthToken();
 
@@ -214,6 +220,66 @@ const FPVendors = ({ user }) => {
     XLSX.utils.book_append_sheet(wb, ws, 'Vendors');
     XLSX.writeFile(wb, `All_Vendors_${new Date().toISOString().split('T')[0]}.xlsx`);
     showToastMessage('Vendors exported successfully');
+  };
+
+  // Multi-select handlers
+  const handleSelectVendor = (id) => {
+    setSelectedVendors(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleSelectAll = () => {
+    const activeVendors = filteredVendors.filter(v => !(v.status === 'deleted' || v.status === 'inactive' || v.is_active === 0));
+    if (selectedVendors.length === activeVendors.length) {
+      setSelectedVendors([]);
+    } else {
+      setSelectedVendors(activeVendors.map(v => v.id));
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    if (selectedVendors.length === 0) {
+      showToastMessage('No vendors selected', 'error');
+      return;
+    }
+    setArchivingSelected(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/fp/vendors/bulk-archive`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedVendors })
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToastMessage(`${result.archivedCount || selectedVendors.length} vendor(s) archived`);
+        setSelectedVendors([]);
+        fetchVendors();
+      } else {
+        showToastMessage(result.message || 'Failed to archive vendors', 'error');
+      }
+    } catch (error) {
+      showToastMessage('Failed to archive vendors', 'error');
+    } finally {
+      setArchivingSelected(false);
+    }
+  };
+
+  const handleDeleteAllArchived = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/fp/vendors/archived/delete-all`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToastMessage(`${result.deletedCount} archived vendors permanently deleted`);
+        setShowDeleteAllConfirm(false);
+        fetchVendors();
+      } else {
+        showToastMessage(result.message || 'Failed to delete', 'error');
+      }
+    } catch (error) {
+      showToastMessage('Failed to delete all archived vendors', 'error');
+    }
   };
 
   return (

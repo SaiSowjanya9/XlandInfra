@@ -2139,6 +2139,29 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
   }
 });
 
+// Bulk archive estimates (Admin)
+router.put('/estimates/bulk-archive', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'No estimate IDs provided' });
+    }
+    
+    // Create placeholders for SQL IN clause
+    const placeholders = ids.map(() => '?').join(',');
+    
+    const [result] = await pool.execute(
+      `UPDATE fp_estimates SET is_archived = 1, archived_at = NOW() WHERE id IN (${placeholders})`,
+      ids
+    );
+    
+    res.json({ success: true, message: `${result.affectedRows} estimate(s) archived`, archivedCount: result.affectedRows });
+  } catch (error) {
+    console.error('Bulk archive estimates error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Update estimate details (full update for property-based estimates)
 router.put('/estimates/:id', authenticate, adminOnly, async (req, res) => {
   try {
@@ -2779,6 +2802,41 @@ router.get('/fp-view/:fpId/vendors', authenticate, adminOnly, async (req, res) =
   } catch (error) {
     console.error('Error fetching FP vendors:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch vendors' });
+  }
+});
+
+// Bulk archive vendors (Admin)
+router.put('/vendors/bulk-archive', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'No vendor IDs provided' });
+    }
+    
+    const placeholders = ids.map(() => '?').join(',');
+    
+    const [result] = await pool.execute(
+      `UPDATE onboarded_vendors SET is_active = 0, status = 'inactive', updated_at = NOW() WHERE id IN (${placeholders})`,
+      ids
+    );
+    
+    res.json({ success: true, message: `${result.affectedRows} vendor(s) archived`, archivedCount: result.affectedRows });
+  } catch (error) {
+    console.error('Bulk archive vendors error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete all archived/inactive vendors permanently (Admin)
+router.delete('/vendors/archived/delete-all', authenticate, adminOnly, async (req, res) => {
+  try {
+    const [result] = await pool.execute(
+      `DELETE FROM onboarded_vendors WHERE (status = 'inactive' OR status = 'deleted' OR is_active = 0)`
+    );
+    res.json({ success: true, message: `${result.affectedRows} archived vendors deleted`, deletedCount: result.affectedRows });
+  } catch (error) {
+    console.error('Delete all archived vendors error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

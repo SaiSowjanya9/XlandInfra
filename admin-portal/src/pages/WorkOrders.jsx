@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
-import { Search, Eye, X, XCircle, Check, Clock, AlertCircle, ChevronDown, Shield, RefreshCw, ClipboardList, CheckCircle, CheckCircle2, Pencil, Plus, Building2, User, List } from 'lucide-react';
+import { Search, Eye, X, XCircle, Check, Clock, AlertCircle, ChevronDown, Shield, RefreshCw, ClipboardList, CheckCircle, CheckCircle2, Pencil, Plus, Building2, User, List, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useFP } from '../contexts/FPContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -469,6 +470,32 @@ const WorkOrders = ({ admin }) => {
       wo.category_name?.toLowerCase().includes(q)
     );
   });
+
+  // Export all work orders to Excel
+  const exportAllWorkOrders = () => {
+    if (filteredOrders.length === 0) {
+      setSuccess('No work orders to export');
+      return;
+    }
+
+    const exportData = filteredOrders.map(wo => ({
+      'Order ID': wo.work_order_id || '',
+      'Resident': wo.customer_name || '',
+      'Property': wo.property_name || '',
+      'Category': wo.category_name || '',
+      'Subcategory': wo.subcategory_name || '',
+      'Status': wo.status?.replace('_', ' ') || '',
+      'Priority': wo.priority || '',
+      'Description': wo.description || '',
+      'Created Date': wo.created_at ? new Date(wo.created_at).toLocaleDateString('en-IN') : ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Work Orders');
+    XLSX.writeFile(wb, `work_orders_${new Date().toISOString().split('T')[0]}.xlsx`);
+    setSuccess(`Exported ${filteredOrders.length} work orders`);
+  };
 
   // If no FP selected, show FP selection
   if (!selectedFp) {
