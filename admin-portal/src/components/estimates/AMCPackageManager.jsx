@@ -17,6 +17,15 @@ import {
   ChevronDown,
   Eye,
 } from 'lucide-react';
+
+// Decode HTML entities (e.g., &#x2F; -> /)
+const decodeHtml = (html) => {
+  if (!html || typeof html !== 'string') return html;
+  const txt = document.createElement('textarea');
+  txt.innerHTML = html;
+  return txt.value;
+};
+
 import {
   getAMCPackages,
   fetchAMCPackages,
@@ -1156,7 +1165,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                           <span className="w-6 h-6 bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                         </div>
                         <div className="col-span-3">
-                          <p className="font-medium text-amber-900 text-sm">{svc.name || svc.service || 'Service'}</p>
+                          <p className="font-medium text-amber-900 text-sm">{decodeHtml(svc.name || svc.service) || 'Service'}</p>
                         </div>
                         <div className="col-span-5">
                           <p className={`text-xs text-amber-700 break-words whitespace-normal ${!(svc.description && svc.description.trim() && svc.description.trim() !== '-') ? 'text-center' : ''}`}>{svc.description?.trim() || '-'}</p>
