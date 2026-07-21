@@ -812,6 +812,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
   // Save estimate to backend
   const handleSaveEstimate = async () => {
+    // Prevent multiple submissions
+    if (savingEstimate) return;
+    setSavingEstimate(true);
+    
     // Validation
     const clientName = selectedProperty?.contact_person || selectedProperty?.contact_name || selectedProperty?.customer_name || estimateForm.customerName;
     // Build phone - prioritize property contact, then form input
@@ -911,6 +915,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     } catch (e) {
       console.error('Save estimate error:', e);
       showToast('Error saving estimate. Please try again.', 'error');
+    } finally {
+      setSavingEstimate(false);
     }
   };
 
@@ -1355,7 +1361,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           {/* Actions */}
           <div className="flex justify-end gap-3">
             <button onClick={handleBackFromEstimate} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Back</button>
-            <button onClick={handleSaveEstimate} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Save</button>
+            <button onClick={handleSaveEstimate} disabled={savingEstimate} className={`px-6 py-2.5 rounded-lg text-sm font-medium ${savingEstimate ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"} text-white`}>{savingEstimate ? "Saving..." : "Save"}</button>
           </div>
         </div>
       )}
@@ -1704,7 +1710,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           {/* Actions */}
           <div className="flex justify-end gap-3">
             <button onClick={() => setEstimateType(null)} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Back</button>
-            <button onClick={handleSaveEstimate} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Save</button>
+            <button onClick={handleSaveEstimate} disabled={savingEstimate} className={`px-6 py-2.5 rounded-lg text-sm font-medium ${savingEstimate ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"} text-white`}>{savingEstimate ? "Saving..." : "Save"}</button>
           </div>
         </div>
       )}
