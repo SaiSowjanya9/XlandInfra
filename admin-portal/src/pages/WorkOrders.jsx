@@ -1217,7 +1217,10 @@ const WorkOrders = ({ admin }) => {
                   <p className="text-sm font-medium text-gray-700 mb-2">Attachments ({selectedOrder.attachments.length})</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {selectedOrder.attachments.map((att) => {
-                      const filePath = att.file_path?.startsWith('uploads/') ? att.file_path : `uploads/${att.file_path || att.file_name}`;
+                      // Handle various file_path formats: /uploads/file.png, uploads/file.png, or just file.png
+                      let filePath = att.file_path || att.file_name || '';
+                      if (filePath.startsWith('/')) filePath = filePath.substring(1);
+                      if (!filePath.startsWith('uploads/')) filePath = `uploads/${filePath}`;
                       const fileUrl = `${API_BASE}/${filePath}`;
                       const fileName = att.original_name || att.file_name || '';
                       const fileExt = fileName.split('.').pop()?.toLowerCase();
