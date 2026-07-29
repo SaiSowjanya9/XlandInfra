@@ -1572,7 +1572,10 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
   let attachmentsHtml = '';
   if (attachments && attachments.length > 0) {
     const attachmentItems = attachments.map(att => {
-      const filePath = att.file_path?.startsWith('uploads/') ? att.file_path : `uploads/${att.file_path || att.file_name}`;
+      // Handle various file_path formats: /uploads/file.png, uploads/file.png, or just file.png
+      let filePath = att.file_path || att.file_name || '';
+      if (filePath.startsWith('/')) filePath = filePath.substring(1);
+      if (!filePath.startsWith('uploads/')) filePath = `uploads/${filePath}`;
       const fileUrl = `${BASE_URL}/${filePath}`;
       const displayName = att.original_name || att.file_name || 'File';
       const fileExt = displayName.split('.').pop()?.toLowerCase();
