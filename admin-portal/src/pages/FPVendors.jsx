@@ -307,6 +307,17 @@ const FPVendors = ({ user }) => {
           >
             <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
           </button>
+          {selectedVendors.length > 0 && (
+            <button
+              onClick={handleBulkArchive}
+              disabled={archivingSelected}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-red-400"
+              title="Archive Selected Vendors"
+            >
+              <Archive className="w-4 h-4" />
+              <span>{archivingSelected ? 'Archiving...' : `Archive (${selectedVendors.length})`}</span>
+            </button>
+          )}
           <button
             onClick={exportAllVendors}
             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
@@ -399,6 +410,15 @@ const FPVendors = ({ user }) => {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
+                  <th className="px-3 py-3 text-center">
+                    <button onClick={handleSelectAll} className="p-1 hover:bg-gray-200 rounded">
+                      {selectedVendors.length > 0 && selectedVendors.length === filteredVendors.filter(v => !(v.status === 'deleted' || v.status === 'inactive' || v.is_active === 0)).length ? (
+                        <CheckSquare className="w-5 h-5 text-blue-600" />
+                      ) : (
+                        <Square className="w-5 h-5 text-gray-400" />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Vendor ID</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Service Type</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Zone</th>
@@ -417,8 +437,21 @@ const FPVendors = ({ user }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredVendors.map((vendor) => (
+                {filteredVendors.map((vendor) => {
+                  const isArchived = vendor.status === 'deleted' || vendor.status === 'inactive' || vendor.is_active === 0;
+                  return (
                   <tr key={vendor.id || vendor.vendorId} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-3 py-4 text-center">
+                      {!isArchived && (
+                        <button onClick={() => handleSelectVendor(vendor.id)} className="p-1 hover:bg-gray-200 rounded">
+                          {selectedVendors.includes(vendor.id) ? (
+                            <CheckSquare className="w-5 h-5 text-blue-600" />
+                          ) : (
+                            <Square className="w-5 h-5 text-gray-400" />
+                          )}
+                        </button>
+                      )}
+                    </td>
                     <td className="px-4 py-4">
                       <p className="font-semibold text-gray-900">{vendor.ownerName || vendor.owner_name || '-'}</p>
                       <p className="text-xs text-gray-400">{vendor.vendorId || vendor.vendor_id}</p>
@@ -519,7 +552,8 @@ const FPVendors = ({ user }) => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
             <div className="px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
