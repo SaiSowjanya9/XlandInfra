@@ -5,7 +5,7 @@ import {
   ArrowLeft, Download, RefreshCw, Wrench, Zap, Wind, 
   Sparkles, Shield, TreePine, Bug, Paintbrush, Hammer,
   Settings, Flame, ArrowUpDown, Droplets, Trash, Waves,
-  FileCheck, Edit3, Save
+  FileCheck, Edit3, Save, CheckSquare, Square, Archive
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useFP } from '../contexts/FPContext';
@@ -54,6 +54,8 @@ const VendorDetails = () => {
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [toast, setToast] = useState(null);
+  const [selectedVendors, setSelectedVendors] = useState([]);
+  const [archivingSelected, setArchivingSelected] = useState(false);
 
   // Get selected FP from context
   const { selectedFp, fpList, selectFp } = useFP();
@@ -295,6 +297,47 @@ const VendorDetails = () => {
     showToast('All vendors exported successfully');
   };
 
+  // Multi-select handlers
+  const handleSelectVendor = (id) => {
+    setSelectedVendors(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleSelectAll = () => {
+    const activeVendors = filteredVendors.filter(v => !(v.status === 'deleted' || v.status === 'inactive' || v.is_active === 0));
+    if (selectedVendors.length === activeVendors.length) {
+      setSelectedVendors([]);
+    } else {
+      setSelectedVendors(activeVendors.map(v => v.id));
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    if (selectedVendors.length === 0) {
+      showToast('No vendors selected', 'error');
+      return;
+    }
+    setArchivingSelected(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/vendors/bulk-archive`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedVendors })
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast(`${result.archivedCount || selectedVendors.length} vendor(s) archived`);
+        setSelectedVendors([]);
+        fetchVendors();
+      } else {
+        showToast(result.message || 'Failed to archive vendors', 'error');
+      }
+    } catch (error) {
+      showToast('Failed to archive vendors', 'error');
+    } finally {
+      setArchivingSelected(false);
+    }
+  };
+
   // Derived data - based on current status filter for dynamic counts
   const getStatusFilteredVendors = () => {
     return vendors.filter(v => {
@@ -500,6 +543,19 @@ const VendorDetails = () => {
             <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
+          {/* Archive Selected Button */}
+          {!isOpsManager && selectedVendors.length > 0 && (
+            <button
+              onClick={handleBulkArchive}
+              disabled={archivingSelected}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-red-400"
+              title="Archive Selected Vendors"
+            >
+              <Archive className="w-4 h-4" />
+              <span>{archivingSelected ? 'Archiving...' : `Archive (${selectedVendors.length})`}</span>
+            </button>
+          )}
+
           {/* Notifications */}
           <div className="relative">
             <button
@@ -644,6 +700,15 @@ const VendorDetails = () => {
             <table className="w-full text-sm min-w-[900px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
+                  <th className="px-3 py-3 text-center">
+                    <button onClick={handleSelectAll} className="p-1 hover:bg-gray-200 rounded">
+                      {selectedVendors.length > 0 && selectedVendors.length === filteredVendors.filter(v => !(v.status === 'deleted' || v.status === 'inactive' || v.is_active === 0)).length ? (
+                        <CheckSquare className="w-5 h-5 text-blue-600" />
+                      ) : (
+                        <Square className="w-5 h-5 text-gray-400" />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">Vendor ID</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">Service</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">Owner</th>
@@ -658,8 +723,21 @@ const VendorDetails = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredVendors.map((vendor) => (
+                {filteredVendors.map((vendor) => {
+                  const isArchived = vendor.status === 'deleted' || vendor.status === 'inactive' || vendor.is_active === 0;
+                  return (
                   <tr key={vendor.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-3 py-3 text-center">
+                      {!isArchived && (
+                        <button onClick={() => handleSelectVendor(vendor.id)} className="p-1 hover:bg-gray-200 rounded">
+                          {selectedVendors.includes(vendor.id) ? (
+                            <CheckSquare className="w-5 h-5 text-blue-600" />
+                          ) : (
+                            <Square className="w-5 h-5 text-gray-400" />
+                          )}
+                        </button>
+                      )}
+                    </td>
                     <td className="px-3 py-3 font-mono text-xs text-gray-600 whitespace-nowrap">
                       {vendor.vendorId || vendor.vendor_id}
                     </td>
@@ -771,7 +849,8 @@ const VendorDetails = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
             <div className="px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
