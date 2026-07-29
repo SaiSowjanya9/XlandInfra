@@ -518,7 +518,7 @@ const Properties = () => {
     // Create detailed export data for a single property
     const exportData = [{
       'Property ID': p.propertyId || '',
-      'Name': p.name || '',
+      'Community Name': p.name || '',
       'Type': getTypeLabel(p.entryType),
       'Zone': p.zone || '',
       'Area Name': p.areaName || '',
@@ -586,7 +586,7 @@ const Properties = () => {
 
     const exportData = filteredProperties.map(property => ({
       'Property ID': property.propertyId || '',
-      'Name': property.name || '',
+      'Community Name': property.name || '',
       'Type': getTypeLabel(property.entryType),
       'Zone': property.zone || '',
       'Division': property.division || '',
@@ -901,7 +901,7 @@ const Properties = () => {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Name</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Community Name</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">ID</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Type</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Zone</th>
@@ -910,7 +910,7 @@ const Properties = () => {
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Units</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Address</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">City</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Customer</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Customer Name</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Contacts</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created By</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created</th>

@@ -640,7 +640,7 @@ const CustomerSubmissions = () => {
     // Create detailed export data for a single property
     const exportData = [{
       'Property ID': p.propertyId || '',
-      'Name': p.name || '',
+      'Community Name': p.name || '',
       'Type': TYPE_LABELS[p.entryType] || '',
       'Zone': p.zone || '',
       'Area Name': p.area || '',
@@ -703,7 +703,7 @@ const CustomerSubmissions = () => {
   const handleExportAll = () => {
     const exportData = filteredProperties.map(p => ({
       'Property ID': p.propertyId || '',
-      'Name': p.name || '',
+      'Community Name': p.name || '',
       'Type': TYPE_LABELS[p.entryType] || '',
       'Zone': p.zone || '',
       'Area Name': p.area || '',
@@ -1135,6 +1135,14 @@ const CustomerSubmissions = () => {
           </div>
 
           <button
+            onClick={handleExportAll}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+            title="Export All Properties"
+          >
+            <Download className="w-4 h-4" />
+            Export All
+          </button>
+          <button
             onClick={() => loadData()}
             className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
             title="Refresh"
@@ -1165,7 +1173,7 @@ const CustomerSubmissions = () => {
             <table className="w-full text-sm min-w-[800px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Name</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Community Name</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">ID</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Type</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap hidden md:table-cell">Zone</th>

@@ -377,7 +377,7 @@ const ExecutiveProperties = ({ user }) => {
 
     const exportData = filteredProperties.map(property => ({
       'Property ID': property.property_id || '',
-      'Name': property.name || '',
+      'Community Name': property.name || '',
       'Type': property.property_type?.replace(/_/g, ' ') || '',
       'Zone': property.zone_name || '',
       'Area': property.area || property.area_name || '',
@@ -707,7 +707,7 @@ const ExecutiveProperties = ({ user }) => {
               <table className="w-full">
                 <thead className="border-b border-gray-100">
                   <tr>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Name</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Community Name</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">ID</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Type</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Zone</th>
@@ -715,8 +715,8 @@ const ExecutiveProperties = ({ user }) => {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Division</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Address</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">City</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Customer</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Customer</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Customer Name</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Customer Name</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Contacts</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created By</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created</th>
