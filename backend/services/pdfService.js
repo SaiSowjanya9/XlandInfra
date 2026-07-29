@@ -74,8 +74,8 @@ const generateEstimatePDF = async (estimate) => {
       doc.moveTo(pvtLtdX + pvtLtdWidth + lineGap, lineY).lineTo(95 + mainTextWidth, lineY).stroke();
       
       // ESTIMATE badge on the right (rounded corners to match frontend)
-      doc.roundedRect(480, 12, 70, 26, 4).fill(gold);
-      doc.fontSize(10).fillColor(black).text('ESTIMATE', 480, 20, { width: 70, align: 'center', lineBreak: false });
+      doc.roundedRect(470, 12, 85, 26, 4).fill(gold);
+      doc.fontSize(11).fillColor(black).text('ESTIMATE', 470, 19, { width: 85, align: 'center', lineBreak: false });
 
       let y = 90;
 
