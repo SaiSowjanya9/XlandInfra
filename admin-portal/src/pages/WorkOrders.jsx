@@ -454,8 +454,9 @@ const WorkOrders = ({ admin }) => {
 
   // Filter by tab, search and status dropdown
   const filteredOrders = workOrders.filter(wo => {
-    // Tab filter - All shows everything, Completed shows only completed
+    // Tab filter - All shows everything, Completed shows only completed, Closed shows only closed
     if (activeTab === 'completed' && wo.status !== 'completed') return false;
+    if (activeTab === 'closed' && wo.status !== 'closed') return false;
     
     // Status dropdown filter
     if (statusFilter && wo.status !== statusFilter) return false;

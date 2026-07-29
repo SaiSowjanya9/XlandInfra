@@ -1386,7 +1386,7 @@ const FPWorkOrders = ({ user }) => {
       )}
 
       {/* Work Orders List - Only show for pending/completed tabs */}
-      {(activeTab === 'all' || activeTab === 'completed') && (
+      {(activeTab === 'all' || activeTab === 'completed' || activeTab === 'closed') && (
         <>
           {/* Search */}
           <div className="bg-white rounded-xl border border-gray-100 p-4">
