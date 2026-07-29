@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
@@ -1704,7 +1704,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
           {/* Footer Note */}
           <div className="text-xs text-gray-500 border-t border-gray-200 pt-4">
-            * Currency: INR (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹) | GST applied on total | Fields marked with * are mandatory
+            * Currency: INR (₹) | GST applied on total | Fields marked with * are mandatory
           </div>
 
           {/* Actions */}
@@ -2637,9 +2637,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       
                       {/* Price Input */}
                       <div className="mb-6">
-                        <label className="text-gray-600 text-xs mb-2 block font-medium">Price (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹) <span className="text-red-500">*</span></label>
+                        <label className="text-gray-600 text-xs mb-2 block font-medium">Price (₹) <span className="text-red-500">*</span></label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">₹</span>
                           <input
                             type="text"
                             inputMode="numeric"
@@ -2869,9 +2869,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   />
                 </div>
                 <div className="w-24">
-                  <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wider">Price (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹)</label>
+                  <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wider">Price (₹)</label>
                   <div className="relative">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹</span>
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
                     <input 
                       type="text" 
                       value={addonForm.price} 
@@ -3099,7 +3099,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Price (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹) <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Price (₹) <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={editingAddon.price}
