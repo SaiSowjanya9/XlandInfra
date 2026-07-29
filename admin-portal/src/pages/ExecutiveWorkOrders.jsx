@@ -19,6 +19,7 @@ const ExecutiveWorkOrders = ({ user }) => {
   const [statusFilter, setStatusFilter] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [showViewModal, setShowViewModal] = useState(false);
+  const [viewingImage, setViewingImage] = useState(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [showCompletionModal, setShowCompletionModal] = useState(false);
@@ -957,15 +958,17 @@ const ExecutiveWorkOrders = ({ user }) => {
                     {selectedWorkOrder.attachments.map((att) => {
                       const filePath = att.file_path?.startsWith('uploads/') ? att.file_path : `uploads/${att.file_path || att.file_name}`;
                       const fileUrl = `${API_BASE}/${filePath}`;
+                      const fileName = att.original_name || att.file_name || '';
+                      const fileExt = fileName.split('.').pop()?.toLowerCase();
+                      const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+                      const isImage = att.file_type?.startsWith('image/') || imageExtensions.includes(fileExt);
                       return (
-                        <a
+                        <div
                           key={att.id}
-                          href={fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="border border-gray-200 rounded-lg p-2 hover:bg-gray-50 transition-colors group"
+                          onClick={() => isImage ? setViewingImage({ url: fileUrl, name: att.original_name || att.file_name }) : window.open(fileUrl, '_blank')}
+                          className="border border-gray-200 rounded-lg p-2 hover:bg-gray-50 transition-colors group cursor-pointer"
                         >
-                          {att.file_type?.startsWith('image/') ? (
+                          {isImage ? (
                             <img
                               src={fileUrl}
                               alt={att.original_name || att.file_name}
@@ -973,11 +976,11 @@ const ExecutiveWorkOrders = ({ user }) => {
                             />
                           ) : (
                             <div className="w-full h-20 bg-gray-100 rounded flex items-center justify-center">
-                              <span className="text-2xl">📄</span>
+                              <span className="text-2xl">??</span>
                             </div>
                           )}
                           <p className="text-xs font-medium text-gray-700 truncate mt-1 group-hover:text-blue-600">{att.original_name || att.file_name}</p>
-                        </a>
+                        </div>
                       );
                     })}
                   </div>
@@ -1046,6 +1049,28 @@ const ExecutiveWorkOrders = ({ user }) => {
                 {isSubmittingCompletion ? 'Completing...' : 'Mark as Completed'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Image Viewer Modal */}
+      {viewingImage && (
+        <div 
+          className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4"
+          onClick={() => setViewingImage(null)}
+        >
+          <button
+            onClick={() => setViewingImage(null)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+          >
+            <X className="w-8 h-8" />
+          </button>
+          <div className="max-w-full max-h-full" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={viewingImage.url}
+              alt={viewingImage.name}
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            />
+            <p className="text-white text-center mt-2 text-sm">{viewingImage.name}</p>
           </div>
         </div>
       )}
