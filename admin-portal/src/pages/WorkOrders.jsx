@@ -699,6 +699,14 @@ const WorkOrders = ({ admin }) => {
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </button>
+        <button
+          onClick={exportAllWorkOrders}
+          className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+          title="Export All Work Orders"
+        >
+          <Download className="w-4 h-4" />
+          Export All
+        </button>
       </div>
 
       {/* Create New Work Order Form */}
