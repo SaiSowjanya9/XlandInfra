@@ -910,6 +910,7 @@ const Properties = () => {
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Units</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Address</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">City</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Customer</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Contacts</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created By</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created</th>

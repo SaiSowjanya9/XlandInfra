@@ -714,6 +714,8 @@ const CoordinatorProperties = ({ user }) => {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Division</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Address</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">City</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Customer</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Customer</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Contacts</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created By</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created</th>
