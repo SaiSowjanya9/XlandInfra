@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
-import { Search, Eye, X, XCircle, Check, Clock, AlertCircle, ChevronDown, Shield, RefreshCw, ClipboardList, CheckCircle, CheckCircle2, Pencil, Plus, Building2, User, List, Download } from 'lucide-react';
+import { Search, Eye, X, XCircle, Check, Clock, AlertCircle, AlertTriangle, ChevronDown, Shield, RefreshCw, ClipboardList, CheckCircle, CheckCircle2, Pencil, Plus, Building2, User, List, Download, Lock } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useFP } from '../contexts/FPContext';
 
@@ -42,6 +42,10 @@ const WorkOrders = ({ admin }) => {
     block: '', flatNumber: ''
   });
   
+  // Auto-delete notification states
+  const [approachingDeletion, setApproachingDeletion] = useState([]);
+  const [showDeletionWarning, setShowDeletionWarning] = useState(false);
+  
   // FP Context
   const { fpList, selectedFp, selectFp, loading: fpLoading } = useFP();
   const token = getAuthToken();
@@ -72,6 +76,22 @@ const WorkOrders = ({ admin }) => {
     }
   }, [selectedFp, activeTab, token]);
 
+  // Fetch work orders approaching auto-deletion (30 days after closed/cancelled)
+  const fetchApproachingDeletion = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/work-orders/approaching-deletion`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success && result.data.length > 0) {
+        setApproachingDeletion(result.data);
+        setShowDeletionWarning(true);
+      }
+    } catch (error) {
+      console.error('Fetch approaching deletion error:', error);
+    }
+  }, [token]);
+
   // Auto-select "Admin (All FPs)" if no FP is selected
   useEffect(() => {
     if (!selectedFp && !fpLoading) {
@@ -82,8 +102,9 @@ const WorkOrders = ({ admin }) => {
   useEffect(() => {
     if (selectedFp) {
       fetchWorkOrders();
+      fetchApproachingDeletion();
     }
-  }, [fetchWorkOrders, selectedFp]);
+  }, [fetchWorkOrders, fetchApproachingDeletion, selectedFp]);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -594,6 +615,35 @@ const WorkOrders = ({ admin }) => {
       {success && (
         <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2 text-green-700">
           <Check className="w-5 h-5" /><span>{success}</span>
+        </div>
+      )}
+
+      {/* Auto-Delete Warning Notification */}
+      {showDeletionWarning && approachingDeletion.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="font-medium text-amber-800">Work Orders Approaching Auto-Delete</h4>
+              <p className="text-sm text-amber-700 mt-1">
+                {approachingDeletion.length} work order(s) will be automatically deleted within 7 days. 
+                Closed and cancelled work orders are deleted 30 days after completion.
+              </p>
+              <div className="mt-2 space-y-1">
+                {approachingDeletion.slice(0, 3).map(wo => (
+                  <div key={wo.id} className="text-sm text-amber-700">
+                    • <strong>{wo.workOrderId}</strong> - {wo.title} ({wo.daysUntilDeletion} days left)
+                  </div>
+                ))}
+                {approachingDeletion.length > 3 && (
+                  <div className="text-sm text-amber-600">...and {approachingDeletion.length - 3} more</div>
+                )}
+              </div>
+            </div>
+            <button onClick={() => setShowDeletionWarning(false)} className="text-amber-600 hover:text-amber-800">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 
