@@ -729,7 +729,7 @@ const ManagerWorkOrders = ({ user }) => {
       </div>
 
       {/* Search - shown for pending/completed tabs */}
-      {(activeTab === 'all' || activeTab === 'completed') && (
+      {(activeTab === 'all' || activeTab === 'completed' || activeTab === 'closed') && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <div className="flex gap-3">
             <div className="flex-1 relative">
@@ -775,7 +775,7 @@ const ManagerWorkOrders = ({ user }) => {
       )}
 
       {/* Work Orders List - shown for pending/completed tabs */}
-      {(activeTab === 'all' || activeTab === 'completed') && (
+      {(activeTab === 'all' || activeTab === 'completed' || activeTab === 'closed') && (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-12">
