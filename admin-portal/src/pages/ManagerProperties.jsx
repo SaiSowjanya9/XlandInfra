@@ -810,6 +810,7 @@ const ManagerProperties = ({ user }) => {
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Property</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Type</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Created Date</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Created By</th>
