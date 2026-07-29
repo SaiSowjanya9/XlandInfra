@@ -1778,13 +1778,17 @@ const CoordinatorWorkOrders = ({ user }) => {
                     {selectedWorkOrder.attachments.map((att) => {
                       const filePath = att.file_path?.startsWith('uploads/') ? att.file_path : `uploads/${att.file_path || att.file_name}`;
                       const fileUrl = `${API_BASE}/${filePath}`;
+                      const fileName = att.original_name || att.file_name || '';
+                      const fileExt = fileName.split('.').pop()?.toLowerCase();
+                      const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+                      const isImage = att.file_type?.startsWith('image/') || imageExtensions.includes(fileExt);
                       return (
                         <div
                           key={att.id}
-                          onClick={() => att.file_type?.startsWith('image/') ? setViewingImage({ url: fileUrl, name: att.original_name || att.file_name }) : window.open(fileUrl, '_blank')}
+                          onClick={() => isImage ? setViewingImage({ url: fileUrl, name: att.original_name || att.file_name }) : window.open(fileUrl, '_blank')}
                           className="border border-gray-200 rounded-lg p-2 hover:bg-gray-50 transition-colors group cursor-pointer"
                         >
-                          {att.file_type?.startsWith('image/') ? (
+                          {isImage ? (
                             <img
                               src={fileUrl}
                               alt={att.original_name || att.file_name}
