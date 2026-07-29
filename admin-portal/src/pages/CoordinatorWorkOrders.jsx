@@ -1778,12 +1778,10 @@ const CoordinatorWorkOrders = ({ user }) => {
                       const filePath = att.file_path?.startsWith('uploads/') ? att.file_path : `uploads/${att.file_path || att.file_name}`;
                       const fileUrl = `${API_BASE}/${filePath}`;
                       return (
-                        <a
+                        <div
                           key={att.id}
-                          href={fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="border border-gray-200 rounded-lg p-2 hover:bg-gray-50 transition-colors group"
+                          onClick={() => att.file_type?.startsWith('image/') ? setViewingImage({ url: fileUrl, name: att.original_name || att.file_name }) : window.open(fileUrl, '_blank')}
+                          className="border border-gray-200 rounded-lg p-2 hover:bg-gray-50 transition-colors group cursor-pointer"
                         >
                           {att.file_type?.startsWith('image/') ? (
                             <img
@@ -1797,7 +1795,7 @@ const CoordinatorWorkOrders = ({ user }) => {
                             </div>
                           )}
                           <p className="text-xs font-medium text-gray-700 truncate mt-1 group-hover:text-blue-600">{att.original_name || att.file_name}</p>
-                        </a>
+                        </div>
                       );
                     })}
                   </div>
