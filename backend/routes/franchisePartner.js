@@ -5554,4 +5554,35 @@ router.delete('/service-types/:id', requireFPScope, async (req, res) => {
   }
 });
 
+// ============================================
+// WORK ORDER AUTO-DELETE NOTIFICATIONS
+// ============================================
+const { getWorkOrdersApproachingDeletion, getApproachingDeletionCount, AUTO_DELETE_DAYS, WARNING_DAYS } = require('../utils/workOrderCleanup');
+
+// Get work orders approaching auto-delete (FP Portal)
+router.get('/work-orders/approaching-deletion', requireFPScope, async (req, res) => {
+  try {
+    const workOrders = await getWorkOrdersApproachingDeletion(req.fpId);
+    res.json({
+      success: true,
+      data: workOrders,
+      config: { autoDeleteDays: AUTO_DELETE_DAYS, warningDays: WARNING_DAYS }
+    });
+  } catch (error) {
+    console.error('Error getting approaching deletion:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get count of work orders approaching auto-delete (FP Portal)
+router.get('/work-orders/approaching-deletion/count', requireFPScope, async (req, res) => {
+  try {
+    const count = await getApproachingDeletionCount(req.fpId);
+    res.json({ success: true, count });
+  } catch (error) {
+    console.error('Error getting approaching deletion count:', error);
+    res.status(500).json({ success: false, count: 0 });
+  }
+});
+
 module.exports = router;

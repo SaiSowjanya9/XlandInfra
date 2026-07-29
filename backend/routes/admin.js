@@ -4104,4 +4104,35 @@ router.post('/migrate/block-unit-types', authenticate, adminOnly, async (req, re
   }
 });
 
+// ============================================
+// WORK ORDER AUTO-DELETE NOTIFICATIONS
+// ============================================
+const { getWorkOrdersApproachingDeletion, getApproachingDeletionCount, AUTO_DELETE_DAYS, WARNING_DAYS } = require('../utils/workOrderCleanup');
+
+// Get work orders approaching auto-delete (Admin)
+router.get('/work-orders/approaching-deletion', authenticate, adminOnly, async (req, res) => {
+  try {
+    const workOrders = await getWorkOrdersApproachingDeletion();
+    res.json({
+      success: true,
+      data: workOrders,
+      config: { autoDeleteDays: AUTO_DELETE_DAYS, warningDays: WARNING_DAYS }
+    });
+  } catch (error) {
+    console.error('Error getting approaching deletion:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get count of work orders approaching auto-delete (Admin)
+router.get('/work-orders/approaching-deletion/count', authenticate, adminOnly, async (req, res) => {
+  try {
+    const count = await getApproachingDeletionCount();
+    res.json({ success: true, count });
+  } catch (error) {
+    console.error('Error getting approaching deletion count:', error);
+    res.status(500).json({ success: false, count: 0 });
+  }
+});
+
 module.exports = router;
