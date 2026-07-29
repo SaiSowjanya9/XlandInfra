@@ -1327,6 +1327,7 @@ const FPProperties = ({ user }) => {
                 <thead className="border-b border-gray-100">
                   <tr>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Name</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Customer</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">ID</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Type</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Zone</th>
@@ -1334,8 +1335,7 @@ const FPProperties = ({ user }) => {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Division</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Address</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">City</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Customer</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Contacts</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Contact</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created By</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
