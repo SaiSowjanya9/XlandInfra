@@ -439,6 +439,7 @@ const WorkOrders = ({ admin }) => {
       case 'accepted': return 'bg-indigo-100 text-indigo-700';
       case 'in_progress': return 'bg-purple-100 text-purple-700';
       case 'completed': return 'bg-green-100 text-green-700';
+      case 'closed': return 'bg-gray-200 text-gray-700';
       case 'cancelled': return 'bg-red-100 text-red-700';
       default: return 'bg-gray-100 text-gray-700';
     }
@@ -888,6 +889,7 @@ const WorkOrders = ({ admin }) => {
             <option value="assigned">Assigned</option>
             <option value="in_progress">In Progress</option>
             <option value="completed">Completed</option>
+                          <option value="closed">Closed</option>
             <option value="cancelled">Cancelled</option>
           </select>
           <button 
@@ -957,6 +959,7 @@ const WorkOrders = ({ admin }) => {
                           <option value="assigned">Assigned</option>
                           <option value="in_progress">In Progress</option>
                           <option value="completed">Completed</option>
+                          <option value="closed">Closed</option>
                           <option value="cancelled">Cancelled</option>
                         </select>
                         <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-current opacity-70" />
@@ -1321,6 +1324,7 @@ const WorkOrders = ({ admin }) => {
                     <option value="assigned">Assigned</option>
                     <option value="in_progress">In Progress</option>
                     <option value="completed">Completed</option>
+                          <option value="closed">Closed</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
