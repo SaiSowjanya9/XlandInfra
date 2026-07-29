@@ -1349,6 +1349,23 @@ const FPProperties = ({ user }) => {
                         <span className="text-sm font-medium text-gray-900">{property.name}</span>
                       </td>
                       <td className="py-3 px-4">
+                        <span className="text-sm text-gray-600">
+                          {(() => {
+                            try {
+                              if (property.association_contacts) {
+                                const contacts = typeof property.association_contacts === 'string' 
+                                  ? JSON.parse(property.association_contacts) 
+                                  : property.association_contacts;
+                                if (contacts.length > 0 && contacts[0].name) {
+                                  return contacts[0].name;
+                                }
+                              }
+                            } catch {}
+                            return property.contact_name || property.contact_person || '-';
+                          })()}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
                         <span className="text-sm text-gray-500">{property.property_id}</span>
                       </td>
                       <td className="py-3 px-4">
