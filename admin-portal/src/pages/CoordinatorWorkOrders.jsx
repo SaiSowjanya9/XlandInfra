@@ -1793,12 +1793,16 @@ const CoordinatorWorkOrders = ({ user }) => {
                               src={fileUrl}
                               alt={att.original_name || att.file_name}
                               className="w-full h-20 object-cover rounded"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
                             />
-                          ) : (
-                            <div className="w-full h-20 bg-gray-100 rounded flex items-center justify-center">
-                              <span className="text-2xl">📄</span>
-                            </div>
-                          )}
+                          ) : null}
+                          <div className={`w-full h-20 bg-gray-100 rounded flex-col items-center justify-center ${isImage ? 'hidden' : 'flex'}`}>
+                            <span className="text-2xl">{isImage ? '🖼️' : '📄'}</span>
+                            {isImage && <span className="text-xs text-gray-500 mt-1">Click to view</span>}
+                          </div>
                           <p className="text-xs font-medium text-gray-700 truncate mt-1 group-hover:text-blue-600">{att.original_name || att.file_name}</p>
                         </div>
                       );
