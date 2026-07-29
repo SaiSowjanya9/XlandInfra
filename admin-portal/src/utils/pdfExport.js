@@ -128,7 +128,7 @@ const generatePDF = (data, type, filename) => {
 
     // Document Badge (right side)
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
-    const badgeWidth = 28;
+    const badgeWidth = 32;
     const badgeHeight = 10;
     const badgeX = pageWidth - margin - badgeWidth;
     const badgeY = 7;
