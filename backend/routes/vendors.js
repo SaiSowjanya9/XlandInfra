@@ -883,7 +883,7 @@ router.get('/assignments', authenticate, managerOrAdmin, async (req, res) => {
     const [propertyAssignments] = await pool.execute(
       `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
         p.name as property_name, p.property_id as property_code, p.property_type, p.address, p.city, p.zone_id as property_zone,
-        COALESCE(ov.company_name, ov.owner_name) as vendor_name, ov.vendor_id as vendor_code, ov.service_type,
+        COALESCE(ov.company_name, ov.owner_name) as vendor_name, ov.vendor_id as vendor_code, COALESCE(pva.service_type, ov.service_type) as service_type,
         COALESCE(ov.phone, ov.owner_mobile) as vendor_phone, COALESCE(ov.email, ov.owner_email) as vendor_email, ov.owner_aadhar,
         ov.owner_name, ov.owner_mobile, ov.owner_email,
         COALESCE(ov.zone_name, ov.zone) as zone_name, COALESCE(ov.area, ov.area_name) as area, ov.rate_per_visit, ov.coverage_per_day,

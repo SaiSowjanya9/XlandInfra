@@ -211,10 +211,7 @@ const PropertyManagement = () => {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent"></div>
                 </div>
-                {/* Floating Logo Card */}
-                <div className="absolute -bottom-6 -left-6 bg-[#0D0D0D] border border-gold-500/30 rounded-2xl p-4 shadow-2xl">
-                  <BrandLogo size="sm" />
-                </div>
+
               </div>
             </div>
           </div>
