@@ -300,7 +300,7 @@ const CustomerSubmissions = () => {
     try {
       // Use admin endpoint to get vendor assignments
       const endpoint = fpId 
-        ? `${API_BASE}/api/admin/fp-view/${fpId}/vendors/assignments`
+        ? `${API_BASE}/api/admin/fp-view/${fpId}/vendor-assignments`
         : `${API_BASE}/api/vendors/assignments`;
       const response = await fetch(endpoint, {
         headers: { 'Authorization': `Bearer ${token}` }
