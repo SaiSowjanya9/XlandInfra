@@ -130,9 +130,6 @@ const FPLayout = ({ admin, onLogout, children }) => {
   const isEmployeeSectionActive = employeeSubItems.some(item => location.pathname === item.path);
   const isEstimatesSectionActive = estimatesSubItems.some(item => location.pathname === item.path);
   
-  // Check if any main nav item is active (to avoid highlighting dropdown when on a different page)
-  const isAnyMainNavActive = navItems.some(item => location.pathname === item.path);
-
   // Color constants for sidebar
   const colors = {
     sidebarBg: 'linear-gradient(180deg, #23201B 0%, #1C1A17 50%, #141210 100%)',
@@ -150,11 +147,20 @@ const FPLayout = ({ admin, onLogout, children }) => {
     profileBg: '#1F1C18',
   };
 
+  // Check if any dropdown is open
+  const isAnyDropdownOpen = vendorOpen || employeeOpen || estimatesOpen;
+
   const NavLink = ({ item, mobile = false }) => {
     const Icon = item.icon;
-    const isActive = location.pathname === item.path;
+    // Only highlight main nav if path matches AND no dropdown is open
+    const isActive = location.pathname === item.path && !isAnyDropdownOpen;
     const handleClick = (e) => {
       if (mobile) setSidebarOpen(false);
+      
+      // Close all dropdowns when clicking on main nav items
+      setVendorOpen(false);
+      setEmployeeOpen(false);
+      setEstimatesOpen(false);
 
       if (localStorage.getItem('formDirty') === 'true') {
         e.preventDefault();
@@ -263,15 +269,15 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 onClick={toggleVendor}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
                 style={{
-                  background: (isVendorSectionActive || (vendorOpen && !isAnyMainNavActive)) ? colors.activeBg : 'transparent',
-                  color: (isVendorSectionActive || (vendorOpen && !isAnyMainNavActive)) ? colors.activeText : colors.primaryText,
+                  background: (isVendorSectionActive || vendorOpen) ? colors.activeBg : 'transparent',
+                  color: (isVendorSectionActive || vendorOpen) ? colors.activeText : colors.primaryText,
                 }}
-                onMouseEnter={(e) => { if (!isVendorSectionActive && !(vendorOpen && !isAnyMainNavActive)) e.currentTarget.style.background = colors.hoverBg; }}
-                onMouseLeave={(e) => { if (!isVendorSectionActive && !(vendorOpen && !isAnyMainNavActive)) e.currentTarget.style.background = 'transparent'; }}
+                onMouseEnter={(e) => { if (!isVendorSectionActive && !vendorOpen) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!isVendorSectionActive && !vendorOpen) e.currentTarget.style.background = 'transparent'; }}
                 title={sidebarCollapsed ? 'Vendor Management' : ''}
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                  <Store className="w-5 h-5 flex-shrink-0" style={{ color: (isVendorSectionActive || (vendorOpen && !isAnyMainNavActive)) ? colors.activeText : colors.iconGold }} />
+                  <Store className="w-5 h-5 flex-shrink-0" style={{ color: (isVendorSectionActive || vendorOpen) ? colors.activeText : colors.iconGold }} />
                   {!sidebarCollapsed && <span>Vendor Management</span>}
                 </div>
                 {!sidebarCollapsed && (
@@ -297,15 +303,15 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 onClick={toggleEmployee}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
                 style={{
-                  background: (isEmployeeSectionActive || (employeeOpen && !isAnyMainNavActive)) ? colors.activeBg : 'transparent',
-                  color: (isEmployeeSectionActive || (employeeOpen && !isAnyMainNavActive)) ? colors.activeText : colors.primaryText,
+                  background: (isEmployeeSectionActive || employeeOpen) ? colors.activeBg : 'transparent',
+                  color: (isEmployeeSectionActive || employeeOpen) ? colors.activeText : colors.primaryText,
                 }}
-                onMouseEnter={(e) => { if (!isEmployeeSectionActive && !(employeeOpen && !isAnyMainNavActive)) e.currentTarget.style.background = colors.hoverBg; }}
-                onMouseLeave={(e) => { if (!isEmployeeSectionActive && !(employeeOpen && !isAnyMainNavActive)) e.currentTarget.style.background = 'transparent'; }}
+                onMouseEnter={(e) => { if (!isEmployeeSectionActive && !employeeOpen) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!isEmployeeSectionActive && !employeeOpen) e.currentTarget.style.background = 'transparent'; }}
                 title={sidebarCollapsed ? 'Employee Management' : ''}
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                  <Users className="w-5 h-5 flex-shrink-0" style={{ color: (isEmployeeSectionActive || (employeeOpen && !isAnyMainNavActive)) ? colors.activeText : colors.iconGold }} />
+                  <Users className="w-5 h-5 flex-shrink-0" style={{ color: (isEmployeeSectionActive || employeeOpen) ? colors.activeText : colors.iconGold }} />
                   {!sidebarCollapsed && <span>Employee Management</span>}
                 </div>
                 {!sidebarCollapsed && (
@@ -331,15 +337,15 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 onClick={toggleEstimates}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
                 style={{
-                  background: (isEstimatesSectionActive || (estimatesOpen && !isAnyMainNavActive)) ? colors.activeBg : 'transparent',
-                  color: (isEstimatesSectionActive || (estimatesOpen && !isAnyMainNavActive)) ? colors.activeText : colors.primaryText,
+                  background: (isEstimatesSectionActive || estimatesOpen) ? colors.activeBg : 'transparent',
+                  color: (isEstimatesSectionActive || estimatesOpen) ? colors.activeText : colors.primaryText,
                 }}
-                onMouseEnter={(e) => { if (!isEstimatesSectionActive && !(estimatesOpen && !isAnyMainNavActive)) e.currentTarget.style.background = colors.hoverBg; }}
-                onMouseLeave={(e) => { if (!isEstimatesSectionActive && !(estimatesOpen && !isAnyMainNavActive)) e.currentTarget.style.background = 'transparent'; }}
+                onMouseEnter={(e) => { if (!isEstimatesSectionActive && !estimatesOpen) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!isEstimatesSectionActive && !estimatesOpen) e.currentTarget.style.background = 'transparent'; }}
                 title={sidebarCollapsed ? 'Estimates / AMC' : ''}
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                  <FileText className="w-5 h-5 flex-shrink-0" style={{ color: (isEstimatesSectionActive || (estimatesOpen && !isAnyMainNavActive)) ? colors.activeText : colors.iconGold }} />
+                  <FileText className="w-5 h-5 flex-shrink-0" style={{ color: (isEstimatesSectionActive || estimatesOpen) ? colors.activeText : colors.iconGold }} />
                   {!sidebarCollapsed && <span>Estimates / AMC</span>}
                 </div>
                 {!sidebarCollapsed && (
