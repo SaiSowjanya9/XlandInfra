@@ -1611,6 +1611,7 @@ router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
       workOrderStats,
       directEstimates,
       propertyEstimates,
+      estimatesByPropertyType,
       recentWorkOrders
     ] = await Promise.all([
       // ALL properties (exclude deleted)
@@ -1651,6 +1652,24 @@ router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
         WHERE (is_archived = 0 OR is_archived IS NULL) 
         AND status NOT IN ('archived', 'rejected', 'deleted')
         AND (estimate_type = 'property_based' OR estimate_type = 'property-based')`),
+      // Estimates by property type (active only)
+      pool.execute(`
+        SELECT 
+          SUM(CASE WHEN property_type = 'gated_community' THEN 1 ELSE 0 END) as gated_community,
+          SUM(CASE WHEN property_type = 'apartment' THEN 1 ELSE 0 END) as apartment,
+          SUM(CASE WHEN property_type = 'villa' THEN 1 ELSE 0 END) as villa,
+          SUM(CASE WHEN property_type = 'flat' THEN 1 ELSE 0 END) as flat,
+          SUM(CASE WHEN property_type = 'plot' THEN 1 ELSE 0 END) as plot
+        FROM fp_estimates 
+        WHERE (is_archived = 0 OR is_archived IS NULL) 
+        AND status NOT IN ('archived', 'rejected', 'deleted')
+      `).then(([[r]]) => ({
+        gated_community: Number(r?.gated_community) || 0,
+        apartment: Number(r?.apartment) || 0,
+        villa: Number(r?.villa) || 0,
+        flat: Number(r?.flat) || 0,
+        plot: Number(r?.plot) || 0
+      })).catch(() => ({ gated_community: 0, apartment: 0, villa: 0, flat: 0, plot: 0 })),
       // Recent work orders
       pool.execute(
         `SELECT wo.id, wo.work_order_id, wo.title, wo.status, wo.priority, wo.created_at,
@@ -1675,6 +1694,7 @@ router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
         completedWorkOrders: workOrderStats.completed + workOrderStats.closed,
         directEstimates: directEstimates,
         propertyEstimates: propertyEstimates,
+        estimatesByPropertyType,
         recentWorkOrders: recentWorkOrders,
         workOrdersByStatus: {
           pending: workOrderStats.pending,

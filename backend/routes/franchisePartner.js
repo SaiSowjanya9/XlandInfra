@@ -180,6 +180,7 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
       workOrderStats,
       directEstimates,
       propertyEstimates,
+      estimatesByPropertyType,
       employeeStats,
       workOrdersByRole,
       recentWorkOrders
@@ -230,6 +231,26 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
         WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
         AND status NOT IN ('archived', 'rejected', 'deleted')
         AND (estimate_type = 'property_based' OR estimate_type = 'property-based')`, [fpId]),
+      
+      // Estimates by property type (active only)
+      pool.execute(`
+        SELECT 
+          SUM(CASE WHEN property_type = 'gated_community' THEN 1 ELSE 0 END) as gated_community,
+          SUM(CASE WHEN property_type = 'apartment' THEN 1 ELSE 0 END) as apartment,
+          SUM(CASE WHEN property_type = 'villa' THEN 1 ELSE 0 END) as villa,
+          SUM(CASE WHEN property_type = 'flat' THEN 1 ELSE 0 END) as flat,
+          SUM(CASE WHEN property_type = 'plot' THEN 1 ELSE 0 END) as plot
+        FROM fp_estimates 
+        WHERE franchise_partner_id = ? 
+        AND (is_archived = 0 OR is_archived IS NULL) 
+        AND status NOT IN ('archived', 'rejected', 'deleted')
+      `, [fpId]).then(([[r]]) => ({
+        gated_community: Number(r?.gated_community) || 0,
+        apartment: Number(r?.apartment) || 0,
+        villa: Number(r?.villa) || 0,
+        flat: Number(r?.flat) || 0,
+        plot: Number(r?.plot) || 0
+      })).catch(() => ({ gated_community: 0, apartment: 0, villa: 0, flat: 0, plot: 0 })),
       
       // Employee stats - combined query (ACTIVE only)
       pool.execute(`
@@ -310,6 +331,7 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
           },
           directEstimates,
           propertyEstimates,
+          estimatesByPropertyType,
           employees: employeeStats.total,
           employeeRoles: {
             managers: employeeStats.managers,

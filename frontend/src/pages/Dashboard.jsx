@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock, Clock, CheckCircle, AlertCircle, Loader2, Eye, ChevronRight, Wrench, User, Phone, Mail, MapPin, Paperclip, Image, FileText, X, Truck } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock, Clock, CheckCircle, AlertCircle, Loader2, Eye, ChevronRight, Wrench, User, Phone, Mail, MapPin, Paperclip, Image, FileText, X, Truck, RefreshCw } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
-// For uploads, use empty string for relative URLs - served at /uploads on same domain
 const UPLOADS_BASE_URL = '';
 
 const Dashboard = ({ user }) => {
+  const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,88 +15,56 @@ const Dashboard = ({ user }) => {
   const modalRef = useRef(null);
   const overlayRef = useRef(null);
 
-  // Scroll modal to top when opened
   useEffect(() => {
     if (selectedWorkOrder) {
-      // Small delay to ensure DOM is ready
       setTimeout(() => {
-        if (modalRef.current) {
-          modalRef.current.scrollTop = 0;
-        }
-        if (overlayRef.current) {
-          overlayRef.current.scrollTop = 0;
-        }
-        // Also scroll window for mobile
+        if (modalRef.current) modalRef.current.scrollTop = 0;
+        if (overlayRef.current) overlayRef.current.scrollTop = 0;
         window.scrollTo(0, 0);
       }, 10);
     }
   }, [selectedWorkOrder]);
 
-  // Fetch dashboard data on mount
-  useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        const token = localStorage.getItem('customerToken');
-        if (!token) {
-          setLoading(false);
-          return;
-        }
-
-        const response = await fetch(`${API_BASE_URL}/api/customers/dashboard`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        const result = await response.json();
-        console.log('[Dashboard] API response:', result);
-        if (result.success) {
-          setDashboardData(result.data);
-        } else {
-          setError(result.message);
-        }
-      } catch (err) {
-        console.error('Dashboard fetch error:', err);
-        setError('Failed to load dashboard data');
-      } finally {
+  const fetchDashboard = async () => {
+    try {
+      const token = localStorage.getItem('customerToken');
+      if (!token) {
         setLoading(false);
+        return;
       }
-    };
 
+      const response = await fetch(`${API_BASE_URL}/api/customers/dashboard`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setDashboardData(result.data);
+      } else {
+        setError(result.message);
+      }
+    } catch (err) {
+      console.error('Dashboard fetch error:', err);
+      setError('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchDashboard();
   }, []);
 
   const menuItems = [
-    {
-      path: '/dashboard/work-order',
-      icon: ClipboardList,
-      title: 'Work Order',
-      description: 'Submit a new maintenance or repair request',
-    },
-    {
-      path: '/dashboard/schedule',
-      icon: Calendar,
-      title: 'Schedules',
-      description: 'View and manage your appointments',
-      locked: true,
-    },
-    {
-      path: '/dashboard/payment',
-      icon: CreditCard,
-      title: 'Payment',
-      description: 'Make payments and view billing history',
-      locked: true,
-    },
-    {
-      path: '/dashboard/contact',
-      icon: HelpCircle,
-      title: 'Contact / Help',
-      description: 'Get support and contact information',
-    },
+    { path: '/dashboard/work-order', icon: ClipboardList, title: 'Work Order', description: 'Submit a new maintenance or repair request' },
+    { path: '/dashboard/schedule', icon: Calendar, title: 'Schedules', description: 'View and manage your appointments', locked: true },
+    { path: '/dashboard/payment', icon: CreditCard, title: 'Payment', description: 'Make payments and view billing history', locked: true },
+    { path: '/dashboard/contact', icon: HelpCircle, title: 'Contact / Help', description: 'Get support and contact information' },
   ];
 
-  // Status badge colors
   const getStatusBadge = (status) => {
     const statusConfig = {
       pending: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30', label: 'Pending' },
@@ -114,7 +83,6 @@ const Dashboard = ({ user }) => {
     );
   };
 
-  // Priority badge
   const getPriorityBadge = (priority) => {
     const priorityConfig = {
       low: { bg: 'bg-green-500/20', text: 'text-green-400' },
@@ -130,392 +98,377 @@ const Dashboard = ({ user }) => {
     );
   };
 
-  // Format date in IST (Indian Standard Time)
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     const date = new Date(dateStr);
     return date.toLocaleString('en-IN', { 
-      day: '2-digit', 
-      month: 'short', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-      timeZone: 'Asia/Kolkata'
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata'
     });
   };
 
   const recentWorkOrders = dashboardData?.recentWorkOrders || [];
-  const stats = dashboardData?.stats || { pending: 0, completed: 0, total: 0 };
+  const stats = dashboardData?.stats || { pending: 0, completed: 0, total: 0, byStatus: {} };
+  
+  // Pie chart data
+  const workOrdersByStatus = stats?.byStatus || {};
+  const pieData = [
+    { name: 'Pending', value: workOrdersByStatus.pending || 0, color: '#F59E0B' },
+    { name: 'In Progress', value: workOrdersByStatus.in_progress || 0, color: '#3B82F6' },
+    { name: 'Completed', value: (workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0), color: '#10B981' },
+  ].filter(item => item.value > 0);
+
+  const totalWorkOrders = stats?.total || 0;
+  const totalForPercentage = pieData.reduce((sum, item) => sum + item.value, 0) || 1;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-10 h-10 border-2 border-gold-500/30 border-t-gold-500 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Welcome Section */}
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-          Welcome, <span className="text-gold-gradient">{user?.firstName}!</span>
-        </h1>
-        <p className="text-dark-300">
-          Manage your work orders, schedule appointments, and more.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+            Welcome, <span className="text-gold-gradient">{user?.firstName}!</span>
+          </h1>
+          <p className="text-dark-300">Here's what's happening with your property today.</p>
+        </div>
+        <button
+          onClick={fetchDashboard}
+          className="flex items-center gap-2 px-4 py-2 bg-dark-800 border border-dark-600 rounded-lg hover:bg-dark-700 transition-colors text-white"
+        >
+          <RefreshCw className="w-4 h-4" />
+          <span>Refresh</span>
+        </button>
       </div>
 
-      {/* Property Info Card */}
-      {user && (
-        <div className="mb-8 bg-gradient-to-r from-gold-600/20 to-gold-700/20 border border-gold-500/30 rounded-2xl p-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center space-x-4">
-              <div className="w-14 h-14 bg-gold-500/20 border border-gold-500/30 rounded-xl flex items-center justify-center">
-                <Building2 className="w-7 h-7 text-gold-400" />
+      {/* Stats Row - 4 cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <button onClick={() => navigate('/dashboard/work-order')} className="bg-dark-800/50 border border-dark-600/50 rounded-2xl p-5 hover:bg-dark-800 transition-all duration-200 group text-left">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <ClipboardList className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-dark-300">Total Orders</p>
+              <p className="text-2xl font-bold text-white">{stats?.total || 0}</p>
+              <p className="text-xs text-dark-400">All Work Orders</p>
+            </div>
+          </div>
+        </button>
+
+        <button onClick={() => navigate('/dashboard/work-order?status=pending')} className="bg-dark-800/50 border border-dark-600/50 rounded-2xl p-5 hover:bg-dark-800 transition-all duration-200 group text-left">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Clock className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-dark-300">Pending</p>
+              <p className="text-2xl font-bold text-white">{stats?.pending || 0}</p>
+              <p className="text-xs text-dark-400">Awaiting Action</p>
+            </div>
+          </div>
+        </button>
+
+        <button onClick={() => navigate('/dashboard/work-order?status=completed')} className="bg-dark-800/50 border border-dark-600/50 rounded-2xl p-5 hover:bg-dark-800 transition-all duration-200 group text-left">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <CheckCircle className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-dark-300">Completed</p>
+              <p className="text-2xl font-bold text-white">{stats?.completed || 0}</p>
+              <p className="text-xs text-dark-400">Successfully Done</p>
+            </div>
+          </div>
+        </button>
+
+        <button onClick={() => navigate('/dashboard/contact')} className="bg-dark-800/50 border border-dark-600/50 rounded-2xl p-5 hover:bg-dark-800 transition-all duration-200 group text-left">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-gold-500 to-gold-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Building2 className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-dark-300">Property</p>
+              <p className="text-lg font-bold text-white truncate max-w-[120px]">{user?.propertyName || 'N/A'}</p>
+              <p className="text-xs text-dark-400">Your Home</p>
+            </div>
+          </div>
+        </button>
+      </div>
+
+      {/* Work Orders Overview - Full Width */}
+      <div className="bg-dark-800/50 border border-dark-600/50 rounded-2xl p-6 mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white">Work Orders Overview</h2>
+          <button onClick={() => navigate('/dashboard/work-order')} className="text-sm text-gold-400 hover:text-gold-300 font-medium flex items-center gap-1">
+            View All <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+        
+        <div className="flex items-center justify-center lg:justify-start gap-12 flex-wrap">
+          {/* Pie Chart */}
+          <div className="relative w-48 h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#374151' }]}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={80}
+                  paddingAngle={pieData.length > 1 ? 3 : 0}
+                  dataKey="value"
+                >
+                  {(pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#374151' }]).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <p className="text-3xl font-bold text-white">{totalWorkOrders}</p>
+              <p className="text-sm text-dark-400">Total</p>
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between min-w-[200px]">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-amber-500"></span>
+                <span className="text-sm text-dark-300">Pending</span>
               </div>
-              <div>
-                <p className="text-gold-400/80 text-sm">Your Property</p>
-                <h2 className="text-xl font-bold text-white">{user.propertyName || 'Property'}</h2>
-                {(user.propertyCode || user.propertyId) && (
-                  <div className="flex items-center space-x-2 mt-1">
-                    <Home className="w-4 h-4 text-gold-500/70" />
-                    <span className="text-dark-300 font-mono">{user.propertyCode || user.propertyId}</span>
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-semibold text-white">{workOrdersByStatus.pending || 0}</span>
+                <span className="text-sm text-dark-400 w-12 text-right">
+                  {totalForPercentage > 0 ? Math.round(((workOrdersByStatus.pending || 0) / totalForPercentage) * 100) : 0}%
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between min-w-[200px]">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                <span className="text-sm text-dark-300">In Progress</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-semibold text-white">{workOrdersByStatus.in_progress || 0}</span>
+                <span className="text-sm text-dark-400 w-12 text-right">
+                  {totalForPercentage > 0 ? Math.round(((workOrdersByStatus.in_progress || 0) / totalForPercentage) * 100) : 0}%
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between min-w-[200px]">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
+                <span className="text-sm text-dark-300">Completed</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-semibold text-white">{(workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0)}</span>
+                <span className="text-sm text-dark-400 w-12 text-right">
+                  {totalForPercentage > 0 ? Math.round((((workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0)) / totalForPercentage) * 100) : 0}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Access Cards */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-white mb-4">Quick Access</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            
+            if (item.locked) {
+              return (
+                <div key={item.path} className="relative bg-dark-800/50 rounded-2xl shadow-lg border border-dark-600/30 overflow-hidden opacity-60 cursor-not-allowed p-5">
+                  <div className="absolute top-3 right-3 z-10">
+                    <div className="bg-dark-700 border border-dark-500 rounded-full p-1.5">
+                      <Lock className="w-4 h-4 text-dark-400" />
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
-            {/* Stats */}
-            <div className="flex items-center gap-6">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-yellow-400">{stats.pending}</p>
-                <p className="text-xs text-dark-400">Pending</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-400">{stats.completed}</p>
-                <p className="text-xs text-dark-400">Completed</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gold-400">{stats.total}</p>
-                <p className="text-xs text-dark-400">Total</p>
-              </div>
-            </div>
+                  <div className="w-10 h-10 bg-dark-700 rounded-xl flex items-center justify-center mb-3">
+                    <Icon className="w-5 h-5 text-dark-400" />
+                  </div>
+                  <h3 className="text-white font-semibold mb-1">{item.title}</h3>
+                  <p className="text-dark-400 text-sm">{item.description}</p>
+                </div>
+              );
+            }
+
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className="flex items-center justify-between p-4 bg-dark-800/50 border border-dark-600/50 rounded-xl hover:bg-dark-800 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-gold-500 to-gold-600 rounded-lg flex items-center justify-center">
+                    <Icon className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-medium text-white">{item.title}</p>
+                    <p className="text-xs text-dark-400">{item.description}</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-dark-500 group-hover:text-gold-400 transition-colors" />
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Recent Work Orders */}
+      {recentWorkOrders.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white">Recent Work Orders</h2>
+            <Link to="/dashboard/work-order" className="text-sm text-gold-400 hover:text-gold-300 flex items-center gap-1">
+              View All <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
+          <div className="grid gap-4">
+            {recentWorkOrders.slice(0, 3).map((order) => (
+              <button
+                key={order.id}
+                onClick={() => setSelectedWorkOrder(order)}
+                className="w-full text-left bg-dark-800/50 border border-dark-600/50 rounded-xl p-4 hover:bg-dark-800 transition-all group"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-medium text-gold-400">{order.work_order_id}</span>
+                      {getStatusBadge(order.status)}
+                      {order.priority && getPriorityBadge(order.priority)}
+                    </div>
+                    <p className="text-white font-medium mb-1">{order.category_name}</p>
+                    <p className="text-dark-400 text-sm line-clamp-1">{order.description}</p>
+                    <p className="text-dark-500 text-xs mt-2">{formatDate(order.created_at)}</p>
+                  </div>
+                  <Eye className="w-5 h-5 text-dark-500 group-hover:text-gold-400 transition-colors mt-1" />
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       )}
-
-      {/* Main Navigation Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          
-          if (item.locked) {
-            return (
-              <div
-                key={item.path}
-                className="relative bg-dark-800/50 rounded-2xl shadow-lg border border-dark-600/30 overflow-hidden opacity-60 cursor-not-allowed"
-              >
-                <div className="absolute top-3 right-3 z-10">
-                  <div className="bg-dark-700 border border-dark-500 rounded-full p-1.5">
-                    <Lock className="w-4 h-4 text-dark-400" />
-                  </div>
-                </div>
-                <div className="bg-gradient-to-br from-dark-700/50 to-dark-800/50 p-6 border-b border-dark-600/30">
-                  <Icon className="w-12 h-12 text-dark-500" />
-                </div>
-                <div className="p-5">
-                  <div className="flex items-center justify-between mb-2">
-                    <h2 className="text-lg font-semibold text-dark-400">
-                      {item.title}
-                    </h2>
-                  </div>
-                  <p className="text-sm text-dark-500">
-                    {item.description}
-                  </p>
-                  <p className="text-xs text-dark-500 mt-2 italic">Coming Soon</p>
-                </div>
-              </div>
-            );
-          }
-          
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className="group bg-dark-800/80 rounded-2xl shadow-lg border border-gold-600/20 overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-gold-500/40 gold-glow-hover"
-            >
-              <div className="bg-gradient-to-br from-gold-600/20 to-gold-700/20 p-6 border-b border-gold-600/20">
-                <Icon className="w-12 h-12 text-gold-400" />
-              </div>
-              <div className="p-5">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-lg font-semibold text-white">
-                    {item.title}
-                  </h2>
-                  <ArrowRight className="w-5 h-5 text-dark-400 group-hover:text-gold-400 group-hover:translate-x-1 transition-all duration-200" />
-                </div>
-                <p className="text-sm text-dark-300">
-                  {item.description}
-                </p>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Recent Activity Section */}
-      <div className="mt-10 bg-dark-800/80 rounded-2xl shadow-lg border border-gold-600/20 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">Recent Activity</h2>
-          {recentWorkOrders.length > 0 && (
-            <span className="text-sm text-dark-400">{recentWorkOrders.length} work order(s)</span>
-          )}
-        </div>
-
-        {loading ? (
-          <div className="text-center py-8">
-            <Loader2 className="w-8 h-8 mx-auto mb-3 text-gold-400 animate-spin" />
-            <p className="text-dark-400">Loading recent activity...</p>
-          </div>
-        ) : error ? (
-          <div className="text-center py-8 text-red-400">
-            <AlertCircle className="w-12 h-12 mx-auto mb-3 text-red-500" />
-            <p>{error}</p>
-          </div>
-        ) : recentWorkOrders.length === 0 ? (
-          <div className="text-center py-8 text-dark-400">
-            <ClipboardList className="w-12 h-12 mx-auto mb-3 text-dark-500" />
-            <p>No recent work orders</p>
-            <Link
-              to="/dashboard/work-order"
-              className="inline-block mt-4 text-gold-400 font-medium hover:text-gold-300 transition-colors"
-            >
-              Create your first work order →
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {recentWorkOrders.map((wo) => (
-              <div
-                key={wo.id}
-                onClick={() => setSelectedWorkOrder(wo)}
-                className="bg-dark-700/50 border border-dark-600/50 rounded-xl p-4 hover:border-gold-500/30 transition-all cursor-pointer group"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-2">
-                      <span className="text-gold-400 font-mono text-sm">{wo.work_order_id}</span>
-                      {getStatusBadge(wo.status)}
-                      {getPriorityBadge(wo.priority)}
-                    </div>
-                    <h3 className="text-white font-medium truncate">
-                      {wo.category_name} {wo.subcategory_name && `- ${wo.subcategory_name}`}
-                    </h3>
-                    {wo.description && (
-                      <p className="text-dark-400 text-sm mt-1 line-clamp-2">{wo.description}</p>
-                    )}
-                    <div className="flex items-center gap-4 mt-2 text-xs text-dark-400">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {formatDate(wo.created_at)}
-                      </span>
-                      {wo.block && wo.flat_number && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          Block {wo.block}, Flat {wo.flat_number}
-                        </span>
-                      )}
-                      {wo.attachments && wo.attachments.length > 0 && (
-                        <span className="flex items-center gap-1 text-gold-400">
-                          <Paperclip className="w-3 h-3" />
-                          {wo.attachments.length} {wo.attachments.length === 1 ? 'file' : 'files'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-dark-500 group-hover:text-gold-400 flex-shrink-0 mt-1" />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* Work Order Detail Modal */}
       {selectedWorkOrder && (
         <div 
           ref={overlayRef}
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center z-[9999] p-0 sm:p-4 overflow-y-auto" 
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto py-8 px-4"
           onClick={() => setSelectedWorkOrder(null)}
         >
           <div 
             ref={modalRef}
-            className="bg-dark-800 sm:rounded-2xl border-0 sm:border border-gold-600/30 w-full sm:max-w-2xl min-h-screen sm:min-h-0 sm:max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
+            className="bg-dark-800 border border-dark-600 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden my-auto"
+            onClick={e => e.stopPropagation()}
           >
-            {/* Modal Header - Sticky */}
-            <div className="sticky top-0 bg-dark-800 border-b border-gold-600/20 p-4 sm:p-5 flex items-center justify-between z-10">
-              <div>
-                <p className="text-gold-400 font-mono text-xs sm:text-sm">{selectedWorkOrder.work_order_id}</p>
-                <h3 className="text-lg sm:text-xl font-bold text-white mt-1">Work Order Details</h3>
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-gold-600/20 to-gold-700/20 border-b border-dark-600 p-4 sm:p-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-gold-400 text-sm font-medium">{selectedWorkOrder.work_order_id}</p>
+                  <h3 className="text-xl font-bold text-white mt-1">{selectedWorkOrder.category_name}</h3>
+                  {selectedWorkOrder.subcategory_name && (
+                    <p className="text-dark-300 text-sm mt-0.5">{selectedWorkOrder.subcategory_name}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setSelectedWorkOrder(null)}
+                  className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-dark-400" />
+                </button>
               </div>
-              <button 
-                onClick={() => setSelectedWorkOrder(null)}
-                className="p-2 sm:p-2.5 text-dark-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/30 rounded-lg transition-all border border-transparent"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex flex-wrap items-center gap-2 mt-4">
+                {getStatusBadge(selectedWorkOrder.status)}
+                {selectedWorkOrder.priority && getPriorityBadge(selectedWorkOrder.priority)}
+              </div>
             </div>
 
             {/* Modal Body */}
-            <div className="p-4 sm:p-5 space-y-4 sm:space-y-6 pb-8">
-              {/* Status & Priority */}
-              <div className="flex items-center gap-3 flex-wrap">
-                {getStatusBadge(selectedWorkOrder.status)}
-                {getPriorityBadge(selectedWorkOrder.priority)}
-                <span className="text-dark-400 text-sm">
-                  Source: <span className="text-dark-200 capitalize">{selectedWorkOrder.source || 'Customer'}</span>
-                </span>
+            <div className="p-4 sm:p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+              {/* Description */}
+              <div>
+                <h4 className="text-sm font-medium text-dark-400 mb-2">Description</h4>
+                <p className="text-white">{selectedWorkOrder.description || 'No description provided'}</p>
               </div>
 
-              {/* Service Details */}
-              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-3 sm:p-4 border border-dark-600/50 backdrop-blur-sm">
-                <h4 className="text-gold-400 font-medium mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
-                  <Wrench className="w-4 h-4" /> Service Details
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
-                  <div>
-                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Category</p>
-                    <p className="text-white font-medium bg-dark-600/30 px-3 py-2 rounded-lg">{selectedWorkOrder.category_name || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Subcategory</p>
-                    <p className="text-white font-medium bg-dark-600/30 px-3 py-2 rounded-lg">{selectedWorkOrder.subcategory_name || '-'}</p>
-                  </div>
-                </div>
-                {selectedWorkOrder.description && (
-                  <div className="mt-4">
-                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Description</p>
-                    <p className="text-white bg-dark-600/30 px-3 py-2 rounded-lg">{selectedWorkOrder.description}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Property & Location */}
-              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-3 sm:p-4 border border-dark-600/50 backdrop-blur-sm">
-                <h4 className="text-gold-400 font-medium mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
-                  <MapPin className="w-4 h-4" /> Property & Location
-                </h4>
+              {/* Details Grid */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Property Type</p>
-                  <p className="text-white font-medium capitalize bg-dark-600/30 px-3 py-2 rounded-lg">{selectedWorkOrder.property_type || '-'}</p>
+                  <p className="text-dark-400 text-xs mb-1">Created</p>
+                  <p className="text-white text-sm">{formatDate(selectedWorkOrder.created_at)}</p>
                 </div>
-              </div>
-
-              {/* Customer Details */}
-              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-3 sm:p-4 border border-dark-600/50 backdrop-blur-sm">
-                <h4 className="text-gold-400 font-medium mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
-                  <User className="w-4 h-4" /> Customer Details
-                </h4>
-                <div className="grid grid-cols-1 gap-2 sm:gap-3 text-sm">
-                  <div className="flex items-center gap-3 bg-dark-600/30 px-3 py-2.5 rounded-lg">
-                    <div className="w-8 h-8 bg-gold-500/20 rounded-full flex items-center justify-center">
-                      <User className="w-4 h-4 text-gold-400" />
-                    </div>
-                    <span className="text-white font-medium">{selectedWorkOrder.customer_name || '-'}</span>
+                {selectedWorkOrder.scheduled_date && (
+                  <div>
+                    <p className="text-dark-400 text-xs mb-1">Scheduled</p>
+                    <p className="text-white text-sm">{formatDate(selectedWorkOrder.scheduled_date)}</p>
                   </div>
-                  <div className="flex items-center gap-3 bg-dark-600/30 px-3 py-2.5 rounded-lg">
-                    <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
-                      <Phone className="w-4 h-4 text-blue-400" />
-                    </div>
-                    <span className="text-white">{selectedWorkOrder.customer_phone || '-'}</span>
+                )}
+                {selectedWorkOrder.completed_at && (
+                  <div>
+                    <p className="text-dark-400 text-xs mb-1">Completed</p>
+                    <p className="text-white text-sm">{formatDate(selectedWorkOrder.completed_at)}</p>
                   </div>
-                  <div className="flex items-center gap-3 bg-dark-600/30 px-3 py-2.5 rounded-lg">
-                    <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center">
-                      <Mail className="w-4 h-4 text-purple-400" />
-                    </div>
-                    <span className="text-white truncate text-sm">{selectedWorkOrder.customer_email || '-'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Entry & Pet Info */}
-              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-3 sm:p-4 border border-dark-600/50 backdrop-blur-sm">
-                <h4 className="text-gold-400 font-medium mb-3 sm:mb-4 text-sm sm:text-base">Entry & Additional Info</h4>
-                <div className="grid grid-cols-2 gap-2 sm:gap-4 text-sm">
-                  <div className="bg-dark-600/30 px-3 py-2.5 rounded-lg">
-                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Permission to Enter</p>
-                    <p className={`font-medium ${selectedWorkOrder.permission_to_enter === 'yes' ? 'text-green-400' : 'text-red-400'}`}>
-                      {selectedWorkOrder.permission_to_enter === 'yes' ? 'Yes' : 'No'}
-                    </p>
-                  </div>
-                  <div className="bg-dark-600/30 px-3 py-2.5 rounded-lg">
-                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Has Pet</p>
-                    <p className={`font-medium ${selectedWorkOrder.has_pet === 'yes' ? 'text-yellow-400' : 'text-dark-200'}`}>
-                      {selectedWorkOrder.has_pet === 'yes' ? 'Yes' : 'No'}
-                    </p>
-                  </div>
-                </div>
-                {selectedWorkOrder.entry_notes && (
-                  <div className="mt-4">
-                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Entry Notes</p>
-                    <p className="text-white bg-dark-600/30 px-3 py-2 rounded-lg">{selectedWorkOrder.entry_notes}</p>
+                )}
+                {selectedWorkOrder.property_type && (
+                  <div>
+                    <p className="text-dark-400 text-xs mb-1">Property Type</p>
+                    <p className="text-white text-sm capitalize">{selectedWorkOrder.property_type}</p>
                   </div>
                 )}
               </div>
 
-              {/* Timeline */}
-              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-3 sm:p-4 border border-dark-600/50 backdrop-blur-sm">
-                <h4 className="text-gold-400 font-medium mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
-                  <Clock className="w-4 h-4" /> Timeline
-                </h4>
-                <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2 sm:gap-3 text-sm">
-                  <div className="bg-dark-600/30 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:flex-1 sm:min-w-[140px]">
-                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Created</p>
-                    <p className="text-white font-medium">{formatDate(selectedWorkOrder.created_at)}</p>
+              {/* Location Info */}
+              {(selectedWorkOrder.block || selectedWorkOrder.flat_number) && (
+                <div>
+                  <h4 className="text-sm font-medium text-dark-400 mb-2">Location</h4>
+                  <div className="flex items-center gap-2 text-white">
+                    <MapPin className="w-4 h-4 text-gold-400" />
+                    <span>
+                      {selectedWorkOrder.block && `Block ${selectedWorkOrder.block}`}
+                      {selectedWorkOrder.block && selectedWorkOrder.flat_number && ', '}
+                      {selectedWorkOrder.flat_number && `Flat ${selectedWorkOrder.flat_number}`}
+                    </span>
                   </div>
-                  {selectedWorkOrder.scheduled_date && (
-                    <div className="bg-blue-500/10 border border-blue-500/20 px-4 py-2.5 rounded-lg flex-1 min-w-[140px]">
-                      <p className="text-blue-400 text-xs uppercase tracking-wider mb-1">Scheduled</p>
-                      <p className="text-white font-medium">{formatDate(selectedWorkOrder.scheduled_date)}</p>
-                    </div>
-                  )}
-                  {selectedWorkOrder.completed_at && (
-                    <div className="bg-green-500/10 border border-green-500/20 px-4 py-2.5 rounded-lg flex-1 min-w-[140px]">
-                      <p className="text-green-400 text-xs uppercase tracking-wider mb-1">Completed</p>
-                      <p className="text-green-400 font-medium">{formatDate(selectedWorkOrder.completed_at)}</p>
-                    </div>
-                  )}
                 </div>
-              </div>
+              )}
 
-              {/* Vendor Info */}
-              {selectedWorkOrder.vendor_name && (
-                <div className="bg-gradient-to-br from-purple-900/20 to-purple-800/10 rounded-xl p-4 border border-purple-500/20 backdrop-blur-sm">
-                  <h4 className="text-purple-400 font-medium mb-3 flex items-center gap-2">
-                    <Truck className="w-4 h-4" /> Assigned Vendor
-                  </h4>
-                  <div className="flex items-center gap-3 bg-dark-600/30 px-4 py-3 rounded-lg">
-                    <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
-                      <Truck className="w-5 h-5 text-purple-400" />
-                    </div>
-                    <div>
-                      <p className="text-white font-medium">{selectedWorkOrder.vendor_name}</p>
-                      {selectedWorkOrder.vendor_phone && (
-                        <p className="text-dark-400 text-sm">{selectedWorkOrder.vendor_phone}</p>
-                      )}
-                    </div>
-                  </div>
+              {/* Entry Permission */}
+              {selectedWorkOrder.permission_to_enter && (
+                <div>
+                  <h4 className="text-sm font-medium text-dark-400 mb-2">Entry Permission</h4>
+                  <p className="text-white capitalize">{selectedWorkOrder.permission_to_enter}</p>
+                  {selectedWorkOrder.entry_notes && (
+                    <p className="text-dark-300 text-sm mt-1">{selectedWorkOrder.entry_notes}</p>
+                  )}
                 </div>
               )}
 
               {/* Attachments */}
               {selectedWorkOrder.attachments && selectedWorkOrder.attachments.length > 0 && (
-                <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-4 border border-dark-600/50 backdrop-blur-sm">
-                  <h4 className="text-gold-400 font-medium mb-4 flex items-center gap-2">
-                    <Paperclip className="w-4 h-4" /> Attachments ({selectedWorkOrder.attachments.length})
+                <div>
+                  <h4 className="text-sm font-medium text-dark-400 mb-2 flex items-center gap-1">
+                    <Paperclip className="w-4 h-4" />
+                    Attachments ({selectedWorkOrder.attachments.length})
                   </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {selectedWorkOrder.attachments.map((att) => {
-                      // Handle file_path that may or may not include 'uploads/' prefix
-                      const filePath = att.file_path?.startsWith('uploads/') 
+                      const isImage = att.file_type?.startsWith('image/');
+                      const fileUrl = att.file_path?.startsWith('http') 
                         ? att.file_path 
-                        : `uploads/${att.file_path || att.file_name}`;
-                      const fileUrl = `${UPLOADS_BASE_URL}/${filePath}`;
+                        : `${UPLOADS_BASE_URL}${att.file_path}`;
                       
                       return (
                         <a
@@ -523,36 +476,18 @@ const Dashboard = ({ user }) => {
                           href={fileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex flex-col items-center p-3 bg-dark-600/40 rounded-lg hover:bg-dark-600/60 transition-colors border border-dark-500/30 hover:border-gold-500/30"
+                          className="bg-dark-700 rounded-lg p-2 hover:bg-dark-600 transition-colors flex items-center gap-2"
                         >
-                          {att.file_type?.startsWith('image/') ? (
-                            <img
-                              src={fileUrl}
-                              alt={att.file_name || att.original_name}
-                              className="w-16 h-16 object-cover rounded-lg mb-2"
-                            />
+                          {isImage ? (
+                            <Image className="w-4 h-4 text-gold-400" />
                           ) : (
-                            <div className="w-16 h-16 bg-dark-500/50 rounded-lg flex items-center justify-center mb-2">
-                              <FileText className="w-8 h-8 text-gold-400" />
-                            </div>
+                            <FileText className="w-4 h-4 text-gold-400" />
                           )}
-                          <span className="text-xs text-dark-200 truncate w-full text-center">
-                            {att.original_name || att.file_name || 'File'}
-                          </span>
+                          <span className="text-sm text-white truncate">{att.original_name || att.file_name}</span>
                         </a>
                       );
                     })}
                   </div>
-                </div>
-              )}
-
-              {/* Completion Notes - Show when work order is completed */}
-              {selectedWorkOrder.status === 'completed' && selectedWorkOrder.closing_notes && (
-                <div className="bg-gradient-to-br from-green-900/30 to-green-800/20 rounded-xl p-4 border border-green-500/30 backdrop-blur-sm">
-                  <h4 className="text-green-400 font-medium mb-3 flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" /> Completion Notes
-                  </h4>
-                  <p className="text-green-200 bg-dark-600/30 px-4 py-3 rounded-lg">{selectedWorkOrder.closing_notes}</p>
                 </div>
               )}
             </div>

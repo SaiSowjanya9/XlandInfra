@@ -197,6 +197,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
       workOrderStats,
       directEstimatesCount,
       propertyEstimatesCount,
+      estimatesByPropertyType,
       recentWorkOrders
     ] = await Promise.all([
       // Properties count - ALL FP properties (active)
@@ -274,6 +275,26 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
         [franchisePartnerId]
       ),
       
+      // Estimates by property type (active only)
+      pool.execute(`
+        SELECT 
+          SUM(CASE WHEN property_type = 'gated_community' THEN 1 ELSE 0 END) as gated_community,
+          SUM(CASE WHEN property_type = 'apartment' THEN 1 ELSE 0 END) as apartment,
+          SUM(CASE WHEN property_type = 'villa' THEN 1 ELSE 0 END) as villa,
+          SUM(CASE WHEN property_type = 'flat' THEN 1 ELSE 0 END) as flat,
+          SUM(CASE WHEN property_type = 'plot' THEN 1 ELSE 0 END) as plot
+        FROM fp_estimates 
+        WHERE franchise_partner_id = ? 
+        AND (is_archived = 0 OR is_archived IS NULL) 
+        AND status NOT IN ('archived', 'rejected', 'deleted')
+      `, [franchisePartnerId]).then(([[r]]) => ({
+        gated_community: Number(r?.gated_community) || 0,
+        apartment: Number(r?.apartment) || 0,
+        villa: Number(r?.villa) || 0,
+        flat: Number(r?.flat) || 0,
+        plot: Number(r?.plot) || 0
+      })).catch(() => ({ gated_community: 0, apartment: 0, villa: 0, flat: 0, plot: 0 })),
+      
       // Recent work orders - ALL FP work orders with creator name lookup
       pool.execute(
         `SELECT wo.*, p.name as property_name, COALESCE(c.name, wo.category_name) as category_name, 
@@ -311,6 +332,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
           completedWorkOrders: workOrderStats.completed + workOrderStats.closed,
           directEstimates: directEstimatesCount,
           propertyEstimates: propertyEstimatesCount,
+          estimatesByPropertyType,
           workOrdersByStatus: {
             pending: workOrderStats.pending,
             under_review: workOrderStats.under_review,

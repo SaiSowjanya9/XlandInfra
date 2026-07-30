@@ -320,6 +320,28 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
       [franchisePartnerId]
     );
 
+    // Estimates by property type (active only)
+    const [[estimatesTypesResult]] = await pool.query(`
+      SELECT 
+        SUM(CASE WHEN property_type = 'gated_community' THEN 1 ELSE 0 END) as gated_community,
+        SUM(CASE WHEN property_type = 'apartment' THEN 1 ELSE 0 END) as apartment,
+        SUM(CASE WHEN property_type = 'villa' THEN 1 ELSE 0 END) as villa,
+        SUM(CASE WHEN property_type = 'flat' THEN 1 ELSE 0 END) as flat,
+        SUM(CASE WHEN property_type = 'plot' THEN 1 ELSE 0 END) as plot
+      FROM fp_estimates 
+      WHERE franchise_partner_id = ? 
+      AND (is_archived = 0 OR is_archived IS NULL) 
+      AND status NOT IN ('archived', 'rejected', 'deleted')
+    `, [franchisePartnerId]);
+    
+    const estimatesByPropertyType = {
+      gated_community: Number(estimatesTypesResult?.gated_community) || 0,
+      apartment: Number(estimatesTypesResult?.apartment) || 0,
+      villa: Number(estimatesTypesResult?.villa) || 0,
+      flat: Number(estimatesTypesResult?.flat) || 0,
+      plot: Number(estimatesTypesResult?.plot) || 0
+    };
+
     // Get recent work orders - ALL FP work orders
     const [recentWorkOrders] = await pool.query(
       `SELECT wo.*, p.name as property_name, COALESCE(c.name, wo.category_name) as category_name,
@@ -354,6 +376,7 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
           completedWorkOrders: (workOrderStats?.completed || 0) + (workOrderStats?.closed || 0),
           directEstimates: directEstimatesCount,
           propertyEstimates: propertyEstimatesCount,
+          estimatesByPropertyType,
           workOrdersByStatus: {
             pending: workOrderStats?.pending || 0,
             under_review: workOrderStats?.under_review || 0,
