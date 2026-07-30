@@ -269,13 +269,13 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               <button
                 onClick={toggleVendor}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
-                style={{ background: isVendorSectionActive ? colors.activeBg : 'transparent', color: isVendorSectionActive ? colors.activeText : colors.primaryText }}
-                onMouseEnter={(e) => { if (!isVendorSectionActive) e.currentTarget.style.background = colors.hoverBg; }}
-                onMouseLeave={(e) => { if (!isVendorSectionActive) e.currentTarget.style.background = 'transparent'; }}
+                style={{ background: (isVendorSectionActive || vendorOpen) ? colors.activeBg : 'transparent', color: (isVendorSectionActive || vendorOpen) ? colors.activeText : colors.primaryText }}
+                onMouseEnter={(e) => { if (!isVendorSectionActive && !vendorOpen) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!isVendorSectionActive && !vendorOpen) e.currentTarget.style.background = 'transparent'; }}
                 title={sidebarCollapsed ? 'Vendor Management' : ''}
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                  <Store className="w-5 h-5 flex-shrink-0" style={{ color: isVendorSectionActive ? colors.activeText : colors.iconGold }} />
+                  <Store className="w-5 h-5 flex-shrink-0" style={{ color: (isVendorSectionActive || vendorOpen) ? colors.activeText : colors.iconGold }} />
                   {!sidebarCollapsed && <span className="text-sm">Vendor Management</span>}
                 </div>
                 {!sidebarCollapsed && (
@@ -296,13 +296,13 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               <button
                 onClick={toggleEmployee}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
-                style={{ background: isEmployeeSectionActive ? colors.activeBg : 'transparent', color: isEmployeeSectionActive ? colors.activeText : colors.primaryText }}
-                onMouseEnter={(e) => { if (!isEmployeeSectionActive) e.currentTarget.style.background = colors.hoverBg; }}
-                onMouseLeave={(e) => { if (!isEmployeeSectionActive) e.currentTarget.style.background = 'transparent'; }}
+                style={{ background: (isEmployeeSectionActive || employeeOpen) ? colors.activeBg : 'transparent', color: (isEmployeeSectionActive || employeeOpen) ? colors.activeText : colors.primaryText }}
+                onMouseEnter={(e) => { if (!isEmployeeSectionActive && !employeeOpen) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!isEmployeeSectionActive && !employeeOpen) e.currentTarget.style.background = 'transparent'; }}
                 title={sidebarCollapsed ? 'Employee Management' : ''}
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                  <Users className="w-5 h-5 flex-shrink-0" style={{ color: isEmployeeSectionActive ? colors.activeText : colors.iconGold }} />
+                  <Users className="w-5 h-5 flex-shrink-0" style={{ color: (isEmployeeSectionActive || employeeOpen) ? colors.activeText : colors.iconGold }} />
                   {!sidebarCollapsed && <span className="text-sm">Employee Management</span>}
                 </div>
                 {!sidebarCollapsed && (
@@ -323,13 +323,13 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               <button
                 onClick={toggleEstimates}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
-                style={{ background: isEstimatesSectionActive ? colors.activeBg : 'transparent', color: isEstimatesSectionActive ? colors.activeText : colors.primaryText }}
-                onMouseEnter={(e) => { if (!isEstimatesSectionActive) e.currentTarget.style.background = colors.hoverBg; }}
-                onMouseLeave={(e) => { if (!isEstimatesSectionActive) e.currentTarget.style.background = 'transparent'; }}
+                style={{ background: (isEstimatesSectionActive || estimatesOpen) ? colors.activeBg : 'transparent', color: (isEstimatesSectionActive || estimatesOpen) ? colors.activeText : colors.primaryText }}
+                onMouseEnter={(e) => { if (!isEstimatesSectionActive && !estimatesOpen) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!isEstimatesSectionActive && !estimatesOpen) e.currentTarget.style.background = 'transparent'; }}
                 title={sidebarCollapsed ? 'Estimates / AMC' : ''}
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                  <FileText className="w-5 h-5 flex-shrink-0" style={{ color: isEstimatesSectionActive ? colors.activeText : colors.iconGold }} />
+                  <FileText className="w-5 h-5 flex-shrink-0" style={{ color: (isEstimatesSectionActive || estimatesOpen) ? colors.activeText : colors.iconGold }} />
                   {!sidebarCollapsed && <span className="text-sm">Estimates / AMC</span>}
                 </div>
                 {!sidebarCollapsed && (
