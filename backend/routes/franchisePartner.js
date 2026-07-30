@@ -2176,6 +2176,64 @@ router.get('/vendors', requireFPScope, async (req, res) => {
   }
 });
 
+// Get vendor assignments for a specific property
+router.get('/vendors/assignments/property/:propertyId', requireFPScope, async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+    
+    if (!propertyId) {
+      return res.status(400).json({ success: false, message: 'Property ID is required' });
+    }
+
+    // Verify property belongs to this FP
+    const [property] = await pool.execute(
+      `SELECT id FROM properties WHERE id = ? AND franchise_partner_id = ?
+       UNION
+       SELECT id FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
+      [propertyId, req.fpId, propertyId, req.fpId]
+    );
+
+    if (property.length === 0) {
+      return res.status(403).json({ success: false, message: 'Property not found or access denied' });
+    }
+
+    // Get all active vendor assignments for this property
+    const [assignments] = await pool.execute(
+      `SELECT pva.id, pva.property_id, pva.vendor_id, pva.service_type, pva.assigned_at, pva.is_active,
+        ov.vendor_id as vendor_code, 
+        COALESCE(ov.company_name, ov.owner_name) as vendor_name, 
+        ov.service_type as vendor_service_type,
+        COALESCE(ov.zone_name, ov.zone) as zone_name
+       FROM property_vendor_assignments pva
+       JOIN onboarded_vendors ov ON pva.vendor_id = ov.id
+       WHERE pva.property_id = ? AND pva.is_active = 1
+       ORDER BY pva.service_type`,
+      [propertyId]
+    );
+
+    // Format for frontend
+    const serviceAssignments = assignments.map(a => ({
+      id: a.id,
+      propertyId: a.property_id,
+      vendorId: a.vendor_code,
+      vendorDbId: a.vendor_id,
+      vendorName: a.vendor_name,
+      serviceType: a.service_type,
+      vendorServiceType: a.vendor_service_type,
+      zoneName: a.zone_name,
+      assignedAt: a.assigned_at
+    }));
+
+    res.json({
+      success: true,
+      data: serviceAssignments
+    });
+  } catch (error) {
+    console.error('Get property vendor assignments error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch property assignments', error: error.message });
+  }
+});
+
 // Get vendor assignments (property-vendor assignments)
 router.get('/vendors/assignments', requireFPScope, async (req, res) => {
   try {
