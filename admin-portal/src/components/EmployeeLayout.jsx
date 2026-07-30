@@ -173,17 +173,19 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   // Check if any dropdown is open
   const isAnyDropdownOpen = vendorOpen || employeeOpen || estimatesOpen;
 
-  const NavLink = ({ item, mobile = false }) => {
+  const NavLink = ({ item, mobile = false, isSubItem = false }) => {
     const Icon = item.icon;
-    // Only highlight main nav if path matches AND no dropdown is open
-    const isActive = location.pathname === item.path && !isAnyDropdownOpen;
+    // Only highlight main nav if path matches AND no dropdown is open (for main nav items only)
+    const isActive = isSubItem ? location.pathname === item.path : (location.pathname === item.path && !isAnyDropdownOpen);
     const handleClick = (e) => {
       if (mobile) setSidebarOpen(false);
       
-      // Close all dropdowns when clicking on main nav items
-      setVendorOpen(false);
-      setEmployeeOpen(false);
-      setEstimatesOpen(false);
+      // Close all dropdowns only when clicking on main nav items (not sub-items)
+      if (!isSubItem) {
+        setVendorOpen(false);
+        setEmployeeOpen(false);
+        setEstimatesOpen(false);
+      }
 
       if (safeStorage.getItem('formDirty') === 'true') {
         e.preventDefault();
@@ -294,7 +296,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               {vendorOpen && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
                   {vendorSubItems.map((item) => (
-                    <NavLink key={item.path} item={item} mobile />
+                    <NavLink key={item.path} item={item} mobile isSubItem />
                   ))}
                 </div>
               )}
@@ -321,7 +323,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               {employeeOpen && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
                   {employeeSubItems.map((item) => (
-                    <NavLink key={item.path} item={item} mobile />
+                    <NavLink key={item.path} item={item} mobile isSubItem />
                   ))}
                 </div>
               )}
@@ -348,7 +350,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               {estimatesOpen && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
                   {estimatesSubItems.map((item) => (
-                    <NavLink key={item.path} item={item} mobile />
+                    <NavLink key={item.path} item={item} mobile isSubItem />
                   ))}
                 </div>
               )}
