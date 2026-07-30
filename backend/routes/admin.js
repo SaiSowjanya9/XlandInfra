@@ -1261,7 +1261,7 @@ router.get('/vendors/assignments', async (req, res) => {
         COALESCE(p.property_type, op.property_type) as property_type, 
         COALESCE(p.address, op.address) as address, 
         COALESCE(p.city, op.city) as city,
-        v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
+        v.owner_name as vendor_name, v.vendor_id as vendor_code, COALESCE(pva.service_type, v.service_type) as service_type,
         v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
         v.zone as zone_name, v.area_name as area, v.rate_per_visit
       FROM property_vendor_assignments pva
@@ -2454,7 +2454,7 @@ router.get('/all-vendor-assignments', authenticate, adminOnly, async (req, res) 
   try {
     const [assignments] = await pool.execute(
       `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at as assigned_date, pva.is_active,
-              ov.vendor_id as vendor_code, ov.owner_name as vendor_name, ov.service_type, 
+              ov.vendor_id as vendor_code, ov.owner_name as vendor_name, COALESCE(pva.service_type, ov.service_type) as service_type, 
               ov.zone as vendor_zone, ov.zone as zone_name, ov.area_name as area, 
               ov.rate_per_visit, ov.coverage_per_day, ov.status as vendor_status,
               ov.owner_mobile as vendor_phone, ov.owner_email as vendor_email,
@@ -2855,7 +2855,7 @@ router.get('/fp-view/:fpId/vendor-assignments', authenticate, adminOnly, async (
               COALESCE(p.property_id, op.property_id) as property_code,
               COALESCE(p.zone_id, op.zone) as property_zone,
               COALESCE(p.property_type, op.property_type) as property_type,
-              v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
+              v.owner_name as vendor_name, v.vendor_id as vendor_code, COALESCE(pva.service_type, v.service_type) as service_type,
               v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
               v.zone as zone_name, v.area_name as area,
               v.rate_per_visit, v.coverage_per_day, v.status as vendor_status,
