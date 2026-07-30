@@ -21,6 +21,7 @@ import {
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { Link } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
+import WorkOrderPieChart from '../components/WorkOrderPieChart';
 
 const FPDashboard = ({ user }) => {
   // Check if user is FP Manager (restricted access)
@@ -100,33 +101,6 @@ const FPDashboard = ({ user }) => {
       link: '/fp/employees'
     },
     {
-      title: 'Total Work Orders',
-      value: stats?.workOrders?.total || 0,
-      icon: ClipboardList,
-      color: 'bg-indigo-500',
-      bgColor: 'bg-indigo-50',
-      textColor: 'text-indigo-600',
-      link: '/fp/work-orders'
-    },
-    {
-      title: 'Pending Work Orders',
-      value: stats?.workOrders?.pending || 0,
-      icon: Clock,
-      color: 'bg-amber-500',
-      bgColor: 'bg-amber-50',
-      textColor: 'text-amber-600',
-      link: '/fp/work-orders?status=pending'
-    },
-    {
-      title: 'Completed Work Orders',
-      value: stats?.workOrders?.completed || 0,
-      icon: CheckCircle,
-      color: 'bg-green-500',
-      bgColor: 'bg-green-50',
-      textColor: 'text-green-600',
-      link: '/fp/work-orders?status=completed'
-    },
-    {
       title: 'Direct Estimates',
       value: stats?.directEstimates || 0,
       icon: FileText,
@@ -145,6 +119,12 @@ const FPDashboard = ({ user }) => {
       link: '/fp/estimates'
     }
   ];
+
+  // Work order status data for pie chart
+  const workOrderStatusData = stats?.workOrders?.byStatus || {
+    pending: stats?.workOrders?.pending || 0,
+    completed: stats?.workOrders?.completed || 0
+  };
 
 
   if (loading) {
@@ -187,25 +167,40 @@ const FPDashboard = ({ user }) => {
         </div>
       )}
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((card, index) => (
-          <Link
-            key={index}
-            to={card.link}
-            className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">{card.title}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
-              </div>
-              <div className={`w-12 h-12 ${card.bgColor} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                <card.icon className={`w-6 h-6 ${card.textColor}`} />
-              </div>
-            </div>
-          </Link>
-        ))}
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Side - Stats Cards */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {statCards.map((card, index) => (
+              <Link
+                key={index}
+                to={card.link}
+                className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">{card.title}</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
+                  </div>
+                  <div className={`w-12 h-12 ${card.bgColor} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <card.icon className={`w-6 h-6 ${card.textColor}`} />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Right Side - Work Order Pie Chart */}
+        <div className="lg:col-span-1">
+          <WorkOrderPieChart
+            data={workOrderStatusData}
+            title="Work Orders"
+            basePath="/fp/work-orders"
+            size="default"
+          />
+        </div>
       </div>
 
       {/* Employee Team Overview */}

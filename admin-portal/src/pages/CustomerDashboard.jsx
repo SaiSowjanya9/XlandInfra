@@ -17,14 +17,21 @@ import {
   TrendingUp,
   ArrowUpRight,
 } from 'lucide-react';
+import WorkOrderPieChart from '../components/WorkOrderPieChart';
 
 const API_BASE = '/api';
 
 const CustomerDashboard = ({ user }) => {
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ pending: 0, completed: 0 });
+  const [stats, setStats] = useState({ pending: 0, completed: 0, byStatus: {} });
   const [customerData, setCustomerData] = useState(null);
+
+  // Work order status data for pie chart
+  const workOrderStatusData = stats?.byStatus || {
+    pending: stats?.pending || 0,
+    completed: stats?.completed || 0
+  };
 
   const fetchCustomerDashboard = async (isInitialLoad = false) => {
     if (isInitialLoad) {
@@ -159,39 +166,14 @@ const CustomerDashboard = ({ user }) => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-400 text-sm">Pending Orders</p>
-              <p className="text-3xl font-bold text-white mt-1">{stats.pending}</p>
-            </div>
-            <div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center">
-              <Clock className="w-6 h-6 text-amber-400" />
-            </div>
-          </div>
-          <div className="flex items-center gap-1 mt-3 text-xs text-amber-400">
-            <TrendingUp className="w-3 h-3" />
-            <span>Requires attention</span>
-          </div>
-        </div>
-        <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-400 text-sm">Completed</p>
-              <p className="text-3xl font-bold text-white mt-1">{stats.completed}</p>
-            </div>
-            <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center">
-              <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-            </div>
-          </div>
-          <div className="flex items-center gap-1 mt-3 text-xs text-emerald-400">
-            <TrendingUp className="w-3 h-3" />
-            <span>All resolved</span>
-          </div>
-        </div>
-      </div>
+      {/* Work Order Status Pie Chart */}
+      <WorkOrderPieChart
+        data={workOrderStatusData}
+        title="Work Orders"
+        basePath="/customer/work-order"
+        size="default"
+        className="!bg-slate-900/50 !border-white/5"
+      />
 
       {/* Two Column Layout */}
       <div className="grid lg:grid-cols-5 gap-6">

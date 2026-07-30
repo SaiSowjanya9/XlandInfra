@@ -12,6 +12,7 @@ import {
   RefreshCw,
   MapPin
 } from 'lucide-react';
+import WorkOrderPieChart from '../components/WorkOrderPieChart';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -56,12 +57,15 @@ const SupervisorDashboard = ({ user }) => {
   const statCards = [
     { label: 'Properties', value: stats?.properties || 0, icon: Building2, bgColor: 'bg-blue-50', textColor: 'text-blue-600', path: '/supervisor/properties' },
     { label: 'Vendors', value: stats?.vendors || 0, icon: Store, bgColor: 'bg-purple-50', textColor: 'text-purple-600', path: '/supervisor/vendors' },
-    { label: 'Total Work Orders', value: stats?.workOrders || 0, icon: ClipboardList, bgColor: 'bg-indigo-50', textColor: 'text-indigo-600', path: '/supervisor/work-orders' },
-    { label: 'Pending Work Orders', value: stats?.pendingWorkOrders || 0, icon: Clock, bgColor: 'bg-amber-50', textColor: 'text-amber-600', path: '/supervisor/work-orders' },
-    { label: 'Completed Work Orders', value: stats?.completedWorkOrders || 0, icon: CheckCircle, bgColor: 'bg-green-50', textColor: 'text-green-600', path: '/supervisor/work-orders' },
     { label: 'Direct Estimates', value: stats?.directEstimates || 0, icon: FileText, bgColor: 'bg-teal-50', textColor: 'text-teal-600', path: '/supervisor/estimates' },
     { label: 'Property Estimates', value: stats?.propertyEstimates || 0, icon: FileText, bgColor: 'bg-cyan-50', textColor: 'text-cyan-600', path: '/supervisor/estimates' }
   ];
+
+  // Work order status data for pie chart
+  const workOrderStatusData = stats?.workOrdersByStatus || {
+    pending: stats?.pendingWorkOrders || 0,
+    completed: stats?.completedWorkOrders || 0
+  };
 
   const getColorClasses = (color) => {
     const colors = {
@@ -111,25 +115,40 @@ const SupervisorDashboard = ({ user }) => {
         </button>
       </div>
 
-      {/* Stats Grid - 4 columns like Manager */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((stat, index) => (
-          <button
-            key={index}
-            onClick={() => navigate(stat.path)}
-            className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group text-left"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">{stat.label}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
-              </div>
-              <div className={`w-12 h-12 ${stat.bgColor} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                <stat.icon className={`w-6 h-6 ${stat.textColor}`} />
-              </div>
-            </div>
-          </button>
-        ))}
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Side - Stats Cards */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {statCards.map((stat, index) => (
+              <button
+                key={index}
+                onClick={() => navigate(stat.path)}
+                className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group text-left"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">{stat.label}</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+                  </div>
+                  <div className={`w-12 h-12 ${stat.bgColor} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <stat.icon className={`w-6 h-6 ${stat.textColor}`} />
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Right Side - Work Order Pie Chart */}
+        <div className="lg:col-span-1">
+          <WorkOrderPieChart
+            data={workOrderStatusData}
+            title="Work Orders"
+            basePath="/supervisor/work-orders"
+            size="default"
+          />
+        </div>
       </div>
 
       {/* Quick Actions */}

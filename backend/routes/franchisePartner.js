@@ -196,15 +196,28 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
       // Customers count
       safeCount('SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?', [fpId]),
       
-      // Work orders - combined query
+      // Work orders - combined query with detailed status breakdown
       pool.execute(`
         SELECT 
           COUNT(*) as total,
-          SUM(CASE WHEN status NOT IN ('completed', 'closed', 'cancelled') THEN 1 ELSE 0 END) as pending,
-          SUM(CASE WHEN status IN ('completed', 'closed') THEN 1 ELSE 0 END) as completed
+          SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN status = 'under_review' THEN 1 ELSE 0 END) as under_review,
+          SUM(CASE WHEN status = 'assigned' THEN 1 ELSE 0 END) as assigned,
+          SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
+          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+          SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled,
+          SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed
         FROM work_orders WHERE franchise_partner_id = ?
-      `, [fpId]).then(([[r]]) => ({ total: r.total || 0, pending: r.pending || 0, completed: r.completed || 0 }))
-        .catch(() => ({ total: 0, pending: 0, completed: 0 })),
+      `, [fpId]).then(([[r]]) => ({ 
+        total: r.total || 0, 
+        pending: r.pending || 0,
+        under_review: r.under_review || 0,
+        assigned: r.assigned || 0,
+        in_progress: r.in_progress || 0,
+        completed: r.completed || 0,
+        cancelled: r.cancelled || 0,
+        closed: r.closed || 0
+      })).catch(() => ({ total: 0, pending: 0, under_review: 0, assigned: 0, in_progress: 0, completed: 0, cancelled: 0, closed: 0 })),
       
       // Direct Estimates count (non-archived, active only)
       safeCount(`SELECT COUNT(*) as count FROM fp_estimates 
@@ -283,8 +296,17 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
           workOrders: {
             total: workOrderStats.total,
             pending: workOrderStats.pending,
-            completed: workOrderStats.completed,
-            byRole: workOrdersByRole
+            completed: workOrderStats.completed + workOrderStats.closed,
+            byRole: workOrdersByRole,
+            byStatus: {
+              pending: workOrderStats.pending,
+              under_review: workOrderStats.under_review,
+              assigned: workOrderStats.assigned,
+              in_progress: workOrderStats.in_progress,
+              completed: workOrderStats.completed,
+              cancelled: workOrderStats.cancelled,
+              closed: workOrderStats.closed
+            }
           },
           directEstimates,
           propertyEstimates,

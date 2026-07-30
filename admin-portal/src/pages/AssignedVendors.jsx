@@ -772,12 +772,12 @@ const AssignedVendors = ({ user }) => {
                       <Building2 className="w-5 h-5 text-blue-600" />
                       <span className="font-medium text-gray-900">{viewAssignment.property_name || viewAssignment.propertyName || '-'}</span>
                     </div>
-                    <span className="text-xs font-mono bg-blue-100 text-blue-700 px-2 py-1 rounded">{viewAssignment.property_id || viewAssignment.propertyId || '-'}</span>
+                    <span className="text-xs font-mono bg-blue-100 text-blue-700 px-2 py-1 rounded">{viewAssignment.property_code || viewAssignment.propertyCode || viewAssignment.property_id || viewAssignment.propertyId || '-'}</span>
                   </div>
                   <div className="grid grid-cols-3 gap-3 mt-2">
                     <div>
-                      <p className="text-xs text-gray-400">Property ID</p>
-                      <p className="text-sm font-mono text-gray-700">{viewAssignment.property_id || viewAssignment.propertyId || '-'}</p>
+                      <p className="text-xs text-gray-400">Property Code</p>
+                      <p className="text-sm font-mono text-gray-700">{viewAssignment.property_code || viewAssignment.propertyCode || viewAssignment.property_id || viewAssignment.propertyId || '-'}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-400">Type</p>
