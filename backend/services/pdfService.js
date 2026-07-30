@@ -89,7 +89,7 @@ const generateEstimatePDF = async (estimate) => {
       if (packagePrice) {
         doc.rect(50, y, 500, 25).fill(lightGray).stroke('#e0e0e0');
         doc.fontSize(10).fillColor(navy).text(`Package Price: Rs. ${Math.round(Number(packagePrice)).toLocaleString()}`, 60, y + 8);
-        doc.fontSize(10).fillColor(navy).text('Billing: Yearly', 450, y + 8);
+        doc.fontSize(10).fillColor(navy).text('Billing: Yearly', 400, y + 8);
         y += 35;
       }
 
