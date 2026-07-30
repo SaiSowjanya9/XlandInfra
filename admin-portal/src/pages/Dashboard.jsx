@@ -3,12 +3,12 @@ import {
   Building2, ClipboardList, Clock, CheckCircle2, FileText, Users, 
   Package, MapPin, Wrench, UserPlus, IndianRupee, Activity,
   RefreshCw, Bell, Settings, UserCheck, Home, X, AlertCircle, Info,
-  QrCode, Download, ChevronDown, Shield, ArrowLeft
+  QrCode, Download, ChevronDown, Shield, ArrowLeft, ArrowRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { useFP } from '../contexts/FPContext';
-import WorkOrderPieChart from '../components/WorkOrderPieChart';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -220,11 +220,27 @@ const Dashboard = () => {
     },
   ];
 
-  // Work order status data for pie chart
-  const workOrderStatusData = stats?.workOrdersByStatus || {
-    pending: stats?.pendingWorkOrders || 0,
-    completed: stats?.completedWorkOrders || 0
-  };
+  // Pie chart data
+  const workOrdersByStatus = stats?.workOrdersByStatus || {};
+  const pieData = [
+    { name: 'Pending', value: workOrdersByStatus.pending || stats?.pendingWorkOrders || 0, color: '#F59E0B' },
+    { name: 'In Progress', value: workOrdersByStatus.in_progress || 0, color: '#3B82F6' },
+    { name: 'Completed', value: (workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0) || stats?.completedWorkOrders || 0, color: '#10B981' },
+  ].filter(item => item.value > 0);
+
+  const totalWorkOrders = (stats?.pendingWorkOrders || 0) + (stats?.completedWorkOrders || 0);
+  const totalForPercentage = pieData.reduce((sum, item) => sum + item.value, 0) || 1;
+
+  // Estimates by property type data
+  const estimatesByType = stats?.estimatesByPropertyType || {};
+  const estimatesBarData = [
+    { name: 'Gated Community', value: estimatesByType.gated_community || 0, color: '#6366F1' },
+    { name: 'Apartment', value: estimatesByType.apartment || 0, color: '#8B5CF6' },
+    { name: 'Villa', value: estimatesByType.villa || 0, color: '#EC4899' },
+    { name: 'Flat', value: estimatesByType.flat || 0, color: '#F59E0B' },
+    { name: 'Plot', value: estimatesByType.plot || 0, color: '#10B981' },
+  ];
+  const totalEstimates = (stats?.directEstimates || 0) + (stats?.propertyEstimates || 0);
 
   // Quick Actions
   const quickActions = [
@@ -507,42 +523,137 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Side - KPI Cards */}
-          <div className="lg:col-span-2">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {kpiCards.map((card, index) => {
-                const Icon = card.icon;
-                return (
-                  <div 
-                    key={index}
-                    onClick={() => navigate(card.path)}
-                    className="bg-white rounded-xl p-4 border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="p-1.5 rounded-lg bg-gray-50">
-                        <Icon className="w-4 h-4 text-gray-500" />
-                      </div>
-                    </div>
-                    <p className="text-2xl font-semibold text-gray-800">
-                      {card.value.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5">{card.title}</p>
+        {/* First Stats Row - KPI Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {kpiCards.map((card, index) => {
+            const Icon = card.icon;
+            return (
+              <div 
+                key={index}
+                onClick={() => navigate(card.path)}
+                className="bg-white rounded-xl p-4 border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1.5 rounded-lg bg-gray-50">
+                    <Icon className="w-4 h-4 text-gray-500" />
                   </div>
-                );
-              })}
+                </div>
+                <p className="text-2xl font-semibold text-gray-800">
+                  {card.value.toLocaleString()}
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">{card.title}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Work Orders Overview - Full Width */}
+        <div className="bg-white rounded-xl border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Work Orders Overview</h2>
+            <button onClick={() => navigate('/employee/work-orders')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+              View All <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+          
+          <div className="flex items-center justify-center lg:justify-start gap-12 flex-wrap">
+            {/* Pie Chart */}
+            <div className="relative w-48 h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={80}
+                    paddingAngle={pieData.length > 1 ? 3 : 0}
+                    dataKey="value"
+                  >
+                    {(pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <p className="text-3xl font-bold text-gray-900">{totalWorkOrders}</p>
+                <p className="text-sm text-gray-500">Total</p>
+              </div>
+            </div>
+
+            {/* Legend */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between min-w-[200px]">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-amber-500"></span>
+                  <span className="text-sm text-gray-600">Pending</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-semibold text-gray-900">{workOrdersByStatus.pending || stats?.pendingWorkOrders || 0}</span>
+                  <span className="text-sm text-gray-500 w-12 text-right">
+                    {totalForPercentage > 0 ? Math.round(((workOrdersByStatus.pending || stats?.pendingWorkOrders || 0) / totalForPercentage) * 100) : 0}%
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between min-w-[200px]">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                  <span className="text-sm text-gray-600">In Progress</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-semibold text-gray-900">{workOrdersByStatus.in_progress || 0}</span>
+                  <span className="text-sm text-gray-500 w-12 text-right">
+                    {totalForPercentage > 0 ? Math.round(((workOrdersByStatus.in_progress || 0) / totalForPercentage) * 100) : 0}%
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between min-w-[200px]">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
+                  <span className="text-sm text-gray-600">Completed</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-semibold text-gray-900">{(workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0) || stats?.completedWorkOrders || 0}</span>
+                  <span className="text-sm text-gray-500 w-12 text-right">
+                    {totalForPercentage > 0 ? Math.round((((workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0) || stats?.completedWorkOrders || 0) / totalForPercentage) * 100) : 0}%
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Right Side - Work Order Pie Chart */}
-          <div className="lg:col-span-1">
-            <WorkOrderPieChart
-              data={workOrderStatusData}
-              title="Work Orders"
-              basePath="/employee/work-orders"
-              size="default"
-            />
+        {/* Estimates Overview */}
+        <div className="bg-white rounded-xl border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Estimates Overview</h2>
+            <button onClick={() => navigate('/employee/estimates/list')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+              View All <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+          
+          <div className="flex items-center gap-8 flex-wrap">
+            <div className="text-center min-w-[120px]">
+              <p className="text-3xl font-bold text-gray-900">{totalEstimates}</p>
+              <p className="text-sm text-gray-500">Total Estimates</p>
+              <div className="flex gap-2 mt-2 text-xs justify-center">
+                <span className="px-2 py-1 bg-teal-50 text-teal-700 rounded-lg">{stats?.directEstimates || 0} Direct</span>
+                <span className="px-2 py-1 bg-cyan-50 text-cyan-700 rounded-lg">{stats?.propertyEstimates || 0} Property</span>
+              </div>
+            </div>
+            <div className="flex-1 h-44 min-w-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={estimatesBarData} layout="vertical" margin={{ top: 5, right: 30, bottom: 5, left: 100 }}>
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: '#6B7280' }} width={95} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px', color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+                  <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={18}>
+                    {estimatesBarData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.color} />))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
