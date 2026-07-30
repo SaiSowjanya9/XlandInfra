@@ -4399,11 +4399,18 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
       let packageServices = [];
       try {
         if (estimate.package_services) {
-          packageServices = typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services;
+          const parsed = typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services;
+          if (Array.isArray(parsed)) {
+            packageServices = parsed;
+          } else if (parsed?.serviceRows) {
+            packageServices = parsed.serviceRows;
+          } else if (parsed?.services) {
+            packageServices = parsed.services;
+          }
           console.log('Found package_services in estimate:', packageServices.length);
         }
         // If no package_services stored, fetch from FP AMC package by ID or name
-        if (packageServices.length === 0 && (estimate.package_id || estimate.package_name)) {
+        if ((!packageServices || packageServices.length === 0) && (estimate.package_id || estimate.package_name)) {
           let pkgRows = [];
           // First try fp_amc_packages table (FP-specific packages)
           if (estimate.package_id) {
@@ -4418,11 +4425,19 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
           if (pkgRows.length > 0 && pkgRows[0].services) {
             const svcData = typeof pkgRows[0].services === 'string' ? JSON.parse(pkgRows[0].services) : pkgRows[0].services;
             console.log('Raw services data structure:', typeof svcData, Array.isArray(svcData) ? 'array' : Object.keys(svcData || {}));
-            packageServices = svcData?.serviceRows || svcData?.services || (Array.isArray(svcData) ? svcData : []);
+            if (Array.isArray(svcData)) {
+              packageServices = svcData;
+            } else if (svcData?.serviceRows) {
+              packageServices = svcData.serviceRows;
+            } else if (svcData?.services) {
+              packageServices = svcData.services;
+            }
             console.log('Parsed package services:', packageServices.length, 'services');
           }
         }
-      } catch (e) { console.log('Package services parse error:', e); }
+        // Ensure packageServices is always an array
+        if (!Array.isArray(packageServices)) packageServices = [];
+      } catch (e) { console.log('Package services parse error:', e); packageServices = []; }
 
       const estimateData = {
         estimateId: estimate.estimate_id,
