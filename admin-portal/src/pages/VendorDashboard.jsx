@@ -5,6 +5,7 @@ import { Building2, FileText, Users, Briefcase, TrendingUp, ArrowUpRight, Clock,
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
+import WorkOrderPieChart from '../components/WorkOrderPieChart';
 
 const VendorDashboard = ({ user }) => {
   const [stats, setStats] = useState({ pending: 0, completed: 0, total: 0 });
@@ -57,22 +58,6 @@ const VendorDashboard = ({ user }) => {
       trendLabel: 'assigned to you'
     },
     { 
-      label: 'Active Orders', 
-      value: stats.pending, 
-      icon: Clock, 
-      gradient: 'from-violet-500 to-purple-500',
-      trend: 'In progress',
-      trendLabel: 'needs attention'
-    },
-    { 
-      label: 'Completed', 
-      value: stats.completed, 
-      icon: CheckCircle2, 
-      gradient: 'from-emerald-500 to-teal-500',
-      trend: 'Done',
-      trendLabel: 'successfully closed'
-    },
-    { 
       label: 'Rating', 
       value: vendorData?.rating || '-', 
       icon: TrendingUp, 
@@ -81,6 +66,13 @@ const VendorDashboard = ({ user }) => {
       trendLabel: 'based on feedback'
     },
   ];
+
+  // Work order status data for pie chart
+  const workOrderStatusData = stats.byStatus || {
+    assigned: 0,
+    in_progress: stats.pending || 0,
+    completed: stats.completed || 0
+  };
 
   const quickActions = [
     { 
@@ -137,32 +129,46 @@ const VendorDashboard = ({ user }) => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <div 
-              key={index} 
-              className="group bg-slate-900/50 border border-white/5 rounded-2xl p-5 hover:bg-slate-900 transition-all duration-300 cursor-pointer"
-              onClick={() => navigate('/vendor/vendor-details')}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className={`w-11 h-11 bg-gradient-to-br ${stat.gradient} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                  <Icon className="w-5 h-5 text-white" />
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Side - Stats Cards */}
+        <div className="lg:col-span-1 space-y-4">
+          {statCards.map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <div 
+                key={index} 
+                className="group bg-slate-900/50 border border-white/5 rounded-2xl p-5 hover:bg-slate-900 transition-all duration-300 cursor-pointer"
+                onClick={() => navigate('/vendor/vendor-details')}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`w-11 h-11 bg-gradient-to-br ${stat.gradient} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                    <Icon className="w-5 h-5 text-white" />
+                  </div>
+                  <ArrowUpRight className="w-4 h-4 text-slate-600 group-hover:text-amber-400 transition-colors" />
                 </div>
-                <ArrowUpRight className="w-4 h-4 text-slate-600 group-hover:text-amber-400 transition-colors" />
+                <p className="text-3xl font-bold text-white">{stat.value}</p>
+                <p className="text-sm text-slate-400 mt-1">{stat.label}</p>
+                <div className="flex items-center gap-1 mt-3 text-xs text-emerald-400">
+                  <TrendingUp className="w-3 h-3" />
+                  <span>{stat.trend}</span>
+                  <span className="text-slate-500 ml-1">{stat.trendLabel}</span>
+                </div>
               </div>
-              <p className="text-3xl font-bold text-white">{stat.value}</p>
-              <p className="text-sm text-slate-400 mt-1">{stat.label}</p>
-              <div className="flex items-center gap-1 mt-3 text-xs text-emerald-400">
-                <TrendingUp className="w-3 h-3" />
-                <span>{stat.trend}</span>
-                <span className="text-slate-500 ml-1">{stat.trendLabel}</span>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+
+        {/* Right Side - Work Order Pie Chart */}
+        <div className="lg:col-span-2">
+          <WorkOrderPieChart
+            data={workOrderStatusData}
+            title="Work Orders"
+            basePath="/vendor/vendor-details"
+            size="default"
+            className="!bg-slate-900/50 !border-white/5"
+          />
+        </div>
       </div>
 
       {/* Quick Actions */}

@@ -8,6 +8,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { useFP } from '../contexts/FPContext';
+import WorkOrderPieChart from '../components/WorkOrderPieChart';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -74,7 +75,8 @@ const Dashboard = () => {
           totalEstimates: data.stats?.totalEstimates ?? data.totalEstimates ?? 0,
           directEstimates: data.stats?.directEstimates ?? data.directEstimates ?? 0,
           propertyEstimates: data.stats?.propertyEstimates ?? data.propertyEstimates ?? 0,
-          fpInfo: data.fpInfo || null
+          fpInfo: data.fpInfo || null,
+          workOrdersByStatus: data.stats?.workOrdersByStatus ?? data.workOrdersByStatus ?? null
         });
         setRecentActivities(Array.isArray(data.recentWorkOrders) ? data.recentWorkOrders : []);
       } else {
@@ -205,18 +207,6 @@ const Dashboard = () => {
       path: '/employee/employee-details'
     },
     { 
-      title: 'Pending Orders',
-      value: stats?.pendingWorkOrders ?? 0,
-      icon: Clock,
-      path: '/employee/work-orders'
-    },
-    { 
-      title: 'Completed',
-      value: stats?.completedWorkOrders ?? 0,
-      icon: CheckCircle2,
-      path: '/employee/work-orders'
-    },
-    { 
       title: 'Direct Estimates',
       value: stats?.directEstimates ?? 0,
       icon: FileText,
@@ -229,6 +219,12 @@ const Dashboard = () => {
       path: '/employee/estimates/list'
     },
   ];
+
+  // Work order status data for pie chart
+  const workOrderStatusData = stats?.workOrdersByStatus || {
+    pending: stats?.pendingWorkOrders || 0,
+    completed: stats?.completedWorkOrders || 0
+  };
 
   // Quick Actions
   const quickActions = [
@@ -511,28 +507,43 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {kpiCards.map((card, index) => {
-            const Icon = card.icon;
-            return (
-              <div 
-                key={index}
-                onClick={() => navigate(card.path)}
-                className="bg-white rounded-xl p-4 border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 rounded-lg bg-gray-50">
-                    <Icon className="w-4 h-4 text-gray-500" />
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Side - KPI Cards */}
+          <div className="lg:col-span-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {kpiCards.map((card, index) => {
+                const Icon = card.icon;
+                return (
+                  <div 
+                    key={index}
+                    onClick={() => navigate(card.path)}
+                    className="bg-white rounded-xl p-4 border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-1.5 rounded-lg bg-gray-50">
+                        <Icon className="w-4 h-4 text-gray-500" />
+                      </div>
+                    </div>
+                    <p className="text-2xl font-semibold text-gray-800">
+                      {card.value.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">{card.title}</p>
                   </div>
-                </div>
-                <p className="text-2xl font-semibold text-gray-800">
-                  {card.value.toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-500 mt-0.5">{card.title}</p>
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Right Side - Work Order Pie Chart */}
+          <div className="lg:col-span-1">
+            <WorkOrderPieChart
+              data={workOrderStatusData}
+              title="Work Orders"
+              basePath="/employee/work-orders"
+              size="default"
+            />
+          </div>
         </div>
 
         {/* Revenue Overview - Only show if data exists */}

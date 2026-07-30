@@ -1619,18 +1619,28 @@ router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
       safeCount('SELECT COUNT(*) as count FROM onboarded_vendors WHERE status = \'active\''),
       // FP employees
       safeCount('SELECT COUNT(*) as count FROM fp_employees WHERE is_active = 1'),
-      // Work orders - combined query for all work orders
+      // Work orders - combined query for all work orders with detailed status breakdown
       pool.execute(`
         SELECT 
           COUNT(*) as total,
-          SUM(CASE WHEN status NOT IN ('completed', 'closed', 'cancelled') THEN 1 ELSE 0 END) as pending,
-          SUM(CASE WHEN status IN ('completed', 'closed') THEN 1 ELSE 0 END) as completed
+          SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN status = 'under_review' THEN 1 ELSE 0 END) as under_review,
+          SUM(CASE WHEN status = 'assigned' THEN 1 ELSE 0 END) as assigned,
+          SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
+          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+          SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled,
+          SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed
         FROM work_orders
       `).then(([[r]]) => ({ 
         total: Number(r.total) || 0, 
-        pending: Number(r.pending) || 0, 
-        completed: Number(r.completed) || 0 
-      })).catch(() => ({ total: 0, pending: 0, completed: 0 })),
+        pending: Number(r.pending) || 0,
+        under_review: Number(r.under_review) || 0,
+        assigned: Number(r.assigned) || 0,
+        in_progress: Number(r.in_progress) || 0,
+        completed: Number(r.completed) || 0,
+        cancelled: Number(r.cancelled) || 0,
+        closed: Number(r.closed) || 0
+      })).catch(() => ({ total: 0, pending: 0, under_review: 0, assigned: 0, in_progress: 0, completed: 0, cancelled: 0, closed: 0 })),
       // Direct Estimates (non-archived, active only)
       safeCount(`SELECT COUNT(*) as count FROM fp_estimates 
         WHERE (is_archived = 0 OR is_archived IS NULL) 
@@ -1662,10 +1672,19 @@ router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
         totalVendors: onboardedVendors,
         totalEmployees: fpEmployees,
         pendingWorkOrders: workOrderStats.pending,
-        completedWorkOrders: workOrderStats.completed,
+        completedWorkOrders: workOrderStats.completed + workOrderStats.closed,
         directEstimates: directEstimates,
         propertyEstimates: propertyEstimates,
-        recentWorkOrders: recentWorkOrders
+        recentWorkOrders: recentWorkOrders,
+        workOrdersByStatus: {
+          pending: workOrderStats.pending,
+          under_review: workOrderStats.under_review,
+          assigned: workOrderStats.assigned,
+          in_progress: workOrderStats.in_progress,
+          completed: workOrderStats.completed,
+          cancelled: workOrderStats.cancelled,
+          closed: workOrderStats.closed
+        }
       }
     });
   } catch (error) {

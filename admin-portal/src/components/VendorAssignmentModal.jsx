@@ -645,7 +645,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
         onClick={e => e.stopPropagation()}
       >
         {/* Header - Soft Purple */}
-        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-500 to-purple-400">
+        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-slate-600 to-slate-500">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">

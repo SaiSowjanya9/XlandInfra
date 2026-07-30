@@ -1303,16 +1303,24 @@ router.get('/dashboard', async (req, res) => {
       wo.attachments = attachments;
     }
 
-    // Get stats for this customer
+    // Get stats for this customer with detailed status breakdown
     const [[stats]] = await pool.execute(
       `SELECT 
          COUNT(*) as total,
-         SUM(CASE WHEN status IN ('pending', 'under_review', 'assigned', 'in_progress', 'accepted') THEN 1 ELSE 0 END) as pending,
-         SUM(CASE WHEN status IN ('completed', 'closed', 'verified') THEN 1 ELSE 0 END) as completed
+         SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+         SUM(CASE WHEN status = 'under_review' THEN 1 ELSE 0 END) as under_review,
+         SUM(CASE WHEN status = 'assigned' THEN 1 ELSE 0 END) as assigned,
+         SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
+         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+         SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled,
+         SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed
        FROM work_orders 
        WHERE property_id = ? OR property_id = ? OR property_name = ? OR resident_id = ? OR LOWER(customer_email) = LOWER(?)`,
       [numericPropertyId, propertyCode, propertyName, customerId, custEmail]
     );
+
+    const pendingCount = (stats?.pending || 0) + (stats?.under_review || 0) + (stats?.assigned || 0) + (stats?.in_progress || 0);
+    const completedCount = (stats?.completed || 0) + (stats?.closed || 0);
 
     res.json({
       success: true,
@@ -1328,9 +1336,18 @@ router.get('/dashboard', async (req, res) => {
         },
         recentWorkOrders: workOrders,
         stats: {
-          pending: stats?.pending || 0,
-          completed: stats?.completed || 0,
-          total: stats?.total || 0
+          pending: pendingCount,
+          completed: completedCount,
+          total: stats?.total || 0,
+          byStatus: {
+            pending: stats?.pending || 0,
+            under_review: stats?.under_review || 0,
+            assigned: stats?.assigned || 0,
+            in_progress: stats?.in_progress || 0,
+            completed: stats?.completed || 0,
+            cancelled: stats?.cancelled || 0,
+            closed: stats?.closed || 0
+          }
         }
       }
     });

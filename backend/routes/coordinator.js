@@ -217,12 +217,17 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
       [franchisePartnerId]
     );
 
-    // Work orders - ALL FP work orders
+    // Work orders - ALL FP work orders with detailed status breakdown
     const [[workOrderStats]] = await pool.query(
       `SELECT 
         COUNT(*) as total,
-        SUM(CASE WHEN status NOT IN ('completed', 'closed', 'cancelled') THEN 1 ELSE 0 END) as pending,
-        SUM(CASE WHEN status IN ('completed', 'closed') THEN 1 ELSE 0 END) as completed
+        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN status = 'under_review' THEN 1 ELSE 0 END) as under_review,
+        SUM(CASE WHEN status = 'assigned' THEN 1 ELSE 0 END) as assigned,
+        SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+        SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled,
+        SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed
        FROM work_orders WHERE franchise_partner_id = ?`,
       [franchisePartnerId]
     );
@@ -276,9 +281,18 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
           employees: employeesCount,
           workOrders: workOrderStats?.total || 0,
           pendingWorkOrders: workOrderStats?.pending || 0,
-          completedWorkOrders: workOrderStats?.completed || 0,
+          completedWorkOrders: (workOrderStats?.completed || 0) + (workOrderStats?.closed || 0),
           directEstimates: directEstimatesCount,
-          propertyEstimates: propertyEstimatesCount
+          propertyEstimates: propertyEstimatesCount,
+          workOrdersByStatus: {
+            pending: workOrderStats?.pending || 0,
+            under_review: workOrderStats?.under_review || 0,
+            assigned: workOrderStats?.assigned || 0,
+            in_progress: workOrderStats?.in_progress || 0,
+            completed: workOrderStats?.completed || 0,
+            cancelled: workOrderStats?.cancelled || 0,
+            closed: workOrderStats?.closed || 0
+          }
         },
         recentWorkOrders
       }

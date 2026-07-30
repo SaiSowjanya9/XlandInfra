@@ -232,19 +232,29 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
         [scopeId]
       ),
       
-      // Work orders - ALL FP work orders
+      // Work orders - ALL FP work orders with detailed status breakdown
       pool.execute(`
         SELECT 
           COUNT(*) as total,
-          SUM(CASE WHEN status NOT IN ('completed', 'closed', 'cancelled') THEN 1 ELSE 0 END) as pending,
-          SUM(CASE WHEN status IN ('completed', 'closed') THEN 1 ELSE 0 END) as completed
+          SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN status = 'under_review' THEN 1 ELSE 0 END) as under_review,
+          SUM(CASE WHEN status = 'assigned' THEN 1 ELSE 0 END) as assigned,
+          SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
+          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+          SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled,
+          SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed
         FROM work_orders 
         WHERE franchise_partner_id = ?
       `, [franchisePartnerId]).then(([[r]]) => ({ 
         total: r.total || 0, 
         pending: r.pending || 0, 
-        completed: r.completed || 0 
-      })).catch(() => ({ total: 0, pending: 0, completed: 0 })),
+        under_review: r.under_review || 0,
+        assigned: r.assigned || 0,
+        in_progress: r.in_progress || 0,
+        completed: r.completed || 0,
+        cancelled: r.cancelled || 0,
+        closed: r.closed || 0
+      })).catch(() => ({ total: 0, pending: 0, under_review: 0, assigned: 0, in_progress: 0, completed: 0, cancelled: 0, closed: 0 })),
       
       // Direct Estimates count - ALL FP direct estimates (non-archived, active)
       safeCount(
@@ -298,9 +308,18 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
           employees: employeesCount,
           workOrders: workOrderStats.total,
           pendingWorkOrders: workOrderStats.pending,
-          completedWorkOrders: workOrderStats.completed,
+          completedWorkOrders: workOrderStats.completed + workOrderStats.closed,
           directEstimates: directEstimatesCount,
-          propertyEstimates: propertyEstimatesCount
+          propertyEstimates: propertyEstimatesCount,
+          workOrdersByStatus: {
+            pending: workOrderStats.pending,
+            under_review: workOrderStats.under_review,
+            assigned: workOrderStats.assigned,
+            in_progress: workOrderStats.in_progress,
+            completed: workOrderStats.completed,
+            cancelled: workOrderStats.cancelled,
+            closed: workOrderStats.closed
+          }
         },
         recentWorkOrders
       }

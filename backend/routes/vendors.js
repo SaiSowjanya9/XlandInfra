@@ -827,19 +827,23 @@ router.get('/dashboard', authenticate, vendorOnly, async (req, res) => {
       [dbVendorId]
     );
 
-    // Get stats for this vendor
-    const [pendingCount] = await pool.execute(
-      `SELECT COUNT(*) as count FROM work_orders WHERE assigned_vendor_id = ? AND status IN ('assigned', 'accepted', 'in_progress')`,
+    // Get stats for this vendor with detailed status breakdown
+    const [[statusStats]] = await pool.execute(
+      `SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'assigned' THEN 1 ELSE 0 END) as assigned,
+        SUM(CASE WHEN status = 'accepted' THEN 1 ELSE 0 END) as accepted,
+        SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+        SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as verified,
+        SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed,
+        SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled
+       FROM work_orders WHERE assigned_vendor_id = ?`,
       [dbVendorId]
     );
-    const [completedCount] = await pool.execute(
-      `SELECT COUNT(*) as count FROM work_orders WHERE assigned_vendor_id = ? AND status IN ('completed', 'verified', 'closed')`,
-      [dbVendorId]
-    );
-    const [totalCount] = await pool.execute(
-      `SELECT COUNT(*) as count FROM work_orders WHERE assigned_vendor_id = ?`,
-      [dbVendorId]
-    );
+
+    const pendingCount = (statusStats?.assigned || 0) + (statusStats?.accepted || 0) + (statusStats?.in_progress || 0);
+    const completedCount = (statusStats?.completed || 0) + (statusStats?.verified || 0) + (statusStats?.closed || 0);
 
     res.json({
       success: true,
@@ -855,9 +859,18 @@ router.get('/dashboard', authenticate, vendorOnly, async (req, res) => {
         },
         recentWorkOrders: workOrders,
         stats: {
-          pending: pendingCount[0].count,
-          completed: completedCount[0].count,
-          total: totalCount[0].count
+          pending: pendingCount,
+          completed: completedCount,
+          total: statusStats?.total || 0,
+          byStatus: {
+            assigned: statusStats?.assigned || 0,
+            accepted: statusStats?.accepted || 0,
+            in_progress: statusStats?.in_progress || 0,
+            completed: statusStats?.completed || 0,
+            verified: statusStats?.verified || 0,
+            closed: statusStats?.closed || 0,
+            cancelled: statusStats?.cancelled || 0
+          }
         }
       }
     });
