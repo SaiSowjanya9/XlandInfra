@@ -72,9 +72,6 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
   const isVendorActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEstimatesActive = estimatesSubItems.some(item => location.pathname === item.path) || location.pathname === '/executive/estimates';
   
-  // Check if any main nav item is active (to avoid highlighting dropdown when on a different page)
-  const isAnyMainNavActive = (isFPExecutive ? fpNavItems : navItems).some(item => location.pathname === item.path);
-
   // Color constants for sidebar
   const colors = {
     sidebarBg: 'linear-gradient(180deg, #23201B 0%, #1C1A17 50%, #141210 100%)',
@@ -110,13 +107,22 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
     }
   };
 
+  // Check if any dropdown is open
+  const isAnyDropdownOpen = expandedMenus.vendors || expandedMenus.estimates;
+
   const NavLink = ({ item, mobile = false }) => {
     const Icon = item.icon;
-    const isActive = location.pathname === item.path;
+    // Only highlight main nav if path matches AND no dropdown is open
+    const isActive = location.pathname === item.path && !isAnyDropdownOpen;
+    const handleClick = () => {
+      if (mobile) setSidebarOpen(false);
+      // Close all dropdowns when clicking on main nav items
+      setExpandedMenus({ vendors: false, estimates: false });
+    };
     return (
       <Link
         to={item.path}
-        onClick={() => mobile && setSidebarOpen(false)}
+        onClick={handleClick}
         className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
         style={{ background: isActive ? colors.activeBg : 'transparent', color: isActive ? colors.activeText : colors.primaryText }}
         onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }}
@@ -190,9 +196,9 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
                 
                 {/* Vendor Management Section */}
                 <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${colors.divider}` }}>
-                  <button onClick={toggleVendors} className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`} style={{ background: (isVendorActive || (expandedMenus.vendors && !isAnyMainNavActive)) ? colors.activeBg : 'transparent', color: (isVendorActive || (expandedMenus.vendors && !isAnyMainNavActive)) ? colors.activeText : colors.primaryText }} onMouseEnter={(e) => { if (!isVendorActive && !(expandedMenus.vendors && !isAnyMainNavActive)) e.currentTarget.style.background = colors.hoverBg; }} onMouseLeave={(e) => { if (!isVendorActive && !(expandedMenus.vendors && !isAnyMainNavActive)) e.currentTarget.style.background = 'transparent'; }} title={sidebarCollapsed ? 'Vendor Management' : ''}>
+                  <button onClick={toggleVendors} className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`} style={{ background: (isVendorActive || expandedMenus.vendors) ? colors.activeBg : 'transparent', color: (isVendorActive || expandedMenus.vendors) ? colors.activeText : colors.primaryText }} onMouseEnter={(e) => { if (!isVendorActive && !expandedMenus.vendors) e.currentTarget.style.background = colors.hoverBg; }} onMouseLeave={(e) => { if (!isVendorActive && !expandedMenus.vendors) e.currentTarget.style.background = 'transparent'; }} title={sidebarCollapsed ? 'Vendor Management' : ''}>
                     <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                      <Store className="w-5 h-5 flex-shrink-0" style={{ color: (isVendorActive || (expandedMenus.vendors && !isAnyMainNavActive)) ? colors.activeText : colors.iconGold }} />
+                      <Store className="w-5 h-5 flex-shrink-0" style={{ color: (isVendorActive || expandedMenus.vendors) ? colors.activeText : colors.iconGold }} />
                       {!sidebarCollapsed && <span className="text-sm">Vendor Management</span>}
                     </div>
                     {!sidebarCollapsed && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.vendors ? 'rotate-180' : ''}`} />}
@@ -210,9 +216,9 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
 
                 {/* Estimates / AMC Section */}
                 <div className="mt-1">
-                  <button onClick={toggleEstimates} className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`} style={{ background: (isEstimatesActive || (expandedMenus.estimates && !isAnyMainNavActive)) ? colors.activeBg : 'transparent', color: (isEstimatesActive || (expandedMenus.estimates && !isAnyMainNavActive)) ? colors.activeText : colors.primaryText }} onMouseEnter={(e) => { if (!isEstimatesActive && !(expandedMenus.estimates && !isAnyMainNavActive)) e.currentTarget.style.background = colors.hoverBg; }} onMouseLeave={(e) => { if (!isEstimatesActive && !(expandedMenus.estimates && !isAnyMainNavActive)) e.currentTarget.style.background = 'transparent'; }} title={sidebarCollapsed ? 'Estimates / AMC' : ''}>
+                  <button onClick={toggleEstimates} className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`} style={{ background: (isEstimatesActive || expandedMenus.estimates) ? colors.activeBg : 'transparent', color: (isEstimatesActive || expandedMenus.estimates) ? colors.activeText : colors.primaryText }} onMouseEnter={(e) => { if (!isEstimatesActive && !expandedMenus.estimates) e.currentTarget.style.background = colors.hoverBg; }} onMouseLeave={(e) => { if (!isEstimatesActive && !expandedMenus.estimates) e.currentTarget.style.background = 'transparent'; }} title={sidebarCollapsed ? 'Estimates / AMC' : ''}>
                     <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                      <FileText className="w-5 h-5 flex-shrink-0" style={{ color: (isEstimatesActive || (expandedMenus.estimates && !isAnyMainNavActive)) ? colors.activeText : colors.iconGold }} />
+                      <FileText className="w-5 h-5 flex-shrink-0" style={{ color: (isEstimatesActive || expandedMenus.estimates) ? colors.activeText : colors.iconGold }} />
                       {!sidebarCollapsed && <span className="text-sm">Estimates / AMC</span>}
                     </div>
                     {!sidebarCollapsed && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.estimates ? 'rotate-180' : ''}`} />}
@@ -234,9 +240,9 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
 
                 {/* Vendor Management Section - Only for regular executives */}
                 <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${colors.divider}` }}>
-                  <button onClick={toggleVendors} className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`} style={{ background: (isVendorActive || (expandedMenus.vendors && !isAnyMainNavActive)) ? colors.activeBg : 'transparent', color: (isVendorActive || (expandedMenus.vendors && !isAnyMainNavActive)) ? colors.activeText : colors.primaryText }} onMouseEnter={(e) => { if (!isVendorActive && !(expandedMenus.vendors && !isAnyMainNavActive)) e.currentTarget.style.background = colors.hoverBg; }} onMouseLeave={(e) => { if (!isVendorActive && !(expandedMenus.vendors && !isAnyMainNavActive)) e.currentTarget.style.background = 'transparent'; }} title={sidebarCollapsed ? 'Vendor Management' : ''}>
+                  <button onClick={toggleVendors} className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`} style={{ background: (isVendorActive || expandedMenus.vendors) ? colors.activeBg : 'transparent', color: (isVendorActive || expandedMenus.vendors) ? colors.activeText : colors.primaryText }} onMouseEnter={(e) => { if (!isVendorActive && !expandedMenus.vendors) e.currentTarget.style.background = colors.hoverBg; }} onMouseLeave={(e) => { if (!isVendorActive && !expandedMenus.vendors) e.currentTarget.style.background = 'transparent'; }} title={sidebarCollapsed ? 'Vendor Management' : ''}>
                     <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                      <Store className="w-5 h-5 flex-shrink-0" style={{ color: (isVendorActive || (expandedMenus.vendors && !isAnyMainNavActive)) ? colors.activeText : colors.iconGold }} />
+                      <Store className="w-5 h-5 flex-shrink-0" style={{ color: (isVendorActive || expandedMenus.vendors) ? colors.activeText : colors.iconGold }} />
                       {!sidebarCollapsed && <span className="text-sm">Vendor Management</span>}
                     </div>
                     {!sidebarCollapsed && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.vendors ? 'rotate-180' : ''}`} />}
@@ -254,9 +260,9 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
 
                 {/* Estimates Section - Only for regular executives */}
                 <div className="mt-1">
-                  <button onClick={toggleEstimates} className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`} style={{ background: (isEstimatesActive || (expandedMenus.estimates && !isAnyMainNavActive)) ? colors.activeBg : 'transparent', color: (isEstimatesActive || (expandedMenus.estimates && !isAnyMainNavActive)) ? colors.activeText : colors.primaryText }} onMouseEnter={(e) => { if (!isEstimatesActive && !(expandedMenus.estimates && !isAnyMainNavActive)) e.currentTarget.style.background = colors.hoverBg; }} onMouseLeave={(e) => { if (!isEstimatesActive && !(expandedMenus.estimates && !isAnyMainNavActive)) e.currentTarget.style.background = 'transparent'; }} title={sidebarCollapsed ? 'Estimates / AMC' : ''}>
+                  <button onClick={toggleEstimates} className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`} style={{ background: (isEstimatesActive || expandedMenus.estimates) ? colors.activeBg : 'transparent', color: (isEstimatesActive || expandedMenus.estimates) ? colors.activeText : colors.primaryText }} onMouseEnter={(e) => { if (!isEstimatesActive && !expandedMenus.estimates) e.currentTarget.style.background = colors.hoverBg; }} onMouseLeave={(e) => { if (!isEstimatesActive && !expandedMenus.estimates) e.currentTarget.style.background = 'transparent'; }} title={sidebarCollapsed ? 'Estimates / AMC' : ''}>
                     <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                      <FileText className="w-5 h-5 flex-shrink-0" style={{ color: (isEstimatesActive || (expandedMenus.estimates && !isAnyMainNavActive)) ? colors.activeText : colors.iconGold }} />
+                      <FileText className="w-5 h-5 flex-shrink-0" style={{ color: (isEstimatesActive || expandedMenus.estimates) ? colors.activeText : colors.iconGold }} />
                       {!sidebarCollapsed && <span className="text-sm">Estimates / AMC</span>}
                     </div>
                     {!sidebarCollapsed && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.estimates ? 'rotate-180' : ''}`} />}
