@@ -2058,13 +2058,15 @@ const FPProperties = ({ user }) => {
                     </span>
                   </div>
 
-                  {/* Services Table */}
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-medium text-gray-700 w-2/5">Service Type</th>
-                          <th className="px-4 py-3 text-left font-medium text-gray-700">Select Vendor</th>
+                  {/* Services Table - Matching Estimates Section Style */}
+                  <div className="border border-purple-200 rounded-xl overflow-hidden">
+                    <table className="w-full text-sm bg-white">
+                      <thead>
+                        <tr className="border-b border-purple-100 bg-purple-50/50">
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-purple-600 uppercase w-[20%]">Service</th>
+                          <th className="px-4 py-2.5 text-center text-xs font-semibold text-purple-600 uppercase w-[18%]">Frequency</th>
+                          <th className="px-4 py-2.5 text-center text-xs font-semibold text-purple-600 uppercase w-[12%]">Visits</th>
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-purple-600 uppercase w-[50%]">Assign Vendor</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -2072,18 +2074,20 @@ const FPProperties = ({ user }) => {
                           // Get vendors matching service type
                           const serviceVendors = getVendorsByServiceType(service.serviceType);
                           const hasSelection = !!service.vendorId;
+                          const visits = service.frequencyCount || 12;
                           
                           return (
-                            <tr key={idx} className="hover:bg-gray-50">
+                            <tr key={idx} className="hover:bg-gray-50 align-middle">
                               <td className="px-4 py-3">
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-gray-900">{service.serviceType}</span>
-                                  <span className="text-xs text-gray-500">
-                                    {service.frequencyType} - {service.frequencyCount} visits
-                                  </span>
-                                </div>
+                                <span className="font-medium text-gray-800">{service.serviceType}</span>
                               </td>
-                              <td className="px-4 py-3 pb-16">
+                              <td className="px-4 py-3 text-center">
+                                <span className="text-gray-600">{service.frequencyType || 'Monthly'}</span>
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <span className="text-gray-600">{visits}</span>
+                              </td>
+                              <td className="px-4 py-3">
                                 <div className="relative">
                                   <select
                                     value={service.vendorId || ''}
@@ -2115,18 +2119,23 @@ const FPProperties = ({ user }) => {
                         })}
                       </tbody>
                     </table>
-                  </div>
-
-                  {/* Assignment Summary */}
-                  <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-between">
-                    <span className="text-sm text-gray-600">
-                      {serviceAssignments.filter(s => s.vendorId).length} of {serviceAssignments.length} services assigned
-                    </span>
-                    {serviceAssignments.filter(s => s.vendorId).length === serviceAssignments.length && (
-                      <span className="flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-1 rounded-full">
-                        <CheckCircle className="w-3 h-3" /> All Assigned
-                      </span>
-                    )}
+                    {/* Assignment Summary - Footer matching Estimates style */}
+                    <div className="px-5 py-3 bg-purple-50 border-t border-purple-100">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-semibold text-purple-700">
+                          {serviceAssignments.filter(s => s.vendorId).length} of {serviceAssignments.length} services assigned
+                        </span>
+                        {serviceAssignments.filter(s => s.vendorId).length === serviceAssignments.length ? (
+                          <span className="flex items-center gap-1.5 text-xs text-green-700 bg-green-100 px-3 py-1.5 rounded-full font-medium">
+                            <CheckCircle className="w-3.5 h-3.5" /> All Assigned
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-100 px-3 py-1.5 rounded-full font-medium">
+                            <AlertCircle className="w-3.5 h-3.5" /> {serviceAssignments.length - serviceAssignments.filter(s => s.vendorId).length} pending
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </>
               ) : (

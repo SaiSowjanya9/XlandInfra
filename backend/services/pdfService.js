@@ -81,7 +81,7 @@ const generateEstimatePDF = async (estimate) => {
 
       // Estimate Info
       doc.fontSize(9).fillColor('#666666');
-      doc.text(`ID: ${estimateId || 'N/A'}`, 50, y);
+      doc.text(`ID: ${estimateId || 'N/A'}`, 60, y);
       doc.text(`Date: ${createdAt ? new Date(createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}`, 400, y);
       y += 25;
 
