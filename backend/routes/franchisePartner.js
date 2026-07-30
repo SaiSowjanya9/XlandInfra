@@ -2152,7 +2152,7 @@ router.get('/vendors/assignments', requireFPScope, async (req, res) => {
         COALESCE(op.address, p.address) as address, 
         COALESCE(op.city, p.city) as city, 
         COALESCE(op.zone, p.zone_id) as property_zone,
-        op.property_code as property_code,
+        COALESCE(p.property_id, op.property_id) as property_code,
         v.owner_name as vendor_name, v.vendor_id as vendor_code, 
         v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
         v.zone as zone_name, v.area_name as area, v.rate_per_visit, v.coverage_per_day
@@ -4487,19 +4487,20 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
       if (emailResult.success) {
         res.json({ 
           success: true, 
-          message: `Estimate sent to ${email}` 
+          message: `Email sent to ${email}` 
         });
       } else {
+        console.error('Email sending failed:', emailResult.error);
         res.json({ 
-          success: true, 
-          message: `Estimate marked as sent. Email delivery: ${emailResult.error || 'pending'}` 
+          success: false, 
+          message: `Failed to send email: ${emailResult.error || 'Unknown error'}` 
         });
       }
     } catch (emailErr) {
-      console.log('Email service not available:', emailErr.message);
+      console.error('Email service error:', emailErr.message);
       res.json({ 
-        success: true, 
-        message: `Estimate marked as sent to ${email}` 
+        success: false, 
+        message: `Email service error: ${emailErr.message}` 
       });
     }
   } catch (error) {

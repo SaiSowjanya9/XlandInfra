@@ -1647,7 +1647,7 @@ router.get('/vendors/assignments', requireManagerScope, async (req, res) => {
       `SELECT pva.id, pva.property_id as numeric_property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
         COALESCE(pva.service_type, v.service_type) as service_type,
         COALESCE(p.name, op.community_name) as property_name, 
-        op.property_code as property_code, 
+        COALESCE(p.property_id, op.property_id) as property_code, 
         COALESCE(op.property_type, p.property_type) as property_type, 
         COALESCE(op.address, p.address) as address, 
         COALESCE(op.city, p.city) as city,
