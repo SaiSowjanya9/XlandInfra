@@ -966,7 +966,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
       propertyName, propertyType, propertyCode: estimate.propertyCode, zone, division, city, address,
       numberOfBlocks, totalUnits, towerName, blockNumber, villaPlotNumber,
       packageName, packagePrice: estimate.packagePrice, amcPackageDescription, 
-      services, addons, subtotal, discount, discountAmount: estimate.discountAmount,
+      services: servicesList, addons: addonsList, subtotal, discount, discountAmount: estimate.discountAmount,
       tax, gstPercent: estimate.gstPercent, total, description, createdAt: estimate.createdAt
     });
     console.log(`📄 PDF generated for estimate ${estimateId}`);

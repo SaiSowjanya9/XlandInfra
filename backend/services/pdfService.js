@@ -146,8 +146,16 @@ const generateEstimatePDF = async (estimate) => {
       doc.text('Visits', 480, y + 6, { continued: false });
       y += 20;
 
-      // Services rows
-      const svcList = services || [];
+      // Services rows - ensure it's an array
+      let svcList = services;
+      if (!Array.isArray(svcList)) {
+        if (typeof svcList === 'string') {
+          try { svcList = JSON.parse(svcList); } catch (e) { svcList = []; }
+        } else {
+          svcList = [];
+        }
+      }
+      if (!Array.isArray(svcList)) svcList = [];
       const pageHeight = 780; // A4 usable height
       
       svcList.forEach((s, idx) => {
@@ -180,8 +188,16 @@ const generateEstimatePDF = async (estimate) => {
 
       y += 10;
 
-      // Add-ons Table (if any)
-      const addonList = addons || [];
+      // Add-ons Table (if any) - ensure it's an array
+      let addonList = addons;
+      if (!Array.isArray(addonList)) {
+        if (typeof addonList === 'string') {
+          try { addonList = JSON.parse(addonList); } catch (e) { addonList = []; }
+        } else {
+          addonList = [];
+        }
+      }
+      if (!Array.isArray(addonList)) addonList = [];
       if (addonList.length > 0) {
         // Calculate first row height to ensure header + at least one row fit together
         const firstAddonDesc = addonList[0]?.description || '-';
