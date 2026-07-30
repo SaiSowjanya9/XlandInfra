@@ -856,8 +856,19 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   const approveUrl = `${baseUrl}/estimate-action/${estimateId}?action=approve&token=${actionToken}`;
   const rejectUrl = `${baseUrl}/estimate-action/${estimateId}?action=reject&token=${actionToken}`;
 
+  // Ensure services is an array
+  let servicesList = services;
+  if (!Array.isArray(servicesList)) {
+    if (typeof servicesList === 'string') {
+      try { servicesList = JSON.parse(servicesList); } catch (e) { servicesList = []; }
+    } else {
+      servicesList = [];
+    }
+  }
+  if (!Array.isArray(servicesList)) servicesList = [];
+
   // Format services list with descriptions
-  const servicesHtml = (services || []).map(s => `
+  const servicesHtml = servicesList.map(s => `
     <tr>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
         <strong>${s.name || s.service || 'Service'}</strong>
@@ -868,8 +879,19 @@ const sendEstimateEmail = async (estimate, actionToken) => {
     </tr>
   `).join('');
 
+  // Ensure addons is an array
+  let addonsList = addons;
+  if (!Array.isArray(addonsList)) {
+    if (typeof addonsList === 'string') {
+      try { addonsList = JSON.parse(addonsList); } catch (e) { addonsList = []; }
+    } else {
+      addonsList = [];
+    }
+  }
+  if (!Array.isArray(addonsList)) addonsList = [];
+
   // Format addons list with descriptions
-  const addonsHtml = (addons || []).map(a => `
+  const addonsHtml = addonsList.map(a => `
     <tr>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
         <strong>${a.name || a.serviceName || a.services?.[0]?.name || 'Add-on'}</strong>
