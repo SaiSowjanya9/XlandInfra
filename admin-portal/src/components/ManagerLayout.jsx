@@ -206,15 +206,15 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
                 onClick={toggleVendors}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
                 style={{
-                  background: (isVendorActive || expandedMenus.vendors) ? colors.activeBg : 'transparent',
-                  color: (isVendorActive || expandedMenus.vendors) ? colors.activeText : colors.primaryText,
+                  background: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
+                  color: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
                 }}
-                onMouseEnter={(e) => { if (!isVendorActive && !expandedMenus.vendors) e.currentTarget.style.background = colors.hoverBg; }}
-                onMouseLeave={(e) => { if (!isVendorActive && !expandedMenus.vendors) e.currentTarget.style.background = 'transparent'; }}
+                onMouseEnter={(e) => { if (!expandedMenus.vendors && !(isVendorActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!expandedMenus.vendors && !(isVendorActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
                 title={sidebarCollapsed ? 'Vendor Management' : ''}
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                  <Store className="w-5 h-5 flex-shrink-0" style={{ color: (isVendorActive || expandedMenus.vendors) ? colors.activeText : colors.iconGold }} />
+                  <Store className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
                   {!sidebarCollapsed && <span>Vendor Management</span>}
                 </div>
                 {!sidebarCollapsed && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.vendors ? 'rotate-180' : ''}`} />}
@@ -253,15 +253,15 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
                 onClick={toggleEstimates}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
                 style={{
-                  background: (isEstimatesActive || expandedMenus.estimates) ? colors.activeBg : 'transparent',
-                  color: (isEstimatesActive || expandedMenus.estimates) ? colors.activeText : colors.primaryText,
+                  background: (expandedMenus.estimates || (isEstimatesActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
+                  color: (expandedMenus.estimates || (isEstimatesActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
                 }}
-                onMouseEnter={(e) => { if (!isEstimatesActive && !expandedMenus.estimates) e.currentTarget.style.background = colors.hoverBg; }}
-                onMouseLeave={(e) => { if (!isEstimatesActive && !expandedMenus.estimates) e.currentTarget.style.background = 'transparent'; }}
+                onMouseEnter={(e) => { if (!expandedMenus.estimates && !(isEstimatesActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!expandedMenus.estimates && !(isEstimatesActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
                 title={sidebarCollapsed ? 'Estimates / AMC' : ''}
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                  <FileText className="w-5 h-5 flex-shrink-0" style={{ color: (isEstimatesActive || expandedMenus.estimates) ? colors.activeText : colors.iconGold }} />
+                  <FileText className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.estimates || (isEstimatesActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
                   {!sidebarCollapsed && <span>Estimates / AMC</span>}
                 </div>
                 {!sidebarCollapsed && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.estimates ? 'rotate-180' : ''}`} />}
