@@ -271,15 +271,15 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 onClick={toggleVendor}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
                 style={{
-                  background: (isVendorSectionActive || vendorOpen) ? colors.activeBg : 'transparent',
-                  color: (isVendorSectionActive || vendorOpen) ? colors.activeText : colors.primaryText,
+                  background: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
+                  color: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
                 }}
-                onMouseEnter={(e) => { if (!isVendorSectionActive && !vendorOpen) e.currentTarget.style.background = colors.hoverBg; }}
-                onMouseLeave={(e) => { if (!isVendorSectionActive && !vendorOpen) e.currentTarget.style.background = 'transparent'; }}
+                onMouseEnter={(e) => { if (!vendorOpen && !(isVendorSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!vendorOpen && !(isVendorSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
                 title={sidebarCollapsed ? 'Vendor Management' : ''}
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                  <Store className="w-5 h-5 flex-shrink-0" style={{ color: (isVendorSectionActive || vendorOpen) ? colors.activeText : colors.iconGold }} />
+                  <Store className="w-5 h-5 flex-shrink-0" style={{ color: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
                   {!sidebarCollapsed && <span>Vendor Management</span>}
                 </div>
                 {!sidebarCollapsed && (
@@ -305,15 +305,15 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 onClick={toggleEmployee}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
                 style={{
-                  background: (isEmployeeSectionActive || employeeOpen) ? colors.activeBg : 'transparent',
-                  color: (isEmployeeSectionActive || employeeOpen) ? colors.activeText : colors.primaryText,
+                  background: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
+                  color: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
                 }}
-                onMouseEnter={(e) => { if (!isEmployeeSectionActive && !employeeOpen) e.currentTarget.style.background = colors.hoverBg; }}
-                onMouseLeave={(e) => { if (!isEmployeeSectionActive && !employeeOpen) e.currentTarget.style.background = 'transparent'; }}
+                onMouseEnter={(e) => { if (!employeeOpen && !(isEmployeeSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!employeeOpen && !(isEmployeeSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
                 title={sidebarCollapsed ? 'Employee Management' : ''}
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                  <Users className="w-5 h-5 flex-shrink-0" style={{ color: (isEmployeeSectionActive || employeeOpen) ? colors.activeText : colors.iconGold }} />
+                  <Users className="w-5 h-5 flex-shrink-0" style={{ color: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
                   {!sidebarCollapsed && <span>Employee Management</span>}
                 </div>
                 {!sidebarCollapsed && (
@@ -339,15 +339,15 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 onClick={toggleEstimates}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
                 style={{
-                  background: (isEstimatesSectionActive || estimatesOpen) ? colors.activeBg : 'transparent',
-                  color: (isEstimatesSectionActive || estimatesOpen) ? colors.activeText : colors.primaryText,
+                  background: (estimatesOpen || (isEstimatesSectionActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
+                  color: (estimatesOpen || (isEstimatesSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
                 }}
-                onMouseEnter={(e) => { if (!isEstimatesSectionActive && !estimatesOpen) e.currentTarget.style.background = colors.hoverBg; }}
-                onMouseLeave={(e) => { if (!isEstimatesSectionActive && !estimatesOpen) e.currentTarget.style.background = 'transparent'; }}
+                onMouseEnter={(e) => { if (!estimatesOpen && !(isEstimatesSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!estimatesOpen && !(isEstimatesSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
                 title={sidebarCollapsed ? 'Estimates / AMC' : ''}
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                  <FileText className="w-5 h-5 flex-shrink-0" style={{ color: (isEstimatesSectionActive || estimatesOpen) ? colors.activeText : colors.iconGold }} />
+                  <FileText className="w-5 h-5 flex-shrink-0" style={{ color: (estimatesOpen || (isEstimatesSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
                   {!sidebarCollapsed && <span>Estimates / AMC</span>}
                 </div>
                 {!sidebarCollapsed && (
