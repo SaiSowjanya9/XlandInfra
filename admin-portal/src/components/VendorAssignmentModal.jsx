@@ -179,7 +179,45 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
   const [estimates, setEstimates] = useState([]);
   const [selectedEstimate, setSelectedEstimate] = useState(null);
   const [serviceAssignments, setServiceAssignments] = useState([]);
+  const [existingDbAssignments, setExistingDbAssignments] = useState([]); // Track database assignments
   const [error, setError] = useState(null);
+
+  // Determine API base path based on current user role
+  const getApiBasePath = () => {
+    const path = window.location.pathname;
+    if (path.startsWith('/fp/')) return '/api/fp';
+    if (path.startsWith('/manager/')) return '/api/manager';
+    if (path.startsWith('/admin/')) return '/api/vendors';
+    return '/api/vendors'; // default
+  };
+
+  // Fetch existing vendor assignments from database
+  const fetchExistingAssignments = async () => {
+    try {
+      const token = getAuthToken();
+      const apiBase = getApiBasePath();
+      const propertyId = property?.id || property?.propertyId;
+      
+      const response = await fetch(`${API_BASE}${apiBase}/assignments/property/${propertyId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          debug('[DB Assignments] Found:', result.data.length, 'existing assignments');
+          return result.data;
+        }
+      }
+      return [];
+    } catch (err) {
+      console.warn('[DB Assignments] Failed to fetch:', err);
+      return [];
+    }
+  };
 
   // Load vendors and estimates on mount
   useEffect(() => {
@@ -240,6 +278,11 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
       
       setVendors(vendorData || []);
       
+      // Fetch existing database assignments for this property
+      const dbAssignments = await fetchExistingAssignments();
+      setExistingDbAssignments(dbAssignments);
+      debug('[DEBUG] Existing DB Assignments:', dbAssignments);
+      
       // Load estimates for this property
       const propertyEstimates = getEstimatesByPropertyId(property.propertyId);
       debug('[DEBUG] Estimates for property:', propertyEstimates?.length || 0);
@@ -251,7 +294,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
       // Auto-select first estimate if available
       // If no estimate exists, do NOT show default services - user must create estimate first
       if (propertyEstimates && propertyEstimates.length > 0) {
-        handleEstimateSelect(propertyEstimates[0], vendorData);
+        handleEstimateSelect(propertyEstimates[0], vendorData, dbAssignments);
       } else {
         // No estimate exists - keep serviceAssignments empty
         // Vendor assignment is only enabled after estimate is created and linked
@@ -351,14 +394,14 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
   ];
 
   // Handle estimate selection - auto-assign matching vendors based on AMC package services
-  const handleEstimateSelect = (estimate, vendorList = vendors) => {
+  const handleEstimateSelect = (estimate, vendorList = vendors, dbAssignments = existingDbAssignments) => {
     setSelectedEstimate(estimate);
     
     // Extract services from estimate
     const services = extractServicesFromEstimate(estimate);
     
-    // Load existing assignments for this estimate
-    const existingAssignments = getServiceVendorAssignmentsByEstimate(
+    // Load existing assignments for this estimate (from localStorage)
+    const localAssignments = getServiceVendorAssignmentsByEstimate(
       property.propertyId, 
       estimate.estimateId
     );
@@ -368,26 +411,48 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     const propZoneNormalized = normalizeZone(propZone);
     
     debug(`[EstimateSelect] Property: ${property?.propertyId}, Zone: "${propZone}"`);
+    debug(`[EstimateSelect] DB Assignments:`, dbAssignments);
     debug(`[EstimateSelect] Available vendors:`, vendorList.map(v => `${v.ownerName || v.owner_name} (${v.serviceType || v.service_type}, ${v.zone_name || v.zone})`));
     
     // Map services with auto-matched vendors (by BOTH service type AND zone - exact match)
     const mappedServices = services.map(service => {
-      // Check for existing assignment first
-      const existing = existingAssignments.find(
-        a => a.serviceType === service.serviceType
+      const serviceNormalized = normalizeServiceType(service.serviceType);
+      
+      // PRIORITY 1: Check for existing DATABASE assignment (by service type)
+      const dbExisting = dbAssignments.find(
+        a => normalizeServiceType(a.serviceType) === serviceNormalized
       );
       
-      if (existing?.vendorId) {
+      if (dbExisting?.vendorId) {
+        debug(`[EstimateSelect] Service "${service.serviceType}" → Found DB assignment: ${dbExisting.vendorName}`);
         return {
           ...service,
-          vendorId: existing.vendorId,
-          vendorName: existing.vendorName,
-          vendorZone: existing.vendorZone,
-          vendorServiceType: existing.vendorServiceType
+          vendorId: dbExisting.vendorId,
+          vendorName: dbExisting.vendorName,
+          vendorZone: dbExisting.zoneName,
+          vendorServiceType: dbExisting.vendorServiceType,
+          assignmentId: dbExisting.id, // Track the assignment ID for updates
+          originalVendorId: dbExisting.vendorId, // Track original for change detection
+          isExisting: true // Flag to show this is an existing assignment
         };
       }
       
-      // Auto-match vendor by BOTH service type AND zone (exact match)
+      // PRIORITY 2: Check for existing localStorage assignment
+      const localExisting = localAssignments.find(
+        a => a.serviceType === service.serviceType
+      );
+      
+      if (localExisting?.vendorId) {
+        return {
+          ...service,
+          vendorId: localExisting.vendorId,
+          vendorName: localExisting.vendorName,
+          vendorZone: localExisting.vendorZone,
+          vendorServiceType: localExisting.vendorServiceType
+        };
+      }
+      
+      // PRIORITY 3: Auto-match vendor by BOTH service type AND zone (exact match)
       const normalizedService = normalizeServiceType(service.serviceType);
       const matchingVendor = vendorList.find(v => {
         const vendorServiceNormalized = normalizeServiceType(v.serviceType || v.service_type);
@@ -555,16 +620,21 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
 
   // Handle vendor selection for a service
   const handleVendorSelect = (serviceIndex, vendorId) => {
-    const vendor = vendors.find(v => v.vendorId === vendorId);
+    const vendor = vendors.find(v => v.vendorId === vendorId || v.vendor_id === vendorId);
     
     setServiceAssignments(prev => {
       const updated = [...prev];
+      const current = updated[serviceIndex];
       updated[serviceIndex] = {
-        ...updated[serviceIndex],
-        vendorId: vendor?.vendorId || '',
-        vendorName: vendor?.ownerName || '',
-        vendorZone: vendor?.zone || '',
-        vendorServiceType: vendor?.serviceType || ''
+        ...current,
+        vendorId: vendor?.vendorId || vendor?.vendor_id || '',
+        vendorName: vendor?.ownerName || vendor?.owner_name || '',
+        vendorZone: vendor?.zone || vendor?.zone_name || '',
+        vendorServiceType: vendor?.serviceType || vendor?.service_type || '',
+        // Preserve existing assignment tracking
+        assignmentId: current.assignmentId,
+        originalVendorId: current.originalVendorId,
+        isExisting: current.isExisting
       };
       return updated;
     });
@@ -581,21 +651,29 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     setError(null);
     
     const token = getAuthToken();
+    const apiBase = getApiBasePath();
     
     try {
       // Get assignments with vendors
       const assignmentsToSave = serviceAssignments.filter(s => s.vendorId);
       
+      // Separate new assignments from updates
+      const newAssignments = assignmentsToSave.filter(s => !s.isExisting);
+      const updatedAssignments = assignmentsToSave.filter(s => s.isExisting && s.vendorId !== s.originalVendorId);
+      const unchangedAssignments = assignmentsToSave.filter(s => s.isExisting && s.vendorId === s.originalVendorId);
+      
       debug('[VendorAssignmentModal] Saving to database:', {
         propertyId: property.id,
-        assignments: assignmentsToSave
+        newAssignments: newAssignments.length,
+        updatedAssignments: updatedAssignments.length,
+        unchangedAssignments: unchangedAssignments.length
       });
       
-      // Save each vendor assignment to database
       let successCount = 0;
       let errorMessages = [];
       
-      for (const assignment of assignmentsToSave) {
+      // Process new assignments
+      for (const assignment of newAssignments) {
         try {
           const response = await fetch(`${API_BASE}/api/vendors/assignments`, {
             method: 'POST',
@@ -605,6 +683,33 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
             },
             body: JSON.stringify({
               propertyId: property.id,
+              vendorId: assignment.vendorId,
+              serviceType: assignment.serviceType
+            })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            successCount++;
+          } else {
+            errorMessages.push(`${assignment.serviceType}: ${result.message || 'Failed to assign'}`);
+          }
+        } catch (err) {
+          errorMessages.push(`${assignment.serviceType}: ${err.message}`);
+        }
+      }
+      
+      // Process updated assignments (reassignments)
+      for (const assignment of updatedAssignments) {
+        try {
+          const response = await fetch(`${API_BASE}/api/vendors/assignments/${assignment.assignmentId}`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
               vendorId: assignment.vendorId
             })
           });
@@ -614,15 +719,21 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
           if (result.success) {
             successCount++;
           } else {
-            errorMessages.push(result.message || 'Failed to assign vendor');
+            errorMessages.push(`${assignment.serviceType}: ${result.message || 'Failed to update'}`);
           }
         } catch (err) {
-          errorMessages.push(err.message);
+          errorMessages.push(`${assignment.serviceType}: ${err.message}`);
         }
       }
       
+      // Count unchanged as success too
+      successCount += unchangedAssignments.length;
+      
       if (successCount > 0) {
-        onSuccess?.(`${successCount} vendor(s) assigned successfully!`);
+        const msg = updatedAssignments.length > 0 
+          ? `${successCount} vendor(s) assigned/updated successfully!`
+          : `${successCount} vendor(s) assigned successfully!`;
+        onSuccess?.(msg);
         onClose();
       } else {
         setError(errorMessages.join(', ') || 'Failed to save assignments');
@@ -731,11 +842,25 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
                         const hasVendors = filteredVendors.length > 0;
                         const hasSelection = !!service.vendorId;
                         const visits = service.frequencyCount || 12;
+                        const isExisting = service.isExisting;
+                        const isChanged = service.originalVendorId && service.vendorId !== service.originalVendorId;
                         
                         return (
-                          <tr key={idx} className="hover:bg-gray-50 align-middle">
+                          <tr key={idx} className={`hover:bg-gray-50 align-middle ${isChanged ? 'bg-amber-50' : ''}`}>
                             <td className="px-4 py-3">
-                              <span className="font-medium text-gray-800">{service.serviceType}</span>
+                              <div className="flex flex-col">
+                                <span className="font-medium text-gray-800">{service.serviceType}</span>
+                                {isExisting && !isChanged && (
+                                  <span className="text-xs text-green-600 flex items-center gap-1 mt-0.5">
+                                    <Check className="w-3 h-3" /> Currently assigned
+                                  </span>
+                                )}
+                                {isChanged && (
+                                  <span className="text-xs text-amber-600 flex items-center gap-1 mt-0.5">
+                                    <AlertCircle className="w-3 h-3" /> Reassigning...
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="px-4 py-3 text-center">
                               <span className="text-gray-600">{service.frequencyType || 'Monthly'}</span>
@@ -749,9 +874,11 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
                                   value={service.vendorId || ''}
                                   onChange={(e) => handleVendorSelect(idx, e.target.value)}
                                   className={`w-full appearance-none px-3 py-2 border rounded-lg text-sm pr-8 outline-none transition-colors cursor-pointer ${
-                                    hasSelection 
-                                      ? 'border-green-400 bg-green-50 text-green-800 focus:border-green-500 focus:ring-2 focus:ring-green-100'
-                                      : 'border-gray-300 bg-white text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100'
+                                    isChanged
+                                      ? 'border-amber-400 bg-amber-50 text-amber-800 focus:border-amber-500 focus:ring-2 focus:ring-amber-100'
+                                      : hasSelection 
+                                        ? 'border-green-400 bg-green-50 text-green-800 focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                        : 'border-gray-300 bg-white text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100'
                                   }`}
                                 >
                                   {hasVendors ? (
@@ -760,6 +887,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
                                       {filteredVendors.map(v => (
                                         <option key={v.vendorId} value={v.vendorId}>
                                           {v.ownerName || v.owner_name} ({v.serviceType || v.service_type})
+                                          {v.vendorId === service.originalVendorId ? ' (Current)' : ''}
                                         </option>
                                       ))}
                                     </>
@@ -777,24 +905,40 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
                   </table>
                   {/* Assignment Summary - Footer matching Estimates style */}
                   <div className="px-5 py-3 bg-purple-50 border-t border-purple-100">
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center flex-wrap gap-2">
                       <div className="flex items-center gap-2">
                         <UserCheck className="w-5 h-5 text-purple-600" />
                         <span className="text-sm font-semibold text-purple-700">
                           {assignedCount} of {serviceAssignments.length} services assigned
                         </span>
+                        {(() => {
+                          const reassignCount = serviceAssignments.filter(s => s.isExisting && s.vendorId !== s.originalVendorId).length;
+                          return reassignCount > 0 && (
+                            <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
+                              {reassignCount} to reassign
+                            </span>
+                          );
+                        })()}
                       </div>
-                      {assignedCount === serviceAssignments.length ? (
-                        <span className="flex items-center gap-1.5 text-xs text-green-700 bg-green-100 px-3 py-1.5 rounded-full font-medium">
-                          <Check className="w-3.5 h-3.5" />
-                          All Assigned
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-100 px-3 py-1.5 rounded-full font-medium">
-                          <AlertCircle className="w-3.5 h-3.5" />
-                          {serviceAssignments.length - assignedCount} pending
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {serviceAssignments.filter(s => s.isExisting && s.vendorId === s.originalVendorId).length > 0 && (
+                          <span className="flex items-center gap-1.5 text-xs text-blue-700 bg-blue-100 px-3 py-1.5 rounded-full font-medium">
+                            <Check className="w-3.5 h-3.5" />
+                            {serviceAssignments.filter(s => s.isExisting && s.vendorId === s.originalVendorId).length} existing
+                          </span>
+                        )}
+                        {assignedCount === serviceAssignments.length ? (
+                          <span className="flex items-center gap-1.5 text-xs text-green-700 bg-green-100 px-3 py-1.5 rounded-full font-medium">
+                            <Check className="w-3.5 h-3.5" />
+                            All Assigned
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-100 px-3 py-1.5 rounded-full font-medium">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            {serviceAssignments.length - assignedCount} pending
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
