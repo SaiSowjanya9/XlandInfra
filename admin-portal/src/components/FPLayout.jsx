@@ -25,8 +25,14 @@ import {
   CreditCard,
   Clock,
   IndianRupee,
+  Bell,
+  AlertTriangle,
+  Trash2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { getAuthToken } from '../utils/safeStorage';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const FPLayout = ({ admin, onLogout, children }) => {
   const location = useLocation();
@@ -65,6 +71,67 @@ const FPLayout = ({ admin, onLogout, children }) => {
   const [paymentsOpen, setPaymentsOpen] = useState(
     location.pathname.startsWith('/fp/payments')
   );
+
+  // Notification states
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef(null);
+  const token = getAuthToken();
+
+  // Fetch work orders approaching auto-deletion
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/fp/work-orders/approaching-deletion`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success && result.data) {
+        const woNotifications = result.data.map(wo => ({
+          id: `wo-delete-${wo.id}`,
+          type: 'warning',
+          title: 'Work Order Auto-Delete',
+          message: `${wo.work_order_id} - (${wo.days_remaining} days left)`,
+          workOrderId: wo.work_order_id,
+          daysRemaining: wo.days_remaining,
+          read: false
+        }));
+        setNotifications(woNotifications);
+      }
+    } catch (error) {
+      console.error('Fetch notifications error:', error);
+    }
+  };
+
+  // Fetch notifications on mount
+  useEffect(() => {
+    if (token) {
+      fetchNotifications();
+      // Refresh every 5 minutes
+      const interval = setInterval(fetchNotifications, 5 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [token]);
+
+  // Close notifications on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const dismissNotification = (id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  const dismissAllNotifications = () => {
+    setNotifications([]);
+  };
+
+  const unreadCount = notifications.length;
 
   // Accordion toggle functions - close other sections when opening one
   const toggleVendor = () => {
@@ -227,14 +294,123 @@ const FPLayout = ({ admin, onLogout, children }) => {
             <Menu className="w-6 h-6 text-slate-700" />
           </button>
           <span className="font-semibold text-slate-800">{admin?.firstName} {admin?.lastName}</span>
-          <button
-            onClick={onLogout}
-            className="p-2 rounded-xl bg-slate-800 text-amber-400 hover:bg-slate-700 transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Mobile Notification Bell */}
+            <div className="relative" ref={notificationRef}>
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="p-2 rounded-xl hover:bg-slate-100 transition-colors relative"
+              >
+                <Bell className="w-5 h-5 text-slate-600" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+            </div>
+            <button
+              onClick={onLogout}
+              className="p-2 rounded-xl bg-slate-800 text-amber-400 hover:bg-slate-700 transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </header>
+
+      {/* Notification Dropdown (shared for mobile and desktop) */}
+      {showNotifications && (
+        <div className="fixed inset-0 z-50" onClick={() => setShowNotifications(false)}>
+          <div 
+            ref={notificationRef}
+            onClick={(e) => e.stopPropagation()}
+            className="absolute right-4 top-16 lg:right-8 lg:top-8 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden"
+          >
+            <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
+              <span className="font-semibold text-gray-800">Notifications</span>
+              {notifications.length > 0 && (
+                <button
+                  onClick={dismissAllNotifications}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Dismiss All
+                </button>
+              )}
+            </div>
+            <div className="max-h-80 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="p-6 text-center">
+                  <Bell className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm text-gray-500">No notifications</p>
+                </div>
+              ) : (
+                <div>
+                  {notifications.some(n => n.type === 'warning') && (
+                    <div className="px-4 py-2 bg-amber-50 border-b border-amber-100">
+                      <div className="flex items-center gap-2 text-amber-800">
+                        <AlertTriangle className="w-4 h-4" />
+                        <span className="text-xs font-medium">Work Orders Approaching Auto-Delete</span>
+                      </div>
+                      <p className="text-xs text-amber-700 mt-1">
+                        Closed/cancelled work orders are deleted 30 days after completion.
+                      </p>
+                    </div>
+                  )}
+                  {notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-3">
+                          <div className={`p-1.5 rounded-lg flex-shrink-0 ${
+                            notification.type === 'warning' ? 'bg-amber-100' : 'bg-blue-100'
+                          }`}>
+                            {notification.type === 'warning' ? (
+                              <AlertTriangle className="w-4 h-4 text-amber-600" />
+                            ) : (
+                              <Bell className="w-4 h-4 text-blue-600" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">{notification.workOrderId}</p>
+                            <p className="text-xs text-amber-600 mt-0.5">
+                              {notification.daysRemaining} days until auto-delete
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => dismissNotification(notification.id)}
+                          className="p-1 hover:bg-gray-200 rounded transition-colors"
+                          title="Dismiss"
+                        >
+                          <X className="w-3 h-3 text-gray-400" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop Notification Bell (Fixed Position) */}
+      <div className="hidden lg:block fixed top-4 right-8 z-40">
+        <button
+          onClick={() => setShowNotifications(!showNotifications)}
+          className="p-2.5 bg-white rounded-xl shadow-md hover:shadow-lg transition-all border border-gray-100 relative"
+        >
+          <Bell className="w-5 h-5 text-gray-600" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+      </div>
 
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
