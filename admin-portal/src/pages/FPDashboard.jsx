@@ -15,7 +15,10 @@ import {
   Briefcase,
   Shield,
   Plus,
-  UserPlus
+  UserPlus,
+  Bell,
+  X,
+  AlertTriangle
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
@@ -32,6 +35,95 @@ const FPDashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const lastFetchRef = useRef(0);
+
+  // Notification states
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef(null);
+
+  // Get read/dismissed notification IDs from localStorage
+  const getReadNotifications = () => {
+    try {
+      return JSON.parse(localStorage.getItem('fp_read_notifications') || '[]');
+    } catch { return []; }
+  };
+
+  const getDismissedNotifications = () => {
+    try {
+      return JSON.parse(localStorage.getItem('fp_dismissed_notifications') || '[]');
+    } catch { return []; }
+  };
+
+  // Fetch notifications
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE}/api/fp/work-orders/approaching-deletion`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success && result.data) {
+        const readIds = getReadNotifications();
+        const dismissedIds = getDismissedNotifications();
+        
+        const woNotifications = result.data
+          .filter(wo => !dismissedIds.includes(`wo-delete-${wo.id}`))
+          .map(wo => ({
+            id: `wo-delete-${wo.id}`,
+            type: 'warning',
+            workOrderId: wo.work_order_id,
+            daysRemaining: wo.days_remaining,
+            read: readIds.includes(`wo-delete-${wo.id}`)
+          }));
+        setNotifications(woNotifications);
+      }
+    } catch (error) {
+      console.error('Fetch notifications error:', error);
+    }
+  }, []);
+
+  // Mark notification as read
+  const markAsRead = (id) => {
+    const readIds = getReadNotifications();
+    if (!readIds.includes(id)) {
+      localStorage.setItem('fp_read_notifications', JSON.stringify([...readIds, id]));
+    }
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  };
+
+  // Mark all as read
+  const markAllAsRead = () => {
+    const allIds = notifications.map(n => n.id);
+    localStorage.setItem('fp_read_notifications', JSON.stringify(allIds));
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  // Dismiss notification
+  const dismissNotification = (id) => {
+    const dismissedIds = getDismissedNotifications();
+    localStorage.setItem('fp_dismissed_notifications', JSON.stringify([...dismissedIds, id]));
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  // Close notifications on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Fetch notifications on mount
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
 
   const fetchDashboardData = useCallback(async (isInitialLoad = false) => {
     // Prevent duplicate fetches within 2 seconds
@@ -152,13 +244,112 @@ const FPDashboard = ({ user }) => {
           </h1>
           <p className="text-gray-500 mt-1">Here's what's happening with your business today.</p>
         </div>
-        <button
-          onClick={() => fetchDashboardData(false)}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <RefreshCw className="w-4 h-4" />
-          <span>Refresh</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Notification Bell */}
+          <div className="relative" ref={notificationRef}>
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              title="Notifications"
+            >
+              <Bell className="w-5 h-5 text-gray-600" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* Notification Dropdown */}
+            {showNotifications && (
+              <div className="absolute right-0 top-12 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50">
+                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-800">Notifications</span>
+                    {unreadCount > 0 && (
+                      <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">
+                        {unreadCount} new
+                      </span>
+                    )}
+                  </div>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={markAllAsRead}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Mark All Read
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="p-6 text-center">
+                      <Bell className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                      <p className="text-sm text-gray-500">No notifications</p>
+                    </div>
+                  ) : (
+                    <div>
+                      {notifications.some(n => n.type === 'warning') && (
+                        <div className="px-4 py-2 bg-amber-50 border-b border-amber-100">
+                          <div className="flex items-center gap-2 text-amber-800">
+                            <AlertTriangle className="w-4 h-4" />
+                            <span className="text-xs font-medium">Work Orders Approaching Auto-Delete</span>
+                          </div>
+                        </div>
+                      )}
+                      {notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          onClick={() => !notification.read && markAsRead(notification.id)}
+                          className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
+                            !notification.read ? 'bg-blue-50/50' : ''
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-3">
+                              <div className="relative">
+                                <div className="p-1.5 rounded-lg bg-amber-100">
+                                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                                </div>
+                                {!notification.read && (
+                                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white"></span>
+                                )}
+                              </div>
+                              <div>
+                                <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>
+                                  {notification.workOrderId}
+                                </p>
+                                <p className="text-xs text-amber-600 mt-0.5">
+                                  {notification.daysRemaining} days until auto-delete
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); dismissNotification(notification.id); }}
+                              className="p-1 hover:bg-red-100 rounded transition-colors"
+                              title="Dismiss"
+                            >
+                              <X className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Refresh Button */}
+          <button
+            onClick={() => fetchDashboardData(false)}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
 
       {/* Error Alert */}
