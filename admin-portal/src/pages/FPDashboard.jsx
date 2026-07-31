@@ -309,23 +309,29 @@ const FPDashboard = ({ user }) => {
           
           <div className="flex items-center justify-between">
             {/* Pie Chart */}
-            <div className="relative" style={{ width: 160, height: 160 }}>
-              <PieChart width={160} height={160}>
-                <Pie
-                  data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
-                  cx={80}
-                  cy={80}
-                  innerRadius={45}
-                  outerRadius={65}
-                  paddingAngle={pieData.length > 1 ? 3 : 0}
-                  dataKey="value"
-                >
-                  {(pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                  ))}
-                </Pie>
-              </PieChart>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className="relative" style={{ width: 160, height: 160, minWidth: 160, minHeight: 160 }}>
+              <div style={{ width: '100%', height: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={65}
+                      paddingAngle={pieData.length > 1 ? 3 : 0}
+                      dataKey="value"
+                      animationBegin={0}
+                      animationDuration={800}
+                    >
+                      {(pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} stroke="white" strokeWidth={2} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <p className="text-2xl font-bold text-gray-900">{totalWorkOrders}</p>
                 <p className="text-xs text-gray-500">Total</p>
               </div>
