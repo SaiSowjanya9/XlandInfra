@@ -302,7 +302,9 @@ const ExecutiveDashboard = ({ user }) => {
                 <XAxis type="number" hide />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: '#6B7280' }} width={95} axisLine={false} tickLine={false} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px', color: '#fff' }}
+                  contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
+                  labelStyle={{ color: '#fff', fontWeight: 600 }}
+                  itemStyle={{ color: '#fff' }}
                   cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                 />
                 <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={18}>

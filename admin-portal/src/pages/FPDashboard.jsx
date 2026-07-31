@@ -226,145 +226,9 @@ const FPDashboard = ({ user }) => {
         </Link>
       </div>
 
-      {/* Your Team + Work Orders Overview */}
+      {/* Estimates Overview + Work Orders Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Your Team Section */}
-        <div className="bg-white rounded-xl border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Team</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-indigo-50 rounded-xl p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                  <UserCog className="w-5 h-5 text-indigo-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-indigo-700">{stats?.employeeRoles?.managers || 0}</p>
-                  <p className="text-sm text-indigo-600">Managers</p>
-                </div>
-              </div>
-              <div className="text-xs text-indigo-500 bg-indigo-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
-                <ClipboardList className="w-3 h-3" />
-                {stats?.workOrders?.byRole?.managers || 0} Work Orders
-              </div>
-            </div>
-
-            <div className="bg-purple-50 rounded-xl p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <UserCheck className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-purple-700">{stats?.employeeRoles?.coordinators || 0}</p>
-                  <p className="text-sm text-purple-600">Coordinators</p>
-                </div>
-              </div>
-              <div className="text-xs text-purple-500 bg-purple-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
-                <ClipboardList className="w-3 h-3" />
-                {stats?.workOrders?.byRole?.coordinators || 0} Work Orders
-              </div>
-            </div>
-
-            <div className="bg-amber-50 rounded-xl p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-amber-700">{stats?.employeeRoles?.supervisors || 0}</p>
-                  <p className="text-sm text-amber-600">Supervisors</p>
-                </div>
-              </div>
-              <div className="text-xs text-amber-500 bg-amber-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
-                <ClipboardList className="w-3 h-3" />
-                {stats?.workOrders?.byRole?.supervisors || 0} Work Orders
-              </div>
-            </div>
-
-            <div className="bg-teal-50 rounded-xl p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
-                  <Briefcase className="w-5 h-5 text-teal-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-teal-700">{stats?.employeeRoles?.executives || 0}</p>
-                  <p className="text-sm text-teal-600">Executives</p>
-                </div>
-              </div>
-              <div className="text-xs text-teal-500 bg-teal-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
-                <ClipboardList className="w-3 h-3" />
-                {stats?.workOrders?.byRole?.executives || 0} Work Orders
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Work Orders Overview - Pie Chart */}
-        <div className="bg-white rounded-xl border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Work Orders Overview</h2>
-            <Link to="/fp/work-orders" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
-              View All <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            {/* Pie Chart */}
-            <div className="relative" style={{ width: 160, height: 160, minWidth: 160, minHeight: 160 }}>
-              <div style={{ width: '100%', height: '100%' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={65}
-                      paddingAngle={pieData.length > 1 ? 3 : 0}
-                      dataKey="value"
-                      animationBegin={0}
-                      animationDuration={800}
-                    >
-                      {(pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} stroke="white" strokeWidth={2} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <p className="text-2xl font-bold text-gray-900">{totalWorkOrders}</p>
-                <p className="text-xs text-gray-500">Total</p>
-              </div>
-            </div>
-
-            {/* Legend */}
-            <div className="flex-1 ml-6 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-amber-500"></span>
-                  <span className="text-sm text-gray-600">Pending</span>
-                </div>
-                <span className="text-sm font-semibold text-gray-900">{workOrdersByStatus.pending || 0}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                  <span className="text-sm text-gray-600">In Progress</span>
-                </div>
-                <span className="text-sm font-semibold text-gray-900">{workOrdersByStatus.in_progress || 0}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                  <span className="text-sm text-gray-600">Completed</span>
-                </div>
-                <span className="text-sm font-semibold text-gray-900">{(workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Estimates Overview - Bar Chart */}
+        {/* Estimates Overview - Vertical Bar Chart */}
         <div className="bg-white rounded-xl border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Estimates Overview</h2>
@@ -378,29 +242,196 @@ const FPDashboard = ({ user }) => {
             <div className="text-center">
               <p className="text-3xl font-bold text-gray-900">{totalEstimates}</p>
               <p className="text-sm text-gray-500">Total</p>
-              <div className="flex gap-2 mt-2 text-xs">
+              <div className="flex flex-col gap-1 mt-2 text-xs">
                 <span className="px-2 py-1 bg-teal-50 text-teal-700 rounded-lg">{stats?.directEstimates || 0} Direct</span>
                 <span className="px-2 py-1 bg-cyan-50 text-cyan-700 rounded-lg">{stats?.propertyEstimates || 0} Property</span>
               </div>
             </div>
 
-            {/* Bar Chart */}
-            <div className="flex-1 h-40">
+            {/* Vertical Bar Chart */}
+            <div className="flex-1" style={{ height: 200 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={estimatesBarData} layout="vertical" margin={{ top: 5, right: 20, bottom: 5, left: 80 }}>
-                  <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: '#6B7280' }} width={75} axisLine={false} tickLine={false} />
+                <BarChart data={estimatesBarData} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B7280' }} axisLine={false} tickLine={false} />
+                  <YAxis hide />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px', color: '#fff' }}
+                    contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
+                    labelStyle={{ color: '#fff', fontWeight: 600 }}
+                    itemStyle={{ color: '#fff' }}
                     cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                   />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={16}>
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={30}>
                     {estimatesBarData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Work Orders Overview - Pie Chart */}
+        <div className="bg-white rounded-xl border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Work Orders Overview</h2>
+            <Link to="/fp/work-orders" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+              View All <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+          
+          <div className="flex items-center justify-center gap-8">
+            {/* Pie Chart - Using SVG directly for reliability */}
+            <div style={{ width: 180, height: 180 }}>
+              <svg viewBox="0 0 180 180" width="180" height="180">
+                {/* Background circle */}
+                <circle cx="90" cy="90" r="70" fill="none" stroke="#E5E7EB" strokeWidth="20" />
+                {/* Pie segments */}
+                {(() => {
+                  const total = (workOrdersByStatus.pending || 0) + (workOrdersByStatus.in_progress || 0) + (workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0);
+                  if (total === 0) return null;
+                  
+                  const pending = workOrdersByStatus.pending || 0;
+                  const inProgress = workOrdersByStatus.in_progress || 0;
+                  const completed = (workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0);
+                  
+                  const circumference = 2 * Math.PI * 70;
+                  let offset = 0;
+                  const segments = [];
+                  
+                  if (pending > 0) {
+                    const length = (pending / total) * circumference;
+                    segments.push(
+                      <circle key="pending" cx="90" cy="90" r="70" fill="none" stroke="#F59E0B" strokeWidth="20"
+                        strokeDasharray={`${length} ${circumference}`}
+                        strokeDashoffset={-offset}
+                        transform="rotate(-90 90 90)"
+                      />
+                    );
+                    offset += length;
+                  }
+                  if (inProgress > 0) {
+                    const length = (inProgress / total) * circumference;
+                    segments.push(
+                      <circle key="inprogress" cx="90" cy="90" r="70" fill="none" stroke="#3B82F6" strokeWidth="20"
+                        strokeDasharray={`${length} ${circumference}`}
+                        strokeDashoffset={-offset}
+                        transform="rotate(-90 90 90)"
+                      />
+                    );
+                    offset += length;
+                  }
+                  if (completed > 0) {
+                    const length = (completed / total) * circumference;
+                    segments.push(
+                      <circle key="completed" cx="90" cy="90" r="70" fill="none" stroke="#10B981" strokeWidth="20"
+                        strokeDasharray={`${length} ${circumference}`}
+                        strokeDashoffset={-offset}
+                        transform="rotate(-90 90 90)"
+                      />
+                    );
+                  }
+                  return segments;
+                })()}
+                {/* Center text */}
+                <text x="90" y="85" textAnchor="middle" className="text-2xl font-bold" fill="#111827" style={{ fontSize: '28px', fontWeight: 700 }}>{totalWorkOrders}</text>
+                <text x="90" y="105" textAnchor="middle" fill="#6B7280" style={{ fontSize: '12px' }}>Total</text>
+              </svg>
+            </div>
+
+            {/* Legend */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-8">
+                <div className="flex items-center gap-2">
+                  <span className="w-4 h-4 rounded-full bg-amber-500"></span>
+                  <span className="text-sm text-gray-600">Pending</span>
+                </div>
+                <span className="text-lg font-bold text-gray-900">{workOrdersByStatus.pending || 0}</span>
+              </div>
+              <div className="flex items-center justify-between gap-8">
+                <div className="flex items-center gap-2">
+                  <span className="w-4 h-4 rounded-full bg-blue-500"></span>
+                  <span className="text-sm text-gray-600">In Progress</span>
+                </div>
+                <span className="text-lg font-bold text-gray-900">{workOrdersByStatus.in_progress || 0}</span>
+              </div>
+              <div className="flex items-center justify-between gap-8">
+                <div className="flex items-center gap-2">
+                  <span className="w-4 h-4 rounded-full bg-emerald-500"></span>
+                  <span className="text-sm text-gray-600">Completed</span>
+                </div>
+                <span className="text-lg font-bold text-gray-900">{(workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Your Team Section - Horizontal Strip */}
+      <div className="bg-white rounded-xl border border-gray-100 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Team</h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-indigo-50 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <UserCog className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-indigo-700">{stats?.employeeRoles?.managers || 0}</p>
+                <p className="text-sm text-indigo-600">Managers</p>
+              </div>
+            </div>
+            <div className="text-xs text-indigo-500 bg-indigo-100 rounded-lg px-2 py-1 inline-flex items-center gap-1 mt-2">
+              <ClipboardList className="w-3 h-3" />
+              {stats?.workOrders?.byRole?.managers || 0} Work Orders
+            </div>
+          </div>
+
+          <div className="bg-purple-50 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                <UserCheck className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-purple-700">{stats?.employeeRoles?.coordinators || 0}</p>
+                <p className="text-sm text-purple-600">Coordinators</p>
+              </div>
+            </div>
+            <div className="text-xs text-purple-500 bg-purple-100 rounded-lg px-2 py-1 inline-flex items-center gap-1 mt-2">
+              <ClipboardList className="w-3 h-3" />
+              {stats?.workOrders?.byRole?.coordinators || 0} Work Orders
+            </div>
+          </div>
+
+          <div className="bg-amber-50 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                <Shield className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-amber-700">{stats?.employeeRoles?.supervisors || 0}</p>
+                <p className="text-sm text-amber-600">Supervisors</p>
+              </div>
+            </div>
+            <div className="text-xs text-amber-500 bg-amber-100 rounded-lg px-2 py-1 inline-flex items-center gap-1 mt-2">
+              <ClipboardList className="w-3 h-3" />
+              {stats?.workOrders?.byRole?.supervisors || 0} Work Orders
+            </div>
+          </div>
+
+          <div className="bg-teal-50 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
+                <Briefcase className="w-5 h-5 text-teal-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-teal-700">{stats?.employeeRoles?.executives || 0}</p>
+                <p className="text-sm text-teal-600">Executives</p>
+              </div>
+            </div>
+            <div className="text-xs text-teal-500 bg-teal-100 rounded-lg px-2 py-1 inline-flex items-center gap-1 mt-2">
+              <ClipboardList className="w-3 h-3" />
+              {stats?.workOrders?.byRole?.executives || 0} Work Orders
             </div>
           </div>
         </div>
