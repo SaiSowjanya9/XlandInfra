@@ -290,6 +290,7 @@ const FPDashboard = ({ user }) => {
                     height={24}
                     iconSize={10}
                     wrapperStyle={{ fontSize: '11px' }}
+                    formatter={(value) => value === 'Direct' ? `Direct (${directCount})` : `Property (${propertyCount})`}
                   />
                   <Bar dataKey="direct" name="Direct" stackId="a" fill="#06B6D4" barSize={40} />
                   <Bar dataKey="property" name="Property" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
