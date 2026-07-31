@@ -22,6 +22,9 @@ import {
   Crown,
   ChevronLeft,
   ChevronRight,
+  CreditCard,
+  Clock,
+  IndianRupee,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -59,12 +62,16 @@ const FPLayout = ({ admin, onLogout, children }) => {
     location.pathname.startsWith('/fp/estimates')
   );
 
+  const [paymentsOpen, setPaymentsOpen] = useState(
+    location.pathname.startsWith('/fp/payments')
+  );
+
   // Accordion toggle functions - close other sections when opening one
   const toggleVendor = () => {
     if (!sidebarCollapsed) {
       const opening = !vendorOpen;
       setVendorOpen(opening);
-      if (opening) { setEmployeeOpen(false); setEstimatesOpen(false); }
+      if (opening) { setEmployeeOpen(false); setEstimatesOpen(false); setPaymentsOpen(false); }
     }
   };
 
@@ -72,7 +79,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !employeeOpen;
       setEmployeeOpen(opening);
-      if (opening) { setVendorOpen(false); setEstimatesOpen(false); }
+      if (opening) { setVendorOpen(false); setEstimatesOpen(false); setPaymentsOpen(false); }
     }
   };
 
@@ -80,7 +87,15 @@ const FPLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !estimatesOpen;
       setEstimatesOpen(opening);
-      if (opening) { setVendorOpen(false); setEmployeeOpen(false); }
+      if (opening) { setVendorOpen(false); setEmployeeOpen(false); setPaymentsOpen(false); }
+    }
+  };
+
+  const togglePayments = () => {
+    if (!sidebarCollapsed) {
+      const opening = !paymentsOpen;
+      setPaymentsOpen(opening);
+      if (opening) { setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); }
     }
   };
 
@@ -126,9 +141,18 @@ const FPLayout = ({ admin, onLogout, children }) => {
   
   const estimatesSubItems = allEstimatesSubItems;
 
+  // Payment sub-items - accessible by FP and Manager
+  const paymentsSubItems = [
+    { path: '/fp/payments', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/fp/payments/record', icon: IndianRupee, label: 'Record Payment' },
+    { path: '/fp/payments/invoices', icon: FileText, label: 'Invoices' },
+    { path: '/fp/payments/history', icon: Clock, label: 'Payment History' },
+  ];
+
   const isVendorSectionActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEmployeeSectionActive = employeeSubItems.some(item => location.pathname === item.path);
   const isEstimatesSectionActive = estimatesSubItems.some(item => location.pathname === item.path);
+  const isPaymentsSectionActive = paymentsSubItems.some(item => location.pathname === item.path);
   
   // Color constants for sidebar
   const colors = {
@@ -148,7 +172,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
   };
 
   // Check if any dropdown is open
-  const isAnyDropdownOpen = vendorOpen || employeeOpen || estimatesOpen;
+  const isAnyDropdownOpen = vendorOpen || employeeOpen || estimatesOpen || paymentsOpen;
 
   const NavLink = ({ item, mobile = false, isSubItem = false }) => {
     const Icon = item.icon;
@@ -162,6 +186,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
         setVendorOpen(false);
         setEmployeeOpen(false);
         setEstimatesOpen(false);
+        setPaymentsOpen(false);
       }
 
       if (localStorage.getItem('formDirty') === 'true') {
@@ -361,6 +386,40 @@ const FPLayout = ({ admin, onLogout, children }) => {
               {estimatesOpen && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
                   {estimatesSubItems.map((item) => (
+                    <NavLink key={item.path} item={item} mobile isSubItem />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Payments Section */}
+            <div className="mt-1">
+              <button
+                onClick={togglePayments}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{
+                  background: (paymentsOpen || (isPaymentsSectionActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
+                  color: (paymentsOpen || (isPaymentsSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
+                }}
+                onMouseEnter={(e) => { if (!paymentsOpen && !(isPaymentsSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!paymentsOpen && !(isPaymentsSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Payments' : ''}
+              >
+                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <CreditCard className="w-5 h-5 flex-shrink-0" style={{ color: (paymentsOpen || (isPaymentsSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span>Payments</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      paymentsOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                )}
+              </button>
+              {paymentsOpen && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
+                  {paymentsSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile isSubItem />
                   ))}
                 </div>

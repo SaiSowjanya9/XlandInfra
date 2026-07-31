@@ -46,6 +46,7 @@ const addonsRouter = require('./routes/addons');
 const { startCleanupScheduler } = require('./utils/workOrderCleanup');
 const amcPackagesRouter = require('./routes/amcPackages');
 const estimatesSyncRouter = require('./routes/estimatesSync');
+const paymentsRouter = require('./routes/payments');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -151,6 +152,7 @@ app.use('/api/qr', qrRouter);
 app.use('/api/addons', addonsRouter);
 app.use('/api/amc-packages', amcPackagesRouter);
 app.use('/api/estimates-sync', estimatesSyncRouter);
+app.use('/api/payments', paymentsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
