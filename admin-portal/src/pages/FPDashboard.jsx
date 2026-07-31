@@ -282,62 +282,56 @@ const FPDashboard = ({ user }) => {
           
           <div className="flex items-center justify-center gap-8">
             {/* Pie Chart - Using SVG directly for reliability */}
-            <div style={{ width: 180, height: 180 }}>
-              <svg viewBox="0 0 180 180" width="180" height="180">
-                {/* Background circle */}
-                <circle cx="90" cy="90" r="70" fill="none" stroke="#E5E7EB" strokeWidth="20" />
-                {/* Pie segments */}
-                {(() => {
-                  const total = (workOrdersByStatus.pending || 0) + (workOrdersByStatus.in_progress || 0) + (workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0);
-                  if (total === 0) return null;
-                  
-                  const pending = workOrdersByStatus.pending || 0;
-                  const inProgress = workOrdersByStatus.in_progress || 0;
-                  const completed = (workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0);
-                  
-                  const circumference = 2 * Math.PI * 70;
-                  let offset = 0;
-                  const segments = [];
-                  
-                  if (pending > 0) {
-                    const length = (pending / total) * circumference;
-                    segments.push(
-                      <circle key="pending" cx="90" cy="90" r="70" fill="none" stroke="#F59E0B" strokeWidth="20"
-                        strokeDasharray={`${length} ${circumference}`}
-                        strokeDashoffset={-offset}
+            {(() => {
+              const pending = Number(workOrdersByStatus.pending) || 0;
+              const inProgress = Number(workOrdersByStatus.in_progress) || 0;
+              const completed = (Number(workOrdersByStatus.completed) || 0) + (Number(workOrdersByStatus.closed) || 0);
+              const pieTotal = pending + inProgress + completed;
+              const circumference = 2 * Math.PI * 70; // ~440
+              
+              // Calculate segment lengths
+              const pendingLen = pieTotal > 0 ? (pending / pieTotal) * circumference : 0;
+              const inProgressLen = pieTotal > 0 ? (inProgress / pieTotal) * circumference : 0;
+              const completedLen = pieTotal > 0 ? (completed / pieTotal) * circumference : 0;
+              
+              return (
+                <div style={{ width: 180, height: 180 }}>
+                  <svg viewBox="0 0 180 180" width="180" height="180">
+                    {/* Completed segment (green) - drawn first as background */}
+                    {completed > 0 && (
+                      <circle cx="90" cy="90" r="70" fill="none" stroke="#10B981" strokeWidth="20"
+                        strokeDasharray={`${completedLen} ${circumference}`}
+                        strokeDashoffset={-(pendingLen + inProgressLen)}
                         transform="rotate(-90 90 90)"
                       />
-                    );
-                    offset += length;
-                  }
-                  if (inProgress > 0) {
-                    const length = (inProgress / total) * circumference;
-                    segments.push(
-                      <circle key="inprogress" cx="90" cy="90" r="70" fill="none" stroke="#3B82F6" strokeWidth="20"
-                        strokeDasharray={`${length} ${circumference}`}
-                        strokeDashoffset={-offset}
+                    )}
+                    {/* In Progress segment (blue) */}
+                    {inProgress > 0 && (
+                      <circle cx="90" cy="90" r="70" fill="none" stroke="#3B82F6" strokeWidth="20"
+                        strokeDasharray={`${inProgressLen} ${circumference}`}
+                        strokeDashoffset={-pendingLen}
                         transform="rotate(-90 90 90)"
                       />
-                    );
-                    offset += length;
-                  }
-                  if (completed > 0) {
-                    const length = (completed / total) * circumference;
-                    segments.push(
-                      <circle key="completed" cx="90" cy="90" r="70" fill="none" stroke="#10B981" strokeWidth="20"
-                        strokeDasharray={`${length} ${circumference}`}
-                        strokeDashoffset={-offset}
+                    )}
+                    {/* Pending segment (amber) - drawn on top */}
+                    {pending > 0 && (
+                      <circle cx="90" cy="90" r="70" fill="none" stroke="#F59E0B" strokeWidth="20"
+                        strokeDasharray={`${pendingLen} ${circumference}`}
+                        strokeDashoffset={0}
                         transform="rotate(-90 90 90)"
                       />
-                    );
-                  }
-                  return segments;
-                })()}
-                {/* Center text */}
-                <text x="90" y="85" textAnchor="middle" className="text-2xl font-bold" fill="#111827" style={{ fontSize: '28px', fontWeight: 700 }}>{totalWorkOrders}</text>
-                <text x="90" y="105" textAnchor="middle" fill="#6B7280" style={{ fontSize: '12px' }}>Total</text>
-              </svg>
-            </div>
+                    )}
+                    {/* Gray background if no data */}
+                    {pieTotal === 0 && (
+                      <circle cx="90" cy="90" r="70" fill="none" stroke="#E5E7EB" strokeWidth="20" />
+                    )}
+                    {/* Center text */}
+                    <text x="90" y="85" textAnchor="middle" fill="#111827" style={{ fontSize: '28px', fontWeight: 700 }}>{pieTotal}</text>
+                    <text x="90" y="105" textAnchor="middle" fill="#6B7280" style={{ fontSize: '12px' }}>Total</text>
+                  </svg>
+                </div>
+              );
+            })()}
 
             {/* Legend */}
             <div className="space-y-4">
