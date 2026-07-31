@@ -170,34 +170,8 @@ const ExecutiveDashboard = ({ user }) => {
         </button>
       </div>
 
-      {/* Second Stats Row - 3 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <button onClick={() => navigate('/executive/work-orders?status=pending')} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-amber-200 transition-all duration-200 group text-left">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Clock className="w-6 h-6 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Pending Work Orders</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.pendingWorkOrders || 0}</p>
-              <p className="text-xs text-gray-400">Awaiting Action</p>
-            </div>
-          </div>
-        </button>
-
-        <button onClick={() => navigate('/executive/work-orders?status=completed')} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-green-200 transition-all duration-200 group text-left">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Completed Work Orders</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.completedWorkOrders || 0}</p>
-              <p className="text-xs text-gray-400">Successfully Completed</p>
-            </div>
-          </div>
-        </button>
-
+      {/* Estimates card */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <button onClick={() => navigate('/executive/estimates')} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-teal-200 transition-all duration-200 group text-left">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">

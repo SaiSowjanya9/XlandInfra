@@ -224,37 +224,6 @@ const FPDashboard = ({ user }) => {
         </Link>
       </div>
 
-      {/* Second Stats Row - 2 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Link to="/fp/work-orders?status=pending" className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-amber-200 transition-all duration-200 group">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Clock className="w-6 h-6 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Pending Work Orders</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.workOrders?.pending || 0}</p>
-              <p className="text-xs text-gray-400">Awaiting Action</p>
-            </div>
-          </div>
-        </Link>
-
-        <Link to="/fp/work-orders?status=completed" className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-green-200 transition-all duration-200 group">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Completed Work Orders</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.workOrders?.completed || 0}</p>
-              <p className="text-xs text-gray-400">Successfully Completed</p>
-            </div>
-          </div>
-        </Link>
-
-
-      </div>
-
       {/* Estimates Overview + Work Orders Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Estimates Overview - Vertical Bar Chart */}
@@ -405,10 +374,6 @@ const FPDashboard = ({ user }) => {
                 <p className="text-sm text-indigo-600">Managers</p>
               </div>
             </div>
-            <div className="text-xs text-indigo-500 bg-indigo-100 rounded-lg px-2 py-1 inline-flex items-center gap-1 mt-2">
-              <ClipboardList className="w-3 h-3" />
-              {stats?.workOrders?.byRole?.managers || 0} Work Orders
-            </div>
           </div>
 
           <div className="bg-purple-50 rounded-xl p-4">
@@ -420,10 +385,6 @@ const FPDashboard = ({ user }) => {
                 <p className="text-2xl font-bold text-purple-700">{stats?.employeeRoles?.coordinators || 0}</p>
                 <p className="text-sm text-purple-600">Coordinators</p>
               </div>
-            </div>
-            <div className="text-xs text-purple-500 bg-purple-100 rounded-lg px-2 py-1 inline-flex items-center gap-1 mt-2">
-              <ClipboardList className="w-3 h-3" />
-              {stats?.workOrders?.byRole?.coordinators || 0} Work Orders
             </div>
           </div>
 
@@ -437,10 +398,6 @@ const FPDashboard = ({ user }) => {
                 <p className="text-sm text-amber-600">Supervisors</p>
               </div>
             </div>
-            <div className="text-xs text-amber-500 bg-amber-100 rounded-lg px-2 py-1 inline-flex items-center gap-1 mt-2">
-              <ClipboardList className="w-3 h-3" />
-              {stats?.workOrders?.byRole?.supervisors || 0} Work Orders
-            </div>
           </div>
 
           <div className="bg-teal-50 rounded-xl p-4">
@@ -452,10 +409,6 @@ const FPDashboard = ({ user }) => {
                 <p className="text-2xl font-bold text-teal-700">{stats?.employeeRoles?.executives || 0}</p>
                 <p className="text-sm text-teal-600">Executives</p>
               </div>
-            </div>
-            <div className="text-xs text-teal-500 bg-teal-100 rounded-lg px-2 py-1 inline-flex items-center gap-1 mt-2">
-              <ClipboardList className="w-3 h-3" />
-              {stats?.workOrders?.byRole?.executives || 0} Work Orders
             </div>
           </div>
         </div>
