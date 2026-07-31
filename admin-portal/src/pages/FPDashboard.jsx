@@ -309,8 +309,8 @@ const FPDashboard = ({ user }) => {
           
           <div className="flex items-center justify-between">
             {/* Pie Chart */}
-            <div className="relative w-40 h-40">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="relative" style={{ width: 160, height: 160 }}>
+              <ResponsiveContainer width={160} height={160}>
                 <PieChart>
                   <Pie
                     data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
