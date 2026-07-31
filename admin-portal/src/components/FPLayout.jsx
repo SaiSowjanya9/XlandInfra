@@ -735,34 +735,6 @@ const FPLayout = ({ admin, onLogout, children }) => {
 
       {/* Main Content */}
       <main className={`${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} min-h-screen transition-all duration-300`}>
-        {/* Desktop Header Bar */}
-        <div className="hidden lg:flex items-center justify-end px-8 py-3 bg-white/80 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-30">
-          <div className="flex items-center gap-4">
-            {/* Notification Bell */}
-            <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="p-2 hover:bg-gray-100 rounded-xl transition-colors relative"
-              title="Notifications"
-            >
-              <Bell className="w-5 h-5 text-gray-600" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
-            {/* User Info */}
-            <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-800">{admin?.firstName} {admin?.lastName}</p>
-                <p className="text-xs text-gray-500">{getRoleDisplay()}</p>
-              </div>
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-semibold text-sm">
-                {getInitials()}
-              </div>
-            </div>
-          </div>
-        </div>
         <div className="p-4 lg:p-8">{children}</div>
       </main>
     </div>
