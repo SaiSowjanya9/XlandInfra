@@ -17,7 +17,7 @@ import {
   Plus,
   UserPlus
 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -110,17 +110,46 @@ const FPDashboard = ({ user }) => {
   const totalWorkOrders = stats?.workOrders?.total || 0;
   const totalForPercentage = pieData.reduce((sum, item) => sum + item.value, 0) || 1;
 
-  // Estimates by type data - includes Direct + Property categories
+  // Stacked bar chart data - Property types with Direct vs Property-based breakdown
   const estimatesByType = stats?.estimatesByPropertyType || {};
-  const estimatesBarData = [
-    { name: 'Direct', value: estimatesByType.direct || 0, color: '#06B6D4' },
-    { name: 'Gated Comm.', value: estimatesByType.gated_community || 0, color: '#6366F1' },
-    { name: 'Apartment', value: estimatesByType.apartment || 0, color: '#8B5CF6' },
-    { name: 'Villa', value: estimatesByType.villa || 0, color: '#EC4899' },
-    { name: 'Flat', value: estimatesByType.flat || 0, color: '#F59E0B' },
-    { name: 'Plot', value: estimatesByType.plot || 0, color: '#10B981' },
-  ].filter(item => item.value > 0); // Only show categories with data
-  const totalEstimates = (stats?.directEstimates || 0) + (stats?.propertyEstimates || 0);
+  const directCount = stats?.directEstimates || 0;
+  const propertyCount = stats?.propertyEstimates || 0;
+  
+  // Stacked bar data: Each bar shows property type, stacked by estimate type
+  const stackedBarData = [
+    { 
+      name: 'Direct', 
+      direct: directCount, 
+      property: 0 
+    },
+    { 
+      name: 'Gated Comm.', 
+      direct: 0, 
+      property: estimatesByType.gated_community || 0 
+    },
+    { 
+      name: 'Apartment', 
+      direct: 0, 
+      property: estimatesByType.apartment || 0 
+    },
+    { 
+      name: 'Villa', 
+      direct: 0, 
+      property: estimatesByType.villa || 0 
+    },
+    { 
+      name: 'Flat', 
+      direct: 0, 
+      property: estimatesByType.flat || 0 
+    },
+    { 
+      name: 'Plot', 
+      direct: 0, 
+      property: estimatesByType.plot || 0 
+    },
+  ].filter(item => item.direct > 0 || item.property > 0); // Only show categories with data
+  
+  const totalEstimates = directCount + propertyCount;
 
   if (loading) {
     return (
@@ -292,10 +321,10 @@ const FPDashboard = ({ user }) => {
               </div>
             </div>
 
-            {/* Vertical Bar Chart */}
+            {/* Stacked Bar Chart */}
             <div className="flex-1" style={{ height: 200 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={estimatesBarData} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
+                <BarChart data={stackedBarData} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
                   <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B7280' }} axisLine={false} tickLine={false} />
                   <YAxis hide />
                   <Tooltip 
@@ -304,11 +333,14 @@ const FPDashboard = ({ user }) => {
                     itemStyle={{ color: '#fff' }}
                     cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                   />
-                  <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={30}>
-                    {estimatesBarData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
+                  <Legend 
+                    verticalAlign="top" 
+                    height={24}
+                    iconSize={10}
+                    wrapperStyle={{ fontSize: '10px' }}
+                  />
+                  <Bar dataKey="direct" name="Direct" stackId="a" fill="#06B6D4" radius={[0, 0, 0, 0]} barSize={35} />
+                  <Bar dataKey="property" name="Property" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={35} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
