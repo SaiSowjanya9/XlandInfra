@@ -109,9 +109,9 @@ const FPLayout = ({ admin, onLogout, children }) => {
             id: `wo-delete-${wo.id}`,
             type: 'warning',
             title: 'Work Order Auto-Delete',
-            message: `${wo.work_order_id} - (${wo.days_remaining} days left)`,
-            workOrderId: wo.work_order_id,
-            daysRemaining: wo.days_remaining,
+            message: `${wo.workOrderId} - (${wo.daysUntilDeletion} days left)`,
+            workOrderId: wo.workOrderId,
+            daysRemaining: wo.daysUntilDeletion,
             read: readIds.includes(`wo-delete-${wo.id}`)
           }));
         setNotifications(woNotifications);
