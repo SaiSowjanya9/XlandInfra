@@ -232,7 +232,7 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
         AND status NOT IN ('archived', 'rejected', 'deleted')
         AND (estimate_type = 'property_based' OR estimate_type = 'property-based')`, [fpId]),
       
-      // Estimates by property type (active only) - case-insensitive matching
+      // Estimates by property type (only property-based estimates, not direct) - case-insensitive matching
       pool.execute(`
         SELECT 
           SUM(CASE WHEN LOWER(REPLACE(property_type, ' ', '_')) = 'gated_community' OR LOWER(property_type) LIKE '%gated%' THEN 1 ELSE 0 END) as gated_community,
@@ -244,13 +244,28 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
         WHERE franchise_partner_id = ? 
         AND (is_archived = 0 OR is_archived IS NULL) 
         AND status NOT IN ('archived', 'rejected', 'deleted')
-      `, [fpId]).then(([[r]]) => ({
-        gated_community: Number(r?.gated_community) || 0,
-        apartment: Number(r?.apartment) || 0,
-        villa: Number(r?.villa) || 0,
-        flat: Number(r?.flat) || 0,
-        plot: Number(r?.plot) || 0
-      })).catch(() => ({ gated_community: 0, apartment: 0, villa: 0, flat: 0, plot: 0 })),
+        AND (estimate_type = 'property_based' OR estimate_type = 'property-based')
+      `, [fpId]).then(async ([[r]]) => {
+        // Debug: Log actual property_type values
+        const [debugRows] = await pool.execute(`
+          SELECT property_type, COUNT(*) as count 
+          FROM fp_estimates 
+          WHERE franchise_partner_id = ? 
+          AND (is_archived = 0 OR is_archived IS NULL) 
+          AND status NOT IN ('archived', 'rejected', 'deleted')
+          AND (estimate_type = 'property_based' OR estimate_type = 'property-based')
+          GROUP BY property_type
+        `, [fpId]);
+        console.log('📊 [Dashboard] Property types in estimates:', debugRows);
+        
+        return {
+          gated_community: Number(r?.gated_community) || 0,
+          apartment: Number(r?.apartment) || 0,
+          villa: Number(r?.villa) || 0,
+          flat: Number(r?.flat) || 0,
+          plot: Number(r?.plot) || 0
+        };
+      }).catch((e) => { console.error('Estimates by type error:', e); return { gated_community: 0, apartment: 0, villa: 0, flat: 0, plot: 0 }; }),
       
       // Employee stats - combined query (ACTIVE only)
       pool.execute(`
