@@ -770,6 +770,31 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
       WHERE id = ?
     `, [newAmountPaid, Math.max(0, newBalance), newPaymentStatus, newStatus, invoiceId]);
 
+    // If invoice is fully paid and linked to a work order, auto-close the work order
+    if (newPaymentStatus === 'paid' && invoice.work_order_id) {
+      console.log(`[Payment] Invoice ${invoiceId} fully paid, auto-closing linked work order ${invoice.work_order_id}`);
+      
+      // Update work order status to 'closed'
+      await connection.execute(`
+        UPDATE work_orders SET
+          status = 'closed',
+          admin_notes = CONCAT(IFNULL(admin_notes, ''), '\nPayment verified and closed on ', DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s')),
+          updated_at = NOW()
+        WHERE id = ? AND status = 'completed'
+      `, [invoice.work_order_id]);
+      
+      // Log the status change in work order history
+      try {
+        await connection.execute(`
+          INSERT INTO work_order_status_history (work_order_id, to_status, changed_by, changed_by_role, notes)
+          VALUES (?, 'closed', ?, ?, 'Auto-closed after invoice payment verified')
+        `, [invoice.work_order_id, req.user.id, req.user.role]);
+      } catch (historyErr) {
+        // Ignore if history table doesn't exist
+        console.log('[Payment] Work order status history logging skipped:', historyErr.message);
+      }
+    }
+
     // Record in payment history
     await connection.execute(`
       INSERT INTO payment_history (

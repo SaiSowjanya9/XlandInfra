@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import {
   ClipboardList,
@@ -34,6 +35,7 @@ import * as XLSX from 'xlsx';
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const FPWorkOrders = ({ user }) => {
+  const navigate = useNavigate();
   const [workOrders, setWorkOrders] = useState([]);
   const [properties, setProperties] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -78,8 +80,6 @@ const FPWorkOrders = ({ user }) => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelNote, setCancelNote] = useState('');
   const [cancellingWorkOrderId, setCancellingWorkOrderId] = useState(null);
-  const [approachingDeletion, setApproachingDeletion] = useState([]);
-  const [showDeletionWarning, setShowDeletionWarning] = useState(false);
   const [viewingImage, setViewingImage] = useState(null);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSubcategoryDropdown, setShowSubcategoryDropdown] = useState(false);
@@ -179,22 +179,6 @@ const FPWorkOrders = ({ user }) => {
     }
   };
 
-  // Fetch work orders approaching auto-deletion (30 days after closed/cancelled)
-  const fetchApproachingDeletion = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/api/fp/work-orders/approaching-deletion`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success && result.data.length > 0) {
-        setApproachingDeletion(result.data);
-        setShowDeletionWarning(true);
-      }
-    } catch (error) {
-      console.error('Fetch approaching deletion error:', error);
-    }
-  };
-
   const fetchDependencies = async () => {
     try {
       const [propRes, catRes, vendRes] = await Promise.all([
@@ -235,7 +219,6 @@ const FPWorkOrders = ({ user }) => {
     fetchWorkOrders();
     fetchDependencies();
     fetchEmployees();
-    fetchApproachingDeletion();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -573,7 +556,7 @@ const FPWorkOrders = ({ user }) => {
       in_progress: 'bg-orange-100 text-orange-700',
       completed: 'bg-green-100 text-green-700',
       verified: 'bg-green-100 text-green-700',
-      closed: 'bg-gray-100 text-gray-700',
+      closed: 'bg-emerald-100 text-emerald-800',
       cancelled: 'bg-red-100 text-red-700'
     };
     return colors[status] || 'bg-gray-100 text-gray-700';
@@ -596,14 +579,17 @@ const FPWorkOrders = ({ user }) => {
     });
   };
 
-  // Count work orders by status - Pending = all except completed, Completed = only completed
-  const pendingCount = workOrders.filter(wo => wo.status !== 'completed').length;
+  // Count work orders by status - Pending = all except completed/closed, Completed = only completed, Closed = payment verified
+  const pendingCount = workOrders.filter(wo => !['completed', 'closed'].includes(wo.status)).length;
   const completedCount = workOrders.filter(wo => wo.status === 'completed').length;
+  const closedCount = workOrders.filter(wo => wo.status === 'closed').length;
 
   // Filter work orders by active tab, status filter, and search term
   const filteredWorkOrders = workOrders.filter(wo => {
-    // Tab filter - All shows everything, Completed shows only completed
+    // Tab filter - All shows everything except closed, Completed shows only completed, Closed shows only closed
+    if (activeTab === 'all' && wo.status === 'closed') return false;
     if (activeTab === 'completed' && wo.status !== 'completed') return false;
+    if (activeTab === 'closed' && wo.status !== 'closed') return false;
 
     // Status dropdown filter
     if (statusFilter !== 'all' && wo.status !== statusFilter) return false;
@@ -853,35 +839,6 @@ const FPWorkOrders = ({ user }) => {
         </div>
       )}
 
-      {/* Auto-Delete Warning Notification */}
-      {showDeletionWarning && approachingDeletion.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h4 className="font-medium text-amber-800">Work Orders Approaching Auto-Delete</h4>
-              <p className="text-sm text-amber-700 mt-1">
-                {approachingDeletion.length} work order(s) will be automatically deleted within 7 days. 
-                Closed and cancelled work orders are deleted 30 days after completion.
-              </p>
-              <div className="mt-2 space-y-1">
-                {approachingDeletion.slice(0, 3).map(wo => (
-                  <div key={wo.id} className="text-sm text-amber-700">
-                    • <strong>{wo.workOrderId}</strong> - {wo.title} ({wo.daysUntilDeletion} days left)
-                  </div>
-                ))}
-                {approachingDeletion.length > 3 && (
-                  <div className="text-sm text-amber-600">...and {approachingDeletion.length - 3} more</div>
-                )}
-              </div>
-            </div>
-            <button onClick={() => setShowDeletionWarning(false)} className="text-amber-600 hover:text-amber-800">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-gray-200">
         <button
@@ -914,6 +871,22 @@ const FPWorkOrders = ({ user }) => {
             activeTab === 'completed' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
           }`}>
             {completedCount}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('closed')}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'closed'
+              ? 'border-green-600 text-green-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Lock className="w-4 h-4" />
+          <span>Closed</span>
+          <span className={`px-2 py-0.5 rounded-full text-xs ${
+            activeTab === 'closed' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+          }`}>
+            {closedCount}
           </span>
         </button>
         <button
@@ -1470,6 +1443,7 @@ const FPWorkOrders = ({ user }) => {
                 <option value="assigned">Assigned</option>
                 <option value="in_progress">In Progress</option>
                 <option value="completed">Completed</option>
+                <option value="closed">Closed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
               <button
@@ -1534,20 +1508,29 @@ const FPWorkOrders = ({ user }) => {
                           </div>
                         </td>
                         <td className="py-4 px-4">
-                          <div className="relative inline-block">
-                            <select
-                              value={wo.status}
-                              onChange={(e) => handleStatusChange(wo.id, e.target.value)}
-                              className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
-                            >
-                              <option value="pending" className="bg-white text-gray-900">Pending</option>
-                              <option value="assigned" className="bg-white text-gray-900">Assigned</option>
-                              <option value="in_progress" className="bg-white text-gray-900">In Progress</option>
-                              <option value="completed" className="bg-white text-gray-900">Completed</option>
-                              <option value="cancelled" className="bg-white text-gray-900">Cancelled</option>
-                            </select>
-                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
-                          </div>
+                          {wo.status === 'closed' ? (
+                            <div className="flex items-center gap-1">
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
+                                <Lock className="w-3 h-3 inline mr-1" />
+                                Closed
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="relative inline-block">
+                              <select
+                                value={wo.status}
+                                onChange={(e) => handleStatusChange(wo.id, e.target.value)}
+                                className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
+                              >
+                                <option value="pending" className="bg-white text-gray-900">Pending</option>
+                                <option value="assigned" className="bg-white text-gray-900">Assigned</option>
+                                <option value="in_progress" className="bg-white text-gray-900">In Progress</option>
+                                <option value="completed" className="bg-white text-gray-900">Completed</option>
+                                <option value="cancelled" className="bg-white text-gray-900">Cancelled</option>
+                              </select>
+                              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
+                            </div>
+                          )}
                         </td>
                         <td className="py-4 px-4">
                           <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
@@ -1603,13 +1586,22 @@ const FPWorkOrders = ({ user }) => {
                               <Trash2 className="w-4 h-4 text-red-500" />
                             </button>
                             {activeTab === 'completed' && (
-                              <button
-                                onClick={() => handleRevertToPending(wo.id)}
-                                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                                title="Revert to Pending"
-                              >
-                                <RotateCcw className="w-4 h-4 text-gray-500" />
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => navigate(`/fp/payments/invoices/create?workOrderId=${wo.id}`)}
+                                  className="p-1.5 hover:bg-amber-50 rounded-lg transition-colors"
+                                  title="Generate Invoice"
+                                >
+                                  <FileText className="w-4 h-4 text-amber-600" />
+                                </button>
+                                <button
+                                  onClick={() => handleRevertToPending(wo.id)}
+                                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                  title="Revert to Pending"
+                                >
+                                  <RotateCcw className="w-4 h-4 text-gray-500" />
+                                </button>
+                              </>
                             )}
                           </div>
                         </td>
