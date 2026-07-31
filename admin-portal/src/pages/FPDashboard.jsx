@@ -71,8 +71,8 @@ const FPDashboard = ({ user }) => {
           .map(wo => ({
             id: `wo-delete-${wo.id}`,
             type: 'warning',
-            workOrderId: wo.work_order_id,
-            daysRemaining: wo.days_remaining,
+            workOrderId: wo.workOrderId,
+            daysRemaining: wo.daysUntilDeletion,
             read: readIds.includes(`wo-delete-${wo.id}`)
           }));
         setNotifications(woNotifications);
