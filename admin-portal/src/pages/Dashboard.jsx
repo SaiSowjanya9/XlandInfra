@@ -8,7 +8,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { useFP } from '../contexts/FPContext';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -258,14 +258,14 @@ const Dashboard = () => {
   const totalWorkOrders = (stats?.pendingWorkOrders || 0) + (stats?.completedWorkOrders || 0);
   const totalForPercentage = pieData.reduce((sum, item) => sum + item.value, 0) || 1;
 
-  // Estimates by property type data
+  // Stacked bar chart data - Direct vs Property-based by category
   const estimatesByType = stats?.estimatesByPropertyType || {};
-  const estimatesBarData = [
-    { name: 'Gated Community', value: estimatesByType.gated_community || 0, color: '#6366F1' },
-    { name: 'Apartment', value: estimatesByType.apartment || 0, color: '#8B5CF6' },
-    { name: 'Villa', value: estimatesByType.villa || 0, color: '#EC4899' },
-    { name: 'Flat', value: estimatesByType.flat || 0, color: '#F59E0B' },
-    { name: 'Plot', value: estimatesByType.plot || 0, color: '#10B981' },
+  const directCount = stats?.directEstimates || 0;
+  const propertyCount = stats?.propertyEstimates || 0;
+  
+  const stackedBarData = [
+    { name: 'Direct', gc: 0, apt: 0, villa: 0, flat: 0, plot: 0, direct: directCount },
+    { name: 'Property', gc: estimatesByType.gated_community || 0, apt: estimatesByType.apartment || 0, villa: estimatesByType.villa || 0, flat: estimatesByType.flat || 0, plot: estimatesByType.plot || 0, direct: 0 },
   ];
   const totalEstimates = (stats?.directEstimates || 0) + (stats?.propertyEstimates || 0);
 
@@ -669,15 +669,19 @@ const Dashboard = () => {
                 <span className="px-2 py-1 bg-cyan-50 text-cyan-700 rounded-lg">{stats?.propertyEstimates || 0} Property</span>
               </div>
             </div>
-            <div className="flex-1 h-44 min-w-[300px]">
+            <div className="flex-1 h-48 min-w-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={estimatesBarData} layout="vertical" margin={{ top: 5, right: 30, bottom: 5, left: 100 }}>
-                  <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: '#6B7280' }} width={95} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelStyle={{ color: '#fff', fontWeight: 600 }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={18}>
-                    {estimatesBarData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.color} />))}
-                  </Bar>
+                <BarChart data={stackedBarData} margin={{ top: 20, right: 10, bottom: 20, left: 10 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
+                  <YAxis hide />
+                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelStyle={{ color: '#fff', fontWeight: 600 }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} formatter={(value, name) => { if (value === 0) return null; const labels = { direct: 'Direct', gc: 'GC', apt: 'Apt', villa: 'Villa', flat: 'Flat', plot: 'Plot' }; return [value, labels[name] || name]; }} />
+                  <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '10px' }} formatter={(value) => { const labels = { direct: 'Direct', gc: 'GC', apt: 'Apt', villa: 'Villa', flat: 'Flat', plot: 'Plot' }; return labels[value] || value; }} />
+                  <Bar dataKey="direct" name="direct" stackId="a" fill="#06B6D4" barSize={50} />
+                  <Bar dataKey="gc" name="gc" stackId="a" fill="#6366F1" barSize={50} />
+                  <Bar dataKey="apt" name="apt" stackId="a" fill="#8B5CF6" barSize={50} />
+                  <Bar dataKey="villa" name="villa" stackId="a" fill="#EC4899" barSize={50} />
+                  <Bar dataKey="flat" name="flat" stackId="a" fill="#F59E0B" barSize={50} />
+                  <Bar dataKey="plot" name="plot" stackId="a" fill="#10B981" radius={[4, 4, 0, 0]} barSize={50} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
