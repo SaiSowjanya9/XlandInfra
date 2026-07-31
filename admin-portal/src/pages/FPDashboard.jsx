@@ -310,23 +310,21 @@ const FPDashboard = ({ user }) => {
           <div className="flex items-center justify-between">
             {/* Pie Chart */}
             <div className="relative" style={{ width: 160, height: 160 }}>
-              <ResponsiveContainer width={160} height={160}>
-                <PieChart>
-                  <Pie
-                    data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={45}
-                    outerRadius={65}
-                    paddingAngle={pieData.length > 1 ? 3 : 0}
-                    dataKey="value"
-                  >
-                    {(pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
+              <PieChart width={160} height={160}>
+                <Pie
+                  data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
+                  cx={80}
+                  cy={80}
+                  innerRadius={45}
+                  outerRadius={65}
+                  paddingAngle={pieData.length > 1 ? 3 : 0}
+                  dataKey="value"
+                >
+                  {(pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                  ))}
+                </Pie>
+              </PieChart>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <p className="text-2xl font-bold text-gray-900">{totalWorkOrders}</p>
                 <p className="text-xs text-gray-500">Total</p>
