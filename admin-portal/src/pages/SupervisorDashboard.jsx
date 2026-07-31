@@ -309,7 +309,7 @@ const SupervisorDashboard = ({ user }) => {
                 <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
                 <YAxis hide />
                 <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelStyle={{ color: '#fff', fontWeight: 600 }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-                <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} />
+                <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} formatter={(value) => value === 'Direct' ? `Direct (${directCount})` : `Property (${propertyCount})`} />
                 <Bar dataKey="direct" name="Direct" stackId="a" fill="#06B6D4" barSize={40} />
                 <Bar dataKey="property" name="Property" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
               </BarChart>
