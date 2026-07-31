@@ -28,6 +28,7 @@ import {
   Bell,
   AlertTriangle,
   Trash2,
+  RefreshCw,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
@@ -78,6 +79,19 @@ const FPLayout = ({ admin, onLogout, children }) => {
   const notificationRef = useRef(null);
   const token = getAuthToken();
 
+  // Get read/dismissed notification IDs from localStorage
+  const getReadNotifications = () => {
+    try {
+      return JSON.parse(localStorage.getItem('fp_read_notifications') || '[]');
+    } catch { return []; }
+  };
+
+  const getDismissedNotifications = () => {
+    try {
+      return JSON.parse(localStorage.getItem('fp_dismissed_notifications') || '[]');
+    } catch { return []; }
+  };
+
   // Fetch work orders approaching auto-deletion
   const fetchNotifications = async () => {
     try {
@@ -86,15 +100,20 @@ const FPLayout = ({ admin, onLogout, children }) => {
       });
       const result = await response.json();
       if (result.success && result.data) {
-        const woNotifications = result.data.map(wo => ({
-          id: `wo-delete-${wo.id}`,
-          type: 'warning',
-          title: 'Work Order Auto-Delete',
-          message: `${wo.work_order_id} - (${wo.days_remaining} days left)`,
-          workOrderId: wo.work_order_id,
-          daysRemaining: wo.days_remaining,
-          read: false
-        }));
+        const readIds = getReadNotifications();
+        const dismissedIds = getDismissedNotifications();
+        
+        const woNotifications = result.data
+          .filter(wo => !dismissedIds.includes(`wo-delete-${wo.id}`))
+          .map(wo => ({
+            id: `wo-delete-${wo.id}`,
+            type: 'warning',
+            title: 'Work Order Auto-Delete',
+            message: `${wo.work_order_id} - (${wo.days_remaining} days left)`,
+            workOrderId: wo.work_order_id,
+            daysRemaining: wo.days_remaining,
+            read: readIds.includes(`wo-delete-${wo.id}`)
+          }));
         setNotifications(woNotifications);
       }
     } catch (error) {
@@ -123,15 +142,37 @@ const FPLayout = ({ admin, onLogout, children }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Mark single notification as read
+  const markAsRead = (id) => {
+    const readIds = getReadNotifications();
+    if (!readIds.includes(id)) {
+      localStorage.setItem('fp_read_notifications', JSON.stringify([...readIds, id]));
+    }
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  };
+
+  // Mark all notifications as read
+  const markAllAsRead = () => {
+    const allIds = notifications.map(n => n.id);
+    localStorage.setItem('fp_read_notifications', JSON.stringify(allIds));
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  // Dismiss (remove) notification - stored in localStorage so it doesn't come back
   const dismissNotification = (id) => {
+    const dismissedIds = getDismissedNotifications();
+    localStorage.setItem('fp_dismissed_notifications', JSON.stringify([...dismissedIds, id]));
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  const dismissAllNotifications = () => {
-    setNotifications([]);
+  // Clear all dismissed notifications (to show them again)
+  const resetDismissedNotifications = () => {
+    localStorage.removeItem('fp_dismissed_notifications');
+    localStorage.removeItem('fp_read_notifications');
+    fetchNotifications();
   };
 
-  const unreadCount = notifications.length;
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   // Accordion toggle functions - close other sections when opening one
   const toggleVendor = () => {
@@ -325,24 +366,46 @@ const FPLayout = ({ admin, onLogout, children }) => {
           <div 
             ref={notificationRef}
             onClick={(e) => e.stopPropagation()}
-            className="absolute right-4 top-16 lg:right-8 lg:top-8 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden"
+            className={`absolute right-4 top-16 lg:top-12 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden ${sidebarCollapsed ? 'lg:right-8' : 'lg:right-8'}`}
           >
             <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
-              <span className="font-semibold text-gray-800">Notifications</span>
-              {notifications.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-800">Notifications</span>
+                {unreadCount > 0 && (
+                  <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">
+                    {unreadCount} new
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllAsRead}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Mark All Read
+                  </button>
+                )}
                 <button
-                  onClick={dismissAllNotifications}
-                  className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  onClick={resetDismissedNotifications}
+                  className="text-xs text-gray-500 hover:text-gray-700 font-medium"
+                  title="Refresh notifications"
                 >
-                  Dismiss All
+                  <RefreshCw className="w-3.5 h-3.5" />
                 </button>
-              )}
+              </div>
             </div>
-            <div className="max-h-80 overflow-y-auto">
+            <div className="max-h-96 overflow-y-auto">
               {notifications.length === 0 ? (
                 <div className="p-6 text-center">
                   <Bell className="w-10 h-10 mx-auto mb-2 text-gray-300" />
                   <p className="text-sm text-gray-500">No notifications</p>
+                  <button
+                    onClick={resetDismissedNotifications}
+                    className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Check for new notifications
+                  </button>
                 </div>
               ) : (
                 <div>
@@ -360,32 +423,46 @@ const FPLayout = ({ admin, onLogout, children }) => {
                   {notifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                      onClick={() => !notification.read && markAsRead(notification.id)}
+                      className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
+                        !notification.read ? 'bg-blue-50/50' : ''
+                      }`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-start gap-3">
-                          <div className={`p-1.5 rounded-lg flex-shrink-0 ${
-                            notification.type === 'warning' ? 'bg-amber-100' : 'bg-blue-100'
-                          }`}>
-                            {notification.type === 'warning' ? (
-                              <AlertTriangle className="w-4 h-4 text-amber-600" />
-                            ) : (
-                              <Bell className="w-4 h-4 text-blue-600" />
+                          {/* Unread indicator dot */}
+                          <div className="relative">
+                            <div className={`p-1.5 rounded-lg flex-shrink-0 ${
+                              notification.type === 'warning' ? 'bg-amber-100' : 'bg-blue-100'
+                            }`}>
+                              {notification.type === 'warning' ? (
+                                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                              ) : (
+                                <Bell className="w-4 h-4 text-blue-600" />
+                              )}
+                            </div>
+                            {!notification.read && (
+                              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white"></span>
                             )}
                           </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-800">{notification.workOrderId}</p>
-                            <p className="text-xs text-amber-600 mt-0.5">
+                          <div className="flex-1">
+                            <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>
+                              {notification.workOrderId}
+                            </p>
+                            <p className={`text-xs mt-0.5 ${!notification.read ? 'text-amber-700' : 'text-amber-600/80'}`}>
                               {notification.daysRemaining} days until auto-delete
                             </p>
+                            {!notification.read && (
+                              <span className="inline-block mt-1 text-[10px] text-blue-600 font-medium">Click to mark as read</span>
+                            )}
                           </div>
                         </div>
                         <button
-                          onClick={() => dismissNotification(notification.id)}
-                          className="p-1 hover:bg-gray-200 rounded transition-colors"
-                          title="Dismiss"
+                          onClick={(e) => { e.stopPropagation(); dismissNotification(notification.id); }}
+                          className="p-1.5 hover:bg-red-100 rounded-lg transition-colors group"
+                          title="Dismiss notification"
                         >
-                          <X className="w-3 h-3 text-gray-400" />
+                          <X className="w-3.5 h-3.5 text-gray-400 group-hover:text-red-500" />
                         </button>
                       </div>
                     </div>
@@ -396,21 +473,6 @@ const FPLayout = ({ admin, onLogout, children }) => {
           </div>
         </div>
       )}
-
-      {/* Desktop Notification Bell (Fixed Position) */}
-      <div className="hidden lg:block fixed top-4 right-8 z-40">
-        <button
-          onClick={() => setShowNotifications(!showNotifications)}
-          className="p-2.5 bg-white rounded-xl shadow-md hover:shadow-lg transition-all border border-gray-100 relative"
-        >
-          <Bell className="w-5 h-5 text-gray-600" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          )}
-        </button>
-      </div>
 
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
@@ -673,6 +735,34 @@ const FPLayout = ({ admin, onLogout, children }) => {
 
       {/* Main Content */}
       <main className={`${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} min-h-screen transition-all duration-300`}>
+        {/* Desktop Header Bar */}
+        <div className="hidden lg:flex items-center justify-end px-8 py-3 bg-white/80 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-30">
+          <div className="flex items-center gap-4">
+            {/* Notification Bell */}
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="p-2 hover:bg-gray-100 rounded-xl transition-colors relative"
+              title="Notifications"
+            >
+              <Bell className="w-5 h-5 text-gray-600" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+            {/* User Info */}
+            <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-800">{admin?.firstName} {admin?.lastName}</p>
+                <p className="text-xs text-gray-500">{getRoleDisplay()}</p>
+              </div>
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-semibold text-sm">
+                {getInitials()}
+              </div>
+            </div>
+          </div>
+        </div>
         <div className="p-4 lg:p-8">{children}</div>
       </main>
     </div>
