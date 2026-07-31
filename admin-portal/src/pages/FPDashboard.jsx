@@ -339,9 +339,10 @@ const FPDashboard = ({ user }) => {
           <div className="flex items-center justify-center gap-8">
             {/* Pie Chart - Using SVG directly for reliability */}
             {(() => {
-              const pending = Number(workOrdersByStatus.pending) || 0;
-              const inProgress = Number(workOrdersByStatus.in_progress) || 0;
-              const completed = (Number(workOrdersByStatus.completed) || 0) + (Number(workOrdersByStatus.closed) || 0);
+              // Use top-level stats for consistency with stat cards
+              const pending = Number(stats?.workOrders?.pending) || 0;
+              const inProgress = Number(stats?.workOrders?.byStatus?.in_progress) || 0;
+              const completed = Number(stats?.workOrders?.completed) || 0; // Already includes closed
               const pieTotal = pending + inProgress + completed;
               const circumference = 2 * Math.PI * 70; // ~440
               
@@ -389,28 +390,28 @@ const FPDashboard = ({ user }) => {
               );
             })()}
 
-            {/* Legend */}
+            {/* Legend - using same values as pie chart */}
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-8">
                 <div className="flex items-center gap-2">
                   <span className="w-4 h-4 rounded-full bg-amber-500"></span>
                   <span className="text-sm text-gray-600">Pending</span>
                 </div>
-                <span className="text-lg font-bold text-gray-900">{workOrdersByStatus.pending || 0}</span>
+                <span className="text-lg font-bold text-gray-900">{stats?.workOrders?.pending || 0}</span>
               </div>
               <div className="flex items-center justify-between gap-8">
                 <div className="flex items-center gap-2">
                   <span className="w-4 h-4 rounded-full bg-blue-500"></span>
                   <span className="text-sm text-gray-600">In Progress</span>
                 </div>
-                <span className="text-lg font-bold text-gray-900">{workOrdersByStatus.in_progress || 0}</span>
+                <span className="text-lg font-bold text-gray-900">{stats?.workOrders?.byStatus?.in_progress || 0}</span>
               </div>
               <div className="flex items-center justify-between gap-8">
                 <div className="flex items-center gap-2">
                   <span className="w-4 h-4 rounded-full bg-emerald-500"></span>
                   <span className="text-sm text-gray-600">Completed</span>
                 </div>
-                <span className="text-lg font-bold text-gray-900">{(workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0)}</span>
+                <span className="text-lg font-bold text-gray-900">{stats?.workOrders?.completed || 0}</span>
               </div>
             </div>
           </div>
