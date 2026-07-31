@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import {
   Building2,
@@ -19,39 +19,50 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const CoordinatorDashboard = ({ user }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const lastFetchRef = useRef(0);
 
   const isFPCoordinator = !!user?.franchisePartnerId;
-  const token = getAuthToken();
 
-  const fetchDashboard = async (isInitialLoad = false) => {
-    if (isInitialLoad) {
-      setLoading(true);
-    }
+  const fetchDashboard = useCallback(async (isInitialLoad = false) => {
+    const now = Date.now();
+    if (!isInitialLoad && now - lastFetchRef.current < 2000) return;
+    lastFetchRef.current = now;
+
+    if (isInitialLoad) setLoading(true);
     try {
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE}/api/coordinator/dashboard`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
-
-      if (result.success) {
-        setStats(result.data.stats);
-      }
+      if (result.success) setStats(result.data.stats);
     } catch (error) {
       console.error('Dashboard fetch error:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchDashboard(true);
-    const interval = setInterval(() => {
-      fetchDashboard(false);
-    }, 30000);
+    const interval = setInterval(() => fetchDashboard(false), 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchDashboard]);
+
+  useEffect(() => {
+    if (location.pathname.includes('coordinator')) fetchDashboard(false);
+  }, [location.pathname, fetchDashboard]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchDashboard(false);
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [fetchDashboard]);
 
   // Pie chart data
   const workOrdersByStatus = stats?.workOrdersByStatus || {};

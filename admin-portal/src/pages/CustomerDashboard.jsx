@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { safeStorage } from '../utils/safeStorage';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import {
   ClipboardList,
@@ -26,15 +26,19 @@ const API_BASE = '/api';
 
 const CustomerDashboard = ({ user }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ pending: 0, completed: 0, total: 0, byStatus: {} });
   const [customerData, setCustomerData] = useState(null);
+  const lastFetchRef = useRef(0);
 
-  const fetchCustomerDashboard = async (isInitialLoad = false) => {
-    if (isInitialLoad) {
-      setLoading(true);
-    }
+  const fetchCustomerDashboard = useCallback(async (isInitialLoad = false) => {
+    const now = Date.now();
+    if (!isInitialLoad && now - lastFetchRef.current < 2000) return;
+    lastFetchRef.current = now;
+
+    if (isInitialLoad) setLoading(true);
     try {
       const token = safeStorage.getItem('customer_token') || getAuthToken();
       const response = await fetch(`${API_BASE}/customers/dashboard`, {
@@ -54,15 +58,25 @@ const CustomerDashboard = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchCustomerDashboard(true);
-    const interval = setInterval(() => {
-      fetchCustomerDashboard(false);
-    }, 30000);
+    const interval = setInterval(() => fetchCustomerDashboard(false), 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchCustomerDashboard]);
+
+  useEffect(() => {
+    if (location.pathname.includes('customer')) fetchCustomerDashboard(false);
+  }, [location.pathname, fetchCustomerDashboard]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchCustomerDashboard(false);
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [fetchCustomerDashboard]);
 
   // Pie chart data
   const workOrdersByStatus = stats?.byStatus || {};

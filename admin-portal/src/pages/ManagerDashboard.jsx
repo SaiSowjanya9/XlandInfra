@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import {
   Building2,
@@ -24,18 +24,21 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const ManagerDashboard = ({ user }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const lastFetchRef = useRef(0);
 
-  const token = getAuthToken();
+  const fetchDashboardData = useCallback(async (isInitialLoad = false) => {
+    const now = Date.now();
+    if (!isInitialLoad && now - lastFetchRef.current < 2000) return;
+    lastFetchRef.current = now;
 
-  const fetchDashboardData = async (isInitialLoad = false) => {
-    if (isInitialLoad) {
-      setLoading(true);
-    }
+    if (isInitialLoad) setLoading(true);
     setError(null);
     try {
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE}/api/manager/dashboard`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -51,15 +54,25 @@ const ManagerDashboard = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchDashboardData(true);
-    const interval = setInterval(() => {
-      fetchDashboardData(false);
-    }, 30000);
+    const interval = setInterval(() => fetchDashboardData(false), 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchDashboardData]);
+
+  useEffect(() => {
+    if (location.pathname.includes('manager')) fetchDashboardData(false);
+  }, [location.pathname, fetchDashboardData]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchDashboardData(false);
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [fetchDashboardData]);
 
   // Pie chart data
   const workOrdersByStatus = stats?.workOrdersByStatus || {};
