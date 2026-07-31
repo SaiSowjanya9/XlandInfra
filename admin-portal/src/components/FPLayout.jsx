@@ -360,13 +360,13 @@ const FPLayout = ({ admin, onLogout, children }) => {
         </div>
       </header>
 
-      {/* Notification Dropdown (shared for mobile and desktop) */}
+      {/* Notification Dropdown (Mobile only - Desktop uses FPDashboard) */}
       {showNotifications && (
-        <div className="fixed inset-0 z-50" onClick={() => setShowNotifications(false)}>
+        <div className="lg:hidden fixed inset-0 z-50" onClick={() => setShowNotifications(false)}>
           <div 
             ref={notificationRef}
             onClick={(e) => e.stopPropagation()}
-            className={`absolute right-4 top-16 lg:top-12 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden ${sidebarCollapsed ? 'lg:right-8' : 'lg:right-8'}`}
+            className="absolute right-4 top-16 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden"
           >
             <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
               <div className="flex items-center gap-2">
