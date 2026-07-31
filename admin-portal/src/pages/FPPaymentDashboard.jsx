@@ -154,7 +154,7 @@ const FPPaymentDashboard = ({ user }) => {
           </button>
           <button
             onClick={() => navigate('/fp/payments/record')}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-white rounded-xl hover:bg-slate-800 transition-colors"
           >
             <CreditCard className="w-4 h-4" />
             Record Payment
@@ -174,8 +174,8 @@ const FPPaymentDashboard = ({ user }) => {
               </p>
               <p className="text-xs text-gray-400 mt-1">{stats.totalInvoices} invoices</p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-              <FileText className="w-6 h-6 text-blue-600" />
+            <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
+              <FileText className="w-6 h-6 text-slate-500" />
             </div>
           </div>
         </div>
@@ -185,16 +185,16 @@ const FPPaymentDashboard = ({ user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Total Collected</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">
+              <p className="text-2xl font-bold text-emerald-700 mt-1">
                 {formatCurrency(stats.totalCollected)}
               </p>
-              <p className="text-xs text-green-500 mt-1 flex items-center gap-1">
+              <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
                 <ArrowUpRight className="w-3 h-3" />
                 {collectionRate}% collection rate
               </p>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600" />
+            <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-emerald-600" />
             </div>
           </div>
         </div>
@@ -204,13 +204,13 @@ const FPPaymentDashboard = ({ user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Pending Amount</p>
-              <p className="text-2xl font-bold text-yellow-600 mt-1">
+              <p className="text-2xl font-bold text-amber-700 mt-1">
                 {formatCurrency(stats.pendingAmount)}
               </p>
               <p className="text-xs text-gray-400 mt-1">{stats.partiallyPaidInvoices} partially paid</p>
             </div>
-            <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-              <Clock className="w-6 h-6 text-yellow-600" />
+            <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center">
+              <Clock className="w-6 h-6 text-amber-600" />
             </div>
           </div>
         </div>
@@ -220,16 +220,16 @@ const FPPaymentDashboard = ({ user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Overdue Amount</p>
-              <p className="text-2xl font-bold text-red-600 mt-1">
+              <p className="text-2xl font-bold text-rose-700 mt-1">
                 {formatCurrency(stats.overdueAmount)}
               </p>
-              <p className="text-xs text-red-400 mt-1 flex items-center gap-1">
+              <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
                 {stats.overdueInvoices} overdue invoices
               </p>
             </div>
-            <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-red-600" />
+            <div className="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center">
+              <AlertCircle className="w-6 h-6 text-rose-500" />
             </div>
           </div>
         </div>
@@ -238,17 +238,17 @@ const FPPaymentDashboard = ({ user }) => {
       {/* Today's Collection & Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Today's Collection */}
-        <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-6 text-white">
+        <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-amber-100 text-sm">Today's Collections</p>
+              <p className="text-slate-300 text-sm">Today's Collections</p>
               <p className="text-3xl font-bold mt-2">{formatCurrency(stats.todayCollections)}</p>
-              <p className="text-amber-200 text-sm mt-2 flex items-center gap-1">
+              <p className="text-slate-400 text-sm mt-2 flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
                 {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}
               </p>
             </div>
-            <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center">
+            <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center">
               <IndianRupee className="w-8 h-8" />
             </div>
           </div>
