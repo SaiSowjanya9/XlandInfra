@@ -232,14 +232,14 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
         AND status NOT IN ('archived', 'rejected', 'deleted')
         AND (estimate_type = 'property_based' OR estimate_type = 'property-based')`, [fpId]),
       
-      // Estimates by property type (active only)
+      // Estimates by property type (active only) - case-insensitive matching
       pool.execute(`
         SELECT 
-          SUM(CASE WHEN property_type = 'gated_community' THEN 1 ELSE 0 END) as gated_community,
-          SUM(CASE WHEN property_type = 'apartment' THEN 1 ELSE 0 END) as apartment,
-          SUM(CASE WHEN property_type = 'villa' THEN 1 ELSE 0 END) as villa,
-          SUM(CASE WHEN property_type = 'flat' THEN 1 ELSE 0 END) as flat,
-          SUM(CASE WHEN property_type = 'plot' THEN 1 ELSE 0 END) as plot
+          SUM(CASE WHEN LOWER(REPLACE(property_type, ' ', '_')) = 'gated_community' OR LOWER(property_type) LIKE '%gated%' THEN 1 ELSE 0 END) as gated_community,
+          SUM(CASE WHEN LOWER(property_type) = 'apartment' OR LOWER(property_type) LIKE '%apartment%' THEN 1 ELSE 0 END) as apartment,
+          SUM(CASE WHEN LOWER(property_type) = 'villa' OR LOWER(property_type) LIKE '%villa%' THEN 1 ELSE 0 END) as villa,
+          SUM(CASE WHEN LOWER(property_type) = 'flat' OR LOWER(property_type) LIKE '%flat%' THEN 1 ELSE 0 END) as flat,
+          SUM(CASE WHEN LOWER(property_type) = 'plot' OR LOWER(property_type) LIKE '%plot%' THEN 1 ELSE 0 END) as plot
         FROM fp_estimates 
         WHERE franchise_partner_id = ? 
         AND (is_archived = 0 OR is_archived IS NULL) 
