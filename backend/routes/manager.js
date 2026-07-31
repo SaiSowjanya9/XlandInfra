@@ -275,25 +275,32 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
         [franchisePartnerId]
       ),
       
-      // Estimates by property type (active only) - case-insensitive matching
+      // Estimates breakdown - Direct + Property-based by category
       pool.execute(`
         SELECT 
-          SUM(CASE WHEN LOWER(REPLACE(property_type, ' ', '_')) = 'gated_community' OR LOWER(property_type) LIKE '%gated%' THEN 1 ELSE 0 END) as gated_community,
-          SUM(CASE WHEN LOWER(property_type) = 'apartment' OR LOWER(property_type) LIKE '%apartment%' THEN 1 ELSE 0 END) as apartment,
-          SUM(CASE WHEN LOWER(property_type) = 'villa' OR LOWER(property_type) LIKE '%villa%' THEN 1 ELSE 0 END) as villa,
-          SUM(CASE WHEN LOWER(property_type) = 'flat' OR LOWER(property_type) LIKE '%flat%' THEN 1 ELSE 0 END) as flat,
-          SUM(CASE WHEN LOWER(property_type) = 'plot' OR LOWER(property_type) LIKE '%plot%' THEN 1 ELSE 0 END) as plot
+          SUM(CASE WHEN estimate_type = 'direct' THEN 1 ELSE 0 END) as direct,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') 
+              AND (LOWER(REPLACE(property_type, ' ', '_')) = 'gated_community' OR LOWER(property_type) LIKE '%gated%') THEN 1 ELSE 0 END) as gated_community,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') 
+              AND (LOWER(property_type) = 'apartment' OR LOWER(property_type) LIKE '%apartment%') THEN 1 ELSE 0 END) as apartment,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') 
+              AND (LOWER(property_type) = 'villa' OR LOWER(property_type) LIKE '%villa%') THEN 1 ELSE 0 END) as villa,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') 
+              AND (LOWER(property_type) = 'flat' OR LOWER(property_type) LIKE '%flat%') THEN 1 ELSE 0 END) as flat,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') 
+              AND (LOWER(property_type) = 'plot' OR LOWER(property_type) LIKE '%plot%') THEN 1 ELSE 0 END) as plot
         FROM fp_estimates 
         WHERE franchise_partner_id = ? 
         AND (is_archived = 0 OR is_archived IS NULL) 
         AND status NOT IN ('archived', 'rejected', 'deleted')
       `, [franchisePartnerId]).then(([[r]]) => ({
+        direct: Number(r?.direct) || 0,
         gated_community: Number(r?.gated_community) || 0,
         apartment: Number(r?.apartment) || 0,
         villa: Number(r?.villa) || 0,
         flat: Number(r?.flat) || 0,
         plot: Number(r?.plot) || 0
-      })).catch(() => ({ gated_community: 0, apartment: 0, villa: 0, flat: 0, plot: 0 })),
+      })).catch(() => ({ direct: 0, gated_community: 0, apartment: 0, villa: 0, flat: 0, plot: 0 })),
       
       // Recent work orders - ALL FP work orders with creator name lookup
       pool.execute(

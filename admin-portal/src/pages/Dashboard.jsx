@@ -5,7 +5,7 @@ import {
   RefreshCw, Bell, Settings, UserCheck, Home, X, AlertCircle, Info,
   QrCode, Download, ChevronDown, Shield, ArrowLeft, ArrowRight
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { useFP } from '../contexts/FPContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
@@ -21,7 +21,9 @@ const Dashboard = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const notificationRef = useRef(null);
+  const lastFetchRef = useRef(0);
   const navigate = useNavigate();
+  const location = useLocation();
   
   // Get FP list and selected FP from context
   const { fpList, selectedFp, selectFp, loading: fpLoading, refreshFpList } = useFP();
@@ -32,6 +34,13 @@ const Dashboard = () => {
       setLoading(false);
       return;
     }
+
+    // Prevent duplicate fetches within 2 seconds
+    const now = Date.now();
+    if (!isInitialLoad && now - lastFetchRef.current < 2000) {
+      return;
+    }
+    lastFetchRef.current = now;
     
     // Get fresh token for each request
     const token = getAuthToken();
@@ -125,6 +134,24 @@ const Dashboard = () => {
       if (selectedFp) fetchDashboardData(false);
     }, 30000);
     return () => clearInterval(interval);
+  }, [fetchDashboardData, selectedFp]);
+
+  // Refresh when navigating back to dashboard
+  useEffect(() => {
+    if (location.pathname === '/admin/dashboard' || location.pathname === '/admin' || location.pathname === '/dashboard') {
+      if (selectedFp) fetchDashboardData(false);
+    }
+  }, [location.pathname, fetchDashboardData, selectedFp]);
+
+  // Refresh when tab becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && selectedFp) {
+        fetchDashboardData(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [fetchDashboardData, selectedFp]);
 
   // Close notifications on outside click

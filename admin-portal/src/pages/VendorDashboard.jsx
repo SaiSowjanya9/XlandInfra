@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { safeStorage } from '../utils/safeStorage';
 import { Building2, FileText, Users, Briefcase, TrendingUp, ArrowUpRight, Clock, CheckCircle2, ClipboardList, RefreshCw, ArrowRight, Star } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 
 const VendorDashboard = ({ user }) => {
@@ -12,11 +12,15 @@ const VendorDashboard = ({ user }) => {
   const [vendorData, setVendorData] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
+  const lastFetchRef = useRef(0);
 
-  const fetchVendorDashboard = async (isInitialLoad = false) => {
-    if (isInitialLoad) {
-      setLoading(true);
-    }
+  const fetchVendorDashboard = useCallback(async (isInitialLoad = false) => {
+    const now = Date.now();
+    if (!isInitialLoad && now - lastFetchRef.current < 2000) return;
+    lastFetchRef.current = now;
+
+    if (isInitialLoad) setLoading(true);
     try {
       const token = getAuthToken() || safeStorage.getItem('pm_auth_token');
       const response = await fetch(`${API_BASE}/api/vendors/dashboard`, {
@@ -35,15 +39,25 @@ const VendorDashboard = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchVendorDashboard(true);
-    const interval = setInterval(() => {
-      fetchVendorDashboard(false);
-    }, 30000);
+    const interval = setInterval(() => fetchVendorDashboard(false), 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchVendorDashboard]);
+
+  useEffect(() => {
+    if (location.pathname.includes('vendor')) fetchVendorDashboard(false);
+  }, [location.pathname, fetchVendorDashboard]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchVendorDashboard(false);
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [fetchVendorDashboard]);
 
   // Pie chart data
   const workOrdersByStatus = stats.byStatus || {};

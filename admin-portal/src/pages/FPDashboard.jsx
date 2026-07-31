@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Building2,
   Users,
@@ -20,18 +20,27 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 
 const FPDashboard = ({ user }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const isFPManager = user?.role === 'manager';
   
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const lastFetchRef = useRef(0);
 
-  const fetchDashboardData = async (isInitialLoad = false) => {
+  const fetchDashboardData = useCallback(async (isInitialLoad = false) => {
+    // Prevent duplicate fetches within 2 seconds
+    const now = Date.now();
+    if (!isInitialLoad && now - lastFetchRef.current < 2000) {
+      return;
+    }
+    lastFetchRef.current = now;
+
     if (isInitialLoad) {
       setLoading(true);
     }
@@ -59,15 +68,36 @@ const FPDashboard = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
+  // Initial load and auto-refresh every 30 seconds
   useEffect(() => {
     fetchDashboardData(true);
     const interval = setInterval(() => {
       fetchDashboardData(false);
     }, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchDashboardData]);
+
+  // Refresh when navigating back to dashboard
+  useEffect(() => {
+    // This runs when location changes and we're on the dashboard
+    if (location.pathname === '/fp/dashboard' || location.pathname === '/fp') {
+      fetchDashboardData(false);
+    }
+  }, [location.pathname, fetchDashboardData]);
+
+  // Refresh when tab becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchDashboardData(false);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [fetchDashboardData]);
 
   // Pie chart data
   const workOrdersByStatus = stats?.workOrders?.byStatus || {};
@@ -80,15 +110,16 @@ const FPDashboard = ({ user }) => {
   const totalWorkOrders = stats?.workOrders?.total || 0;
   const totalForPercentage = pieData.reduce((sum, item) => sum + item.value, 0) || 1;
 
-  // Estimates by property type data
+  // Estimates by type data - includes Direct + Property categories
   const estimatesByType = stats?.estimatesByPropertyType || {};
   const estimatesBarData = [
-    { name: 'Gated Community', value: estimatesByType.gated_community || 0, color: '#6366F1' },
+    { name: 'Direct', value: estimatesByType.direct || 0, color: '#06B6D4' },
+    { name: 'Gated Comm.', value: estimatesByType.gated_community || 0, color: '#6366F1' },
     { name: 'Apartment', value: estimatesByType.apartment || 0, color: '#8B5CF6' },
     { name: 'Villa', value: estimatesByType.villa || 0, color: '#EC4899' },
     { name: 'Flat', value: estimatesByType.flat || 0, color: '#F59E0B' },
     { name: 'Plot', value: estimatesByType.plot || 0, color: '#10B981' },
-  ];
+  ].filter(item => item.value > 0); // Only show categories with data
   const totalEstimates = (stats?.directEstimates || 0) + (stats?.propertyEstimates || 0);
 
   if (loading) {
@@ -184,8 +215,8 @@ const FPDashboard = ({ user }) => {
         </Link>
       </div>
 
-      {/* Second Stats Row - 3 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Second Stats Row - 4 cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link to="/fp/work-orders?status=pending" className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-amber-200 transition-all duration-200 group">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -212,15 +243,28 @@ const FPDashboard = ({ user }) => {
           </div>
         </Link>
 
-        <Link to="/fp/estimates" className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-teal-200 transition-all duration-200 group">
+        <Link to="/fp/estimates?type=direct" className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-cyan-200 transition-all duration-200 group">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-cyan-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <FileText className="w-6 h-6 text-cyan-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Direct Estimates</p>
+              <p className="text-2xl font-bold text-gray-900">{stats?.directEstimates || 0}</p>
+              <p className="text-xs text-gray-400">Direct Client Estimates</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link to="/fp/estimates?type=property" className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-teal-200 transition-all duration-200 group">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
               <FileText className="w-6 h-6 text-teal-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Estimates</p>
-              <p className="text-2xl font-bold text-gray-900">{(stats?.directEstimates || 0) + (stats?.propertyEstimates || 0)}</p>
-              <p className="text-xs text-gray-400">Total Estimates</p>
+              <p className="text-sm text-gray-500">Property Estimates</p>
+              <p className="text-2xl font-bold text-gray-900">{stats?.propertyEstimates || 0}</p>
+              <p className="text-xs text-gray-400">Property-based Estimates</p>
             </div>
           </div>
         </Link>
@@ -436,16 +480,16 @@ const FPDashboard = ({ user }) => {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <button
-            onClick={() => navigate('/fp/properties/add')}
+            onClick={() => navigate('/fp/add-customer')}
             className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-blue-600" />
+                <UserPlus className="w-5 h-5 text-blue-600" />
               </div>
               <div className="text-left">
-                <p className="font-medium text-gray-900">Add Property</p>
-                <p className="text-xs text-gray-500">Register new property</p>
+                <p className="font-medium text-gray-900">Add Customer</p>
+                <p className="text-xs text-gray-500">Register new customer</p>
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
