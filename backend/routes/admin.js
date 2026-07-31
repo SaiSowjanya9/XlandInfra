@@ -1652,31 +1652,25 @@ router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
         WHERE (is_archived = 0 OR is_archived IS NULL) 
         AND status NOT IN ('archived', 'rejected', 'deleted')
         AND (estimate_type = 'property_based' OR estimate_type = 'property-based')`),
-      // Estimates breakdown - Direct + Property-based by category
+      // Estimates breakdown - Direct and Property-based by property type
       pool.execute(`
         SELECT 
-          SUM(CASE WHEN estimate_type = 'direct' THEN 1 ELSE 0 END) as direct,
-          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') 
-              AND (LOWER(REPLACE(property_type, ' ', '_')) = 'gated_community' OR LOWER(property_type) LIKE '%gated%') THEN 1 ELSE 0 END) as gated_community,
-          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') 
-              AND (LOWER(property_type) = 'apartment' OR LOWER(property_type) LIKE '%apartment%') THEN 1 ELSE 0 END) as apartment,
-          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') 
-              AND (LOWER(property_type) = 'villa' OR LOWER(property_type) LIKE '%villa%') THEN 1 ELSE 0 END) as villa,
-          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') 
-              AND (LOWER(property_type) = 'flat' OR LOWER(property_type) LIKE '%flat%') THEN 1 ELSE 0 END) as flat,
-          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') 
-              AND (LOWER(property_type) = 'plot' OR LOWER(property_type) LIKE '%plot%') THEN 1 ELSE 0 END) as plot
-        FROM fp_estimates 
-        WHERE (is_archived = 0 OR is_archived IS NULL) 
-        AND status NOT IN ('archived', 'rejected', 'deleted')
+          SUM(CASE WHEN estimate_type = 'direct' AND (LOWER(REPLACE(property_type, ' ', '_')) = 'gated_community' OR LOWER(property_type) LIKE '%gated%') THEN 1 ELSE 0 END) as direct_gc,
+          SUM(CASE WHEN estimate_type = 'direct' AND (LOWER(property_type) = 'apartment' OR LOWER(property_type) LIKE '%apartment%') THEN 1 ELSE 0 END) as direct_apt,
+          SUM(CASE WHEN estimate_type = 'direct' AND (LOWER(property_type) = 'villa' OR LOWER(property_type) LIKE '%villa%') THEN 1 ELSE 0 END) as direct_villa,
+          SUM(CASE WHEN estimate_type = 'direct' AND (LOWER(property_type) = 'flat' OR LOWER(property_type) LIKE '%flat%') THEN 1 ELSE 0 END) as direct_flat,
+          SUM(CASE WHEN estimate_type = 'direct' AND (LOWER(property_type) = 'plot' OR LOWER(property_type) LIKE '%plot%') THEN 1 ELSE 0 END) as direct_plot,
+          SUM(CASE WHEN estimate_type = 'direct' AND (property_type IS NULL OR property_type = '' OR (LOWER(property_type) NOT LIKE '%gated%' AND LOWER(property_type) NOT LIKE '%apartment%' AND LOWER(property_type) NOT LIKE '%villa%' AND LOWER(property_type) NOT LIKE '%flat%' AND LOWER(property_type) NOT LIKE '%plot%')) THEN 1 ELSE 0 END) as direct_other,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (LOWER(REPLACE(property_type, ' ', '_')) = 'gated_community' OR LOWER(property_type) LIKE '%gated%') THEN 1 ELSE 0 END) as prop_gc,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (LOWER(property_type) = 'apartment' OR LOWER(property_type) LIKE '%apartment%') THEN 1 ELSE 0 END) as prop_apt,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (LOWER(property_type) = 'villa' OR LOWER(property_type) LIKE '%villa%') THEN 1 ELSE 0 END) as prop_villa,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (LOWER(property_type) = 'flat' OR LOWER(property_type) LIKE '%flat%') THEN 1 ELSE 0 END) as prop_flat,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (LOWER(property_type) = 'plot' OR LOWER(property_type) LIKE '%plot%') THEN 1 ELSE 0 END) as prop_plot
+        FROM fp_estimates WHERE (is_archived = 0 OR is_archived IS NULL) AND status NOT IN ('archived', 'rejected', 'deleted')
       `).then(([[r]]) => ({
-        direct: Number(r?.direct) || 0,
-        gated_community: Number(r?.gated_community) || 0,
-        apartment: Number(r?.apartment) || 0,
-        villa: Number(r?.villa) || 0,
-        flat: Number(r?.flat) || 0,
-        plot: Number(r?.plot) || 0
-      })).catch(() => ({ direct: 0, gated_community: 0, apartment: 0, villa: 0, flat: 0, plot: 0 })),
+        direct_gc: Number(r?.direct_gc) || 0, direct_apt: Number(r?.direct_apt) || 0, direct_villa: Number(r?.direct_villa) || 0, direct_flat: Number(r?.direct_flat) || 0, direct_plot: Number(r?.direct_plot) || 0, direct_other: Number(r?.direct_other) || 0,
+        prop_gc: Number(r?.prop_gc) || 0, prop_apt: Number(r?.prop_apt) || 0, prop_villa: Number(r?.prop_villa) || 0, prop_flat: Number(r?.prop_flat) || 0, prop_plot: Number(r?.prop_plot) || 0
+      })).catch(() => ({ direct_gc: 0, direct_apt: 0, direct_villa: 0, direct_flat: 0, direct_plot: 0, direct_other: 0, prop_gc: 0, prop_apt: 0, prop_villa: 0, prop_flat: 0, prop_plot: 0 })),
       // Recent work orders
       pool.execute(
         `SELECT wo.id, wo.work_order_id, wo.title, wo.status, wo.priority, wo.created_at,

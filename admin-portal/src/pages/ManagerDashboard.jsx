@@ -85,15 +85,19 @@ const ManagerDashboard = ({ user }) => {
   const totalWorkOrders = stats?.totalWorkOrders || 0;
   const totalForPercentage = pieData.reduce((sum, item) => sum + item.value, 0) || 1;
 
-  // Stacked bar chart data - Direct vs Property-based by category
-  const estimatesByType = stats?.estimatesByPropertyType || {};
+  // Stacked bar chart data - Property types with Direct vs Property-based breakdown
+  const est = stats?.estimatesByPropertyType || {};
   const directCount = stats?.directEstimates || 0;
   const propertyCount = stats?.propertyEstimates || 0;
   
   const stackedBarData = [
-    { name: 'Direct', gc: 0, apt: 0, villa: 0, flat: 0, plot: 0, direct: directCount },
-    { name: 'Property', gc: estimatesByType.gated_community || 0, apt: estimatesByType.apartment || 0, villa: estimatesByType.villa || 0, flat: estimatesByType.flat || 0, plot: estimatesByType.plot || 0, direct: 0 },
-  ];
+    { name: 'GC', direct: est.direct_gc || 0, property: est.prop_gc || 0 },
+    { name: 'Apartment', direct: est.direct_apt || 0, property: est.prop_apt || 0 },
+    { name: 'Villa', direct: est.direct_villa || 0, property: est.prop_villa || 0 },
+    { name: 'Flat', direct: est.direct_flat || 0, property: est.prop_flat || 0 },
+    { name: 'Plot', direct: est.direct_plot || 0, property: est.prop_plot || 0 },
+  ].filter(item => item.direct > 0 || item.property > 0);
+  if ((est.direct_other || 0) > 0) stackedBarData.unshift({ name: 'Other', direct: est.direct_other || 0, property: 0 });
   const totalEstimates = directCount + propertyCount;
 
   if (loading) {
@@ -402,16 +406,12 @@ const ManagerDashboard = ({ user }) => {
           <div className="flex-1 h-48 min-w-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stackedBarData} margin={{ top: 20, right: 10, bottom: 20, left: 10 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
                 <YAxis hide />
-                <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelStyle={{ color: '#fff', fontWeight: 600 }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} formatter={(value, name) => { if (value === 0) return null; const labels = { direct: 'Direct', gc: 'GC', apt: 'Apt', villa: 'Villa', flat: 'Flat', plot: 'Plot' }; return [value, labels[name] || name]; }} />
-                <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '10px' }} formatter={(value) => { const labels = { direct: 'Direct', gc: 'GC', apt: 'Apt', villa: 'Villa', flat: 'Flat', plot: 'Plot' }; return labels[value] || value; }} />
-                <Bar dataKey="direct" name="direct" stackId="a" fill="#06B6D4" barSize={50} />
-                <Bar dataKey="gc" name="gc" stackId="a" fill="#6366F1" barSize={50} />
-                <Bar dataKey="apt" name="apt" stackId="a" fill="#8B5CF6" barSize={50} />
-                <Bar dataKey="villa" name="villa" stackId="a" fill="#EC4899" barSize={50} />
-                <Bar dataKey="flat" name="flat" stackId="a" fill="#F59E0B" barSize={50} />
-                <Bar dataKey="plot" name="plot" stackId="a" fill="#10B981" radius={[4, 4, 0, 0]} barSize={50} />
+                <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelStyle={{ color: '#fff', fontWeight: 600 }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+                <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} />
+                <Bar dataKey="direct" name="Direct" stackId="a" fill="#06B6D4" barSize={40} />
+                <Bar dataKey="property" name="Property" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
               </BarChart>
             </ResponsiveContainer>
           </div>
