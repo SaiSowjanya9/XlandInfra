@@ -224,8 +224,8 @@ const FPDashboard = ({ user }) => {
         </Link>
       </div>
 
-      {/* Second Stats Row - 4 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Second Stats Row - 2 cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Link to="/fp/work-orders?status=pending" className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-amber-200 transition-all duration-200 group">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -252,31 +252,7 @@ const FPDashboard = ({ user }) => {
           </div>
         </Link>
 
-        <Link to="/fp/estimates?type=direct" className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-cyan-200 transition-all duration-200 group">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-cyan-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <FileText className="w-6 h-6 text-cyan-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Direct Estimates</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.directEstimates || 0}</p>
-              <p className="text-xs text-gray-400">Direct Client Estimates</p>
-            </div>
-          </div>
-        </Link>
 
-        <Link to="/fp/estimates?type=property" className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-teal-200 transition-all duration-200 group">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <FileText className="w-6 h-6 text-teal-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Property Estimates</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.propertyEstimates || 0}</p>
-              <p className="text-xs text-gray-400">Property-based Estimates</p>
-            </div>
-          </div>
-        </Link>
       </div>
 
       {/* Estimates Overview + Work Orders Overview */}
@@ -295,10 +271,6 @@ const FPDashboard = ({ user }) => {
             <div className="text-center">
               <p className="text-3xl font-bold text-gray-900">{totalEstimates}</p>
               <p className="text-sm text-gray-500">Total</p>
-              <div className="flex flex-col gap-1 mt-2 text-xs">
-                <span className="px-2 py-1 bg-teal-50 text-teal-700 rounded-lg">{stats?.directEstimates || 0} Direct</span>
-                <span className="px-2 py-1 bg-cyan-50 text-cyan-700 rounded-lg">{stats?.propertyEstimates || 0} Property</span>
-              </div>
             </div>
 
             {/* Stacked Bar Chart - Property types with Direct vs Property-based */}

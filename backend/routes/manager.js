@@ -275,20 +275,20 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
         [franchisePartnerId]
       ),
       
-      // Estimates breakdown - Direct and Property-based by property type
+      // Estimates breakdown - Direct and Property-based by property type (codes: GC, APT, AP, VILLA, VL, FLAT, FL, PLOT, PL)
       pool.execute(`
         SELECT 
-          SUM(CASE WHEN estimate_type = 'direct' AND (LOWER(REPLACE(property_type, ' ', '_')) = 'gated_community' OR LOWER(property_type) LIKE '%gated%') THEN 1 ELSE 0 END) as direct_gc,
-          SUM(CASE WHEN estimate_type = 'direct' AND (LOWER(property_type) = 'apartment' OR LOWER(property_type) LIKE '%apartment%') THEN 1 ELSE 0 END) as direct_apt,
-          SUM(CASE WHEN estimate_type = 'direct' AND (LOWER(property_type) = 'villa' OR LOWER(property_type) LIKE '%villa%') THEN 1 ELSE 0 END) as direct_villa,
-          SUM(CASE WHEN estimate_type = 'direct' AND (LOWER(property_type) = 'flat' OR LOWER(property_type) LIKE '%flat%') THEN 1 ELSE 0 END) as direct_flat,
-          SUM(CASE WHEN estimate_type = 'direct' AND (LOWER(property_type) = 'plot' OR LOWER(property_type) LIKE '%plot%') THEN 1 ELSE 0 END) as direct_plot,
-          SUM(CASE WHEN estimate_type = 'direct' AND (property_type IS NULL OR property_type = '' OR (LOWER(property_type) NOT LIKE '%gated%' AND LOWER(property_type) NOT LIKE '%apartment%' AND LOWER(property_type) NOT LIKE '%villa%' AND LOWER(property_type) NOT LIKE '%flat%' AND LOWER(property_type) NOT LIKE '%plot%')) THEN 1 ELSE 0 END) as direct_other,
-          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (LOWER(REPLACE(property_type, ' ', '_')) = 'gated_community' OR LOWER(property_type) LIKE '%gated%') THEN 1 ELSE 0 END) as prop_gc,
-          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (LOWER(property_type) = 'apartment' OR LOWER(property_type) LIKE '%apartment%') THEN 1 ELSE 0 END) as prop_apt,
-          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (LOWER(property_type) = 'villa' OR LOWER(property_type) LIKE '%villa%') THEN 1 ELSE 0 END) as prop_villa,
-          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (LOWER(property_type) = 'flat' OR LOWER(property_type) LIKE '%flat%') THEN 1 ELSE 0 END) as prop_flat,
-          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (LOWER(property_type) = 'plot' OR LOWER(property_type) LIKE '%plot%') THEN 1 ELSE 0 END) as prop_plot
+          SUM(CASE WHEN estimate_type = 'direct' AND (UPPER(property_type) = 'GC' OR LOWER(property_type) LIKE '%gated%') THEN 1 ELSE 0 END) as direct_gc,
+          SUM(CASE WHEN estimate_type = 'direct' AND (UPPER(property_type) IN ('APT', 'AP') OR LOWER(property_type) LIKE '%apartment%') THEN 1 ELSE 0 END) as direct_apt,
+          SUM(CASE WHEN estimate_type = 'direct' AND (UPPER(property_type) IN ('VILLA', 'VL') OR LOWER(property_type) LIKE '%villa%') THEN 1 ELSE 0 END) as direct_villa,
+          SUM(CASE WHEN estimate_type = 'direct' AND (UPPER(property_type) IN ('FLAT', 'FL') OR LOWER(property_type) LIKE '%flat%') THEN 1 ELSE 0 END) as direct_flat,
+          SUM(CASE WHEN estimate_type = 'direct' AND (UPPER(property_type) IN ('PLOT', 'PL') OR LOWER(property_type) LIKE '%plot%') THEN 1 ELSE 0 END) as direct_plot,
+          SUM(CASE WHEN estimate_type = 'direct' AND (property_type IS NULL OR property_type = '' OR (UPPER(property_type) NOT IN ('GC', 'APT', 'AP', 'VILLA', 'VL', 'FLAT', 'FL', 'PLOT', 'PL') AND LOWER(property_type) NOT LIKE '%gated%' AND LOWER(property_type) NOT LIKE '%apartment%' AND LOWER(property_type) NOT LIKE '%villa%' AND LOWER(property_type) NOT LIKE '%flat%' AND LOWER(property_type) NOT LIKE '%plot%')) THEN 1 ELSE 0 END) as direct_other,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (UPPER(property_type) = 'GC' OR LOWER(property_type) LIKE '%gated%') THEN 1 ELSE 0 END) as prop_gc,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (UPPER(property_type) IN ('APT', 'AP') OR LOWER(property_type) LIKE '%apartment%') THEN 1 ELSE 0 END) as prop_apt,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (UPPER(property_type) IN ('VILLA', 'VL') OR LOWER(property_type) LIKE '%villa%') THEN 1 ELSE 0 END) as prop_villa,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (UPPER(property_type) IN ('FLAT', 'FL') OR LOWER(property_type) LIKE '%flat%') THEN 1 ELSE 0 END) as prop_flat,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (UPPER(property_type) IN ('PLOT', 'PL') OR LOWER(property_type) LIKE '%plot%') THEN 1 ELSE 0 END) as prop_plot
         FROM fp_estimates WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) AND status NOT IN ('archived', 'rejected', 'deleted')
       `, [franchisePartnerId]).then(([[r]]) => ({
         direct_gc: Number(r?.direct_gc) || 0, direct_apt: Number(r?.direct_apt) || 0, direct_villa: Number(r?.direct_villa) || 0, direct_flat: Number(r?.direct_flat) || 0, direct_plot: Number(r?.direct_plot) || 0, direct_other: Number(r?.direct_other) || 0,

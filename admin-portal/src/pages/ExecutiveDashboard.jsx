@@ -303,10 +303,6 @@ const ExecutiveDashboard = ({ user }) => {
           <div className="text-center min-w-[120px]">
             <p className="text-3xl font-bold text-gray-900">{totalEstimates}</p>
             <p className="text-sm text-gray-500">Total Estimates</p>
-            <div className="flex gap-2 mt-2 text-xs justify-center">
-              <span className="px-2 py-1 bg-teal-50 text-teal-700 rounded-lg">{stats?.directEstimates || 0} Direct</span>
-              <span className="px-2 py-1 bg-cyan-50 text-cyan-700 rounded-lg">{stats?.propertyEstimates || 0} Property</span>
-            </div>
           </div>
 
           {/* Stacked Bar Chart */}

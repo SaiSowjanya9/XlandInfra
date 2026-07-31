@@ -233,18 +233,6 @@ const Dashboard = () => {
       icon: Users,
       path: '/employee/employee-details'
     },
-    { 
-      title: 'Direct Estimates',
-      value: stats?.directEstimates ?? 0,
-      icon: FileText,
-      path: '/employee/estimates/list'
-    },
-    { 
-      title: 'Property Estimates',
-      value: stats?.propertyEstimates ?? 0,
-      icon: FileText,
-      path: '/employee/estimates/list'
-    },
   ];
 
   // Pie chart data
@@ -668,10 +656,6 @@ const Dashboard = () => {
             <div className="text-center min-w-[120px]">
               <p className="text-3xl font-bold text-gray-900">{totalEstimates}</p>
               <p className="text-sm text-gray-500">Total Estimates</p>
-              <div className="flex gap-2 mt-2 text-xs justify-center">
-                <span className="px-2 py-1 bg-teal-50 text-teal-700 rounded-lg">{stats?.directEstimates || 0} Direct</span>
-                <span className="px-2 py-1 bg-cyan-50 text-cyan-700 rounded-lg">{stats?.propertyEstimates || 0} Property</span>
-              </div>
             </div>
             <div className="flex-1 h-48 min-w-[300px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -796,23 +780,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* System Overview */}
-          <div className="bg-white rounded-xl p-5 border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-medium text-gray-800">Estimates Overview</h3>
-              <Activity className="w-4 h-4 text-gray-400" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-3 bg-teal-50 rounded-lg">
-                <p className="text-2xl font-semibold text-teal-700">{stats?.directEstimates ?? 0}</p>
-                <p className="text-xs text-gray-500 mt-1">Direct Estimates</p>
-              </div>
-              <div className="text-center p-3 bg-cyan-50 rounded-lg">
-                <p className="text-2xl font-semibold text-cyan-700">{stats?.propertyEstimates ?? 0}</p>
-                <p className="text-xs text-gray-500 mt-1">Property Estimates</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Quick Actions - Full Width */}
