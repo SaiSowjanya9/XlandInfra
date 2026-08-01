@@ -6,12 +6,12 @@ require('dotenv').config();
 const isProduction = process.env.NODE_ENV === 'production';
 
 const dbConfig = isProduction ? {
-  // Production (Railway) Database
-  host: process.env.DB_HOST || 'kodama.proxy.rlwy.net',
+  // Production Database
+  host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'railway',
-  port: process.env.DB_PORT || 30074,
+  database: process.env.DB_NAME || 'xland_pm',
+  port: process.env.DB_PORT || 3306,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -30,7 +30,7 @@ const dbConfig = isProduction ? {
   queueLimit: 0
 };
 
-console.log(`📦 Database mode: ${isProduction ? 'PRODUCTION (Railway)' : 'DEVELOPMENT (Local)'}`);
+console.log(`📦 Database mode: ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}`);
 console.log(`📦 Database: ${dbConfig.database} @ ${dbConfig.host}:${dbConfig.port}`);
 
 let pool = null;

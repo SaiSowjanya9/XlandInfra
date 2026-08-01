@@ -71,7 +71,7 @@ router.post('/create-payment-link', authenticate, canManagePayments, async (req,
     // Get invoice details
     const [invoices] = await pool.execute(`
       SELECT i.*, 
-             p.name as property_name, p.property_id as property_code,
+             p.community_name as property_name, p.property_id as property_code,
              c.name as client_name
       FROM invoices i
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
@@ -210,7 +210,7 @@ router.post('/send-payment-link', authenticate, canManagePayments, async (req, r
     // Get invoice details
     const [invoices] = await pool.execute(`
       SELECT i.*, 
-             p.name as property_name, p.property_id as property_code
+             p.community_name as property_name, p.property_id as property_code
       FROM invoices i
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
       WHERE i.id = ?
