@@ -592,9 +592,12 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
     const { invoiceId, status, paymentMethod, startDate, endDate, search } = req.query;
 
     let query = `
-      SELECT p.*, i.invoice_id as invoice_code
+      SELECT p.*, 
+             i.invoice_id as invoice_code, i.estimate_id as invoice_estimate_id,
+             prop.name as property_name, prop.property_id as property_code
       FROM payments p
       LEFT JOIN invoices i ON p.invoice_id = i.id
+      LEFT JOIN onboarded_properties prop ON p.property_id = prop.id
       WHERE 1=1
     `;
     const params = [];
@@ -647,7 +650,9 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
         invoiceId: p.invoice_id,
         invoiceCode: p.invoice_code,
         propertyId: p.property_id,
-        estimateId: p.estimate_id,
+        propertyName: p.property_name,
+        propertyCode: p.property_code,
+        estimateId: p.estimate_id || p.invoice_estimate_id,
         customerId: p.customer_id,
         customerName: p.customer_name,
         amount: parseFloat(p.amount),

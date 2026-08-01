@@ -16,6 +16,7 @@ import {
   ChevronDown,
   IndianRupee,
   Printer,
+  Link,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
@@ -348,7 +349,7 @@ const FPInvoices = ({ user }) => {
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => navigate(`/fp/payments/invoices/${invoice.id}`)}
                             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -356,23 +357,23 @@ const FPInvoices = ({ user }) => {
                           >
                             <Eye className="w-4 h-4 text-gray-600" />
                           </button>
-                          {canEdit && invoice.status === 'draft' && (
-                            <button
-                              onClick={() => handleSendInvoice(invoice)}
-                              className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
-                              title="Send Invoice"
-                            >
-                              <Send className="w-4 h-4 text-blue-600" />
-                            </button>
-                          )}
                           {canEdit && invoice.balanceAmount > 0 && (
-                            <button
-                              onClick={() => navigate(`/fp/payments/record?invoiceId=${invoice.id}`)}
-                              className="p-2 hover:bg-green-100 rounded-lg transition-colors"
-                              title="Record Payment"
-                            >
-                              <CreditCard className="w-4 h-4 text-green-600" />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => navigate(`/fp/payments/invoices/${invoice.id}`)}
+                                className="p-2 hover:bg-purple-100 rounded-lg transition-colors"
+                                title="Send Payment Link"
+                              >
+                                <Link className="w-4 h-4 text-purple-600" />
+                              </button>
+                              <button
+                                onClick={() => navigate(`/fp/payments/record?invoiceId=${invoice.id}`)}
+                                className="p-2 hover:bg-green-100 rounded-lg transition-colors"
+                                title="Record Payment"
+                              >
+                                <CreditCard className="w-4 h-4 text-green-600" />
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
