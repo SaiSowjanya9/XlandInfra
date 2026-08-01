@@ -62,16 +62,21 @@ const SupervisorDashboard = ({ user }) => {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [fetchDashboard]);
 
-  // Pie chart data
+  // Pie chart data - use consistent data source
   const workOrdersByStatus = stats?.workOrdersByStatus || {};
+  const pendingWO = Number(stats?.pendingWorkOrders) || Number(workOrdersByStatus.pending) || 0;
+  const inProgressWO = Number(workOrdersByStatus.in_progress) || 0;
+  const completedWO = Number(stats?.completedWorkOrders) || (Number(workOrdersByStatus.completed || 0) + Number(workOrdersByStatus.closed || 0));
+  const pieTotal = pendingWO + inProgressWO + completedWO;
+  
   const pieData = [
-    { name: 'Pending', value: workOrdersByStatus.pending || 0, color: '#F59E0B' },
-    { name: 'In Progress', value: workOrdersByStatus.in_progress || 0, color: '#3B82F6' },
-    { name: 'Completed', value: (workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0), color: '#10B981' },
+    { name: 'Pending', value: pendingWO, color: '#F59E0B' },
+    { name: 'In Progress', value: inProgressWO, color: '#3B82F6' },
+    { name: 'Completed', value: completedWO, color: '#10B981' },
   ].filter(item => item.value > 0);
 
-  const totalWorkOrders = stats?.totalWorkOrders || 0;
-  const totalForPercentage = pieData.reduce((sum, item) => sum + item.value, 0) || 1;
+  const totalWorkOrders = pieTotal || stats?.totalWorkOrders || 0;
+  const totalForPercentage = pieTotal || 1;
 
   // Stacked bar chart data - Property types with Direct vs Property-based breakdown
   const est = stats?.estimatesByPropertyType || {};
@@ -229,9 +234,9 @@ const SupervisorDashboard = ({ user }) => {
                 <span className="text-sm text-gray-600">Pending</span>
               </div>
               <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-gray-900">{workOrdersByStatus.pending || 0}</span>
+                <span className="text-sm font-semibold text-gray-900">{pendingWO}</span>
                 <span className="text-sm text-gray-500 w-12 text-right">
-                  {totalForPercentage > 0 ? Math.round(((workOrdersByStatus.pending || 0) / totalForPercentage) * 100) : 0}%
+                  {totalForPercentage > 0 ? Math.round((pendingWO / totalForPercentage) * 100) : 0}%
                 </span>
               </div>
             </div>
@@ -241,9 +246,9 @@ const SupervisorDashboard = ({ user }) => {
                 <span className="text-sm text-gray-600">In Progress</span>
               </div>
               <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-gray-900">{workOrdersByStatus.in_progress || 0}</span>
+                <span className="text-sm font-semibold text-gray-900">{inProgressWO}</span>
                 <span className="text-sm text-gray-500 w-12 text-right">
-                  {totalForPercentage > 0 ? Math.round(((workOrdersByStatus.in_progress || 0) / totalForPercentage) * 100) : 0}%
+                  {totalForPercentage > 0 ? Math.round((inProgressWO / totalForPercentage) * 100) : 0}%
                 </span>
               </div>
             </div>
@@ -253,9 +258,9 @@ const SupervisorDashboard = ({ user }) => {
                 <span className="text-sm text-gray-600">Completed</span>
               </div>
               <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-gray-900">{(workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0)}</span>
+                <span className="text-sm font-semibold text-gray-900">{completedWO}</span>
                 <span className="text-sm text-gray-500 w-12 text-right">
-                  {totalForPercentage > 0 ? Math.round((((workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0)) / totalForPercentage) * 100) : 0}%
+                  {totalForPercentage > 0 ? Math.round((completedWO / totalForPercentage) * 100) : 0}%
                 </span>
               </div>
             </div>
