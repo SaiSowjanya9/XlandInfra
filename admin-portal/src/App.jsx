@@ -538,6 +538,11 @@ function App() {
                     <Route path="estimates/amc" element={<SupervisorEstimates user={user} defaultTab="amc" />} />
                     <Route path="estimates/addons" element={<SupervisorEstimates user={user} defaultTab="addons" />} />
                     <Route path="estimates/archived" element={<SupervisorEstimates user={user} defaultTab="archived" />} />
+                    {/* Payments - View Only for Supervisors */}
+                    <Route path="payments" element={<FPPaymentDashboard user={user} />} />
+                    <Route path="payments/invoices" element={<FPInvoices user={user} />} />
+                    <Route path="payments/invoices/:id" element={<FPInvoiceView user={user} />} />
+                    <Route path="payments/history" element={<FPPaymentHistory user={user} />} />
                     <Route path="*" element={<Navigate to="/supervisor" replace />} />
                   </Routes>
                 </SupervisorLayout>
@@ -574,6 +579,11 @@ function App() {
                     <Route path="estimates/amc" element={<ExecutiveEstimates user={user} defaultTab="amc" />} />
                     <Route path="estimates/addons" element={<ExecutiveEstimates user={user} defaultTab="addons" />} />
                     <Route path="estimates/archived" element={<ExecutiveEstimates user={user} defaultTab="archived" />} />
+                    {/* Payments - View Only for Executives */}
+                    <Route path="payments" element={<FPPaymentDashboard user={user} />} />
+                    <Route path="payments/invoices" element={<FPInvoices user={user} />} />
+                    <Route path="payments/invoices/:id" element={<FPInvoiceView user={user} />} />
+                    <Route path="payments/history" element={<FPPaymentHistory user={user} />} />
                     <Route path="*" element={<Navigate to="/executive" replace />} />
                   </Routes>
                 </ExecutiveLayout>
