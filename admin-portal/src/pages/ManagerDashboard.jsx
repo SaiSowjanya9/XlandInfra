@@ -74,16 +74,21 @@ const ManagerDashboard = ({ user }) => {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [fetchDashboardData]);
 
-  // Pie chart data
+  // Pie chart data - use consistent data source
   const workOrdersByStatus = stats?.workOrdersByStatus || {};
+  const pendingWO = Number(stats?.pendingWorkOrders) || Number(workOrdersByStatus.pending) || 0;
+  const inProgressWO = Number(workOrdersByStatus.in_progress) || 0;
+  const completedWO = Number(stats?.completedWorkOrders) || (Number(workOrdersByStatus.completed || 0) + Number(workOrdersByStatus.closed || 0));
+  const pieTotal = pendingWO + inProgressWO + completedWO;
+  
   const pieData = [
-    { name: 'Pending', value: workOrdersByStatus.pending || 0, color: '#F59E0B' },
-    { name: 'In Progress', value: workOrdersByStatus.in_progress || 0, color: '#3B82F6' },
-    { name: 'Completed', value: (workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0), color: '#10B981' },
+    { name: 'Pending', value: pendingWO, color: '#F59E0B' },
+    { name: 'In Progress', value: inProgressWO, color: '#3B82F6' },
+    { name: 'Completed', value: completedWO, color: '#10B981' },
   ].filter(item => item.value > 0);
 
-  const totalWorkOrders = stats?.totalWorkOrders || 0;
-  const totalForPercentage = pieData.reduce((sum, item) => sum + item.value, 0) || 1;
+  const totalWorkOrders = pieTotal || stats?.totalWorkOrders || 0;
+  const totalForPercentage = pieTotal || 1;
 
   // Stacked bar chart data - Property types with Direct vs Property-based breakdown
   const est = stats?.estimatesByPropertyType || {};
@@ -216,7 +221,7 @@ const ManagerDashboard = ({ user }) => {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Team</h2>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-purple-50 rounded-xl p-4">
-              <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
                   <UserCheck className="w-5 h-5 text-purple-600" />
                 </div>
@@ -225,14 +230,10 @@ const ManagerDashboard = ({ user }) => {
                   <p className="text-sm text-purple-600">Coordinators</p>
                 </div>
               </div>
-              <div className="text-xs text-purple-500 bg-purple-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
-                <ClipboardList className="w-3 h-3" />
-                {stats?.workOrdersByRole?.coordinators || 0} Work Orders
-              </div>
             </div>
 
             <div className="bg-amber-50 rounded-xl p-4">
-              <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
                   <Shield className="w-5 h-5 text-amber-600" />
                 </div>
@@ -241,14 +242,10 @@ const ManagerDashboard = ({ user }) => {
                   <p className="text-sm text-amber-600">Supervisors</p>
                 </div>
               </div>
-              <div className="text-xs text-amber-500 bg-amber-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
-                <ClipboardList className="w-3 h-3" />
-                {stats?.workOrdersByRole?.supervisors || 0} Work Orders
-              </div>
             </div>
 
             <div className="bg-teal-50 rounded-xl p-4">
-              <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
                   <Briefcase className="w-5 h-5 text-teal-600" />
                 </div>
@@ -257,14 +254,10 @@ const ManagerDashboard = ({ user }) => {
                   <p className="text-sm text-teal-600">Executives</p>
                 </div>
               </div>
-              <div className="text-xs text-teal-500 bg-teal-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
-                <ClipboardList className="w-3 h-3" />
-                {stats?.workOrdersByRole?.executives || 0} Work Orders
-              </div>
             </div>
 
             <div className="bg-indigo-50 rounded-xl p-4">
-              <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
                   <MapPin className="w-5 h-5 text-indigo-600" />
                 </div>
@@ -272,10 +265,6 @@ const ManagerDashboard = ({ user }) => {
                   <p className="text-2xl font-bold text-indigo-700">{stats?.zones || 0}</p>
                   <p className="text-sm text-indigo-600">Zones</p>
                 </div>
-              </div>
-              <div className="text-xs text-indigo-500 bg-indigo-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
-                <Building2 className="w-3 h-3" />
-                Assigned Areas
               </div>
             </div>
           </div>
@@ -324,9 +313,9 @@ const ManagerDashboard = ({ user }) => {
                   <span className="text-sm text-gray-600">Pending</span>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="text-sm font-semibold text-gray-900">{workOrdersByStatus.pending || 0}</span>
+                  <span className="text-sm font-semibold text-gray-900">{pendingWO}</span>
                   <span className="text-sm text-gray-500 w-12 text-right">
-                    {totalForPercentage > 0 ? Math.round(((workOrdersByStatus.pending || 0) / totalForPercentage) * 100) : 0}%
+                    {totalForPercentage > 0 ? Math.round((pendingWO / totalForPercentage) * 100) : 0}%
                   </span>
                 </div>
               </div>
@@ -336,9 +325,9 @@ const ManagerDashboard = ({ user }) => {
                   <span className="text-sm text-gray-600">In Progress</span>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="text-sm font-semibold text-gray-900">{workOrdersByStatus.in_progress || 0}</span>
+                  <span className="text-sm font-semibold text-gray-900">{inProgressWO}</span>
                   <span className="text-sm text-gray-500 w-12 text-right">
-                    {totalForPercentage > 0 ? Math.round(((workOrdersByStatus.in_progress || 0) / totalForPercentage) * 100) : 0}%
+                    {totalForPercentage > 0 ? Math.round((inProgressWO / totalForPercentage) * 100) : 0}%
                   </span>
                 </div>
               </div>
@@ -348,9 +337,9 @@ const ManagerDashboard = ({ user }) => {
                   <span className="text-sm text-gray-600">Completed</span>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="text-sm font-semibold text-gray-900">{(workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0)}</span>
+                  <span className="text-sm font-semibold text-gray-900">{completedWO}</span>
                   <span className="text-sm text-gray-500 w-12 text-right">
-                    {totalForPercentage > 0 ? Math.round((((workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0)) / totalForPercentage) * 100) : 0}%
+                    {totalForPercentage > 0 ? Math.round((completedWO / totalForPercentage) * 100) : 0}%
                   </span>
                 </div>
               </div>
