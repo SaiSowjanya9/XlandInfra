@@ -234,7 +234,7 @@ router.get('/invoices', authenticate, canViewPayments, async (req, res) => {
     
     let query = `
       SELECT i.*, 
-             p.name as property_name, p.property_id as property_code,
+             p.community_name as property_name, p.property_id as property_code,
              c.name as client_name
       FROM invoices i
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
@@ -322,7 +322,7 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
 
     let query = `
       SELECT i.*, 
-             p.name as property_name, p.property_id as property_code,
+             p.community_name as property_name, p.property_id as property_code,
              c.name as client_name
       FROM invoices i
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
@@ -594,7 +594,7 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
     let query = `
       SELECT p.*, 
              i.invoice_id as invoice_code, i.estimate_id as invoice_estimate_id,
-             prop.name as property_name, prop.property_id as property_code
+             prop.community_name as property_name, prop.property_id as property_code
       FROM payments p
       LEFT JOIN invoices i ON p.invoice_id = i.id
       LEFT JOIN onboarded_properties prop ON p.property_id = prop.id
