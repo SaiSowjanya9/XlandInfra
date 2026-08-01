@@ -353,7 +353,7 @@ const FPInvoiceView = ({ user }) => {
         <div className={`print:hidden rounded-xl p-4 ${linkStatusConfig?.color || 'bg-gray-100'}`}>
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
-              {linkStatusConfig?.icon && <linkStatusConfig.icon className="w-5 h-5" />}
+              {linkStatusConfig?.icon && (() => { const Icon = linkStatusConfig.icon; return <Icon className="w-5 h-5" />; })()}
               <div>
                 <p className="font-medium">{linkStatusConfig?.label || 'Payment Link'}</p>
                 <p className="text-sm opacity-80">
