@@ -175,127 +175,109 @@ const ExecutiveDashboard = ({ user }) => {
         </button>
       </div>
 
-      {/* Estimates card */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <button onClick={() => navigate('/executive/estimates')} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-teal-200 transition-all duration-200 group text-left">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <FileText className="w-6 h-6 text-teal-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Estimates</p>
-              <p className="text-2xl font-bold text-gray-900">{(stats?.directEstimates || 0) + (stats?.propertyEstimates || 0)}</p>
-              <p className="text-xs text-gray-400">Total Estimates</p>
-            </div>
+      {/* Estimates Overview + Work Orders Overview */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Estimates Overview - Bar Chart */}
+        <div className="bg-white rounded-xl border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Estimates Overview</h2>
+            <button onClick={() => navigate('/executive/estimates')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+              View All <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
-        </button>
-      </div>
-
-      {/* Work Orders Overview - Full Width */}
-      <div className="bg-white rounded-xl border border-gray-100 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Work Orders Overview</h2>
-          <button onClick={() => navigate('/executive/work-orders')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
-            View All <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-        
-        <div className="flex items-center justify-center lg:justify-start gap-12 flex-wrap">
-          {/* Pie Chart */}
-          <div className="relative w-48 h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={80}
-                  paddingAngle={pieData.length > 1 ? 3 : 0}
-                  dataKey="value"
-                >
-                  {(pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <p className="text-3xl font-bold text-gray-900">{totalWorkOrders}</p>
+          
+          <div className="flex items-center gap-6">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-gray-900">{totalEstimates}</p>
               <p className="text-sm text-gray-500">Total</p>
             </div>
-          </div>
-
-          {/* Legend */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between min-w-[200px]">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-amber-500"></span>
-                <span className="text-sm text-gray-600">Pending</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-gray-900">{pendingWO}</span>
-                <span className="text-sm text-gray-500 w-12 text-right">
-                  {totalForPercentage > 0 ? Math.round((pendingWO / totalForPercentage) * 100) : 0}%
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between min-w-[200px]">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                <span className="text-sm text-gray-600">In Progress</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-gray-900">{inProgressWO}</span>
-                <span className="text-sm text-gray-500 w-12 text-right">
-                  {totalForPercentage > 0 ? Math.round((inProgressWO / totalForPercentage) * 100) : 0}%
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between min-w-[200px]">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                <span className="text-sm text-gray-600">Completed</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-gray-900">{completedWO}</span>
-                <span className="text-sm text-gray-500 w-12 text-right">
-                  {totalForPercentage > 0 ? Math.round((completedWO / totalForPercentage) * 100) : 0}%
-                </span>
-              </div>
+            <div className="flex-1 h-48 min-w-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stackedBarData} margin={{ top: 20, right: 10, bottom: 20, left: 10 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
+                  <YAxis hide />
+                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelStyle={{ color: '#fff', fontWeight: 600 }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+                  <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} formatter={(value) => value === 'Direct' ? `Direct (${directCount})` : `Property (${propertyCount})`} />
+                  <Bar dataKey="direct" name="Direct" stackId="a" fill="#06B6D4" barSize={40} />
+                  <Bar dataKey="property" name="Property" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Estimates Overview */}
-      <div className="bg-white rounded-xl border border-gray-100 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Estimates Overview</h2>
-          <button onClick={() => navigate('/executive/estimates')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
-            View All <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-        
-        <div className="flex items-center gap-8 flex-wrap">
-          {/* Total Count */}
-          <div className="text-center min-w-[120px]">
-            <p className="text-3xl font-bold text-gray-900">{totalEstimates}</p>
-            <p className="text-sm text-gray-500">Total Estimates</p>
+        {/* Work Orders Overview - Pie Chart */}
+        <div className="bg-white rounded-xl border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Work Orders Overview</h2>
+            <button onClick={() => navigate('/executive/work-orders')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+              View All <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="relative w-48 h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={80}
+                    paddingAngle={pieData.length > 1 ? 3 : 0}
+                    dataKey="value"
+                  >
+                    {(pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <p className="text-3xl font-bold text-gray-900">{totalWorkOrders}</p>
+                <p className="text-sm text-gray-500">Total</p>
+              </div>
+            </div>
 
-          {/* Stacked Bar Chart */}
-          <div className="flex-1 h-48 min-w-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stackedBarData} margin={{ top: 20, right: 10, bottom: 20, left: 10 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
-                <YAxis hide />
-                <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelStyle={{ color: '#fff', fontWeight: 600 }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-                <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} formatter={(value) => value === 'Direct' ? `Direct (${directCount})` : `Property (${propertyCount})`} />
-                <Bar dataKey="direct" name="Direct" stackId="a" fill="#06B6D4" barSize={40} />
-                <Bar dataKey="property" name="Property" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="flex-1 ml-8 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-amber-500"></span>
+                  <span className="text-sm text-gray-600">Pending</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-semibold text-gray-900">{pendingWO}</span>
+                  <span className="text-sm text-gray-500 w-12 text-right">
+                    {totalForPercentage > 0 ? Math.round((pendingWO / totalForPercentage) * 100) : 0}%
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                  <span className="text-sm text-gray-600">In Progress</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-semibold text-gray-900">{inProgressWO}</span>
+                  <span className="text-sm text-gray-500 w-12 text-right">
+                    {totalForPercentage > 0 ? Math.round((inProgressWO / totalForPercentage) * 100) : 0}%
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
+                  <span className="text-sm text-gray-600">Completed</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-semibold text-gray-900">{completedWO}</span>
+                  <span className="text-sm text-gray-500 w-12 text-right">
+                    {totalForPercentage > 0 ? Math.round((completedWO / totalForPercentage) * 100) : 0}%
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

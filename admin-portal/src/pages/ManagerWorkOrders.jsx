@@ -762,6 +762,7 @@ const ManagerWorkOrders = ({ user }) => {
               <option value="assigned">Assigned</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
+              <option value="closed">Closed</option>
               <option value="cancelled">Cancelled</option>
             </select>
             <button

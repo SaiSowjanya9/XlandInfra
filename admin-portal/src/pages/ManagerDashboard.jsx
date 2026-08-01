@@ -198,74 +198,36 @@ const ManagerDashboard = ({ user }) => {
         </button>
       </div>
 
-      {/* Second Stats Row - Estimates card */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <button onClick={() => navigate('/manager/estimates')} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-teal-200 transition-all duration-200 group text-left">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <FileText className="w-6 h-6 text-teal-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Estimates</p>
-              <p className="text-2xl font-bold text-gray-900">{(stats?.directEstimates || 0) + (stats?.propertyEstimates || 0)}</p>
-              <p className="text-xs text-gray-400">Total Estimates</p>
-            </div>
-          </div>
-        </button>
-      </div>
-
-      {/* Your Team + Work Orders Overview */}
+      {/* Estimates Overview + Work Orders Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Your Team Section */}
+        {/* Estimates Overview - Bar Chart */}
         <div className="bg-white rounded-xl border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Team</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-purple-50 rounded-xl p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <UserCheck className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-purple-700">{stats?.teamRoles?.coordinators || 0}</p>
-                  <p className="text-sm text-purple-600">Coordinators</p>
-                </div>
-              </div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Estimates Overview</h2>
+            <button onClick={() => navigate('/manager/estimates')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+              View All <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+          
+          <div className="flex items-center gap-6">
+            {/* Total Count */}
+            <div className="text-center">
+              <p className="text-3xl font-bold text-gray-900">{totalEstimates}</p>
+              <p className="text-sm text-gray-500">Total</p>
             </div>
 
-            <div className="bg-amber-50 rounded-xl p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-amber-700">{stats?.teamRoles?.supervisors || 0}</p>
-                  <p className="text-sm text-amber-600">Supervisors</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-teal-50 rounded-xl p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
-                  <Briefcase className="w-5 h-5 text-teal-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-teal-700">{stats?.teamRoles?.executives || 0}</p>
-                  <p className="text-sm text-teal-600">Executives</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-indigo-50 rounded-xl p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-indigo-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-indigo-700">{stats?.zones || 0}</p>
-                  <p className="text-sm text-indigo-600">Zones</p>
-                </div>
-              </div>
+            {/* Stacked Bar Chart */}
+            <div className="flex-1 h-48 min-w-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stackedBarData} margin={{ top: 20, right: 10, bottom: 20, left: 10 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
+                  <YAxis hide />
+                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelStyle={{ color: '#fff', fontWeight: 600 }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+                  <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} formatter={(value) => value === 'Direct' ? `Direct (${directCount})` : `Property (${propertyCount})`} />
+                  <Bar dataKey="direct" name="Direct" stackId="a" fill="#06B6D4" barSize={40} />
+                  <Bar dataKey="property" name="Property" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
@@ -348,31 +310,53 @@ const ManagerDashboard = ({ user }) => {
         </div>
       </div>
 
-      {/* Estimates Overview */}
+      {/* Your Team */}
       <div className="bg-white rounded-xl border border-gray-100 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Estimates Overview</h2>
-          <button onClick={() => navigate('/manager/estimates')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
-            View All <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-        
-        <div className="flex items-center gap-8 flex-wrap">
-          <div className="text-center min-w-[120px]">
-            <p className="text-3xl font-bold text-gray-900">{totalEstimates}</p>
-            <p className="text-sm text-gray-500">Total Estimates</p>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Team</h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-purple-50 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                <UserCheck className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-purple-700">{stats?.teamRoles?.coordinators || 0}</p>
+                <p className="text-sm text-purple-600">Coordinators</p>
+              </div>
+            </div>
           </div>
-          <div className="flex-1 h-48 min-w-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stackedBarData} margin={{ top: 20, right: 10, bottom: 20, left: 10 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
-                <YAxis hide />
-                <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelStyle={{ color: '#fff', fontWeight: 600 }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-                <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} formatter={(value) => value === 'Direct' ? `Direct (${directCount})` : `Property (${propertyCount})`} />
-                <Bar dataKey="direct" name="Direct" stackId="a" fill="#06B6D4" barSize={40} />
-                <Bar dataKey="property" name="Property" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="bg-amber-50 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                <Shield className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-amber-700">{stats?.teamRoles?.supervisors || 0}</p>
+                <p className="text-sm text-amber-600">Supervisors</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-teal-50 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
+                <Briefcase className="w-5 h-5 text-teal-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-teal-700">{stats?.teamRoles?.executives || 0}</p>
+                <p className="text-sm text-teal-600">Executives</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-indigo-50 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <MapPin className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-indigo-700">{stats?.zones || 0}</p>
+                <p className="text-sm text-indigo-600">Zones</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
