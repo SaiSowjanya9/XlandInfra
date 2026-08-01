@@ -47,6 +47,7 @@ const { startCleanupScheduler } = require('./utils/workOrderCleanup');
 const amcPackagesRouter = require('./routes/amcPackages');
 const estimatesSyncRouter = require('./routes/estimatesSync');
 const paymentsRouter = require('./routes/payments');
+const razorpayRouter = require('./routes/razorpay');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -153,6 +154,7 @@ app.use('/api/addons', addonsRouter);
 app.use('/api/amc-packages', amcPackagesRouter);
 app.use('/api/estimates-sync', estimatesSyncRouter);
 app.use('/api/payments', paymentsRouter);
+app.use('/api/razorpay', razorpayRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

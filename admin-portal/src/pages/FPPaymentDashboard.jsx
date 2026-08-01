@@ -136,6 +136,9 @@ const FPPaymentDashboard = ({ user }) => {
     ? ((stats.totalCollected / stats.totalInvoiceAmount) * 100).toFixed(1)
     : 0;
 
+  // Only these roles can edit/record payments
+  const canEdit = ['admin', 'operations_manager', 'franchise_partner', 'manager'].includes(user?.role);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -152,13 +155,15 @@ const FPPaymentDashboard = ({ user }) => {
             <RefreshCw className="w-4 h-4" />
             Refresh
           </button>
-          <button
-            onClick={() => navigate('/fp/payments/record')}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-white rounded-xl hover:bg-slate-800 transition-colors"
-          >
-            <CreditCard className="w-4 h-4" />
-            Record Payment
-          </button>
+          {canEdit && (
+            <button
+              onClick={() => navigate('/fp/payments/record')}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-white rounded-xl hover:bg-slate-800 transition-colors"
+            >
+              <CreditCard className="w-4 h-4" />
+              Record Payment
+            </button>
+          )}
         </div>
       </div>
 
@@ -300,13 +305,15 @@ const FPPaymentDashboard = ({ user }) => {
               <Clock className="w-5 h-5 text-purple-600" />
               <span className="text-sm font-medium text-gray-700">Payment History</span>
             </button>
-            <button
-              onClick={() => navigate('/fp/payments/invoices/create')}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
-            >
-              <CreditCard className="w-5 h-5 text-amber-600" />
-              <span className="text-sm font-medium text-gray-700">Create Invoice</span>
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => navigate('/fp/payments/invoices/create')}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
+              >
+                <CreditCard className="w-5 h-5 text-amber-600" />
+                <span className="text-sm font-medium text-gray-700">Create Invoice</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -354,12 +361,14 @@ const FPPaymentDashboard = ({ user }) => {
             <div className="text-center py-8 text-gray-500">
               <CreditCard className="w-12 h-12 mx-auto mb-3 text-gray-300" />
               <p>No recent payments</p>
-              <button
-                onClick={() => navigate('/fp/payments/record')}
-                className="mt-3 text-sm text-amber-600 hover:text-amber-700 font-medium"
-              >
-                Record your first payment
-              </button>
+              {canEdit && (
+                <button
+                  onClick={() => navigate('/fp/payments/record')}
+                  className="mt-3 text-sm text-amber-600 hover:text-amber-700 font-medium"
+                >
+                  Record your first payment
+                </button>
+              )}
             </div>
           )}
         </div>

@@ -17,6 +17,10 @@ import {
   Eye,
   XCircle,
   User,
+  ChevronDown,
+  X,
+  Home,
+  Hash,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
@@ -54,6 +58,7 @@ const FPPaymentHistory = ({ user }) => {
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [viewPayment, setViewPayment] = useState(null);
   const [toast, setToast] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   const token = getAuthToken();
 
@@ -137,13 +142,16 @@ const FPPaymentHistory = ({ user }) => {
     const exportData = payments.map(p => ({
       'Payment ID': p.paymentId,
       'Invoice ID': p.invoiceCode || '-',
+      'Estimate ID': p.estimateId || '-',
+      'Property ID': p.propertyCode || '-',
+      'Property Name': p.propertyName || '-',
       'Customer Name': p.customerName || '-',
-      'Amount': p.amount,
       'Payment Method': PAYMENT_METHOD_CONFIG[p.paymentMethod]?.label || p.paymentMethod,
-      'Transaction Ref': p.transactionReference || '-',
+      'Transaction Reference': p.transactionReference || '-',
+      'Amount Paid': p.amount,
       'Payment Date': formatDate(p.paymentDate),
-      'Status': STATUS_CONFIG[p.status]?.label || p.status,
       'Received By': p.receivedBy || '-',
+      'Payment Status': STATUS_CONFIG[p.status]?.label || p.status,
       'Remarks': p.remarks || '-'
     }));
 
@@ -162,6 +170,8 @@ const FPPaymentHistory = ({ user }) => {
     pending: payments.filter(p => p.status === 'pending').length
   };
 
+  const canEdit = ['admin', 'operations_manager', 'franchise_partner', 'manager'].includes(user?.role);
+
   return (
     <div className="space-y-6">
       {/* Toast */}
@@ -178,7 +188,7 @@ const FPPaymentHistory = ({ user }) => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Payment History</h1>
-          <p className="text-gray-500 mt-1">View all payment transactions</p>
+          <p className="text-gray-500 mt-1">Complete payment history for all invoices</p>
         </div>
         <div className="flex gap-3">
           <button
@@ -188,13 +198,15 @@ const FPPaymentHistory = ({ user }) => {
             <Download className="w-4 h-4" />
             Export
           </button>
-          <button
-            onClick={() => navigate('/fp/payments/record')}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors"
-          >
-            <IndianRupee className="w-4 h-4" />
-            Record Payment
-          </button>
+          {canEdit && (
+            <button
+              onClick={() => navigate('/fp/payments/record')}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors"
+            >
+              <IndianRupee className="w-4 h-4" />
+              Record Payment
+            </button>
+          )}
         </div>
       </div>
 
@@ -226,65 +238,91 @@ const FPPaymentHistory = ({ user }) => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by payment ID, customer, transaction ref..."
+              placeholder="Search by Payment ID, Customer, Transaction Ref..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400"
             />
           </div>
 
-          {/* Payment Method Filter */}
-          <select
-            value={methodFilter}
-            onChange={(e) => setMethodFilter(e.target.value)}
-            className="px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400"
+          {/* Filter Toggle */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-2 px-4 py-2.5 border rounded-xl transition-colors ${
+              showFilters ? 'bg-amber-50 border-amber-300 text-amber-700' : 'border-gray-200 hover:bg-gray-50'
+            }`}
           >
-            <option value="all">All Methods</option>
-            <option value="cash">Cash</option>
-            <option value="upi_manual">UPI (Manual)</option>
-            <option value="bank_transfer">Bank Transfer</option>
-            <option value="card_pos">Card/POS</option>
-          </select>
+            <Filter className="w-4 h-4" />
+            Filters
+            <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+          </button>
 
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400"
-          >
-            <option value="all">All Status</option>
-            <option value="completed">Completed</option>
-            <option value="pending">Pending</option>
-            <option value="failed">Failed</option>
-            <option value="refunded">Refunded</option>
-          </select>
-
-          {/* Date Range */}
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={dateRange.start}
-              onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-              className="px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400"
-              placeholder="Start Date"
-            />
-            <span className="text-gray-400">to</span>
-            <input
-              type="date"
-              value={dateRange.end}
-              onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-              className="px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400"
-              placeholder="End Date"
-            />
-          </div>
-
+          {/* Refresh */}
           <button
             onClick={fetchPayments}
-            className="p-2.5 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
           >
-            <RefreshCw className="w-5 h-5 text-gray-600" />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
           </button>
         </div>
+
+        {/* Expandable Filters */}
+        {showFilters && (
+          <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Payment Method Filter */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Payment Method</label>
+              <select
+                value={methodFilter}
+                onChange={(e) => setMethodFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400"
+              >
+                <option value="all">All Methods</option>
+                {Object.entries(PAYMENT_METHOD_CONFIG).map(([key, config]) => (
+                  <option key={key} value={key}>{config.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400"
+              >
+                <option value="all">All Status</option>
+                {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                  <option key={key} value={key}>{config.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Start Date */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">From Date</label>
+              <input
+                type="date"
+                value={dateRange.start}
+                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400"
+              />
+            </div>
+
+            {/* End Date */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">To Date</label>
+              <input
+                type="date"
+                value={dateRange.end}
+                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Payments Table */}
@@ -298,12 +336,6 @@ const FPPaymentHistory = ({ user }) => {
           <div className="text-center py-12">
             <Clock className="w-12 h-12 mx-auto mb-3 text-gray-300" />
             <p className="text-gray-500">No payment records found</p>
-            <button
-              onClick={() => navigate('/fp/payments/record')}
-              className="mt-4 text-amber-600 hover:text-amber-700 font-medium"
-            >
-              Record your first payment
-            </button>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -311,64 +343,78 @@ const FPPaymentHistory = ({ user }) => {
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Payment ID</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Invoice ID</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Property</th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Customer</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Invoice</th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Method</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Transaction Ref</th>
                   <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Amount</th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Date</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Received By</th>
                   <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
-                  <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Action</th>
+                  <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {payments.map(payment => {
-                  const methodConfig = PAYMENT_METHOD_CONFIG[payment.paymentMethod] || {
-                    label: payment.paymentMethod,
-                    icon: CreditCardIcon,
-                    color: 'bg-gray-100 text-gray-700'
-                  };
-                  const statusConfig = STATUS_CONFIG[payment.status] || STATUS_CONFIG.pending;
-                  const MethodIcon = methodConfig.icon;
+                  const methodConfig = PAYMENT_METHOD_CONFIG[payment.paymentMethod] || {};
+                  const statusConfig = STATUS_CONFIG[payment.status] || {};
+                  const MethodIcon = methodConfig.icon || CreditCardIcon;
 
                   return (
                     <tr key={payment.id} className="hover:bg-gray-50/50">
                       <td className="py-3 px-4">
                         <p className="font-medium text-gray-900">{payment.paymentId}</p>
+                        {payment.estimateId && (
+                          <p className="text-xs text-gray-500">Est: {payment.estimateId}</p>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <p className="text-gray-900">{payment.invoiceCode || '-'}</p>
+                      </td>
+                      <td className="py-3 px-4">
+                        <p className="text-gray-900">{payment.propertyCode || '-'}</p>
+                        {payment.propertyName && (
+                          <p className="text-xs text-gray-500 truncate max-w-[150px]">{payment.propertyName}</p>
+                        )}
                       </td>
                       <td className="py-3 px-4">
                         <p className="text-gray-900">{payment.customerName || '-'}</p>
                       </td>
                       <td className="py-3 px-4">
-                        <p className="text-blue-600 font-medium">{payment.invoiceCode || '-'}</p>
-                      </td>
-                      <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
-                          <div className={`w-7 h-7 ${methodConfig.color} rounded-lg flex items-center justify-center`}>
-                            <MethodIcon className="w-4 h-4" />
+                          <div className={`p-1.5 rounded-lg ${methodConfig.color || 'bg-gray-100'}`}>
+                            <MethodIcon className="w-3.5 h-3.5" />
                           </div>
-                          <div>
-                            <p className="text-sm text-gray-900">{methodConfig.label}</p>
-                            {payment.transactionReference && (
-                              <p className="text-xs text-gray-400">Ref: {payment.transactionReference}</p>
-                            )}
-                          </div>
+                          <span className="text-sm text-gray-700">{methodConfig.label || payment.paymentMethod}</span>
                         </div>
                       </td>
+                      <td className="py-3 px-4">
+                        <p className="text-gray-600 text-sm font-mono">
+                          {payment.transactionReference || '-'}
+                        </p>
+                      </td>
                       <td className="py-3 px-4 text-right">
-                        <p className="font-semibold text-green-600">{formatCurrency(payment.amount)}</p>
+                        <p className="font-semibold text-gray-900">{formatCurrency(payment.amount)}</p>
                       </td>
                       <td className="py-3 px-4">
                         <p className="text-gray-600">{formatDate(payment.paymentDate)}</p>
                       </td>
                       <td className="py-3 px-4">
+                        <p className="text-gray-900">{payment.receivedBy || '-'}</p>
+                        {payment.receivedByRole && (
+                          <p className="text-xs text-gray-500 capitalize">{payment.receivedByRole.replace('_', ' ')}</p>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
                         <div className="flex justify-center">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusConfig.color}`}>
-                            {statusConfig.label}
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusConfig.color || 'bg-gray-100'}`}>
+                            {statusConfig.label || payment.status}
                           </span>
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <div className="flex justify-center">
+                        <div className="flex items-center justify-center">
                           <button
                             onClick={() => setViewPayment(payment)}
                             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -387,96 +433,130 @@ const FPPaymentHistory = ({ user }) => {
         )}
       </div>
 
-      {/* Payment Detail Modal */}
+      {/* Payment Details Modal */}
       {viewPayment && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">{viewPayment.paymentId}</h2>
-                  <p className="text-sm text-gray-500 mt-1">Payment Details</p>
+                  <h2 className="text-xl font-bold text-gray-900">Payment Details</h2>
+                  <p className="text-gray-500">{viewPayment.paymentId}</p>
                 </div>
                 <button
                   onClick={() => setViewPayment(null)}
-                  className="p-2 hover:bg-gray-100 rounded-xl"
+                  className="p-2 hover:bg-gray-100 rounded-lg"
                 >
-                  <XCircle className="w-5 h-5 text-gray-400" />
+                  <X className="w-5 h-5 text-gray-500" />
                 </button>
               </div>
             </div>
-            <div className="p-6 space-y-4">
-              {/* Amount */}
-              <div className="bg-green-50 rounded-xl p-4 text-center">
-                <p className="text-sm text-green-600">Amount Paid</p>
-                <p className="text-3xl font-bold text-green-700 mt-1">
-                  {formatCurrency(viewPayment.amount)}
-                </p>
+
+            <div className="p-6 space-y-6">
+              {/* Amount & Status */}
+              <div className="bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl p-6 text-white">
+                <p className="text-amber-100 text-sm mb-1">Amount Paid</p>
+                <p className="text-3xl font-bold">{formatCurrency(viewPayment.amount)}</p>
+                <div className="mt-4 flex items-center gap-2">
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    viewPayment.status === 'completed' ? 'bg-white/20' : 'bg-white/10'
+                  }`}>
+                    {STATUS_CONFIG[viewPayment.status]?.label || viewPayment.status}
+                  </span>
+                </div>
               </div>
 
               {/* Details Grid */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Invoice</p>
-                  <p className="font-medium text-blue-600">{viewPayment.invoiceCode || '-'}</p>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500 uppercase mb-1">Payment ID</p>
+                  <p className="font-semibold text-gray-900">{viewPayment.paymentId}</p>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Customer</p>
-                  <p className="font-medium text-gray-900">{viewPayment.customerName || '-'}</p>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500 uppercase mb-1">Invoice ID</p>
+                  <p className="font-semibold text-gray-900">{viewPayment.invoiceCode || '-'}</p>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Payment Method</p>
-                  <p className="font-medium text-gray-900">
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500 uppercase mb-1">Estimate ID</p>
+                  <p className="font-semibold text-gray-900">{viewPayment.estimateId || '-'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500 uppercase mb-1">Property ID</p>
+                  <p className="font-semibold text-gray-900">{viewPayment.propertyCode || '-'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500 uppercase mb-1">Property Name</p>
+                  <p className="font-semibold text-gray-900">{viewPayment.propertyName || '-'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500 uppercase mb-1">Customer Name</p>
+                  <p className="font-semibold text-gray-900">{viewPayment.customerName || '-'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500 uppercase mb-1">Payment Method</p>
+                  <p className="font-semibold text-gray-900">
                     {PAYMENT_METHOD_CONFIG[viewPayment.paymentMethod]?.label || viewPayment.paymentMethod}
                   </p>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Payment Type</p>
-                  <p className="font-medium text-gray-900 capitalize">{viewPayment.paymentType}</p>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500 uppercase mb-1">Transaction Reference</p>
+                  <p className="font-semibold text-gray-900 font-mono">{viewPayment.transactionReference || '-'}</p>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Transaction Reference</p>
-                  <p className="font-medium text-gray-900">{viewPayment.transactionReference || '-'}</p>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500 uppercase mb-1">Payment Date</p>
+                  <p className="font-semibold text-gray-900">{formatDate(viewPayment.paymentDate)}</p>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Payment Date</p>
-                  <p className="font-medium text-gray-900">{formatDate(viewPayment.paymentDate)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Status</p>
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_CONFIG[viewPayment.status]?.color}`}>
-                    {STATUS_CONFIG[viewPayment.status]?.label}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Received By</p>
-                  <p className="font-medium text-gray-900">{viewPayment.receivedBy || '-'}</p>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500 uppercase mb-1">Received By</p>
+                  <p className="font-semibold text-gray-900">{viewPayment.receivedBy || '-'}</p>
+                  {viewPayment.receivedByRole && (
+                    <p className="text-xs text-gray-500 capitalize">{viewPayment.receivedByRole.replace('_', ' ')}</p>
+                  )}
                 </div>
               </div>
 
+              {/* Remarks */}
               {viewPayment.remarks && (
-                <div className="pt-4 border-t border-gray-100">
+                <div className="bg-gray-50 rounded-xl p-4">
                   <p className="text-xs text-gray-500 uppercase mb-1">Remarks</p>
-                  <p className="text-gray-700">{viewPayment.remarks}</p>
+                  <p className="text-gray-900">{viewPayment.remarks}</p>
                 </div>
               )}
 
+              {/* Payment Proof */}
               {viewPayment.paymentProofUrl && (
-                <div className="pt-4 border-t border-gray-100">
+                <div className="bg-gray-50 rounded-xl p-4">
                   <p className="text-xs text-gray-500 uppercase mb-2">Payment Proof</p>
                   <a
                     href={`${API_BASE}${viewPayment.paymentProofUrl}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-amber-600 hover:text-amber-700 font-medium text-sm"
+                    className="text-amber-600 hover:text-amber-700 font-medium"
                   >
                     View Attachment
                   </a>
                 </div>
               )}
 
-              <div className="pt-4 border-t border-gray-100 text-center text-xs text-gray-400">
-                Recorded on {formatDateTime(viewPayment.createdAt)}
+              {/* Actions */}
+              <div className="flex gap-3 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => setViewPayment(null)}
+                  className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50"
+                >
+                  Close
+                </button>
+                {viewPayment.invoiceCode && (
+                  <button
+                    onClick={() => {
+                      setViewPayment(null);
+                      navigate(`/fp/payments/invoices/${viewPayment.invoiceId}`);
+                    }}
+                    className="flex-1 px-4 py-2.5 bg-amber-600 text-white rounded-xl hover:bg-amber-700"
+                  >
+                    View Invoice
+                  </button>
+                )}
               </div>
             </div>
           </div>
