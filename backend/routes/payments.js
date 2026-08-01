@@ -286,6 +286,7 @@ router.get('/invoices', authenticate, canViewPayments, async (req, res) => {
         propertyId: i.property_id,
         propertyName: i.property_name || i.customer_name,
         propertyCode: i.property_code,
+        estimateId: i.estimate_id,
         customerId: i.customer_id,
         customerName: i.customer_name || i.client_name,
         customerEmail: i.customer_email,
@@ -677,7 +678,8 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
     const fpId = getFPScope(req);
     const {
       invoiceId, propertyId, estimateId, customerId, customerName,
-      amount, paymentMethod, transactionReference, paymentDate, remarks
+      amount, paymentMethod, transactionReference, paymentDate, remarks,
+      receivedBy, paymentStatus
     } = req.body;
 
     // Validate required fields
@@ -718,6 +720,9 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
     // Get payment proof URL if uploaded
     const paymentProofUrl = req.file ? `/uploads/payments/${req.file.filename}` : null;
 
+    // Determine received by name - use provided value or default to current user
+    const receivedByName = receivedBy || `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.username;
+
     // Insert payment record
     const [result] = await connection.execute(`
       INSERT INTO payments (
@@ -742,7 +747,7 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
       paymentProofUrl,
       'completed',
       req.user.id,
-      `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.username,
+      receivedByName,
       req.user.role,
       remarks || null
     ]);
