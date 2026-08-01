@@ -3,7 +3,7 @@ const router = express.Router();
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
-const pool = require('../db');
+const { pool } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 
 // Environment variables for Razorpay
