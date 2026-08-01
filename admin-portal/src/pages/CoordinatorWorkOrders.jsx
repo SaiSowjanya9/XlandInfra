@@ -1235,6 +1235,7 @@ const CoordinatorWorkOrders = ({ user }) => {
             <option value="assigned">Assigned</option>
             <option value="in_progress">In Progress</option>
             <option value="completed">Completed</option>
+            <option value="closed">Closed</option>
             <option value="cancelled">Cancelled</option>
           </select>
           <button
@@ -1306,6 +1307,7 @@ const CoordinatorWorkOrders = ({ user }) => {
                           <option value="assigned" className="bg-white text-gray-900">Assigned</option>
                           <option value="in_progress" className="bg-white text-gray-900">In Progress</option>
                           <option value="completed" className="bg-white text-gray-900">Completed</option>
+                          <option value="closed" className="bg-white text-gray-900">Closed</option>
                           <option value="cancelled" className="bg-white text-gray-900">Cancelled</option>
                         </select>
                         <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
@@ -2132,6 +2134,7 @@ const CoordinatorWorkOrders = ({ user }) => {
                     <option value="assigned">Assigned</option>
                     <option value="in_progress">In Progress</option>
                     <option value="completed">Completed</option>
+                    <option value="closed">Closed</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
