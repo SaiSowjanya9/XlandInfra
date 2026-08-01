@@ -213,38 +213,21 @@ const Dashboard = () => {
   const hasData = stats !== null;
   const hasRevenue = stats?.revenue || stats?.amcCollection || stats?.pendingCollection;
 
-  // KPI Cards - show 0 if no data, not dash
-  const kpiCards = [
-    { 
-      title: 'Properties',
-      value: stats?.totalProperties ?? stats?.properties ?? 0,
-      icon: Building2,
-      path: '/employee/customer-submissions'
-    },
-    { 
-      title: 'Vendors',
-      value: stats?.totalVendors ?? stats?.vendors ?? 0,
-      icon: Wrench,
-      path: '/employee/assigned-vendors'
-    },
-    { 
-      title: 'Employees',
-      value: stats?.totalEmployees ?? stats?.customers ?? 0,
-      icon: Users,
-      path: '/employee/employee-details'
-    },
-  ];
-
-  // Pie chart data
+  // Pie chart data - use consistent data source
   const workOrdersByStatus = stats?.workOrdersByStatus || {};
+  const pendingWO = Number(stats?.pendingWorkOrders) || Number(workOrdersByStatus.pending) || 0;
+  const inProgressWO = Number(workOrdersByStatus.in_progress) || 0;
+  const completedWO = Number(stats?.completedWorkOrders) || (Number(workOrdersByStatus.completed || 0) + Number(workOrdersByStatus.closed || 0));
+  const pieTotal = pendingWO + inProgressWO + completedWO;
+  
   const pieData = [
-    { name: 'Pending', value: workOrdersByStatus.pending || stats?.pendingWorkOrders || 0, color: '#F59E0B' },
-    { name: 'In Progress', value: workOrdersByStatus.in_progress || 0, color: '#3B82F6' },
-    { name: 'Completed', value: (workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0) || stats?.completedWorkOrders || 0, color: '#10B981' },
+    { name: 'Pending', value: pendingWO, color: '#F59E0B' },
+    { name: 'In Progress', value: inProgressWO, color: '#3B82F6' },
+    { name: 'Completed', value: completedWO, color: '#10B981' },
   ].filter(item => item.value > 0);
 
-  const totalWorkOrders = (stats?.pendingWorkOrders || 0) + (stats?.completedWorkOrders || 0);
-  const totalForPercentage = pieData.reduce((sum, item) => sum + item.value, 0) || 1;
+  const totalWorkOrders = pieTotal || stats?.totalWorkOrders || 0;
+  const totalForPercentage = pieTotal || 1;
 
   // Stacked bar chart data - Property types with Direct vs Property-based breakdown
   const est = stats?.estimatesByPropertyType || {};
@@ -542,135 +525,214 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* First Stats Row - KPI Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {kpiCards.map((card, index) => {
-            const Icon = card.icon;
-            return (
-              <div 
-                key={index}
-                onClick={() => navigate(card.path)}
-                className="bg-white rounded-xl p-4 border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 rounded-lg bg-gray-50">
-                    <Icon className="w-4 h-4 text-gray-500" />
-                  </div>
-                </div>
-                <p className="text-2xl font-semibold text-gray-800">
-                  {card.value.toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-500 mt-0.5">{card.title}</p>
+        {/* First Stats Row - 4 KPI Cards like FP Portal */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div 
+            onClick={() => navigate('/employee/customer-submissions')}
+            className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Building2 className="w-6 h-6 text-blue-600" />
               </div>
-            );
-          })}
+              <div>
+                <p className="text-sm text-gray-500">Properties</p>
+                <p className="text-2xl font-bold text-gray-900">{stats?.totalProperties ?? 0}</p>
+                <p className="text-xs text-gray-400">Total Properties</p>
+              </div>
+            </div>
+          </div>
+
+          <div 
+            onClick={() => navigate('/employee/assigned-vendors')}
+            className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Wrench className="w-6 h-6 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Vendors</p>
+                <p className="text-2xl font-bold text-gray-900">{stats?.totalVendors ?? 0}</p>
+                <p className="text-xs text-gray-400">Total Vendors</p>
+              </div>
+            </div>
+          </div>
+
+          <div 
+            onClick={() => navigate('/employee/employee-details')}
+            className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-amber-200 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Users className="w-6 h-6 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Employees</p>
+                <p className="text-2xl font-bold text-gray-900">{stats?.totalEmployees ?? 0}</p>
+                <p className="text-xs text-gray-400">Total Employees</p>
+              </div>
+            </div>
+          </div>
+
+          <div 
+            onClick={() => navigate('/employee/work-orders')}
+            className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-indigo-200 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <ClipboardList className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Total Work Orders</p>
+                <p className="text-2xl font-bold text-gray-900">{totalWorkOrders}</p>
+                <p className="text-xs text-gray-400">All Work Orders</p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Work Orders Overview - Full Width */}
-        <div className="bg-white rounded-xl border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Work Orders Overview</h2>
-            <button onClick={() => navigate('/employee/work-orders')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
-              View All <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-          
-          <div className="flex items-center justify-center lg:justify-start gap-12 flex-wrap">
-            {/* Pie Chart */}
-            <div className="relative w-48 h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={80}
-                    paddingAngle={pieData.length > 1 ? 3 : 0}
-                    dataKey="value"
-                  >
-                    {(pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <p className="text-3xl font-bold text-gray-900">{totalWorkOrders}</p>
+        {/* Estimates Overview + Work Orders Overview - Side by Side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Estimates Overview - Bar Chart */}
+          <div className="bg-white rounded-xl border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Estimates Overview</h2>
+              <button onClick={() => navigate('/employee/estimates/list')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                View All <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="flex items-center gap-6">
+              <div className="text-center">
+                <p className="text-3xl font-bold text-gray-900">{totalEstimates}</p>
                 <p className="text-sm text-gray-500">Total</p>
               </div>
+              <div className="flex-1 h-48 min-w-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stackedBarData} margin={{ top: 20, right: 10, bottom: 20, left: 10 }}>
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
+                    <YAxis hide />
+                    <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelStyle={{ color: '#fff', fontWeight: 600 }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+                    <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} formatter={(value) => value === 'Direct' ? `Direct (${directCount})` : `Property (${propertyCount})`} />
+                    <Bar dataKey="direct" name="Direct" stackId="a" fill="#06B6D4" barSize={40} />
+                    <Bar dataKey="property" name="Property" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
+          </div>
 
-            {/* Legend */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between min-w-[200px]">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-amber-500"></span>
-                  <span className="text-sm text-gray-600">Pending</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-semibold text-gray-900">{workOrdersByStatus.pending || stats?.pendingWorkOrders || 0}</span>
-                  <span className="text-sm text-gray-500 w-12 text-right">
-                    {totalForPercentage > 0 ? Math.round(((workOrdersByStatus.pending || stats?.pendingWorkOrders || 0) / totalForPercentage) * 100) : 0}%
-                  </span>
+          {/* Work Orders Overview - Pie Chart */}
+          <div className="bg-white rounded-xl border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Work Orders Overview</h2>
+              <button onClick={() => navigate('/employee/work-orders')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                View All <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div className="relative w-48 h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={80}
+                      paddingAngle={pieData.length > 1 ? 3 : 0}
+                      dataKey="value"
+                    >
+                      {(pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <p className="text-3xl font-bold text-gray-900">{totalWorkOrders}</p>
+                  <p className="text-sm text-gray-500">Total</p>
                 </div>
               </div>
-              <div className="flex items-center justify-between min-w-[200px]">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                  <span className="text-sm text-gray-600">In Progress</span>
+
+              <div className="flex-1 ml-8 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-amber-500"></span>
+                    <span className="text-sm text-gray-600">Pending</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-semibold text-gray-900">{pendingWO}</span>
+                    <span className="text-sm text-gray-500 w-12 text-right">
+                      {totalForPercentage > 0 ? Math.round((pendingWO / totalForPercentage) * 100) : 0}%
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-semibold text-gray-900">{workOrdersByStatus.in_progress || 0}</span>
-                  <span className="text-sm text-gray-500 w-12 text-right">
-                    {totalForPercentage > 0 ? Math.round(((workOrdersByStatus.in_progress || 0) / totalForPercentage) * 100) : 0}%
-                  </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                    <span className="text-sm text-gray-600">In Progress</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-semibold text-gray-900">{inProgressWO}</span>
+                    <span className="text-sm text-gray-500 w-12 text-right">
+                      {totalForPercentage > 0 ? Math.round((inProgressWO / totalForPercentage) * 100) : 0}%
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center justify-between min-w-[200px]">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                  <span className="text-sm text-gray-600">Completed</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-semibold text-gray-900">{(workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0) || stats?.completedWorkOrders || 0}</span>
-                  <span className="text-sm text-gray-500 w-12 text-right">
-                    {totalForPercentage > 0 ? Math.round((((workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0) || stats?.completedWorkOrders || 0) / totalForPercentage) * 100) : 0}%
-                  </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
+                    <span className="text-sm text-gray-600">Completed</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-semibold text-gray-900">{completedWO}</span>
+                    <span className="text-sm text-gray-500 w-12 text-right">
+                      {totalForPercentage > 0 ? Math.round((completedWO / totalForPercentage) * 100) : 0}%
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Estimates Overview */}
-        <div className="bg-white rounded-xl border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Estimates Overview</h2>
-            <button onClick={() => navigate('/employee/estimates/list')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
-              View All <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-          
-          <div className="flex items-center gap-8 flex-wrap">
-            <div className="text-center min-w-[120px]">
-              <p className="text-3xl font-bold text-gray-900">{totalEstimates}</p>
-              <p className="text-sm text-gray-500">Total Estimates</p>
+        {/* Franchise Partners Section - Only show in Admin (All FPs) mode */}
+        {selectedFp.id === 'all' && fpList.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-100 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Franchise Partners</h2>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {fpList.slice(0, 4).map((fp, index) => {
+                const colors = [
+                  { bg: 'bg-indigo-50', text: 'text-indigo-700', iconBg: 'bg-indigo-100', iconText: 'text-indigo-600' },
+                  { bg: 'bg-purple-50', text: 'text-purple-700', iconBg: 'bg-purple-100', iconText: 'text-purple-600' },
+                  { bg: 'bg-amber-50', text: 'text-amber-700', iconBg: 'bg-amber-100', iconText: 'text-amber-600' },
+                  { bg: 'bg-teal-50', text: 'text-teal-700', iconBg: 'bg-teal-100', iconText: 'text-teal-600' },
+                ];
+                const color = colors[index % 4];
+                return (
+                  <div 
+                    key={fp.id}
+                    onClick={() => selectFp(fp)}
+                    className={`${color.bg} rounded-xl p-4 cursor-pointer hover:shadow-md transition-all`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 ${color.iconBg} rounded-lg flex items-center justify-center`}>
+                        <Building2 className={`w-5 h-5 ${color.iconText}`} />
+                      </div>
+                      <div>
+                        <p className={`text-lg font-bold ${color.text}`}>{fp.fpId}</p>
+                        <p className={`text-sm ${color.text} opacity-80`}>{fp.companyName?.substring(0, 15) || 'Franchise Partner'}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div className="flex-1 h-48 min-w-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stackedBarData} margin={{ top: 20, right: 10, bottom: 20, left: 10 }}>
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
-                  <YAxis hide />
-                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelStyle={{ color: '#fff', fontWeight: 600 }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-                  <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} formatter={(value) => value === 'Direct' ? `Direct (${directCount})` : `Property (${propertyCount})`} />
-                  <Bar dataKey="direct" name="Direct" stackId="a" fill="#06B6D4" barSize={40} />
-                  <Bar dataKey="property" name="Property" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
           </div>
-        </div>
+        )}
 
         {/* Revenue Overview - Only show if data exists */}
         {hasRevenue && (
@@ -782,26 +844,73 @@ const Dashboard = () => {
 
         </div>
 
-        {/* Quick Actions - Full Width */}
-        <div className="bg-white rounded-xl p-5 border border-gray-100">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-medium text-gray-800">Quick Actions</h3>
-            <Settings className="w-4 h-4 text-gray-400" />
-          </div>
-          <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
-            {quickActions.map((action, index) => {
-              const Icon = action.icon;
-              return (
-                <button
-                  key={index}
-                  onClick={() => navigate(action.path)}
-                  className="flex flex-col items-center justify-center p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
-                >
-                  <Icon className="w-5 h-5 text-gray-500 mb-2" />
-                  <span className="text-xs text-gray-600 text-center">{action.label}</span>
-                </button>
-              );
-            })}
+        {/* Quick Actions */}
+        <div className="bg-white rounded-xl border border-gray-100 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <button
+              onClick={() => navigate('/employee/work-orders')}
+              className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                  <ClipboardList className="w-5 h-5 text-indigo-600" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-gray-900">View Work Orders</p>
+                  <p className="text-xs text-gray-500">Manage all work orders</p>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
+            </button>
+
+            <button
+              onClick={() => navigate('/employee/estimates/list')}
+              className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-teal-600" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-gray-900">View Estimates</p>
+                  <p className="text-xs text-gray-500">Manage all estimates</p>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
+            </button>
+
+            <button
+              onClick={() => navigate('/employee/customer-submissions')}
+              className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-gray-900">View Properties</p>
+                  <p className="text-xs text-gray-500">Manage all properties</p>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
+            </button>
+
+            <button
+              onClick={() => navigate('/employee/assigned-vendors')}
+              className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                  <Wrench className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-gray-900">View Vendors</p>
+                  <p className="text-xs text-gray-500">Manage all vendors</p>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
+            </button>
           </div>
         </div>
       </div>
