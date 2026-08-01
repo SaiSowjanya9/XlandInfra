@@ -2,17 +2,58 @@
 -- Version 18: Enhanced Razorpay Payment Link Support
 
 -- Add Razorpay payment link fields to invoices table
-ALTER TABLE invoices
-  ADD COLUMN IF NOT EXISTS razorpay_payment_link_id VARCHAR(100) AFTER payment_link_expires_at,
-  ADD COLUMN IF NOT EXISTS razorpay_short_url VARCHAR(255) AFTER razorpay_payment_link_id,
-  ADD COLUMN IF NOT EXISTS payment_link_status ENUM('created', 'sent', 'paid', 'expired', 'cancelled') DEFAULT NULL AFTER razorpay_short_url,
-  ADD COLUMN IF NOT EXISTS payment_link_sent_via VARCHAR(50) AFTER payment_link_status,
-  ADD COLUMN IF NOT EXISTS payment_link_sent_at DATETIME AFTER payment_link_sent_via;
+-- Note: Run these ALTER statements one by one if column already exists errors occur
 
--- Add indexes for Razorpay fields
-ALTER TABLE invoices
-  ADD INDEX IF NOT EXISTS idx_razorpay_link_id (razorpay_payment_link_id),
-  ADD INDEX IF NOT EXISTS idx_payment_link_status (payment_link_status);
+-- Check and add columns (ignore errors if column already exists)
+SET @sql = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'invoices' AND COLUMN_NAME = 'razorpay_payment_link_id') = 0,
+  'ALTER TABLE invoices ADD COLUMN razorpay_payment_link_id VARCHAR(100)',
+  'SELECT 1'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'invoices' AND COLUMN_NAME = 'razorpay_short_url') = 0,
+  'ALTER TABLE invoices ADD COLUMN razorpay_short_url VARCHAR(255)',
+  'SELECT 1'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'invoices' AND COLUMN_NAME = 'payment_link_status') = 0,
+  "ALTER TABLE invoices ADD COLUMN payment_link_status ENUM('created', 'sent', 'paid', 'expired', 'cancelled') DEFAULT NULL",
+  'SELECT 1'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'invoices' AND COLUMN_NAME = 'payment_link_sent_via') = 0,
+  'ALTER TABLE invoices ADD COLUMN payment_link_sent_via VARCHAR(50)',
+  'SELECT 1'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'invoices' AND COLUMN_NAME = 'payment_link_sent_at') = 0,
+  'ALTER TABLE invoices ADD COLUMN payment_link_sent_at DATETIME',
+  'SELECT 1'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add indexes (will fail silently if already exists)
+-- Run separately if needed:
+-- CREATE INDEX idx_razorpay_link_id ON invoices(razorpay_payment_link_id);
+-- CREATE INDEX idx_payment_link_status ON invoices(payment_link_status);
 
 -- Add Razorpay webhook logs table for debugging and audit
 CREATE TABLE IF NOT EXISTS razorpay_webhooks (
