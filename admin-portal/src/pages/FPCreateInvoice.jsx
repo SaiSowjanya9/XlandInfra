@@ -146,9 +146,9 @@ const FPCreateInvoice = ({ user }) => {
     setSelectedProperty(property);
     setFormData(prev => ({
       ...prev,
-      customerName: property.customer_name || property.client_name || property.contact_person || '',
-      customerEmail: property.customer_email || property.email || '',
-      customerPhone: property.customer_phone || property.phone || property.contact_number || ''
+      customerName: property.customer_name || property.client_name || property.contact_person || property.name || '',
+      customerEmail: property.customer_email || property.contact_email || property.email || '',
+      customerPhone: property.customer_phone || property.contact_phone || property.phone || property.contact_number || ''
     }));
     setShowPropertySearch(false);
   };

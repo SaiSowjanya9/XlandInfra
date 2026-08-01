@@ -1634,18 +1634,22 @@ const FPWorkOrders = ({ user }) => {
 
             <div className="p-6 space-y-4">
               {/* Customer Information */}
-              <div className="grid grid-cols-3 gap-4 bg-gray-50 rounded-lg p-4">
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Customer Name</p>
-                  <p className="font-medium text-gray-900">{selectedWorkOrder.customer_name || [selectedWorkOrder.first_name, selectedWorkOrder.last_name].filter(Boolean).join(' ') || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Email</p>
-                  <p className="font-medium text-gray-900 text-sm break-all">{selectedWorkOrder.customer_email || selectedWorkOrder.email || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Phone</p>
-                  <p className="font-medium text-gray-900">{selectedWorkOrder.customer_phone || selectedWorkOrder.phone || 'N/A'}</p>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Customer Name</p>
+                    <p className="font-medium text-gray-900 mt-1">{selectedWorkOrder.customer_name || [selectedWorkOrder.first_name, selectedWorkOrder.last_name].filter(Boolean).join(' ') || 'N/A'}</p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Email</p>
+                    <p className="font-medium text-gray-900 mt-1 text-sm truncate" title={selectedWorkOrder.customer_email || selectedWorkOrder.email || 'N/A'}>
+                      {selectedWorkOrder.customer_email || selectedWorkOrder.email || 'N/A'}
+                    </p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Phone</p>
+                    <p className="font-medium text-gray-900 mt-1">{selectedWorkOrder.customer_phone || selectedWorkOrder.phone || 'N/A'}</p>
+                  </div>
                 </div>
               </div>
 

@@ -1075,18 +1075,22 @@ const WorkOrders = ({ admin }) => {
 
             <div className="p-6 space-y-4">
               {/* Customer Information */}
-              <div className="grid grid-cols-3 gap-4 bg-gray-50 rounded-lg p-4">
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Customer Name</p>
-                  <p className="font-medium text-gray-900">{selectedOrder.customer_name || [selectedOrder.first_name, selectedOrder.last_name].filter(Boolean).join(' ') || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Email</p>
-                  <p className="font-medium text-gray-900 text-sm break-all">{selectedOrder.customer_email || selectedOrder.email || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Phone</p>
-                  <p className="font-medium text-gray-900">{selectedOrder.customer_phone || selectedOrder.phone || 'N/A'}</p>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Customer Name</p>
+                    <p className="font-medium text-gray-900 mt-1">{selectedOrder.customer_name || [selectedOrder.first_name, selectedOrder.last_name].filter(Boolean).join(' ') || 'N/A'}</p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Email</p>
+                    <p className="font-medium text-gray-900 mt-1 text-sm truncate" title={selectedOrder.customer_email || selectedOrder.email || 'N/A'}>
+                      {selectedOrder.customer_email || selectedOrder.email || 'N/A'}
+                    </p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Phone</p>
+                    <p className="font-medium text-gray-900 mt-1">{selectedOrder.customer_phone || selectedOrder.phone || 'N/A'}</p>
+                  </div>
                 </div>
               </div>
 

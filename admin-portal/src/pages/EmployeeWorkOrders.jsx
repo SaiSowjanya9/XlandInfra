@@ -1624,14 +1624,16 @@ const EmployeeWorkOrders = ({ admin }) => {
               </div>
 
               {/* Customer/Resident Details */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-lg p-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-lg p-3 min-w-0">
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Customer Name</p>
                   <p className="font-medium text-gray-900 mt-1">{selectedOrder.customer_name || [selectedOrder.first_name, selectedOrder.last_name].filter(Boolean).join(' ') || 'N/A'}</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
+                <div className="bg-gray-50 rounded-lg p-3 min-w-0">
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Email</p>
-                  <p className="font-medium text-gray-900 mt-1">{selectedOrder.customer_email || selectedOrder.email || 'N/A'}</p>
+                  <p className="font-medium text-gray-900 mt-1 text-sm truncate" title={selectedOrder.customer_email || selectedOrder.email || 'N/A'}>
+                    {selectedOrder.customer_email || selectedOrder.email || 'N/A'}
+                  </p>
                 </div>
               </div>
 
