@@ -226,6 +226,15 @@ const FPDashboard = ({ user }) => {
   
   const totalEstimates = directCount + propertyCount;
 
+  // Estimates by status data
+  const estStatus = stats?.estimatesByStatus || {};
+  const statusData = [
+    { name: 'Draft', direct: estStatus.direct_draft || 0, property: estStatus.prop_draft || 0, color: '#6B7280' },
+    { name: 'Sent', direct: estStatus.direct_sent || 0, property: estStatus.prop_sent || 0, color: '#3B82F6' },
+    { name: 'Approved', direct: estStatus.direct_approved || 0, property: estStatus.prop_approved || 0, color: '#10B981' },
+    { name: 'Rejected', direct: estStatus.direct_rejected || 0, property: estStatus.prop_rejected || 0, color: '#EF4444' },
+  ];
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -418,10 +427,10 @@ const FPDashboard = ({ user }) => {
         </Link>
       </div>
 
-      {/* Estimates Overview + Work Orders Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Estimates Overview - Vertical Bar Chart */}
-        <div className="bg-white rounded-xl border border-gray-100 p-6">
+      {/* Combined Estimates + Work Orders Overview Box */}
+      <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-6">
+        {/* Estimates Overview Section */}
+        <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Estimates Overview</h2>
             <Link to="/fp/estimates" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
@@ -429,42 +438,62 @@ const FPDashboard = ({ user }) => {
             </Link>
           </div>
           
-          <div className="flex items-center gap-6">
-            {/* Total Count */}
-            <div className="text-center">
-              <p className="text-3xl font-bold text-gray-900">{totalEstimates}</p>
-              <p className="text-sm text-gray-500">Total</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Half - Property Type Bar Chart */}
+            <div className="flex items-center gap-4">
+              <div className="text-center">
+                <p className="text-3xl font-bold text-gray-900">{totalEstimates}</p>
+                <p className="text-sm text-gray-500">Total</p>
+              </div>
+              <div className="flex-1 h-44">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stackedBarData} margin={{ top: 20, right: 10, bottom: 20, left: 10 }}>
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
+                    <YAxis hide />
+                    <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelStyle={{ color: '#fff', fontWeight: 600 }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+                    <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} formatter={(value) => value === 'Direct' ? `Direct (${directCount})` : `Property (${propertyCount})`} />
+                    <Bar dataKey="direct" name="Direct" stackId="a" fill="#06B6D4" barSize={40} />
+                    <Bar dataKey="property" name="Property" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
-            {/* Stacked Bar Chart - Property types with Direct vs Property-based */}
-            <div className="flex-1" style={{ height: 200 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stackedBarData} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
-                  <YAxis hide />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
-                    labelStyle={{ color: '#fff', fontWeight: 600 }}
-                    itemStyle={{ color: '#fff' }}
-                    cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                  />
-                  <Legend 
-                    verticalAlign="top" 
-                    height={24}
-                    iconSize={10}
-                    wrapperStyle={{ fontSize: '11px' }}
-                    formatter={(value) => value === 'Direct' ? `Direct (${directCount})` : `Property (${propertyCount})`}
-                  />
-                  <Bar dataKey="direct" name="Direct" stackId="a" fill="#06B6D4" barSize={40} />
-                  <Bar dataKey="property" name="Property" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
-                </BarChart>
-              </ResponsiveContainer>
+            {/* Right Half - Status Breakdown */}
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <div className="grid grid-cols-2 gap-3">
+                  {statusData.map((status) => (
+                    <div key={status.name} className="bg-gray-50 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: status.color }}></span>
+                        <span className="text-sm font-medium text-gray-700">{status.name}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <div className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-sm bg-cyan-500"></span>
+                          <span className="text-gray-600">Direct:</span>
+                          <span className="font-semibold text-gray-900">{status.direct}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-sm bg-purple-500"></span>
+                          <span className="text-gray-600">Property:</span>
+                          <span className="font-semibold text-gray-900">{status.property}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Work Orders Overview - Pie Chart */}
-        <div className="bg-white rounded-xl border border-gray-100 p-6">
+        {/* Divider */}
+        <div className="border-t border-gray-100"></div>
+
+        {/* Work Orders Overview Section */}
+        <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Work Orders Overview</h2>
             <Link to="/fp/work-orders" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
@@ -475,7 +504,6 @@ const FPDashboard = ({ user }) => {
           <div className="flex items-center justify-center gap-8">
             {/* Pie Chart - Using SVG directly for reliability */}
             {(() => {
-              // Get all status counts
               const pending = Number(workOrdersByStatus.pending) || 0;
               const assigned = Number(workOrdersByStatus.assigned) || 0;
               const inProgress = Number(workOrdersByStatus.in_progress) || 0;
@@ -483,11 +511,10 @@ const FPDashboard = ({ user }) => {
               const closed = Number(workOrdersByStatus.closed) || 0;
               const cancelled = Number(workOrdersByStatus.cancelled) || 0;
               
-              const circumference = 2 * Math.PI * 70; // ~440
+              const circumference = 2 * Math.PI * 60;
               const pieTotal = totalWorkOrders || (pending + assigned + inProgress + completed + closed + cancelled);
               const segmentTotal = pending + assigned + inProgress + completed + closed + cancelled || 1;
               
-              // Calculate segment lengths based on proportions
               const pendingLen = (pending / segmentTotal) * circumference;
               const assignedLen = (assigned / segmentTotal) * circumference;
               const inProgressLen = (inProgress / segmentTotal) * circumference;
@@ -495,7 +522,6 @@ const FPDashboard = ({ user }) => {
               const closedLen = (closed / segmentTotal) * circumference;
               const cancelledLen = (cancelled / segmentTotal) * circumference;
               
-              // Calculate cumulative offsets for each segment
               let offset = 0;
               const segments = [
                 { len: pendingLen, color: '#F59E0B', show: pending > 0 },
@@ -507,75 +533,73 @@ const FPDashboard = ({ user }) => {
               ];
               
               return (
-                <div style={{ width: 180, height: 180 }}>
-                  <svg viewBox="0 0 180 180" width="180" height="180">
+                <div style={{ width: 160, height: 160 }}>
+                  <svg viewBox="0 0 160 160" width="160" height="160">
                     {segments.map((seg, idx) => {
                       if (!seg.show) return null;
                       const currentOffset = offset;
                       offset += seg.len;
                       return (
-                        <circle key={idx} cx="90" cy="90" r="70" fill="none" stroke={seg.color} strokeWidth="20"
+                        <circle key={idx} cx="80" cy="80" r="60" fill="none" stroke={seg.color} strokeWidth="16"
                           strokeDasharray={`${seg.len} ${circumference}`}
                           strokeDashoffset={-currentOffset}
-                          transform="rotate(-90 90 90)"
+                          transform="rotate(-90 80 80)"
                         />
                       );
                     })}
-                    {/* Gray background if no data */}
                     {pieTotal === 0 && (
-                      <circle cx="90" cy="90" r="70" fill="none" stroke="#E5E7EB" strokeWidth="20" />
+                      <circle cx="80" cy="80" r="60" fill="none" stroke="#E5E7EB" strokeWidth="16" />
                     )}
-                    {/* Center text */}
-                    <text x="90" y="85" textAnchor="middle" fill="#111827" style={{ fontSize: '28px', fontWeight: 700 }}>{pieTotal}</text>
-                    <text x="90" y="105" textAnchor="middle" fill="#6B7280" style={{ fontSize: '12px' }}>Total</text>
+                    <text x="80" y="75" textAnchor="middle" fill="#111827" style={{ fontSize: '24px', fontWeight: 700 }}>{pieTotal}</text>
+                    <text x="80" y="95" textAnchor="middle" fill="#6B7280" style={{ fontSize: '11px' }}>Total</text>
                   </svg>
                 </div>
               );
             })()}
 
-            {/* Legend - All 6 statuses */}
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-              <div className="flex items-center justify-between gap-4">
+            {/* Legend - All 6 statuses in grid */}
+            <div className="grid grid-cols-3 gap-x-6 gap-y-2">
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-amber-500"></span>
-                  <span className="text-sm text-gray-600">Pending</span>
+                  <span className="text-xs text-gray-600">Pending</span>
                 </div>
-                <span className="text-sm font-bold text-gray-900">{workOrdersByStatus.pending || 0}</span>
+                <span className="text-xs font-semibold text-gray-900">{workOrdersByStatus.pending || 0}</span>
               </div>
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                  <span className="text-sm text-gray-600">Assigned</span>
+                  <span className="text-xs text-gray-600">Assigned</span>
                 </div>
-                <span className="text-sm font-bold text-gray-900">{workOrdersByStatus.assigned || 0}</span>
+                <span className="text-xs font-semibold text-gray-900">{workOrdersByStatus.assigned || 0}</span>
               </div>
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-purple-500"></span>
-                  <span className="text-sm text-gray-600">In Progress</span>
+                  <span className="text-xs text-gray-600">In Progress</span>
                 </div>
-                <span className="text-sm font-bold text-gray-900">{workOrdersByStatus.in_progress || 0}</span>
+                <span className="text-xs font-semibold text-gray-900">{workOrdersByStatus.in_progress || 0}</span>
               </div>
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                  <span className="text-sm text-gray-600">Completed</span>
+                  <span className="text-xs text-gray-600">Completed</span>
                 </div>
-                <span className="text-sm font-bold text-gray-900">{workOrdersByStatus.completed || 0}</span>
+                <span className="text-xs font-semibold text-gray-900">{workOrdersByStatus.completed || 0}</span>
               </div>
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-gray-500"></span>
-                  <span className="text-sm text-gray-600">Closed</span>
+                  <span className="text-xs text-gray-600">Closed</span>
                 </div>
-                <span className="text-sm font-bold text-gray-900">{workOrdersByStatus.closed || 0}</span>
+                <span className="text-xs font-semibold text-gray-900">{workOrdersByStatus.closed || 0}</span>
               </div>
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-red-500"></span>
-                  <span className="text-sm text-gray-600">Cancelled</span>
+                  <span className="text-xs text-gray-600">Cancelled</span>
                 </div>
-                <span className="text-sm font-bold text-gray-900">{workOrdersByStatus.cancelled || 0}</span>
+                <span className="text-xs font-semibold text-gray-900">{workOrdersByStatus.cancelled || 0}</span>
               </div>
             </div>
           </div>
