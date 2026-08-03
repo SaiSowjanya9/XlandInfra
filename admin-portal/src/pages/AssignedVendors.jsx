@@ -321,16 +321,17 @@ const AssignedVendors = ({ user }) => {
 
   // Filter service assignments
   const filteredServiceAssignments = serviceAssignments.filter(a => {
+    if (!a) return false;
     if (searchTerm) {
-      const q = searchTerm.toLowerCase();
-      // Get property code - handle both camelCase and snake_case
-      const propCode = (a.property_code || a.propertyCode || '').toLowerCase();
-      const propId = (a.property_id || a.propertyId || '').toLowerCase();
-      const vendorIdValue = (a.vendor_id || a.vendorId || '').toLowerCase();
-      const vendorName = (a.vendor_name || a.vendorName || a.owner_name || a.ownerName || '').toLowerCase();
-      const propName = (a.property_name || a.propertyName || '').toLowerCase();
-      const serviceType = (a.service_type || a.serviceType || '').toLowerCase();
-      const estimateId = (a.estimate_id || a.estimateId || '').toLowerCase();
+      const q = (searchTerm || '').toLowerCase();
+      // Get property code - handle both camelCase and snake_case with safe null checks
+      const propCode = String(a.property_code || a.propertyCode || '').toLowerCase();
+      const propId = String(a.property_id || a.propertyId || '').toLowerCase();
+      const vendorIdValue = String(a.vendor_id || a.vendorId || '').toLowerCase();
+      const vendorName = String(a.vendor_name || a.vendorName || a.owner_name || a.ownerName || '').toLowerCase();
+      const propName = String(a.property_name || a.propertyName || '').toLowerCase();
+      const serviceType = String(a.service_type || a.serviceType || '').toLowerCase();
+      const estimateId = String(a.estimate_id || a.estimateId || '').toLowerCase();
       
       const matchesSearch =
         vendorName.includes(q) ||
@@ -346,8 +347,8 @@ const AssignedVendors = ({ user }) => {
     if (serviceTypeFilter && a.serviceType !== serviceTypeFilter && a.service_type !== serviceTypeFilter) return false;
     // Property type filter - extract type from property_code prefix (e.g., "GC-123" -> "GC")
     if (propertyTypeFilter) {
-      const propCode = (a.property_code || a.propertyCode || '').toUpperCase();
-      const propType = propCode.split('-')[0];
+      const propCodeVal = String(a.property_code || a.propertyCode || '').toUpperCase();
+      const propType = propCodeVal.split('-')[0];
       if (propType !== propertyTypeFilter) return false;
     }
     return true;
@@ -485,7 +486,7 @@ const AssignedVendors = ({ user }) => {
               type="text"
               placeholder="Search by vendor name, ID, property, or service type..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value.trim())}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-500 outline-none"
             />
           </div>
@@ -565,7 +566,7 @@ const AssignedVendors = ({ user }) => {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Rate</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property Code</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property ID</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Assigned</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
@@ -787,7 +788,7 @@ const AssignedVendors = ({ user }) => {
                   </div>
                   <div className="grid grid-cols-3 gap-3 mt-2">
                     <div>
-                      <p className="text-xs text-gray-400">Property Code</p>
+                      <p className="text-xs text-gray-400">Property ID</p>
                       <p className="text-sm font-mono text-gray-700">{viewAssignment.property_code || viewAssignment.propertyCode || viewAssignment.property_id || viewAssignment.propertyId || '-'}</p>
                     </div>
                     <div>
