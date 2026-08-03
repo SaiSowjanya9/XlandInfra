@@ -286,6 +286,31 @@ router.get('/dashboard', requireExecutiveScope, async (req, res) => {
       prop_gc: Number(estimatesTypesResult?.prop_gc) || 0, prop_apt: Number(estimatesTypesResult?.prop_apt) || 0, prop_villa: Number(estimatesTypesResult?.prop_villa) || 0, prop_flat: Number(estimatesTypesResult?.prop_flat) || 0, prop_plot: Number(estimatesTypesResult?.prop_plot) || 0
     };
 
+    // Estimates breakdown by status (Draft, Sent, Approved, Rejected) for Direct and Property-based
+    const [[estimatesStatusResult]] = await pool.query(`
+      SELECT 
+        SUM(CASE WHEN estimate_type = 'direct' AND LOWER(status) = 'draft' THEN 1 ELSE 0 END) as direct_draft,
+        SUM(CASE WHEN estimate_type = 'direct' AND LOWER(status) = 'sent' THEN 1 ELSE 0 END) as direct_sent,
+        SUM(CASE WHEN estimate_type = 'direct' AND LOWER(status) = 'approved' THEN 1 ELSE 0 END) as direct_approved,
+        SUM(CASE WHEN estimate_type = 'direct' AND LOWER(status) = 'rejected' THEN 1 ELSE 0 END) as direct_rejected,
+        SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND LOWER(status) = 'draft' THEN 1 ELSE 0 END) as prop_draft,
+        SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND LOWER(status) = 'sent' THEN 1 ELSE 0 END) as prop_sent,
+        SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND LOWER(status) = 'approved' THEN 1 ELSE 0 END) as prop_approved,
+        SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND LOWER(status) = 'rejected' THEN 1 ELSE 0 END) as prop_rejected
+      FROM fp_estimates WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL)
+    `, [franchisePartnerId]);
+    
+    const estimatesByStatus = {
+      direct_draft: Number(estimatesStatusResult?.direct_draft) || 0,
+      direct_sent: Number(estimatesStatusResult?.direct_sent) || 0,
+      direct_approved: Number(estimatesStatusResult?.direct_approved) || 0,
+      direct_rejected: Number(estimatesStatusResult?.direct_rejected) || 0,
+      prop_draft: Number(estimatesStatusResult?.prop_draft) || 0,
+      prop_sent: Number(estimatesStatusResult?.prop_sent) || 0,
+      prop_approved: Number(estimatesStatusResult?.prop_approved) || 0,
+      prop_rejected: Number(estimatesStatusResult?.prop_rejected) || 0
+    };
+
     // Get recent work orders - ALL FP work orders
     const [recentWorkOrders] = await pool.query(
       `SELECT wo.*, p.name as property_name, COALESCE(c.name, wo.category_name) as category_name,
@@ -321,6 +346,7 @@ router.get('/dashboard', requireExecutiveScope, async (req, res) => {
           directEstimates: directEstimatesCount,
           propertyEstimates: propertyEstimatesCount,
           estimatesByPropertyType,
+          estimatesByStatus,
           workOrdersByStatus: {
             pending: workOrderStats?.pending || 0,
             under_review: workOrderStats?.under_review || 0,

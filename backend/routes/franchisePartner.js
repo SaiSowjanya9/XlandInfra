@@ -181,6 +181,7 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
       directEstimates,
       propertyEstimates,
       estimatesByPropertyType,
+      estimatesByStatus,
       employeeStats,
       workOrdersByRole,
       recentWorkOrders
@@ -271,6 +272,29 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
         prop_plot: Number(r?.prop_plot) || 0
       })).catch((e) => { console.error('Estimates by type error:', e); return { direct_gc: 0, direct_apt: 0, direct_villa: 0, direct_flat: 0, direct_plot: 0, direct_other: 0, prop_gc: 0, prop_apt: 0, prop_villa: 0, prop_flat: 0, prop_plot: 0 }; }),
       
+      // Estimates breakdown by status (Draft, Sent, Approved, Rejected) for Direct and Property-based
+      pool.execute(`
+        SELECT 
+          SUM(CASE WHEN estimate_type = 'direct' AND LOWER(status) = 'draft' THEN 1 ELSE 0 END) as direct_draft,
+          SUM(CASE WHEN estimate_type = 'direct' AND LOWER(status) = 'sent' THEN 1 ELSE 0 END) as direct_sent,
+          SUM(CASE WHEN estimate_type = 'direct' AND LOWER(status) = 'approved' THEN 1 ELSE 0 END) as direct_approved,
+          SUM(CASE WHEN estimate_type = 'direct' AND LOWER(status) = 'rejected' THEN 1 ELSE 0 END) as direct_rejected,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND LOWER(status) = 'draft' THEN 1 ELSE 0 END) as prop_draft,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND LOWER(status) = 'sent' THEN 1 ELSE 0 END) as prop_sent,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND LOWER(status) = 'approved' THEN 1 ELSE 0 END) as prop_approved,
+          SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND LOWER(status) = 'rejected' THEN 1 ELSE 0 END) as prop_rejected
+        FROM fp_estimates WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL)
+      `, [fpId]).then(([[r]]) => ({
+        direct_draft: Number(r?.direct_draft) || 0,
+        direct_sent: Number(r?.direct_sent) || 0,
+        direct_approved: Number(r?.direct_approved) || 0,
+        direct_rejected: Number(r?.direct_rejected) || 0,
+        prop_draft: Number(r?.prop_draft) || 0,
+        prop_sent: Number(r?.prop_sent) || 0,
+        prop_approved: Number(r?.prop_approved) || 0,
+        prop_rejected: Number(r?.prop_rejected) || 0
+      })).catch(() => ({ direct_draft: 0, direct_sent: 0, direct_approved: 0, direct_rejected: 0, prop_draft: 0, prop_sent: 0, prop_approved: 0, prop_rejected: 0 })),
+      
       // Employee stats - combined query (ACTIVE only)
       pool.execute(`
         SELECT 
@@ -351,6 +375,7 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
           directEstimates,
           propertyEstimates,
           estimatesByPropertyType,
+          estimatesByStatus,
           employees: employeeStats.total,
           employeeRoles: {
             managers: employeeStats.managers,
