@@ -15,8 +15,6 @@ import {
   CheckCircle2,
   XCircle,
   Layers,
-  Plus,
-  Trash2,
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -59,9 +57,6 @@ const ManagerEmployeeZones = ({ user }) => {
   const [assignedZonesMap, setAssignedZonesMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [viewZonesEmployee, setViewZonesEmployee] = useState(null);
-  const [showCreateZone, setShowCreateZone] = useState(false);
-  const [newZoneName, setNewZoneName] = useState('');
-  const [creatingZone, setCreatingZone] = useState(false);
 
   const token = getAuthToken();
 
@@ -145,68 +140,6 @@ const ManagerEmployeeZones = ({ user }) => {
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
-  };
-
-  const handleCreateZone = async () => {
-    if (!newZoneName.trim()) {
-      showToast('Please enter a zone name', 'error');
-      return;
-    }
-    
-    // Check if zone already exists
-    if (zones.some(z => z.name.toLowerCase() === newZoneName.trim().toLowerCase())) {
-      showToast('Zone with this name already exists', 'error');
-      return;
-    }
-    
-    setCreatingZone(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/manager/zones`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ name: newZoneName.trim() })
-      });
-      
-      const result = await response.json();
-      if (result.success) {
-        showToast(`Zone "${newZoneName.trim()}" created successfully`);
-        setNewZoneName('');
-        setShowCreateZone(false);
-        loadData(); // Refresh zones list
-      } else {
-        showToast(result.message || 'Failed to create zone', 'error');
-      }
-    } catch (error) {
-      console.error('Create zone error:', error);
-      showToast('Failed to create zone', 'error');
-    } finally {
-      setCreatingZone(false);
-    }
-  };
-
-  const handleDeleteZone = async (zoneId, zoneName) => {
-    if (!confirm(`Are you sure you want to delete zone "${zoneName}"?`)) return;
-    
-    try {
-      const response = await fetch(`${API_BASE}/api/manager/zones/${zoneId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      const result = await response.json();
-      if (result.success) {
-        showToast(`Zone "${zoneName}" deleted`);
-        loadData();
-      } else {
-        showToast(result.message || 'Failed to delete zone', 'error');
-      }
-    } catch (error) {
-      console.error('Delete zone error:', error);
-      showToast('Failed to delete zone', 'error');
-    }
   };
 
   const openAssignModal = async (employee) => {
@@ -413,76 +346,12 @@ const ManagerEmployeeZones = ({ user }) => {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Employee Zone Management</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Assign and manage zones for employees • {employees.length} employees • {zones.length} zones
-          </p>
-        </div>
-        <button
-          onClick={() => setShowCreateZone(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium shadow-sm"
-        >
-          Add Zone
-        </button>
+      <div>
+        <h1 className="text-2xl font-semibold text-gray-900">Employee Zone Management</h1>
+        <p className="text-gray-500 text-sm mt-1">
+          Assign and manage zones for employees • {employees.length} employees • {zones.length} zones
+        </p>
       </div>
-
-      {/* Create Zone Modal */}
-      {showCreateZone && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowCreateZone(false)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Create New Zone</h3>
-                <button onClick={() => setShowCreateZone(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
-            </div>
-            <div className="p-5">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Zone Name</label>
-              <input
-                type="text"
-                value={newZoneName}
-                onChange={(e) => setNewZoneName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleCreateZone()}
-                placeholder="e.g., Mangalagiri, Zone A"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none"
-                autoFocus
-              />
-              <p className="text-xs text-gray-500 mt-2">
-                Current zones: {zones.map(z => z.name).join(', ') || 'None'}
-              </p>
-            </div>
-            <div className="px-5 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 rounded-b-xl">
-              <button
-                onClick={() => { setShowCreateZone(false); setNewZoneName(''); }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateZone}
-                disabled={creatingZone || !newZoneName.trim()}
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {creatingZone ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-4 h-4" />
-                    Create Zone
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
