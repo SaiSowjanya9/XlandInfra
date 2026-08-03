@@ -245,32 +245,23 @@ const ManagerDashboard = ({ user }) => {
               </div>
             </div>
 
-            {/* Right Half - Status Breakdown */}
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <div className="grid grid-cols-2 gap-3">
-                  {statusData.map((status) => (
-                    <div key={status.name} className="bg-gray-50 rounded-lg p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: status.color }}></span>
-                        <span className="text-sm font-medium text-gray-700">{status.name}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <div className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-sm bg-cyan-500"></span>
-                          <span className="text-gray-600">Direct:</span>
-                          <span className="font-semibold text-gray-900">{status.direct}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-sm bg-purple-500"></span>
-                          <span className="text-gray-600">Property:</span>
-                          <span className="font-semibold text-gray-900">{status.property}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* Right Half - Status Breakdown Bar Chart */}
+            <div className="flex-1 h-44">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={statusData} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
+                  <YAxis hide />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
+                    labelStyle={{ color: '#fff', fontWeight: 600 }}
+                    itemStyle={{ color: '#fff' }}
+                    cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                  />
+                  <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} />
+                  <Bar dataKey="direct" name="Direct" fill="#06B6D4" barSize={20} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="property" name="Property" fill="#8B5CF6" barSize={20} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
