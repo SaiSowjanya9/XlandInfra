@@ -11,7 +11,8 @@ import {
   CheckCircle,
   RefreshCw,
   MapPin,
-  ArrowRight
+  ArrowRight,
+  UserPlus
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
@@ -336,6 +337,22 @@ const CoordinatorDashboard = ({ user }) => {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <button
+            onClick={() => navigate('/coordinator/customers/add')}
+            className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <UserPlus className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="text-left">
+                <p className="font-medium text-gray-900">Add Customer</p>
+                <p className="text-xs text-gray-500">Register new customer</p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
+          </button>
+
+          <button
             onClick={() => navigate('/coordinator/work-orders')}
             className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
           >
@@ -352,6 +369,22 @@ const CoordinatorDashboard = ({ user }) => {
           </button>
 
           <button
+            onClick={() => navigate('/coordinator/employees')}
+            className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Users className="w-5 h-5 text-orange-600" />
+              </div>
+              <div className="text-left">
+                <p className="font-medium text-gray-900">Add Employee</p>
+                <p className="text-xs text-gray-500">Add new team member</p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
+          </button>
+
+          <button
             onClick={() => navigate('/coordinator/estimates/create')}
             className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
           >
@@ -362,38 +395,6 @@ const CoordinatorDashboard = ({ user }) => {
               <div className="text-left">
                 <p className="font-medium text-gray-900">Create Estimate</p>
                 <p className="text-xs text-gray-500">Create new estimate</p>
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
-          </button>
-
-          <button
-            onClick={() => navigate('/coordinator/properties')}
-            className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-blue-600" />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-gray-900">View Properties</p>
-                <p className="text-xs text-gray-500">Manage properties</p>
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
-          </button>
-
-          <button
-            onClick={() => navigate('/coordinator/employees/zones')}
-            className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-orange-600" />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-gray-900">Manage Zones</p>
-                <p className="text-xs text-gray-500">View assigned zones</p>
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />

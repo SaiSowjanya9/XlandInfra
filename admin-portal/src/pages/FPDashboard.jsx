@@ -656,7 +656,7 @@ const FPDashboard = ({ user }) => {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <button
-            onClick={() => navigate('/fp/add-customer')}
+            onClick={() => navigate('/fp/customers/add')}
             className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
           >
             <div className="flex items-center gap-3">
