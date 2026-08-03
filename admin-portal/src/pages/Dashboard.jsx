@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Building2, ClipboardList, Clock, CheckCircle2, FileText, Users, 
-  Package, MapPin, Wrench, UserPlus, IndianRupee, Activity,
+  Package, MapPin, Wrench, UserPlus, Activity,
   RefreshCw, Bell, Settings, UserCheck, Home, X, AlertCircle, Info,
   QrCode, Download, ChevronDown, Shield, ArrowLeft, ArrowRight
 } from 'lucide-react';
@@ -211,19 +211,24 @@ const Dashboard = () => {
 
   // Check if we have real data
   const hasData = stats !== null;
-  const hasRevenue = stats?.revenue || stats?.amcCollection || stats?.pendingCollection;
 
-  // Pie chart data - use consistent data source
+  // Pie chart data - All 6 statuses
   const workOrdersByStatus = stats?.workOrdersByStatus || {};
-  const pendingWO = Number(stats?.pendingWorkOrders) || Number(workOrdersByStatus.pending) || 0;
+  const pendingWO = Number(workOrdersByStatus.pending) || 0;
+  const assignedWO = Number(workOrdersByStatus.assigned) || 0;
   const inProgressWO = Number(workOrdersByStatus.in_progress) || 0;
-  const completedWO = Number(stats?.completedWorkOrders) || (Number(workOrdersByStatus.completed || 0) + Number(workOrdersByStatus.closed || 0));
-  const pieTotal = pendingWO + inProgressWO + completedWO;
+  const completedWO = Number(workOrdersByStatus.completed) || 0;
+  const closedWO = Number(workOrdersByStatus.closed) || 0;
+  const cancelledWO = Number(workOrdersByStatus.cancelled) || 0;
+  const pieTotal = pendingWO + assignedWO + inProgressWO + completedWO + closedWO + cancelledWO;
   
   const pieData = [
     { name: 'Pending', value: pendingWO, color: '#F59E0B' },
-    { name: 'In Progress', value: inProgressWO, color: '#3B82F6' },
+    { name: 'Assigned', value: assignedWO, color: '#3B82F6' },
+    { name: 'In Progress', value: inProgressWO, color: '#8B5CF6' },
     { name: 'Completed', value: completedWO, color: '#10B981' },
+    { name: 'Closed', value: closedWO, color: '#6B7280' },
+    { name: 'Cancelled', value: cancelledWO, color: '#EF4444' },
   ].filter(item => item.value > 0);
 
   const totalWorkOrders = pieTotal || stats?.totalWorkOrders || 0;
@@ -253,15 +258,6 @@ const Dashboard = () => {
     { label: 'Manage AMC', icon: Package, path: '/employee/estimates' },
     { label: 'Properties', icon: Home, path: '/employee/customer-submissions' },
   ];
-
-  const formatCurrency = (value) => {
-    if (!value) return null;
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(Math.round(value));
-  };
 
   // Show FP selection dropdown if no FP selected
   if (!selectedFp) {
@@ -657,42 +653,49 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="flex-1 ml-8 space-y-4">
+              {/* Legend - All 6 statuses in grid */}
+              <div className="flex-1 ml-6 grid grid-cols-2 gap-x-4 gap-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-amber-500"></span>
-                    <span className="text-sm text-gray-600">Pending</span>
+                    <span className="text-xs text-gray-600">Pending</span>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-semibold text-gray-900">{pendingWO}</span>
-                    <span className="text-sm text-gray-500 w-12 text-right">
-                      {totalForPercentage > 0 ? Math.round((pendingWO / totalForPercentage) * 100) : 0}%
-                    </span>
-                  </div>
+                  <span className="text-xs font-semibold text-gray-900">{pendingWO}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                    <span className="text-sm text-gray-600">In Progress</span>
+                    <span className="text-xs text-gray-600">Assigned</span>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-semibold text-gray-900">{inProgressWO}</span>
-                    <span className="text-sm text-gray-500 w-12 text-right">
-                      {totalForPercentage > 0 ? Math.round((inProgressWO / totalForPercentage) * 100) : 0}%
-                    </span>
+                  <span className="text-xs font-semibold text-gray-900">{assignedWO}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-purple-500"></span>
+                    <span className="text-xs text-gray-600">In Progress</span>
                   </div>
+                  <span className="text-xs font-semibold text-gray-900">{inProgressWO}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                    <span className="text-sm text-gray-600">Completed</span>
+                    <span className="text-xs text-gray-600">Completed</span>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-semibold text-gray-900">{completedWO}</span>
-                    <span className="text-sm text-gray-500 w-12 text-right">
-                      {totalForPercentage > 0 ? Math.round((completedWO / totalForPercentage) * 100) : 0}%
-                    </span>
+                  <span className="text-xs font-semibold text-gray-900">{completedWO}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-gray-500"></span>
+                    <span className="text-xs text-gray-600">Closed</span>
                   </div>
+                  <span className="text-xs font-semibold text-gray-900">{closedWO}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                    <span className="text-xs text-gray-600">Cancelled</span>
+                  </div>
+                  <span className="text-xs font-semibold text-gray-900">{cancelledWO}</span>
                 </div>
               </div>
             </div>
@@ -730,36 +733,6 @@ const Dashboard = () => {
                   </div>
                 );
               })}
-            </div>
-          </div>
-        )}
-
-        {/* Revenue Overview - Only show if data exists */}
-        {hasRevenue && (
-          <div className="bg-white rounded-xl p-5 border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-medium text-gray-800">Revenue Overview</h3>
-              <IndianRupee className="w-4 h-4 text-gray-400" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {stats?.revenue && (
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-500 mb-1">Total Revenue</p>
-                  <p className="text-xl font-semibold text-gray-800">{formatCurrency(stats.revenue)}</p>
-                </div>
-              )}
-              {stats?.amcCollection && (
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-500 mb-1">AMC Collection</p>
-                  <p className="text-xl font-semibold text-gray-800">{formatCurrency(stats.amcCollection)}</p>
-                </div>
-              )}
-              {stats?.pendingCollection && (
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-500 mb-1">Pending Collection</p>
-                  <p className="text-xl font-semibold text-gray-800">{formatCurrency(stats.pendingCollection)}</p>
-                </div>
-              )}
             </div>
           </div>
         )}

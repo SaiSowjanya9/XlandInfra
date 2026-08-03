@@ -1,7 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
   ClipboardList,
-  CreditCard,
   Calendar,
   Phone,
   LogOut,
@@ -21,7 +20,6 @@ const CustomerLayout = ({ admin, onLogout, children }) => {
   const navItems = [
     { path: '/customer', icon: Home, label: 'Dashboard' },
     { path: '/customer/work-order', icon: ClipboardList, label: 'Work Orders' },
-    { path: '/customer/payment', icon: CreditCard, label: 'Payments' },
     { path: '/customer/schedule', icon: Calendar, label: 'Schedule' },
     { path: '/customer/contact', icon: Phone, label: 'Contact' },
   ];

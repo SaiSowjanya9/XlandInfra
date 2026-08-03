@@ -91,7 +91,6 @@ const CustomerDashboard = ({ user }) => {
 
   const quickAccess = [
     { title: 'Work Orders', icon: ClipboardList, path: '/customer/work-order', gradient: 'from-blue-500 to-indigo-600' },
-    { title: 'Payments', icon: CreditCard, path: '/customer/payment', gradient: 'from-teal-500 to-cyan-600' },
     { title: 'Schedule', icon: Calendar, path: '/customer/schedule', gradient: 'from-violet-500 to-purple-600' },
     { title: 'Contact', icon: Phone, path: '/customer/contact', gradient: 'from-amber-500 to-orange-600' },
   ];
