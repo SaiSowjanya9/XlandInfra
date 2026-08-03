@@ -249,6 +249,15 @@ const Dashboard = () => {
   if ((est.direct_other || 0) > 0) stackedBarData.unshift({ name: 'Other', direct: est.direct_other || 0, property: 0 });
   const totalEstimates = (stats?.directEstimates || 0) + (stats?.propertyEstimates || 0);
 
+  // Estimates by status data
+  const estStatus = stats?.estimatesByStatus || {};
+  const statusData = [
+    { name: 'Draft', direct: estStatus.direct_draft || 0, property: estStatus.prop_draft || 0, color: '#6B7280' },
+    { name: 'Sent', direct: estStatus.direct_sent || 0, property: estStatus.prop_sent || 0, color: '#3B82F6' },
+    { name: 'Approved', direct: estStatus.direct_approved || 0, property: estStatus.prop_approved || 0, color: '#10B981' },
+    { name: 'Rejected', direct: estStatus.direct_rejected || 0, property: estStatus.prop_rejected || 0, color: '#EF4444' },
+  ];
+
   // Quick Actions
   const quickActions = [
     { label: 'Create Estimate', icon: FileText, path: '/employee/estimates' },
@@ -588,10 +597,10 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Estimates Overview + Work Orders Overview - Side by Side */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Estimates Overview - Bar Chart */}
-          <div className="bg-white rounded-xl border border-gray-100 p-6">
+        {/* Combined Estimates + Work Orders Overview Box */}
+        <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-6">
+          {/* Estimates Overview Section */}
+          <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Estimates Overview</h2>
               <button onClick={() => navigate('/employee/estimates/list')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
@@ -599,28 +608,53 @@ const Dashboard = () => {
               </button>
             </div>
             
-            <div className="flex items-center gap-6">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-gray-900">{totalEstimates}</p>
-                <p className="text-sm text-gray-500">Total</p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Half - Property Type Bar Chart */}
+              <div className="flex items-center gap-4">
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-gray-900">{totalEstimates}</p>
+                  <p className="text-sm text-gray-500">Total</p>
+                </div>
+                <div className="flex-1 h-44">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stackedBarData} margin={{ top: 20, right: 10, bottom: 20, left: 10 }}>
+                      <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
+                      <YAxis hide />
+                      <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelStyle={{ color: '#fff', fontWeight: 600 }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+                      <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} formatter={(value) => value === 'Direct' ? `Direct (${directCount})` : `Property (${propertyCount})`} />
+                      <Bar dataKey="direct" name="Direct" stackId="a" fill="#06B6D4" barSize={40} />
+                      <Bar dataKey="property" name="Property" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-              <div className="flex-1 h-48 min-w-[300px]">
+
+              {/* Right Half - Status Breakdown Bar Chart */}
+              <div className="flex-1 h-44">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stackedBarData} margin={{ top: 20, right: 10, bottom: 20, left: 10 }}>
-                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
+                  <BarChart data={statusData} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
                     <YAxis hide />
-                    <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelStyle={{ color: '#fff', fontWeight: 600 }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-                    <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} formatter={(value) => value === 'Direct' ? `Direct (${directCount})` : `Property (${propertyCount})`} />
-                    <Bar dataKey="direct" name="Direct" stackId="a" fill="#06B6D4" barSize={40} />
-                    <Bar dataKey="property" name="Property" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
+                      labelStyle={{ color: '#fff', fontWeight: 600 }}
+                      itemStyle={{ color: '#fff' }}
+                      cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                    />
+                    <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} />
+                    <Bar dataKey="direct" name="Direct" fill="#06B6D4" barSize={20} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="property" name="Property" fill="#8B5CF6" barSize={20} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
           </div>
 
-          {/* Work Orders Overview - Pie Chart */}
-          <div className="bg-white rounded-xl border border-gray-100 p-6">
+          {/* Divider */}
+          <div className="border-t border-gray-100"></div>
+
+          {/* Work Orders Overview Section */}
+          <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Work Orders Overview</h2>
               <button onClick={() => navigate('/employee/work-orders')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
@@ -628,16 +662,16 @@ const Dashboard = () => {
               </button>
             </div>
             
-            <div className="flex items-center justify-between">
-              <div className="relative w-48 h-48">
+            <div className="flex items-center justify-center gap-8">
+              <div className="relative w-44 h-44">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
                       cx="50%"
                       cy="50%"
-                      innerRadius={55}
-                      outerRadius={80}
+                      innerRadius={50}
+                      outerRadius={70}
                       paddingAngle={pieData.length > 1 ? 3 : 0}
                       dataKey="value"
                     >
@@ -648,49 +682,49 @@ const Dashboard = () => {
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <p className="text-3xl font-bold text-gray-900">{totalWorkOrders}</p>
-                  <p className="text-sm text-gray-500">Total</p>
+                  <p className="text-2xl font-bold text-gray-900">{totalWorkOrders}</p>
+                  <p className="text-xs text-gray-500">Total</p>
                 </div>
               </div>
 
               {/* Legend - All 6 statuses in grid */}
-              <div className="flex-1 ml-6 grid grid-cols-2 gap-x-4 gap-y-2">
-                <div className="flex items-center justify-between">
+              <div className="grid grid-cols-3 gap-x-6 gap-y-2">
+                <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-amber-500"></span>
                     <span className="text-xs text-gray-600">Pending</span>
                   </div>
                   <span className="text-xs font-semibold text-gray-900">{pendingWO}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-blue-500"></span>
                     <span className="text-xs text-gray-600">Assigned</span>
                   </div>
                   <span className="text-xs font-semibold text-gray-900">{assignedWO}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-purple-500"></span>
                     <span className="text-xs text-gray-600">In Progress</span>
                   </div>
                   <span className="text-xs font-semibold text-gray-900">{inProgressWO}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
                     <span className="text-xs text-gray-600">Completed</span>
                   </div>
                   <span className="text-xs font-semibold text-gray-900">{completedWO}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-gray-500"></span>
                     <span className="text-xs text-gray-600">Closed</span>
                   </div>
                   <span className="text-xs font-semibold text-gray-900">{closedWO}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-red-500"></span>
                     <span className="text-xs text-gray-600">Cancelled</span>

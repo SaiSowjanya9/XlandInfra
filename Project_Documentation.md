@@ -1,7 +1,7 @@
 # Customer Portal - Project Documentation
 
-> **Last Updated:** July 6, 2026 at 4:30 PM (UTC-05:00)
-> **Version:** 3.4.0
+> **Last Updated:** August 3, 2026 at 12:30 PM (UTC+05:30)
+> **Version:** 3.5.0
 > **Status:** In Development
 
 ---
@@ -1327,6 +1327,61 @@ npm run dev
 ---
 
 ## 14. Change Log
+
+### Version 3.5.0 (August 3, 2026)
+
+#### Dashboard UI Overhaul - Combined Estimates & Work Orders Box
+
+**1. Unified Dashboard Layout**
+- Combined "Estimates Overview" and "Work Orders Overview" into a single unified box
+- Estimates section on top, Work Orders section below with divider
+- Consistent layout across all user portals (FP, Manager, Coordinator, Executive, Supervisor, Admin)
+
+**2. Estimates Overview Section**
+- **Left Half:** Property type breakdown bar chart (Direct vs Property)
+  - Shows GC, Apartment, Villa, Flat, Plot categories
+  - Stacked bars with Direct (cyan) and Property (purple)
+  - Legend showing total counts for Direct and Property estimates
+- **Right Half:** Status breakdown grouped bar chart
+  - 4 status categories: Draft, Sent, Approved, Rejected
+  - Side-by-side bars showing Direct vs Property counts per status
+  - Color-coded status indicators (Gray, Blue, Green, Red)
+
+**3. Work Orders Overview Section**
+- Donut/Pie chart showing work order distribution
+- 6 status categories: Pending, Assigned, In Progress, Completed, Closed, Cancelled
+- 3-column legend layout for better readability
+- Total count displayed in center of chart
+
+**4. Backend API Updates**
+- Added `estimatesByStatus` data to all dashboard APIs:
+  - `coordinator.js` - `/api/coordinator/dashboard`
+  - `franchisePartner.js` - `/api/fp/dashboard`
+  - `manager.js` - `/api/manager/dashboard`
+  - `executive.js` - `/api/executive/dashboard`
+  - `supervisor.js` - `/api/supervisor/dashboard`
+  - `admin.js` - `/api/admin/dashboard`
+- Returns breakdown: `direct_draft`, `direct_sent`, `direct_approved`, `direct_rejected`, `prop_draft`, `prop_sent`, `prop_approved`, `prop_rejected`
+
+**5. Files Modified**
+
+*Frontend Dashboards:*
+- `admin-portal/src/pages/FPDashboard.jsx` - Combined layout with status bar chart
+- `admin-portal/src/pages/CoordinatorDashboard.jsx` - Combined layout with status bar chart
+- `admin-portal/src/pages/ManagerDashboard.jsx` - Combined layout with status bar chart
+- `admin-portal/src/pages/ExecutiveDashboard.jsx` - Combined layout with status bar chart
+- `admin-portal/src/pages/SupervisorDashboard.jsx` - Combined layout with status bar chart
+- `admin-portal/src/pages/Dashboard.jsx` - Admin dashboard with combined layout
+
+*Backend Routes:*
+- `backend/routes/coordinator.js` - Added estimatesByStatus query
+- `backend/routes/franchisePartner.js` - Added estimatesByStatus query
+- `backend/routes/manager.js` - Added estimatesByStatus query
+- `backend/routes/executive.js` - Added estimatesByStatus query
+- `backend/routes/supervisor.js` - Added estimatesByStatus query
+- `backend/routes/admin.js` - Added estimatesByStatus query
+
+---
 
 ### Version 3.4.0 (July 6, 2026)
 

@@ -2,9 +2,19 @@
 
 A comprehensive full-stack web application for property management, work orders, vendor management, and AMC (Annual Maintenance Contract) packages, built with React, Node.js, and MySQL.
 
-> **Last Updated:** July 6, 2026
+> **Last Updated:** August 3, 2026
+> **Version:** 3.5.0
 
 ## Features
+
+### Dashboard Analytics (v3.5.0)
+- **Unified Overview Box**: Combined Estimates and Work Orders overview in single dashboard section
+- **Estimates Visualization**: 
+  - Property type bar chart (Direct vs Property by GC, Apartment, Villa, Flat, Plot)
+  - Status breakdown bar chart (Draft, Sent, Approved, Rejected)
+  - Side-by-side Direct vs Property counts per status
+- **Work Orders Visualization**: Donut chart with 6 status categories and legend
+- **Available in all portals**: FP, Manager, Coordinator, Executive, Supervisor, Admin
 
 ### Customer Portal
 - **Work Order Management**: Submit maintenance and repair requests with categories and subcategories
