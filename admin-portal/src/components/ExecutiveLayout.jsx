@@ -20,9 +20,6 @@ import {
   Archive,
   ChevronLeft,
   ChevronRight,
-  IndianRupee,
-  Receipt,
-  Clock,
 } from 'lucide-react';
 
 const ExecutiveLayout = ({ admin, onLogout, children }) => {
@@ -72,16 +69,8 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
     { path: '/executive/estimates/archived', icon: Archive, label: 'Archived' }
   ];
 
-  // Payments sub-items (VIEW-ONLY for Executive - no Record Payment)
-  const paymentsSubItems = [
-    { path: '/executive/payments', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/executive/payments/invoices', icon: Receipt, label: 'Invoices' },
-    { path: '/executive/payments/history', icon: Clock, label: 'Payment History' },
-  ];
-
   const isVendorActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEstimatesActive = estimatesSubItems.some(item => location.pathname === item.path) || location.pathname === '/executive/estimates';
-  const isPaymentsActive = paymentsSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/executive/payments');
   
   // Color constants for sidebar
   const colors = {
@@ -101,33 +90,25 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
   useEffect(() => {
     if (isVendorActive) setExpandedMenus(prev => ({ ...prev, vendors: true }));
     if (isEstimatesActive) setExpandedMenus(prev => ({ ...prev, estimates: true }));
-    if (isPaymentsActive) setExpandedMenus(prev => ({ ...prev, payments: true }));
   }, [location.pathname]);
 
   // Accordion toggle functions - close other sections when opening one
   const toggleVendors = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.vendors;
-      setExpandedMenus({ vendors: opening, estimates: false, payments: false });
+      setExpandedMenus({ vendors: opening, estimates: false });
     }
   };
 
   const toggleEstimates = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.estimates;
-      setExpandedMenus({ vendors: false, estimates: opening, payments: false });
-    }
-  };
-
-  const togglePayments = () => {
-    if (!sidebarCollapsed) {
-      const opening = !expandedMenus.payments;
-      setExpandedMenus({ vendors: false, estimates: false, payments: opening });
+      setExpandedMenus({ vendors: false, estimates: opening });
     }
   };
 
   // Check if any dropdown is open
-  const isAnyDropdownOpen = expandedMenus.vendors || expandedMenus.estimates || expandedMenus.payments;
+  const isAnyDropdownOpen = expandedMenus.vendors || expandedMenus.estimates;
 
   const NavLink = ({ item, mobile = false }) => {
     const Icon = item.icon;
@@ -136,7 +117,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
     const handleClick = () => {
       if (mobile) setSidebarOpen(false);
       // Close all dropdowns when clicking on main nav items
-      setExpandedMenus({ vendors: false, estimates: false, payments: false });
+      setExpandedMenus({ vendors: false, estimates: false });
     };
     return (
       <Link
@@ -297,35 +278,6 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
                   )}
                 </div>
 
-                {/* Payments Section (View-Only) */}
-                <div className="mt-1">
-                  <button
-                    onClick={togglePayments}
-                    className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
-                    style={{
-                      background: (expandedMenus.payments || (isPaymentsActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
-                      color: (expandedMenus.payments || (isPaymentsActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
-                    }}
-                    onMouseEnter={(e) => { if (!expandedMenus.payments && !(isPaymentsActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
-                    onMouseLeave={(e) => { if (!expandedMenus.payments && !(isPaymentsActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
-                    title={sidebarCollapsed ? 'Payments' : ''}
-                  >
-                    <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                      <IndianRupee className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.payments || (isPaymentsActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                      {!sidebarCollapsed && <span className="text-sm">Payments</span>}
-                    </div>
-                    {!sidebarCollapsed && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.payments ? 'rotate-180' : ''}`} />}
-                  </button>
-                  {expandedMenus.payments && !sidebarCollapsed && (
-                    <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
-                      {paymentsSubItems.map((item) => { const Icon = item.icon; const isActive = location.pathname === item.path; return (
-                        <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)} className="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 font-medium" style={{ background: isActive ? colors.activeBg : 'transparent', color: isActive ? colors.activeText : colors.primaryText }} onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }} onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
-                          <Icon className="w-4 h-4" style={{ color: isActive ? colors.activeText : colors.iconGold }} /><span>{item.label}</span>
-                        </Link>
-                      ); })}
-                    </div>
-                  )}
-                </div>
               </>
             )}
           </nav>

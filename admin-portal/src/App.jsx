@@ -33,12 +33,6 @@ import FPEditEmployee from './pages/FPEditEmployee';
 import FPEmployeeZones from './pages/FPEmployeeZones';
 import FPEstimates from './pages/FPEstimates';
 import FPCustomers from './pages/FPCustomers';
-import FPPaymentDashboard from './pages/FPPaymentDashboard';
-import FPRecordPayment from './pages/FPRecordPayment';
-import FPInvoices from './pages/FPInvoices';
-import FPInvoiceView from './pages/FPInvoiceView';
-import FPCreateInvoice from './pages/FPCreateInvoice';
-import FPPaymentHistory from './pages/FPPaymentHistory';
 
 import ManagerLogin from './pages/ManagerLogin';
 import ManagerLayout from './components/ManagerLayout';
@@ -417,12 +411,6 @@ function App() {
                     <Route path="estimates/amc" element={<FPEstimates user={user} defaultTab="amc" />} />
                     <Route path="estimates/addons" element={<FPEstimates user={user} defaultTab="addons" />} />
                     <Route path="estimates/archived" element={<FPEstimates user={user} defaultTab="archived" />} />
-                    <Route path="payments" element={<FPPaymentDashboard user={user} />} />
-                    <Route path="payments/record" element={<FPRecordPayment user={user} />} />
-                    <Route path="payments/invoices" element={<FPInvoices user={user} />} />
-                    <Route path="payments/invoices/create" element={<FPCreateInvoice user={user} />} />
-                    <Route path="payments/invoices/:id" element={<FPInvoiceView user={user} />} />
-                    <Route path="payments/history" element={<FPPaymentHistory user={user} />} />
                     <Route path="qr-management" element={<QRManagement />} />
                     <Route path="*" element={<Navigate to="/fp" replace />} />
                   </Routes>
@@ -460,12 +448,6 @@ function App() {
                     <Route path="estimates/amc" element={<ManagerEstimates user={user} defaultTab="amc" />} />
                     <Route path="estimates/addons" element={<ManagerEstimates user={user} defaultTab="addons" />} />
                     <Route path="estimates/archived" element={<ManagerEstimates user={user} defaultTab="archived" />} />
-                    <Route path="payments" element={<FPPaymentDashboard user={user} />} />
-                    <Route path="payments/record" element={<FPRecordPayment user={user} />} />
-                    <Route path="payments/invoices" element={<FPInvoices user={user} />} />
-                    <Route path="payments/invoices/create" element={<FPCreateInvoice user={user} />} />
-                    <Route path="payments/invoices/:id" element={<FPInvoiceView user={user} />} />
-                    <Route path="payments/history" element={<FPPaymentHistory user={user} />} />
                     <Route path="*" element={<Navigate to="/manager" replace />} />
                   </Routes>
                 </ManagerLayout>
@@ -538,11 +520,6 @@ function App() {
                     <Route path="estimates/amc" element={<SupervisorEstimates user={user} defaultTab="amc" />} />
                     <Route path="estimates/addons" element={<SupervisorEstimates user={user} defaultTab="addons" />} />
                     <Route path="estimates/archived" element={<SupervisorEstimates user={user} defaultTab="archived" />} />
-                    {/* Payments - View Only for Supervisors */}
-                    <Route path="payments" element={<FPPaymentDashboard user={user} />} />
-                    <Route path="payments/invoices" element={<FPInvoices user={user} />} />
-                    <Route path="payments/invoices/:id" element={<FPInvoiceView user={user} />} />
-                    <Route path="payments/history" element={<FPPaymentHistory user={user} />} />
                     <Route path="*" element={<Navigate to="/supervisor" replace />} />
                   </Routes>
                 </SupervisorLayout>
@@ -579,11 +556,6 @@ function App() {
                     <Route path="estimates/amc" element={<ExecutiveEstimates user={user} defaultTab="amc" />} />
                     <Route path="estimates/addons" element={<ExecutiveEstimates user={user} defaultTab="addons" />} />
                     <Route path="estimates/archived" element={<ExecutiveEstimates user={user} defaultTab="archived" />} />
-                    {/* Payments - View Only for Executives */}
-                    <Route path="payments" element={<FPPaymentDashboard user={user} />} />
-                    <Route path="payments/invoices" element={<FPInvoices user={user} />} />
-                    <Route path="payments/invoices/:id" element={<FPInvoiceView user={user} />} />
-                    <Route path="payments/history" element={<FPPaymentHistory user={user} />} />
                     <Route path="*" element={<Navigate to="/executive" replace />} />
                   </Routes>
                 </ExecutiveLayout>

@@ -28,6 +28,15 @@ import { useFP } from '../contexts/FPContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+// Property Types for filtering
+const PROPERTY_TYPES = [
+  { value: 'GC', label: 'Gated Community' },
+  { value: 'APT', label: 'Apartment' },
+  { value: 'VILLA', label: 'Villa' },
+  { value: 'FLAT', label: 'Flat' },
+  { value: 'PLOT', label: 'Plot' }
+];
+
 const AssignedVendors = ({ user }) => {
   // Check user role for view-only mode and API prefix
   const isAdmin = user?.role === 'admin' || user?.role === 'operations_manager';
@@ -69,7 +78,7 @@ const AssignedVendors = ({ user }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [zoneFilter, setZoneFilter] = useState('');
   const [serviceTypeFilter, setServiceTypeFilter] = useState('');
-  const [propertyFilter, setPropertyFilter] = useState('');
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState('');
   const [toast, setToast] = useState(null);
   const [viewAssignment, setViewAssignment] = useState(null);
   const [removeConfirm, setRemoveConfirm] = useState(null);
@@ -294,18 +303,6 @@ const AssignedVendors = ({ user }) => {
 
   const allServiceTypes = [...new Set(serviceAssignments.map(a => a.serviceType || a.service_type).filter(Boolean))];
 
-  // Get unique properties from all assignments
-  const allProperties = [...new Set([
-    ...assignments.map(a => a.propertyId || a.property_id),
-    ...serviceAssignments.map(a => a.propertyId || a.property_id)
-  ].filter(Boolean))].map(propId => {
-    const assignment = [...assignments, ...serviceAssignments].find(a => (a.propertyId || a.property_id) === propId);
-    return {
-      id: propId,
-      name: assignment?.propertyName || assignment?.property_name || propId
-    };
-  });
-
   // Filter property assignments
   const filteredAssignments = assignments.filter(a => {
     if (searchTerm) {
@@ -326,19 +323,33 @@ const AssignedVendors = ({ user }) => {
   const filteredServiceAssignments = serviceAssignments.filter(a => {
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
+      // Get property code - handle both camelCase and snake_case
+      const propCode = (a.property_code || a.propertyCode || '').toLowerCase();
+      const propId = (a.property_id || a.propertyId || '').toLowerCase();
+      const vendorIdValue = (a.vendor_id || a.vendorId || '').toLowerCase();
+      const vendorName = (a.vendor_name || a.vendorName || a.owner_name || a.ownerName || '').toLowerCase();
+      const propName = (a.property_name || a.propertyName || '').toLowerCase();
+      const serviceType = (a.service_type || a.serviceType || '').toLowerCase();
+      const estimateId = (a.estimate_id || a.estimateId || '').toLowerCase();
+      
       const matchesSearch =
-        a.vendorName?.toLowerCase().includes(q) ||
-        a.vendorId?.toLowerCase().includes(q) ||
-        a.propertyName?.toLowerCase().includes(q) ||
-        a.propertyId?.toLowerCase().includes(q) ||
-        (a.property_code || a.propertyCode || '').toLowerCase().includes(q) ||
-        a.serviceType?.toLowerCase().includes(q) ||
-        a.estimateId?.toLowerCase().includes(q);
+        vendorName.includes(q) ||
+        vendorIdValue.includes(q) ||
+        propName.includes(q) ||
+        propId.includes(q) ||
+        propCode.includes(q) ||
+        serviceType.includes(q) ||
+        estimateId.includes(q);
       if (!matchesSearch) return false;
     }
     if (zoneFilter && a.propertyZone !== zoneFilter && a.property_zone !== zoneFilter) return false;
     if (serviceTypeFilter && a.serviceType !== serviceTypeFilter && a.service_type !== serviceTypeFilter) return false;
-    if (propertyFilter && !(a.property_code || a.propertyCode || '').toLowerCase().includes(propertyFilter.toLowerCase())) return false;
+    // Property type filter - extract type from property_code prefix (e.g., "GC-123" -> "GC")
+    if (propertyTypeFilter) {
+      const propCode = (a.property_code || a.propertyCode || '').toUpperCase();
+      const propType = propCode.split('-')[0];
+      if (propType !== propertyTypeFilter) return false;
+    }
     return true;
   });
 
@@ -506,20 +517,20 @@ const AssignedVendors = ({ user }) => {
           </div>
           <div className="relative">
             <select
-              value={propertyFilter}
-              onChange={(e) => setPropertyFilter(e.target.value)}
+              value={propertyTypeFilter}
+              onChange={(e) => setPropertyTypeFilter(e.target.value)}
               className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-200 focus:border-amber-500 outline-none"
             >
               <option value="">All Properties</option>
-              {allProperties.map(p => (
-                <option key={p.code} value={p.code}>{p.code}</option>
+              {PROPERTY_TYPES.map(pt => (
+                <option key={pt.value} value={pt.value}>{pt.label}</option>
               ))}
             </select>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
           </div>
-          {(searchTerm || zoneFilter || serviceTypeFilter || propertyFilter) && (
+          {(searchTerm || zoneFilter || serviceTypeFilter || propertyTypeFilter) && (
             <button
-              onClick={() => { setSearchTerm(''); setZoneFilter(''); setServiceTypeFilter(''); setPropertyFilter(''); }}
+              onClick={() => { setSearchTerm(''); setZoneFilter(''); setServiceTypeFilter(''); setPropertyTypeFilter(''); }}
               className="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Clear

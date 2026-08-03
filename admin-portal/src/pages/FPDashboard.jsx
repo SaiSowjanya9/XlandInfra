@@ -191,12 +191,15 @@ const FPDashboard = ({ user }) => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [fetchDashboardData]);
 
-  // Pie chart data
+  // Pie chart data - All 6 statuses
   const workOrdersByStatus = stats?.workOrders?.byStatus || {};
   const pieData = [
-    { name: 'Pending', value: workOrdersByStatus.pending || 0, color: '#F59E0B' },
-    { name: 'In Progress', value: workOrdersByStatus.in_progress || 0, color: '#3B82F6' },
-    { name: 'Completed', value: (workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0), color: '#10B981' },
+    { name: 'Pending', value: workOrdersByStatus.pending || 0, color: '#F59E0B' },     // Amber
+    { name: 'Assigned', value: workOrdersByStatus.assigned || 0, color: '#3B82F6' },   // Blue
+    { name: 'In Progress', value: workOrdersByStatus.in_progress || 0, color: '#8B5CF6' }, // Purple
+    { name: 'Completed', value: workOrdersByStatus.completed || 0, color: '#10B981' }, // Emerald
+    { name: 'Closed', value: workOrdersByStatus.closed || 0, color: '#6B7280' },       // Gray
+    { name: 'Cancelled', value: workOrdersByStatus.cancelled || 0, color: '#EF4444' }, // Red
   ].filter(item => item.value > 0);
 
   const totalWorkOrders = stats?.workOrders?.total || 0;
@@ -472,45 +475,52 @@ const FPDashboard = ({ user }) => {
           <div className="flex items-center justify-center gap-8">
             {/* Pie Chart - Using SVG directly for reliability */}
             {(() => {
-              // Use top-level stats for consistency with stat cards
-              const pending = Number(stats?.workOrders?.pending) || 0;
-              const inProgress = Number(stats?.workOrders?.byStatus?.in_progress) || 0;
-              const completed = Number(stats?.workOrders?.completed) || 0; // Already includes closed
-              const pieTotal = pending + inProgress + completed;
-              const circumference = 2 * Math.PI * 70; // ~440
+              // Get all status counts
+              const pending = Number(workOrdersByStatus.pending) || 0;
+              const assigned = Number(workOrdersByStatus.assigned) || 0;
+              const inProgress = Number(workOrdersByStatus.in_progress) || 0;
+              const completed = Number(workOrdersByStatus.completed) || 0;
+              const closed = Number(workOrdersByStatus.closed) || 0;
+              const cancelled = Number(workOrdersByStatus.cancelled) || 0;
               
-              // Calculate segment lengths
-              const pendingLen = pieTotal > 0 ? (pending / pieTotal) * circumference : 0;
-              const inProgressLen = pieTotal > 0 ? (inProgress / pieTotal) * circumference : 0;
-              const completedLen = pieTotal > 0 ? (completed / pieTotal) * circumference : 0;
+              const circumference = 2 * Math.PI * 70; // ~440
+              const pieTotal = totalWorkOrders || (pending + assigned + inProgress + completed + closed + cancelled);
+              const segmentTotal = pending + assigned + inProgress + completed + closed + cancelled || 1;
+              
+              // Calculate segment lengths based on proportions
+              const pendingLen = (pending / segmentTotal) * circumference;
+              const assignedLen = (assigned / segmentTotal) * circumference;
+              const inProgressLen = (inProgress / segmentTotal) * circumference;
+              const completedLen = (completed / segmentTotal) * circumference;
+              const closedLen = (closed / segmentTotal) * circumference;
+              const cancelledLen = (cancelled / segmentTotal) * circumference;
+              
+              // Calculate cumulative offsets for each segment
+              let offset = 0;
+              const segments = [
+                { len: pendingLen, color: '#F59E0B', show: pending > 0 },
+                { len: assignedLen, color: '#3B82F6', show: assigned > 0 },
+                { len: inProgressLen, color: '#8B5CF6', show: inProgress > 0 },
+                { len: completedLen, color: '#10B981', show: completed > 0 },
+                { len: closedLen, color: '#6B7280', show: closed > 0 },
+                { len: cancelledLen, color: '#EF4444', show: cancelled > 0 },
+              ];
               
               return (
                 <div style={{ width: 180, height: 180 }}>
                   <svg viewBox="0 0 180 180" width="180" height="180">
-                    {/* Completed segment (green) - drawn first as background */}
-                    {completed > 0 && (
-                      <circle cx="90" cy="90" r="70" fill="none" stroke="#10B981" strokeWidth="20"
-                        strokeDasharray={`${completedLen} ${circumference}`}
-                        strokeDashoffset={-(pendingLen + inProgressLen)}
-                        transform="rotate(-90 90 90)"
-                      />
-                    )}
-                    {/* In Progress segment (blue) */}
-                    {inProgress > 0 && (
-                      <circle cx="90" cy="90" r="70" fill="none" stroke="#3B82F6" strokeWidth="20"
-                        strokeDasharray={`${inProgressLen} ${circumference}`}
-                        strokeDashoffset={-pendingLen}
-                        transform="rotate(-90 90 90)"
-                      />
-                    )}
-                    {/* Pending segment (amber) - drawn on top */}
-                    {pending > 0 && (
-                      <circle cx="90" cy="90" r="70" fill="none" stroke="#F59E0B" strokeWidth="20"
-                        strokeDasharray={`${pendingLen} ${circumference}`}
-                        strokeDashoffset={0}
-                        transform="rotate(-90 90 90)"
-                      />
-                    )}
+                    {segments.map((seg, idx) => {
+                      if (!seg.show) return null;
+                      const currentOffset = offset;
+                      offset += seg.len;
+                      return (
+                        <circle key={idx} cx="90" cy="90" r="70" fill="none" stroke={seg.color} strokeWidth="20"
+                          strokeDasharray={`${seg.len} ${circumference}`}
+                          strokeDashoffset={-currentOffset}
+                          transform="rotate(-90 90 90)"
+                        />
+                      );
+                    })}
                     {/* Gray background if no data */}
                     {pieTotal === 0 && (
                       <circle cx="90" cy="90" r="70" fill="none" stroke="#E5E7EB" strokeWidth="20" />
@@ -523,28 +533,49 @@ const FPDashboard = ({ user }) => {
               );
             })()}
 
-            {/* Legend - using same values as pie chart */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between gap-8">
+            {/* Legend - All 6 statuses */}
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+              <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-amber-500"></span>
+                  <span className="w-3 h-3 rounded-full bg-amber-500"></span>
                   <span className="text-sm text-gray-600">Pending</span>
                 </div>
-                <span className="text-lg font-bold text-gray-900">{stats?.workOrders?.pending || 0}</span>
+                <span className="text-sm font-bold text-gray-900">{workOrdersByStatus.pending || 0}</span>
               </div>
-              <div className="flex items-center justify-between gap-8">
+              <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-blue-500"></span>
+                  <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                  <span className="text-sm text-gray-600">Assigned</span>
+                </div>
+                <span className="text-sm font-bold text-gray-900">{workOrdersByStatus.assigned || 0}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-purple-500"></span>
                   <span className="text-sm text-gray-600">In Progress</span>
                 </div>
-                <span className="text-lg font-bold text-gray-900">{stats?.workOrders?.byStatus?.in_progress || 0}</span>
+                <span className="text-sm font-bold text-gray-900">{workOrdersByStatus.in_progress || 0}</span>
               </div>
-              <div className="flex items-center justify-between gap-8">
+              <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-emerald-500"></span>
+                  <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
                   <span className="text-sm text-gray-600">Completed</span>
                 </div>
-                <span className="text-lg font-bold text-gray-900">{stats?.workOrders?.completed || 0}</span>
+                <span className="text-sm font-bold text-gray-900">{workOrdersByStatus.completed || 0}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-gray-500"></span>
+                  <span className="text-sm text-gray-600">Closed</span>
+                </div>
+                <span className="text-sm font-bold text-gray-900">{workOrdersByStatus.closed || 0}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                  <span className="text-sm text-gray-600">Cancelled</span>
+                </div>
+                <span className="text-sm font-bold text-gray-900">{workOrdersByStatus.cancelled || 0}</span>
               </div>
             </div>
           </div>
