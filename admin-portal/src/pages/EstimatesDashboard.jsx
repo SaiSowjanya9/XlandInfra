@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   FileText, 
@@ -9,7 +9,9 @@ import {
   Building2, 
   RefreshCw,
   ArrowRight,
-  Mail
+  Mail,
+  Calendar,
+  ChevronDown
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -60,11 +62,35 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-  const [periodFilter, setPeriodFilter] = useState('month');
+  
+  // Main date range filter (controls entire dashboard)
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  
+  // Individual block filters (each block has its own)
+  const [filter1, setFilter1] = useState('all'); // Property-Based Property Type
+  const [filter2, setFilter2] = useState('all'); // Status Overview
+  const [filter3, setFilter3] = useState('all'); // Estimate Type
+  const [filter4, setFilter4] = useState('all'); // Direct Property Type
+  const [filter5, setFilter5] = useState('all'); // Direct Status
+  const [filter6, setFilter6] = useState('all'); // Property-Based Status
   const [trendPeriod, setTrendPeriod] = useState('month');
 
   const token = getAuthToken();
   const apiPath = getApiPath(portalType);
+  const datePickerRef = useRef(null);
+
+  // Close date picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (datePickerRef.current && !datePickerRef.current.contains(event.target)) {
+        setShowDatePicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Get the base path for navigation
   const getBasePath = () => {
@@ -104,9 +130,27 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     fetchEstimates();
   }, [fetchEstimates]);
 
-  // Filter estimates by period
-  const getFilteredEstimates = () => {
-    if (periodFilter === 'all') return estimates;
+  // Filter estimates by MAIN date range (controls entire dashboard)
+  const getMainFilteredEstimates = () => {
+    if (!startDate && !endDate) return estimates;
+    
+    return estimates.filter(est => {
+      const estDate = new Date(est.created_at || est.createdAt);
+      if (startDate && estDate < new Date(startDate)) return false;
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        if (estDate > end) return false;
+      }
+      return true;
+    });
+  };
+
+  const mainFilteredEstimates = getMainFilteredEstimates();
+
+  // Helper function to apply period filter to a dataset
+  const applyPeriodFilter = (data, periodFilter) => {
+    if (periodFilter === 'all') return data;
     
     const now = new Date();
     const filterDate = new Date();
@@ -128,16 +172,17 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
         filterDate.setFullYear(now.getFullYear() - 1);
         break;
       default:
-        return estimates;
+        return data;
     }
     
-    return estimates.filter(est => {
+    return data.filter(est => {
       const estDate = new Date(est.created_at || est.createdAt);
       return estDate >= filterDate;
     });
   };
 
-  const filteredEstimates = getFilteredEstimates();
+  // For backward compatibility (charts that don't have individual filters yet)
+  const filteredEstimates = mainFilteredEstimates;
 
   // Get this month's estimates for funnel
   const getThisMonthEstimates = () => {
@@ -151,26 +196,49 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
 
   const thisMonthEstimates = getThisMonthEstimates();
 
-  // Calculate stats
-  const totalEstimates = filteredEstimates.length;
-  const directEstimates = filteredEstimates.filter(e => 
+  // Calculate stats for STAT CARDS (use main date range filtered data)
+  const totalEstimates = mainFilteredEstimates.length;
+  const directEstimates = mainFilteredEstimates.filter(e => 
     e.estimate_type === 'direct' || e.estimateType === 'direct'
   ).length;
-  const propertyBasedEstimates = filteredEstimates.filter(e => 
+  const propertyBasedEstimates = mainFilteredEstimates.filter(e => 
     e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
     e.estimateType === 'property_based' || e.estimateType === 'property-based'
   ).length;
   
-  const draftEstimates = filteredEstimates.filter(e => 
+  const draftEstimates = mainFilteredEstimates.filter(e => 
     (e.status || '').toLowerCase() === 'draft'
   ).length;
-  const sentEstimates = filteredEstimates.filter(e => 
+  const sentEstimates = mainFilteredEstimates.filter(e => 
     (e.status || '').toLowerCase() === 'sent'
   ).length;
-  const approvedEstimates = filteredEstimates.filter(e => 
+  const approvedEstimates = mainFilteredEstimates.filter(e => 
     (e.status || '').toLowerCase() === 'approved'
   ).length;
-  const rejectedEstimates = filteredEstimates.filter(e => 
+  const rejectedEstimates = mainFilteredEstimates.filter(e => 
+    (e.status || '').toLowerCase() === 'rejected'
+  ).length;
+
+  // Calculate stats for CHARTS (use filtered estimates)
+  const filteredTotal = filteredEstimates.length;
+  const filteredDirect = filteredEstimates.filter(e => 
+    e.estimate_type === 'direct' || e.estimateType === 'direct'
+  ).length;
+  const filteredPropertyBased = filteredEstimates.filter(e => 
+    e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
+    e.estimateType === 'property_based' || e.estimateType === 'property-based'
+  ).length;
+  
+  const filteredDraft = filteredEstimates.filter(e => 
+    (e.status || '').toLowerCase() === 'draft'
+  ).length;
+  const filteredSent = filteredEstimates.filter(e => 
+    (e.status || '').toLowerCase() === 'sent'
+  ).length;
+  const filteredApproved = filteredEstimates.filter(e => 
+    (e.status || '').toLowerCase() === 'approved'
+  ).length;
+  const filteredRejected = filteredEstimates.filter(e => 
     (e.status || '').toLowerCase() === 'rejected'
   ).length;
 
@@ -253,76 +321,88 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     }
   ];
 
-  // Property type distribution data for property-based estimates only
-  const propertyBasedOnly = filteredEstimates.filter(e => 
+  // ============================================
+  // CHART DATA - Each uses its own filter
+  // ============================================
+
+  // Block 1: Property-Based Property Type (uses filter1)
+  const block1Data = applyPeriodFilter(mainFilteredEstimates, filter1).filter(e => 
     e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
     e.estimateType === 'property_based' || e.estimateType === 'property-based'
   );
-  
   const propertyTypeCount = {};
-  propertyBasedOnly.forEach(est => {
+  block1Data.forEach(est => {
     const propType = normalizePropertyType(est.property_type || est.propertyType);
     propertyTypeCount[propType] = (propertyTypeCount[propType] || 0) + 1;
   });
-  
   const propertyTypeData = Object.entries(propertyTypeCount)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
 
-  // Property type distribution data for DIRECT estimates
-  const directOnly = filteredEstimates.filter(e => 
+  // Block 2: Status Overview (uses filter2)
+  const block2Data = applyPeriodFilter(mainFilteredEstimates, filter2);
+  const block2Draft = block2Data.filter(e => (e.status || '').toLowerCase() === 'draft').length;
+  const block2Sent = block2Data.filter(e => (e.status || '').toLowerCase() === 'sent').length;
+  const block2Approved = block2Data.filter(e => (e.status || '').toLowerCase() === 'approved').length;
+  const block2Rejected = block2Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length;
+  const statusData = [
+    { name: 'Draft', value: block2Draft, color: '#3B82F6' },
+    { name: 'Sent', value: block2Sent, color: '#F59E0B' },
+    { name: 'Approved', value: block2Approved, color: '#22C55E' },
+    { name: 'Rejected', value: block2Rejected, color: '#EF4444' }
+  ].filter(item => item.value > 0);
+
+  // Block 3: Estimate Type (uses filter3)
+  const block3Data = applyPeriodFilter(mainFilteredEstimates, filter3);
+  const block3Direct = block3Data.filter(e => e.estimate_type === 'direct' || e.estimateType === 'direct').length;
+  const block3PropertyBased = block3Data.filter(e => 
+    e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
+    e.estimateType === 'property_based' || e.estimateType === 'property-based'
+  ).length;
+  const typeData = [
+    { name: 'Direct Estimates', value: block3Direct, color: '#8B5CF6' },
+    { name: 'Property-Based', value: block3PropertyBased, color: '#3B82F6' }
+  ].filter(item => item.value > 0);
+
+  // Block 4: Direct Property Type (uses filter4)
+  const block4Data = applyPeriodFilter(mainFilteredEstimates, filter4).filter(e => 
     e.estimate_type === 'direct' || e.estimateType === 'direct'
   );
-  
   const directPropertyTypeCount = {};
-  directOnly.forEach(est => {
+  block4Data.forEach(est => {
     const propType = normalizePropertyType(est.property_type || est.propertyType);
     directPropertyTypeCount[propType] = (directPropertyTypeCount[propType] || 0) + 1;
   });
-  
   const directPropertyTypeData = Object.entries(directPropertyTypeCount)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
 
-  // Status for Property-Based estimates
-  const propertyBasedDraft = propertyBasedOnly.filter(e => (e.status || '').toLowerCase() === 'draft').length;
-  const propertyBasedSent = propertyBasedOnly.filter(e => (e.status || '').toLowerCase() === 'sent').length;
-  const propertyBasedApproved = propertyBasedOnly.filter(e => (e.status || '').toLowerCase() === 'approved').length;
-  const propertyBasedRejected = propertyBasedOnly.filter(e => (e.status || '').toLowerCase() === 'rejected').length;
-
-  const propertyBasedStatusData = [
-    { name: 'Draft', value: propertyBasedDraft, color: '#3B82F6' },
-    { name: 'Sent', value: propertyBasedSent, color: '#F59E0B' },
-    { name: 'Approved', value: propertyBasedApproved, color: '#22C55E' },
-    { name: 'Rejected', value: propertyBasedRejected, color: '#EF4444' }
-  ].filter(item => item.value > 0);
-
-  // Status for Direct estimates
-  const directDraft = directOnly.filter(e => (e.status || '').toLowerCase() === 'draft').length;
-  const directSent = directOnly.filter(e => (e.status || '').toLowerCase() === 'sent').length;
-  const directApproved = directOnly.filter(e => (e.status || '').toLowerCase() === 'approved').length;
-  const directRejected = directOnly.filter(e => (e.status || '').toLowerCase() === 'rejected').length;
-
+  // Block 5: Direct Status (uses filter5)
+  const block5Data = applyPeriodFilter(mainFilteredEstimates, filter5).filter(e => 
+    e.estimate_type === 'direct' || e.estimateType === 'direct'
+  );
   const directStatusData = [
-    { name: 'Draft', value: directDraft, color: '#3B82F6' },
-    { name: 'Sent', value: directSent, color: '#F59E0B' },
-    { name: 'Approved', value: directApproved, color: '#22C55E' },
-    { name: 'Rejected', value: directRejected, color: '#EF4444' }
+    { name: 'Draft', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#3B82F6' },
+    { name: 'Sent', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#F59E0B' },
+    { name: 'Approved', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#22C55E' },
+    { name: 'Rejected', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
   ].filter(item => item.value > 0);
 
-  // Status distribution data (for donut chart) - matching reference colors
-  const statusData = [
-    { name: 'Draft', value: draftEstimates, color: '#3B82F6' },
-    { name: 'Sent', value: sentEstimates, color: '#F59E0B' },
-    { name: 'Approved', value: approvedEstimates, color: '#22C55E' },
-    { name: 'Rejected', value: rejectedEstimates, color: '#EF4444' }
+  // Block 6: Property-Based Status (uses filter6)
+  const block6Data = applyPeriodFilter(mainFilteredEstimates, filter6).filter(e => 
+    e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
+    e.estimateType === 'property_based' || e.estimateType === 'property-based'
+  );
+  const propertyBasedStatusData = [
+    { name: 'Draft', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#3B82F6' },
+    { name: 'Sent', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#F59E0B' },
+    { name: 'Approved', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#22C55E' },
+    { name: 'Rejected', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
   ].filter(item => item.value > 0);
 
-  // Estimate type distribution (for donut chart)
-  const typeData = [
-    { name: 'Direct Estimates', value: directEstimates, color: '#8B5CF6' },
-    { name: 'Property-Based', value: propertyBasedEstimates, color: '#3B82F6' }
-  ].filter(item => item.value > 0);
+  // Legacy variables for compatibility
+  const propertyBasedOnly = block1Data;
+  const directOnly = block4Data;
 
   // Calculate trend data for line chart
   const getTrendData = () => {
@@ -402,20 +482,135 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-      {/* Header with Refresh */}
-      <div className="flex items-center justify-between">
+      {/* Header with Date Range Picker and Refresh */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Estimates Dashboard</h1>
           <p className="text-gray-500 text-sm mt-1">Overview of all your estimates</p>
         </div>
-        <button
-          onClick={() => fetchEstimates(true)}
-          disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Date Range Picker */}
+          <div className="relative" ref={datePickerRef}>
+            <button
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Calendar className="w-4 h-4 text-gray-500" />
+              <span className="text-sm text-gray-700">
+                {startDate && endDate 
+                  ? `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`
+                  : startDate 
+                    ? `From ${new Date(startDate).toLocaleDateString()}`
+                    : endDate
+                      ? `Until ${new Date(endDate).toLocaleDateString()}`
+                      : 'All Time'}
+              </span>
+              <ChevronDown className="w-4 h-4 text-gray-500" />
+            </button>
+            
+            {showDatePicker && (
+              <div className="absolute right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-50 min-w-[300px]">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => {
+                        const now = new Date();
+                        const weekAgo = new Date(now);
+                        weekAgo.setDate(now.getDate() - 7);
+                        setStartDate(weekAgo.toISOString().split('T')[0]);
+                        setEndDate(now.toISOString().split('T')[0]);
+                      }}
+                      className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-full"
+                    >
+                      Last 7 Days
+                    </button>
+                    <button
+                      onClick={() => {
+                        const now = new Date();
+                        const monthAgo = new Date(now);
+                        monthAgo.setMonth(now.getMonth() - 1);
+                        setStartDate(monthAgo.toISOString().split('T')[0]);
+                        setEndDate(now.toISOString().split('T')[0]);
+                      }}
+                      className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-full"
+                    >
+                      Last 30 Days
+                    </button>
+                    <button
+                      onClick={() => {
+                        const now = new Date();
+                        const quarterAgo = new Date(now);
+                        quarterAgo.setMonth(now.getMonth() - 3);
+                        setStartDate(quarterAgo.toISOString().split('T')[0]);
+                        setEndDate(now.toISOString().split('T')[0]);
+                      }}
+                      className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-full"
+                    >
+                      Last 3 Months
+                    </button>
+                    <button
+                      onClick={() => {
+                        const now = new Date();
+                        const yearAgo = new Date(now);
+                        yearAgo.setFullYear(now.getFullYear() - 1);
+                        setStartDate(yearAgo.toISOString().split('T')[0]);
+                        setEndDate(now.toISOString().split('T')[0]);
+                      }}
+                      className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-full"
+                    >
+                      Last Year
+                    </button>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t">
+                    <button
+                      onClick={() => {
+                        setStartDate('');
+                        setEndDate('');
+                      }}
+                      className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      onClick={() => setShowDatePicker(false)}
+                      className="px-4 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Refresh Button */}
+          <button
+            onClick={() => fetchEstimates(true)}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Stat Cards Row - 7 cards matching reference */}
@@ -458,10 +653,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-800">Estimates by Property Type (Property-Based)</h3>
             <select
-              value={periodFilter}
-              onChange={(e) => setPeriodFilter(e.target.value)}
+              value={filter1}
+              onChange={(e) => setFilter1(e.target.value)}
               className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
             >
+              <option value="all">All Time</option>
               <option value="week">Weekly</option>
               <option value="month">Monthly</option>
               <option value="quarter">Quarterly</option>
@@ -513,10 +709,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-800">Estimate Status Overview</h3>
             <select
-              value={periodFilter}
-              onChange={(e) => setPeriodFilter(e.target.value)}
+              value={filter2}
+              onChange={(e) => setFilter2(e.target.value)}
               className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
             >
+              <option value="all">All Time</option>
               <option value="week">Weekly</option>
               <option value="month">Monthly</option>
               <option value="quarter">Quarterly</option>
@@ -554,7 +751,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               {/* Center text */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-gray-800">{totalEstimates}</div>
+                  <div className="text-3xl font-bold text-gray-800">{block2Data.length}</div>
                   <div className="text-xs text-gray-500">Total</div>
                 </div>
               </div>
@@ -570,7 +767,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                     <span className="text-gray-600">{item.name}</span>
                   </div>
                   <span className="text-gray-800">
-                    {item.value} ({totalEstimates ? ((item.value / totalEstimates) * 100).toFixed(1) : 0}%)
+                    {item.value} ({block2Data.length ? ((item.value / block2Data.length) * 100).toFixed(1) : 0}%)
                   </span>
                 </div>
               ))}
@@ -585,10 +782,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               <h3 className="font-semibold text-gray-800">Estimates by Estimate Type</h3>
             </div>
             <select
-              value={periodFilter}
-              onChange={(e) => setPeriodFilter(e.target.value)}
+              value={filter3}
+              onChange={(e) => setFilter3(e.target.value)}
               className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
             >
+              <option value="all">All Time</option>
               <option value="week">Weekly</option>
               <option value="month">Monthly</option>
               <option value="quarter">Quarterly</option>
@@ -633,7 +831,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   />
                   <span className="text-gray-600">{item.name}</span>
                   <span className="ml-auto font-medium text-gray-800">
-                    {item.value} ({totalEstimates ? ((item.value / totalEstimates) * 100).toFixed(1) : 0}%)
+                    {item.value} ({block3Data.length ? ((item.value / block3Data.length) * 100).toFixed(1) : 0}%)
                   </span>
                 </div>
               ))}
@@ -649,10 +847,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-800">Estimates by Property Type (Direct)</h3>
             <select
-              value={periodFilter}
-              onChange={(e) => setPeriodFilter(e.target.value)}
+              value={filter4}
+              onChange={(e) => setFilter4(e.target.value)}
               className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
             >
+              <option value="all">All Time</option>
               <option value="week">Weekly</option>
               <option value="month">Monthly</option>
               <option value="quarter">Quarterly</option>
@@ -703,10 +902,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-800">Direct Estimate Status</h3>
             <select
-              value={periodFilter}
-              onChange={(e) => setPeriodFilter(e.target.value)}
+              value={filter5}
+              onChange={(e) => setFilter5(e.target.value)}
               className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
             >
+              <option value="all">All Time</option>
               <option value="week">Weekly</option>
               <option value="month">Monthly</option>
               <option value="quarter">Quarterly</option>
@@ -744,7 +944,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               {/* Center text */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-gray-800">{directEstimates}</div>
+                  <div className="text-3xl font-bold text-gray-800">{block5Data.length}</div>
                   <div className="text-xs text-gray-500">Total</div>
                 </div>
               </div>
@@ -760,7 +960,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                     <span className="text-gray-600">{item.name}</span>
                   </div>
                   <span className="text-gray-800">
-                    {item.value} ({directEstimates ? ((item.value / directEstimates) * 100).toFixed(1) : 0}%)
+                    {item.value} ({block5Data.length ? ((item.value / block5Data.length) * 100).toFixed(1) : 0}%)
                   </span>
                 </div>
               ))}
@@ -773,10 +973,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-800">Property-Based Status</h3>
             <select
-              value={periodFilter}
-              onChange={(e) => setPeriodFilter(e.target.value)}
+              value={filter6}
+              onChange={(e) => setFilter6(e.target.value)}
               className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
             >
+              <option value="all">All Time</option>
               <option value="week">Weekly</option>
               <option value="month">Monthly</option>
               <option value="quarter">Quarterly</option>
@@ -814,7 +1015,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               {/* Center text */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-gray-800">{propertyBasedEstimates}</div>
+                  <div className="text-3xl font-bold text-gray-800">{block6Data.length}</div>
                   <div className="text-xs text-gray-500">Total</div>
                 </div>
               </div>
@@ -830,7 +1031,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                     <span className="text-gray-600">{item.name}</span>
                   </div>
                   <span className="text-gray-800">
-                    {item.value} ({propertyBasedEstimates ? ((item.value / propertyBasedEstimates) * 100).toFixed(1) : 0}%)
+                    {item.value} ({block6Data.length ? ((item.value / block6Data.length) * 100).toFixed(1) : 0}%)
                   </span>
                 </div>
               ))}
@@ -850,6 +1051,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               onChange={(e) => setTrendPeriod(e.target.value)}
               className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
             >
+              <option value="all">All Time</option>
               <option value="week">Weekly</option>
               <option value="month">Monthly</option>
               <option value="quarter">Quarterly</option>
