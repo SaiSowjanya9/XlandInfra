@@ -21,7 +21,7 @@ import {
   PlusCircle,
   Archive,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
 } from 'lucide-react';
 
 const CoordinatorLayout = ({ admin, onLogout, children }) => {
@@ -66,6 +66,7 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
   ];
 
   const estimatesSubItems = [
+    { path: '/coordinator/estimates/dashboard', icon: BarChart3, label: 'Dashboard' },
     { path: '/coordinator/estimates/create', icon: Plus, label: 'Create Estimate' },
     { path: '/coordinator/estimates', icon: List, label: 'All Estimates' },
     { path: '/coordinator/estimates/amc', icon: Package, label: 'AMC Packages' },

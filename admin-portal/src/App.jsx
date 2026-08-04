@@ -86,6 +86,7 @@ import QRManagement from './pages/QRManagement';
 import EstimateAction from './pages/EstimateAction';
 import ResetPassword from './pages/ResetPassword';
 import Phase2Documentation from './pages/Phase2Documentation';
+import EstimatesDashboard from './pages/EstimatesDashboard';
 import { FPProvider } from './contexts/FPContext';
 
 // Session timeout in milliseconds (30 minutes)
@@ -342,6 +343,7 @@ function App() {
                     <Route path="user-management" element={<UserManagement />} />
                     <Route path="qr-management" element={<QRManagement />} />
                     <Route path="estimates" element={<Navigate to="/employee/estimates/list" replace />} />
+                    <Route path="estimates/dashboard" element={<EstimatesDashboard user={user} portalType="employee" />} />
                     <Route path="estimates/create" element={<Estimates admin={user} defaultTab="create" />} />
                     <Route path="estimates/list" element={<Estimates admin={user} defaultTab="list" />} />
                     <Route path="estimates/amc-manager" element={<Estimates admin={user} defaultTab="amc-manager" />} />
@@ -407,6 +409,7 @@ function App() {
                     <Route path="employees/edit/:id" element={<FPEditEmployee user={user} />} />
                     <Route path="employees/zones" element={<FPEmployeeZones user={user} />} />
                     <Route path="estimates" element={<FPEstimates user={user} defaultTab="list" />} />
+                    <Route path="estimates/dashboard" element={<EstimatesDashboard user={user} portalType="franchise" />} />
                     <Route path="estimates/create" element={<FPEstimates user={user} defaultTab="create" />} />
                     <Route path="estimates/amc" element={<FPEstimates user={user} defaultTab="amc" />} />
                     <Route path="estimates/addons" element={<FPEstimates user={user} defaultTab="addons" />} />
@@ -444,6 +447,7 @@ function App() {
                     <Route path="vendors/assigned" element={<AssignedVendors user={user} />} />
                     <Route path="employees/zones" element={<ManagerEmployeeZones user={user} />} />
                     <Route path="estimates" element={<ManagerEstimates user={user} defaultTab="list" />} />
+                    <Route path="estimates/dashboard" element={<EstimatesDashboard user={user} portalType="manager" />} />
                     <Route path="estimates/create" element={<ManagerEstimates user={user} defaultTab="create" />} />
                     <Route path="estimates/amc" element={<ManagerEstimates user={user} defaultTab="amc" />} />
                     <Route path="estimates/addons" element={<ManagerEstimates user={user} defaultTab="addons" />} />

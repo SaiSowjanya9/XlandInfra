@@ -62,6 +62,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
   ];
 
   const estimatesSubItems = [
+    { path: '/executive/estimates/dashboard', icon: BarChart3, label: 'Dashboard' },
     { path: '/executive/estimates/create', icon: Plus, label: 'Create Estimate' },
     { path: '/executive/estimates', icon: List, label: 'All Estimates' },
     { path: '/executive/estimates/amc', icon: Package, label: 'AMC Packages' },
