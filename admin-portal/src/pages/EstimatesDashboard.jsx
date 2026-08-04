@@ -184,11 +184,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   // For backward compatibility (charts that don't have individual filters yet)
   const filteredEstimates = mainFilteredEstimates;
 
-  // Get this month's estimates for funnel
+  // Get this month's estimates for funnel (uses main date filtered data)
   const getThisMonthEstimates = () => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    return estimates.filter(est => {
+    return mainFilteredEstimates.filter(est => {
       const estDate = new Date(est.created_at || est.createdAt);
       return estDate >= startOfMonth;
     });
@@ -404,7 +404,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const propertyBasedOnly = block1Data;
   const directOnly = block4Data;
 
-  // Calculate trend data for line chart
+  // Calculate trend data for line chart (uses main date filtered data)
   const getTrendData = () => {
     const monthlyData = {};
     const now = new Date();
@@ -416,7 +416,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       monthlyData[key] = { name: key, direct: 0, property: 0, sortDate: date };
     }
     
-    estimates.forEach(est => {
+    mainFilteredEstimates.forEach(est => {
       const date = new Date(est.created_at || est.createdAt);
       const key = date.toLocaleString('default', { month: 'short' }) + ' ' + date.getFullYear();
       
@@ -821,6 +821,13 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   No data
                 </div>
               )}
+              {/* Center text */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-gray-800">{block3Data.length}</div>
+                  <div className="text-xs text-gray-500">Total</div>
+                </div>
+              </div>
             </div>
             <div className="w-1/2 space-y-3 pl-4">
               {typeData.map((item, index) => (
