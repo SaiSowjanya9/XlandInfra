@@ -249,7 +249,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const funnelInvoicesCreated = funnelApproved;
   const funnelPaid = Math.floor(funnelApproved * 0.85); // Assuming 85% of approved are paid
 
-  // Stat cards configuration - matching the reference image exactly
+  // Stat cards configuration - matching the reference image exactly with gradient backgrounds
   const statCards = [
     {
       label: 'Total Estimates',
@@ -258,7 +258,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       icon: FileText,
       iconBg: '#DBEAFE',
       iconColor: '#3B82F6',
-      borderColor: '#3B82F6'
+      borderColor: '#3B82F6',
+      gradientEnd: 'rgba(59, 130, 246, 0.08)'
     },
     {
       label: 'Direct Estimates',
@@ -267,25 +268,28 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       icon: Send,
       iconBg: '#EDE9FE',
       iconColor: '#8B5CF6',
-      borderColor: '#8B5CF6'
+      borderColor: '#8B5CF6',
+      gradientEnd: 'rgba(139, 92, 246, 0.08)'
     },
     {
       label: 'Property-Based',
       value: propertyBasedEstimates,
       percentage: totalEstimates ? `${((propertyBasedEstimates / totalEstimates) * 100).toFixed(1)}% of total` : '0% of total',
       icon: Building2,
-      iconBg: '#FEF3C7',
-      iconColor: '#F59E0B',
-      borderColor: '#F59E0B'
+      iconBg: '#CCFBF1',
+      iconColor: '#14B8A6',
+      borderColor: '#14B8A6',
+      gradientEnd: 'rgba(20, 184, 166, 0.08)'
     },
     {
       label: 'Draft',
       value: draftEstimates,
       percentage: totalEstimates ? `${((draftEstimates / totalEstimates) * 100).toFixed(1)}% of total` : '0% of total',
       icon: FileEdit,
-      iconBg: '#FED7AA',
-      iconColor: '#EA580C',
-      borderColor: '#EA580C'
+      iconBg: '#FEF3C7',
+      iconColor: '#F59E0B',
+      borderColor: '#F59E0B',
+      gradientEnd: 'rgba(245, 158, 11, 0.08)'
     },
     {
       label: 'Sent',
@@ -294,7 +298,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       icon: Mail,
       iconBg: '#DBEAFE',
       iconColor: '#3B82F6',
-      borderColor: '#3B82F6'
+      borderColor: '#3B82F6',
+      gradientEnd: 'rgba(59, 130, 246, 0.08)'
     },
     {
       label: 'Approved',
@@ -303,7 +308,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       icon: CheckCircle,
       iconBg: '#D1FAE5',
       iconColor: '#10B981',
-      borderColor: '#10B981'
+      borderColor: '#10B981',
+      gradientEnd: 'rgba(16, 185, 129, 0.08)'
     },
     {
       label: 'Rejected',
@@ -312,7 +318,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       icon: XCircle,
       iconBg: '#FEE2E2',
       iconColor: '#EF4444',
-      borderColor: '#EF4444'
+      borderColor: '#EF4444',
+      gradientEnd: 'rgba(239, 68, 68, 0.08)'
     }
   ];
 
@@ -425,9 +432,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       const key = date.toLocaleString('default', { month: 'short' }) + ' ' + date.getFullYear();
       
       if (monthlyData[key]) {
-        if (est.estimate_type === 'direct' || est.estimateType === 'direct') {
+        const estType = est.estimate_type || est.estimateType || '';
+        if (estType === 'direct') {
           monthlyData[key].direct++;
-        } else {
+        } else if (estType === 'property_based' || estType === 'property-based') {
           monthlyData[key].property++;
         }
       }
@@ -443,10 +451,12 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-gray-900 px-3 py-2 shadow-xl rounded-lg border border-gray-700 z-50">
-          <p className="font-semibold text-white text-sm">{payload[0]?.name || label}</p>
-          <p className="text-gray-300 text-sm">
-            Count: <span className="font-bold text-white">{payload[0]?.value}</span>
-          </p>
+          <p className="font-semibold text-white text-sm mb-1">{label || payload[0]?.name}</p>
+          {payload.map((entry, index) => (
+            <p key={index} className="text-sm" style={{ color: entry.color }}>
+              {entry.name}: <span className="font-bold">{entry.value}</span>
+            </p>
+          ))}
         </div>
       );
     }
@@ -624,8 +634,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             <div
               key={index}
               onClick={() => navigate(`${getBasePath()}/estimates`)}
-              className="bg-white rounded-xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-all group"
-              style={{ borderTop: `3px solid ${card.borderColor}` }}
+              className="rounded-xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-all group"
+              style={{ 
+                borderTop: `3px solid ${card.borderColor}`,
+                background: `linear-gradient(135deg, white 0%, white 50%, ${card.gradientEnd} 100%)`
+              }}
             >
               <div className="flex items-center gap-2 mb-3">
                 <div 
