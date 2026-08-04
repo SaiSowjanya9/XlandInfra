@@ -8,11 +8,8 @@ import {
   FileEdit, 
   Building2, 
   RefreshCw,
-  TrendingUp,
   ArrowRight,
-  Info,
-  Mail,
-  Home
+  Mail
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -63,8 +60,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-  const [periodFilter, setPeriodFilter] = useState('all');
-  const [trendPeriod, setTrendPeriod] = useState('monthly');
+  const [periodFilter, setPeriodFilter] = useState('month');
+  const [trendPeriod, setTrendPeriod] = useState('month');
 
   const token = getAuthToken();
   const apiPath = getApiPath(portalType);
@@ -115,9 +112,6 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     const filterDate = new Date();
     
     switch (periodFilter) {
-      case 'today':
-        filterDate.setHours(0, 0, 0, 0);
-        break;
       case 'week':
         filterDate.setDate(now.getDate() - 7);
         break;
@@ -126,6 +120,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
         break;
       case 'quarter':
         filterDate.setMonth(now.getMonth() - 3);
+        break;
+      case 'half':
+        filterDate.setMonth(now.getMonth() - 6);
         break;
       case 'year':
         filterDate.setFullYear(now.getFullYear() - 1);
@@ -272,6 +269,47 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
 
+  // Property type distribution data for DIRECT estimates
+  const directOnly = filteredEstimates.filter(e => 
+    e.estimate_type === 'direct' || e.estimateType === 'direct'
+  );
+  
+  const directPropertyTypeCount = {};
+  directOnly.forEach(est => {
+    const propType = normalizePropertyType(est.property_type || est.propertyType);
+    directPropertyTypeCount[propType] = (directPropertyTypeCount[propType] || 0) + 1;
+  });
+  
+  const directPropertyTypeData = Object.entries(directPropertyTypeCount)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+
+  // Status for Property-Based estimates
+  const propertyBasedDraft = propertyBasedOnly.filter(e => (e.status || '').toLowerCase() === 'draft').length;
+  const propertyBasedSent = propertyBasedOnly.filter(e => (e.status || '').toLowerCase() === 'sent').length;
+  const propertyBasedApproved = propertyBasedOnly.filter(e => (e.status || '').toLowerCase() === 'approved').length;
+  const propertyBasedRejected = propertyBasedOnly.filter(e => (e.status || '').toLowerCase() === 'rejected').length;
+
+  const propertyBasedStatusData = [
+    { name: 'Draft', value: propertyBasedDraft, color: '#3B82F6' },
+    { name: 'Sent', value: propertyBasedSent, color: '#F59E0B' },
+    { name: 'Approved', value: propertyBasedApproved, color: '#22C55E' },
+    { name: 'Rejected', value: propertyBasedRejected, color: '#EF4444' }
+  ].filter(item => item.value > 0);
+
+  // Status for Direct estimates
+  const directDraft = directOnly.filter(e => (e.status || '').toLowerCase() === 'draft').length;
+  const directSent = directOnly.filter(e => (e.status || '').toLowerCase() === 'sent').length;
+  const directApproved = directOnly.filter(e => (e.status || '').toLowerCase() === 'approved').length;
+  const directRejected = directOnly.filter(e => (e.status || '').toLowerCase() === 'rejected').length;
+
+  const directStatusData = [
+    { name: 'Draft', value: directDraft, color: '#3B82F6' },
+    { name: 'Sent', value: directSent, color: '#F59E0B' },
+    { name: 'Approved', value: directApproved, color: '#22C55E' },
+    { name: 'Rejected', value: directRejected, color: '#EF4444' }
+  ].filter(item => item.value > 0);
+
   // Status distribution data (for donut chart) - matching reference colors
   const statusData = [
     { name: 'Draft', value: draftEstimates, color: '#3B82F6' },
@@ -391,16 +429,17 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               className="bg-white rounded-xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-all group"
               style={{ borderTop: `3px solid ${card.borderColor}` }}
             >
-              <div className="flex items-start justify-between mb-2">
+              <div className="flex items-center gap-2 mb-3">
                 <div 
                   className="p-2 rounded-lg"
                   style={{ backgroundColor: card.iconBg }}
                 >
-                  <Icon className="w-5 h-5" style={{ color: card.iconColor }} />
+                  <Icon className="w-4 h-4" style={{ color: card.iconColor }} />
                 </div>
+                <span className="text-sm font-medium text-gray-700">{card.label}</span>
               </div>
               <div className="text-3xl font-bold text-gray-900 mb-1">{card.value}</div>
-              <div className="text-xs text-gray-500 mb-2">{card.percentage}</div>
+              <div className="text-xs text-gray-500 mb-2 whitespace-nowrap">{card.percentage}</div>
               <div 
                 className="text-xs font-medium flex items-center gap-1 group-hover:gap-2 transition-all"
                 style={{ color: card.borderColor }}
@@ -417,21 +456,17 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
         {/* Estimates by Property Type (Horizontal Bar) */}
         <div className="bg-white rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-gray-800">Estimates by Property Type (Property-Based)</h3>
-              <div className="group relative">
-                <Info className="w-4 h-4 text-gray-400 cursor-help" />
-              </div>
-            </div>
+            <h3 className="font-semibold text-gray-800">Estimates by Property Type (Property-Based)</h3>
             <select
               value={periodFilter}
               onChange={(e) => setPeriodFilter(e.target.value)}
               className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
             >
-              <option value="month">This Month</option>
-              <option value="quarter">This Quarter</option>
-              <option value="year">This Year</option>
-              <option value="all">All Time</option>
+              <option value="week">Weekly</option>
+              <option value="month">Monthly</option>
+              <option value="quarter">Quarterly</option>
+              <option value="half">Half-Yearly</option>
+              <option value="year">Yearly</option>
             </select>
           </div>
           
@@ -476,21 +511,17 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
         {/* Estimate Status Overview (Donut) */}
         <div className="bg-white rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-gray-800">Estimate Status Overview</h3>
-              <div className="group relative">
-                <Info className="w-4 h-4 text-gray-400 cursor-help" />
-              </div>
-            </div>
+            <h3 className="font-semibold text-gray-800">Estimate Status Overview</h3>
             <select
               value={periodFilter}
               onChange={(e) => setPeriodFilter(e.target.value)}
               className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
             >
-              <option value="month">This Month</option>
-              <option value="quarter">This Quarter</option>
-              <option value="year">This Year</option>
-              <option value="all">All Time</option>
+              <option value="week">Weekly</option>
+              <option value="month">Monthly</option>
+              <option value="quarter">Quarterly</option>
+              <option value="half">Half-Yearly</option>
+              <option value="year">Yearly</option>
             </select>
           </div>
           
@@ -554,9 +585,15 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               <h3 className="font-semibold text-gray-800">Estimates by Estimate Type</h3>
             </div>
             <select
+              value={periodFilter}
+              onChange={(e) => setPeriodFilter(e.target.value)}
               className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
             >
-              <option>This Month</option>
+              <option value="week">Weekly</option>
+              <option value="month">Monthly</option>
+              <option value="quarter">Quarterly</option>
+              <option value="half">Half-Yearly</option>
+              <option value="year">Yearly</option>
             </select>
           </div>
           
@@ -605,24 +642,219 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
       </div>
 
+      {/* Direct Estimates Row - 3 Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Estimates by Property Type - Direct */}
+        <div className="bg-white rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-800">Estimates by Property Type (Direct)</h3>
+            <select
+              value={periodFilter}
+              onChange={(e) => setPeriodFilter(e.target.value)}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
+            >
+              <option value="week">Weekly</option>
+              <option value="month">Monthly</option>
+              <option value="quarter">Quarterly</option>
+              <option value="half">Half-Yearly</option>
+              <option value="year">Yearly</option>
+            </select>
+          </div>
+          
+          {directPropertyTypeData.length > 0 ? (
+            <div className="space-y-3">
+              {directPropertyTypeData.map((item, index) => {
+                const maxValue = Math.max(...directPropertyTypeData.map(d => d.value));
+                const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+                const colors = ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE', '#EDE9FE'];
+                
+                return (
+                  <div key={index} className="flex items-center gap-3">
+                    <div className="w-28 text-sm text-gray-600 truncate">{item.name}</div>
+                    <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+                      <div 
+                        className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
+                        style={{ 
+                          width: `${Math.max(widthPercent, 15)}%`,
+                          backgroundColor: colors[index % colors.length]
+                        }}
+                      >
+                        <span className="text-white text-xs font-medium">{item.value}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="flex justify-center gap-1 text-xs text-gray-400 mt-2">
+                <span>0</span>
+                <span className="flex-1 text-center">Number of Estimates</span>
+                <span>{Math.max(...directPropertyTypeData.map(d => d.value))}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="h-48 flex items-center justify-center text-gray-400">
+              No direct estimates
+            </div>
+          )}
+        </div>
+
+        {/* Direct Estimate Status Overview (Donut) */}
+        <div className="bg-white rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-800">Direct Estimate Status</h3>
+            <select
+              value={periodFilter}
+              onChange={(e) => setPeriodFilter(e.target.value)}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
+            >
+              <option value="week">Weekly</option>
+              <option value="month">Monthly</option>
+              <option value="quarter">Quarterly</option>
+              <option value="half">Half-Yearly</option>
+              <option value="year">Yearly</option>
+            </select>
+          </div>
+          
+          <div className="flex items-center">
+            <div className="w-1/2 relative">
+              {directStatusData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie
+                      data={directStatusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={75}
+                      dataKey="value"
+                      strokeWidth={0}
+                    >
+                      {directStatusData.map((entry, index) => (
+                        <Cell key={index} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-44 flex items-center justify-center text-gray-400">
+                  No data
+                </div>
+              )}
+              {/* Center text */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-gray-800">{directEstimates}</div>
+                  <div className="text-xs text-gray-500">Total</div>
+                </div>
+              </div>
+            </div>
+            <div className="w-1/2 space-y-2 pl-4">
+              {directStatusData.map((item, index) => (
+                <div key={index} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-gray-600">{item.name}</span>
+                  </div>
+                  <span className="text-gray-800">
+                    {item.value} ({directEstimates ? ((item.value / directEstimates) * 100).toFixed(1) : 0}%)
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Property-Based Estimate Status (Donut) */}
+        <div className="bg-white rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-800">Property-Based Status</h3>
+            <select
+              value={periodFilter}
+              onChange={(e) => setPeriodFilter(e.target.value)}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
+            >
+              <option value="week">Weekly</option>
+              <option value="month">Monthly</option>
+              <option value="quarter">Quarterly</option>
+              <option value="half">Half-Yearly</option>
+              <option value="year">Yearly</option>
+            </select>
+          </div>
+          
+          <div className="flex items-center">
+            <div className="w-1/2 relative">
+              {propertyBasedStatusData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie
+                      data={propertyBasedStatusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={75}
+                      dataKey="value"
+                      strokeWidth={0}
+                    >
+                      {propertyBasedStatusData.map((entry, index) => (
+                        <Cell key={index} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-44 flex items-center justify-center text-gray-400">
+                  No data
+                </div>
+              )}
+              {/* Center text */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-gray-800">{propertyBasedEstimates}</div>
+                  <div className="text-xs text-gray-500">Total</div>
+                </div>
+              </div>
+            </div>
+            <div className="w-1/2 space-y-2 pl-4">
+              {propertyBasedStatusData.map((item, index) => (
+                <div key={index} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-gray-600">{item.name}</span>
+                  </div>
+                  <span className="text-gray-800">
+                    {item.value} ({propertyBasedEstimates ? ((item.value / propertyBasedEstimates) * 100).toFixed(1) : 0}%)
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Bottom Row - Trend & Funnel */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Estimate Trend (Line Chart) */}
         <div className="bg-white rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-gray-800">Estimate Trend</h3>
-              <div className="group relative">
-                <Info className="w-4 h-4 text-gray-400 cursor-help" />
-              </div>
-            </div>
+            <h3 className="font-semibold text-gray-800">Estimate Trend</h3>
             <select
               value={trendPeriod}
               onChange={(e) => setTrendPeriod(e.target.value)}
               className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
             >
-              <option value="monthly">Monthly</option>
-              <option value="weekly">Weekly</option>
+              <option value="week">Weekly</option>
+              <option value="month">Monthly</option>
+              <option value="quarter">Quarterly</option>
+              <option value="half">Half-Yearly</option>
+              <option value="year">Yearly</option>
             </select>
           </div>
           
@@ -664,12 +896,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
         {/* Estimates Funnel */}
         <div className="bg-white rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-gray-800">Estimates Funnel (This Month)</h3>
-              <div className="group relative">
-                <Info className="w-4 h-4 text-gray-400 cursor-help" />
-              </div>
-            </div>
+            <h3 className="font-semibold text-gray-800">Estimates Funnel (This Month)</h3>
           </div>
           
           <div className="flex items-center gap-6">
