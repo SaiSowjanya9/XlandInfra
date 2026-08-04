@@ -493,10 +493,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           <div className="relative" ref={datePickerRef}>
             <button
               onClick={() => setShowDatePicker(!showDatePicker)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 bg-white/80 backdrop-blur-md border border-white/30 rounded-xl hover:bg-white/95 transition-all shadow-sm hover:shadow-md"
             >
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-700">
+              <Calendar className="w-4 h-4 text-gray-600" />
+              <span className="text-sm text-gray-700 font-medium">
                 {startDate && endDate 
                   ? `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`
                   : startDate 
@@ -505,28 +505,29 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                       ? `Until ${new Date(endDate).toLocaleDateString()}`
                       : 'All Time'}
               </span>
-              <ChevronDown className="w-4 h-4 text-gray-500" />
+              <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
             </button>
             
             {showDatePicker && (
-              <div className="absolute right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-50 min-w-[300px]">
+              <div className="absolute right-0 mt-2 bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-5 z-50 min-w-[320px]"
+                   style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.5) inset' }}>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Start Date</label>
                     <input
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2.5 bg-white/70 border border-gray-200/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 backdrop-blur-sm transition-all"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">End Date</label>
                     <input
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2.5 bg-white/70 border border-gray-200/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 backdrop-blur-sm transition-all"
                     />
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -538,7 +539,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         setStartDate(weekAgo.toISOString().split('T')[0]);
                         setEndDate(now.toISOString().split('T')[0]);
                       }}
-                      className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-full"
+                      className="px-3 py-1.5 text-xs bg-white/60 hover:bg-white/80 border border-gray-200/50 rounded-full backdrop-blur-sm transition-all hover:shadow-sm"
                     >
                       Last 7 Days
                     </button>
@@ -550,7 +551,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         setStartDate(monthAgo.toISOString().split('T')[0]);
                         setEndDate(now.toISOString().split('T')[0]);
                       }}
-                      className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-full"
+                      className="px-3 py-1.5 text-xs bg-white/60 hover:bg-white/80 border border-gray-200/50 rounded-full backdrop-blur-sm transition-all hover:shadow-sm"
                     >
                       Last 30 Days
                     </button>
@@ -562,7 +563,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         setStartDate(quarterAgo.toISOString().split('T')[0]);
                         setEndDate(now.toISOString().split('T')[0]);
                       }}
-                      className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-full"
+                      className="px-3 py-1.5 text-xs bg-white/60 hover:bg-white/80 border border-gray-200/50 rounded-full backdrop-blur-sm transition-all hover:shadow-sm"
                     >
                       Last 3 Months
                     </button>
@@ -574,24 +575,24 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         setStartDate(yearAgo.toISOString().split('T')[0]);
                         setEndDate(now.toISOString().split('T')[0]);
                       }}
-                      className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-full"
+                      className="px-3 py-1.5 text-xs bg-white/60 hover:bg-white/80 border border-gray-200/50 rounded-full backdrop-blur-sm transition-all hover:shadow-sm"
                     >
                       Last Year
                     </button>
                   </div>
-                  <div className="flex justify-between pt-2 border-t">
+                  <div className="flex justify-between pt-3 border-t border-gray-200/30">
                     <button
                       onClick={() => {
                         setStartDate('');
                         setEndDate('');
                       }}
-                      className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                      className="px-4 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-white/50 rounded-lg transition-all"
                     >
                       Clear
                     </button>
                     <button
                       onClick={() => setShowDatePicker(false)}
-                      className="px-4 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      className="px-5 py-1.5 text-sm bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/25 transition-all"
                     >
                       Apply
                     </button>
@@ -655,7 +656,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             <select
               value={filter1}
               onChange={(e) => setFilter1(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
             >
               <option value="all">All Time</option>
               <option value="week">Weekly</option>
@@ -711,7 +712,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             <select
               value={filter2}
               onChange={(e) => setFilter2(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
             >
               <option value="all">All Time</option>
               <option value="week">Weekly</option>
@@ -784,7 +785,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             <select
               value={filter3}
               onChange={(e) => setFilter3(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
             >
               <option value="all">All Time</option>
               <option value="week">Weekly</option>
@@ -856,7 +857,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             <select
               value={filter4}
               onChange={(e) => setFilter4(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
             >
               <option value="all">All Time</option>
               <option value="week">Weekly</option>
@@ -911,7 +912,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             <select
               value={filter5}
               onChange={(e) => setFilter5(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
             >
               <option value="all">All Time</option>
               <option value="week">Weekly</option>
@@ -982,7 +983,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             <select
               value={filter6}
               onChange={(e) => setFilter6(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
             >
               <option value="all">All Time</option>
               <option value="week">Weekly</option>
@@ -1056,7 +1057,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             <select
               value={trendPeriod}
               onChange={(e) => setTrendPeriod(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none bg-white cursor-pointer"
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
             >
               <option value="all">All Time</option>
               <option value="week">Weekly</option>
@@ -1108,61 +1109,41 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             <h3 className="font-semibold text-gray-800">Estimates Funnel (This Month)</h3>
           </div>
           
-          <div className="flex items-center gap-6">
-            {/* Funnel Visual */}
-            <div className="flex-1 flex flex-col items-center gap-1">
-              {/* Total Estimates */}
-              <div 
-                className="w-full h-10 rounded flex items-center justify-center text-white font-medium"
-                style={{ backgroundColor: '#3B82F6' }}
-              >
-                {thisMonthTotal} Total Estimates
-              </div>
-              {/* Sent */}
-              <div 
-                className="w-11/12 h-10 rounded flex items-center justify-center text-white font-medium"
-                style={{ backgroundColor: '#F59E0B' }}
-              >
-                {thisMonthSent} Sent
-              </div>
-              {/* Approved */}
-              <div 
-                className="w-10/12 h-10 rounded flex items-center justify-center text-white font-medium"
-                style={{ backgroundColor: '#22C55E' }}
-              >
-                {thisMonthApproved} Approved
-              </div>
-              {/* Invoices Created */}
-              <div 
-                className="w-9/12 h-10 rounded flex items-center justify-center text-white font-medium"
-                style={{ backgroundColor: '#14B8A6' }}
-              >
-                {thisMonthInvoicesCreated} Invoices Created
-              </div>
-              {/* Paid */}
-              <div 
-                className="w-8/12 h-10 rounded flex items-center justify-center text-white font-medium"
-                style={{ backgroundColor: '#8B5CF6' }}
-              >
-                {thisMonthPaid} Paid
-              </div>
+          <div className="flex items-center gap-8">
+            {/* Funnel Visual - Clean trapezoid shape without text */}
+            <div className="flex-1 flex flex-col items-center" style={{ maxWidth: '280px' }}>
+              {[
+                { width: '100%', color: '#3B82F6' },
+                { width: '85%', color: '#22D3EE' },
+                { width: '70%', color: '#22C55E' },
+                { width: '55%', color: '#F59E0B' },
+                { width: '40%', color: '#EF4444' }
+              ].map((bar, idx) => (
+                <div 
+                  key={idx}
+                  className="h-11 rounded-sm"
+                  style={{ 
+                    width: bar.width, 
+                    backgroundColor: bar.color,
+                    marginTop: idx === 0 ? '0' : '-1px'
+                  }}
+                />
+              ))}
             </div>
             
-            {/* Funnel Legend */}
-            <div className="w-40 space-y-2">
+            {/* Funnel Legend - Right side with count, name, percentage */}
+            <div className="flex-1 space-y-3">
               {[
-                { label: 'Total Estimates', value: thisMonthTotal, percent: 100, color: '#3B82F6' },
-                { label: 'Sent', value: thisMonthSent, percent: thisMonthTotal ? ((thisMonthSent / thisMonthTotal) * 100).toFixed(1) : 0, color: '#F59E0B' },
-                { label: 'Approved', value: thisMonthApproved, percent: thisMonthTotal ? ((thisMonthApproved / thisMonthTotal) * 100).toFixed(1) : 0, color: '#22C55E' },
-                { label: 'Invoices Created', value: thisMonthInvoicesCreated, percent: thisMonthTotal ? ((thisMonthInvoicesCreated / thisMonthTotal) * 100).toFixed(1) : 0, color: '#14B8A6' },
-                { label: 'Paid', value: thisMonthPaid, percent: thisMonthTotal ? ((thisMonthPaid / thisMonthTotal) * 100).toFixed(1) : 0, color: '#8B5CF6' }
+                { label: 'Total Estimates', value: thisMonthTotal, percent: 100 },
+                { label: 'Sent', value: thisMonthSent, percent: thisMonthTotal ? ((thisMonthSent / thisMonthTotal) * 100).toFixed(1) : 0 },
+                { label: 'Approved', value: thisMonthApproved, percent: thisMonthTotal ? ((thisMonthApproved / thisMonthTotal) * 100).toFixed(1) : 0 },
+                { label: 'Invoices Created', value: thisMonthInvoicesCreated, percent: thisMonthTotal ? ((thisMonthInvoicesCreated / thisMonthTotal) * 100).toFixed(1) : 0 },
+                { label: 'Paid', value: thisMonthPaid, percent: thisMonthTotal ? ((thisMonthPaid / thisMonthTotal) * 100).toFixed(1) : 0 }
               ].map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium" style={{ color: item.color }}>{item.value}</span>
-                    <span className="text-gray-600">{item.label}</span>
-                  </div>
-                  <span className="text-gray-500">{item.percent}%</span>
+                <div key={idx} className="flex items-center text-sm">
+                  <span className="font-bold text-gray-800 w-8">{item.value}</span>
+                  <span className="text-gray-600 flex-1">{item.label}</span>
+                  <span className="text-gray-500 font-medium">{item.percent}%</span>
                 </div>
               ))}
             </div>
