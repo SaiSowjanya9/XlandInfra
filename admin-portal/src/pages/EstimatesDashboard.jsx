@@ -148,28 +148,33 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
 
   const mainFilteredEstimates = getMainFilteredEstimates();
 
-  // Helper function to apply period filter to a dataset
+  // Helper function to apply period filter to a dataset (IST timezone aware)
   const applyPeriodFilter = (data, periodFilter) => {
     if (periodFilter === 'all') return data;
     
     const now = new Date();
-    const filterDate = new Date();
+    let filterDate = new Date();
     
     switch (periodFilter) {
       case 'week':
+        // This week (last 7 days)
         filterDate.setDate(now.getDate() - 7);
         break;
       case 'month':
-        filterDate.setMonth(now.getMonth() - 1);
+        // This month (from 1st of current month)
+        filterDate = new Date(now.getFullYear(), now.getMonth(), 1);
         break;
       case 'quarter':
-        filterDate.setMonth(now.getMonth() - 3);
+        // This quarter (last 3 months from 1st)
+        filterDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
         break;
       case 'half':
-        filterDate.setMonth(now.getMonth() - 6);
+        // This half-year (last 6 months from 1st)
+        filterDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
         break;
       case 'year':
-        filterDate.setFullYear(now.getFullYear() - 1);
+        // This calendar year (from Jan 1 of current year)
+        filterDate = new Date(now.getFullYear(), 0, 1);
         break;
       default:
         return data;
@@ -177,8 +182,18 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     
     return data.filter(est => {
       const estDate = new Date(est.created_at || est.createdAt);
-      return estDate >= filterDate;
+      return estDate >= filterDate && estDate <= now;
     });
+  };
+  
+  // Helper to format date in Indian format (dd/mm/yyyy)
+  const formatDateIST = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
   // For backward compatibility (charts that don't have individual filters yet)
@@ -493,7 +508,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+    <div className="p-4 space-y-4 bg-gray-50 min-h-screen">
       {/* Header with Date Range Picker and Refresh */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
@@ -510,11 +525,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               <Calendar className="w-4 h-4 text-gray-600" />
               <span className="text-sm text-gray-700 font-medium">
                 {startDate && endDate 
-                  ? `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`
+                  ? `${formatDateIST(startDate)} - ${formatDateIST(endDate)}`
                   : startDate 
-                    ? `From ${new Date(startDate).toLocaleDateString()}`
+                    ? `From ${formatDateIST(startDate)}`
                     : endDate
-                      ? `Until ${new Date(endDate).toLocaleDateString()}`
+                      ? `Until ${formatDateIST(endDate)}`
                       : 'All Time'}
               </span>
               <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
@@ -627,52 +642,58 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       </div>
 
       {/* Stat Cards Row - 7 cards matching reference */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {statCards.map((card, index) => {
           const Icon = card.icon;
           return (
             <div
               key={index}
-              onClick={() => navigate(`${getBasePath()}/estimates`)}
-              className="rounded-xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-all group"
+              className="rounded-xl p-3 shadow-sm hover:shadow-md transition-all"
               style={{ 
                 borderTop: `3px solid ${card.borderColor}`,
-                background: `linear-gradient(135deg, white 0%, white 50%, ${card.gradientEnd} 100%)`
+                background: `linear-gradient(135deg, white 0%, white 60%, ${card.gradientEnd} 100%)`
               }}
             >
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-1.5 mb-2">
                 <div 
-                  className="p-2 rounded-lg"
+                  className="p-1.5 rounded-lg"
                   style={{ backgroundColor: card.iconBg }}
                 >
-                  <Icon className="w-4 h-4" style={{ color: card.iconColor }} />
+                  <Icon className="w-3.5 h-3.5" style={{ color: card.iconColor }} />
                 </div>
-                <span className="text-sm font-medium text-gray-700">{card.label}</span>
+                <span className="text-xs font-medium text-gray-600 leading-tight">{card.label}</span>
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">{card.value}</div>
-              <div className="text-xs text-gray-500 whitespace-nowrap">{card.percentage}</div>
+              <div className="text-2xl font-bold text-gray-900 mb-0.5">{card.value}</div>
+              <div className="text-[10px] text-gray-500 mb-1">{card.percentage}</div>
+              <div 
+                onClick={() => navigate(`${getBasePath()}/estimates`)}
+                className="text-[10px] font-medium flex items-center gap-0.5 cursor-pointer hover:gap-1 transition-all"
+                style={{ color: card.borderColor }}
+              >
+                View All →
+              </div>
             </div>
           );
         })}
       </div>
 
       {/* Middle Row - 3 Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Estimates by Property Type (Horizontal Bar) */}
-        <div className="bg-white rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-800">Estimates by Property Type (Property-Based)</h3>
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Estimates by Property Type (Property-Based)</h3>
             <select
               value={filter1}
               onChange={(e) => setFilter1(e.target.value)}
               className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
             >
               <option value="all">All Time</option>
-              <option value="week">Weekly</option>
-              <option value="month">Monthly</option>
-              <option value="quarter">Quarterly</option>
-              <option value="half">Half-Yearly</option>
-              <option value="year">Yearly</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
             </select>
           </div>
           
@@ -716,34 +737,34 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
 
         {/* Estimate Status Overview (Donut) */}
-        <div className="bg-white rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-800">Estimate Status Overview</h3>
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Estimate Status Overview</h3>
             <select
               value={filter2}
               onChange={(e) => setFilter2(e.target.value)}
               className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
             >
               <option value="all">All Time</option>
-              <option value="week">Weekly</option>
-              <option value="month">Monthly</option>
-              <option value="quarter">Quarterly</option>
-              <option value="half">Half-Yearly</option>
-              <option value="year">Yearly</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
             </select>
           </div>
           
           <div className="flex items-center">
             <div className="w-1/2 relative">
               {statusData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={180}>
+                <ResponsiveContainer width="100%" height={150}>
                   <PieChart>
                     <Pie
                       data={statusData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={55}
-                      outerRadius={75}
+                      innerRadius={45}
+                      outerRadius={65}
                       dataKey="value"
                       strokeWidth={0}
                     >
@@ -761,9 +782,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               )}
               {/* Center text - always shows count including 0 */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                <div className="text-center bg-white rounded-full p-2">
-                  <div className="text-3xl font-bold text-gray-800">{block2Data.length}</div>
-                  <div className="text-xs text-gray-500">Total</div>
+                <div className="text-center bg-white rounded-full p-1">
+                  <div className="text-2xl font-bold text-gray-800">{block2Data.length}</div>
+                  <div className="text-[10px] text-gray-500">Total</div>
                 </div>
               </div>
             </div>
@@ -787,10 +808,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
 
         {/* Estimates by Estimate Type (Donut) */}
-        <div className="bg-white rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-gray-800">Estimates by Estimate Type</h3>
+              <h3 className="text-sm font-semibold text-gray-800">Estimates by Estimate Type</h3>
             </div>
             <select
               value={filter3}
@@ -798,25 +819,25 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
             >
               <option value="all">All Time</option>
-              <option value="week">Weekly</option>
-              <option value="month">Monthly</option>
-              <option value="quarter">Quarterly</option>
-              <option value="half">Half-Yearly</option>
-              <option value="year">Yearly</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
             </select>
           </div>
           
           <div className="flex items-center">
             <div className="w-1/2 relative">
               {typeData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={180}>
+                <ResponsiveContainer width="100%" height={150}>
                   <PieChart>
                     <Pie
                       data={typeData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={55}
-                      outerRadius={75}
+                      innerRadius={45}
+                      outerRadius={65}
                       dataKey="value"
                       strokeWidth={0}
                     >
@@ -834,9 +855,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               )}
               {/* Center text - always shows count including 0 */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                <div className="text-center bg-white rounded-full p-2">
-                  <div className="text-3xl font-bold text-gray-800">{block3Data.length}</div>
-                  <div className="text-xs text-gray-500">Total</div>
+                <div className="text-center bg-white rounded-full p-1">
+                  <div className="text-2xl font-bold text-gray-800">{block3Data.length}</div>
+                  <div className="text-[10px] text-gray-500">Total</div>
                 </div>
               </div>
             </div>
@@ -862,22 +883,22 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       </div>
 
       {/* Direct Estimates Row - 3 Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Estimates by Property Type - Direct */}
-        <div className="bg-white rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-800">Estimates by Property Type (Direct)</h3>
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Estimates by Property Type (Direct)</h3>
             <select
               value={filter4}
               onChange={(e) => setFilter4(e.target.value)}
               className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
             >
               <option value="all">All Time</option>
-              <option value="week">Weekly</option>
-              <option value="month">Monthly</option>
-              <option value="quarter">Quarterly</option>
-              <option value="half">Half-Yearly</option>
-              <option value="year">Yearly</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
             </select>
           </div>
           
@@ -920,34 +941,34 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
 
         {/* Direct Estimate Status Overview (Donut) */}
-        <div className="bg-white rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-800">Direct Estimate Status</h3>
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Direct Estimate Status</h3>
             <select
               value={filter5}
               onChange={(e) => setFilter5(e.target.value)}
               className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
             >
               <option value="all">All Time</option>
-              <option value="week">Weekly</option>
-              <option value="month">Monthly</option>
-              <option value="quarter">Quarterly</option>
-              <option value="half">Half-Yearly</option>
-              <option value="year">Yearly</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
             </select>
           </div>
           
           <div className="flex items-center">
             <div className="w-1/2 relative">
               {directStatusData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={180}>
+                <ResponsiveContainer width="100%" height={150}>
                   <PieChart>
                     <Pie
                       data={directStatusData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={55}
-                      outerRadius={75}
+                      innerRadius={45}
+                      outerRadius={65}
                       dataKey="value"
                       strokeWidth={0}
                     >
@@ -965,9 +986,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               )}
               {/* Center text - always shows count including 0 */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                <div className="text-center bg-white rounded-full p-2">
-                  <div className="text-3xl font-bold text-gray-800">{block5Data.length}</div>
-                  <div className="text-xs text-gray-500">Total</div>
+                <div className="text-center bg-white rounded-full p-1">
+                  <div className="text-2xl font-bold text-gray-800">{block5Data.length}</div>
+                  <div className="text-[10px] text-gray-500">Total</div>
                 </div>
               </div>
             </div>
@@ -991,34 +1012,34 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
 
         {/* Property-Based Estimate Status (Donut) */}
-        <div className="bg-white rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-800">Property-Based Status</h3>
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Property-Based Status</h3>
             <select
               value={filter6}
               onChange={(e) => setFilter6(e.target.value)}
               className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
             >
               <option value="all">All Time</option>
-              <option value="week">Weekly</option>
-              <option value="month">Monthly</option>
-              <option value="quarter">Quarterly</option>
-              <option value="half">Half-Yearly</option>
-              <option value="year">Yearly</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
             </select>
           </div>
           
           <div className="flex items-center">
             <div className="w-1/2 relative">
               {propertyBasedStatusData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={180}>
+                <ResponsiveContainer width="100%" height={150}>
                   <PieChart>
                     <Pie
                       data={propertyBasedStatusData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={55}
-                      outerRadius={75}
+                      innerRadius={45}
+                      outerRadius={65}
                       dataKey="value"
                       strokeWidth={0}
                     >
@@ -1036,9 +1057,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               )}
               {/* Center text - always shows count including 0 */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                <div className="text-center bg-white rounded-full p-2">
-                  <div className="text-3xl font-bold text-gray-800">{block6Data.length}</div>
-                  <div className="text-xs text-gray-500">Total</div>
+                <div className="text-center bg-white rounded-full p-1">
+                  <div className="text-2xl font-bold text-gray-800">{block6Data.length}</div>
+                  <div className="text-[10px] text-gray-500">Total</div>
                 </div>
               </div>
             </div>
@@ -1063,22 +1084,22 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       </div>
 
       {/* Bottom Row - Trend & Funnel */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Estimate Trend (Line Chart) */}
-        <div className="bg-white rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-800">Estimate Trend</h3>
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Estimate Trend</h3>
             <select
               value={trendPeriod}
               onChange={(e) => setTrendPeriod(e.target.value)}
               className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
             >
               <option value="all">All Time</option>
-              <option value="week">Weekly</option>
-              <option value="month">Monthly</option>
-              <option value="quarter">Quarterly</option>
-              <option value="half">Half-Yearly</option>
-              <option value="year">Yearly</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
             </select>
           </div>
           
@@ -1119,57 +1140,66 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
 
         {/* Estimates Funnel */}
-        <div className="bg-white rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-800">Estimates Funnel</h3>
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Estimates Funnel</h3>
             <select
               value={funnelFilter}
               onChange={(e) => setFunnelFilter(e.target.value)}
               className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
             >
               <option value="all">All Time</option>
-              <option value="week">Weekly</option>
-              <option value="month">Monthly</option>
-              <option value="quarter">Quarterly</option>
-              <option value="half">Half-Yearly</option>
-              <option value="year">Yearly</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
             </select>
           </div>
           
           {funnelTotal > 0 ? (
             <div className="flex items-center gap-8">
-              {/* Funnel Visual - Clean trapezoid shape without text - matching reference colors */}
+              {/* Funnel Visual with hover effects */}
               <div className="flex-1 flex flex-col items-center" style={{ maxWidth: '280px' }}>
                 {[
-                  { width: '100%', color: '#5B8DEF' },
-                  { width: funnelTotal ? `${Math.max((funnelSent / funnelTotal) * 100, 20)}%` : '85%', color: '#14B8A6' },
-                  { width: funnelTotal ? `${Math.max((funnelApproved / funnelTotal) * 100, 15)}%` : '70%', color: '#22C55E' },
-                  { width: funnelTotal ? `${Math.max((funnelInvoicesCreated / funnelTotal) * 100, 10)}%` : '55%', color: '#FBBF24' },
-                  { width: funnelTotal ? `${Math.max((funnelPaid / funnelTotal) * 100, 5)}%` : '40%', color: '#EF4444' }
+                  { label: 'Total Estimates', value: funnelTotal, width: '100%', color: '#5B8DEF', hoverColor: '#4A7DE0' },
+                  { label: 'Sent', value: funnelSent, width: funnelTotal ? `${Math.max((funnelSent / funnelTotal) * 100, 20)}%` : '85%', color: '#14B8A6', hoverColor: '#0D9488' },
+                  { label: 'Approved', value: funnelApproved, width: funnelTotal ? `${Math.max((funnelApproved / funnelTotal) * 100, 15)}%` : '70%', color: '#22C55E', hoverColor: '#16A34A' },
+                  { label: 'Invoices Created', value: funnelInvoicesCreated, width: funnelTotal ? `${Math.max((funnelInvoicesCreated / funnelTotal) * 100, 10)}%` : '55%', color: '#FBBF24', hoverColor: '#EAB308' },
+                  { label: 'Paid', value: funnelPaid, width: funnelTotal ? `${Math.max((funnelPaid / funnelTotal) * 100, 5)}%` : '40%', color: '#EF4444', hoverColor: '#DC2626' }
                 ].map((bar, idx) => (
                   <div 
                     key={idx}
-                    className="h-11 rounded-sm"
+                    className="h-11 rounded-sm cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg group relative"
                     style={{ 
                       width: bar.width, 
                       backgroundColor: bar.color,
                       marginTop: idx === 0 ? '0' : '-1px'
                     }}
-                  />
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = bar.hoverColor}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = bar.color}
+                  >
+                    {/* Tooltip on hover */}
+                    <div className="absolute left-1/2 -translate-x-1/2 -top-12 bg-gray-900 text-white px-3 py-1.5 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 shadow-xl">
+                      <div className="font-semibold">{bar.label}</div>
+                      <div>Count: <span className="font-bold">{bar.value}</span></div>
+                      <div className="absolute left-1/2 -translate-x-1/2 top-full border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  </div>
                 ))}
               </div>
               
               {/* Funnel Legend - Right side with count, name, percentage */}
               <div className="flex-1 space-y-3">
                 {[
-                  { label: 'Total Estimates', value: funnelTotal, percent: funnelTotal > 0 ? 100 : 0 },
-                  { label: 'Sent', value: funnelSent, percent: funnelTotal ? ((funnelSent / funnelTotal) * 100).toFixed(1) : 0 },
-                  { label: 'Approved', value: funnelApproved, percent: funnelTotal ? ((funnelApproved / funnelTotal) * 100).toFixed(1) : 0 },
-                  { label: 'Invoices Created', value: funnelInvoicesCreated, percent: funnelTotal ? ((funnelInvoicesCreated / funnelTotal) * 100).toFixed(1) : 0 },
-                  { label: 'Paid', value: funnelPaid, percent: funnelTotal ? ((funnelPaid / funnelTotal) * 100).toFixed(1) : 0 }
+                  { label: 'Total Estimates', value: funnelTotal, percent: funnelTotal > 0 ? 100 : 0, color: '#5B8DEF' },
+                  { label: 'Sent', value: funnelSent, percent: funnelTotal ? ((funnelSent / funnelTotal) * 100).toFixed(1) : 0, color: '#14B8A6' },
+                  { label: 'Approved', value: funnelApproved, percent: funnelTotal ? ((funnelApproved / funnelTotal) * 100).toFixed(1) : 0, color: '#22C55E' },
+                  { label: 'Invoices Created', value: funnelInvoicesCreated, percent: funnelTotal ? ((funnelInvoicesCreated / funnelTotal) * 100).toFixed(1) : 0, color: '#FBBF24' },
+                  { label: 'Paid', value: funnelPaid, percent: funnelTotal ? ((funnelPaid / funnelTotal) * 100).toFixed(1) : 0, color: '#EF4444' }
                 ].map((item, idx) => (
-                  <div key={idx} className="flex items-center text-sm">
-                    <span className="font-bold text-gray-800 w-8">{item.value}</span>
+                  <div key={idx} className="flex items-center text-sm hover:bg-gray-50 rounded px-1 -mx-1 transition-colors cursor-default">
+                    <span className="font-bold w-8" style={{ color: item.color }}>{item.value}</span>
                     <span className="text-gray-600 flex-1">{item.label}</span>
                     <span className="text-gray-500 font-medium">{item.percent}%</span>
                   </div>
