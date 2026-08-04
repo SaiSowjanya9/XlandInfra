@@ -75,6 +75,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const [filter5, setFilter5] = useState('all'); // Direct Status
   const [filter6, setFilter6] = useState('all'); // Property-Based Status
   const [trendPeriod, setTrendPeriod] = useState('month');
+  const [funnelFilter, setFunnelFilter] = useState('month'); // Funnel chart filter
 
   const token = getAuthToken();
   const apiPath = getApiPath(portalType);
@@ -183,17 +184,12 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   // For backward compatibility (charts that don't have individual filters yet)
   const filteredEstimates = mainFilteredEstimates;
 
-  // Get this month's estimates for funnel (uses main date filtered data)
-  const getThisMonthEstimates = () => {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    return mainFilteredEstimates.filter(est => {
-      const estDate = new Date(est.created_at || est.createdAt);
-      return estDate >= startOfMonth;
-    });
+  // Get funnel estimates based on funnel filter
+  const getFunnelEstimates = () => {
+    return applyPeriodFilter(mainFilteredEstimates, funnelFilter);
   };
 
-  const thisMonthEstimates = getThisMonthEstimates();
+  const funnelEstimates = getFunnelEstimates();
 
   // Calculate stats for STAT CARDS (use main date range filtered data)
   const totalEstimates = mainFilteredEstimates.length;
@@ -241,17 +237,17 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     (e.status || '').toLowerCase() === 'rejected'
   ).length;
 
-  // This month stats for funnel
-  const thisMonthTotal = thisMonthEstimates.length;
-  const thisMonthSent = thisMonthEstimates.filter(e => 
+  // Funnel stats (uses funnel filter)
+  const funnelTotal = funnelEstimates.length;
+  const funnelSent = funnelEstimates.filter(e => 
     ['sent', 'approved', 'rejected'].includes((e.status || '').toLowerCase())
   ).length;
-  const thisMonthApproved = thisMonthEstimates.filter(e => 
+  const funnelApproved = funnelEstimates.filter(e => 
     (e.status || '').toLowerCase() === 'approved'
   ).length;
   // Calculate invoices created (approved estimates) and paid (we'll assume some percentage)
-  const thisMonthInvoicesCreated = thisMonthApproved;
-  const thisMonthPaid = Math.floor(thisMonthApproved * 0.85); // Assuming 85% of approved are paid
+  const funnelInvoicesCreated = funnelApproved;
+  const funnelPaid = Math.floor(funnelApproved * 0.85); // Assuming 85% of approved are paid
 
   // Stat cards configuration - matching the reference image exactly
   const statCards = [
@@ -344,12 +340,15 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const block2Sent = block2Data.filter(e => (e.status || '').toLowerCase() === 'sent').length;
   const block2Approved = block2Data.filter(e => (e.status || '').toLowerCase() === 'approved').length;
   const block2Rejected = block2Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length;
-  const statusData = [
+  // All statuses for legend display
+  const statusDataAll = [
     { name: 'Draft', value: block2Draft, color: '#3B82F6' },
     { name: 'Sent', value: block2Sent, color: '#F59E0B' },
     { name: 'Approved', value: block2Approved, color: '#22C55E' },
     { name: 'Rejected', value: block2Rejected, color: '#EF4444' }
-  ].filter(item => item.value > 0);
+  ];
+  // Only non-zero for chart display
+  const statusData = statusDataAll.filter(item => item.value > 0);
 
   // Block 3: Estimate Type (uses filter3)
   const block3Data = applyPeriodFilter(mainFilteredEstimates, filter3);
@@ -380,24 +379,30 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const block5Data = applyPeriodFilter(mainFilteredEstimates, filter5).filter(e => 
     e.estimate_type === 'direct' || e.estimateType === 'direct'
   );
-  const directStatusData = [
+  // All statuses for legend display
+  const directStatusDataAll = [
     { name: 'Draft', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#3B82F6' },
     { name: 'Sent', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#F59E0B' },
     { name: 'Approved', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#22C55E' },
     { name: 'Rejected', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
-  ].filter(item => item.value > 0);
+  ];
+  // Only non-zero for chart display
+  const directStatusData = directStatusDataAll.filter(item => item.value > 0);
 
   // Block 6: Property-Based Status (uses filter6)
   const block6Data = applyPeriodFilter(mainFilteredEstimates, filter6).filter(e => 
     e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
     e.estimateType === 'property_based' || e.estimateType === 'property-based'
   );
-  const propertyBasedStatusData = [
+  // All statuses for legend display
+  const propertyBasedStatusDataAll = [
     { name: 'Draft', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#3B82F6' },
     { name: 'Sent', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#F59E0B' },
     { name: 'Approved', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#22C55E' },
     { name: 'Rejected', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
-  ].filter(item => item.value > 0);
+  ];
+  // Only non-zero for chart display
+  const propertyBasedStatusData = propertyBasedStatusDataAll.filter(item => item.value > 0);
 
   // Legacy variables for compatibility
   const propertyBasedOnly = block1Data;
@@ -732,7 +737,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         <Cell key={index} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip content={<CustomTooltip />} offset={20} />
+                    <Tooltip content={<CustomTooltip />} position={{ x: 0, y: -10 }} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -749,7 +754,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               </div>
             </div>
             <div className="w-1/2 space-y-2 pl-4">
-              {statusData.map((item, index) => (
+              {statusDataAll.map((item, index) => (
                 <div key={index} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <div 
@@ -805,7 +810,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         <Cell key={index} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip content={<CustomTooltip />} offset={20} />
+                    <Tooltip content={<CustomTooltip />} position={{ x: 0, y: -10 }} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -932,7 +937,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         <Cell key={index} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip content={<CustomTooltip />} offset={20} />
+                    <Tooltip content={<CustomTooltip />} position={{ x: 0, y: -10 }} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -949,7 +954,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               </div>
             </div>
             <div className="w-1/2 space-y-2 pl-4">
-              {directStatusData.map((item, index) => (
+              {directStatusDataAll.map((item, index) => (
                 <div key={index} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <div 
@@ -1003,7 +1008,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         <Cell key={index} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip content={<CustomTooltip />} offset={20} />
+                    <Tooltip content={<CustomTooltip />} position={{ x: 0, y: -10 }} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -1020,7 +1025,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               </div>
             </div>
             <div className="w-1/2 space-y-2 pl-4">
-              {propertyBasedStatusData.map((item, index) => (
+              {propertyBasedStatusDataAll.map((item, index) => (
                 <div key={index} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <div 
@@ -1065,7 +1070,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip content={<CustomTooltip />} offset={20} />
+                <Tooltip content={<CustomTooltip />} position={{ x: 0, y: -10 }} />
                 <Legend />
                 <Line 
                   type="monotone" 
@@ -1097,48 +1102,66 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
         {/* Estimates Funnel */}
         <div className="bg-white rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-800">Estimates Funnel (This Month)</h3>
+            <h3 className="font-semibold text-gray-800">Estimates Funnel</h3>
+            <select
+              value={funnelFilter}
+              onChange={(e) => setFunnelFilter(e.target.value)}
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
+            >
+              <option value="all">All Time</option>
+              <option value="week">Weekly</option>
+              <option value="month">Monthly</option>
+              <option value="quarter">Quarterly</option>
+              <option value="half">Half-Yearly</option>
+              <option value="year">Yearly</option>
+            </select>
           </div>
           
-          <div className="flex items-center gap-8">
-            {/* Funnel Visual - Clean trapezoid shape without text */}
-            <div className="flex-1 flex flex-col items-center" style={{ maxWidth: '280px' }}>
-              {[
-                { width: '100%', color: '#3B82F6' },
-                { width: '85%', color: '#22D3EE' },
-                { width: '70%', color: '#22C55E' },
-                { width: '55%', color: '#F59E0B' },
-                { width: '40%', color: '#EF4444' }
-              ].map((bar, idx) => (
-                <div 
-                  key={idx}
-                  className="h-11 rounded-sm"
-                  style={{ 
-                    width: bar.width, 
-                    backgroundColor: bar.color,
-                    marginTop: idx === 0 ? '0' : '-1px'
-                  }}
-                />
-              ))}
+          {funnelTotal > 0 ? (
+            <div className="flex items-center gap-8">
+              {/* Funnel Visual - Clean trapezoid shape without text */}
+              <div className="flex-1 flex flex-col items-center" style={{ maxWidth: '280px' }}>
+                {[
+                  { width: '100%', color: '#3B82F6' },
+                  { width: funnelTotal ? `${Math.max((funnelSent / funnelTotal) * 100, 20)}%` : '85%', color: '#22D3EE' },
+                  { width: funnelTotal ? `${Math.max((funnelApproved / funnelTotal) * 100, 15)}%` : '70%', color: '#22C55E' },
+                  { width: funnelTotal ? `${Math.max((funnelInvoicesCreated / funnelTotal) * 100, 10)}%` : '55%', color: '#F59E0B' },
+                  { width: funnelTotal ? `${Math.max((funnelPaid / funnelTotal) * 100, 5)}%` : '40%', color: '#EF4444' }
+                ].map((bar, idx) => (
+                  <div 
+                    key={idx}
+                    className="h-11 rounded-sm"
+                    style={{ 
+                      width: bar.width, 
+                      backgroundColor: bar.color,
+                      marginTop: idx === 0 ? '0' : '-1px'
+                    }}
+                  />
+                ))}
+              </div>
+              
+              {/* Funnel Legend - Right side with count, name, percentage */}
+              <div className="flex-1 space-y-3">
+                {[
+                  { label: 'Total Estimates', value: funnelTotal, percent: funnelTotal > 0 ? 100 : 0 },
+                  { label: 'Sent', value: funnelSent, percent: funnelTotal ? ((funnelSent / funnelTotal) * 100).toFixed(1) : 0 },
+                  { label: 'Approved', value: funnelApproved, percent: funnelTotal ? ((funnelApproved / funnelTotal) * 100).toFixed(1) : 0 },
+                  { label: 'Invoices Created', value: funnelInvoicesCreated, percent: funnelTotal ? ((funnelInvoicesCreated / funnelTotal) * 100).toFixed(1) : 0 },
+                  { label: 'Paid', value: funnelPaid, percent: funnelTotal ? ((funnelPaid / funnelTotal) * 100).toFixed(1) : 0 }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-center text-sm">
+                    <span className="font-bold text-gray-800 w-8">{item.value}</span>
+                    <span className="text-gray-600 flex-1">{item.label}</span>
+                    <span className="text-gray-500 font-medium">{item.percent}%</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            
-            {/* Funnel Legend - Right side with count, name, percentage */}
-            <div className="flex-1 space-y-3">
-              {[
-                { label: 'Total Estimates', value: thisMonthTotal, percent: 100 },
-                { label: 'Sent', value: thisMonthSent, percent: thisMonthTotal ? ((thisMonthSent / thisMonthTotal) * 100).toFixed(1) : 0 },
-                { label: 'Approved', value: thisMonthApproved, percent: thisMonthTotal ? ((thisMonthApproved / thisMonthTotal) * 100).toFixed(1) : 0 },
-                { label: 'Invoices Created', value: thisMonthInvoicesCreated, percent: thisMonthTotal ? ((thisMonthInvoicesCreated / thisMonthTotal) * 100).toFixed(1) : 0 },
-                { label: 'Paid', value: thisMonthPaid, percent: thisMonthTotal ? ((thisMonthPaid / thisMonthTotal) * 100).toFixed(1) : 0 }
-              ].map((item, idx) => (
-                <div key={idx} className="flex items-center text-sm">
-                  <span className="font-bold text-gray-800 w-8">{item.value}</span>
-                  <span className="text-gray-600 flex-1">{item.label}</span>
-                  <span className="text-gray-500 font-medium">{item.percent}%</span>
-                </div>
-              ))}
+          ) : (
+            <div className="h-48 flex items-center justify-center text-gray-400">
+              No estimates for selected period
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
