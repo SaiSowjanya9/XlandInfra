@@ -22,6 +22,7 @@ import {
   Crown,
   ChevronLeft,
   ChevronRight,
+  BarChart3,
 } from 'lucide-react';
 
 const ManagerLayout = ({ admin, onLogout, children }) => {
@@ -59,6 +60,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
 
   // Estimates sub-items
   const estimatesSubItems = [
+    { path: '/manager/estimates/dashboard', icon: BarChart3, label: 'Dashboard' },
     { path: '/manager/estimates/create', icon: Plus, label: 'Create Estimate' },
     { path: '/manager/estimates', icon: List, label: 'All Estimates' },
     { path: '/manager/estimates/amc', icon: Package, label: 'AMC Packages' },

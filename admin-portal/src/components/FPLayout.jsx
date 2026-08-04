@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   Trash2,
   RefreshCw,
+  BarChart3,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
@@ -225,6 +226,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
 
   // Estimates sub-items - FP Manager can create estimates but not AMC Packages/Add-ons
   const allEstimatesSubItems = [
+    { path: '/fp/estimates/dashboard', icon: BarChart3, label: 'Dashboard' },
     { path: '/fp/estimates/create', icon: Plus, label: 'Create Estimate' },
     { path: '/fp/estimates', icon: List, label: 'All Estimates' },
     { path: '/fp/estimates/amc', icon: Package, label: 'AMC Packages' },

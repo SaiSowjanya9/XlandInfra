@@ -27,6 +27,7 @@ import {
   Crown,
   ChevronLeft,
   ChevronRight,
+  BarChart3,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useFP } from '../contexts/FPContext';
@@ -100,6 +101,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
 
   // Estimates sub-items - Create Estimate hidden for Ops Manager
   const allEstimatesSubItems = [
+    { path: '/employee/estimates/dashboard', icon: BarChart3, label: 'Dashboard' },
     { path: '/employee/estimates/create', icon: Plus, label: 'Create Estimate', adminOnly: true },
     { path: '/employee/estimates/list', icon: List, label: 'All Estimates' },
     { path: '/employee/estimates/amc-manager', icon: Package, label: 'AMC Packages' },

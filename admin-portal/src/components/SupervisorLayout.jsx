@@ -53,6 +53,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
 
   // Estimates sub-items (without Hide Pricing, Create Packages, Create Add-On)
   const estimatesSubItems = [
+    { path: '/supervisor/estimates/dashboard', icon: BarChart3, label: 'Dashboard' },
     { path: '/supervisor/estimates/create', icon: Plus, label: 'Create Estimate' },
     { path: '/supervisor/estimates', icon: List, label: 'All Estimates' },
     { path: '/supervisor/estimates/amc', icon: Package, label: 'AMC Packages' },
