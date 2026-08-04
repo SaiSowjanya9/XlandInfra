@@ -741,8 +741,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                 </div>
               )}
               {/* Center text */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="text-center">
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                <div className="text-center bg-white rounded-full p-2">
                   <div className="text-3xl font-bold text-gray-800">{block2Data.length}</div>
                   <div className="text-xs text-gray-500">Total</div>
                 </div>
@@ -814,8 +814,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                 </div>
               )}
               {/* Center text */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="text-center">
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                <div className="text-center bg-white rounded-full p-2">
                   <div className="text-3xl font-bold text-gray-800">{block3Data.length}</div>
                   <div className="text-xs text-gray-500">Total</div>
                 </div>
@@ -941,8 +941,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                 </div>
               )}
               {/* Center text */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="text-center">
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                <div className="text-center bg-white rounded-full p-2">
                   <div className="text-3xl font-bold text-gray-800">{block5Data.length}</div>
                   <div className="text-xs text-gray-500">Total</div>
                 </div>
@@ -1012,8 +1012,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                 </div>
               )}
               {/* Center text */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="text-center">
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                <div className="text-center bg-white rounded-full p-2">
                   <div className="text-3xl font-bold text-gray-800">{block6Data.length}</div>
                   <div className="text-xs text-gray-500">Total</div>
                 </div>
