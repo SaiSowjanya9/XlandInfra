@@ -256,7 +256,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       value: totalEstimates,
       percentage: '100% of all estimates',
       icon: FileText,
-      iconBg: '#EBF5FF',
+      iconBg: '#DBEAFE',
       iconColor: '#3B82F6',
       borderColor: '#3B82F6'
     },
@@ -265,7 +265,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       value: directEstimates,
       percentage: totalEstimates ? `${((directEstimates / totalEstimates) * 100).toFixed(1)}% of total` : '0% of total',
       icon: Send,
-      iconBg: '#F3E8FF',
+      iconBg: '#EDE9FE',
       iconColor: '#8B5CF6',
       borderColor: '#8B5CF6'
     },
@@ -274,36 +274,36 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       value: propertyBasedEstimates,
       percentage: totalEstimates ? `${((propertyBasedEstimates / totalEstimates) * 100).toFixed(1)}% of total` : '0% of total',
       icon: Building2,
-      iconBg: '#E0F2FE',
-      iconColor: '#0EA5E9',
-      borderColor: '#0EA5E9'
+      iconBg: '#FEF3C7',
+      iconColor: '#F59E0B',
+      borderColor: '#F59E0B'
     },
     {
       label: 'Draft',
       value: draftEstimates,
       percentage: totalEstimates ? `${((draftEstimates / totalEstimates) * 100).toFixed(1)}% of total` : '0% of total',
       icon: FileEdit,
-      iconBg: '#FEF3C7',
-      iconColor: '#F59E0B',
-      borderColor: '#F59E0B'
+      iconBg: '#FED7AA',
+      iconColor: '#EA580C',
+      borderColor: '#EA580C'
     },
     {
       label: 'Sent',
       value: sentEstimates,
       percentage: totalEstimates ? `${((sentEstimates / totalEstimates) * 100).toFixed(1)}% of total` : '0% of total',
       icon: Mail,
-      iconBg: '#D1FAE5',
-      iconColor: '#10B981',
-      borderColor: '#10B981'
+      iconBg: '#DBEAFE',
+      iconColor: '#3B82F6',
+      borderColor: '#3B82F6'
     },
     {
       label: 'Approved',
       value: approvedEstimates,
       percentage: totalEstimates ? `${((approvedEstimates / totalEstimates) * 100).toFixed(1)}% of total` : '0% of total',
       icon: CheckCircle,
-      iconBg: '#CCFBF1',
-      iconColor: '#14B8A6',
-      borderColor: '#14B8A6'
+      iconBg: '#D1FAE5',
+      iconColor: '#10B981',
+      borderColor: '#10B981'
     },
     {
       label: 'Rejected',
@@ -340,11 +340,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const block2Sent = block2Data.filter(e => (e.status || '').toLowerCase() === 'sent').length;
   const block2Approved = block2Data.filter(e => (e.status || '').toLowerCase() === 'approved').length;
   const block2Rejected = block2Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length;
-  // All statuses for legend display
+  // All statuses for legend display - matching reference image colors
   const statusDataAll = [
-    { name: 'Draft', value: block2Draft, color: '#3B82F6' },
-    { name: 'Sent', value: block2Sent, color: '#F59E0B' },
-    { name: 'Approved', value: block2Approved, color: '#22C55E' },
+    { name: 'Draft', value: block2Draft, color: '#5B8DEF' },
+    { name: 'Sent', value: block2Sent, color: '#FBBF24' },
+    { name: 'Approved', value: block2Approved, color: '#14B8A6' },
     { name: 'Rejected', value: block2Rejected, color: '#EF4444' }
   ];
   // Only non-zero for chart display
@@ -359,7 +359,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   ).length;
   const typeData = [
     { name: 'Direct Estimates', value: block3Direct, color: '#8B5CF6' },
-    { name: 'Property-Based', value: block3PropertyBased, color: '#3B82F6' }
+    { name: 'Property-Based', value: block3PropertyBased, color: '#06B6D4' }
   ].filter(item => item.value > 0);
 
   // Block 4: Direct Property Type (uses filter4)
@@ -379,11 +379,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const block5Data = applyPeriodFilter(mainFilteredEstimates, filter5).filter(e => 
     e.estimate_type === 'direct' || e.estimateType === 'direct'
   );
-  // All statuses for legend display
+  // All statuses for legend display - matching reference image colors
   const directStatusDataAll = [
-    { name: 'Draft', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#3B82F6' },
-    { name: 'Sent', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#F59E0B' },
-    { name: 'Approved', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#22C55E' },
+    { name: 'Draft', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#5B8DEF' },
+    { name: 'Sent', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#FBBF24' },
+    { name: 'Approved', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#14B8A6' },
     { name: 'Rejected', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
   ];
   // Only non-zero for chart display
@@ -394,11 +394,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
     e.estimateType === 'property_based' || e.estimateType === 'property-based'
   );
-  // All statuses for legend display
+  // All statuses for legend display - matching reference image colors
   const propertyBasedStatusDataAll = [
-    { name: 'Draft', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#3B82F6' },
-    { name: 'Sent', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#F59E0B' },
-    { name: 'Approved', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#22C55E' },
+    { name: 'Draft', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#5B8DEF' },
+    { name: 'Sent', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#FBBF24' },
+    { name: 'Approved', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#14B8A6' },
     { name: 'Rejected', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
   ];
   // Only non-zero for chart display
@@ -668,8 +668,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               {propertyTypeData.map((item, index) => {
                 const maxValue = Math.max(...propertyTypeData.map(d => d.value));
                 const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-                const colors = ['#3B82F6', '#8B5CF6', '#06B6D4', '#F59E0B', '#EF4444'];
-                const bgColors = ['#EFF6FF', '#F5F3FF', '#ECFEFF', '#FFFBEB', '#FEF2F2'];
+                const colors = ['#5B8DEF', '#22C55E', '#14B8A6', '#FBBF24', '#EF4444'];
+                const bgColors = ['#EFF6FF', '#D1FAE5', '#CCFBF1', '#FEF3C7', '#FEE2E2'];
                 
                 return (
                   <div key={index} className="flex items-center gap-3">
@@ -695,8 +695,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               </div>
             </div>
           ) : (
-            <div className="h-48 flex items-center justify-center text-gray-400">
-              No property-based estimates
+            <div className="h-48 flex flex-col items-center justify-center text-gray-400">
+              <div className="text-4xl font-bold text-gray-300 mb-2">0</div>
+              <div className="text-sm">No estimates</div>
             </div>
           )}
         </div>
@@ -741,11 +742,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-44 flex items-center justify-center text-gray-400">
-                  No data
+                <div className="h-44 flex items-center justify-center">
+                  <div className="w-[150px] h-[150px] rounded-full border-8 border-gray-200"></div>
                 </div>
               )}
-              {/* Center text */}
+              {/* Center text - always shows count including 0 */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
                 <div className="text-center bg-white rounded-full p-2">
                   <div className="text-3xl font-bold text-gray-800">{block2Data.length}</div>
@@ -814,11 +815,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-44 flex items-center justify-center text-gray-400">
-                  No data
+                <div className="h-44 flex items-center justify-center">
+                  <div className="w-[150px] h-[150px] rounded-full border-8 border-gray-200"></div>
                 </div>
               )}
-              {/* Center text */}
+              {/* Center text - always shows count including 0 */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
                 <div className="text-center bg-white rounded-full p-2">
                   <div className="text-3xl font-bold text-gray-800">{block3Data.length}</div>
@@ -827,7 +828,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               </div>
             </div>
             <div className="w-1/2 space-y-3 pl-4">
-              {typeData.map((item, index) => (
+              {[
+                { name: 'Direct Estimates', value: block3Direct, color: '#8B5CF6' },
+                { name: 'Property-Based', value: block3PropertyBased, color: '#06B6D4' }
+              ].map((item, index) => (
                 <div key={index} className="flex items-center gap-2 text-sm">
                   <div 
                     className="w-3 h-3 rounded-full" 
@@ -869,7 +873,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               {directPropertyTypeData.map((item, index) => {
                 const maxValue = Math.max(...directPropertyTypeData.map(d => d.value));
                 const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-                const colors = ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE', '#EDE9FE'];
+                const colors = ['#5B8DEF', '#22C55E', '#14B8A6', '#FBBF24', '#EF4444'];
                 
                 return (
                   <div key={index} className="flex items-center gap-3">
@@ -895,8 +899,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               </div>
             </div>
           ) : (
-            <div className="h-48 flex items-center justify-center text-gray-400">
-              No direct estimates
+            <div className="h-48 flex flex-col items-center justify-center text-gray-400">
+              <div className="text-4xl font-bold text-gray-300 mb-2">0</div>
+              <div className="text-sm">No estimates</div>
             </div>
           )}
         </div>
@@ -941,11 +946,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-44 flex items-center justify-center text-gray-400">
-                  No data
+                <div className="h-44 flex items-center justify-center">
+                  <div className="w-[150px] h-[150px] rounded-full border-8 border-gray-200"></div>
                 </div>
               )}
-              {/* Center text */}
+              {/* Center text - always shows count including 0 */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
                 <div className="text-center bg-white rounded-full p-2">
                   <div className="text-3xl font-bold text-gray-800">{block5Data.length}</div>
@@ -1012,11 +1017,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-44 flex items-center justify-center text-gray-400">
-                  No data
+                <div className="h-44 flex items-center justify-center">
+                  <div className="w-[150px] h-[150px] rounded-full border-8 border-gray-200"></div>
                 </div>
               )}
-              {/* Center text */}
+              {/* Center text - always shows count including 0 */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
                 <div className="text-center bg-white rounded-full p-2">
                   <div className="text-3xl font-bold text-gray-800">{block6Data.length}</div>
@@ -1076,25 +1081,26 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   type="monotone" 
                   dataKey="direct" 
                   name="Direct Estimates"
-                  stroke="#3B82F6" 
+                  stroke="#5B8DEF" 
                   strokeWidth={2}
-                  dot={{ fill: '#3B82F6', r: 4 }}
+                  dot={{ fill: '#5B8DEF', r: 4 }}
                   activeDot={{ r: 6 }}
                 />
                 <Line 
                   type="monotone" 
                   dataKey="property" 
                   name="Property-Based Estimates"
-                  stroke="#8B5CF6" 
+                  stroke="#14B8A6" 
                   strokeWidth={2}
-                  dot={{ fill: '#8B5CF6', r: 4 }}
+                  dot={{ fill: '#14B8A6', r: 4 }}
                   activeDot={{ r: 6 }}
                 />
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-64 flex items-center justify-center text-gray-400">
-              No data available
+            <div className="h-64 flex flex-col items-center justify-center text-gray-400">
+              <div className="text-4xl font-bold text-gray-300 mb-2">0</div>
+              <div className="text-sm">No data available</div>
             </div>
           )}
         </div>
@@ -1119,13 +1125,13 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           
           {funnelTotal > 0 ? (
             <div className="flex items-center gap-8">
-              {/* Funnel Visual - Clean trapezoid shape without text */}
+              {/* Funnel Visual - Clean trapezoid shape without text - matching reference colors */}
               <div className="flex-1 flex flex-col items-center" style={{ maxWidth: '280px' }}>
                 {[
-                  { width: '100%', color: '#3B82F6' },
-                  { width: funnelTotal ? `${Math.max((funnelSent / funnelTotal) * 100, 20)}%` : '85%', color: '#22D3EE' },
+                  { width: '100%', color: '#5B8DEF' },
+                  { width: funnelTotal ? `${Math.max((funnelSent / funnelTotal) * 100, 20)}%` : '85%', color: '#14B8A6' },
                   { width: funnelTotal ? `${Math.max((funnelApproved / funnelTotal) * 100, 15)}%` : '70%', color: '#22C55E' },
-                  { width: funnelTotal ? `${Math.max((funnelInvoicesCreated / funnelTotal) * 100, 10)}%` : '55%', color: '#F59E0B' },
+                  { width: funnelTotal ? `${Math.max((funnelInvoicesCreated / funnelTotal) * 100, 10)}%` : '55%', color: '#FBBF24' },
                   { width: funnelTotal ? `${Math.max((funnelPaid / funnelTotal) * 100, 5)}%` : '40%', color: '#EF4444' }
                 ].map((bar, idx) => (
                   <div 
@@ -1158,8 +1164,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               </div>
             </div>
           ) : (
-            <div className="h-48 flex items-center justify-center text-gray-400">
-              No estimates for selected period
+            <div className="h-48 flex flex-col items-center justify-center text-gray-400">
+              <div className="text-4xl font-bold text-gray-300 mb-2">0</div>
+              <div className="text-sm">No estimates</div>
             </div>
           )}
         </div>
