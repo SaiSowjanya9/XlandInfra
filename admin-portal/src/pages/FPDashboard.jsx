@@ -372,8 +372,8 @@ const FPDashboard = ({ user }) => {
         </div>
       )}
 
-      {/* First Stats Row - 4 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* First Stats Row - 3 cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Link to="/fp/properties" className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -409,19 +409,6 @@ const FPDashboard = ({ user }) => {
               <p className="text-sm text-gray-500">Employees</p>
               <p className="text-2xl font-bold text-gray-900">{stats?.employees || 0}</p>
               <p className="text-xs text-gray-400">Total Employees</p>
-            </div>
-          </div>
-        </Link>
-
-        <Link to="/fp/work-orders" className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-indigo-200 transition-all duration-200 group">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <ClipboardList className="w-6 h-6 text-indigo-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Total Work Orders</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.workOrders?.total || 0}</p>
-              <p className="text-xs text-gray-400">All Work Orders</p>
             </div>
           </div>
         </Link>
@@ -502,7 +489,7 @@ const FPDashboard = ({ user }) => {
               const closed = Number(workOrdersByStatus.closed) || 0;
               const cancelled = Number(workOrdersByStatus.cancelled) || 0;
               
-              const circumference = 2 * Math.PI * 60;
+              const circumference = 2 * Math.PI * 80;
               const pieTotal = totalWorkOrders || (pending + assigned + inProgress + completed + closed + cancelled);
               const segmentTotal = pending + assigned + inProgress + completed + closed + cancelled || 1;
               
@@ -524,25 +511,25 @@ const FPDashboard = ({ user }) => {
               ];
               
               return (
-                <div style={{ width: 160, height: 160 }}>
-                  <svg viewBox="0 0 160 160" width="160" height="160">
+                <div style={{ width: 220, height: 220 }}>
+                  <svg viewBox="0 0 220 220" width="220" height="220">
                     {segments.map((seg, idx) => {
                       if (!seg.show) return null;
                       const currentOffset = offset;
                       offset += seg.len;
                       return (
-                        <circle key={idx} cx="80" cy="80" r="60" fill="none" stroke={seg.color} strokeWidth="16"
+                        <circle key={idx} cx="110" cy="110" r="80" fill="none" stroke={seg.color} strokeWidth="20"
                           strokeDasharray={`${seg.len} ${circumference}`}
                           strokeDashoffset={-currentOffset}
-                          transform="rotate(-90 80 80)"
+                          transform="rotate(-90 110 110)"
                         />
                       );
                     })}
                     {pieTotal === 0 && (
-                      <circle cx="80" cy="80" r="60" fill="none" stroke="#E5E7EB" strokeWidth="16" />
+                      <circle cx="110" cy="110" r="80" fill="none" stroke="#E5E7EB" strokeWidth="20" />
                     )}
-                    <text x="80" y="75" textAnchor="middle" fill="#111827" style={{ fontSize: '24px', fontWeight: 700 }}>{pieTotal}</text>
-                    <text x="80" y="95" textAnchor="middle" fill="#6B7280" style={{ fontSize: '11px' }}>Total</text>
+                    <text x="110" y="102" textAnchor="middle" fill="#111827" style={{ fontSize: '32px', fontWeight: 700 }}>{pieTotal}</text>
+                    <text x="110" y="125" textAnchor="middle" fill="#6B7280" style={{ fontSize: '13px' }}>Total</text>
                   </svg>
                 </div>
               );

@@ -530,8 +530,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* First Stats Row - 4 KPI Cards like FP Portal */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* First Stats Row - 3 KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div 
             onClick={() => navigate('/employee/customer-submissions')}
             className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group"
@@ -579,22 +579,6 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
-
-          <div 
-            onClick={() => navigate('/employee/work-orders')}
-            className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-indigo-200 transition-all cursor-pointer group"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <ClipboardList className="w-6 h-6 text-indigo-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Total Work Orders</p>
-                <p className="text-2xl font-bold text-gray-900">{totalWorkOrders}</p>
-                <p className="text-xs text-gray-400">All Work Orders</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Combined Estimates + Work Orders Overview Box */}
@@ -621,7 +605,7 @@ const Dashboard = () => {
                       <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
                       <YAxis hide />
                       <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelStyle={{ color: '#fff', fontWeight: 600 }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-                      <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} formatter={(value) => value === 'Direct' ? `Direct (${directCount})` : `Property (${propertyCount})`} />
+                      <Legend verticalAlign="top" align="center" height={36} iconSize={14} wrapperStyle={{ fontSize: '14px', fontWeight: 500 }} formatter={(value) => value === 'Direct' ? `Direct (${directCount})` : `Property (${propertyCount})`} />
                       <Bar dataKey="direct" name="Direct" stackId="a" fill="#06B6D4" barSize={40} />
                       <Bar dataKey="property" name="Property" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
                     </BarChart>
@@ -641,7 +625,7 @@ const Dashboard = () => {
                       itemStyle={{ color: '#fff' }}
                       cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                     />
-                    <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} />
+                    <Legend verticalAlign="top" align="center" height={36} iconSize={14} wrapperStyle={{ fontSize: '14px', fontWeight: 500 }} />
                     <Bar dataKey="direct" name="Direct" fill="#06B6D4" barSize={20} radius={[4, 4, 0, 0]} />
                     <Bar dataKey="property" name="Property" fill="#8B5CF6" barSize={20} radius={[4, 4, 0, 0]} />
                   </BarChart>
@@ -663,15 +647,15 @@ const Dashboard = () => {
             </div>
             
             <div className="flex items-center justify-center gap-8">
-              <div className="relative w-44 h-44">
+              <div className="relative w-56 h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
                       cx="50%"
                       cy="50%"
-                      innerRadius={50}
-                      outerRadius={70}
+                      innerRadius={65}
+                      outerRadius={95}
                       paddingAngle={pieData.length > 1 ? 3 : 0}
                       dataKey="value"
                     >
@@ -682,8 +666,8 @@ const Dashboard = () => {
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <p className="text-2xl font-bold text-gray-900">{totalWorkOrders}</p>
-                  <p className="text-xs text-gray-500">Total</p>
+                  <p className="text-3xl font-bold text-gray-900">{totalWorkOrders}</p>
+                  <p className="text-sm text-gray-500">Total</p>
                 </div>
               </div>
 

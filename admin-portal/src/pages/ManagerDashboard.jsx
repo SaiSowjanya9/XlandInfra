@@ -159,8 +159,8 @@ const ManagerDashboard = ({ user }) => {
         </div>
       )}
 
-      {/* First Stats Row - 4 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* First Stats Row - 3 cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <button onClick={() => navigate('/manager/properties')} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group text-left">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -196,19 +196,6 @@ const ManagerDashboard = ({ user }) => {
               <p className="text-sm text-gray-500">Employees</p>
               <p className="text-2xl font-bold text-gray-900">{stats?.employees || 0}</p>
               <p className="text-xs text-gray-400">Total Employees</p>
-            </div>
-          </div>
-        </button>
-
-        <button onClick={() => navigate('/manager/work-orders')} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-indigo-200 transition-all duration-200 group text-left">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <ClipboardList className="w-6 h-6 text-indigo-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Total Work Orders</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.totalWorkOrders || 0}</p>
-              <p className="text-xs text-gray-400">All Work Orders</p>
             </div>
           </div>
         </button>
@@ -280,15 +267,15 @@ const ManagerDashboard = ({ user }) => {
           </div>
           
           <div className="flex items-center justify-center gap-8">
-            <div className="relative w-44 h-44">
+            <div className="relative w-56 h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
-                    outerRadius={70}
+                    innerRadius={65}
+                    outerRadius={95}
                     paddingAngle={pieData.length > 1 ? 3 : 0}
                     dataKey="value"
                   >
@@ -299,8 +286,8 @@ const ManagerDashboard = ({ user }) => {
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <p className="text-2xl font-bold text-gray-900">{totalWorkOrders}</p>
-                <p className="text-xs text-gray-500">Total</p>
+                <p className="text-3xl font-bold text-gray-900">{totalWorkOrders}</p>
+                <p className="text-sm text-gray-500">Total</p>
               </div>
             </div>
 
