@@ -8,7 +8,6 @@ import {
   FileEdit, 
   Building2, 
   RefreshCw,
-  ArrowRight,
   Mail,
   Calendar,
   ChevronDown
@@ -438,13 +437,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white px-3 py-2 shadow-lg rounded-lg border border-gray-200">
-          <p className="font-medium text-gray-800 text-sm">{label || payload[0]?.name}</p>
-          {payload.map((entry, index) => (
-            <p key={index} style={{ color: entry.color || entry.fill }} className="text-sm">
-              {entry.name}: {entry.value}
-            </p>
-          ))}
+        <div className="bg-gray-900 px-3 py-2 shadow-xl rounded-lg border border-gray-700 z-50">
+          <p className="font-semibold text-white text-sm">{payload[0]?.name || label}</p>
+          <p className="text-gray-300 text-sm">
+            Count: <span className="font-bold text-white">{payload[0]?.value}</span>
+          </p>
         </div>
       );
     }
@@ -635,13 +632,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                 <span className="text-sm font-medium text-gray-700">{card.label}</span>
               </div>
               <div className="text-3xl font-bold text-gray-900 mb-1">{card.value}</div>
-              <div className="text-xs text-gray-500 mb-2 whitespace-nowrap">{card.percentage}</div>
-              <div 
-                className="text-xs font-medium flex items-center gap-1 group-hover:gap-2 transition-all"
-                style={{ color: card.borderColor }}
-              >
-                View All <ArrowRight className="w-3 h-3" />
-              </div>
+              <div className="text-xs text-gray-500 whitespace-nowrap">{card.percentage}</div>
             </div>
           );
         })}
@@ -741,7 +732,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         <Cell key={index} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<CustomTooltip />} offset={20} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -814,7 +805,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         <Cell key={index} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<CustomTooltip />} offset={20} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -941,7 +932,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         <Cell key={index} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<CustomTooltip />} offset={20} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -1012,7 +1003,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         <Cell key={index} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<CustomTooltip />} offset={20} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -1074,7 +1065,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip />} offset={20} />
                 <Legend />
                 <Line 
                   type="monotone" 
