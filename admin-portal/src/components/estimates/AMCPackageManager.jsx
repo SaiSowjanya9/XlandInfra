@@ -256,10 +256,10 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
     let loadedServiceRows = [];
     if (Array.isArray(pkg.serviceRows) && pkg.serviceRows.length > 0) {
       loadedServiceRows = pkg.serviceRows.map(row => ({
-        service: decodeHtml(row.service) || '',
+        service: decodeHtml(row.service || row.name) || '',
         description: decodeHtml(row.description) || '',
-        frequencyCount: row.frequencyCount ?? 1,
-        frequencyType: row.frequencyType || 'Monthly'
+        frequencyCount: row.frequency_count ?? row.frequencyCount ?? 1,
+        frequencyType: row.frequency_type || row.frequencyType || 'Monthly'
       }));
     } else if (typeof pkg.services === 'string' && pkg.services) {
       loadedServiceRows = pkg.services.split(',').map(s => ({
