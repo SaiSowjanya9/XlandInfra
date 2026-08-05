@@ -11,6 +11,14 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 import { FREQUENCY_TYPES, FREQUENCY_COUNT_MAP } from '../utils/estimateStore';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
+// Decode HTML entities (e.g., &amp; -> &)
+const decodeHtml = (html) => {
+  if (!html || typeof html !== 'string') return html;
+  const txt = document.createElement('textarea');
+  txt.innerHTML = html;
+  return txt.value;
+};
+
 const PROPERTY_TYPE_OPTIONS = [
   { id: 'GC', label: 'Gated Community' },
   { id: 'APT', label: 'Apartment' },
@@ -240,7 +248,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   const showToast = (msg, type = 'success') => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3500); };
   const formatCurrency = (amt) => { const num = parseFloat(amt); return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(isNaN(num) ? 0 : Math.round(num)); };
   const getAddonId = (addon) => (addon.id ?? addon.addonId)?.toString();
-  const getAddonName = (addon) => addon.service_name || addon.name || addon.serviceName || addon.services?.[0]?.name || 'Add-on Service';
+  const getAddonName = (addon) => decodeHtml(addon.service_name || addon.name || addon.serviceName || addon.services?.[0]?.name) || 'Add-on Service';
   const getAddonPrice = (addon) => parseFloat(addon.price ?? addon.totalPrice ?? addon.services?.[0]?.price) || 0;
   const getPackagePrice = (pkg) => parseFloat(pkg?.price ?? pkg?.base_price ?? pkg?.totalPrice ?? pkg?.total_price ?? pkg?.rate ?? pkg?.total_rate) || 0;
   const getPackageServices = (pkg) => {
@@ -503,7 +511,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="border border-blue-200 rounded-xl overflow-hidden bg-blue-50/30">
                 <div className="px-5 py-3 flex items-center gap-3">
                   <Package className="w-5 h-5 text-blue-600" />
-                  <span className="font-semibold text-gray-900">{pkg.name}</span>
+                  <span className="font-semibold text-gray-900">{decodeHtml(pkg.name)}</span>
                   <span className="px-2 py-0.5 bg-slate-700 text-white text-xs rounded font-mono">{pkg.package_code || `AMC-${pkg.id}`}</span>
                 </div>
                 <table className="w-full text-sm bg-white">
@@ -522,7 +530,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                       return (
                         <tr key={idx}>
                           <td className="px-3 py-2.5 text-gray-800">{decodeHtml(svc.service || svc.name) || '-'}</td>
-                          <td className={`px-3 py-2.5 text-gray-600 text-center`}>{svc.description?.trim() || '-'}</td>
+                          <td className={`px-3 py-2.5 text-gray-600 text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</td>
                           <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
                           <td className="px-3 py-2.5 text-center text-gray-600">{svc.frequencyCount || svc.frequency_count || getFrequencyVisits(freqType)}</td>
                         </tr>
@@ -587,7 +595,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                     return (
                       <tr key={idx}>
                         <td className="px-3 py-2.5 text-gray-800">{getAddonName(addon)}</td>
-                        <td className={`px-3 py-2.5 text-gray-600 text-center`}>{addon.description || '-'}</td>
+                        <td className={`px-3 py-2.5 text-gray-600 text-center`}>{decodeHtml(addon.description) || '-'}</td>
                         <td className="px-3 py-2.5 text-center text-gray-600">{freqType}</td>
                         <td className="px-5 py-2.5 text-center text-gray-600">{addon.frequency_count || addon.frequencyCount || getFrequencyVisits(freqType)}</td>
                         <td className="px-5 py-2.5 text-center">
@@ -1449,7 +1457,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                           <div className="col-span-3">
                             <input
                               type="number"
-                              min="1"
+                              min="0"
                               value={row.frequencyCount}
                               readOnly
                               className="w-full px-3 py-2.5 border border-gray-300 bg-gray-100 rounded-lg text-sm cursor-not-allowed"
@@ -1610,7 +1618,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
       {addonActiveTab === 'all-addons' && (
         <div className="space-y-4">
           <div className="bg-white rounded-xl border border-gray-200 p-4"><div className="flex items-center justify-between"><div><h3 className="font-semibold text-gray-900">All Add-ons</h3><p className="text-sm text-gray-500">{addons.length} add-on(s) available</p></div><div className="flex gap-2 flex-wrap"><button onClick={() => setAddonFilterPropertyType('all')} className={`px-3 py-1.5 text-sm rounded-lg ${addonFilterPropertyType === 'all' ? 'bg-stone-700 text-white' : 'bg-gray-100 text-gray-700'}`}>All{addons.length > 0 && <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${addonFilterPropertyType === 'all' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'}`}>{addons.length}</span>}</button>{PROPERTY_TYPE_OPTIONS.map(t => { const count = addons.filter(a => matchPropertyType(a.property_type, t.id)).length; return <button key={t.id} onClick={() => setAddonFilterPropertyType(t.id)} className={`px-3 py-1.5 text-sm rounded-lg ${addonFilterPropertyType === t.id ? 'bg-stone-700 text-white' : 'bg-gray-100 text-gray-700'}`}>{t.label}{count > 0 && <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${addonFilterPropertyType === t.id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'}`}>{count}</span>}</button>; })}</div></div></div>
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{filteredAddons.length === 0 ? <div className="py-16 text-center"><p className="text-gray-500">No add-ons found</p></div> : <table className="w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Add-on Name</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Property Type</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Frequency</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">No.of visits</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Total Rate</th><th className="px-4 py-3 text-center font-medium text-gray-600 uppercase text-xs">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{filteredAddons.map(a => <tr key={a.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-medium">{a.service_name || a.name || 'Unnamed Add-on'}</td><td className="px-4 py-3 text-gray-500">{getPropertyTypeLabel(a.property_type) || 'GC'}</td><td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${(a.frequency_type || 'Monthly') === 'Monthly' ? 'bg-blue-100 text-blue-700' : (a.frequency_type || '') === 'Quarterly' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>{a.frequency_type || 'Monthly'}</span></td><td className="px-4 py-3 text-gray-600">{a.frequency_count || 1}x</td><td className="px-4 py-3 font-semibold">{formatCurrency(a.price)}</td><td className="px-4 py-3"><div className="flex items-center justify-center"><button onClick={() => setViewAddon(a)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details"><Eye className="w-4 h-4" /></button></div></td></tr>)}</tbody></table>}</div>
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{filteredAddons.length === 0 ? <div className="py-16 text-center"><p className="text-gray-500">No add-ons found</p></div> : <table className="w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Add-on Name</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Property Type</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Frequency</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">No.of visits</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Total Rate</th><th className="px-4 py-3 text-center font-medium text-gray-600 uppercase text-xs">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{filteredAddons.map(a => <tr key={a.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-medium">{a.service_name || a.name || 'Unnamed Add-on'}</td><td className="px-4 py-3 text-gray-500">{getPropertyTypeLabel(a.property_type) || 'GC'}</td><td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${(a.frequency_type || 'Monthly') === 'Monthly' ? 'bg-blue-100 text-blue-700' : (a.frequency_type || '') === 'Quarterly' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>{a.frequency_type || 'Monthly'}</span></td><td className="px-4 py-3 text-gray-600">{a.frequency_count ?? 1}x</td><td className="px-4 py-3 font-semibold">{formatCurrency(a.price)}</td><td className="px-4 py-3"><div className="flex items-center justify-center"><button onClick={() => setViewAddon(a)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details"><Eye className="w-4 h-4" /></button></div></td></tr>)}</tbody></table>}</div>
         </div>
       )}
     </div>
@@ -1857,9 +1865,9 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                         <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-indigo-100 rounded-t-lg">
                           <div className="col-span-1 text-xs font-semibold text-indigo-700">#</div>
                           <div className="col-span-3 text-xs font-semibold text-indigo-700">Service</div>
-                          <div className="col-span-5 text-xs font-semibold text-indigo-700">Description</div>
+                          <div className="col-span-4 text-xs font-semibold text-indigo-700">Description</div>
                           <div className="col-span-2 text-xs font-semibold text-indigo-700 text-center">Frequency</div>
-                          <div className="col-span-1 text-xs font-semibold text-indigo-700 text-right">Visits</div>
+                          <div className="col-span-2 text-xs font-semibold text-indigo-700 text-right">Visits</div>
                         </div>
                         <div className="border border-indigo-100 rounded-b-lg divide-y divide-indigo-50">
                           {pkgServices.map((svc, idx) => (
@@ -1868,16 +1876,16 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                                 <span className="w-5 h-5 bg-indigo-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                               </div>
                               <div className="col-span-3">
-                                <p className="font-medium text-gray-800 text-sm">{svc.name || svc.service}</p>
+                                <p className="font-medium text-gray-800 text-sm">{decodeHtml(svc.name || svc.service)}</p>
                               </div>
-                              <div className="col-span-5">
-                                <p className={`text-xs text-gray-500 break-words whitespace-normal text-center`}>{svc.description?.trim() || '-'}</p>
+                              <div className="col-span-4">
+                                <p className={`text-xs text-gray-500 break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</p>
                               </div>
                               <div className="col-span-2 text-center">
                                 <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
                               </div>
-                              <div className="col-span-1 text-right">
-                                <p className="text-sm text-indigo-700 font-semibold">{svc.frequencyCount || svc.frequency_count || 1}</p>
+                              <div className="col-span-2 text-right">
+                                <p className="text-sm text-indigo-700 font-semibold">{svc.frequencyCount ?? svc.frequency_count ?? 1}</p>
                               </div>
                             </div>
                           ))}
@@ -1896,13 +1904,13 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-lg">
                       <div className="col-span-1 text-xs font-semibold text-green-700">#</div>
                       <div className="col-span-3 text-xs font-semibold text-green-700">Service</div>
-                      <div className="col-span-5 text-xs font-semibold text-green-700">Description</div>
+                      <div className="col-span-4 text-xs font-semibold text-green-700">Description</div>
                       <div className="col-span-2 text-xs font-semibold text-green-700 text-center">Frequency</div>
-                      <div className="col-span-1 text-xs font-semibold text-green-700 text-right">Visits</div>
+                      <div className="col-span-2 text-xs font-semibold text-green-700 text-right">Visits</div>
                     </div>
                     <div className="border border-green-100 divide-y divide-green-50">
                       {viewEstimate.addons.map((addon, idx) => {
-                        const addonName = addon.name || addon.service_name || '';
+                        const addonName = decodeHtml(addon.name || addon.service_name) || '';
                         const estPropertyType = (viewEstimate.property_type || '').toUpperCase();
                         let addonFromList = addons.find(a => a.id == addon.id || a.id == addon.addon_id);
                         if (!addonFromList || !addonFromList.description) {
@@ -1911,8 +1919,8 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                             (a.property_type || '').toUpperCase() === estPropertyType
                           ) || addonFromList;
                         }
-                        const addonDescription = addon.description || addonFromList?.description || '';
-                        const frequencyCount = addon.frequency_count || addon.frequencyCount || addonFromList?.frequency_count || 1;
+                        const addonDescription = decodeHtml(addon.description || addonFromList?.description) || '';
+                        const frequencyCount = addon.frequency_count ?? addon.frequencyCount ?? addonFromList?.frequency_count ?? 1;
                         const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
                         return (
                           <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
@@ -1920,15 +1928,15 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                               <span className="w-5 h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                             </div>
                             <div className="col-span-3">
-                              <p className="font-medium text-gray-800 text-sm">{addon.name || addon.service_name}</p>
+                              <p className="font-medium text-gray-800 text-sm">{addonName}</p>
                             </div>
-                            <div className="col-span-5">
+                            <div className="col-span-4">
                               <p className="text-xs text-gray-500 break-words whitespace-normal">{addonDescription || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>
                             </div>
-                            <div className="col-span-1 text-right">
+                            <div className="col-span-2 text-right">
                               <p className="text-sm text-green-700 font-semibold">{frequencyCount}</p>
                             </div>
                           </div>
@@ -2033,7 +2041,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                         </div>
                         <div className="col-span-5">
                           <p className={`text-sm text-gray-600 text-center`}>
-                            {svc.description?.trim() || '-'}
+                            {decodeHtml(svc.description)?.trim() || '-'}
                           </p>
                         </div>
                         <div className="col-span-2 text-center">

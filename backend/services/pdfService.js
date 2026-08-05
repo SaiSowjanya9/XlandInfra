@@ -4,6 +4,32 @@ const path = require('path');
 // Logo file path - icon only (without text) for horizontal layout - OPTIMIZED for smaller PDF size
 const LOGO_PATH = path.join(__dirname, '../assets/logo-icon-optimized.png');
 
+/**
+ * Decode HTML entities (e.g., &amp; -> &, &#x2F; -> /)
+ */
+const decodeHtml = (html) => {
+  if (!html || typeof html !== 'string') return html || '';
+  const entities = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&#x27;': "'",
+    '&#x2F;': '/',
+    '&nbsp;': ' ',
+    '&#x26;': '&'
+  };
+  let decoded = html;
+  for (const [entity, char] of Object.entries(entities)) {
+    decoded = decoded.replace(new RegExp(entity, 'gi'), char);
+  }
+  // Handle numeric entities
+  decoded = decoded.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
+  decoded = decoded.replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  return decoded;
+};
+
 // Generate estimate PDF and return as buffer
 const generateEstimatePDF = async (estimate) => {
   return new Promise((resolve, reject) => {
@@ -102,7 +128,7 @@ const generateEstimatePDF = async (estimate) => {
       doc.fontSize(8).fillColor('#666666');
       let py = y + 28;
       if (propertyCode) { doc.text(`Property ID: ${propertyCode}`, 60, py); py += 12; }
-      if (propertyName) { doc.text(`Name: ${propertyName}`, 60, py); py += 12; }
+      if (propertyName) { doc.text(`Name: ${decodeHtml(propertyName)}`, 60, py); py += 12; }
       const propTypeLabel = { 'GC': 'Gated Community', 'APT': 'Apartment', 'VILLA': 'Villa', 'PLOT': 'Plot' }[propertyType] || propertyType;
       if (propTypeLabel) { doc.text(`Type: ${propTypeLabel}`, 60, py); py += 12; }
       if (zone) { doc.text(`Zone: ${zone}`, 60, py); py += 12; }
@@ -113,7 +139,7 @@ const generateEstimatePDF = async (estimate) => {
       doc.fontSize(10).fillColor(navy).text('Customer Details', 315, y + 10);
       doc.fontSize(8).fillColor('#666666');
       let cy = y + 28;
-      if (customerName) { doc.text(`Name: ${customerName}`, 315, cy); cy += 12; }
+      if (customerName) { doc.text(`Name: ${decodeHtml(customerName)}`, 315, cy); cy += 12; }
       if (customerPhone) { doc.text(`Phone: ${customerPhone}`, 315, cy); cy += 12; }
       if (customerEmail) { doc.text(`Email: ${customerEmail}`, 315, cy); cy += 12; }
       if (city) { doc.text(`City: ${city}`, 315, cy); cy += 12; }
@@ -122,13 +148,14 @@ const generateEstimatePDF = async (estimate) => {
 
       // Package Description - dynamic height based on content
       if (amcPackageDescription) {
+        const decodedPkgDesc = decodeHtml(amcPackageDescription);
         doc.fontSize(10).fillColor(navy).text('PACKAGE DESCRIPTION', 50, y);
         y += 15;
         // Calculate height needed for description (approx 12 chars per line at font size 8)
-        const descLines = Math.ceil(amcPackageDescription.length / 70);
+        const descLines = Math.ceil(decodedPkgDesc.length / 70);
         const descBoxHeight = Math.min(Math.max(descLines * 12 + 16, 50), 150); // Min 50, max 150
         doc.rect(50, y, 500, descBoxHeight).fill(lightGray).stroke('#e0e0e0');
-        doc.fontSize(8).fillColor('#444444').text(amcPackageDescription, 60, y + 8, { width: 480, height: descBoxHeight - 12 });
+        doc.fontSize(8).fillColor('#444444').text(decodedPkgDesc, 60, y + 8, { width: 480, height: descBoxHeight - 12 });
         y += descBoxHeight + 10;
       }
 
@@ -159,7 +186,7 @@ const generateEstimatePDF = async (estimate) => {
       const pageHeight = 780; // A4 usable height
       
       svcList.forEach((s, idx) => {
-        const svcDesc = s.description || '-';
+        const svcDesc = decodeHtml(s.description) || '-';
         // Calculate row height based on description length (approx 40 chars per line)
         const descLines = Math.ceil(svcDesc.length / 40);
         const rowHeight = Math.max(22, descLines * 11);
@@ -174,11 +201,11 @@ const generateEstimatePDF = async (estimate) => {
         doc.rect(50, y, 500, rowHeight).fill(rowColor).stroke('#e0e0e0');
         doc.fontSize(8).fillColor('#333333');
         doc.text(String(idx + 1), 55, y + 6, { continued: false });
-        const svcName = s.name || s.service || 'Service';
+        const svcName = decodeHtml(s.name || s.service || 'Service');
         doc.text(svcName.substring(0, 28), 75, y + 6, { continued: false });
         // Full description with height constraint to prevent page overflow
         doc.text(svcDesc, 190, y + 6, { width: 200, height: rowHeight - 8, align: 'center', continued: false });
-        const freqCount = s.frequencyCount || s.frequency_count || 1;
+        const freqCount = s.frequencyCount ?? s.frequency_count ?? 1;
         let freqType = s.frequencyType || s.frequency_type || 'Monthly';
         freqType = freqType.replace(/^\d+x\s*/i, '');
         doc.text(freqType, 400, y + 6, { continued: false });
@@ -225,7 +252,7 @@ const generateEstimatePDF = async (estimate) => {
         y += 20;
 
         addonList.forEach((a, idx) => {
-          const addonDesc = a.description || '-';
+          const addonDesc = decodeHtml(a.description) || '-';
           // Calculate row height based on description length (approx 40 chars per line)
           const descLines = Math.ceil(addonDesc.length / 40);
           const rowHeight = Math.max(22, descLines * 11);
@@ -240,11 +267,11 @@ const generateEstimatePDF = async (estimate) => {
           doc.rect(50, y, 500, rowHeight).fill(rowColor).stroke('#e0e0e0');
           doc.fontSize(8).fillColor('#333333');
           doc.text(String(idx + 1), 55, y + 6, { continued: false });
-          const addonName = a.name || a.service_name || 'Add-on';
+          const addonName = decodeHtml(a.name || a.service_name || 'Add-on');
           doc.text(addonName.substring(0, 28), 75, y + 6, { continued: false });
           // Full description with height constraint to prevent page overflow
           doc.text(addonDesc, 190, y + 6, { width: 200, height: rowHeight - 8, align: 'center', continued: false });
-          const freqCount = a.frequency_count || a.frequencyCount || 1;
+          const freqCount = a.frequency_count ?? a.frequencyCount ?? 1;
           let freqType = a.frequency_type || a.frequencyType || 'Monthly';
           freqType = freqType.replace(/^\d+x\s*/i, '');
           doc.text(freqType, 400, y + 6, { continued: false });

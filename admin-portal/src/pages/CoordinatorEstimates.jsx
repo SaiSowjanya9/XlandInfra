@@ -11,6 +11,14 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 import { FREQUENCY_TYPES, FREQUENCY_COUNT_MAP } from '../utils/estimateStore';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
+// Decode HTML entities (e.g., &amp; -> &)
+const decodeHtml = (html) => {
+  if (!html || typeof html !== 'string') return html;
+  const txt = document.createElement('textarea');
+  txt.innerHTML = html;
+  return txt.value;
+};
+
 const PROPERTY_TYPE_OPTIONS = [
   { id: 'GC', label: 'Gated Community' },
   { id: 'APT', label: 'Apartment' },
@@ -573,12 +581,12 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="border border-blue-200 rounded-xl overflow-hidden bg-blue-50/30">
                 <div className="px-5 py-3 flex items-center gap-3">
                   <Package className="w-5 h-5 text-blue-600" />
-                  <span className="font-semibold text-gray-900">{pkg.name}</span>
+                  <span className="font-semibold text-gray-900">{decodeHtml(pkg.name)}</span>
                   <span className="px-2 py-0.5 bg-slate-700 text-white text-xs rounded font-mono">{pkg.package_code || `AMC-${pkg.id}`}</span>
                 </div>
                 <table className="w-full text-sm bg-white">
                   <thead><tr className="border-y border-blue-100"><th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[12%]">Service</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[53%]">Description</th><th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[20%]">Frequency</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[15%]">Visits</th></tr></thead>
-                  <tbody className="divide-y divide-gray-100">{services.length > 0 ? services.map((svc, idx) => { const freqType = svc.frequencyType || svc.frequency_type || 'Monthly'; const hasDesc = svc.description && svc.description.trim() && svc.description.trim() !== '-'; return (<tr key={idx}><td className="px-3 py-2.5 text-gray-800">{decodeHtml(svc.service || svc.name) || '-'}</td><td className={`px-3 py-2.5 text-gray-600 text-center`}>{svc.description?.trim() || '-'}</td><td className="px-3 py-2.5 text-gray-600">{freqType}</td><td className="px-3 py-2.5 text-center text-gray-600">{svc.frequencyCount || svc.frequency_count || getFrequencyVisits(freqType)}</td></tr>); }) : <tr><td colSpan={4} className="px-5 py-3 text-center text-gray-400">No services in package</td></tr>}</tbody>
+                  <tbody className="divide-y divide-gray-100">{services.length > 0 ? services.map((svc, idx) => { const freqType = svc.frequencyType || svc.frequency_type || 'Monthly'; const hasDesc = svc.description && svc.description.trim() && svc.description.trim() !== '-'; return (<tr key={idx}><td className="px-3 py-2.5 text-gray-800">{decodeHtml(svc.service || svc.name) || '-'}</td><td className={`px-3 py-2.5 text-gray-600 text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</td><td className="px-3 py-2.5 text-gray-600">{freqType}</td><td className="px-3 py-2.5 text-center text-gray-600">{svc.frequencyCount || svc.frequency_count || getFrequencyVisits(freqType)}</td></tr>); }) : <tr><td colSpan={4} className="px-5 py-3 text-center text-gray-400">No services in package</td></tr>}</tbody>
                 </table>
                 <div className="px-5 py-3 bg-blue-50 border-t border-blue-100"><div className="flex justify-between items-center"><span className="text-sm font-semibold text-blue-700">Total Package Price</span><span className="text-lg font-bold text-gray-900">{formatCurrency(getPackagePrice(pkg))}</span></div><div className="text-xs text-blue-600 mt-1">Service Period: <span className="capitalize whitespace-nowrap">{getPackageBillingDuration(pkg)?.replace('-', ' ')}</span></div></div>
               </div>
@@ -1462,7 +1470,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                           <div className="col-span-3">
                             <input
                               type="number"
-                              min="1"
+                              min="0"
                               value={row.frequencyCount}
                               readOnly
                               className="w-full px-3 py-2.5 border border-gray-300 bg-gray-100 rounded-lg text-sm cursor-not-allowed"
@@ -1870,9 +1878,9 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                         <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-indigo-100 rounded-t-lg">
                           <div className="col-span-1 text-xs font-semibold text-indigo-700">#</div>
                           <div className="col-span-3 text-xs font-semibold text-indigo-700">Service</div>
-                          <div className="col-span-5 text-xs font-semibold text-indigo-700">Description</div>
+                          <div className="col-span-4 text-xs font-semibold text-indigo-700">Description</div>
                           <div className="col-span-2 text-xs font-semibold text-indigo-700 text-center">Frequency</div>
-                          <div className="col-span-1 text-xs font-semibold text-indigo-700 text-right">Visits</div>
+                          <div className="col-span-2 text-xs font-semibold text-indigo-700 text-right">Visits</div>
                         </div>
                         <div className="border border-indigo-100 rounded-b-lg divide-y divide-indigo-50">
                           {pkgServices.map((svc, idx) => (
@@ -1881,16 +1889,16 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                                 <span className="w-5 h-5 bg-indigo-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                               </div>
                               <div className="col-span-3">
-                                <p className="font-medium text-gray-800 text-sm">{svc.name || svc.service}</p>
+                                <p className="font-medium text-gray-800 text-sm">{decodeHtml(svc.name || svc.service)}</p>
                               </div>
-                              <div className="col-span-5">
-                                <p className={`text-xs text-gray-500 break-words whitespace-normal text-center`}>{svc.description?.trim() || '-'}</p>
+                              <div className="col-span-4">
+                                <p className={`text-xs text-gray-500 break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</p>
                               </div>
                               <div className="col-span-2 text-center">
                                 <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
                               </div>
-                              <div className="col-span-1 text-right">
-                                <p className="text-sm text-indigo-700 font-semibold">{svc.frequencyCount || svc.frequency_count || 1}</p>
+                              <div className="col-span-2 text-right">
+                                <p className="text-sm text-indigo-700 font-semibold">{svc.frequencyCount ?? svc.frequency_count ?? 1}</p>
                               </div>
                             </div>
                           ))}
@@ -1909,13 +1917,13 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-lg">
                       <div className="col-span-1 text-xs font-semibold text-green-700">#</div>
                       <div className="col-span-3 text-xs font-semibold text-green-700">Service</div>
-                      <div className="col-span-5 text-xs font-semibold text-green-700">Description</div>
+                      <div className="col-span-4 text-xs font-semibold text-green-700">Description</div>
                       <div className="col-span-2 text-xs font-semibold text-green-700 text-center">Frequency</div>
-                      <div className="col-span-1 text-xs font-semibold text-green-700 text-right">Visits</div>
+                      <div className="col-span-2 text-xs font-semibold text-green-700 text-right">Visits</div>
                     </div>
                     <div className="border border-green-100 divide-y divide-green-50">
                       {viewEstimate.addons.map((addon, idx) => {
-                        const addonName = addon.name || addon.service_name || '';
+                        const addonName = decodeHtml(addon.name || addon.service_name) || '';
                         const estPropertyType = (viewEstimate.property_type || '').toUpperCase();
                         let addonFromList = addons.find(a => a.id == addon.id || a.id == addon.addon_id);
                         if (!addonFromList || !addonFromList.description) {
@@ -1924,8 +1932,8 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                             (a.property_type || '').toUpperCase() === estPropertyType
                           ) || addonFromList;
                         }
-                        const addonDescription = addon.description || addonFromList?.description || '';
-                        const frequencyCount = addon.frequency_count || addon.frequencyCount || addonFromList?.frequency_count || 1;
+                        const addonDescription = decodeHtml(addon.description || addonFromList?.description) || '';
+                        const frequencyCount = addon.frequency_count ?? addon.frequencyCount ?? addonFromList?.frequency_count ?? 1;
                         const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
                         return (
                           <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
@@ -1933,15 +1941,15 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                               <span className="w-5 h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                             </div>
                             <div className="col-span-3">
-                              <p className="font-medium text-gray-800 text-sm">{addon.name || addon.service_name}</p>
+                              <p className="font-medium text-gray-800 text-sm">{addonName}</p>
                             </div>
-                            <div className="col-span-5">
+                            <div className="col-span-4">
                               <p className="text-xs text-gray-500 break-words whitespace-normal">{addonDescription || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>
                             </div>
-                            <div className="col-span-1 text-right">
+                            <div className="col-span-2 text-right">
                               <p className="text-sm text-green-700 font-semibold">{frequencyCount}</p>
                             </div>
                           </div>
@@ -2042,11 +2050,11 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                           <span className="w-7 h-7 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                         </div>
                         <div className="col-span-2">
-                          <p className="font-medium text-gray-900 text-sm">{svc.name || svc.service || 'Service'}</p>
+                          <p className="font-medium text-gray-900 text-sm">{decodeHtml(svc.name || svc.service) || 'Service'}</p>
                         </div>
                         <div className="col-span-5">
                           <p className={`text-sm text-gray-600 text-center`}>
-                            {svc.description?.trim() || '-'}
+                            {decodeHtml(svc.description)?.trim() || '-'}
                           </p>
                         </div>
                         <div className="col-span-2 text-center">

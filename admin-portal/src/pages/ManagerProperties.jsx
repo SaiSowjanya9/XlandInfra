@@ -336,7 +336,7 @@ const ManagerProperties = ({ user }) => {
         setServiceAssignments(services.map(s => ({
           serviceType: s.serviceType,
           frequencyType: s.frequencyType || 'Monthly',
-          frequencyCount: s.frequencyCount || 1,
+          frequencyCount: s.frequencyCount ?? 1,
           vendorId: ''
         })));
       } else {
@@ -1647,7 +1647,7 @@ const ManagerProperties = ({ user }) => {
                           // Get vendors sorted by matching service type first
                           const zoneVendors = getZoneFilteredVendors(selectedProperty.zone_name || selectedProperty.zone, service.serviceType);
                           const hasSelection = !!service.vendorId;
-                          const visits = service.frequencyCount || 12;
+                          const visits = service.frequencyCount ?? 12;
                           
                           return (
                             <tr key={idx} className="hover:bg-gray-50 align-middle">

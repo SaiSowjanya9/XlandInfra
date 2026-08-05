@@ -27,6 +27,14 @@ const normalizePropertyType = (type) => {
   return upper;
 };
 
+// Decode HTML entities (e.g., &amp; -> &)
+const decodeHtml = (html) => {
+  if (!html || typeof html !== 'string') return html;
+  const txt = document.createElement('textarea');
+  txt.innerHTML = html;
+  return txt.value;
+};
+
 // Abbreviate long frequency types for better display in badges
 const abbreviateFrequency = (freq) => {
   if (!freq) return 'Monthly';
@@ -139,7 +147,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       propertyTypeName: PROPERTY_TYPE_OPTIONS.find(t => t.id === selectedPropertyType)?.label || selectedPropertyType,
       services: [{
         name: addonForm.serviceName.trim(),
-        frequency: parseInt(addonForm.frequencyCount) || 1,
+        frequency: !isNaN(parseInt(addonForm.frequencyCount)) ? parseInt(addonForm.frequencyCount) : 1,
         frequencyType: addonForm.frequencyType,
         price: parseFloat(addonForm.price),
         description: addonForm.description?.trim() || ''
@@ -205,13 +213,13 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   const handleEditAddon = (addon) => {
     setEditingAddon(addon);
     setEditForm({
-      serviceName: addon.services?.[0]?.name || '',
-      frequencyCount: addon.services?.[0]?.frequency || 1,
+      serviceName: decodeHtml(addon.services?.[0]?.name) || '',
+      frequencyCount: addon.services?.[0]?.frequency ?? 1,
       frequencyType: addon.services?.[0]?.frequencyType || 'Monthly',
       billingCycle: addon.billingCycle || 'Monthly',
       price: addon.services?.[0]?.price?.toString() || addon.totalPrice?.toString() || '',
       propertyType: addon.propertyType || 'GC',
-      description: addon.services?.[0]?.description || addon.description || ''
+      description: decodeHtml(addon.services?.[0]?.description || addon.description) || ''
     });
     setShowEditModal(true);
   };
@@ -232,7 +240,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       propertyTypeName: PROPERTY_TYPE_OPTIONS.find(t => t.id === editForm.propertyType)?.label || editForm.propertyType,
       services: [{
         name: editForm.serviceName.trim(),
-        frequency: parseInt(editForm.frequencyCount) || 1,
+        frequency: !isNaN(parseInt(editForm.frequencyCount)) ? parseInt(editForm.frequencyCount) : 1,
         frequencyType: editForm.frequencyType,
         price: parseFloat(editForm.price),
         description: editForm.description?.trim() || ''
@@ -259,7 +267,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
           body: JSON.stringify({
             service_name: editForm.serviceName.trim(),
             frequency_type: editForm.frequencyType,
-            frequency_count: parseInt(editForm.frequencyCount) || 1,
+            frequency_count: !isNaN(parseInt(editForm.frequencyCount)) ? parseInt(editForm.frequencyCount) : 1,
             property_type: editForm.propertyType,
             price: parseFloat(editForm.price),
             description: editForm.description?.trim() || ''
@@ -432,7 +440,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider whitespace-nowrap">Visits</label>
                     <input
                       type="number"
-                      min="1"
+                      min="0"
                       value={addonForm.frequencyCount}
                       readOnly={addonForm.frequencyType !== 'Other'}
                       onChange={(e) => setAddonForm({ ...addonForm, frequencyCount: e.target.value })}
@@ -688,7 +696,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                             </td>
                             {/* Description */}
                             <td className="px-4 py-4 text-sm text-gray-600">
-                              {addon.description || addon.services?.[0]?.description || '-'}
+                              {decodeHtml(addon.description || addon.services?.[0]?.description) || '-'}
                             </td>
                             {/* Frequency */}
                             <td className="px-4 py-4 text-sm text-gray-700">
@@ -696,7 +704,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                             </td>
                             {/* Visits - No "x" suffix */}
                             <td className="px-4 py-4 text-center text-sm text-gray-600">
-                              {addon.services?.[0]?.frequency || addon.frequency_count || 1}
+                              {addon.services?.[0]?.frequency ?? addon.frequency_count ?? 1}
                             </td>
                             {/* Property Type */}
                             <td className="px-4 py-4">
@@ -802,7 +810,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">No.of visits</label>
                   <input
                     type="number"
-                    min="1"
+                    min="0"
                     value={editForm.frequencyCount}
                     readOnly={editForm.frequencyType !== 'Other'}
                     onChange={(e) => setEditForm({ ...editForm, frequencyCount: e.target.value })}

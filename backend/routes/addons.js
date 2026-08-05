@@ -63,7 +63,7 @@ router.post('/', async (req, res) => {
         propertyType,
         propertyTypeName || propertyType,
         service.name,
-        service.frequency || 1,
+        service.frequency ?? 1,
         service.frequencyType || 'Monthly',
         billingCycle || 'Monthly',
         service.price || 0,

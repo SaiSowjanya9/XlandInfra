@@ -203,7 +203,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         serviceRows: validServices.map(row => ({
           service: row.service.trim(),
           description: row.description || '',
-          frequencyCount: parseInt(row.frequencyCount) || 1,
+          frequencyCount: !isNaN(parseInt(row.frequencyCount)) ? parseInt(row.frequencyCount) : 1,
           frequencyType: row.frequencyType
         })),
         rate: parseFloat(amcForm.price),
@@ -256,14 +256,14 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
     let loadedServiceRows = [];
     if (Array.isArray(pkg.serviceRows) && pkg.serviceRows.length > 0) {
       loadedServiceRows = pkg.serviceRows.map(row => ({
-        service: row.service || '',
-        description: row.description || '',
-        frequencyCount: row.frequencyCount || 1,
+        service: decodeHtml(row.service) || '',
+        description: decodeHtml(row.description) || '',
+        frequencyCount: row.frequencyCount ?? 1,
         frequencyType: row.frequencyType || 'Monthly'
       }));
     } else if (typeof pkg.services === 'string' && pkg.services) {
       loadedServiceRows = pkg.services.split(',').map(s => ({
-        service: s.trim(),
+        service: decodeHtml(s.trim()),
         description: '',
         frequencyCount: 12,
         frequencyType: 'Monthly'
@@ -273,11 +273,11 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
     }
     
     setAmcForm({
-      packageName: pkg.packageName || '',
+      packageName: decodeHtml(pkg.packageName) || '',
       serviceRows: loadedServiceRows,
       price: pkg.rate?.toString() || '',
       billingDuration: pkg.billingDuration || 'monthly',
-      description: pkg.description || ''
+      description: decodeHtml(pkg.description) || ''
     });
     setShowEditModal(true);
   };
@@ -695,9 +695,9 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
               </div>
 
               {/* Service Configuration with Price on Right */}
-              <div className="flex flex-col lg:flex-row gap-6">
+              <div className="flex flex-col lg:flex-row gap-6 overflow-x-auto">
                 {/* Service Rows Section */}
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-[550px]">
                   <h3 className="text-sm font-semibold text-gray-700 mb-4">Service Configuration</h3>
                   
                   {/* Table Header */}
@@ -705,13 +705,13 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     <div className="col-span-3">
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Service</span>
                     </div>
-                    <div className="col-span-4">
+                    <div className="col-span-3">
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Description</span>
                     </div>
                     <div className="col-span-3">
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency</span>
                     </div>
-                    <div className="col-span-1">
+                    <div className="col-span-2">
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Visits</span>
                     </div>
                     <div className="col-span-1">
@@ -735,7 +735,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         </div>
                         
                         {/* Description */}
-                        <div className="md:col-span-4">
+                        <div className="md:col-span-3">
                           <input
                             type="text"
                             value={row.description || ''}
@@ -760,10 +760,10 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         </div>
                         
                         {/* Visits - Auto-set based on frequency */}
-                        <div className="md:col-span-1">
+                        <div className="md:col-span-2">
                           <input
                             type="number"
-                            min="1"
+                            min="0"
                             value={row.frequencyCount}
                             readOnly={row.frequencyType !== 'Other'}
                             onChange={(e) => handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
@@ -1045,7 +1045,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                       <div className="sm:col-span-2">
                         <input
                           type="number"
-                          min="1"
+                          min="0"
                           value={row.frequencyCount}
                           readOnly={row.frequencyType !== 'Other'}
                           onChange={(e) => handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
@@ -1150,34 +1150,36 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">Services Included</p>
                 {viewAmcPackage.servicesData && viewAmcPackage.servicesData.length > 0 ? (
-                  <div className="space-y-2">
-                    {/* Table Header */}
-                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-slate-100 rounded-lg">
-                      <div className="col-span-1 text-xs font-semibold text-gray-600">#</div>
-                      <div className="col-span-3 text-xs font-semibold text-gray-600">Service</div>
-                      <div className="col-span-5 text-xs font-semibold text-gray-600 text-center">Description</div>
-                      <div className="col-span-2 text-xs font-semibold text-gray-600 text-center">Frequency</div>
-                      <div className="col-span-1 text-xs font-semibold text-gray-600 text-center">Visits</div>
-                    </div>
-                    {viewAmcPackage.servicesData.map((svc, idx) => (
-                      <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-amber-50 px-3 py-3 rounded-lg border border-amber-100">
-                        <div className="col-span-1">
-                          <span className="w-6 h-6 bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
-                        </div>
-                        <div className="col-span-3">
-                          <p className="font-medium text-amber-900 text-sm">{decodeHtml(svc.name || svc.service) || 'Service'}</p>
-                        </div>
-                        <div className="col-span-5">
-                          <p className={`text-xs text-amber-700 break-words whitespace-normal ${!(svc.description && svc.description.trim() && svc.description.trim() !== '-') ? 'text-center' : ''}`}>{svc.description?.trim() || '-'}</p>
-                        </div>
-                        <div className="col-span-2 text-center">
-                          <p className="text-sm font-medium text-amber-700">{svc.frequency_type || svc.frequencyType || 'Monthly'}</p>
-                        </div>
-                        <div className="col-span-1 text-center">
-                          <p className="text-sm font-medium text-amber-700">{svc.frequency_count || svc.frequencyCount || 1}</p>
-                        </div>
+                  <div className="overflow-x-auto -mx-2 px-2">
+                    <div className="space-y-2 min-w-[500px]">
+                      {/* Table Header */}
+                      <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-slate-100 rounded-lg">
+                        <div className="col-span-1 text-xs font-semibold text-gray-600">#</div>
+                        <div className="col-span-3 text-xs font-semibold text-gray-600">Service</div>
+                        <div className="col-span-4 text-xs font-semibold text-gray-600 text-center">Description</div>
+                        <div className="col-span-2 text-xs font-semibold text-gray-600 text-center">Frequency</div>
+                        <div className="col-span-2 text-xs font-semibold text-gray-600 text-center">Visits</div>
                       </div>
-                    ))}
+                      {viewAmcPackage.servicesData.map((svc, idx) => (
+                        <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-amber-50 px-3 py-3 rounded-lg border border-amber-100">
+                          <div className="col-span-1">
+                            <span className="w-6 h-6 bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
+                          </div>
+                          <div className="col-span-3">
+                            <p className="font-medium text-amber-900 text-sm">{decodeHtml(svc.name || svc.service) || 'Service'}</p>
+                          </div>
+                          <div className="col-span-4">
+                            <p className={`text-xs text-amber-700 break-words whitespace-normal ${!(svc.description && svc.description.trim() && svc.description.trim() !== '-') ? 'text-center' : ''}`}>{decodeHtml(svc.description)?.trim() || '-'}</p>
+                          </div>
+                          <div className="col-span-2 text-center">
+                            <p className="text-sm font-medium text-amber-700">{svc.frequency_type || svc.frequencyType || 'Monthly'}</p>
+                          </div>
+                          <div className="col-span-2 text-center">
+                            <p className="text-sm font-medium text-amber-700">{svc.frequency_count ?? svc.frequencyCount ?? 1}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <p className="text-sm text-gray-400 italic">No services listed</p>

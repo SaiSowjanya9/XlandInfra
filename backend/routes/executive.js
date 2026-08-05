@@ -2081,14 +2081,14 @@ const transformAddon = (addon) => ({
   service_name: addon.service_name || addon.name || '',
   property_type: addon.property_type,
   frequency_type: addon.frequency_type || 'Monthly',
-  frequency_count: addon.frequency_count || 1,
+  frequency_count: addon.frequency_count ?? 1,
   price: parseFloat(addon.price) || 0,
   description: addon.description || '',
   billing_cycle: addon.billing_cycle || 'Monthly',
   // Transformed fields
   propertyType: addon.property_type === 'AP' ? 'APT' : addon.property_type === 'VL' ? 'VILLA' : addon.property_type === 'FL' ? 'FLAT' : addon.property_type === 'PL' ? 'PLOT' : addon.property_type,
   propertyTypeName: addon.property_type === 'GC' ? 'Gated Community' : addon.property_type === 'AP' || addon.property_type === 'APT' ? 'Apartment' : addon.property_type === 'VL' || addon.property_type === 'VILLA' ? 'Villa' : addon.property_type === 'FL' || addon.property_type === 'FLAT' ? 'Flat' : addon.property_type === 'PL' || addon.property_type === 'PLOT' ? 'Plot' : addon.property_type,
-  services: [{ name: addon.service_name || addon.name || '', frequency: addon.frequency_count || 1, frequencyType: addon.frequency_type || 'Monthly', price: parseFloat(addon.price) || 0, description: addon.description || '' }],
+  services: [{ name: addon.service_name || addon.name || '', frequency: addon.frequency_count ?? 1, frequencyType: addon.frequency_type || 'Monthly', price: parseFloat(addon.price) || 0, description: addon.description || '' }],
   totalPrice: parseFloat(addon.price) || 0,
   billingCycle: addon.billing_cycle || 'Monthly',
   createdAt: addon.created_at

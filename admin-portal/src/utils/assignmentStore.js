@@ -274,7 +274,7 @@ export const saveServiceVendorAssignments = (propertyId, estimateId, serviceAssi
           propertyZone: propertyInfo.propertyZone || '',
           // Service info
           serviceType: sa.serviceType,
-          frequencyCount: sa.frequencyCount || 1,
+          frequencyCount: sa.frequencyCount ?? 1,
           frequencyType: sa.frequencyType || 'Monthly',
           // Vendor info
           vendorId: sa.vendorId,
