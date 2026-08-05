@@ -25,6 +25,25 @@ const formatDateIST = (dateStr) => {
   return `${day}/${month}/${year}`;
 };
 
+// Parse dd/mm/yyyy to yyyy-mm-dd (internal format)
+const parseISTDate = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return '';
+  const [day, month, year] = parts;
+  if (!day || !month || !year || year.length !== 4) return '';
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+};
+
+// Handle date input change with auto-formatting
+const handleDateInput = (value, setter) => {
+  let cleaned = value.replace(/[^\d/]/g, '');
+  if (cleaned.length === 2 && !cleaned.includes('/')) cleaned += '/';
+  else if (cleaned.length === 5 && cleaned.split('/').length === 2) cleaned += '/';
+  if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
+  setter(cleaned);
+};
+
 // Helper to normalize property type to standard format
 const normalizePropertyType = (type) => {
   if (!type) return '';
@@ -107,7 +126,9 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
-  const clearAllFilters = () => { setEstimateTypeFilter('all'); setStatusFilter('all'); setCategoryFilter('all'); setFromDate(''); setToDate(''); setSearchTerm(''); };
+  const [fromDateDisplay, setFromDateDisplay] = useState('');
+  const [toDateDisplay, setToDateDisplay] = useState('');
+  const clearAllFilters = () => { setEstimateTypeFilter('all'); setStatusFilter('all'); setCategoryFilter('all'); setFromDate(''); setToDate(''); setFromDateDisplay(''); setToDateDisplay(''); setSearchTerm(''); };
   const [fpPortalLinks, setFpPortalLinks] = useState([]);
 
   const [estimateForm, setEstimateForm] = useState({ clientId: '', propertyId: '', title: '', description: '', estimateType: '', subtotal: 0, taxPercentage: 18, discountPercentage: 0, validUntil: '', items: [{ description: '', quantity: 1, unitPrice: 0 }] });
@@ -722,8 +743,8 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                     <div><label className="block text-xs font-medium text-gray-500 mb-1">Estimate Type</label><select value={estimateTypeFilter} onChange={(e) => setEstimateTypeFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"><option value="all">All Estimates</option><option value="property_based">Property Based</option><option value="direct">Direct</option></select></div>
                     <div><label className="block text-xs font-medium text-gray-500 mb-1">Status</label><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"><option value="all">All Statuses</option><option value="draft">Draft</option><option value="sent">Sent</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="archived">Archived</option></select></div>
                     <div><label className="block text-xs font-medium text-gray-500 mb-1">Property Category</label><select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"><option value="all">All Categories</option>{PROPERTY_TYPE_OPTIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></div>
-                    <div><label className="block text-xs font-medium text-gray-500 mb-1">From Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label><input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />{fromDate && <p className="text-xs text-gray-500 mt-1">{formatDateIST(fromDate)}</p>}</div>
-                    <div><label className="block text-xs font-medium text-gray-500 mb-1">To Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label><input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />{toDate && <p className="text-xs text-gray-500 mt-1">{formatDateIST(toDate)}</p>}</div>
+                    <div><label className="block text-xs font-medium text-gray-500 mb-1">From Date</label><input type="text" placeholder="dd/mm/yyyy" value={fromDateDisplay} onChange={(e) => { handleDateInput(e.target.value, setFromDateDisplay); const parsed = parseISTDate(e.target.value); if (parsed) setFromDate(parsed); }} onBlur={() => { const parsed = parseISTDate(fromDateDisplay); if (parsed) setFromDate(parsed); else if (fromDateDisplay && fromDateDisplay.length < 10) setFromDateDisplay(''); }} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-medium text-gray-500 mb-1">To Date</label><input type="text" placeholder="dd/mm/yyyy" value={toDateDisplay} onChange={(e) => { handleDateInput(e.target.value, setToDateDisplay); const parsed = parseISTDate(e.target.value); if (parsed) setToDate(parsed); }} onBlur={() => { const parsed = parseISTDate(toDateDisplay); if (parsed) setToDate(parsed); else if (toDateDisplay && toDateDisplay.length < 10) setToDateDisplay(''); }} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
                   </div>
                   <button onClick={clearAllFilters} className="text-sm text-blue-600 hover:underline">Clear all filters</button>
                 </div>
