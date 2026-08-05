@@ -37,6 +37,17 @@ const STATUS_STYLES = {
   archived: 'bg-slate-100 text-slate-700'
 };
 
+// Format date in IST format (dd/mm/yyyy)
+const formatDateIST = (dateStr) => {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '-';
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 const EstimatesList = ({ 
   admin, 
   estimates = [], 
@@ -276,7 +287,7 @@ const EstimatesList = ({
       'Total': e.total || 0,
       'Status': e.status || '-',
       'Created By': e.createdByName || e.created_by_name || '-',
-      'Created Date': e.createdAt || e.created_at ? new Date(e.createdAt || e.created_at).toLocaleDateString('en-IN') : '-'
+      'Created Date': formatDateIST(e.createdAt || e.created_at)
     }));
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
@@ -595,7 +606,7 @@ const EstimatesList = ({
                 />
                 {filters.dateFrom && (
                   <p className="text-xs text-gray-500 mt-1">
-                    {new Date(filters.dateFrom).toLocaleDateString('en-IN')}
+                    {formatDateIST(filters.dateFrom)}
                   </p>
                 )}
               </div>
@@ -609,7 +620,7 @@ const EstimatesList = ({
                 />
                 {filters.dateTo && (
                   <p className="text-xs text-gray-500 mt-1">
-                    {new Date(filters.dateTo).toLocaleDateString('en-IN')}
+                    {formatDateIST(filters.dateTo)}
                   </p>
                 )}
               </div>
@@ -719,7 +730,7 @@ const EstimatesList = ({
                     <td className="px-3 sm:px-6 py-3 sm:py-4 hidden md:table-cell">
                       <div className="flex items-center gap-1 text-sm text-gray-600 whitespace-nowrap">
                         <Calendar className="w-4 h-4" />
-                        {new Date(estimate.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
+                        {formatDateIST(estimate.createdAt)}
                       </div>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
@@ -793,7 +804,7 @@ const EstimatesList = ({
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[viewEstimate.status] || 'bg-gray-100 text-gray-700'}`}>{viewEstimate.status?.charAt(0).toUpperCase() + viewEstimate.status?.slice(1) || 'Draft'}</span>
                 </div>
                 <div><p className="text-xs text-gray-500">Type</p><p className="font-medium text-sm capitalize">{(viewEstimate.estimateType || viewEstimate.estimate_type)?.replace('_', ' ') || '-'}</p></div>
-                <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{new Date(viewEstimate.createdAt || viewEstimate.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</p></div>
+                <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{formatDateIST(viewEstimate.createdAt || viewEstimate.created_at)}</p></div>
               </div>
 
               {/* Property Details */}
