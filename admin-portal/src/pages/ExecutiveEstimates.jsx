@@ -530,7 +530,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
     }
     return servicesData?.property_type || pkg?.property_type || pkg?.propertyType || '';
   };
-  const getFrequencyVisits = (frequency) => ({ Monthly: 12, 'Every 2 Months': 6, Quarterly: 4, 'Half-Yearly': 2, Yearly: 1 }[frequency]) || parseInt(frequency) || 12;
+  const getFrequencyVisits = (frequency) => ({ Monthly: 12, 'Every 2 Months': 6, Quarterly: 4, 'Half-Yearly': 2, Yearly: 1, Other: null }[frequency]) ?? parseInt(frequency) ?? 0;
   
   // Helper to compute total units based on property type
   const computeTotalUnits = (prop) => {
@@ -1547,7 +1547,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                               <p className="font-medium text-gray-800 text-sm">{addonName}</p>
                             </div>
                             <div className="col-span-4">
-                              <p className="text-xs text-gray-500 break-words whitespace-normal">{addonDescription || '-'}</p>
+                              <p className="text-xs text-gray-500 break-all whitespace-normal">{addonDescription || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>
