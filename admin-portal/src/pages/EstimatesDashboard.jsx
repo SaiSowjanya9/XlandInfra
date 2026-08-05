@@ -600,8 +600,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         }}
                         className="w-full px-3 py-2.5 pr-10 bg-white/70 border border-gray-200/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 backdrop-blur-sm transition-all"
                       />
-                      <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setStartDate(e.target.value); setStartDateDisplay(formatDateIST(e.target.value)); }}} />
-                      <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
+                        <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setStartDate(e.target.value); setStartDateDisplay(formatDateIST(e.target.value)); }}} />
+                        <Calendar className="w-4 h-4 text-gray-400 pointer-events-none" />
+                      </div>
                     </div>
                   </div>
                   <div>
@@ -623,8 +625,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         }}
                         className="w-full px-3 py-2.5 pr-10 bg-white/70 border border-gray-200/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 backdrop-blur-sm transition-all"
                       />
-                      <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setEndDate(e.target.value); setEndDateDisplay(formatDateIST(e.target.value)); }}} />
-                      <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
+                        <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setEndDate(e.target.value); setEndDateDisplay(formatDateIST(e.target.value)); }}} />
+                        <Calendar className="w-4 h-4 text-gray-400 pointer-events-none" />
+                      </div>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
