@@ -2061,7 +2061,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                           <p className="text-sm text-gray-700">{svc.frequency_type || svc.frequencyType || svc.frequency || 'Monthly'}</p>
                         </div>
                         <div className="col-span-2 text-center">
-                          <p className="text-sm font-medium text-gray-900">{svc.frequency_count || svc.frequencyCount || svc.visits || '12'}</p>
+                          <p className="text-sm font-medium text-gray-900">{svc.frequency_count ?? svc.frequencyCount ?? svc.visits ?? 0}</p>
                         </div>
                       </div>
                     ))}
