@@ -460,8 +460,8 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                             <div className="col-span-3">
                               <p className="font-medium text-gray-800 text-sm">{decodeHtml(service.name || service.service)}</p>
                             </div>
-                            <div className="col-span-4">
-                              <p className="text-xs text-gray-500 break-words whitespace-normal">{decodeHtml(service.description) || '-'}</p>
+                            <div className="col-span-4 overflow-hidden">
+                              <p className="text-xs text-gray-500 break-all whitespace-normal">{decodeHtml(service.description) || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-indigo-600">{service.frequencyType || 'Monthly'}</p>
@@ -505,8 +505,8 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                             <div className="col-span-3">
                               <p className="font-medium text-gray-800 text-sm">{addonName}</p>
                             </div>
-                            <div className="col-span-4">
-                              <p className="text-xs text-gray-500 break-words whitespace-normal">{decodeHtml(addon.description) || '-'}</p>
+                            <div className="col-span-4 overflow-hidden">
+                              <p className="text-xs text-gray-500 break-all whitespace-normal">{decodeHtml(addon.description) || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>

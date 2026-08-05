@@ -1005,8 +1005,8 @@ const EstimatesList = ({
                               <div className="col-span-3">
                                 <p className="font-medium text-gray-800 text-sm">{decodeHtml(svc.name || svc.service)}</p>
                               </div>
-                              <div className="col-span-4">
-                                <p className={`text-xs text-gray-500 break-words whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{decodeHtml(svc.description) || '-'}</p>
+                              <div className="col-span-4 overflow-hidden">
+                                <p className={`text-xs text-gray-500 break-all whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{decodeHtml(svc.description) || '-'}</p>
                               </div>
                               <div className="col-span-2 text-center">
                                 <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
