@@ -1170,14 +1170,14 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                           <div className="col-span-1">
                             <span className="w-6 h-6 bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                           </div>
-                          <div className="col-span-3">
-                            <p className="font-medium text-amber-900 text-sm">{decodeHtml(svc.name || svc.service) || 'Service'}</p>
+                          <div className="col-span-3 min-w-0">
+                            <p className="font-medium text-amber-900 text-sm truncate">{decodeHtml(svc.name || svc.service) || 'Service'}</p>
                           </div>
-                          <div className="col-span-4 overflow-hidden">
-                            <p className={`text-xs text-amber-700 break-all whitespace-normal ${!(svc.description && svc.description.trim() && svc.description.trim() !== '-') ? 'text-center' : ''}`}>{decodeHtml(svc.description)?.trim() || '-'}</p>
+                          <div className="col-span-4 min-w-0 overflow-hidden">
+                            <p className={`text-xs text-amber-700 whitespace-normal ${!(svc.description && svc.description.trim() && svc.description.trim() !== '-') ? 'text-center' : ''}`} style={{wordBreak: 'break-word', overflowWrap: 'anywhere'}}>{decodeHtml(svc.description)?.trim() || '-'}</p>
                           </div>
-                          <div className="col-span-2 text-center">
-                            <p className="text-sm font-medium text-amber-700">{svc.frequency_type || svc.frequencyType || 'Monthly'}</p>
+                          <div className="col-span-2 text-center min-w-0">
+                            <p className="text-sm font-medium text-amber-700 truncate">{svc.frequency_type || svc.frequencyType || 'Monthly'}</p>
                           </div>
                           <div className="col-span-2 text-center">
                             <p className="text-sm font-medium text-amber-700">{svc.frequency_count ?? svc.frequencyCount ?? 0}</p>
