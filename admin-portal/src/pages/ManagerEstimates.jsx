@@ -1194,6 +1194,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 <label className="block text-xs font-medium text-gray-500 mb-1">From Date</label>
                 <div className="relative">
                   <input type="text" placeholder="dd/mm/yyyy" value={filterFromDateDisplay} onChange={(e) => { handleDateInput(e.target.value, setFilterFromDateDisplay); const parsed = parseISTDate(e.target.value); if (parsed) setFilterFromDate(parsed); }} onBlur={() => { const parsed = parseISTDate(filterFromDateDisplay); if (parsed) setFilterFromDate(parsed); else if (filterFromDateDisplay && filterFromDateDisplay.length < 10) setFilterFromDateDisplay(''); }} className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm bg-white" />
+                  <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setFilterFromDate(e.target.value); setFilterFromDateDisplay(formatDateIST(e.target.value)); }}} />
                   <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
               </div>
@@ -1201,6 +1202,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 <label className="block text-xs font-medium text-gray-500 mb-1">To Date</label>
                 <div className="relative">
                   <input type="text" placeholder="dd/mm/yyyy" value={filterToDateDisplay} onChange={(e) => { handleDateInput(e.target.value, setFilterToDateDisplay); const parsed = parseISTDate(e.target.value); if (parsed) setFilterToDate(parsed); }} onBlur={() => { const parsed = parseISTDate(filterToDateDisplay); if (parsed) setFilterToDate(parsed); else if (filterToDateDisplay && filterToDateDisplay.length < 10) setFilterToDateDisplay(''); }} className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm bg-white" />
+                  <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setFilterToDate(e.target.value); setFilterToDateDisplay(formatDateIST(e.target.value)); }}} />
                   <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
               </div>
