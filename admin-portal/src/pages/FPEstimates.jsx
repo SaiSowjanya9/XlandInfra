@@ -619,7 +619,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         return {
           name: addonName || 'Add-on',
           frequencyType: a.frequency_type || a.frequencyType || addonFromList?.frequency_type || 'One-time',
-          frequencyCount: a.frequency_count || a.frequencyCount || addonFromList?.frequency_count || 1,
+          frequencyCount: a.frequency_count ?? a.frequencyCount ?? addonFromList?.frequency_count ?? 1,
           description: a.description || addonFromList?.description || ''
         };
       })
@@ -909,7 +909,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         billing_duration: pkg?.billing_duration || pkg?.billingDuration || getPackageBillingDuration(pkg) || 'yearly',
         package_services: pkgServices.map(s => ({ 
           name: s.service || s.name, 
-          frequencyCount: s.frequencyCount || s.frequency_count || 1, 
+          frequencyCount: s.frequencyCount ?? s.frequency_count ?? 1, 
           frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
           description: s.description || ''
         })),
@@ -1236,7 +1236,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <div className="border border-blue-200 rounded-xl overflow-hidden bg-blue-50/30">
                     <div className="px-5 py-3 flex items-center gap-3">
                       <Package className="w-5 h-5 text-blue-600" />
-                      <span className="font-semibold text-gray-900">{pkg.name}</span>
+                      <span className="font-semibold text-gray-900">{decodeHtml(pkg.name)}</span>
                       <span className="px-2 py-0.5 bg-slate-700 text-white text-xs rounded font-mono">{pkg.package_code || `AMC-${pkg.id}`}</span>
                     </div>
                     <table className="w-full text-sm bg-white">
@@ -1255,7 +1255,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           return (
                             <tr key={idx} className="align-top">
                               <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(svc.service || svc.name) || '-'}</td>
-                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{svc.description?.trim() || '-'}</td>
+                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</td>
                               <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
                               <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             </tr>
@@ -1318,8 +1318,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         const visits = FREQUENCY_COUNT_MAP?.[addon.frequency_type] || 12;
                         return (
                           <tr key={idx} className="align-top">
-                            <td className="px-3 py-2.5 text-gray-800 font-medium">{addon.service_name}</td>
-                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{addon.description || addon.services?.[0]?.description || '-'}</td>
+                            <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(addon.service_name)}</td>
+                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{decodeHtml(addon.description || addon.services?.[0]?.description) || '-'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type || 'Monthly'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             <td className="px-3 py-2.5 text-center">
@@ -1578,7 +1578,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <div className="border border-blue-200 rounded-xl overflow-hidden bg-blue-50/30">
                     <div className="px-5 py-3 flex items-center gap-3">
                       <Package className="w-5 h-5 text-blue-600" />
-                      <span className="font-semibold text-gray-900">{pkg.name}</span>
+                      <span className="font-semibold text-gray-900">{decodeHtml(pkg.name)}</span>
                       <span className="px-2 py-0.5 bg-slate-700 text-white text-xs rounded font-mono">{pkg.package_code || `AMC-${pkg.id}`}</span>
                     </div>
                     <table className="w-full text-sm bg-white">
@@ -1597,7 +1597,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           return (
                             <tr key={idx} className="align-top">
                               <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(svc.service || svc.name) || '-'}</td>
-                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{svc.description?.trim() || '-'}</td>
+                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</td>
                               <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
                               <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             </tr>
@@ -1660,8 +1660,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         const visits = FREQUENCY_COUNT_MAP?.[addon.frequency_type] || 12;
                         return (
                           <tr key={idx} className="align-top">
-                            <td className="px-3 py-2.5 text-gray-800 font-medium">{addon.service_name}</td>
-                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{addon.description || addon.services?.[0]?.description || '-'}</td>
+                            <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(addon.service_name)}</td>
+                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{decodeHtml(addon.description || addon.services?.[0]?.description) || '-'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type || 'Monthly'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             <td className="px-3 py-2.5 text-center">
@@ -2289,7 +2289,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       const isEditing = !!editingAmcPackage;
       const url = isEditing ? `/api/fp/amc-packages/${editingAmcPackage}` : '/api/fp/amc-packages';
       const method = isEditing ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyType, services: validSvc.map(r => ({ name: r.service, description: r.description || '', frequency_count: parseInt(r.frequencyCount) || 1, frequency_type: r.frequencyType })), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
+      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyType, services: validSvc.map(r => ({ name: r.service, description: r.description || '', frequency_count: !isNaN(parseInt(r.frequencyCount)) ? parseInt(r.frequencyCount) : 1, frequency_type: r.frequencyType })), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
       const result = await res.json();
       if (res.ok || result.success) { showToast(isEditing ? 'AMC Package updated!' : 'AMC Package created!'); resetAmcForm(); loadData(); setAmcActiveTab('all-packages'); }
       else showToast(result.message || 'Failed', 'error');
@@ -2482,12 +2482,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                 onClick={() => {
                                   setEditingAmcPackage(pkg.id);
                                   setAmcForm({
-                                    packageName: pkg.name || '',
-                                    description: pkg.description || '',
+                                    packageName: decodeHtml(pkg.name) || '',
+                                    description: decodeHtml(pkg.description) || '',
                                     serviceRows: serviceRows.length > 0 ? serviceRows.map(s => ({
-                                      service: s.name || s.service || '',
-                                      description: s.description || '',
-                                      frequencyCount: s.frequency_count || s.frequencyCount || 12,
+                                      service: decodeHtml(s.name || s.service) || '',
+                                      description: decodeHtml(s.description) || '',
+                                      frequencyCount: s.frequency_count ?? s.frequencyCount ?? 12,
                                       frequencyType: s.frequency_type || s.frequencyType || 'Monthly'
                                     })) : [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }],
                                     price: pkg.base_price || pkg.price || '',
@@ -2513,7 +2513,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                     return {
                                       name: s.name || s.service || 'Service',
                                       description: s.description || '',
-                                      frequencyCount: s.frequency_count || s.frequencyCount || 1,
+                                      frequencyCount: s.frequency_count ?? s.frequencyCount ?? 1,
                                       frequencyType: s.frequency_type || s.frequencyType || 'Monthly'
                                     };
                                   }) : [];
@@ -2623,13 +2623,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <div className="col-span-3">
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Service</span>
                       </div>
-                      <div className="col-span-4">
+                      <div className="col-span-3">
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Description</span>
                       </div>
                       <div className="col-span-3">
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency</span>
                       </div>
-                      <div className="col-span-1">
+                      <div className="col-span-2">
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Visits</span>
                       </div>
                       <div className="col-span-1">
@@ -2653,7 +2653,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           </div>
                           
                           {/* Description */}
-                          <div className="col-span-4">
+                          <div className="col-span-3">
                             <input
                               type="text"
                               value={row.description || ''}
@@ -2678,10 +2678,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           </div>
                           
                           {/* Frequency Count */}
-                          <div className="col-span-1">
+                          <div className="col-span-2">
                             <input
                               type="number"
-                              min="1"
+                              min="0"
                               value={row.frequencyCount}
                               readOnly={row.frequencyType !== 'Other'}
                               onChange={(e) => handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
@@ -2806,7 +2806,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     if (!addonForm.serviceName.trim()) { showToast('Enter service name', 'error'); return; }
     if (!addonForm.price || parseFloat(addonForm.price) <= 0) { showToast('Enter valid price', 'error'); return; }
     try {
-      const res = await fetch(`${API_BASE}/api/fp/addons`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ property_type: addonSelectedPropertyType, service_name: addonForm.serviceName, frequency_count: parseInt(addonForm.frequencyCount) || 1, frequency_type: addonForm.frequencyType, billing_cycle: addonForm.billingCycle, price: parseFloat(addonForm.price), description: addonForm.description || '' }) });
+      const res = await fetch(`${API_BASE}/api/fp/addons`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ property_type: addonSelectedPropertyType, service_name: addonForm.serviceName, frequency_count: !isNaN(parseInt(addonForm.frequencyCount)) ? parseInt(addonForm.frequencyCount) : 1, frequency_type: addonForm.frequencyType, billing_cycle: addonForm.billingCycle, price: parseFloat(addonForm.price), description: addonForm.description || '' }) });
       const result = await res.json();
       if (res.ok || result.success) { showToast('Add-on created!'); setAddonForm({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' }); setAddonSelectedPropertyType(null); loadData(); setAddonActiveTab('all-addons'); }
       else showToast(result.message || 'Failed', 'error');
@@ -2817,12 +2817,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const openEditAddon = (addon) => {
     setEditingAddon({
       id: addon.id,
-      serviceName: addon.service_name || '',
+      serviceName: decodeHtml(addon.service_name) || '',
       frequencyType: addon.frequency_type || 'Monthly',
-      frequencyCount: addon.frequency_count || 1,
+      frequencyCount: addon.frequency_count ?? 1,
       propertyType: addon.property_type || 'GC',
       price: addon.price || '',
-      description: addon.description || ''
+      description: decodeHtml(addon.description) || ''
     });
   };
 
@@ -3073,7 +3073,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         <p className="text-sm text-gray-600">{a.frequency_type || 'Monthly'}</p>
                       </div>
                       <div className="col-span-1">
-                        <p className="text-sm text-gray-600">{a.frequency_count || 1}</p>
+                        <p className="text-sm text-gray-600">{a.frequency_count ?? 1}</p>
                       </div>
                       <div className="col-span-2">
                         <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">{getPropertyTypeLabel(a.property_type) || 'GC'}</span>
@@ -3517,9 +3517,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-indigo-100 rounded-t-lg">
                           <div className="col-span-1 text-xs font-semibold text-indigo-700">#</div>
                           <div className="col-span-3 text-xs font-semibold text-indigo-700">Service</div>
-                          <div className="col-span-5 text-xs font-semibold text-indigo-700">Description</div>
+                          <div className="col-span-4 text-xs font-semibold text-indigo-700">Description</div>
                           <div className="col-span-2 text-xs font-semibold text-indigo-700 text-center">Frequency</div>
-                          <div className="col-span-1 text-xs font-semibold text-indigo-700 text-right">Visits</div>
+                          <div className="col-span-2 text-xs font-semibold text-indigo-700 text-right">Visits</div>
                         </div>
                         {/* Rows */}
                         <div className="border border-indigo-100 rounded-b-lg divide-y divide-indigo-50">
@@ -3531,14 +3531,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               <div className="col-span-3">
                                 <p className="font-medium text-gray-800 text-sm">{decodeHtml(svc.name || svc.service)}</p>
                               </div>
-                              <div className="col-span-5">
-                                <p className={`text-xs text-gray-500 break-words whitespace-normal text-center`}>{svc.description?.trim() || '-'}</p>
+                              <div className="col-span-4">
+                                <p className={`text-xs text-gray-500 break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</p>
                               </div>
                               <div className="col-span-2 text-center">
                                 <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
                               </div>
-                              <div className="col-span-1 text-right">
-                                <p className="text-sm text-indigo-700 font-semibold">{svc.frequencyCount || svc.frequency_count || 1}</p>
+                              <div className="col-span-2 text-right">
+                                <p className="text-sm text-indigo-700 font-semibold">{svc.frequencyCount ?? svc.frequency_count ?? 1}</p>
                               </div>
                             </div>
                           ))}
@@ -3558,14 +3558,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-lg">
                       <div className="col-span-1 text-xs font-semibold text-green-700">#</div>
                       <div className="col-span-3 text-xs font-semibold text-green-700">Service</div>
-                      <div className="col-span-5 text-xs font-semibold text-green-700">Description</div>
+                      <div className="col-span-4 text-xs font-semibold text-green-700">Description</div>
                       <div className="col-span-2 text-xs font-semibold text-green-700 text-center">Frequency</div>
-                      <div className="col-span-1 text-xs font-semibold text-green-700 text-right">Visits</div>
+                      <div className="col-span-2 text-xs font-semibold text-green-700 text-right">Visits</div>
                     </div>
                     {/* Rows */}
                     <div className="border border-green-100 divide-y divide-green-50">
                       {viewEstimate.addons.map((addon, idx) => {
-                        const addonName = addon.name || addon.service_name || '';
+                        const addonName = decodeHtml(addon.name || addon.service_name) || '';
                         const estPropertyType = (viewEstimate.property_type || '').toUpperCase();
                         // Priority 1: Match by ID
                         let addonFromList = addons.find(a => a.id == addon.id || a.id == addon.addon_id);
@@ -3577,7 +3577,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           ) || addonFromList;
                         }
                         const addonDescription = addon.description || addonFromList?.description || '';
-                        const frequencyCount = addon.frequency_count || addon.frequencyCount || addonFromList?.frequency_count || 1;
+                        const frequencyCount = addon.frequency_count ?? addon.frequencyCount ?? addonFromList?.frequency_count ?? 1;
                         const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
                         return (
                           <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
@@ -3585,15 +3585,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               <span className="w-5 h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                             </div>
                             <div className="col-span-3">
-                              <p className="font-medium text-gray-800 text-sm">{addon.name || addon.service_name}</p>
+                              <p className="font-medium text-gray-800 text-sm">{addonName}</p>
                             </div>
-                            <div className="col-span-5">
+                            <div className="col-span-4">
                               <p className="text-xs text-gray-500 break-words whitespace-normal">{addonDescription || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>
                             </div>
-                            <div className="col-span-1 text-right">
+                            <div className="col-span-2 text-right">
                               <p className="text-sm text-green-700 font-semibold">{frequencyCount}</p>
                             </div>
                           </div>
@@ -3699,7 +3699,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         </div>
                         <div className="col-span-5">
                           <p className={`text-sm text-gray-600 text-center`}>
-                            {svc.description?.trim() || '-'}
+                            {decodeHtml(svc.description)?.trim() || '-'}
                           </p>
                         </div>
                         <div className="col-span-2 text-center">

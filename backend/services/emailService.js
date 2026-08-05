@@ -3,6 +3,32 @@ const { generateEstimatePDF } = require('./pdfService');
 const { pool } = require('../config/database');
 
 /**
+ * Decode HTML entities (e.g., &amp; -> &, &#x2F; -> /)
+ */
+const decodeHtml = (html) => {
+  if (!html || typeof html !== 'string') return html || '';
+  const entities = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&#x27;': "'",
+    '&#x2F;': '/',
+    '&nbsp;': ' ',
+    '&#x26;': '&'
+  };
+  let decoded = html;
+  for (const [entity, char] of Object.entries(entities)) {
+    decoded = decoded.replace(new RegExp(entity, 'gi'), char);
+  }
+  // Handle numeric entities
+  decoded = decoded.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
+  decoded = decoded.replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  return decoded;
+};
+
+/**
  * Clean property ID by stripping role-based prefixes (EXEC-, MNG-, SUP-, COORD-, FP-)
  * e.g., "EXEC-GC-1781058144329" -> "GC-1781058144329"
  */
@@ -871,9 +897,9 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   const servicesHtml = servicesList.map(s => `
     <tr>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
-        <strong>${s.name || s.service || 'Service'}</strong>
-        ${s.frequencyType ? `<br><span style="font-size: 12px; color: #6b7280;">${s.frequencyType} - ${s.frequencyCount || 1} visits</span>` : ''}
-        ${s.description ? `<br><span style="font-size: 12px; color: #6b7280;">${s.description}</span>` : ''}
+        <strong>${decodeHtml(s.name || s.service || 'Service')}</strong>
+        ${s.frequencyType ? `<br><span style="font-size: 12px; color: #6b7280;">${s.frequencyType} - ${s.frequencyCount ?? 1} visits</span>` : ''}
+        ${s.description ? `<br><span style="font-size: 12px; color: #6b7280;">${decodeHtml(s.description)}</span>` : ''}
       </td>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">₹${Math.round(Number(s.price || s.rate || 0)).toLocaleString()}</td>
     </tr>
@@ -894,9 +920,9 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   const addonsHtml = addonsList.map(a => `
     <tr>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
-        <strong>${a.name || a.serviceName || a.services?.[0]?.name || 'Add-on'}</strong>
-        ${a.frequency_type || a.frequencyType ? `<br><span style="font-size: 12px; color: #6b7280;">${a.frequency_type || a.frequencyType} - ${a.frequency_count || a.frequencyCount || 1} visits</span>` : ''}
-        ${a.description ? `<br><span style="font-size: 12px; color: #6b7280;">${a.description}</span>` : ''}
+        <strong>${decodeHtml(a.name || a.serviceName || a.services?.[0]?.name || 'Add-on')}</strong>
+        ${a.frequency_type || a.frequencyType ? `<br><span style="font-size: 12px; color: #6b7280;">${a.frequency_type || a.frequencyType} - ${a.frequency_count ?? a.frequencyCount ?? 1} visits</span>` : ''}
+        ${a.description ? `<br><span style="font-size: 12px; color: #6b7280;">${decodeHtml(a.description)}</span>` : ''}
       </td>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">₹${Math.round(Number(a.price || a.totalPrice || a.services?.[0]?.price || 0)).toLocaleString()}</td>
     </tr>

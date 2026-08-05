@@ -3410,7 +3410,7 @@ const transformAddon = (addon) => ({
   propertyTypeName: getPropertyTypeName(addon.property_type),
   services: [{
     name: addon.service_name || '',
-    frequency: addon.frequency_count || 1,
+    frequency: addon.frequency_count ?? 1,
     frequencyType: addon.frequency_type || 'Monthly',
     price: parseFloat(addon.price) || 0,
     description: addon.description || ''
@@ -3503,7 +3503,7 @@ router.put('/fp-addons/:id', authenticate, adminOnly, async (req, res) => {
         price = COALESCE(?, price), 
         description = COALESCE(?, description)
        WHERE id = ?`,
-      [service_name, frequency_type, frequency_count || 1, property_type, price || 0, description || '', id]
+      [service_name, frequency_type, frequency_count ?? 1, property_type, price || 0, description || '', id]
     );
 
     console.log('Admin updated fp_addon:', id);

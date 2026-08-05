@@ -6,6 +6,14 @@ import {
 } from 'lucide-react';
 import { calculateEstimateTotal } from '../../utils/estimateStore';
 
+// Decode HTML entities (e.g., &amp; -> &)
+const decodeHtml = (html) => {
+  if (!html || typeof html !== 'string') return html;
+  const txt = document.createElement('textarea');
+  txt.innerHTML = html;
+  return txt.value;
+};
+
 const PROPERTY_ICONS = {
   APT: Home,
   Flats: LayoutGrid,
@@ -439,9 +447,9 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                       <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-indigo-100 rounded-t-lg">
                         <div className="col-span-1 text-xs font-semibold text-indigo-700">#</div>
                         <div className="col-span-3 text-xs font-semibold text-indigo-700">Service</div>
-                        <div className="col-span-5 text-xs font-semibold text-indigo-700">Description</div>
+                        <div className="col-span-4 text-xs font-semibold text-indigo-700">Description</div>
                         <div className="col-span-2 text-xs font-semibold text-indigo-700 text-center">Frequency</div>
-                        <div className="col-span-1 text-xs font-semibold text-indigo-700 text-right">Visits</div>
+                        <div className="col-span-2 text-xs font-semibold text-indigo-700 text-right">Visits</div>
                       </div>
                       <div className="border border-indigo-100 rounded-b-lg divide-y divide-indigo-50">
                         {services.map((service, idx) => (
@@ -450,16 +458,16 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                               <span className="w-5 h-5 bg-indigo-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                             </div>
                             <div className="col-span-3">
-                              <p className="font-medium text-gray-800 text-sm">{service.name || service.service}</p>
+                              <p className="font-medium text-gray-800 text-sm">{decodeHtml(service.name || service.service)}</p>
                             </div>
-                            <div className="col-span-5">
-                              <p className="text-xs text-gray-500 break-words whitespace-normal">{service.description || '-'}</p>
+                            <div className="col-span-4">
+                              <p className="text-xs text-gray-500 break-words whitespace-normal">{decodeHtml(service.description) || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-indigo-600">{service.frequencyType || 'Monthly'}</p>
                             </div>
-                            <div className="col-span-1 text-right">
-                              <p className="text-sm text-indigo-700 font-semibold">{service.frequencyCount || 1}</p>
+                            <div className="col-span-2 text-right">
+                              <p className="text-sm text-indigo-700 font-semibold">{service.frequencyCount ?? 1}</p>
                             </div>
                           </div>
                         ))}
@@ -480,14 +488,14 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                     <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-lg">
                       <div className="col-span-1 text-xs font-semibold text-green-700">#</div>
                       <div className="col-span-3 text-xs font-semibold text-green-700">Service</div>
-                      <div className="col-span-5 text-xs font-semibold text-green-700">Description</div>
+                      <div className="col-span-4 text-xs font-semibold text-green-700">Description</div>
                       <div className="col-span-2 text-xs font-semibold text-green-700 text-center">Frequency</div>
-                      <div className="col-span-1 text-xs font-semibold text-green-700 text-right">Visits</div>
+                      <div className="col-span-2 text-xs font-semibold text-green-700 text-right">Visits</div>
                     </div>
                     <div className="border border-green-100 divide-y divide-green-50">
                       {viewEstimate.addons.map((addon, idx) => {
-                        const addonName = addon.name || addon.serviceName || addon.service_name || 'Add-on';
-                        const frequencyCount = addon.frequency_count || addon.frequencyCount || 1;
+                        const addonName = decodeHtml(addon.name || addon.serviceName || addon.service_name) || 'Add-on';
+                        const frequencyCount = addon.frequency_count ?? addon.frequencyCount ?? 1;
                         const frequencyType = addon.frequency_type || addon.frequencyType || 'Monthly';
                         return (
                           <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
@@ -497,13 +505,13 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                             <div className="col-span-3">
                               <p className="font-medium text-gray-800 text-sm">{addonName}</p>
                             </div>
-                            <div className="col-span-5">
-                              <p className="text-xs text-gray-500 break-words whitespace-normal">{addon.description || '-'}</p>
+                            <div className="col-span-4">
+                              <p className="text-xs text-gray-500 break-words whitespace-normal">{decodeHtml(addon.description) || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>
                             </div>
-                            <div className="col-span-1 text-right">
+                            <div className="col-span-2 text-right">
                               <p className="text-sm text-green-700 font-semibold">{frequencyCount}</p>
                             </div>
                           </div>

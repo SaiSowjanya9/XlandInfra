@@ -841,7 +841,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
                         const filteredVendors = getFilteredVendors(service.serviceType);
                         const hasVendors = filteredVendors.length > 0;
                         const hasSelection = !!service.vendorId;
-                        const visits = service.frequencyCount || 12;
+                        const visits = service.frequencyCount ?? 12;
                         const isExisting = service.isExisting;
                         const isChanged = service.originalVendorId && service.vendorId !== service.originalVendorId;
                         

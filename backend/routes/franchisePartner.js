@@ -4985,14 +4985,14 @@ const transformAddon = (addon) => ({
   service_name: addon.service_name || '',
   property_type: addon.property_type,
   frequency_type: addon.frequency_type || 'Monthly',
-  frequency_count: addon.frequency_count || 1,
+  frequency_count: addon.frequency_count ?? 1,
   price: parseFloat(addon.price) || 0,
   description: addon.description || '',
   billing_cycle: addon.billing_cycle || 'Monthly',
   // Transformed fields
   propertyType: addon.property_type === 'AP' ? 'APT' : addon.property_type === 'VL' ? 'VILLA' : addon.property_type === 'FL' ? 'FLAT' : addon.property_type === 'PL' ? 'PLOT' : addon.property_type,
   propertyTypeName: addon.property_type === 'GC' ? 'Gated Community' : addon.property_type === 'AP' || addon.property_type === 'APT' ? 'Apartment' : addon.property_type === 'VL' || addon.property_type === 'VILLA' ? 'Villa' : addon.property_type === 'FL' || addon.property_type === 'FLAT' ? 'Flat' : addon.property_type === 'PL' || addon.property_type === 'PLOT' ? 'Plot' : addon.property_type,
-  services: [{ name: addon.service_name || '', frequency: addon.frequency_count || 1, frequencyType: addon.frequency_type || 'Monthly', price: parseFloat(addon.price) || 0, description: addon.description || '' }],
+  services: [{ name: addon.service_name || '', frequency: addon.frequency_count ?? 1, frequencyType: addon.frequency_type || 'Monthly', price: parseFloat(addon.price) || 0, description: addon.description || '' }],
   totalPrice: parseFloat(addon.price) || 0,
   billingCycle: addon.billing_cycle || 'Monthly',
   createdAt: addon.created_at
@@ -5036,7 +5036,7 @@ router.post('/addons', requireFPScope, async (req, res) => {
       `INSERT INTO fp_addons (
         franchise_partner_id, property_type, service_name, frequency_count, frequency_type, billing_cycle, price, description
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [req.fpId, property_type, service_name, frequency_count || 1, frequency_type || 'Monthly', billing_cycle || 'Monthly', price || 0, description || '']
+      [req.fpId, property_type, service_name, frequency_count ?? 1, frequency_type || 'Monthly', billing_cycle || 'Monthly', price || 0, description || '']
     );
 
     res.status(201).json({
@@ -5064,7 +5064,7 @@ router.put('/addons/:id', requireFPScope, async (req, res) => {
       `UPDATE fp_addons SET 
         service_name = ?, frequency_type = ?, frequency_count = ?, property_type = ?, price = ?, description = ?
        WHERE id = ? AND franchise_partner_id = ?`,
-      [service_name, frequency_type, frequency_count || 1, property_type, price || 0, description || '', id, req.fpId]
+      [service_name, frequency_type, frequency_count ?? 1, property_type, price || 0, description || '', id, req.fpId]
     );
 
     res.json({ success: true, message: 'Add-on updated successfully' });

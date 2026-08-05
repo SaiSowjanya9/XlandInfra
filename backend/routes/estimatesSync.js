@@ -494,7 +494,7 @@ router.post('/:estimateId/send', async (req, res) => {
               name: a.name || a.service_name || details?.service_name || 'Add-on',
               description: a.description || details?.description || '',
               frequency_type: a.frequency_type || a.frequencyType || details?.frequency_type || 'Monthly',
-              frequency_count: a.frequency_count || a.frequencyCount || details?.frequency_count || 1
+              frequency_count: a.frequency_count ?? a.frequencyCount ?? details?.frequency_count ?? 1
             };
           });
         } catch (addonErr) {

@@ -7,6 +7,31 @@ import { XLAND_LOGO_ICON } from './logoIconBase64.js';
 const isDev = import.meta.env.DEV;
 const debug = (...args) => isDev && console.log(...args);
 
+// Decode HTML entities (e.g., &amp; -> &, &#x2F; -> /)
+const decodeHtml = (html) => {
+  if (!html || typeof html !== 'string') return html || '';
+  // Use a more comprehensive decoding for Node/browser environments
+  const entities = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&#x27;': "'",
+    '&#x2F;': '/',
+    '&nbsp;': ' ',
+    '&#x26;': '&'
+  };
+  let decoded = html;
+  for (const [entity, char] of Object.entries(entities)) {
+    decoded = decoded.replace(new RegExp(entity, 'gi'), char);
+  }
+  // Handle numeric entities
+  decoded = decoded.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
+  decoded = decoded.replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  return decoded;
+};
+
 const GST_RATE = 0.18;
 
 // Detect iOS devices (iPhone, iPad, iPod)
@@ -239,7 +264,7 @@ const generatePDF = (data, type, filename) => {
       py += 5;
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
-      const propName = String(data.propertyName || data.communityName || '-');
+      const propName = decodeHtml(String(data.propertyName || data.communityName || '-'));
       doc.text(propName.length > 16 ? propName.substring(0, 16) + '...' : propName, margin + 6, py);
       const typeLabel = isGC ? 'Gated Community' : isApt ? 'Apartment' : isVilla ? 'Villa' : isFlat ? 'Flat' : isPlot ? 'Plot' : String(data.propertyType || '-');
       doc.text(typeLabel, margin + cardWidth/2 + 6, py);
@@ -348,7 +373,7 @@ const generatePDF = (data, type, filename) => {
       cy += 5;
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
-      const custName = String(data.customerName || '-');
+      const custName = decodeHtml(String(data.customerName || '-'));
       doc.text(custName.length > 14 ? custName.substring(0, 14) + '...' : custName, cx + 6, cy);
       doc.text(String(data.customerPhone || '-'), cx + cardWidth/2 + 4, cy);
       cy += 7;
@@ -410,14 +435,14 @@ const generatePDF = (data, type, filename) => {
     const services = data.services || data.packageServices || [];
     const tableBody = services.length > 0 
       ? services.map((s, idx) => {
-          const freqCount = s.frequencyCount || s.frequency_count || s.frequency || 1;
+          const freqCount = s.frequencyCount ?? s.frequency_count ?? s.frequency ?? 1;
           let freqType = String(s.frequencyType || s.frequency_type || 'Monthly');
           // Remove "Nx " prefix if present
           freqType = freqType.replace(/^\d+x\s*/i, '');
           return [
             String(idx + 1),
-            String(s.name || s.service || 'Service'),
-            String(s.description || '-'),
+            decodeHtml(String(s.name || s.service || 'Service')),
+            decodeHtml(String(s.description || '-')),
             String(freqType),
             String(freqCount)
           ];
@@ -454,14 +479,14 @@ const generatePDF = (data, type, filename) => {
       y += 6;
 
       const addonsBody = data.addons.map((a, idx) => {
-        const freqCount = a.frequencyCount || a.frequency_count || a.visits || 1;
+        const freqCount = a.frequencyCount ?? a.frequency_count ?? a.visits ?? 1;
         let freqType = String(a.frequencyType || a.frequency_type || a.frequency || 'Monthly');
         // Remove "Nx " prefix if present
         freqType = freqType.replace(/^\d+x\s*/i, '');
         return [
           String(idx + 1),
-          String(a.name || a.serviceName || a.service_name || 'Add-on'),
-          String(a.description || '-'),
+          decodeHtml(String(a.name || a.serviceName || a.service_name || 'Add-on')),
+          decodeHtml(String(a.description || '-')),
           String(freqType),
           String(freqCount)
         ];
@@ -598,7 +623,7 @@ const generatePDF = (data, type, filename) => {
       
       doc.setFillColor(...cardBg);
       doc.setDrawColor(...borderLight);
-      const noteLines = doc.splitTextToSize(String(data.description), pageWidth - margin * 2 - 8);
+      const noteLines = doc.splitTextToSize(decodeHtml(String(data.description)), pageWidth - margin * 2 - 8);
       const noteBoxH = Math.min(Math.max(12, noteLines.length * 4 + 6), 40);
       doc.roundedRect(margin, y, pageWidth - margin * 2, noteBoxH, 2, 2, 'FD');
       
@@ -652,7 +677,7 @@ export const exportEstimateToPDF = (estimate) => {
           debug('[PDF] Using package_services:', pkgServices);
           services = pkgServices.map(s => ({
             name: s.service || s.name || s.serviceName || 'Service',
-            frequencyCount: s.frequencyCount || s.frequency_count || s.frequency || s.visits || 1,
+            frequencyCount: s.frequencyCount ?? s.frequency_count ?? s.frequency ?? s.visits ?? 1,
             frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
             description: s.description || ''
           }));
@@ -664,7 +689,7 @@ export const exportEstimateToPDF = (estimate) => {
       debug('[PDF] Using packageServices:', estimate.packageServices);
       services = estimate.packageServices.map(s => ({
         name: s.service || s.name || s.serviceName || 'Service',
-        frequencyCount: s.frequencyCount || s.frequency || s.visits || 1,
+        frequencyCount: s.frequencyCount ?? s.frequency ?? s.visits ?? 1,
         frequencyType: s.frequencyType || 'Monthly',
         description: s.description || ''
       }));
@@ -673,7 +698,7 @@ export const exportEstimateToPDF = (estimate) => {
     else if (estimate.serviceRows && Array.isArray(estimate.serviceRows) && estimate.serviceRows.length > 0) {
       services = estimate.serviceRows.filter(sr => sr.service || sr.name).map(sr => ({
         name: sr.service || sr.name || 'Service',
-        frequencyCount: sr.frequencyCount || sr.frequency || 1,
+        frequencyCount: sr.frequencyCount ?? sr.frequency ?? 1,
         frequencyType: sr.frequencyType || 'Monthly'
       }));
     }
@@ -685,14 +710,14 @@ export const exportEstimateToPDF = (estimate) => {
         if (s.services && Array.isArray(s.services)) {
           return s.services.map(inner => ({
             name: inner.name || inner.service || 'Service',
-            frequencyCount: inner.frequencyCount || inner.frequency || 1,
+            frequencyCount: inner.frequencyCount ?? inner.frequency ?? 1,
             frequencyType: inner.frequencyType || 'Monthly'
           }));
         }
         // Handle addon/service structure
         return {
           name: s.name || s.service || s.serviceName || s.description || 'Service',
-          frequencyCount: s.frequencyCount || s.frequency || s.visits || 1,
+          frequencyCount: s.frequencyCount ?? s.frequency ?? s.visits ?? 1,
           frequencyType: s.frequencyType || s.billingType || s.billing || 'Monthly'
         };
       }).flat();
@@ -729,7 +754,7 @@ export const exportEstimateToPDF = (estimate) => {
       addons = estimate.addons.map(a => ({
         name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
         frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
-        frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || a.services?.[0]?.frequency || a.services?.[0]?.frequencyCount || 1,
+        frequencyCount: a.frequencyCount ?? a.frequency_count ?? a.visits ?? a.noOfVisits ?? a.no_of_visits ?? a.services?.[0]?.frequency ?? a.services?.[0]?.frequencyCount ?? 1,
         description: a.description || ''
       }));
     }
@@ -741,7 +766,7 @@ export const exportEstimateToPDF = (estimate) => {
           addons = parsed.map(a => ({
             name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
             frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
-            frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || a.services?.[0]?.frequency || a.services?.[0]?.frequencyCount || 1,
+            frequencyCount: a.frequencyCount ?? a.frequency_count ?? a.visits ?? a.noOfVisits ?? a.no_of_visits ?? a.services?.[0]?.frequency ?? a.services?.[0]?.frequencyCount ?? 1,
             description: a.description || ''
           }));
         }
@@ -752,7 +777,7 @@ export const exportEstimateToPDF = (estimate) => {
       addons = estimate.selectedAddons.map(a => ({
         name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
         frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
-        frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || a.services?.[0]?.frequency || a.services?.[0]?.frequencyCount || 1,
+        frequencyCount: a.frequencyCount ?? a.frequency_count ?? a.visits ?? a.noOfVisits ?? a.no_of_visits ?? a.services?.[0]?.frequency ?? a.services?.[0]?.frequencyCount ?? 1,
         description: a.description || ''
       }));
     }
@@ -831,7 +856,7 @@ export const exportPackageToPDF = (pkg) => {
       services = pkg.serviceRows.map(sr => ({
         name: sr.service || sr.name || sr.serviceType || 'Service',
         description: sr.description || '',
-        frequencyCount: sr.frequencyCount || sr.frequency || 1,
+        frequencyCount: sr.frequencyCount ?? sr.frequency ?? 1,
         frequencyType: sr.frequencyType || 'Monthly',
         price: parseFloat(sr.price || sr.rate || 0)
       }));
@@ -843,7 +868,7 @@ export const exportPackageToPDF = (pkg) => {
           services = parsed.serviceRows.map(sr => ({
             name: sr.service || sr.name || sr.serviceType || 'Service',
             description: sr.description || '',
-            frequencyCount: sr.frequencyCount || sr.frequency || 1,
+            frequencyCount: sr.frequencyCount ?? sr.frequency ?? 1,
             frequencyType: sr.frequencyType || 'Monthly',
             price: parseFloat(sr.price || sr.rate || 0)
           }));
@@ -851,7 +876,7 @@ export const exportPackageToPDF = (pkg) => {
           services = parsed.map(s => ({
             name: s.name || s.service || s.serviceType || 'Service',
             description: s.description || '',
-            frequencyCount: s.frequencyCount || s.frequency || 1,
+            frequencyCount: s.frequencyCount ?? s.frequency ?? 1,
             frequencyType: s.frequencyType || 'Monthly',
             price: parseFloat(s.price || 0)
           }));
@@ -870,7 +895,7 @@ export const exportPackageToPDF = (pkg) => {
       services = pkg.services.map(s => ({
         name: typeof s === 'string' ? s : (s.name || s.service || s.serviceType || 'Service'),
         description: typeof s === 'string' ? '' : (s.description || ''),
-        frequencyCount: s.frequencyCount || s.frequency || 1,
+        frequencyCount: s.frequencyCount ?? s.frequency ?? 1,
         frequencyType: s.frequencyType || 'Monthly',
         price: parseFloat(s.price || 0)
       }));

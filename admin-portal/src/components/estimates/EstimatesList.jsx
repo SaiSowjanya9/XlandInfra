@@ -14,6 +14,14 @@ import { getAuthToken } from '../../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+// Decode HTML entities (e.g., &amp; -> &)
+const decodeHtml = (html) => {
+  if (!html || typeof html !== 'string') return html;
+  const txt = document.createElement('textarea');
+  txt.innerHTML = html;
+  return txt.value;
+};
+
 const PROPERTY_ICONS = {
   APT: Home,
   FLAT: LayoutGrid,
@@ -502,7 +510,7 @@ const EstimatesList = ({
           addons: addonsArray.map(a => ({
             name: a.name || a.service_name || a.serviceName || 'Add-on',
             frequencyType: a.frequency_type || a.frequencyType || 'One-time',
-            frequencyCount: a.frequency_count || a.frequencyCount || 1,
+            frequencyCount: a.frequency_count ?? a.frequencyCount ?? 1,
             description: a.description || ''
           }))
         };
@@ -984,9 +992,9 @@ const EstimatesList = ({
                         <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-indigo-100 rounded-t-lg">
                           <div className="col-span-1 text-xs font-semibold text-indigo-700">#</div>
                           <div className="col-span-3 text-xs font-semibold text-indigo-700">Service</div>
-                          <div className="col-span-5 text-xs font-semibold text-indigo-700">Description</div>
+                          <div className="col-span-4 text-xs font-semibold text-indigo-700">Description</div>
                           <div className="col-span-2 text-xs font-semibold text-indigo-700 text-center">Frequency</div>
-                          <div className="col-span-1 text-xs font-semibold text-indigo-700 text-right">Visits</div>
+                          <div className="col-span-2 text-xs font-semibold text-indigo-700 text-right">Visits</div>
                         </div>
                         <div className="border border-indigo-100 rounded-b-lg divide-y divide-indigo-50">
                           {pkgServices.map((svc, idx) => (
@@ -995,16 +1003,16 @@ const EstimatesList = ({
                                 <span className="w-5 h-5 bg-indigo-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                               </div>
                               <div className="col-span-3">
-                                <p className="font-medium text-gray-800 text-sm">{svc.name || svc.service}</p>
+                                <p className="font-medium text-gray-800 text-sm">{decodeHtml(svc.name || svc.service)}</p>
                               </div>
-                              <div className="col-span-5">
-                                <p className={`text-xs text-gray-500 break-words whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</p>
+                              <div className="col-span-4">
+                                <p className={`text-xs text-gray-500 break-words whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{decodeHtml(svc.description) || '-'}</p>
                               </div>
                               <div className="col-span-2 text-center">
                                 <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
                               </div>
-                              <div className="col-span-1 text-right">
-                                <p className="text-sm text-indigo-700 font-semibold">{svc.frequencyCount || svc.frequency_count || 1}</p>
+                              <div className="col-span-2 text-right">
+                                <p className="text-sm text-indigo-700 font-semibold">{svc.frequencyCount ?? svc.frequency_count ?? 1}</p>
                               </div>
                             </div>
                           ))}
@@ -1023,7 +1031,7 @@ const EstimatesList = ({
                     {viewEstimate.services.map((service, idx) => (
                       <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
                         <div>
-                          <p className="font-medium">{service.name || service.service || service.serviceName || 'Service'}</p>
+                          <p className="font-medium">{decodeHtml(service.name || service.service || service.serviceName) || 'Service'}</p>
                           {(service.frequency || service.frequencyCount) && service.frequencyType && (
                             <p className="text-xs text-gray-500">{service.frequencyType} - {service.frequency || service.frequencyCount} visits</p>
                           )}
@@ -1043,16 +1051,16 @@ const EstimatesList = ({
                     <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-lg">
                       <div className="col-span-1 text-xs font-semibold text-green-700">#</div>
                       <div className="col-span-3 text-xs font-semibold text-green-700">Service</div>
-                      <div className="col-span-5 text-xs font-semibold text-green-700">Description</div>
+                      <div className="col-span-4 text-xs font-semibold text-green-700">Description</div>
                       <div className="col-span-2 text-xs font-semibold text-green-700 text-center">Frequency</div>
-                      <div className="col-span-1 text-xs font-semibold text-green-700 text-right">Visits</div>
+                      <div className="col-span-2 text-xs font-semibold text-green-700 text-right">Visits</div>
                     </div>
                     <div className="border border-green-100 divide-y divide-green-50">
                       {viewEstimate.addons.map((addon, idx) => {
-                        const addonName = typeof addon === 'number' ? `Add-on ${idx + 1}` : (addon.name || addon.serviceName || addon.service_name || `Add-on ${idx + 1}`);
-                        const frequencyCount = typeof addon === 'object' ? (addon.frequency_count || addon.frequencyCount || 1) : 1;
+                        const addonName = typeof addon === 'number' ? `Add-on ${idx + 1}` : decodeHtml(addon.name || addon.serviceName || addon.service_name) || `Add-on ${idx + 1}`;
+                        const frequencyCount = typeof addon === 'object' ? (addon.frequency_count ?? addon.frequencyCount ?? 1) : 1;
                         const frequencyType = typeof addon === 'object' ? (addon.frequencyType || addon.frequency_type || 'Monthly') : 'Monthly';
-                        const addonDesc = typeof addon === 'object' ? (addon.description || '') : '';
+                        const addonDesc = typeof addon === 'object' ? decodeHtml(addon.description) || '' : '';
                         return (
                           <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
                             <div className="col-span-1">
@@ -1061,13 +1069,13 @@ const EstimatesList = ({
                             <div className="col-span-3">
                               <p className="font-medium text-gray-800 text-sm">{addonName}</p>
                             </div>
-                            <div className="col-span-5">
+                            <div className="col-span-4">
                               <p className={`text-xs text-gray-500 break-words whitespace-normal ${!addonDesc ? 'text-center' : ''}`}>{addonDesc || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>
                             </div>
-                            <div className="col-span-1 text-right">
+                            <div className="col-span-2 text-right">
                               <p className="text-sm text-green-700 font-semibold">{frequencyCount}</p>
                             </div>
                           </div>

@@ -883,7 +883,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
         estimateData.amc_package_description = selectedPackage.description || '';
         estimateData.package_services = (selectedPackage.services || []).map(s => ({
           name: s.service || s.name,
-          frequencyCount: s.frequencyCount || 1,
+          frequencyCount: s.frequencyCount ?? 1,
           frequencyType: s.frequencyType || 'Monthly',
           description: s.description || ''
         }));
@@ -927,7 +927,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
         estimateData.amc_package_description = directSelectedPackage.description || '';
         estimateData.package_services = (directSelectedPackage.services || []).map(s => ({
           name: s.service || s.name,
-          frequencyCount: s.frequencyCount || 1,
+          frequencyCount: s.frequencyCount ?? 1,
           frequencyType: s.frequencyType || 'Monthly',
           description: s.description || ''
         }));
@@ -1934,7 +1934,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                         <label className="block text-xs font-medium text-gray-600 mb-1">Visits</label>
                         <input
                           type="number"
-                          min="1"
+                          min="0"
                           value={customAddonForm.frequencyCount}
                           readOnly
                           className="w-full px-3 py-2 text-sm border border-gray-200 bg-gray-100 rounded-md text-center cursor-not-allowed"
@@ -2550,7 +2550,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       <label className="block text-xs font-medium text-gray-600 mb-1">Visits</label>
                       <input
                         type="number"
-                        min="1"
+                        min="0"
                         value={directCustomAddonForm.frequencyCount}
                         readOnly
                         className="w-full px-3 py-2 text-sm border border-gray-200 bg-gray-100 rounded-md text-center cursor-not-allowed"
