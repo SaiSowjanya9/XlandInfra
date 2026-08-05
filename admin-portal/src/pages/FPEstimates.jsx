@@ -2289,7 +2289,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       const isEditing = !!editingAmcPackage;
       const url = isEditing ? `/api/fp/amc-packages/${editingAmcPackage}` : '/api/fp/amc-packages';
       const method = isEditing ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyType, services: validSvc.map(r => ({ name: r.service, description: r.description || '', frequency_count: !isNaN(parseInt(r.frequencyCount)) ? parseInt(r.frequencyCount) : 1, frequency_type: r.frequencyType })), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
+      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyType, services: validSvc.map(r => { const parsed = parseInt(r.frequencyCount); return { name: r.service, description: r.description || '', frequency_count: typeof r.frequencyCount === 'number' ? r.frequencyCount : (isNaN(parsed) ? 0 : parsed), frequency_type: r.frequencyType }; }), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
       const result = await res.json();
       if (res.ok || result.success) { showToast(isEditing ? 'AMC Package updated!' : 'AMC Package created!'); resetAmcForm(); loadData(); setAmcActiveTab('all-packages'); }
       else showToast(result.message || 'Failed', 'error');
@@ -2297,7 +2297,19 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   };
   const handleDeleteAmcPackage = async (id) => { if (!window.confirm('Delete this package?')) return; try { const res = await fetch(`/api/fp/amc-packages/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
   const handleAddServiceRow = () => setAmcForm({ ...amcForm, serviceRows: [...amcForm.serviceRows, { service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }] });
-  const handleUpdateServiceRow = (i, f, v) => { const rows = [...amcForm.serviceRows]; if (f === 'frequencyType') { const auto = FREQUENCY_COUNT_MAP[v]; rows[i] = { ...rows[i], [f]: v, frequencyCount: auto !== null ? auto : '' }; } else rows[i][f] = v; setAmcForm({ ...amcForm, serviceRows: rows }); };
+  const handleUpdateServiceRow = (i, f, v) => { 
+    const rows = [...amcForm.serviceRows]; 
+    if (f === 'frequencyType') { 
+      const auto = FREQUENCY_COUNT_MAP[v]; 
+      rows[i] = { ...rows[i], [f]: v, frequencyCount: auto !== null ? auto : 0 }; 
+    } else if (f === 'frequencyCount') {
+      const parsed = parseInt(v);
+      rows[i][f] = v === '' ? 0 : (isNaN(parsed) ? 0 : parsed);
+    } else {
+      rows[i][f] = v; 
+    }
+    setAmcForm({ ...amcForm, serviceRows: rows }); 
+  };
   const handleRemoveServiceRow = (i) => { if (amcForm.serviceRows.length > 1) setAmcForm({ ...amcForm, serviceRows: amcForm.serviceRows.filter((_, idx) => idx !== i) }); };
 
   const getPrice = () => parseFloat(amcForm.price) || 0;
