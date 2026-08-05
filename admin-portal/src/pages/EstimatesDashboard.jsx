@@ -74,8 +74,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const [filter4, setFilter4] = useState('all'); // Direct Property Type
   const [filter5, setFilter5] = useState('all'); // Direct Status
   const [filter6, setFilter6] = useState('all'); // Property-Based Status
-  const [trendPeriod, setTrendPeriod] = useState('month');
-  const [funnelFilter, setFunnelFilter] = useState('month'); // Funnel chart filter
+  const [trendPeriod, setTrendPeriod] = useState('all'); // Default to All Time
+  const [funnelFilter, setFunnelFilter] = useState('all'); // Default to All Time
 
   const token = getAuthToken();
   const apiPath = getApiPath(portalType);
