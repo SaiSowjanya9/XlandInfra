@@ -157,8 +157,9 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         frequencyCount: autoCount !== null ? autoCount : 0
       };
     } else if (field === 'frequencyCount') {
-      // Ensure frequencyCount is stored as a number
-      const numValue = value === '' ? 0 : parseInt(value) || 0;
+      // Ensure frequencyCount is stored as a number - handle 0 explicitly
+      const parsed = parseInt(value);
+      const numValue = value === '' ? 0 : (isNaN(parsed) ? 0 : parsed);
       newRows[index][field] = numValue;
     } else {
       newRows[index][field] = value;
@@ -205,12 +206,16 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         fpId: selectedFp.id,
         packageName: amcForm.packageName.trim(),
         propertyType: selectedPropertyType,
-        serviceRows: validServices.map(row => ({
-          service: row.service.trim(),
-          description: row.description || '',
-          frequencyCount: typeof row.frequencyCount === 'number' ? row.frequencyCount : (parseInt(row.frequencyCount) || 0),
-          frequencyType: row.frequencyType
-        })),
+        serviceRows: validServices.map(row => {
+          const parsed = parseInt(row.frequencyCount);
+          const count = typeof row.frequencyCount === 'number' ? row.frequencyCount : (isNaN(parsed) ? 0 : parsed);
+          return {
+            service: row.service.trim(),
+            description: row.description || '',
+            frequencyCount: count,
+            frequencyType: row.frequencyType
+          };
+        }),
         rate: parseFloat(amcForm.price),
         billingDuration: amcForm.billingDuration,
         description: amcForm.description?.trim() || ''
