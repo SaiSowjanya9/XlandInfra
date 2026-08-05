@@ -14,6 +14,17 @@ const PROPERTY_TYPE_OPTIONS = [
   { id: 'PLOT', label: 'Plot' },
 ];
 
+// Format date in IST format (dd/mm/yyyy)
+const formatDateIST = (dateStr) => {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '-';
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 // Helper to normalize property type to standard format
 const normalizePropertyType = (type) => {
   if (!type) return '';
@@ -711,8 +722,8 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                     <div><label className="block text-xs font-medium text-gray-500 mb-1">Estimate Type</label><select value={estimateTypeFilter} onChange={(e) => setEstimateTypeFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"><option value="all">All Estimates</option><option value="property_based">Property Based</option><option value="direct">Direct</option></select></div>
                     <div><label className="block text-xs font-medium text-gray-500 mb-1">Status</label><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"><option value="all">All Statuses</option><option value="draft">Draft</option><option value="sent">Sent</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="archived">Archived</option></select></div>
                     <div><label className="block text-xs font-medium text-gray-500 mb-1">Property Category</label><select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"><option value="all">All Categories</option>{PROPERTY_TYPE_OPTIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></div>
-                    <div><label className="block text-xs font-medium text-gray-500 mb-1">From Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label><input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />{fromDate && <p className="text-xs text-gray-500 mt-1">{new Date(fromDate).toLocaleDateString('en-IN')}</p>}</div>
-                    <div><label className="block text-xs font-medium text-gray-500 mb-1">To Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label><input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />{toDate && <p className="text-xs text-gray-500 mt-1">{new Date(toDate).toLocaleDateString('en-IN')}</p>}</div>
+                    <div><label className="block text-xs font-medium text-gray-500 mb-1">From Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label><input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />{fromDate && <p className="text-xs text-gray-500 mt-1">{formatDateIST(fromDate)}</p>}</div>
+                    <div><label className="block text-xs font-medium text-gray-500 mb-1">To Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label><input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />{toDate && <p className="text-xs text-gray-500 mt-1">{formatDateIST(toDate)}</p>}</div>
                   </div>
                   <button onClick={clearAllFilters} className="text-sm text-blue-600 hover:underline">Clear all filters</button>
                 </div>
@@ -735,7 +746,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                               <td className="py-4 px-4"><div className="flex items-center gap-2"><TypeIcon className="w-4 h-4 text-gray-400" /><span className={`px-2 py-0.5 text-xs font-medium rounded ${estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span></div></td>
                               <td className="py-4 px-4"><span className="text-gray-600">{(estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based') ? (estimate.division || estimate.property_division || '-') : '-'}</span></td>
                               <td className="py-4 px-4"><span className="text-gray-700">{estimate.client_name || '-'}</span></td>
-                              <td className="py-4 px-4"><div className="flex items-center gap-1.5 text-gray-600"><Calendar className="w-4 h-4" />{estimate.created_at ? new Date(estimate.created_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : '-'}</div></td>
+                              <td className="py-4 px-4"><div className="flex items-center gap-1.5 text-gray-600"><Calendar className="w-4 h-4" />{formatDateIST(estimate.created_at)}</div></td>
                               <td className="py-4 px-4"><div><p className="font-medium text-gray-900">{estimate.created_by_name || (estimate.created_by_role ? estimate.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</p>{estimate.created_by_name && estimate.created_by_role && <p className="text-xs text-gray-400 capitalize">{estimate.created_by_role.replace(/_/g, ' ')}</p>}</div></td>
                               <td className="py-4 px-4"><span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(estimate.status)}`}>{estimate.status?.charAt(0).toUpperCase() + estimate.status?.slice(1) || 'Draft'}</span></td>
                               <td className="py-4 px-4"><div className="flex items-center justify-center gap-1"><button onClick={() => setViewEstimate(estimate)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button>{(estimate.estimate_type === 'direct' || (estimate.estimate_type && !estimate.estimate_type.includes('property'))) && <button onClick={() => openEditEstimate(estimate)} className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>}</div></td>
@@ -773,7 +784,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                           <td className="px-4 py-3 font-mono text-xs">{e.estimate_id || `EST-${e.id}`}</td>
                           <td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td>
                           <td className="px-4 py-3">{e.client_name || '-'}</td>
-                          <td className="px-4 py-3 text-gray-500">{e.archived_at ? new Date(e.archived_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : '-'}</td>
+                          <td className="px-4 py-3 text-gray-500">{formatDateIST(e.archived_at)}</td>
                           <td className="px-4 py-3 font-semibold">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(e.total_amount || 0)}</td>
                           <td className="px-4 py-3"><div className="flex items-center justify-center"><button onClick={() => setViewEstimate(e)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details"><Eye className="w-4 h-4" /></button></div></td>
                         </tr>
@@ -1287,7 +1298,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                   }`}>{viewEstimate.status || 'draft'}</span>
                 </div>
                 <div><p className="text-xs text-gray-500">Type</p><p className="font-medium text-sm capitalize">{viewEstimate.estimate_type?.replace('_', ' ')}</p></div>
-                <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{viewEstimate.created_at ? new Date(viewEstimate.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : '-'}</p></div>
+                <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{formatDateIST(viewEstimate.created_at)}</p></div>
               </div>
 
               {/* Property Details */}
