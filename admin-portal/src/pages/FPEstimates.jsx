@@ -1251,7 +1251,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <tbody className="divide-y divide-gray-100">
                         {services.length > 0 ? services.map((svc, idx) => {
                           const freqType = svc.frequencyType || svc.frequency_type || 'Monthly';
-                          const visits = FREQUENCY_COUNT_MAP?.[freqType] || 12;
+                          const visits = svc.frequency_count ?? svc.frequencyCount ?? (FREQUENCY_COUNT_MAP?.[freqType] ?? 0);
                           return (
                             <tr key={idx} className="align-top">
                               <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(svc.service || svc.name) || '-'}</td>
@@ -1315,7 +1315,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       {estimateForm.selectedAddons.map((id, idx) => {
                         const addon = addons.find(a => a.id == id || a.id === parseInt(id));
                         if (!addon) return null;
-                        const visits = FREQUENCY_COUNT_MAP?.[addon.frequency_type] || 12;
+                        const visits = addon.frequency_count ?? (FREQUENCY_COUNT_MAP?.[addon.frequency_type] ?? 0);
                         return (
                           <tr key={idx} className="align-top">
                             <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(addon.service_name)}</td>
@@ -1593,7 +1593,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <tbody className="divide-y divide-gray-100">
                         {services.length > 0 ? services.map((svc, idx) => {
                           const freqType = svc.frequencyType || svc.frequency_type || 'Monthly';
-                          const visits = FREQUENCY_COUNT_MAP?.[freqType] || 12;
+                          const visits = svc.frequency_count ?? svc.frequencyCount ?? (FREQUENCY_COUNT_MAP?.[freqType] ?? 0);
                           return (
                             <tr key={idx} className="align-top">
                               <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(svc.service || svc.name) || '-'}</td>
@@ -1657,7 +1657,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       {estimateForm.selectedAddons.map((id, idx) => {
                         const addon = addons.find(a => a.id == id || a.id === parseInt(id));
                         if (!addon) return null;
-                        const visits = FREQUENCY_COUNT_MAP?.[addon.frequency_type] || 12;
+                        const visits = addon.frequency_count ?? (FREQUENCY_COUNT_MAP?.[addon.frequency_type] ?? 0);
                         return (
                           <tr key={idx} className="align-top">
                             <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(addon.service_name)}</td>
@@ -3588,7 +3588,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               <p className="font-medium text-gray-800 text-sm">{addonName}</p>
                             </div>
                             <div className="col-span-4">
-                              <p className="text-xs text-gray-500 break-words whitespace-normal">{addonDescription || '-'}</p>
+                              <p className="text-xs text-gray-500 break-all whitespace-normal">{addonDescription || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>

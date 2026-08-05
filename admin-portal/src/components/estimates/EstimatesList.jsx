@@ -1070,7 +1070,7 @@ const EstimatesList = ({
                               <p className="font-medium text-gray-800 text-sm">{addonName}</p>
                             </div>
                             <div className="col-span-4">
-                              <p className={`text-xs text-gray-500 break-words whitespace-normal ${!addonDesc ? 'text-center' : ''}`}>{addonDesc || '-'}</p>
+                              <p className={`text-xs text-gray-500 break-all whitespace-normal ${!addonDesc ? 'text-center' : ''}`}>{addonDesc || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>

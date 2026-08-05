@@ -370,7 +370,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
     }
     return servicesData?.property_type || pkg?.property_type || pkg?.propertyType || '';
   };
-  const getFrequencyVisits = (frequency) => FREQUENCY_COUNT_MAP?.[frequency] || parseInt(frequency) || 12;
+  const getFrequencyVisits = (frequency) => FREQUENCY_COUNT_MAP?.[frequency] ?? parseInt(frequency) ?? 0;
 
   // CREATE ESTIMATE - State for new form
   const [selectedAmcPackage, setSelectedAmcPackage] = useState('');
@@ -1944,7 +1944,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                               <p className="font-medium text-gray-800 text-sm">{addonName}</p>
                             </div>
                             <div className="col-span-4">
-                              <p className="text-xs text-gray-500 break-words whitespace-normal">{addonDescription || '-'}</p>
+                              <p className="text-xs text-gray-500 break-all whitespace-normal">{addonDescription || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>
