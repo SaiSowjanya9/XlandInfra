@@ -578,41 +578,47 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Start Date</label>
-                    <input
-                      type="text"
-                      placeholder="dd/mm/yyyy"
-                      value={startDateDisplay}
-                      onChange={(e) => {
-                        handleDateInput(e.target.value, setStartDateDisplay);
-                        const parsed = parseISTDate(e.target.value);
-                        if (parsed) setStartDate(parsed);
-                      }}
-                      onBlur={() => {
-                        const parsed = parseISTDate(startDateDisplay);
-                        if (parsed) setStartDate(parsed);
-                        else if (startDateDisplay && startDateDisplay.length < 10) setStartDateDisplay('');
-                      }}
-                      className="w-full px-3 py-2.5 bg-white/70 border border-gray-200/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 backdrop-blur-sm transition-all"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="dd/mm/yyyy"
+                        value={startDateDisplay}
+                        onChange={(e) => {
+                          handleDateInput(e.target.value, setStartDateDisplay);
+                          const parsed = parseISTDate(e.target.value);
+                          if (parsed) setStartDate(parsed);
+                        }}
+                        onBlur={() => {
+                          const parsed = parseISTDate(startDateDisplay);
+                          if (parsed) setStartDate(parsed);
+                          else if (startDateDisplay && startDateDisplay.length < 10) setStartDateDisplay('');
+                        }}
+                        className="w-full px-3 py-2.5 pr-10 bg-white/70 border border-gray-200/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 backdrop-blur-sm transition-all"
+                      />
+                      <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">End Date</label>
-                    <input
-                      type="text"
-                      placeholder="dd/mm/yyyy"
-                      value={endDateDisplay}
-                      onChange={(e) => {
-                        handleDateInput(e.target.value, setEndDateDisplay);
-                        const parsed = parseISTDate(e.target.value);
-                        if (parsed) setEndDate(parsed);
-                      }}
-                      onBlur={() => {
-                        const parsed = parseISTDate(endDateDisplay);
-                        if (parsed) setEndDate(parsed);
-                        else if (endDateDisplay && endDateDisplay.length < 10) setEndDateDisplay('');
-                      }}
-                      className="w-full px-3 py-2.5 bg-white/70 border border-gray-200/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 backdrop-blur-sm transition-all"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="dd/mm/yyyy"
+                        value={endDateDisplay}
+                        onChange={(e) => {
+                          handleDateInput(e.target.value, setEndDateDisplay);
+                          const parsed = parseISTDate(e.target.value);
+                          if (parsed) setEndDate(parsed);
+                        }}
+                        onBlur={() => {
+                          const parsed = parseISTDate(endDateDisplay);
+                          if (parsed) setEndDate(parsed);
+                          else if (endDateDisplay && endDateDisplay.length < 10) setEndDateDisplay('');
+                        }}
+                        className="w-full px-3 py-2.5 pr-10 bg-white/70 border border-gray-200/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 backdrop-blur-sm transition-all"
+                      />
+                      <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
