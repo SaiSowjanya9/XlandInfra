@@ -30,6 +30,25 @@ const formatDateIST = (dateStr) => {
   return `${day}/${month}/${year}`;
 };
 
+// Parse dd/mm/yyyy to yyyy-mm-dd (internal format)
+const parseISTDate = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return '';
+  const [day, month, year] = parts;
+  if (!day || !month || !year || year.length !== 4) return '';
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+};
+
+// Handle date input change with auto-formatting
+const handleDateInput = (value, setter) => {
+  let cleaned = value.replace(/[^\d/]/g, '');
+  if (cleaned.length === 2 && !cleaned.includes('/')) cleaned += '/';
+  else if (cleaned.length === 5 && cleaned.split('/').length === 2) cleaned += '/';
+  if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
+  setter(cleaned);
+};
+
 // Helper to normalize property type to standard format
 const normalizePropertyType = (type) => {
   if (!type) return '';
@@ -110,6 +129,8 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterFromDate, setFilterFromDate] = useState('');
   const [filterToDate, setFilterToDate] = useState('');
+  const [filterFromDateDisplay, setFilterFromDateDisplay] = useState('');
+  const [filterToDateDisplay, setFilterToDateDisplay] = useState('');
   const [estimateType, setEstimateType] = useState(null);
   const [propertyIdInput, setPropertyIdInput] = useState('');
   const [selectedProperty, setSelectedProperty] = useState(null);
@@ -1170,17 +1191,15 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">From Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label>
-                <input type="date" value={filterFromDate} onChange={(e) => setFilterFromDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
-                {filterFromDate && <p className="text-xs text-gray-500 mt-1">{formatDateIST(filterFromDate)}</p>}
+                <label className="block text-xs font-medium text-gray-500 mb-1">From Date</label>
+                <input type="text" placeholder="dd/mm/yyyy" value={filterFromDateDisplay} onChange={(e) => { handleDateInput(e.target.value, setFilterFromDateDisplay); const parsed = parseISTDate(e.target.value); if (parsed) setFilterFromDate(parsed); }} onBlur={() => { const parsed = parseISTDate(filterFromDateDisplay); if (parsed) setFilterFromDate(parsed); else if (filterFromDateDisplay && filterFromDateDisplay.length < 10) setFilterFromDateDisplay(''); }} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">To Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label>
-                <input type="date" value={filterToDate} onChange={(e) => setFilterToDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
-                {filterToDate && <p className="text-xs text-gray-500 mt-1">{formatDateIST(filterToDate)}</p>}
+                <label className="block text-xs font-medium text-gray-500 mb-1">To Date</label>
+                <input type="text" placeholder="dd/mm/yyyy" value={filterToDateDisplay} onChange={(e) => { handleDateInput(e.target.value, setFilterToDateDisplay); const parsed = parseISTDate(e.target.value); if (parsed) setFilterToDate(parsed); }} onBlur={() => { const parsed = parseISTDate(filterToDateDisplay); if (parsed) setFilterToDate(parsed); else if (filterToDateDisplay && filterToDateDisplay.length < 10) setFilterToDateDisplay(''); }} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
               </div>
             </div>
-            <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterCategory('all'); setFilterFromDate(''); setFilterToDate(''); }} className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium">Clear all filters</button>
+            <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterCategory('all'); setFilterFromDate(''); setFilterToDate(''); setFilterFromDateDisplay(''); setFilterToDateDisplay(''); }} className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium">Clear all filters</button>
           </div>
         )}
       </div>

@@ -63,8 +63,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const [error, setError] = useState(null);
   
   // Main date range filter (controls entire dashboard)
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(''); // Internal format yyyy-mm-dd
+  const [endDate, setEndDate] = useState(''); // Internal format yyyy-mm-dd
+  const [startDateDisplay, setStartDateDisplay] = useState(''); // Display format dd/mm/yyyy
+  const [endDateDisplay, setEndDateDisplay] = useState(''); // Display format dd/mm/yyyy
   const [showDatePicker, setShowDatePicker] = useState(false);
   
   // Individual block filters (each block has its own)
@@ -194,6 +196,41 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
+  };
+
+  // Parse dd/mm/yyyy to yyyy-mm-dd (internal format)
+  const parseISTDate = (dateStr) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return '';
+    const [day, month, year] = parts;
+    if (!day || !month || !year || year.length !== 4) return '';
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  };
+
+  // Handle date input change with auto-formatting
+  const handleDateInput = (value, setter) => {
+    // Remove non-numeric characters except /
+    let cleaned = value.replace(/[^\d/]/g, '');
+    
+    // Auto-insert slashes
+    if (cleaned.length === 2 && !cleaned.includes('/')) {
+      cleaned += '/';
+    } else if (cleaned.length === 5 && cleaned.split('/').length === 2) {
+      cleaned += '/';
+    }
+    
+    // Limit to dd/mm/yyyy format (10 chars)
+    if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
+    
+    // Set display value
+    setter(cleaned);
+  };
+
+  // Convert display date to internal date when valid
+  const applyDateFilter = (displayDate) => {
+    if (!displayDate || displayDate.length !== 10) return '';
+    return parseISTDate(displayDate);
   };
 
   // For backward compatibility (charts that don't have individual filters yet)
@@ -540,24 +577,42 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                    style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.5) inset' }}>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Start Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Start Date</label>
                     <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
+                      type="text"
+                      placeholder="dd/mm/yyyy"
+                      value={startDateDisplay}
+                      onChange={(e) => {
+                        handleDateInput(e.target.value, setStartDateDisplay);
+                        const parsed = parseISTDate(e.target.value);
+                        if (parsed) setStartDate(parsed);
+                      }}
+                      onBlur={() => {
+                        const parsed = parseISTDate(startDateDisplay);
+                        if (parsed) setStartDate(parsed);
+                        else if (startDateDisplay && startDateDisplay.length < 10) setStartDateDisplay('');
+                      }}
                       className="w-full px-3 py-2.5 bg-white/70 border border-gray-200/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 backdrop-blur-sm transition-all"
                     />
-                    {startDate && <p className="text-xs text-gray-500 mt-1">Selected: {formatDateIST(startDate)}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">End Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">End Date</label>
                     <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
+                      type="text"
+                      placeholder="dd/mm/yyyy"
+                      value={endDateDisplay}
+                      onChange={(e) => {
+                        handleDateInput(e.target.value, setEndDateDisplay);
+                        const parsed = parseISTDate(e.target.value);
+                        if (parsed) setEndDate(parsed);
+                      }}
+                      onBlur={() => {
+                        const parsed = parseISTDate(endDateDisplay);
+                        if (parsed) setEndDate(parsed);
+                        else if (endDateDisplay && endDateDisplay.length < 10) setEndDateDisplay('');
+                      }}
                       className="w-full px-3 py-2.5 bg-white/70 border border-gray-200/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 backdrop-blur-sm transition-all"
                     />
-                    {endDate && <p className="text-xs text-gray-500 mt-1">Selected: {formatDateIST(endDate)}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -567,6 +622,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         weekAgo.setDate(now.getDate() - 7);
                         setStartDate(weekAgo.toISOString().split('T')[0]);
                         setEndDate(now.toISOString().split('T')[0]);
+                        setStartDateDisplay(formatDateIST(weekAgo.toISOString().split('T')[0]));
+                        setEndDateDisplay(formatDateIST(now.toISOString().split('T')[0]));
                       }}
                       className="px-3 py-1.5 text-xs bg-white/60 hover:bg-white/80 border border-gray-200/50 rounded-full backdrop-blur-sm transition-all hover:shadow-sm"
                     >
@@ -579,6 +636,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         monthAgo.setMonth(now.getMonth() - 1);
                         setStartDate(monthAgo.toISOString().split('T')[0]);
                         setEndDate(now.toISOString().split('T')[0]);
+                        setStartDateDisplay(formatDateIST(monthAgo.toISOString().split('T')[0]));
+                        setEndDateDisplay(formatDateIST(now.toISOString().split('T')[0]));
                       }}
                       className="px-3 py-1.5 text-xs bg-white/60 hover:bg-white/80 border border-gray-200/50 rounded-full backdrop-blur-sm transition-all hover:shadow-sm"
                     >
@@ -591,6 +650,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         quarterAgo.setMonth(now.getMonth() - 3);
                         setStartDate(quarterAgo.toISOString().split('T')[0]);
                         setEndDate(now.toISOString().split('T')[0]);
+                        setStartDateDisplay(formatDateIST(quarterAgo.toISOString().split('T')[0]));
+                        setEndDateDisplay(formatDateIST(now.toISOString().split('T')[0]));
                       }}
                       className="px-3 py-1.5 text-xs bg-white/60 hover:bg-white/80 border border-gray-200/50 rounded-full backdrop-blur-sm transition-all hover:shadow-sm"
                     >
@@ -603,6 +664,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         yearAgo.setFullYear(now.getFullYear() - 1);
                         setStartDate(yearAgo.toISOString().split('T')[0]);
                         setEndDate(now.toISOString().split('T')[0]);
+                        setStartDateDisplay(formatDateIST(yearAgo.toISOString().split('T')[0]));
+                        setEndDateDisplay(formatDateIST(now.toISOString().split('T')[0]));
                       }}
                       className="px-3 py-1.5 text-xs bg-white/60 hover:bg-white/80 border border-gray-200/50 rounded-full backdrop-blur-sm transition-all hover:shadow-sm"
                     >
@@ -614,6 +677,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                       onClick={() => {
                         setStartDate('');
                         setEndDate('');
+                        setStartDateDisplay('');
+                        setEndDateDisplay('');
                       }}
                       className="px-4 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-white/50 rounded-lg transition-all"
                     >

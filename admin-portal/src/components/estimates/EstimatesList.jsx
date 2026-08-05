@@ -48,6 +48,25 @@ const formatDateIST = (dateStr) => {
   return `${day}/${month}/${year}`;
 };
 
+// Parse dd/mm/yyyy to yyyy-mm-dd (internal format)
+const parseISTDate = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return '';
+  const [day, month, year] = parts;
+  if (!day || !month || !year || year.length !== 4) return '';
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+};
+
+// Handle date input change with auto-formatting
+const handleDateInput = (value, setter) => {
+  let cleaned = value.replace(/[^\d/]/g, '');
+  if (cleaned.length === 2 && !cleaned.includes('/')) cleaned += '/';
+  else if (cleaned.length === 5 && cleaned.split('/').length === 2) cleaned += '/';
+  if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
+  setter(cleaned);
+};
+
 const EstimatesList = ({ 
   admin, 
   estimates = [], 
@@ -63,6 +82,8 @@ const EstimatesList = ({
   const [exportingId, setExportingId] = useState(null);
   const [selectedEstimates, setSelectedEstimates] = useState([]);
   const [archivingSelected, setArchivingSelected] = useState(false);
+  const [dateFromDisplay, setDateFromDisplay] = useState('');
+  const [dateToDisplay, setDateToDisplay] = useState('');
   const [filters, setFilters] = useState({
     estimateType: externalEstimateTypeFilter || 'all',
     status: 'all',
@@ -502,6 +523,8 @@ const EstimatesList = ({
       dateFrom: '',
       dateTo: ''
     });
+    setDateFromDisplay('');
+    setDateToDisplay('');
     setSearchTerm('');
     // Sync with parent
     if (onEstimateTypeFilterChange) {
@@ -597,32 +620,42 @@ const EstimatesList = ({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">From Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">From Date</label>
                 <input
-                  type="date"
-                  value={filters.dateFrom}
-                  onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                  type="text"
+                  placeholder="dd/mm/yyyy"
+                  value={dateFromDisplay}
+                  onChange={(e) => {
+                    handleDateInput(e.target.value, setDateFromDisplay);
+                    const parsed = parseISTDate(e.target.value);
+                    if (parsed) setFilters({ ...filters, dateFrom: parsed });
+                  }}
+                  onBlur={() => {
+                    const parsed = parseISTDate(dateFromDisplay);
+                    if (parsed) setFilters({ ...filters, dateFrom: parsed });
+                    else if (dateFromDisplay && dateFromDisplay.length < 10) setDateFromDisplay('');
+                  }}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                 />
-                {filters.dateFrom && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {formatDateIST(filters.dateFrom)}
-                  </p>
-                )}
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">To Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">To Date</label>
                 <input
-                  type="date"
-                  value={filters.dateTo}
-                  onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+                  type="text"
+                  placeholder="dd/mm/yyyy"
+                  value={dateToDisplay}
+                  onChange={(e) => {
+                    handleDateInput(e.target.value, setDateToDisplay);
+                    const parsed = parseISTDate(e.target.value);
+                    if (parsed) setFilters({ ...filters, dateTo: parsed });
+                  }}
+                  onBlur={() => {
+                    const parsed = parseISTDate(dateToDisplay);
+                    if (parsed) setFilters({ ...filters, dateTo: parsed });
+                    else if (dateToDisplay && dateToDisplay.length < 10) setDateToDisplay('');
+                  }}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                 />
-                {filters.dateTo && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {formatDateIST(filters.dateTo)}
-                  </p>
-                )}
               </div>
             </div>
             <button
