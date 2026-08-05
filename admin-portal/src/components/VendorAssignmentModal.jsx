@@ -505,7 +505,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
       estimate.serviceRows.forEach(sr => {
         services.push({
           serviceType: sr.service || sr.name || sr.serviceType,
-          frequencyCount: sr.frequencyCount || sr.frequency || 1,
+          frequencyCount: sr.frequencyCount ?? sr.frequency ?? 0,
           frequencyType: sr.frequencyType || 'Monthly'
         });
       });
@@ -516,7 +516,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
       packageData.serviceRows.forEach(sr => {
         services.push({
           serviceType: sr.service || sr.name || sr.serviceType,
-          frequencyCount: sr.frequencyCount || sr.frequency || 1,
+          frequencyCount: sr.frequencyCount ?? sr.frequency ?? 0,
           frequencyType: sr.frequencyType || 'Monthly'
         });
       });
@@ -544,7 +544,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
           if (serviceName) {
             services.push({
               serviceType: serviceName,
-              frequencyCount: s.frequencyCount || s.frequency || 1,
+              frequencyCount: s.frequencyCount ?? s.frequency ?? 0,
               frequencyType: s.frequencyType || 'Monthly'
             });
           }
@@ -561,7 +561,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
             if (addonServiceName && !services.find(svc => svc.serviceType === addonServiceName)) {
               services.push({
                 serviceType: addonServiceName,
-                frequencyCount: s.frequencyCount || s.frequency || 1,
+                frequencyCount: s.frequencyCount ?? s.frequency ?? 0,
                 frequencyType: s.frequencyType || 'Monthly'
               });
             }

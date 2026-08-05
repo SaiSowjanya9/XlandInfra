@@ -1818,7 +1818,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                             <div className="col-span-2 text-sm font-medium text-gray-800">{service.service || service.name}</div>
                             <div className={`col-span-5 text-xs text-gray-500 ${!service.description ? 'text-center' : ''}`}>{service.description || '-'}</div>
                             <div className="col-span-3 text-sm text-gray-600">{service.frequencyType || service.frequency_type || 'Monthly'}</div>
-                            <div className="col-span-2 text-sm text-gray-600 text-center">{service.frequencyCount || service.frequency_count || service.visits || 1}</div>
+                            <div className="col-span-2 text-sm text-gray-600 text-center">{service.frequency_count ?? service.frequencyCount ?? service.visits ?? 0}</div>
                           </div>
                         ));
                       })()}
@@ -2437,7 +2437,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                           <div className="col-span-2 text-sm font-medium text-gray-800">{service.service || service.name}</div>
                           <div className={`col-span-5 text-xs text-gray-500 ${!service.description ? 'text-center' : ''}`}>{service.description || '-'}</div>
                           <div className="col-span-3 text-sm text-gray-600">{service.frequencyType || service.frequency_type || 'Monthly'}</div>
-                          <div className="col-span-2 text-sm text-gray-600 text-center">{service.frequencyCount || service.frequency_count || service.visits || 1}</div>
+                          <div className="col-span-2 text-sm text-gray-600 text-center">{service.frequency_count ?? service.frequencyCount ?? service.visits ?? 0}</div>
                         </div>
                       ));
                     })()}
