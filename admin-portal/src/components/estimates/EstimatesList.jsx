@@ -40,6 +40,11 @@ const STATUS_STYLES = {
 // Format date in IST format (dd/mm/yyyy)
 const formatDateIST = (dateStr) => {
   if (!dateStr) return '-';
+  // If already in yyyy-mm-dd format, parse directly to avoid timezone issues
+  if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  }
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return '-';
   const day = date.getDate().toString().padStart(2, '0');
