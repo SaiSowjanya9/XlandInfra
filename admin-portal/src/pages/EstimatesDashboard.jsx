@@ -191,6 +191,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   // Helper to format date in Indian format (dd/mm/yyyy)
   const formatDateIST = (dateString) => {
     if (!dateString) return '';
+    // If already in yyyy-mm-dd format, parse directly to avoid timezone issues
+    if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = dateString.split('-');
+      return `${day}/${month}/${year}`;
+    }
     const date = new Date(dateString);
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
