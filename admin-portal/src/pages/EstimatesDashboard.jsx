@@ -540,22 +540,24 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                    style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.5) inset' }}>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Start Date</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Start Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label>
                     <input
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
                       className="w-full px-3 py-2.5 bg-white/70 border border-gray-200/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 backdrop-blur-sm transition-all"
                     />
+                    {startDate && <p className="text-xs text-gray-500 mt-1">Selected: {formatDateIST(startDate)}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">End Date</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">End Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label>
                     <input
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
                       className="w-full px-3 py-2.5 bg-white/70 border border-gray-200/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 backdrop-blur-sm transition-all"
                     />
+                    {endDate && <p className="text-xs text-gray-500 mt-1">Selected: {formatDateIST(endDate)}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
