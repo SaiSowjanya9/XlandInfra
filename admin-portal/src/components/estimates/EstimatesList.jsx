@@ -502,7 +502,7 @@ const EstimatesList = ({
           // Include package services with descriptions (same as FP portal)
           packageServices: packageServices.map(s => ({
             name: s.service || s.name || s.serviceName || 'Service',
-            frequencyCount: s.frequencyCount || s.frequency_count || s.frequency || 1,
+            frequencyCount: s.frequencyCount ?? s.frequency_count ?? s.frequency ?? 0,
             frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
             description: s.description || ''
           })),

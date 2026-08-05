@@ -532,7 +532,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                           <td className="px-3 py-2.5 text-gray-800">{decodeHtml(svc.service || svc.name) || '-'}</td>
                           <td className={`px-3 py-2.5 text-gray-600 text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</td>
                           <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
-                          <td className="px-3 py-2.5 text-center text-gray-600">{svc.frequencyCount || svc.frequency_count || getFrequencyVisits(freqType)}</td>
+                          <td className="px-3 py-2.5 text-center text-gray-600">{svc.frequency_count ?? svc.frequencyCount ?? getFrequencyVisits(freqType)}</td>
                         </tr>
                       );
                     }) : <tr><td colSpan={4} className="px-5 py-3 text-center text-gray-400">No services in package</td></tr>}
@@ -597,7 +597,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                         <td className="px-3 py-2.5 text-gray-800">{getAddonName(addon)}</td>
                         <td className={`px-3 py-2.5 text-gray-600 text-center`}>{decodeHtml(addon.description) || '-'}</td>
                         <td className="px-3 py-2.5 text-center text-gray-600">{freqType}</td>
-                        <td className="px-5 py-2.5 text-center text-gray-600">{addon.frequency_count || addon.frequencyCount || getFrequencyVisits(freqType)}</td>
+                        <td className="px-5 py-2.5 text-center text-gray-600">{addon.frequency_count ?? addon.frequencyCount ?? getFrequencyVisits(freqType)}</td>
                         <td className="px-5 py-2.5 text-center">
                           <button onClick={() => setSelectedAddons(selectedAddons.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
                         </td>

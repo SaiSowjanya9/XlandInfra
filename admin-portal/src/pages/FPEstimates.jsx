@@ -599,7 +599,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       // Include package services with descriptions
       packageServices: packageServices.map(s => ({
         name: s.service || s.name || s.serviceName || 'Service',
-        frequencyCount: s.frequencyCount || s.frequency_count || s.frequency || 1,
+        frequencyCount: s.frequencyCount ?? s.frequency_count ?? s.frequency ?? 0,
         frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
         description: s.description || ''
       })),
@@ -619,7 +619,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         return {
           name: addonName || 'Add-on',
           frequencyType: a.frequency_type || a.frequencyType || addonFromList?.frequency_type || 'One-time',
-          frequencyCount: a.frequency_count ?? a.frequencyCount ?? addonFromList?.frequency_count ?? 1,
+          frequencyCount: a.frequency_count ?? a.frequencyCount ?? addonFromList?.frequency_count ?? 0,
           description: a.description || addonFromList?.description || ''
         };
       })
@@ -909,7 +909,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         billing_duration: pkg?.billing_duration || pkg?.billingDuration || getPackageBillingDuration(pkg) || 'yearly',
         package_services: pkgServices.map(s => ({ 
           name: s.service || s.name, 
-          frequencyCount: s.frequencyCount ?? s.frequency_count ?? 1, 
+          frequencyCount: s.frequencyCount ?? s.frequency_count ?? 0, 
           frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
           description: s.description || ''
         })),
