@@ -1296,7 +1296,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                               <td className="px-6 py-4"><span className="font-semibold text-gray-900">{getAddonName(addon)}</span></td>
                               <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200 whitespace-nowrap">{getPropertyTypeLabel(addon.property_type)}</span></td>
                               <td className="px-4 py-4"><span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getFrequencyBadgeColor(addon.frequency_type || addon.frequency)}`}>{addon.frequency_type || addon.frequency || 'Monthly'}</span></td>
-                              <td className="px-4 py-4"><span className="text-sm text-gray-600">{addon.frequency_count || addon.visits || '12'}x</span></td>
+                              <td className="px-4 py-4"><span className="text-sm text-gray-600">{addon.frequency_count ?? addon.visits ?? 0}x</span></td>
                               <td className="px-4 py-4 text-right"><span className="font-semibold text-gray-900">{formatCurrency(getAddonPrice(addon))}</span></td>
                               <td className="px-4 py-4"><div className="flex items-center justify-center"><button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View Details"><Eye className="w-4 h-4" /></button></div></td>
                             </tr>
@@ -1664,7 +1664,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                           <p className="text-sm text-gray-700">{svc.frequency_type || svc.frequencyType || svc.frequency || 'Monthly'}</p>
                         </div>
                         <div className="col-span-2 text-center">
-                          <p className="text-sm font-medium text-gray-900">{svc.frequency_count || svc.frequencyCount || svc.visits || '12'}</p>
+                          <p className="text-sm font-medium text-gray-900">{svc.frequency_count ?? svc.frequencyCount ?? svc.visits ?? 0}</p>
                         </div>
                       </div>
                     ))}
