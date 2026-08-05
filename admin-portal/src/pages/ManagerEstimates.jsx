@@ -1965,14 +1965,14 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                               <div className="col-span-3">
                                 <p className="font-medium text-gray-800 text-sm">{decodeHtml(svc.name || svc.service)}</p>
                               </div>
-                              <div className="col-span-4">
-                                <p className={`text-xs text-gray-500 break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</p>
+                              <div className="col-span-4 overflow-hidden">
+                                <p className={`text-xs text-gray-500 break-all whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</p>
                               </div>
                               <div className="col-span-2 text-center">
                                 <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
                               </div>
                               <div className="col-span-2 text-right">
-                                <p className="text-sm text-indigo-700 font-semibold">{svc.frequencyCount ?? svc.frequency_count ?? 1}</p>
+                                <p className="text-sm text-indigo-700 font-semibold">{svc.frequency_count ?? svc.frequencyCount ?? 0}</p>
                               </div>
                             </div>
                           ))}

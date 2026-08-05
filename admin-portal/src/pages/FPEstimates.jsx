@@ -1255,7 +1255,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           return (
                             <tr key={idx} className="align-top">
                               <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(svc.service || svc.name) || '-'}</td>
-                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</td>
+                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-all whitespace-normal text-center max-w-[200px]`}>{decodeHtml(svc.description)?.trim() || '-'}</td>
                               <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
                               <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             </tr>
@@ -1319,7 +1319,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         return (
                           <tr key={idx} className="align-top">
                             <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(addon.service_name)}</td>
-                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{decodeHtml(addon.description || addon.services?.[0]?.description) || '-'}</td>
+                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-all whitespace-normal text-center max-w-[200px]`}>{decodeHtml(addon.description || addon.services?.[0]?.description) || '-'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type || 'Monthly'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             <td className="px-3 py-2.5 text-center">
@@ -1597,7 +1597,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           return (
                             <tr key={idx} className="align-top">
                               <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(svc.service || svc.name) || '-'}</td>
-                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</td>
+                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-all whitespace-normal text-center max-w-[200px]`}>{decodeHtml(svc.description)?.trim() || '-'}</td>
                               <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
                               <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             </tr>
@@ -1661,7 +1661,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         return (
                           <tr key={idx} className="align-top">
                             <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(addon.service_name)}</td>
-                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{decodeHtml(addon.description || addon.services?.[0]?.description) || '-'}</td>
+                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-all whitespace-normal text-center max-w-[200px]`}>{decodeHtml(addon.description || addon.services?.[0]?.description) || '-'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type || 'Monthly'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             <td className="px-3 py-2.5 text-center">
@@ -2487,7 +2487,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                     serviceRows: serviceRows.length > 0 ? serviceRows.map(s => ({
                                       service: decodeHtml(s.name || s.service) || '',
                                       description: decodeHtml(s.description) || '',
-                                      frequencyCount: s.frequency_count ?? s.frequencyCount ?? 12,
+                                      frequencyCount: s.frequency_count ?? s.frequencyCount ?? 0,
                                       frequencyType: s.frequency_type || s.frequencyType || 'Monthly'
                                     })) : [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }],
                                     price: pkg.base_price || pkg.price || '',
@@ -2513,7 +2513,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                     return {
                                       name: s.name || s.service || 'Service',
                                       description: s.description || '',
-                                      frequencyCount: s.frequency_count ?? s.frequencyCount ?? 1,
+                                      frequencyCount: s.frequency_count ?? s.frequencyCount ?? 0,
                                       frequencyType: s.frequency_type || s.frequencyType || 'Monthly'
                                     };
                                   }) : [];
@@ -3531,14 +3531,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               <div className="col-span-3">
                                 <p className="font-medium text-gray-800 text-sm">{decodeHtml(svc.name || svc.service)}</p>
                               </div>
-                              <div className="col-span-4">
-                                <p className={`text-xs text-gray-500 break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</p>
+                              <div className="col-span-4 overflow-hidden">
+                                <p className={`text-xs text-gray-500 break-all whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</p>
                               </div>
                               <div className="col-span-2 text-center">
                                 <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
                               </div>
                               <div className="col-span-2 text-right">
-                                <p className="text-sm text-indigo-700 font-semibold">{svc.frequencyCount ?? svc.frequency_count ?? 1}</p>
+                                <p className="text-sm text-indigo-700 font-semibold">{svc.frequency_count ?? svc.frequencyCount ?? 0}</p>
                               </div>
                             </div>
                           ))}

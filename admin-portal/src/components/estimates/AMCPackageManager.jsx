@@ -153,8 +153,13 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       newRows[index] = {
         ...newRows[index],
         [field]: value,
-        frequencyCount: autoCount !== null ? autoCount : ''
+        // For 'Other', set to 0 (editable), otherwise use auto-calculated value
+        frequencyCount: autoCount !== null ? autoCount : 0
       };
+    } else if (field === 'frequencyCount') {
+      // Ensure frequencyCount is stored as a number
+      const numValue = value === '' ? 0 : parseInt(value) || 0;
+      newRows[index][field] = numValue;
     } else {
       newRows[index][field] = value;
     }
@@ -203,7 +208,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         serviceRows: validServices.map(row => ({
           service: row.service.trim(),
           description: row.description || '',
-          frequencyCount: !isNaN(parseInt(row.frequencyCount)) ? parseInt(row.frequencyCount) : 1,
+          frequencyCount: typeof row.frequencyCount === 'number' ? row.frequencyCount : (parseInt(row.frequencyCount) || 0),
           frequencyType: row.frequencyType
         })),
         rate: parseFloat(amcForm.price),
@@ -1168,14 +1173,14 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                           <div className="col-span-3">
                             <p className="font-medium text-amber-900 text-sm">{decodeHtml(svc.name || svc.service) || 'Service'}</p>
                           </div>
-                          <div className="col-span-4">
-                            <p className={`text-xs text-amber-700 break-words whitespace-normal ${!(svc.description && svc.description.trim() && svc.description.trim() !== '-') ? 'text-center' : ''}`}>{decodeHtml(svc.description)?.trim() || '-'}</p>
+                          <div className="col-span-4 overflow-hidden">
+                            <p className={`text-xs text-amber-700 break-all whitespace-normal ${!(svc.description && svc.description.trim() && svc.description.trim() !== '-') ? 'text-center' : ''}`}>{decodeHtml(svc.description)?.trim() || '-'}</p>
                           </div>
                           <div className="col-span-2 text-center">
                             <p className="text-sm font-medium text-amber-700">{svc.frequency_type || svc.frequencyType || 'Monthly'}</p>
                           </div>
                           <div className="col-span-2 text-center">
-                            <p className="text-sm font-medium text-amber-700">{svc.frequency_count ?? svc.frequencyCount ?? 1}</p>
+                            <p className="text-sm font-medium text-amber-700">{svc.frequency_count ?? svc.frequencyCount ?? 0}</p>
                           </div>
                         </div>
                       ))}
