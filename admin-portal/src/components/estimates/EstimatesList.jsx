@@ -586,22 +586,32 @@ const EstimatesList = ({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">From Date</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">From Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label>
                 <input
                   type="date"
                   value={filters.dateFrom}
                   onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                 />
+                {filters.dateFrom && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {new Date(filters.dateFrom).toLocaleDateString('en-IN')}
+                  </p>
+                )}
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">To Date</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">To Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label>
                 <input
                   type="date"
                   value={filters.dateTo}
                   onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                 />
+                {filters.dateTo && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {new Date(filters.dateTo).toLocaleDateString('en-IN')}
+                  </p>
+                )}
               </div>
             </div>
             <button
