@@ -2061,12 +2061,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">From Date</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">From Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label>
                 <input type="date" value={filterFromDate} onChange={(e) => setFilterFromDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
+                {filterFromDate && <p className="text-xs text-gray-500 mt-1">{new Date(filterFromDate).toLocaleDateString('en-IN')}</p>}
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">To Date</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">To Date <span className="text-gray-400 font-normal">(dd/mm/yyyy)</span></label>
                 <input type="date" value={filterToDate} onChange={(e) => setFilterToDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
+                {filterToDate && <p className="text-xs text-gray-500 mt-1">{new Date(filterToDate).toLocaleDateString('en-IN')}</p>}
               </div>
             </div>
             <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterCategory('all'); setFilterFromDate(''); setFilterToDate(''); }} className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium">Clear all filters</button>
