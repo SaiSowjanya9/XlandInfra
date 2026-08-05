@@ -681,64 +681,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
 
       {/* Middle Row - 3 Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Estimates by Property Type (Horizontal Bar) */}
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Estimates by Property Type (Property-Based)</h3>
-            <select
-              value={filter1}
-              onChange={(e) => setFilter1(e.target.value)}
-              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
-            >
-              <option value="all">All Time</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="quarter">This Quarter</option>
-              <option value="half">Last 6 Months</option>
-              <option value="year">This Year</option>
-            </select>
-          </div>
-          
-          {propertyTypeData.length > 0 ? (
-            <div className="space-y-3">
-              {propertyTypeData.map((item, index) => {
-                const maxValue = Math.max(...propertyTypeData.map(d => d.value));
-                const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-                const colors = ['#5B8DEF', '#22C55E', '#14B8A6', '#FBBF24', '#EF4444'];
-                const bgColors = ['#EFF6FF', '#D1FAE5', '#CCFBF1', '#FEF3C7', '#FEE2E2'];
-                
-                return (
-                  <div key={index} className="flex items-center gap-3">
-                    <div className="w-28 text-sm text-gray-600 truncate">{item.name}</div>
-                    <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
-                      <div 
-                        className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
-                        style={{ 
-                          width: `${Math.max(widthPercent, 15)}%`,
-                          backgroundColor: colors[index % colors.length]
-                        }}
-                      >
-                        <span className="text-white text-xs font-medium">{item.value}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              <div className="flex justify-center gap-1 text-xs text-gray-400 mt-2">
-                <span>0</span>
-                <span className="flex-1 text-center">Number of Estimates</span>
-                <span>{Math.max(...propertyTypeData.map(d => d.value))}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="h-48 flex flex-col items-center justify-center text-gray-400">
-              <div className="text-4xl font-bold text-gray-300 mb-2">0</div>
-              <div className="text-sm">No estimates</div>
-            </div>
-          )}
-        </div>
-
-        {/* Estimates by Estimate Type (Donut) - Position 2 */}
+        {/* Estimates by Estimate Type (Donut) - Position 1 */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Estimates by Estimate Type</h3>
@@ -808,6 +751,63 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Estimates by Property Type (Horizontal Bar) - Position 2 */}
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Estimates by Property Type (Property-Based)</h3>
+            <select
+              value={filter1}
+              onChange={(e) => setFilter1(e.target.value)}
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
+            >
+              <option value="all">All Time</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
+            </select>
+          </div>
+          
+          {propertyTypeData.length > 0 ? (
+            <div className="space-y-3">
+              {propertyTypeData.map((item, index) => {
+                const maxValue = Math.max(...propertyTypeData.map(d => d.value));
+                const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+                const colors = ['#5B8DEF', '#22C55E', '#14B8A6', '#FBBF24', '#EF4444'];
+                const bgColors = ['#EFF6FF', '#D1FAE5', '#CCFBF1', '#FEF3C7', '#FEE2E2'];
+                
+                return (
+                  <div key={index} className="flex items-center gap-3">
+                    <div className="w-28 text-sm text-gray-600 truncate">{item.name}</div>
+                    <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+                      <div 
+                        className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
+                        style={{ 
+                          width: `${Math.max(widthPercent, 15)}%`,
+                          backgroundColor: colors[index % colors.length]
+                        }}
+                      >
+                        <span className="text-white text-xs font-medium">{item.value}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="flex justify-center gap-1 text-xs text-gray-400 mt-2">
+                <span>0</span>
+                <span className="flex-1 text-center">Number of Estimates</span>
+                <span>{Math.max(...propertyTypeData.map(d => d.value))}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="h-48 flex flex-col items-center justify-center text-gray-400">
+              <div className="text-4xl font-bold text-gray-300 mb-2">0</div>
+              <div className="text-sm">No estimates</div>
+            </div>
+          )}
         </div>
 
         {/* Property-Based Status (Donut) - Position 3 */}
@@ -884,63 +884,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
 
       {/* Direct Estimates Row - 3 Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Estimates by Property Type - Direct */}
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Estimates by Property Type (Direct)</h3>
-            <select
-              value={filter4}
-              onChange={(e) => setFilter4(e.target.value)}
-              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
-            >
-              <option value="all">All Time</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="quarter">This Quarter</option>
-              <option value="half">Last 6 Months</option>
-              <option value="year">This Year</option>
-            </select>
-          </div>
-          
-          {directPropertyTypeData.length > 0 ? (
-            <div className="space-y-3">
-              {directPropertyTypeData.map((item, index) => {
-                const maxValue = Math.max(...directPropertyTypeData.map(d => d.value));
-                const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-                const colors = ['#5B8DEF', '#22C55E', '#14B8A6', '#FBBF24', '#EF4444'];
-                
-                return (
-                  <div key={index} className="flex items-center gap-3">
-                    <div className="w-28 text-sm text-gray-600 truncate">{item.name}</div>
-                    <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
-                      <div 
-                        className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
-                        style={{ 
-                          width: `${Math.max(widthPercent, 15)}%`,
-                          backgroundColor: colors[index % colors.length]
-                        }}
-                      >
-                        <span className="text-white text-xs font-medium">{item.value}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              <div className="flex justify-center gap-1 text-xs text-gray-400 mt-2">
-                <span>0</span>
-                <span className="flex-1 text-center">Number of Estimates</span>
-                <span>{Math.max(...directPropertyTypeData.map(d => d.value))}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="h-48 flex flex-col items-center justify-center text-gray-400">
-              <div className="text-4xl font-bold text-gray-300 mb-2">0</div>
-              <div className="text-sm">No estimates</div>
-            </div>
-          )}
-        </div>
-
-        {/* Estimate Status Overview (Donut) - Position 2 */}
+        {/* Estimate Status Overview (Donut) - Position 1 */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Estimate Status Overview</h3>
@@ -1009,6 +953,62 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Estimates by Property Type - Direct - Position 2 */}
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Estimates by Property Type (Direct)</h3>
+            <select
+              value={filter4}
+              onChange={(e) => setFilter4(e.target.value)}
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
+            >
+              <option value="all">All Time</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
+            </select>
+          </div>
+          
+          {directPropertyTypeData.length > 0 ? (
+            <div className="space-y-3">
+              {directPropertyTypeData.map((item, index) => {
+                const maxValue = Math.max(...directPropertyTypeData.map(d => d.value));
+                const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+                const colors = ['#5B8DEF', '#22C55E', '#14B8A6', '#FBBF24', '#EF4444'];
+                
+                return (
+                  <div key={index} className="flex items-center gap-3">
+                    <div className="w-28 text-sm text-gray-600 truncate">{item.name}</div>
+                    <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+                      <div 
+                        className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
+                        style={{ 
+                          width: `${Math.max(widthPercent, 15)}%`,
+                          backgroundColor: colors[index % colors.length]
+                        }}
+                      >
+                        <span className="text-white text-xs font-medium">{item.value}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="flex justify-center gap-1 text-xs text-gray-400 mt-2">
+                <span>0</span>
+                <span className="flex-1 text-center">Number of Estimates</span>
+                <span>{Math.max(...directPropertyTypeData.map(d => d.value))}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="h-48 flex flex-col items-center justify-center text-gray-400">
+              <div className="text-4xl font-bold text-gray-300 mb-2">0</div>
+              <div className="text-sm">No estimates</div>
+            </div>
+          )}
         </div>
 
         {/* Direct Estimate Status (Donut) - Position 3 */}
