@@ -3694,16 +3694,16 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         <div className="col-span-1">
                           <span className="w-7 h-7 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                         </div>
-                        <div className="col-span-2">
-                          <p className="font-medium text-gray-900 text-sm">{decodeHtml(svc.name || svc.service) || 'Service'}</p>
+                        <div className="col-span-2 min-w-0">
+                          <p className="font-medium text-gray-900 text-sm truncate">{decodeHtml(svc.name || svc.service) || 'Service'}</p>
                         </div>
-                        <div className="col-span-5">
-                          <p className={`text-sm text-gray-600 text-center`}>
+                        <div className="col-span-5 min-w-0 overflow-hidden">
+                          <p className="text-sm text-gray-600 text-center" style={{wordBreak: 'break-word', overflowWrap: 'anywhere'}}>
                             {decodeHtml(svc.description)?.trim() || '-'}
                           </p>
                         </div>
-                        <div className="col-span-2 text-center">
-                          <p className="text-sm text-gray-700">{svc.frequency_type || svc.frequencyType || svc.frequency || 'Monthly'}</p>
+                        <div className="col-span-2 text-center min-w-0">
+                          <p className="text-sm text-gray-700 truncate">{svc.frequency_type || svc.frequencyType || svc.frequency || 'Monthly'}</p>
                         </div>
                         <div className="col-span-2 text-center">
                           <p className="text-sm font-medium text-gray-900">{svc.frequency_count ?? svc.frequencyCount ?? svc.visits ?? 0}</p>
