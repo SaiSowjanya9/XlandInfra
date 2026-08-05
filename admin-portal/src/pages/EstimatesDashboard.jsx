@@ -738,7 +738,209 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           )}
         </div>
 
-        {/* Estimate Status Overview (Donut) */}
+        {/* Estimates by Estimate Type (Donut) - Position 2 */}
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Estimates by Estimate Type</h3>
+            <select
+              value={filter3}
+              onChange={(e) => setFilter3(e.target.value)}
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
+            >
+              <option value="all">All Time</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
+            </select>
+          </div>
+          
+          <div className="flex items-center">
+            <div className="w-1/2 relative">
+              {typeData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={150}>
+                  <PieChart>
+                    <Pie
+                      data={typeData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={65}
+                      dataKey="value"
+                      strokeWidth={0}
+                    >
+                      {typeData.map((entry, index) => (
+                        <Cell key={index} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} position={{ x: 0, y: -10 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-44 flex items-center justify-center">
+                  <div className="w-[150px] h-[150px] rounded-full border-8 border-gray-200"></div>
+                </div>
+              )}
+              {/* Center text - always shows count including 0 */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                <div className="text-center bg-white rounded-full p-1">
+                  <div className="text-2xl font-bold text-gray-800">{block3Data.length}</div>
+                  <div className="text-[10px] text-gray-500">Total</div>
+                </div>
+              </div>
+            </div>
+            <div className="w-1/2 space-y-3 pl-4">
+              {[
+                { name: 'Direct Estimates', value: block3Direct, color: '#8B5CF6' },
+                { name: 'Property-Based', value: block3PropertyBased, color: '#06B6D4' }
+              ].map((item, index) => (
+                <div key={index} className="flex items-center gap-2 text-sm">
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-gray-600">{item.name}</span>
+                  <span className="ml-auto font-medium text-gray-800">
+                    {item.value} ({block3Data.length ? ((item.value / block3Data.length) * 100).toFixed(1) : 0}%)
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Property-Based Status (Donut) - Position 3 */}
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Property-Based Status</h3>
+            <select
+              value={filter6}
+              onChange={(e) => setFilter6(e.target.value)}
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
+            >
+              <option value="all">All Time</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
+            </select>
+          </div>
+          
+          <div className="flex items-center">
+            <div className="w-1/2 relative">
+              {propertyBasedStatusData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={150}>
+                  <PieChart>
+                    <Pie
+                      data={propertyBasedStatusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={65}
+                      dataKey="value"
+                      strokeWidth={0}
+                    >
+                      {propertyBasedStatusData.map((entry, index) => (
+                        <Cell key={index} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} position={{ x: 0, y: -10 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-44 flex items-center justify-center">
+                  <div className="w-[150px] h-[150px] rounded-full border-8 border-gray-200"></div>
+                </div>
+              )}
+              {/* Center text - always shows count including 0 */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                <div className="text-center bg-white rounded-full p-1">
+                  <div className="text-2xl font-bold text-gray-800">{block6Data.length}</div>
+                  <div className="text-[10px] text-gray-500">Total</div>
+                </div>
+              </div>
+            </div>
+            <div className="w-1/2 space-y-2 pl-4">
+              {propertyBasedStatusDataAll.map((item, index) => (
+                <div key={index} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-gray-600">{item.name}</span>
+                  </div>
+                  <span className="text-gray-800">
+                    {item.value} ({block6Data.length ? ((item.value / block6Data.length) * 100).toFixed(1) : 0}%)
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Direct Estimates Row - 3 Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Estimates by Property Type - Direct */}
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Estimates by Property Type (Direct)</h3>
+            <select
+              value={filter4}
+              onChange={(e) => setFilter4(e.target.value)}
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
+            >
+              <option value="all">All Time</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
+            </select>
+          </div>
+          
+          {directPropertyTypeData.length > 0 ? (
+            <div className="space-y-3">
+              {directPropertyTypeData.map((item, index) => {
+                const maxValue = Math.max(...directPropertyTypeData.map(d => d.value));
+                const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+                const colors = ['#5B8DEF', '#22C55E', '#14B8A6', '#FBBF24', '#EF4444'];
+                
+                return (
+                  <div key={index} className="flex items-center gap-3">
+                    <div className="w-28 text-sm text-gray-600 truncate">{item.name}</div>
+                    <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+                      <div 
+                        className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
+                        style={{ 
+                          width: `${Math.max(widthPercent, 15)}%`,
+                          backgroundColor: colors[index % colors.length]
+                        }}
+                      >
+                        <span className="text-white text-xs font-medium">{item.value}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="flex justify-center gap-1 text-xs text-gray-400 mt-2">
+                <span>0</span>
+                <span className="flex-1 text-center">Number of Estimates</span>
+                <span>{Math.max(...directPropertyTypeData.map(d => d.value))}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="h-48 flex flex-col items-center justify-center text-gray-400">
+              <div className="text-4xl font-bold text-gray-300 mb-2">0</div>
+              <div className="text-sm">No estimates</div>
+            </div>
+          )}
+        </div>
+
+        {/* Estimate Status Overview (Donut) - Position 2 */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Estimate Status Overview</h3>
@@ -809,140 +1011,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
         </div>
 
-        {/* Estimates by Estimate Type (Donut) */}
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-gray-800">Estimates by Estimate Type</h3>
-            </div>
-            <select
-              value={filter3}
-              onChange={(e) => setFilter3(e.target.value)}
-              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
-            >
-              <option value="all">All Time</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="quarter">This Quarter</option>
-              <option value="half">Last 6 Months</option>
-              <option value="year">This Year</option>
-            </select>
-          </div>
-          
-          <div className="flex items-center">
-            <div className="w-1/2 relative">
-              {typeData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={150}>
-                  <PieChart>
-                    <Pie
-                      data={typeData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={65}
-                      dataKey="value"
-                      strokeWidth={0}
-                    >
-                      {typeData.map((entry, index) => (
-                        <Cell key={index} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} position={{ x: 0, y: -10 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-44 flex items-center justify-center">
-                  <div className="w-[150px] h-[150px] rounded-full border-8 border-gray-200"></div>
-                </div>
-              )}
-              {/* Center text - always shows count including 0 */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                <div className="text-center bg-white rounded-full p-1">
-                  <div className="text-2xl font-bold text-gray-800">{block3Data.length}</div>
-                  <div className="text-[10px] text-gray-500">Total</div>
-                </div>
-              </div>
-            </div>
-            <div className="w-1/2 space-y-3 pl-4">
-              {[
-                { name: 'Direct Estimates', value: block3Direct, color: '#8B5CF6' },
-                { name: 'Property-Based', value: block3PropertyBased, color: '#06B6D4' }
-              ].map((item, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="text-gray-600">{item.name}</span>
-                  <span className="ml-auto font-medium text-gray-800">
-                    {item.value} ({block3Data.length ? ((item.value / block3Data.length) * 100).toFixed(1) : 0}%)
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Direct Estimates Row - 3 Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Estimates by Property Type - Direct */}
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Estimates by Property Type (Direct)</h3>
-            <select
-              value={filter4}
-              onChange={(e) => setFilter4(e.target.value)}
-              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
-            >
-              <option value="all">All Time</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="quarter">This Quarter</option>
-              <option value="half">Last 6 Months</option>
-              <option value="year">This Year</option>
-            </select>
-          </div>
-          
-          {directPropertyTypeData.length > 0 ? (
-            <div className="space-y-3">
-              {directPropertyTypeData.map((item, index) => {
-                const maxValue = Math.max(...directPropertyTypeData.map(d => d.value));
-                const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-                const colors = ['#5B8DEF', '#22C55E', '#14B8A6', '#FBBF24', '#EF4444'];
-                
-                return (
-                  <div key={index} className="flex items-center gap-3">
-                    <div className="w-28 text-sm text-gray-600 truncate">{item.name}</div>
-                    <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
-                      <div 
-                        className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
-                        style={{ 
-                          width: `${Math.max(widthPercent, 15)}%`,
-                          backgroundColor: colors[index % colors.length]
-                        }}
-                      >
-                        <span className="text-white text-xs font-medium">{item.value}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              <div className="flex justify-center gap-1 text-xs text-gray-400 mt-2">
-                <span>0</span>
-                <span className="flex-1 text-center">Number of Estimates</span>
-                <span>{Math.max(...directPropertyTypeData.map(d => d.value))}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="h-48 flex flex-col items-center justify-center text-gray-400">
-              <div className="text-4xl font-bold text-gray-300 mb-2">0</div>
-              <div className="text-sm">No estimates</div>
-            </div>
-          )}
-        </div>
-
-        {/* Direct Estimate Status Overview (Donut) */}
+        {/* Direct Estimate Status (Donut) - Position 3 */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Direct Estimate Status</h3>
@@ -1006,77 +1075,6 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   </div>
                   <span className="text-gray-800">
                     {item.value} ({block5Data.length ? ((item.value / block5Data.length) * 100).toFixed(1) : 0}%)
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Property-Based Estimate Status (Donut) */}
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Property-Based Status</h3>
-            <select
-              value={filter6}
-              onChange={(e) => setFilter6(e.target.value)}
-              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
-            >
-              <option value="all">All Time</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="quarter">This Quarter</option>
-              <option value="half">Last 6 Months</option>
-              <option value="year">This Year</option>
-            </select>
-          </div>
-          
-          <div className="flex items-center">
-            <div className="w-1/2 relative">
-              {propertyBasedStatusData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={150}>
-                  <PieChart>
-                    <Pie
-                      data={propertyBasedStatusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={65}
-                      dataKey="value"
-                      strokeWidth={0}
-                    >
-                      {propertyBasedStatusData.map((entry, index) => (
-                        <Cell key={index} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} position={{ x: 0, y: -10 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-44 flex items-center justify-center">
-                  <div className="w-[150px] h-[150px] rounded-full border-8 border-gray-200"></div>
-                </div>
-              )}
-              {/* Center text - always shows count including 0 */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                <div className="text-center bg-white rounded-full p-1">
-                  <div className="text-2xl font-bold text-gray-800">{block6Data.length}</div>
-                  <div className="text-[10px] text-gray-500">Total</div>
-                </div>
-              </div>
-            </div>
-            <div className="w-1/2 space-y-2 pl-4">
-              {propertyBasedStatusDataAll.map((item, index) => (
-                <div key={index} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <span className="text-gray-600">{item.name}</span>
-                  </div>
-                  <span className="text-gray-800">
-                    {item.value} ({block6Data.length ? ((item.value / block6Data.length) * 100).toFixed(1) : 0}%)
                   </span>
                 </div>
               ))}
