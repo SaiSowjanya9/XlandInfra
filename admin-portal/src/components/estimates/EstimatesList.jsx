@@ -638,6 +638,7 @@ const EstimatesList = ({
                     }}
                     className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-lg text-sm"
                   />
+                  <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setFilters({ ...filters, dateFrom: e.target.value }); setDateFromDisplay(formatDateIST(e.target.value)); }}} />
                   <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
               </div>
@@ -660,6 +661,7 @@ const EstimatesList = ({
                     }}
                     className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-lg text-sm"
                   />
+                  <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setFilters({ ...filters, dateTo: e.target.value }); setDateToDisplay(formatDateIST(e.target.value)); }}} />
                   <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
               </div>
