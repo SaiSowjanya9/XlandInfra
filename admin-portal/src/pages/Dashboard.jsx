@@ -571,10 +571,10 @@ const Dashboard = () => {
         </div>
 
         {/* First Stats Row - 3 KPI Cards */}
-        <div className="flex flex-wrap gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div 
             onClick={() => navigate('/employee/customer-submissions')}
-            className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group min-w-[200px] flex-1 max-w-[280px]"
+            className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -590,7 +590,7 @@ const Dashboard = () => {
 
           <div 
             onClick={() => navigate('/employee/assigned-vendors')}
-            className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer group min-w-[200px] flex-1 max-w-[280px]"
+            className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -606,7 +606,7 @@ const Dashboard = () => {
 
           <div 
             onClick={() => navigate('/employee/employee-details')}
-            className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-lg hover:border-amber-200 transition-all cursor-pointer group min-w-[200px] flex-1 max-w-[280px]"
+            className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-lg hover:border-amber-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
