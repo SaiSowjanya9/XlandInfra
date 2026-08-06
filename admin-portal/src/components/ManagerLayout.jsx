@@ -56,14 +56,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
   // Work Orders sub-items
   const workOrdersSubItems = [
     { path: '/manager/work-orders/dashboard', icon: BarChart3, label: 'Dashboard' },
-    { path: '/manager/work-orders/create', icon: Plus, label: 'Create Work Order' },
-    { path: '/manager/work-orders', icon: List, label: 'All Work Orders' },
-    { path: '/manager/work-orders/pending', icon: Clock, label: 'Pending' },
-    { path: '/manager/work-orders/assigned', icon: UserPlus, label: 'Assigned' },
-    { path: '/manager/work-orders/in-progress', icon: ClipboardList, label: 'In Progress' },
-    { path: '/manager/work-orders/completed', icon: CheckCircle, label: 'Completed' },
-    { path: '/manager/work-orders/closed', icon: Archive, label: 'Closed' },
-    { path: '/manager/work-orders/cancelled', icon: XCircle, label: 'Cancelled' }
+    { path: '/manager/work-orders', icon: List, label: 'All Work Orders' }
   ];
 
   // Vendor sub-items
