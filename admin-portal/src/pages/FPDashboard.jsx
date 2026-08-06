@@ -36,6 +36,7 @@ const FPDashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [estimates, setEstimates] = useState([]);
+  const [workOrders, setWorkOrders] = useState([]);
   const lastFetchRef = useRef(0);
 
   // Notification states
@@ -142,16 +143,19 @@ const FPDashboard = ({ user }) => {
     
     try {
       const token = getAuthToken();
-      const [dashboardRes, estimatesRes] = await Promise.all([
+      const [dashboardRes, estimatesRes, workOrdersRes] = await Promise.all([
         fetch(`${API_BASE}/api/fp/dashboard`, {
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         }),
         fetch(`${API_BASE}/api/fp/estimates`, {
           headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`${API_BASE}/api/fp/work-orders`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);
       
-      const [dashResult, estResult] = await Promise.all([dashboardRes.json(), estimatesRes.json()]);
+      const [dashResult, estResult, woResult] = await Promise.all([dashboardRes.json(), estimatesRes.json(), workOrdersRes.json()]);
       
       if (dashResult.success) {
         setStats(dashResult.data.stats);
@@ -161,6 +165,10 @@ const FPDashboard = ({ user }) => {
       
       if (estResult.success && Array.isArray(estResult.data)) {
         setEstimates(estResult.data);
+      }
+      
+      if (woResult.success && Array.isArray(woResult.data)) {
+        setWorkOrders(woResult.data);
       }
     } catch (err) {
       console.error('Dashboard fetch error:', err);
@@ -212,6 +220,29 @@ const FPDashboard = ({ user }) => {
 
   const totalWorkOrders = stats?.workOrders?.total || 0;
   const totalForPercentage = pieData.reduce((sum, item) => sum + item.value, 0) || 1;
+
+  // Work Orders by Priority data
+  const lowPriorityWO = workOrders.filter(wo => (wo.priority || '').toLowerCase() === 'low').length;
+  const mediumPriorityWO = workOrders.filter(wo => (wo.priority || '').toLowerCase() === 'medium').length;
+  const highPriorityWO = workOrders.filter(wo => (wo.priority || '').toLowerCase() === 'high').length;
+  const priorityTotal = lowPriorityWO + mediumPriorityWO + highPriorityWO;
+  
+  const priorityData = [
+    { name: 'Low', value: lowPriorityWO, color: '#10B981' },
+    { name: 'Medium', value: mediumPriorityWO, color: '#F59E0B' },
+    { name: 'High', value: highPriorityWO, color: '#EF4444' },
+  ];
+
+  // Work Orders by Property Type data
+  const propertyTypeColors = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444'];
+  const propertyTypeCounts = workOrders.reduce((acc, wo) => {
+    const type = wo.property_type || wo.propertyType || 'Other';
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {});
+  const woPropertyTypeData = Object.entries(propertyTypeCounts)
+    .map(([name, value], index) => ({ name, value, color: propertyTypeColors[index % propertyTypeColors.length] }))
+    .sort((a, b) => b.value - a.value);
 
   // Stacked bar chart data - Property types with Direct vs Property-based breakdown
   const est = stats?.estimatesByPropertyType || {};
@@ -447,105 +478,120 @@ const FPDashboard = ({ user }) => {
             </Link>
           </div>
           
-          <div className="flex items-center justify-center gap-8">
-            {/* Pie Chart - Using SVG directly for reliability */}
-            {(() => {
-              const pending = Number(workOrdersByStatus.pending) || 0;
-              const assigned = Number(workOrdersByStatus.assigned) || 0;
-              const inProgress = Number(workOrdersByStatus.in_progress) || 0;
-              const completed = Number(workOrdersByStatus.completed) || 0;
-              const closed = Number(workOrdersByStatus.closed) || 0;
-              const cancelled = Number(workOrdersByStatus.cancelled) || 0;
-              
-              const circumference = 2 * Math.PI * 80;
-              const pieTotal = totalWorkOrders || (pending + assigned + inProgress + completed + closed + cancelled);
-              const segmentTotal = pending + assigned + inProgress + completed + closed + cancelled || 1;
-              
-              const pendingLen = (pending / segmentTotal) * circumference;
-              const assignedLen = (assigned / segmentTotal) * circumference;
-              const inProgressLen = (inProgress / segmentTotal) * circumference;
-              const completedLen = (completed / segmentTotal) * circumference;
-              const closedLen = (closed / segmentTotal) * circumference;
-              const cancelledLen = (cancelled / segmentTotal) * circumference;
-              
-              let offset = 0;
-              const segments = [
-                { len: pendingLen, color: '#F59E0B', show: pending > 0 },
-                { len: assignedLen, color: '#3B82F6', show: assigned > 0 },
-                { len: inProgressLen, color: '#8B5CF6', show: inProgress > 0 },
-                { len: completedLen, color: '#10B981', show: completed > 0 },
-                { len: closedLen, color: '#6B7280', show: closed > 0 },
-                { len: cancelledLen, color: '#EF4444', show: cancelled > 0 },
-              ];
-              
-              return (
-                <div style={{ width: 220, height: 220 }}>
-                  <svg viewBox="0 0 220 220" width="220" height="220">
-                    {segments.map((seg, idx) => {
-                      if (!seg.show) return null;
-                      const currentOffset = offset;
-                      offset += seg.len;
-                      return (
-                        <circle key={idx} cx="110" cy="110" r="80" fill="none" stroke={seg.color} strokeWidth="20"
-                          strokeDasharray={`${seg.len} ${circumference}`}
-                          strokeDashoffset={-currentOffset}
-                          transform="rotate(-90 110 110)"
-                        />
-                      );
-                    })}
-                    {pieTotal === 0 && (
-                      <circle cx="110" cy="110" r="80" fill="none" stroke="#E5E7EB" strokeWidth="20" />
-                    )}
-                    <text x="110" y="102" textAnchor="middle" fill="#111827" style={{ fontSize: '32px', fontWeight: 700 }}>{pieTotal}</text>
-                    <text x="110" y="125" textAnchor="middle" fill="#6B7280" style={{ fontSize: '13px' }}>Total</text>
-                  </svg>
+          {/* Three Chart Boxes */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Work Orders by Status */}
+            <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Status</h3>
+              <div className="flex items-center">
+                <div className="w-36 h-36">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={65}
+                        dataKey="value"
+                        strokeWidth={0}
+                      >
+                        {(pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
+                        <tspan x="50%" dy="-3" className="text-xl font-bold fill-gray-900">{totalWorkOrders}</tspan>
+                        <tspan x="50%" dy="16" className="text-[10px] fill-gray-500">Total</tspan>
+                      </text>
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-              );
-            })()}
+                <div className="flex-1 ml-4 space-y-1.5">
+                  {[
+                    { name: 'Pending', value: workOrdersByStatus.pending || 0, color: '#F59E0B' },
+                    { name: 'Assigned', value: workOrdersByStatus.assigned || 0, color: '#3B82F6' },
+                    { name: 'In Progress', value: workOrdersByStatus.in_progress || 0, color: '#8B5CF6' },
+                    { name: 'Completed', value: workOrdersByStatus.completed || 0, color: '#10B981' },
+                    { name: 'Closed', value: workOrdersByStatus.closed || 0, color: '#6B7280' },
+                    { name: 'Cancelled', value: workOrdersByStatus.cancelled || 0, color: '#EF4444' },
+                  ].map((item, index) => (
+                    <div key={index} className="flex items-center gap-2 text-xs">
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                      <span className="text-gray-600 w-16 flex-shrink-0">{item.name}</span>
+                      <span className="font-medium text-gray-900 whitespace-nowrap">{item.value} ({totalWorkOrders ? ((item.value / totalWorkOrders) * 100).toFixed(1) : 0}%)</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
 
-            {/* Legend - All 6 statuses in grid */}
-            <div className="grid grid-cols-3 gap-x-6 gap-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-amber-500"></span>
-                  <span className="text-xs text-gray-600">Pending</span>
+            {/* Work Orders by Priority */}
+            <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Priority</h3>
+              <div className="flex items-center">
+                <div className="w-36 h-36">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={priorityTotal > 0 ? priorityData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={65}
+                        dataKey="value"
+                        strokeWidth={0}
+                      >
+                        {(priorityTotal > 0 ? priorityData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
+                        <tspan x="50%" dy="-3" className="text-xl font-bold fill-gray-900">{priorityTotal || totalWorkOrders}</tspan>
+                        <tspan x="50%" dy="16" className="text-[10px] fill-gray-500">Total</tspan>
+                      </text>
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-                <span className="text-xs font-semibold text-gray-900">{workOrdersByStatus.pending || 0}</span>
+                <div className="flex-1 ml-4 space-y-3">
+                  {priorityData.map((item, index) => (
+                    <div key={index} className="flex items-center gap-2 text-xs">
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                      <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
+                      <span className="font-medium text-gray-900 whitespace-nowrap">{item.value} ({(priorityTotal || totalWorkOrders) ? ((item.value / (priorityTotal || totalWorkOrders)) * 100).toFixed(1) : 0}%)</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                  <span className="text-xs text-gray-600">Assigned</span>
-                </div>
-                <span className="text-xs font-semibold text-gray-900">{workOrdersByStatus.assigned || 0}</span>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-purple-500"></span>
-                  <span className="text-xs text-gray-600">In Progress</span>
-                </div>
-                <span className="text-xs font-semibold text-gray-900">{workOrdersByStatus.in_progress || 0}</span>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                  <span className="text-xs text-gray-600">Completed</span>
-                </div>
-                <span className="text-xs font-semibold text-gray-900">{workOrdersByStatus.completed || 0}</span>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-gray-500"></span>
-                  <span className="text-xs text-gray-600">Closed</span>
-                </div>
-                <span className="text-xs font-semibold text-gray-900">{workOrdersByStatus.closed || 0}</span>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-red-500"></span>
-                  <span className="text-xs text-gray-600">Cancelled</span>
-                </div>
-                <span className="text-xs font-semibold text-gray-900">{workOrdersByStatus.cancelled || 0}</span>
+            </div>
+
+            {/* Work Orders by Property Type */}
+            <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Property Type</h3>
+              <div className="space-y-3">
+                {woPropertyTypeData.length > 0 ? (
+                  woPropertyTypeData.slice(0, 5).map((item, index) => (
+                    <div key={index} className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600">{item.name}</span>
+                        <span className="font-medium text-gray-900">{item.value}</span>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full rounded-full transition-all"
+                          style={{ 
+                            width: `${Math.max(5, (item.value / (woPropertyTypeData[0]?.value || 1)) * 100)}%`,
+                            backgroundColor: item.color
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-gray-500 py-8">
+                    <p className="text-xs">No data available</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
