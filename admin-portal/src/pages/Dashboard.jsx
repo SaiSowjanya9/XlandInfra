@@ -22,6 +22,7 @@ const Dashboard = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [estimates, setEstimates] = useState([]);
+  const [workOrders, setWorkOrders] = useState([]);
   const notificationRef = useRef(null);
   const lastFetchRef = useRef(0);
   const navigate = useNavigate();
@@ -58,26 +59,30 @@ const Dashboard = () => {
     try {
       let endpoint;
       let estimatesEndpoint;
+      let workOrdersEndpoint;
       if (selectedFp.id === 'all') {
         // Admin mode - fetch aggregated data from all sources
         endpoint = `${API_BASE}/api/admin/dashboard-stats`;
         estimatesEndpoint = `${API_BASE}/api/admin/estimates`;
+        workOrdersEndpoint = `${API_BASE}/api/admin/work-orders`;
       } else {
         // Specific FP selected
         endpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/dashboard`;
         estimatesEndpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/estimates`;
+        workOrdersEndpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/work-orders`;
       }
       
-      const [dashRes, estRes] = await Promise.all([
+      const [dashRes, estRes, woRes] = await Promise.all([
         fetch(endpoint, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(estimatesEndpoint, { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(estimatesEndpoint, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(workOrdersEndpoint, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
       
       if (!dashRes.ok) {
         throw new Error(`HTTP ${dashRes.status}`);
       }
       
-      const [result, estResult] = await Promise.all([dashRes.json(), estRes.json()]);
+      const [result, estResult, woResult] = await Promise.all([dashRes.json(), estRes.json(), woRes.json()]);
       if (result.success && result.data) {
         const data = result.data;
         // Map dashboard data to stats format with safe defaults
@@ -101,6 +106,9 @@ const Dashboard = () => {
       }
       if (estResult.success && Array.isArray(estResult.data)) {
         setEstimates(estResult.data);
+      }
+      if (woResult.success && Array.isArray(woResult.data)) {
+        setWorkOrders(woResult.data);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -242,6 +250,29 @@ const Dashboard = () => {
 
   const totalWorkOrders = pieTotal || stats?.totalWorkOrders || 0;
   const totalForPercentage = pieTotal || 1;
+
+  // Work Orders by Priority data
+  const lowPriorityWO = workOrders.filter(wo => (wo.priority || '').toLowerCase() === 'low').length;
+  const mediumPriorityWO = workOrders.filter(wo => (wo.priority || '').toLowerCase() === 'medium').length;
+  const highPriorityWO = workOrders.filter(wo => (wo.priority || '').toLowerCase() === 'high').length;
+  const priorityTotal = lowPriorityWO + mediumPriorityWO + highPriorityWO;
+  
+  const priorityData = [
+    { name: 'Low', value: lowPriorityWO, color: '#10B981' },
+    { name: 'Medium', value: mediumPriorityWO, color: '#F59E0B' },
+    { name: 'High', value: highPriorityWO, color: '#EF4444' },
+  ];
+
+  // Work Orders by Property Type data
+  const propertyTypeColors = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444'];
+  const propertyTypeCounts = workOrders.reduce((acc, wo) => {
+    const type = wo.property_type || wo.propertyType || 'Other';
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {});
+  const propertyTypeData = Object.entries(propertyTypeCounts)
+    .map(([name, value], index) => ({ name, value, color: propertyTypeColors[index % propertyTypeColors.length] }))
+    .sort((a, b) => b.value - a.value);
 
   // Stacked bar chart data - Property types with Direct vs Property-based breakdown
   const est = stats?.estimatesByPropertyType || {};
@@ -615,74 +646,120 @@ const Dashboard = () => {
               </button>
             </div>
             
-            <div className="flex items-center justify-center gap-8">
-              <div className="relative w-56 h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={65}
-                      outerRadius={95}
-                      paddingAngle={pieData.length > 1 ? 3 : 0}
-                      dataKey="value"
-                    >
-                      {(pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <p className="text-3xl font-bold text-gray-900">{totalWorkOrders}</p>
-                  <p className="text-sm text-gray-500">Total</p>
+            {/* Three Chart Boxes */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Work Orders by Status */}
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Status</h3>
+                <div className="flex items-center">
+                  <div className="w-36 h-36">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={40}
+                          outerRadius={65}
+                          dataKey="value"
+                          strokeWidth={0}
+                        >
+                          {(pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
+                          <tspan x="50%" dy="-3" className="text-xl font-bold fill-gray-900">{totalWorkOrders}</tspan>
+                          <tspan x="50%" dy="16" className="text-[10px] fill-gray-500">Total</tspan>
+                        </text>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex-1 ml-4 space-y-1.5">
+                    {[
+                      { name: 'Pending', value: pendingWO, color: '#F59E0B' },
+                      { name: 'Assigned', value: assignedWO, color: '#3B82F6' },
+                      { name: 'In Progress', value: inProgressWO, color: '#8B5CF6' },
+                      { name: 'Completed', value: completedWO, color: '#10B981' },
+                      { name: 'Closed', value: closedWO, color: '#6B7280' },
+                      { name: 'Cancelled', value: cancelledWO, color: '#EF4444' },
+                    ].map((item, index) => (
+                      <div key={index} className="flex items-center gap-2 text-xs">
+                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                        <span className="text-gray-600 w-16 flex-shrink-0">{item.name}</span>
+                        <span className="font-medium text-gray-900 whitespace-nowrap">{item.value} ({totalWorkOrders ? ((item.value / totalWorkOrders) * 100).toFixed(1) : 0}%)</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Legend - All 6 statuses in grid */}
-              <div className="grid grid-cols-3 gap-x-6 gap-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-amber-500"></span>
-                    <span className="text-xs text-gray-600">Pending</span>
+              {/* Work Orders by Priority */}
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Priority</h3>
+                <div className="flex items-center">
+                  <div className="w-36 h-36">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={priorityTotal > 0 ? priorityData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={40}
+                          outerRadius={65}
+                          dataKey="value"
+                          strokeWidth={0}
+                        >
+                          {(priorityTotal > 0 ? priorityData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
+                          <tspan x="50%" dy="-3" className="text-xl font-bold fill-gray-900">{priorityTotal || totalWorkOrders}</tspan>
+                          <tspan x="50%" dy="16" className="text-[10px] fill-gray-500">Total</tspan>
+                        </text>
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
-                  <span className="text-xs font-semibold text-gray-900">{pendingWO}</span>
+                  <div className="flex-1 ml-4 space-y-3">
+                    {priorityData.map((item, index) => (
+                      <div key={index} className="flex items-center gap-2 text-xs">
+                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                        <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
+                        <span className="font-medium text-gray-900 whitespace-nowrap">{item.value} ({(priorityTotal || totalWorkOrders) ? ((item.value / (priorityTotal || totalWorkOrders)) * 100).toFixed(1) : 0}%)</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                    <span className="text-xs text-gray-600">Assigned</span>
-                  </div>
-                  <span className="text-xs font-semibold text-gray-900">{assignedWO}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-purple-500"></span>
-                    <span className="text-xs text-gray-600">In Progress</span>
-                  </div>
-                  <span className="text-xs font-semibold text-gray-900">{inProgressWO}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                    <span className="text-xs text-gray-600">Completed</span>
-                  </div>
-                  <span className="text-xs font-semibold text-gray-900">{completedWO}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-gray-500"></span>
-                    <span className="text-xs text-gray-600">Closed</span>
-                  </div>
-                  <span className="text-xs font-semibold text-gray-900">{closedWO}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-red-500"></span>
-                    <span className="text-xs text-gray-600">Cancelled</span>
-                  </div>
-                  <span className="text-xs font-semibold text-gray-900">{cancelledWO}</span>
+              </div>
+
+              {/* Work Orders by Property Type */}
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Property Type</h3>
+                <div className="space-y-3">
+                  {propertyTypeData.length > 0 ? (
+                    propertyTypeData.slice(0, 5).map((item, index) => (
+                      <div key={index} className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-600">{item.name}</span>
+                          <span className="font-medium text-gray-900">{item.value}</span>
+                        </div>
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full rounded-full transition-all"
+                            style={{ 
+                              width: `${Math.max(5, (item.value / (propertyTypeData[0]?.value || 1)) * 100)}%`,
+                              backgroundColor: item.color
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-gray-500 py-8">
+                      <p className="text-xs">No data available</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

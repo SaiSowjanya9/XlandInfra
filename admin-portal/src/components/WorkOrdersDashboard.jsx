@@ -704,23 +704,23 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       </div>
 
       {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Work Orders by Status */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex justify-between items-center mb-3">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders by Status</h3>
             <PeriodDropdown value={statusChartFilter} onChange={setStatusChartFilter} />
           </div>
           <div className="flex items-center">
-            <div className="w-32 h-32">
+            <div className="w-36 h-36">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={totalFiltered > 0 ? statusData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
                     cx="50%"
                     cy="50%"
-                    innerRadius={35}
-                    outerRadius={55}
+                    innerRadius={40}
+                    outerRadius={65}
                     dataKey="value"
                     strokeWidth={0}
                   >
@@ -729,16 +729,16 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                     ))}
                   </Pie>
                   <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                    <tspan x="50%" dy="-3" className="text-lg font-bold fill-gray-900">{totalFiltered}</tspan>
-                    <tspan x="50%" dy="14" className="text-[10px] fill-gray-500">Total</tspan>
+                    <tspan x="50%" dy="-3" className="text-xl font-bold fill-gray-900">{totalFiltered}</tspan>
+                    <tspan x="50%" dy="16" className="text-[10px] fill-gray-500">Total</tspan>
                   </text>
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="flex-1 ml-3 space-y-1">
+            <div className="flex-1 ml-4 space-y-1.5">
               {statusData.map((item, index) => (
-                <div key={index} className="flex items-center gap-1.5 text-xs">
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                <div key={index} className="flex items-center gap-2 text-xs">
+                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
                   <span className="text-gray-600 w-16 flex-shrink-0">{item.name}</span>
                   <span className="font-medium text-gray-900 whitespace-nowrap">{item.value} ({totalFiltered ? ((item.value / totalFiltered) * 100).toFixed(1) : 0}%)</span>
                 </div>
@@ -748,8 +748,8 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
 
         {/* Work Orders by Priority */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex justify-between items-center mb-3">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders by Priority</h3>
             <PeriodDropdown value={priorityChartFilter} onChange={setPriorityChartFilter} />
           </div>
@@ -758,15 +758,15 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
             const chartData = priorityTotal > 0 ? priorityData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }];
             return (
               <div className="flex items-center">
-                <div className="w-32 h-32">
+                <div className="w-36 h-36">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={chartData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={35}
-                        outerRadius={55}
+                        innerRadius={40}
+                        outerRadius={65}
                         dataKey="value"
                         strokeWidth={0}
                       >
@@ -775,16 +775,16 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                         ))}
                       </Pie>
                       <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                        <tspan x="50%" dy="-3" className="text-lg font-bold fill-gray-900">{priorityTotal}</tspan>
-                        <tspan x="50%" dy="14" className="text-[10px] fill-gray-500">Total</tspan>
+                        <tspan x="50%" dy="-3" className="text-xl font-bold fill-gray-900">{priorityTotal}</tspan>
+                        <tspan x="50%" dy="16" className="text-[10px] fill-gray-500">Total</tspan>
                       </text>
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="flex-1 ml-3 space-y-2">
+                <div className="flex-1 ml-4 space-y-3">
                   {priorityData.map((item, index) => (
-                    <div key={index} className="flex items-center gap-1.5 text-xs">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                    <div key={index} className="flex items-center gap-2 text-xs">
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
                       <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
                       <span className="font-medium text-gray-900 whitespace-nowrap">{item.value} ({priorityTotal ? ((item.value / priorityTotal) * 100).toFixed(1) : 0}%)</span>
                     </div>
@@ -796,20 +796,20 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
 
         {/* Work Orders by Property Type */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex justify-between items-center mb-3">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders by Property Type</h3>
             <PeriodDropdown value={propertyTypeFilter} onChange={setPropertyTypeFilter} />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {propertyTypeData.length > 0 ? (
               propertyTypeData.slice(0, 5).map((item, index) => (
-                <div key={index} className="space-y-0.5">
+                <div key={index} className="space-y-1">
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-600">{item.name}</span>
                     <span className="font-medium text-gray-900">{item.value}</span>
                   </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div 
                       className="h-full rounded-full transition-all"
                       style={{ 
@@ -821,7 +821,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                 </div>
               ))
             ) : (
-              <div className="text-center text-gray-500 py-6">
+              <div className="text-center text-gray-500 py-8">
                 <p className="text-xs">No data available</p>
               </div>
             )}
@@ -830,10 +830,10 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       </div>
 
       {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Work Orders Trend */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex justify-between items-center mb-3">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders Trend</h3>
             <select 
               value={trendPeriod} 
@@ -844,26 +844,26 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
               <option value="yearly">Yearly</option>
             </select>
           </div>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
               <span className="text-xs text-gray-600">Created</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
               <span className="text-xs text-gray-600">Completed</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-red-500"></div>
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
               <span className="text-xs text-gray-600">Cancelled</span>
             </div>
           </div>
-          <div className="h-52">
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="#9CA3AF" />
-                <YAxis tick={{ fontSize: 10 }} stroke="#9CA3AF" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#9CA3AF" />
+                <YAxis tick={{ fontSize: 11 }} stroke="#9CA3AF" />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'white', 
@@ -872,36 +872,36 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                     boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
                   }}
                 />
-                <Line type="monotone" dataKey="Created" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6', strokeWidth: 0, r: 3 }} />
-                <Line type="monotone" dataKey="Completed" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981', strokeWidth: 0, r: 3 }} />
-                <Line type="monotone" dataKey="Cancelled" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444', strokeWidth: 0, r: 3 }} />
+                <Line type="monotone" dataKey="Created" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6', strokeWidth: 0, r: 4 }} />
+                <Line type="monotone" dataKey="Completed" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981', strokeWidth: 0, r: 4 }} />
+                <Line type="monotone" dataKey="Cancelled" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444', strokeWidth: 0, r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Average Completion Time */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex justify-between items-center mb-3">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Average Completion Time</h3>
             <PeriodDropdown value={completionTimeFilter} onChange={setCompletionTimeFilter} />
           </div>
-          <div className="flex gap-4">
+          <div className="flex gap-6">
             {/* Left side - Average and Priority bars */}
             <div className="flex-1">
-              <div className="mb-3">
-                <div className="text-2xl font-bold text-gray-900">{completionData.average}</div>
+              <div className="mb-4">
+                <div className="text-3xl font-bold text-gray-900">{completionData.average}</div>
                 <div className="text-xs text-gray-500">Days</div>
               </div>
-              <div className="text-xs font-medium text-gray-700 mb-2">By Priority (Days)</div>
-              <div className="space-y-2">
+              <div className="text-xs font-medium text-gray-700 mb-3">By Priority (Days)</div>
+              <div className="space-y-3">
                 {completionData.byPriority.map((item, index) => (
-                  <div key={index} className="space-y-0.5">
+                  <div key={index} className="space-y-1">
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-600">{item.name}</span>
                       <span className="font-medium text-gray-900">{item.days} Days</span>
                     </div>
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                       <div 
                         className="h-full rounded-full transition-all"
                         style={{ 
@@ -916,17 +916,17 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
             </div>
             
             {/* Right side - SLA Compliance */}
-            <div className="w-40 border-l border-gray-200 pl-4">
-              <div className="text-xs font-medium text-gray-700 mb-2">SLA Compliance</div>
-              <div className="relative w-24 h-24 mx-auto">
+            <div className="w-48 border-l border-gray-200 pl-6">
+              <div className="text-xs font-medium text-gray-700 mb-3">SLA Compliance</div>
+              <div className="relative w-28 h-28 mx-auto">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={slaData.data}
                       cx="50%"
                       cy="50%"
-                      innerRadius={28}
-                      outerRadius={40}
+                      innerRadius={32}
+                      outerRadius={48}
                       dataKey="value"
                       strokeWidth={0}
                     >
@@ -935,8 +935,8 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                       ))}
                     </Pie>
                     <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                      <tspan x="50%" dy="-2" className="text-base font-bold fill-gray-900">{slaData.percentage}%</tspan>
-                      <tspan x="50%" dy="12" className="text-[8px] fill-gray-500">Met</tspan>
+                      <tspan x="50%" dy="-2" className="text-lg font-bold fill-gray-900">{slaData.percentage}%</tspan>
+                      <tspan x="50%" dy="14" className="text-[9px] fill-gray-500">Met</tspan>
                     </text>
                   </PieChart>
                 </ResponsiveContainer>
