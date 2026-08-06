@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ClipboardList, 
@@ -161,6 +161,28 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
     fetchWorkOrders();
   }, [fetchWorkOrders]);
 
+  // Filter work orders by date range first
+  const dateFilteredWorkOrders = useMemo(() => {
+    if (!startDate && !endDate) return workOrders;
+    
+    return workOrders.filter(wo => {
+      const woDate = new Date(wo.created_at || wo.createdAt);
+      if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999); // Include the entire end day
+        return woDate >= start && woDate <= end;
+      } else if (startDate) {
+        return woDate >= new Date(startDate);
+      } else if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        return woDate <= end;
+      }
+      return true;
+    });
+  }, [workOrders, startDate, endDate]);
+
   // Filter helpers
   const applyPeriodFilter = (data, period) => {
     if (period === 'all') return data;
@@ -194,16 +216,16 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
     });
   };
 
-  // Calculate stats
+  // Calculate stats - use dateFilteredWorkOrders
   const getStats = () => {
-    const total = workOrders.length;
+    const total = dateFilteredWorkOrders.length;
     const normalizeStatus = (status) => status?.toLowerCase().replace('-', '_').replace(' ', '_');
-    const pending = workOrders.filter(wo => normalizeStatus(wo.status) === 'pending').length;
-    const assigned = workOrders.filter(wo => normalizeStatus(wo.status) === 'assigned').length;
-    const inProgress = workOrders.filter(wo => normalizeStatus(wo.status) === 'in_progress').length;
-    const completed = workOrders.filter(wo => normalizeStatus(wo.status) === 'completed').length;
-    const closed = workOrders.filter(wo => normalizeStatus(wo.status) === 'closed').length;
-    const cancelled = workOrders.filter(wo => normalizeStatus(wo.status) === 'cancelled').length;
+    const pending = dateFilteredWorkOrders.filter(wo => normalizeStatus(wo.status) === 'pending').length;
+    const assigned = dateFilteredWorkOrders.filter(wo => normalizeStatus(wo.status) === 'assigned').length;
+    const inProgress = dateFilteredWorkOrders.filter(wo => normalizeStatus(wo.status) === 'in_progress').length;
+    const completed = dateFilteredWorkOrders.filter(wo => normalizeStatus(wo.status) === 'completed').length;
+    const closed = dateFilteredWorkOrders.filter(wo => normalizeStatus(wo.status) === 'closed').length;
+    const cancelled = dateFilteredWorkOrders.filter(wo => normalizeStatus(wo.status) === 'cancelled').length;
     
     return { total, pending, assigned, inProgress, completed, closed, cancelled };
   };
@@ -212,7 +234,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
 
   // Status chart data
   const getStatusChartData = () => {
-    const filtered = applyPeriodFilter(workOrders, statusChartFilter);
+    const filtered = applyPeriodFilter(dateFilteredWorkOrders, statusChartFilter);
     const statusCounts = {
       pending: 0,
       assigned: 0,
@@ -241,7 +263,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
 
   // Priority chart data
   const getPriorityChartData = () => {
-    const filtered = applyPeriodFilter(workOrders, priorityChartFilter);
+    const filtered = applyPeriodFilter(dateFilteredWorkOrders, priorityChartFilter);
     const priorityCounts = { low: 0, medium: 0, high: 0 };
     
     filtered.forEach(wo => {
@@ -260,7 +282,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
 
   // Property type chart data
   const getPropertyTypeData = () => {
-    const filtered = applyPeriodFilter(workOrders, propertyTypeFilter);
+    const filtered = applyPeriodFilter(dateFilteredWorkOrders, propertyTypeFilter);
     const typeCounts = {};
     
     filtered.forEach(wo => {
@@ -309,10 +331,10 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       });
     }
 
-    return months.map(({ month, startDate, endDate }) => {
-      const monthWOs = workOrders.filter(wo => {
+    return months.map(({ month, startDate: mStart, endDate: mEnd }) => {
+      const monthWOs = dateFilteredWorkOrders.filter(wo => {
         const woDate = new Date(wo.created_at || wo.createdAt);
-        return woDate >= startDate && woDate <= endDate;
+        return woDate >= mStart && woDate <= mEnd;
       });
 
       return {
@@ -326,7 +348,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
 
   // Average completion time data
   const getCompletionTimeData = () => {
-    const filtered = applyPeriodFilter(workOrders, completionTimeFilter);
+    const filtered = applyPeriodFilter(dateFilteredWorkOrders, completionTimeFilter);
     const completedWOs = filtered.filter(wo => wo.status === 'completed' && wo.completed_at);
     
     const priorityTimes = { high: [], medium: [], low: [] };
@@ -358,7 +380,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
 
   // SLA Compliance
   const getSLACompliance = () => {
-    const filtered = applyPeriodFilter(workOrders, completionTimeFilter);
+    const filtered = applyPeriodFilter(dateFilteredWorkOrders, completionTimeFilter);
     const completedWOs = filtered.filter(wo => wo.status === 'completed');
     
     // Assume SLA thresholds: High = 2 days, Medium = 5 days, Low = 10 days
@@ -461,7 +483,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
   const trendData = getTrendData();
   const completionData = getCompletionTimeData();
   const slaData = getSLACompliance();
-  const totalFiltered = applyPeriodFilter(workOrders, statusChartFilter).length;
+  const totalFiltered = applyPeriodFilter(dateFilteredWorkOrders, statusChartFilter).length;
 
   return (
     <div className="space-y-6">
@@ -754,7 +776,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
             <PeriodDropdown value={priorityChartFilter} onChange={setPriorityChartFilter} />
           </div>
           {(() => {
-            const priorityTotal = applyPeriodFilter(workOrders, priorityChartFilter).length;
+            const priorityTotal = applyPeriodFilter(dateFilteredWorkOrders, priorityChartFilter).length;
             const chartData = priorityTotal > 0 ? priorityData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }];
             return (
               <div className="flex items-center">
