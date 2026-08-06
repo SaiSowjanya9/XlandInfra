@@ -540,51 +540,51 @@ const Dashboard = () => {
         </div>
 
         {/* First Stats Row - 3 KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="flex flex-wrap gap-4">
           <div 
             onClick={() => navigate('/employee/customer-submissions')}
-            className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group"
+            className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group min-w-[200px] flex-1 max-w-[280px]"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Building2 className="w-6 h-6 text-blue-600" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Building2 className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Properties</p>
-                <p className="text-2xl font-bold text-gray-900">{stats?.totalProperties ?? 0}</p>
-                <p className="text-xs text-gray-400">Total Properties</p>
+                <p className="text-xs text-gray-500">Properties</p>
+                <p className="text-xl font-bold text-gray-900">{stats?.totalProperties ?? 0}</p>
+                <p className="text-[10px] text-gray-400">Total Properties</p>
               </div>
             </div>
           </div>
 
           <div 
             onClick={() => navigate('/employee/assigned-vendors')}
-            className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer group"
+            className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer group min-w-[200px] flex-1 max-w-[280px]"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Wrench className="w-6 h-6 text-emerald-600" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Wrench className="w-5 h-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Vendors</p>
-                <p className="text-2xl font-bold text-gray-900">{stats?.totalVendors ?? 0}</p>
-                <p className="text-xs text-gray-400">Total Vendors</p>
+                <p className="text-xs text-gray-500">Vendors</p>
+                <p className="text-xl font-bold text-gray-900">{stats?.totalVendors ?? 0}</p>
+                <p className="text-[10px] text-gray-400">Total Vendors</p>
               </div>
             </div>
           </div>
 
           <div 
             onClick={() => navigate('/employee/employee-details')}
-            className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-amber-200 transition-all cursor-pointer group"
+            className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-lg hover:border-amber-200 transition-all cursor-pointer group min-w-[200px] flex-1 max-w-[280px]"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Users className="w-6 h-6 text-amber-600" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Users className="w-5 h-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Employees</p>
-                <p className="text-2xl font-bold text-gray-900">{stats?.totalEmployees ?? 0}</p>
-                <p className="text-xs text-gray-400">Total Employees</p>
+                <p className="text-xs text-gray-500">Employees</p>
+                <p className="text-xl font-bold text-gray-900">{stats?.totalEmployees ?? 0}</p>
+                <p className="text-[10px] text-gray-400">Total Employees</p>
               </div>
             </div>
           </div>

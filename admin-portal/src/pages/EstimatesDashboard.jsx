@@ -822,11 +822,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               ].map((item, index) => (
                 <div key={index} className="flex items-center gap-2 text-sm">
                   <div 
-                    className="w-3 h-3 rounded-full" 
+                    className="w-3 h-3 rounded-full flex-shrink-0" 
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-gray-600">{item.name}</span>
-                  <span className="ml-auto font-medium text-gray-800">
+                  <span className="text-gray-600 w-24">{item.name}</span>
+                  <span className="font-medium text-gray-800 whitespace-nowrap">
                     {item.value} ({block3Data.length ? ((item.value / block3Data.length) * 100).toFixed(1) : 0}%)
                   </span>
                 </div>
@@ -946,15 +946,13 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             </div>
             <div className="w-1/2 space-y-2 pl-4">
               {propertyBasedStatusDataAll.map((item, index) => (
-                <div key={index} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <span className="text-gray-600">{item.name}</span>
-                  </div>
-                  <span className="text-gray-800">
+                <div key={index} className="flex items-center gap-2 text-sm">
+                  <div 
+                    className="w-3 h-3 rounded-full flex-shrink-0" 
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-gray-600 w-20 flex-shrink-0">{item.name}</span>
+                  <span className="text-gray-800 whitespace-nowrap">
                     {item.value} ({block6Data.length ? ((item.value / block6Data.length) * 100).toFixed(1) : 0}%)
                   </span>
                 </div>
@@ -1020,15 +1018,13 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             </div>
             <div className="w-1/2 space-y-2 pl-4">
               {statusDataAll.map((item, index) => (
-                <div key={index} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <span className="text-gray-600">{item.name}</span>
-                  </div>
-                  <span className="text-gray-800">
+                <div key={index} className="flex items-center gap-2 text-sm">
+                  <div 
+                    className="w-3 h-3 rounded-full flex-shrink-0" 
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-gray-600 w-20 flex-shrink-0">{item.name}</span>
+                  <span className="text-gray-800 whitespace-nowrap">
                     {item.value} ({block2Data.length ? ((item.value / block2Data.length) * 100).toFixed(1) : 0}%)
                   </span>
                 </div>
@@ -1147,15 +1143,13 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             </div>
             <div className="w-1/2 space-y-2 pl-4">
               {directStatusDataAll.map((item, index) => (
-                <div key={index} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <span className="text-gray-600">{item.name}</span>
-                  </div>
-                  <span className="text-gray-800">
+                <div key={index} className="flex items-center gap-2 text-sm">
+                  <div 
+                    className="w-3 h-3 rounded-full flex-shrink-0" 
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-gray-600 w-20 flex-shrink-0">{item.name}</span>
+                  <span className="text-gray-800 whitespace-nowrap">
                     {item.value} ({block5Data.length ? ((item.value / block5Data.length) * 100).toFixed(1) : 0}%)
                   </span>
                 </div>

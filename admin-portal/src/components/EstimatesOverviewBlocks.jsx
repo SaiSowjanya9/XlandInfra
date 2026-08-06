@@ -109,12 +109,10 @@ const DonutChart = ({ data, dataAll, total, title }) => (
     </div>
     <div className="w-1/2 space-y-1.5 pl-3">
       {dataAll.map((item, index) => (
-        <div key={index} className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-            <span className="text-gray-600">{item.name}</span>
-          </div>
-          <span className="text-gray-800 font-medium">
+        <div key={index} className="flex items-center gap-1.5 text-xs">
+          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+          <span className="text-gray-600 w-20 flex-shrink-0">{item.name}</span>
+          <span className="text-gray-800 font-medium whitespace-nowrap">
             {item.value} ({total ? ((item.value / total) * 100).toFixed(1) : 0}%)
           </span>
         </div>
