@@ -104,14 +104,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   // Work Orders sub-items
   const workOrdersSubItems = [
     { path: '/employee/work-orders/dashboard', icon: BarChart3, label: 'Dashboard' },
-    { path: '/employee/work-orders/create', icon: Plus, label: 'Create Work Order', adminOnly: true },
-    { path: '/employee/work-orders', icon: List, label: 'All Work Orders' },
-    { path: '/employee/work-orders/pending', icon: Clock, label: 'Pending' },
-    { path: '/employee/work-orders/assigned', icon: UserPlus, label: 'Assigned' },
-    { path: '/employee/work-orders/in-progress', icon: ClipboardList, label: 'In Progress' },
-    { path: '/employee/work-orders/completed', icon: CheckCircle, label: 'Completed' },
-    { path: '/employee/work-orders/closed', icon: Archive, label: 'Closed' },
-    { path: '/employee/work-orders/cancelled', icon: XCircle, label: 'Cancelled' }
+    { path: '/employee/work-orders', icon: List, label: 'All Work Orders' }
   ];
 
   const filteredWorkOrdersSubItems = isOpsManager

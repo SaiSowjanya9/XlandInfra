@@ -55,14 +55,7 @@ const Layout = ({ admin, onLogout, children }) => {
   // Work Orders sub-items
   const workOrdersSubItems = [
     { path: '/work-orders/dashboard', icon: BarChart3, label: 'Dashboard' },
-    { path: '/work-orders/create', icon: Plus, label: 'Create Work Order' },
-    { path: '/work-orders', icon: List, label: 'All Work Orders' },
-    { path: '/work-orders/pending', icon: Clock, label: 'Pending' },
-    { path: '/work-orders/assigned', icon: UserPlus, label: 'Assigned' },
-    { path: '/work-orders/in-progress', icon: ClipboardList, label: 'In Progress' },
-    { path: '/work-orders/completed', icon: CheckCircle, label: 'Completed' },
-    { path: '/work-orders/closed', icon: Archive, label: 'Closed' },
-    { path: '/work-orders/cancelled', icon: XCircle, label: 'Cancelled' }
+    { path: '/work-orders', icon: List, label: 'All Work Orders' }
   ];
 
   const isWorkOrdersSectionActive = workOrdersSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/work-orders');

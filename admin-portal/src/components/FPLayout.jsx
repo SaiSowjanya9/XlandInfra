@@ -218,14 +218,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
   // Work Orders sub-items
   const workOrdersSubItems = [
     { path: '/fp/work-orders/dashboard', icon: BarChart3, label: 'Dashboard' },
-    { path: '/fp/work-orders/create', icon: Plus, label: 'Create Work Order' },
-    { path: '/fp/work-orders', icon: List, label: 'All Work Orders' },
-    { path: '/fp/work-orders/pending', icon: Clock, label: 'Pending' },
-    { path: '/fp/work-orders/assigned', icon: UserPlus, label: 'Assigned' },
-    { path: '/fp/work-orders/in-progress', icon: ClipboardList, label: 'In Progress' },
-    { path: '/fp/work-orders/completed', icon: CheckCircle, label: 'Completed' },
-    { path: '/fp/work-orders/closed', icon: Archive, label: 'Closed' },
-    { path: '/fp/work-orders/cancelled', icon: XCircle, label: 'Cancelled' }
+    { path: '/fp/work-orders', icon: List, label: 'All Work Orders' }
   ];
 
   // Vendor sub-items - Add Vendor hidden for FP Manager, Assigned Vendors is view-only
