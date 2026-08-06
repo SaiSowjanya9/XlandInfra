@@ -527,7 +527,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
             ))}
 
             {/* Work Orders Section */}
-            <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${colors.divider}` }}>
+            <div className="mt-2">
               <button
                 onClick={toggleWorkOrders}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
@@ -552,7 +552,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 )}
               </button>
               {workOrdersOpen && !sidebarCollapsed && (
-                <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
+                <div className="ml-4 mt-1 space-y-1 pl-3">
                   {workOrdersSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile isSubItem />
                   ))}
@@ -561,7 +561,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
             </div>
 
             {/* Vendor Management Section */}
-            <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${colors.divider}` }}>
+            <div className="mt-3 pt-3" >
               <button
                 onClick={toggleVendor}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
@@ -586,7 +586,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 )}
               </button>
               {vendorOpen && !sidebarCollapsed && (
-                <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
+                <div className="ml-4 mt-1 space-y-1 pl-3" >
                   {vendorSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile isSubItem />
                   ))}
@@ -620,7 +620,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 )}
               </button>
               {employeeOpen && !sidebarCollapsed && (
-                <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
+                <div className="ml-4 mt-1 space-y-1 pl-3" >
                   {employeeSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile isSubItem />
                   ))}
@@ -654,7 +654,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 )}
               </button>
               {estimatesOpen && !sidebarCollapsed && (
-                <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
+                <div className="ml-4 mt-1 space-y-1 pl-3" >
                   {estimatesSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile isSubItem />
                   ))}
@@ -665,7 +665,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
           </nav>
 
           {/* User Info & Logout */}
-          <div className="px-3 py-4" style={{ borderTop: `1px solid ${colors.divider}` }}>
+          <div className="px-3 py-4" >
             {!sidebarCollapsed ? (
               <div 
                 className="flex items-center justify-between px-3 py-2 rounded-xl"

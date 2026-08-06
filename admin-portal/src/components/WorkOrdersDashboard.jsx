@@ -61,7 +61,10 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
   const [error, setError] = useState(null);
   
   // Filters
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [startDateDisplay, setStartDateDisplay] = useState('');
+  const [endDateDisplay, setEndDateDisplay] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [statusChartFilter, setStatusChartFilter] = useState('all');
   const [priorityChartFilter, setPriorityChartFilter] = useState('all');
@@ -71,6 +74,40 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
   const token = getAuthToken();
   const apiPath = getApiPath(portalType);
   const datePickerRef = useRef(null);
+
+  // IST date formatting helpers
+  const formatDateIST = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const parseISTDate = (displayStr) => {
+    if (!displayStr || displayStr.length < 10) return null;
+    const parts = displayStr.split('/');
+    if (parts.length !== 3) return null;
+    const [day, month, year] = parts;
+    if (day && month && year && year.length === 4) {
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    return null;
+  };
+
+  const handleDateInput = (value, setter) => {
+    const cleaned = value.replace(/[^\d/]/g, '');
+    if (cleaned.length <= 10) {
+      let formatted = cleaned;
+      if (cleaned.length === 2 && !cleaned.includes('/')) {
+        formatted = cleaned + '/';
+      } else if (cleaned.length === 5 && cleaned.split('/').length === 2) {
+        formatted = cleaned + '/';
+      }
+      setter(formatted);
+    }
+  };
 
   // Close date picker on outside click
   useEffect(() => {
@@ -399,7 +436,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
     <select 
       value={value} 
       onChange={(e) => onChange(e.target.value)}
-      className={`text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
+      className={`text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
     >
       <option value="all">All Time</option>
       <option value="week">This Week</option>
@@ -443,9 +480,147 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
               className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm hover:bg-gray-50"
             >
               <Calendar className="w-4 h-4 text-gray-500" />
-              <span>{dateRange.start || dateRange.end ? `${dateRange.start || '...'} - ${dateRange.end || '...'}` : 'Select Date Range'}</span>
-              <ChevronDown className="w-4 h-4 text-gray-500" />
+              <span className="text-gray-700 font-medium">
+                {startDate && endDate 
+                  ? `${formatDateIST(startDate)} - ${formatDateIST(endDate)}`
+                  : startDate 
+                    ? `From ${formatDateIST(startDate)}`
+                    : endDate
+                      ? `Until ${formatDateIST(endDate)}`
+                      : 'All Time'}
+              </span>
+              <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
             </button>
+
+            {showDatePicker && (
+              <div className="absolute right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-200 p-5 z-50 min-w-[300px]">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Start Date</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="dd/mm/yyyy"
+                        value={startDateDisplay}
+                        onChange={(e) => {
+                          handleDateInput(e.target.value, setStartDateDisplay);
+                          const parsed = parseISTDate(e.target.value);
+                          if (parsed) setStartDate(parsed);
+                        }}
+                        onBlur={() => {
+                          const parsed = parseISTDate(startDateDisplay);
+                          if (parsed) setStartDate(parsed);
+                          else if (startDateDisplay && startDateDisplay.length < 10) setStartDateDisplay('');
+                        }}
+                        className="w-full px-3 py-2.5 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
+                      />
+                      <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
+                        <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setStartDate(e.target.value); setStartDateDisplay(formatDateIST(e.target.value)); }}} />
+                        <Calendar className="w-4 h-4 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">End Date</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="dd/mm/yyyy"
+                        value={endDateDisplay}
+                        onChange={(e) => {
+                          handleDateInput(e.target.value, setEndDateDisplay);
+                          const parsed = parseISTDate(e.target.value);
+                          if (parsed) setEndDate(parsed);
+                        }}
+                        onBlur={() => {
+                          const parsed = parseISTDate(endDateDisplay);
+                          if (parsed) setEndDate(parsed);
+                          else if (endDateDisplay && endDateDisplay.length < 10) setEndDateDisplay('');
+                        }}
+                        className="w-full px-3 py-2.5 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
+                      />
+                      <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
+                        <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setEndDate(e.target.value); setEndDateDisplay(formatDateIST(e.target.value)); }}} />
+                        <Calendar className="w-4 h-4 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => {
+                        const now = new Date();
+                        const start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        setStartDate(start.toISOString().split('T')[0]);
+                        setEndDate(now.toISOString().split('T')[0]);
+                        setStartDateDisplay(formatDateIST(start.toISOString().split('T')[0]));
+                        setEndDateDisplay(formatDateIST(now.toISOString().split('T')[0]));
+                      }}
+                      className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      Last 7 Days
+                    </button>
+                    <button
+                      onClick={() => {
+                        const now = new Date();
+                        const start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        setStartDate(start.toISOString().split('T')[0]);
+                        setEndDate(now.toISOString().split('T')[0]);
+                        setStartDateDisplay(formatDateIST(start.toISOString().split('T')[0]));
+                        setEndDateDisplay(formatDateIST(now.toISOString().split('T')[0]));
+                      }}
+                      className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      Last 30 Days
+                    </button>
+                    <button
+                      onClick={() => {
+                        const now = new Date();
+                        const start = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+                        setStartDate(start.toISOString().split('T')[0]);
+                        setEndDate(now.toISOString().split('T')[0]);
+                        setStartDateDisplay(formatDateIST(start.toISOString().split('T')[0]));
+                        setEndDateDisplay(formatDateIST(now.toISOString().split('T')[0]));
+                      }}
+                      className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      Last 3 Months
+                    </button>
+                    <button
+                      onClick={() => {
+                        const now = new Date();
+                        const start = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+                        setStartDate(start.toISOString().split('T')[0]);
+                        setEndDate(now.toISOString().split('T')[0]);
+                        setStartDateDisplay(formatDateIST(start.toISOString().split('T')[0]));
+                        setEndDateDisplay(formatDateIST(now.toISOString().split('T')[0]));
+                      }}
+                      className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      Last Year
+                    </button>
+                  </div>
+                  <div className="flex justify-between pt-3 border-t border-gray-100">
+                    <button
+                      onClick={() => {
+                        setStartDate('');
+                        setEndDate('');
+                        setStartDateDisplay('');
+                        setEndDateDisplay('');
+                      }}
+                      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      onClick={() => setShowDatePicker(false)}
+                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Refresh */}
@@ -529,23 +704,23 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       </div>
 
       {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Work Orders by Status */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-semibold text-gray-900">Work Orders by Status</h3>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-semibold text-gray-900">Work Orders by Status</h3>
             <PeriodDropdown value={statusChartFilter} onChange={setStatusChartFilter} />
           </div>
           <div className="flex items-center">
-            <div className="w-40 h-40">
+            <div className="w-32 h-32">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={totalFiltered > 0 ? statusData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
                     cx="50%"
                     cy="50%"
-                    innerRadius={45}
-                    outerRadius={70}
+                    innerRadius={35}
+                    outerRadius={55}
                     dataKey="value"
                     strokeWidth={0}
                   >
@@ -554,17 +729,17 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                     ))}
                   </Pie>
                   <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                    <tspan x="50%" dy="-5" className="text-2xl font-bold fill-gray-900">{totalFiltered}</tspan>
-                    <tspan x="50%" dy="18" className="text-xs fill-gray-500">Total</tspan>
+                    <tspan x="50%" dy="-3" className="text-lg font-bold fill-gray-900">{totalFiltered}</tspan>
+                    <tspan x="50%" dy="14" className="text-[10px] fill-gray-500">Total</tspan>
                   </text>
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="flex-1 ml-4 space-y-2">
+            <div className="flex-1 ml-3 space-y-1">
               {statusData.map((item, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
-                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
-                  <span className="text-gray-600 w-20 flex-shrink-0">{item.name}</span>
+                <div key={index} className="flex items-center gap-1.5 text-xs">
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                  <span className="text-gray-600 w-16 flex-shrink-0">{item.name}</span>
                   <span className="font-medium text-gray-900 whitespace-nowrap">{item.value} ({totalFiltered ? ((item.value / totalFiltered) * 100).toFixed(1) : 0}%)</span>
                 </div>
               ))}
@@ -573,9 +748,9 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
 
         {/* Work Orders by Priority */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-semibold text-gray-900">Work Orders by Priority</h3>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-semibold text-gray-900">Work Orders by Priority</h3>
             <PeriodDropdown value={priorityChartFilter} onChange={setPriorityChartFilter} />
           </div>
           {(() => {
@@ -583,15 +758,15 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
             const chartData = priorityTotal > 0 ? priorityData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }];
             return (
               <div className="flex items-center">
-                <div className="w-40 h-40">
+                <div className="w-32 h-32">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={chartData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={45}
-                        outerRadius={70}
+                        innerRadius={35}
+                        outerRadius={55}
                         dataKey="value"
                         strokeWidth={0}
                       >
@@ -600,17 +775,17 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                         ))}
                       </Pie>
                       <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                        <tspan x="50%" dy="-5" className="text-2xl font-bold fill-gray-900">{priorityTotal}</tspan>
-                        <tspan x="50%" dy="18" className="text-xs fill-gray-500">Total</tspan>
+                        <tspan x="50%" dy="-3" className="text-lg font-bold fill-gray-900">{priorityTotal}</tspan>
+                        <tspan x="50%" dy="14" className="text-[10px] fill-gray-500">Total</tspan>
                       </text>
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="flex-1 ml-4 space-y-3">
+                <div className="flex-1 ml-3 space-y-2">
                   {priorityData.map((item, index) => (
-                    <div key={index} className="flex items-center gap-2 text-sm">
-                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
-                      <span className="text-gray-600 w-16 flex-shrink-0">{item.name}</span>
+                    <div key={index} className="flex items-center gap-1.5 text-xs">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                      <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
                       <span className="font-medium text-gray-900 whitespace-nowrap">{item.value} ({priorityTotal ? ((item.value / priorityTotal) * 100).toFixed(1) : 0}%)</span>
                     </div>
                   ))}
@@ -621,20 +796,20 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
 
         {/* Work Orders by Property Type */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-semibold text-gray-900">Work Orders by Property Type</h3>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-semibold text-gray-900">Work Orders by Property Type</h3>
             <PeriodDropdown value={propertyTypeFilter} onChange={setPropertyTypeFilter} />
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {propertyTypeData.length > 0 ? (
               propertyTypeData.slice(0, 5).map((item, index) => (
-                <div key={index} className="space-y-1">
-                  <div className="flex justify-between text-sm">
+                <div key={index} className="space-y-0.5">
+                  <div className="flex justify-between text-xs">
                     <span className="text-gray-600">{item.name}</span>
                     <span className="font-medium text-gray-900">{item.value}</span>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div 
                       className="h-full rounded-full transition-all"
                       style={{ 
@@ -646,8 +821,8 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                 </div>
               ))
             ) : (
-              <div className="text-center text-gray-500 py-8">
-                <p className="text-sm">No data available</p>
+              <div className="text-center text-gray-500 py-6">
+                <p className="text-xs">No data available</p>
               </div>
             )}
           </div>
@@ -655,40 +830,40 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       </div>
 
       {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Work Orders Trend */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-semibold text-gray-900">Work Orders Trend</h3>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-semibold text-gray-900">Work Orders Trend</h3>
             <select 
               value={trendPeriod} 
               onChange={(e) => setTrendPeriod(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="monthly">Monthly</option>
               <option value="yearly">Yearly</option>
             </select>
           </div>
-          <div className="flex items-center gap-4 mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-              <span className="text-sm text-gray-600">Created</span>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+              <span className="text-xs text-gray-600">Created</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-green-500"></div>
-              <span className="text-sm text-gray-600">Completed</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+              <span className="text-xs text-gray-600">Completed</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-500"></div>
-              <span className="text-sm text-gray-600">Cancelled</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-red-500"></div>
+              <span className="text-xs text-gray-600">Cancelled</span>
             </div>
           </div>
-          <div className="h-64">
+          <div className="h-52">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#9CA3AF" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#9CA3AF" />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="#9CA3AF" />
+                <YAxis tick={{ fontSize: 10 }} stroke="#9CA3AF" />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'white', 
@@ -697,36 +872,36 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                     boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
                   }}
                 />
-                <Line type="monotone" dataKey="Created" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6', strokeWidth: 0, r: 4 }} />
-                <Line type="monotone" dataKey="Completed" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981', strokeWidth: 0, r: 4 }} />
-                <Line type="monotone" dataKey="Cancelled" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444', strokeWidth: 0, r: 4 }} />
+                <Line type="monotone" dataKey="Created" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6', strokeWidth: 0, r: 3 }} />
+                <Line type="monotone" dataKey="Completed" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981', strokeWidth: 0, r: 3 }} />
+                <Line type="monotone" dataKey="Cancelled" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444', strokeWidth: 0, r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Average Completion Time */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-semibold text-gray-900">Average Completion Time</h3>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-semibold text-gray-900">Average Completion Time</h3>
             <PeriodDropdown value={completionTimeFilter} onChange={setCompletionTimeFilter} />
           </div>
-          <div className="flex gap-6">
+          <div className="flex gap-4">
             {/* Left side - Average and Priority bars */}
             <div className="flex-1">
-              <div className="mb-4">
-                <div className="text-3xl font-bold text-gray-900">{completionData.average}</div>
-                <div className="text-sm text-gray-500">Days</div>
+              <div className="mb-3">
+                <div className="text-2xl font-bold text-gray-900">{completionData.average}</div>
+                <div className="text-xs text-gray-500">Days</div>
               </div>
-              <div className="text-sm font-medium text-gray-700 mb-3">By Priority (Days)</div>
-              <div className="space-y-3">
+              <div className="text-xs font-medium text-gray-700 mb-2">By Priority (Days)</div>
+              <div className="space-y-2">
                 {completionData.byPriority.map((item, index) => (
-                  <div key={index} className="space-y-1">
-                    <div className="flex justify-between text-sm">
+                  <div key={index} className="space-y-0.5">
+                    <div className="flex justify-between text-xs">
                       <span className="text-gray-600">{item.name}</span>
                       <span className="font-medium text-gray-900">{item.days} Days</span>
                     </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <div 
                         className="h-full rounded-full transition-all"
                         style={{ 
@@ -741,17 +916,17 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
             </div>
             
             {/* Right side - SLA Compliance */}
-            <div className="w-48 border-l border-gray-200 pl-6">
-              <div className="text-sm font-medium text-gray-700 mb-3">SLA Compliance</div>
-              <div className="relative w-32 h-32 mx-auto">
+            <div className="w-40 border-l border-gray-200 pl-4">
+              <div className="text-xs font-medium text-gray-700 mb-2">SLA Compliance</div>
+              <div className="relative w-24 h-24 mx-auto">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={slaData.data}
                       cx="50%"
                       cy="50%"
-                      innerRadius={35}
-                      outerRadius={50}
+                      innerRadius={28}
+                      outerRadius={40}
                       dataKey="value"
                       strokeWidth={0}
                     >
@@ -760,8 +935,8 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                       ))}
                     </Pie>
                     <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                      <tspan x="50%" dy="-2" className="text-xl font-bold fill-gray-900">{slaData.percentage}%</tspan>
-                      <tspan x="50%" dy="14" className="text-[10px] fill-gray-500">Met</tspan>
+                      <tspan x="50%" dy="-2" className="text-base font-bold fill-gray-900">{slaData.percentage}%</tspan>
+                      <tspan x="50%" dy="12" className="text-[8px] fill-gray-500">Met</tspan>
                     </text>
                   </PieChart>
                 </ResponsiveContainer>
