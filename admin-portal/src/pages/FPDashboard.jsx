@@ -484,22 +484,36 @@ const FPDashboard = ({ user }) => {
             <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Status</h3>
               <div className="flex items-center">
-                <div className="w-36 h-36">
+                <div className="w-36 h-36 relative">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
+                      {/* Background gray ring - always visible */}
                       <Pie
-                        data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
+                        data={[{ value: 1 }]}
                         cx="50%"
                         cy="50%"
                         innerRadius={40}
                         outerRadius={65}
                         dataKey="value"
                         strokeWidth={0}
-                      >
-                        {(pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
+                        fill="#E5E7EB"
+                      />
+                      {/* Actual data ring - overlays gray ring */}
+                      {pieData.length > 0 && (
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={40}
+                          outerRadius={65}
+                          dataKey="value"
+                          strokeWidth={0}
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                      )}
                       <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
                         <tspan x="50%" dy="-3" className="text-xl font-bold fill-gray-900">{totalWorkOrders}</tspan>
                         <tspan x="50%" dy="16" className="text-[10px] fill-gray-500">Total</tspan>
@@ -530,22 +544,36 @@ const FPDashboard = ({ user }) => {
             <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Priority</h3>
               <div className="flex items-center">
-                <div className="w-36 h-36">
+                <div className="w-36 h-36 relative">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
+                      {/* Background gray ring - always visible */}
                       <Pie
-                        data={priorityTotal > 0 ? priorityData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
+                        data={[{ value: 1 }]}
                         cx="50%"
                         cy="50%"
                         innerRadius={40}
                         outerRadius={65}
                         dataKey="value"
                         strokeWidth={0}
-                      >
-                        {(priorityTotal > 0 ? priorityData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
+                        fill="#E5E7EB"
+                      />
+                      {/* Actual data ring - overlays gray ring */}
+                      {priorityTotal > 0 && (
+                        <Pie
+                          data={priorityData.filter(d => d.value > 0)}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={40}
+                          outerRadius={65}
+                          dataKey="value"
+                          strokeWidth={0}
+                        >
+                          {priorityData.filter(d => d.value > 0).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                      )}
                       <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
                         <tspan x="50%" dy="-3" className="text-xl font-bold fill-gray-900">{priorityTotal || totalWorkOrders}</tspan>
                         <tspan x="50%" dy="16" className="text-[10px] fill-gray-500">Total</tspan>
@@ -569,29 +597,51 @@ const FPDashboard = ({ user }) => {
             <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Property Type</h3>
               <div className="space-y-3">
-                {woPropertyTypeData.length > 0 ? (
-                  woPropertyTypeData.slice(0, 5).map((item, index) => (
+                {(() => {
+                  // Default property types to always show
+                  const defaultTypes = [
+                    { name: 'Gated Community', color: '#3B82F6' },
+                    { name: 'Apartment', color: '#8B5CF6' },
+                    { name: 'Villa', color: '#10B981' },
+                    { name: 'Plot', color: '#F59E0B' },
+                    { name: 'Flat', color: '#EF4444' },
+                  ];
+                  
+                  // Merge with actual data
+                  const mergedData = defaultTypes.map(dt => {
+                    const found = woPropertyTypeData.find(p => p.name.toLowerCase() === dt.name.toLowerCase());
+                    return { ...dt, value: found?.value || 0 };
+                  });
+                  
+                  // Add any property types from data that aren't in defaults
+                  woPropertyTypeData.forEach(p => {
+                    if (!mergedData.find(m => m.name.toLowerCase() === p.name.toLowerCase())) {
+                      mergedData.push(p);
+                    }
+                  });
+                  
+                  const maxValue = Math.max(...mergedData.map(d => d.value), 1);
+                  
+                  return mergedData.slice(0, 5).map((item, index) => (
                     <div key={index} className="space-y-1">
                       <div className="flex justify-between text-xs">
                         <span className="text-gray-600">{item.name}</span>
                         <span className="font-medium text-gray-900">{item.value}</span>
                       </div>
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full rounded-full transition-all"
-                          style={{ 
-                            width: `${Math.max(5, (item.value / (woPropertyTypeData[0]?.value || 1)) * 100)}%`,
-                            backgroundColor: item.color
-                          }}
-                        ></div>
+                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        {item.value > 0 && (
+                          <div 
+                            className="h-full rounded-full transition-all"
+                            style={{ 
+                              width: `${Math.max(5, (item.value / maxValue) * 100)}%`,
+                              backgroundColor: item.color
+                            }}
+                          ></div>
+                        )}
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center text-gray-500 py-8">
-                    <p className="text-xs">No data available</p>
-                  </div>
-                )}
+                  ));
+                })()}
               </div>
             </div>
           </div>
