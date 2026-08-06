@@ -167,7 +167,7 @@ const Layout = ({ admin, onLogout, children }) => {
             ))}
 
             {/* Work Orders Section */}
-            <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${colors.divider}` }}>
+            <div className="mt-3 pt-3" >
               <button
                 onClick={toggleWorkOrders}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
@@ -185,7 +185,7 @@ const Layout = ({ admin, onLogout, children }) => {
                 )}
               </button>
               {workOrdersOpen && !sidebarCollapsed && (
-                <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
+                <div className="ml-4 mt-1 space-y-1 pl-3" >
                   {workOrdersSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile collapsed={sidebarCollapsed} isSubItem />
                   ))}
@@ -195,7 +195,7 @@ const Layout = ({ admin, onLogout, children }) => {
           </nav>
 
           {/* User Info & Logout */}
-          <div className="px-3 py-4" style={{ borderTop: `1px solid ${colors.divider}` }}>
+          <div className="px-3 py-4" >
             {!sidebarCollapsed ? (
               <div className="flex items-center justify-between px-3 py-2 rounded-xl" style={{ background: colors.profileBg }}>
                 <div className="flex flex-col">

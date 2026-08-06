@@ -197,7 +197,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
                 ))}
                 
                 {/* Vendor Management Section */}
-                <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${colors.divider}` }}>
+                <div className="mt-3 pt-3" >
                   <button onClick={toggleVendors} className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`} style={{ background: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent', color: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText }} onMouseEnter={(e) => { if (!expandedMenus.vendors && !(isVendorActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }} onMouseLeave={(e) => { if (!expandedMenus.vendors && !(isVendorActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }} title={sidebarCollapsed ? 'Vendor Management' : ''}>
                     <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                       <Store className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
@@ -206,7 +206,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
                     {!sidebarCollapsed && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.vendors ? 'rotate-180' : ''}`} />}
                   </button>
                   {expandedMenus.vendors && !sidebarCollapsed && (
-                    <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
+                    <div className="ml-4 mt-1 space-y-1 pl-3" >
                       {vendorSubItems.map((item) => { const Icon = item.icon; const isActive = location.pathname === item.path; return (
                         <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)} className="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 font-medium" style={{ background: isActive ? colors.activeBg : 'transparent', color: isActive ? colors.activeText : colors.primaryText }} onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }} onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
                           <Icon className="w-4 h-4" style={{ color: isActive ? colors.activeText : colors.iconGold }} /><span>{item.label}</span>
@@ -226,7 +226,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
                     {!sidebarCollapsed && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.estimates ? 'rotate-180' : ''}`} />}
                   </button>
                   {expandedMenus.estimates && !sidebarCollapsed && (
-                    <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
+                    <div className="ml-4 mt-1 space-y-1 pl-3" >
                       {estimatesSubItems.map((item) => { const Icon = item.icon; const isActive = location.pathname === item.path; return (
                         <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)} className="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 font-medium" style={{ background: isActive ? colors.activeBg : 'transparent', color: isActive ? colors.activeText : colors.primaryText }} onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }} onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
                           <Icon className="w-4 h-4" style={{ color: isActive ? colors.activeText : colors.iconGold }} /><span>{item.label}</span>
@@ -241,7 +241,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
                 {navItems.map((item) => (<NavLink key={item.path} item={item} mobile />))}
 
                 {/* Vendor Management Section - Only for regular executives */}
-                <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${colors.divider}` }}>
+                <div className="mt-3 pt-3" >
                   <button onClick={toggleVendors} className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`} style={{ background: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent', color: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText }} onMouseEnter={(e) => { if (!expandedMenus.vendors && !(isVendorActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }} onMouseLeave={(e) => { if (!expandedMenus.vendors && !(isVendorActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }} title={sidebarCollapsed ? 'Vendor Management' : ''}>
                     <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                       <Store className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
@@ -250,7 +250,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
                     {!sidebarCollapsed && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.vendors ? 'rotate-180' : ''}`} />}
                   </button>
                   {expandedMenus.vendors && !sidebarCollapsed && (
-                    <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
+                    <div className="ml-4 mt-1 space-y-1 pl-3" >
                       {vendorSubItems.map((item) => { const Icon = item.icon; const isActive = location.pathname === item.path; return (
                         <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)} className="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 font-medium" style={{ background: isActive ? colors.activeBg : 'transparent', color: isActive ? colors.activeText : colors.primaryText }} onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }} onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
                           <Icon className="w-4 h-4" style={{ color: isActive ? colors.activeText : colors.iconGold }} /><span>{item.label}</span>
@@ -270,7 +270,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
                     {!sidebarCollapsed && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.estimates ? 'rotate-180' : ''}`} />}
                   </button>
                   {expandedMenus.estimates && !sidebarCollapsed && (
-                    <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
+                    <div className="ml-4 mt-1 space-y-1 pl-3" >
                       {estimatesSubItems.map((item) => { const Icon = item.icon; const isActive = location.pathname === item.path; return (
                         <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)} className="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 font-medium" style={{ background: isActive ? colors.activeBg : 'transparent', color: isActive ? colors.activeText : colors.primaryText }} onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }} onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
                           <Icon className="w-4 h-4" style={{ color: isActive ? colors.activeText : colors.iconGold }} /><span>{item.label}</span>
@@ -285,7 +285,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
           </nav>
 
           {/* User Info & Logout */}
-          <div className="px-3 py-4" style={{ borderTop: `1px solid ${colors.divider}` }}>
+          <div className="px-3 py-4" >
             {!sidebarCollapsed ? (
               <div className="flex items-center justify-between px-3 py-2 rounded-xl" style={{ background: colors.profileBg }}>
                 <div className="flex flex-col">

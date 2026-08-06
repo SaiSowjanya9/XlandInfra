@@ -815,17 +815,17 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                 </div>
               </div>
             </div>
-            <div className="w-1/2 space-y-3 pl-4">
+            <div className="w-1/2 space-y-2 pl-3">
               {[
                 { name: 'Direct Estimates', value: block3Direct, color: '#8B5CF6' },
                 { name: 'Property-Based', value: block3PropertyBased, color: '#06B6D4' }
               ].map((item, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
+                <div key={index} className="flex items-center gap-1.5 text-xs">
                   <div 
-                    className="w-3 h-3 rounded-full flex-shrink-0" 
+                    className="w-2 h-2 rounded-full flex-shrink-0" 
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-gray-600 w-24">{item.name}</span>
+                  <span className="text-gray-600 w-20 flex-shrink-0">{item.name}</span>
                   <span className="font-medium text-gray-800 whitespace-nowrap">
                     {item.value} ({block3Data.length ? ((item.value / block3Data.length) * 100).toFixed(1) : 0}%)
                   </span>
@@ -944,14 +944,14 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                 </div>
               </div>
             </div>
-            <div className="w-1/2 space-y-2 pl-4">
+            <div className="w-1/2 space-y-1.5 pl-3">
               {propertyBasedStatusDataAll.map((item, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
+                <div key={index} className="flex items-center gap-1.5 text-xs">
                   <div 
-                    className="w-3 h-3 rounded-full flex-shrink-0" 
+                    className="w-2 h-2 rounded-full flex-shrink-0" 
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-gray-600 w-20 flex-shrink-0">{item.name}</span>
+                  <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
                   <span className="text-gray-800 whitespace-nowrap">
                     {item.value} ({block6Data.length ? ((item.value / block6Data.length) * 100).toFixed(1) : 0}%)
                   </span>
@@ -1016,14 +1016,14 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                 </div>
               </div>
             </div>
-            <div className="w-1/2 space-y-2 pl-4">
+            <div className="w-1/2 space-y-1.5 pl-3">
               {statusDataAll.map((item, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
+                <div key={index} className="flex items-center gap-1.5 text-xs">
                   <div 
-                    className="w-3 h-3 rounded-full flex-shrink-0" 
+                    className="w-2 h-2 rounded-full flex-shrink-0" 
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-gray-600 w-20 flex-shrink-0">{item.name}</span>
+                  <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
                   <span className="text-gray-800 whitespace-nowrap">
                     {item.value} ({block2Data.length ? ((item.value / block2Data.length) * 100).toFixed(1) : 0}%)
                   </span>
@@ -1141,14 +1141,14 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                 </div>
               </div>
             </div>
-            <div className="w-1/2 space-y-2 pl-4">
+            <div className="w-1/2 space-y-1.5 pl-3">
               {directStatusDataAll.map((item, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
+                <div key={index} className="flex items-center gap-1.5 text-xs">
                   <div 
-                    className="w-3 h-3 rounded-full flex-shrink-0" 
+                    className="w-2 h-2 rounded-full flex-shrink-0" 
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-gray-600 w-20 flex-shrink-0">{item.name}</span>
+                  <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
                   <span className="text-gray-800 whitespace-nowrap">
                     {item.value} ({block5Data.length ? ((item.value / block5Data.length) * 100).toFixed(1) : 0}%)
                   </span>
