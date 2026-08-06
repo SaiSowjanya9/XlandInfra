@@ -13,13 +13,25 @@ import {
   ChevronRight,
   PanelLeftClose,
   PanelLeft,
+  ChevronDown,
+  Plus,
+  List,
+  Clock,
+  UserPlus,
+  CheckCircle,
+  Archive,
+  XCircle,
+  BarChart3,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const Layout = ({ admin, onLogout, children }) => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [workOrdersOpen, setWorkOrdersOpen] = useState(
+    location.pathname.startsWith('/work-orders')
+  );
 
   // Get user initials for avatar
   const getInitials = () => {
@@ -36,10 +48,34 @@ const Layout = ({ admin, onLogout, children }) => {
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/customer-submissions', icon: Building2, label: 'Property Management' },
-    { path: '/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/categories', icon: FolderTree, label: 'Categories' },
     { path: '/create-customer', icon: FileInput, label: 'Create Customer' },
   ];
+
+  // Work Orders sub-items
+  const workOrdersSubItems = [
+    { path: '/work-orders/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/work-orders/create', icon: Plus, label: 'Create Work Order' },
+    { path: '/work-orders', icon: List, label: 'All Work Orders' },
+    { path: '/work-orders/pending', icon: Clock, label: 'Pending' },
+    { path: '/work-orders/assigned', icon: UserPlus, label: 'Assigned' },
+    { path: '/work-orders/in-progress', icon: ClipboardList, label: 'In Progress' },
+    { path: '/work-orders/completed', icon: CheckCircle, label: 'Completed' },
+    { path: '/work-orders/closed', icon: Archive, label: 'Closed' },
+    { path: '/work-orders/cancelled', icon: XCircle, label: 'Cancelled' }
+  ];
+
+  const isWorkOrdersSectionActive = workOrdersSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/work-orders');
+
+  useEffect(() => {
+    if (isWorkOrdersSectionActive) setWorkOrdersOpen(true);
+  }, [location.pathname]);
+
+  const toggleWorkOrders = () => {
+    if (!sidebarCollapsed) {
+      setWorkOrdersOpen(!workOrdersOpen);
+    }
+  };
 
   // Color constants for sidebar
   const colors = {
@@ -56,13 +92,19 @@ const Layout = ({ admin, onLogout, children }) => {
     profileBg: '#1F1C18',
   };
 
-  const NavLink = ({ item, mobile = false, collapsed = false }) => {
+  const NavLink = ({ item, mobile = false, collapsed = false, isSubItem = false }) => {
     const Icon = item.icon;
-    const isActive = location.pathname === item.path;
+    // Only highlight main nav if path matches AND work orders dropdown is not open (for main nav items only)
+    const isActive = isSubItem ? location.pathname === item.path : (location.pathname === item.path && !workOrdersOpen);
+    const handleClick = () => {
+      if (mobile) setSidebarOpen(false);
+      // Close work orders dropdown when clicking on main nav items (not sub-items)
+      if (!isSubItem) setWorkOrdersOpen(false);
+    };
     return (
       <Link
         to={item.path}
-        onClick={() => mobile && setSidebarOpen(false)}
+        onClick={handleClick}
         className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
         style={{ background: isActive ? colors.activeBg : 'transparent', color: isActive ? colors.activeText : colors.primaryText }}
         onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }}
@@ -130,6 +172,33 @@ const Layout = ({ admin, onLogout, children }) => {
             {navItems.map((item) => (
               <NavLink key={item.path} item={item} mobile collapsed={sidebarCollapsed} />
             ))}
+
+            {/* Work Orders Section */}
+            <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${colors.divider}` }}>
+              <button
+                onClick={toggleWorkOrders}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{ background: (workOrdersOpen || isWorkOrdersSectionActive) ? colors.activeBg : 'transparent', color: (workOrdersOpen || isWorkOrdersSectionActive) ? colors.activeText : colors.primaryText }}
+                onMouseEnter={(e) => { if (!workOrdersOpen && !isWorkOrdersSectionActive) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!workOrdersOpen && !isWorkOrdersSectionActive) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Work Orders' : ''}
+              >
+                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <ClipboardList className="w-5 h-5 flex-shrink-0" style={{ color: (workOrdersOpen || isWorkOrdersSectionActive) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span className="text-sm">Work Orders</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${workOrdersOpen ? 'rotate-180' : ''}`} />
+                )}
+              </button>
+              {workOrdersOpen && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
+                  {workOrdersSubItems.map((item) => (
+                    <NavLink key={item.path} item={item} mobile collapsed={sidebarCollapsed} isSubItem />
+                  ))}
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* User Info & Logout */}

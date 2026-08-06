@@ -28,6 +28,9 @@ import {
   ChevronLeft,
   ChevronRight,
   BarChart3,
+  Clock,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useFP } from '../contexts/FPContext';
@@ -69,6 +72,10 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     return (first + last).toUpperCase() || 'U';
   };
 
+  const [workOrdersOpen, setWorkOrdersOpen] = useState(
+    location.pathname.startsWith('/employee/work-orders')
+  );
+
   const [vendorOpen, setVendorOpen] = useState(
     location.pathname.startsWith('/employee/add-vendor') ||
     location.pathname.startsWith('/employee/vendor-details') ||
@@ -84,7 +91,6 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   // Base nav items - filtered based on role
   const allNavItems = [
     { path: '/employee', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/employee/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer' },
     { path: '/employee/user-management', icon: Shield, label: 'User Management', adminOnly: true },
     { path: '/employee/qr-management', icon: QrCode, label: 'QR Management' },
@@ -94,6 +100,25 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   const navItems = isOpsManager 
     ? allNavItems.filter(item => !item.adminOnly)
     : allNavItems;
+
+  // Work Orders sub-items
+  const workOrdersSubItems = [
+    { path: '/employee/work-orders/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/employee/work-orders/create', icon: Plus, label: 'Create Work Order', adminOnly: true },
+    { path: '/employee/work-orders', icon: List, label: 'All Work Orders' },
+    { path: '/employee/work-orders/pending', icon: Clock, label: 'Pending' },
+    { path: '/employee/work-orders/assigned', icon: UserPlus, label: 'Assigned' },
+    { path: '/employee/work-orders/in-progress', icon: ClipboardList, label: 'In Progress' },
+    { path: '/employee/work-orders/completed', icon: CheckCircle, label: 'Completed' },
+    { path: '/employee/work-orders/closed', icon: Archive, label: 'Closed' },
+    { path: '/employee/work-orders/cancelled', icon: XCircle, label: 'Cancelled' }
+  ];
+
+  const filteredWorkOrdersSubItems = isOpsManager
+    ? workOrdersSubItems.filter(item => !item.adminOnly)
+    : workOrdersSubItems;
+
+  const isWorkOrdersSectionActive = workOrdersSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/employee/work-orders');
 
   const [estimatesOpen, setEstimatesOpen] = useState(
     location.pathname.startsWith('/employee/estimates')
@@ -133,11 +158,19 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   const isEmployeeSectionActive = employeeSubItems.some(item => location.pathname === item.path);
   
   // Accordion toggle functions - close other sections when opening one
+  const toggleWorkOrders = () => {
+    if (!sidebarCollapsed) {
+      const opening = !workOrdersOpen;
+      setWorkOrdersOpen(opening);
+      if (opening) { setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); }
+    }
+  };
+
   const toggleVendor = () => {
     if (!sidebarCollapsed) {
       const opening = !vendorOpen;
       setVendorOpen(opening);
-      if (opening) { setEmployeeOpen(false); setEstimatesOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); }
     }
   };
 
@@ -145,7 +178,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !employeeOpen;
       setEmployeeOpen(opening);
-      if (opening) { setVendorOpen(false); setEstimatesOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEstimatesOpen(false); }
     }
   };
 
@@ -153,7 +186,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !estimatesOpen;
       setEstimatesOpen(opening);
-      if (opening) { setVendorOpen(false); setEmployeeOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); }
     }
   };
 
@@ -173,7 +206,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   };
 
   // Check if any dropdown is open
-  const isAnyDropdownOpen = vendorOpen || employeeOpen || estimatesOpen;
+  const isAnyDropdownOpen = workOrdersOpen || vendorOpen || employeeOpen || estimatesOpen;
 
   const NavLink = ({ item, mobile = false, isSubItem = false }) => {
     const Icon = item.icon;
@@ -184,6 +217,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
       
       // Close all dropdowns only when clicking on main nav items (not sub-items)
       if (!isSubItem) {
+        setWorkOrdersOpen(false);
         setVendorOpen(false);
         setEmployeeOpen(false);
         setEstimatesOpen(false);
@@ -272,10 +306,37 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
             {/* Property Management - Direct link, FP selection on page */}
             <NavLink item={{ path: '/employee/customer-submissions', icon: Building2, label: 'Property Management' }} mobile />
 
-            {/* Other nav items (Work Orders, etc.) */}
+            {/* Other nav items */}
             {navItems.filter(item => item.path !== '/employee').map((item) => (
               <NavLink key={item.path} item={item} mobile />
             ))}
+
+            {/* Work Orders Section */}
+            <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${colors.divider}` }}>
+              <button
+                onClick={toggleWorkOrders}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{ background: (workOrdersOpen || (isWorkOrdersSectionActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent', color: (workOrdersOpen || (isWorkOrdersSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText }}
+                onMouseEnter={(e) => { if (!workOrdersOpen && !(isWorkOrdersSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!workOrdersOpen && !(isWorkOrdersSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Work Orders' : ''}
+              >
+                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <ClipboardList className="w-5 h-5 flex-shrink-0" style={{ color: (workOrdersOpen || (isWorkOrdersSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span className="text-sm">Work Orders</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${workOrdersOpen ? 'rotate-180' : ''}`} />
+                )}
+              </button>
+              {workOrdersOpen && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
+                  {filteredWorkOrdersSubItems.map((item) => (
+                    <NavLink key={item.path} item={item} mobile isSubItem />
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Vendor Management Section */}
             <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${colors.divider}` }}>

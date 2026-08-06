@@ -9,6 +9,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { useFP } from '../contexts/FPContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import EstimatesOverviewBlocks from '../components/EstimatesOverviewBlocks';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -20,6 +21,7 @@ const Dashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [estimates, setEstimates] = useState([]);
   const notificationRef = useRef(null);
   const lastFetchRef = useRef(0);
   const navigate = useNavigate();
@@ -55,23 +57,27 @@ const Dashboard = () => {
     }
     try {
       let endpoint;
+      let estimatesEndpoint;
       if (selectedFp.id === 'all') {
         // Admin mode - fetch aggregated data from all sources
         endpoint = `${API_BASE}/api/admin/dashboard-stats`;
+        estimatesEndpoint = `${API_BASE}/api/admin/estimates`;
       } else {
         // Specific FP selected
         endpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/dashboard`;
+        estimatesEndpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/estimates`;
       }
       
-      const response = await fetch(endpoint, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const [dashRes, estRes] = await Promise.all([
+        fetch(endpoint, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(estimatesEndpoint, { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
       
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      if (!dashRes.ok) {
+        throw new Error(`HTTP ${dashRes.status}`);
       }
       
-      const result = await response.json();
+      const [result, estResult] = await Promise.all([dashRes.json(), estRes.json()]);
       if (result.success && result.data) {
         const data = result.data;
         // Map dashboard data to stats format with safe defaults
@@ -92,6 +98,9 @@ const Dashboard = () => {
         // Set empty defaults if no data
         setStats(null);
         setRecentActivities([]);
+      }
+      if (estResult.success && Array.isArray(estResult.data)) {
+        setEstimates(estResult.data);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -591,47 +600,7 @@ const Dashboard = () => {
                 View All <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Half - Property Type Bar Chart */}
-              <div className="flex items-center gap-4">
-                <div className="text-center">
-                  <p className="text-3xl font-bold text-gray-900">{totalEstimates}</p>
-                  <p className="text-sm text-gray-500">Total</p>
-                </div>
-                <div className="flex-1 h-44">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stackedBarData} margin={{ top: 20, right: 10, bottom: 20, left: 10 }}>
-                      <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
-                      <YAxis hide />
-                      <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelStyle={{ color: '#fff', fontWeight: 600 }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-                      <Legend verticalAlign="top" align="center" height={36} iconSize={14} wrapperStyle={{ fontSize: '14px', fontWeight: 500 }} formatter={(value) => value === 'Direct' ? `Direct (${directCount})` : `Property (${propertyCount})`} />
-                      <Bar dataKey="direct" name="Direct" stackId="a" fill="#06B6D4" barSize={40} />
-                      <Bar dataKey="property" name="Property" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Right Half - Status Breakdown Bar Chart */}
-              <div className="flex-1 h-44">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={statusData} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
-                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
-                    <YAxis hide />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
-                      labelStyle={{ color: '#fff', fontWeight: 600 }}
-                      itemStyle={{ color: '#fff' }}
-                      cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                    />
-                    <Legend verticalAlign="top" align="center" height={36} iconSize={14} wrapperStyle={{ fontSize: '14px', fontWeight: 500 }} />
-                    <Bar dataKey="direct" name="Direct" fill="#06B6D4" barSize={20} radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="property" name="Property" fill="#8B5CF6" barSize={20} radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+            <EstimatesOverviewBlocks estimates={estimates} />
           </div>
 
           {/* Divider */}

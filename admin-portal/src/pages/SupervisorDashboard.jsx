@@ -15,6 +15,7 @@ import {
   UserPlus
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import EstimatesOverviewBlocks from '../components/EstimatesOverviewBlocks';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -23,6 +24,7 @@ const SupervisorDashboard = ({ user }) => {
   const location = useLocation();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [estimates, setEstimates] = useState([]);
   const lastFetchRef = useRef(0);
 
   const fetchDashboard = useCallback(async (isInitialLoad = false) => {
@@ -33,11 +35,13 @@ const SupervisorDashboard = ({ user }) => {
     if (isInitialLoad) setLoading(true);
     try {
       const token = getAuthToken();
-      const response = await fetch(`${API_BASE}/api/supervisor/dashboard`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success) setStats(result.data.stats);
+      const [dashRes, estRes] = await Promise.all([
+        fetch(`${API_BASE}/api/supervisor/dashboard`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/supervisor/estimates`, { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
+      const [dashResult, estResult] = await Promise.all([dashRes.json(), estRes.json()]);
+      if (dashResult.success) setStats(dashResult.data.stats);
+      if (estResult.success && Array.isArray(estResult.data)) setEstimates(estResult.data);
     } catch (error) {
       console.error('Dashboard fetch error:', error);
     } finally {
@@ -188,47 +192,7 @@ const SupervisorDashboard = ({ user }) => {
               View All <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Half - Property Type Bar Chart */}
-            <div className="flex items-center gap-4">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-gray-900">{totalEstimates}</p>
-                <p className="text-sm text-gray-500">Total</p>
-              </div>
-              <div className="flex-1 h-44">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stackedBarData} margin={{ top: 20, right: 10, bottom: 20, left: 10 }}>
-                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
-                    <YAxis hide />
-                    <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelStyle={{ color: '#fff', fontWeight: 600 }} itemStyle={{ color: '#fff' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-                    <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} formatter={(value) => value === 'Direct' ? `Direct (${directCount})` : `Property (${propertyCount})`} />
-                    <Bar dataKey="direct" name="Direct" stackId="a" fill="#06B6D4" barSize={40} />
-                    <Bar dataKey="property" name="Property" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Right Half - Status Breakdown Bar Chart */}
-            <div className="flex-1 h-44">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={statusData} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 500 }} axisLine={false} tickLine={false} />
-                  <YAxis hide />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
-                    labelStyle={{ color: '#fff', fontWeight: 600 }}
-                    itemStyle={{ color: '#fff' }}
-                    cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                  />
-                  <Legend verticalAlign="top" height={24} iconSize={10} wrapperStyle={{ fontSize: '11px' }} />
-                  <Bar dataKey="direct" name="Direct" fill="#06B6D4" barSize={20} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="property" name="Property" fill="#8B5CF6" barSize={20} radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          <EstimatesOverviewBlocks estimates={estimates} />
         </div>
 
         {/* Divider */}
