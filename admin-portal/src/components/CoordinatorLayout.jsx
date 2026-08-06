@@ -22,6 +22,7 @@ import {
   Archive,
   ChevronLeft,
   ChevronRight,
+  BarChart3,
 } from 'lucide-react';
 
 const CoordinatorLayout = ({ admin, onLogout, children }) => {
@@ -95,7 +96,7 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
   useEffect(() => {
     if (isVendorActive) setExpandedMenus(prev => ({ ...prev, vendors: true }));
     if (isEstimatesActive) setExpandedMenus(prev => ({ ...prev, estimates: true }));
-  }, [location.pathname]);
+  }, [location.pathname, isVendorActive, isEstimatesActive]);
 
   // Accordion toggle functions - close other sections when opening one
   const toggleVendors = () => {

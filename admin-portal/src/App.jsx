@@ -87,6 +87,7 @@ import EstimateAction from './pages/EstimateAction';
 import ResetPassword from './pages/ResetPassword';
 import Phase2Documentation from './pages/Phase2Documentation';
 import EstimatesDashboard from './pages/EstimatesDashboard';
+import WorkOrdersDashboard from './components/WorkOrdersDashboard';
 import { FPProvider } from './contexts/FPContext';
 
 // Session timeout in milliseconds (30 minutes)
@@ -332,7 +333,14 @@ function App() {
                 <EmployeeLayout admin={user} onLogout={() => { handleLogout(); }}>
                   <Routes>
                     <Route path="customer-submissions" element={<CustomerSubmissions />} />
+                    <Route path="work-orders/dashboard" element={<WorkOrdersDashboard user={user} portalType="employee" />} />
                     <Route path="work-orders" element={<EmployeeWorkOrders admin={user} />} />
+                    <Route path="work-orders/pending" element={<EmployeeWorkOrders admin={user} />} />
+                    <Route path="work-orders/assigned" element={<EmployeeWorkOrders admin={user} />} />
+                    <Route path="work-orders/in-progress" element={<EmployeeWorkOrders admin={user} />} />
+                    <Route path="work-orders/completed" element={<EmployeeWorkOrders admin={user} />} />
+                    <Route path="work-orders/closed" element={<EmployeeWorkOrders admin={user} />} />
+                    <Route path="work-orders/cancelled" element={<EmployeeWorkOrders admin={user} />} />
                     <Route path="create-customer" element={<CreateCustomer admin={user} />} />
                     <Route path="add-vendor" element={<AddVendor admin={user} />} />
                     <Route path="vendor-details" element={<VendorDetails />} />
@@ -398,7 +406,14 @@ function App() {
                 <FPLayout admin={user} onLogout={() => { handleLogout(); }}>
                   <Routes>
                     <Route path="properties" element={<FPProperties user={user} />} />
+                    <Route path="work-orders/dashboard" element={<WorkOrdersDashboard user={user} portalType="franchise" />} />
                     <Route path="work-orders" element={<FPWorkOrders user={user} />} />
+                    <Route path="work-orders/pending" element={<FPWorkOrders user={user} />} />
+                    <Route path="work-orders/completed" element={<FPWorkOrders user={user} />} />
+                    <Route path="work-orders/assigned" element={<FPWorkOrders user={user} />} />
+                    <Route path="work-orders/in-progress" element={<FPWorkOrders user={user} />} />
+                    <Route path="work-orders/closed" element={<FPWorkOrders user={user} />} />
+                    <Route path="work-orders/cancelled" element={<FPWorkOrders user={user} />} />
                     <Route path="customers" element={<FPCustomers user={user} />} />
                     <Route path="customers/add" element={<FPCustomers user={user} defaultTab="add" />} />
                     <Route path="vendors" element={<FPVendors user={user} />} />
@@ -437,9 +452,14 @@ function App() {
                 <ManagerLayout admin={user} onLogout={() => { handleLogout(); }}>
                   <Routes>
                     <Route path="properties" element={<ManagerProperties user={user} />} />
+                    <Route path="work-orders/dashboard" element={<WorkOrdersDashboard user={user} portalType="manager" />} />
                     <Route path="work-orders" element={<ManagerWorkOrders user={user} />} />
                     <Route path="work-orders/pending" element={<ManagerWorkOrders user={user} />} />
                     <Route path="work-orders/completed" element={<ManagerWorkOrders user={user} />} />
+                    <Route path="work-orders/assigned" element={<ManagerWorkOrders user={user} />} />
+                    <Route path="work-orders/in-progress" element={<ManagerWorkOrders user={user} />} />
+                    <Route path="work-orders/closed" element={<ManagerWorkOrders user={user} />} />
+                    <Route path="work-orders/cancelled" element={<ManagerWorkOrders user={user} />} />
                     <Route path="customers" element={<ManagerCustomers user={user} />} />
                     <Route path="customers/add" element={<ManagerCustomers user={user} defaultTab="add" />} />
                     <Route path="vendors" element={<ManagerVendors user={user} />} />
@@ -485,6 +505,7 @@ function App() {
                     <Route path="vendors/assigned" element={<AssignedVendors user={user} />} />
                     <Route path="employees/zones" element={<CoordinatorEmployees user={user} />} />
                     <Route path="estimates" element={<CoordinatorEstimates user={user} defaultTab="list" />} />
+                    <Route path="estimates/dashboard" element={<EstimatesDashboard user={user} portalType="coordinator" />} />
                     <Route path="estimates/create" element={<CoordinatorEstimates user={user} defaultTab="create" />} />
                     <Route path="estimates/amc" element={<CoordinatorEstimates user={user} defaultTab="amc" />} />
                     <Route path="estimates/addons" element={<CoordinatorEstimates user={user} defaultTab="addons" />} />
@@ -520,6 +541,7 @@ function App() {
                     <Route path="vendors/add" element={<SupervisorAddVendor user={user} />} />
                     <Route path="vendors/assigned" element={<AssignedVendors user={user} />} />
                     <Route path="estimates" element={<SupervisorEstimates user={user} defaultTab="list" />} />
+                    <Route path="estimates/dashboard" element={<EstimatesDashboard user={user} portalType="supervisor" />} />
                     <Route path="estimates/create" element={<SupervisorEstimates user={user} defaultTab="create" />} />
                     <Route path="estimates/amc" element={<SupervisorEstimates user={user} defaultTab="amc" />} />
                     <Route path="estimates/addons" element={<SupervisorEstimates user={user} defaultTab="addons" />} />
@@ -556,6 +578,7 @@ function App() {
                     <Route path="vendors/assigned" element={<AssignedVendors user={user} />} />
                     <Route path="employees/zones" element={<ManagerEmployeeZones user={user} viewOnly={true} />} />
                     <Route path="estimates" element={<ExecutiveEstimates user={user} defaultTab="list" />} />
+                    <Route path="estimates/dashboard" element={<EstimatesDashboard user={user} portalType="executive" />} />
                     <Route path="estimates/create" element={<ExecutiveEstimates user={user} defaultTab="create" />} />
                     <Route path="estimates/amc" element={<ExecutiveEstimates user={user} defaultTab="amc" />} />
                     <Route path="estimates/addons" element={<ExecutiveEstimates user={user} defaultTab="addons" />} />

@@ -23,6 +23,9 @@ import {
   ChevronLeft,
   ChevronRight,
   BarChart3,
+  Clock,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 
 const ManagerLayout = ({ admin, onLogout, children }) => {
@@ -46,9 +49,21 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
   const navItems = [
     { path: '/manager', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/manager/properties', icon: Building2, label: 'Property Management' },
-    { path: '/manager/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/manager/customers/add', icon: UserPlus, label: 'Add Customer' },
     { path: '/manager/employees/zones', icon: MapPin, label: 'Employee Zone Management' },
+  ];
+
+  // Work Orders sub-items
+  const workOrdersSubItems = [
+    { path: '/manager/work-orders/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/manager/work-orders/create', icon: Plus, label: 'Create Work Order' },
+    { path: '/manager/work-orders', icon: List, label: 'All Work Orders' },
+    { path: '/manager/work-orders/pending', icon: Clock, label: 'Pending' },
+    { path: '/manager/work-orders/assigned', icon: UserPlus, label: 'Assigned' },
+    { path: '/manager/work-orders/in-progress', icon: ClipboardList, label: 'In Progress' },
+    { path: '/manager/work-orders/completed', icon: CheckCircle, label: 'Completed' },
+    { path: '/manager/work-orders/closed', icon: Archive, label: 'Closed' },
+    { path: '/manager/work-orders/cancelled', icon: XCircle, label: 'Cancelled' }
   ];
 
   // Vendor sub-items
@@ -68,6 +83,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
     { path: '/manager/estimates/archived', icon: Archive, label: 'Archived' }
   ];
 
+  const isWorkOrdersActive = workOrdersSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/manager/work-orders');
   const isVendorActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEstimatesActive = estimatesSubItems.some(item => location.pathname === item.path) || location.pathname === '/manager/estimates';
   
@@ -87,27 +103,35 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
   };
 
   useEffect(() => {
+    if (isWorkOrdersActive) setExpandedMenus(prev => ({ ...prev, workOrders: true }));
     if (isVendorActive) setExpandedMenus(prev => ({ ...prev, vendors: true }));
     if (isEstimatesActive) setExpandedMenus(prev => ({ ...prev, estimates: true }));
   }, [location.pathname]);
 
   // Accordion toggle functions - close other sections when opening one
+  const toggleWorkOrders = () => {
+    if (!sidebarCollapsed) {
+      const opening = !expandedMenus.workOrders;
+      setExpandedMenus({ workOrders: opening, vendors: false, estimates: false });
+    }
+  };
+
   const toggleVendors = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.vendors;
-      setExpandedMenus({ vendors: opening, estimates: false });
+      setExpandedMenus({ workOrders: false, vendors: opening, estimates: false });
     }
   };
 
   const toggleEstimates = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.estimates;
-      setExpandedMenus({ vendors: false, estimates: opening });
+      setExpandedMenus({ workOrders: false, vendors: false, estimates: opening });
     }
   };
 
   // Check if any dropdown is open
-  const isAnyDropdownOpen = expandedMenus.vendors || expandedMenus.estimates;
+  const isAnyDropdownOpen = expandedMenus.workOrders || expandedMenus.vendors || expandedMenus.estimates;
 
   const NavLink = ({ item, mobile = false }) => {
     const Icon = item.icon;
@@ -116,7 +140,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
     const handleClick = () => {
       if (mobile) setSidebarOpen(false);
       // Close all dropdowns when clicking on main nav items
-      setExpandedMenus({ vendors: false, estimates: false, payments: false });
+      setExpandedMenus({ workOrders: false, vendors: false, estimates: false, payments: false });
     };
     return (
       <Link
@@ -201,6 +225,52 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
             {navItems.map((item) => (
               <NavLink key={item.path} item={item} mobile />
             ))}
+
+            {/* Work Orders Section */}
+            <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${colors.divider}` }}>
+              <button
+                onClick={toggleWorkOrders}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{
+                  background: (expandedMenus.workOrders || (isWorkOrdersActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
+                  color: (expandedMenus.workOrders || (isWorkOrdersActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
+                }}
+                onMouseEnter={(e) => { if (!expandedMenus.workOrders && !(isWorkOrdersActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!expandedMenus.workOrders && !(isWorkOrdersActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Work Orders' : ''}
+              >
+                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <ClipboardList className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.workOrders || (isWorkOrdersActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span>Work Orders</span>}
+                </div>
+                {!sidebarCollapsed && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.workOrders ? 'rotate-180' : ''}`} />}
+              </button>
+              {expandedMenus.workOrders && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3" style={{ borderLeft: `2px solid ${colors.divider}` }}>
+                  {workOrdersSubItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setSidebarOpen(false)}
+                        className="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 font-medium"
+                        style={{
+                          background: isActive ? colors.activeBg : 'transparent',
+                          color: isActive ? colors.activeText : colors.primaryText,
+                        }}
+                        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }}
+                        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                      >
+                        <Icon className="w-4 h-4" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* Vendor Management Section */}
             <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${colors.divider}` }}>
