@@ -63,20 +63,11 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
   // Filters
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [statusChartFilter, setStatusChartFilter] = useState('month');
-  const [priorityChartFilter, setPriorityChartFilter] = useState('month');
-  const [propertyTypeFilter, setPropertyTypeFilter] = useState('month');
+  const [statusChartFilter, setStatusChartFilter] = useState('all');
+  const [priorityChartFilter, setPriorityChartFilter] = useState('all');
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
   const [trendPeriod, setTrendPeriod] = useState('monthly');
-  const [completionTimeFilter, setCompletionTimeFilter] = useState('month');
-  
-  // Table filters
-  const [tablePriorityFilter, setTablePriorityFilter] = useState('all');
-  const [tablePropertyTypeFilter, setTablePropertyTypeFilter] = useState('all');
-  const [tableStatusFilter, setTableStatusFilter] = useState('all');
-  const [tableSearch, setTableSearch] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
-
+  const [completionTimeFilter, setCompletionTimeFilter] = useState('all');
   const token = getAuthToken();
   const apiPath = getApiPath(portalType);
   const datePickerRef = useRef(null);
@@ -113,8 +104,11 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       
       if (result.success || result.data || Array.isArray(result)) {
         const data = result.data || result.workOrders || result || [];
-        setWorkOrders(Array.isArray(data) ? data : []);
+        const workOrdersArray = Array.isArray(data) ? data : [];
+        console.log('[WorkOrdersDashboard] Fetched', workOrdersArray.length, 'work orders');
+        setWorkOrders(workOrdersArray);
       } else {
+        console.error('[WorkOrdersDashboard] Failed to load:', result.message);
         setError(result.message || 'Failed to load work orders');
       }
     } catch (err) {
@@ -147,6 +141,9 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       case 'quarter':
         filterDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
         break;
+      case 'sixmonths':
+        filterDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+        break;
       case 'year':
         filterDate = new Date(now.getFullYear(), 0, 1);
         break;
@@ -163,12 +160,13 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
   // Calculate stats
   const getStats = () => {
     const total = workOrders.length;
-    const pending = workOrders.filter(wo => wo.status === 'pending').length;
-    const assigned = workOrders.filter(wo => wo.status === 'assigned').length;
-    const inProgress = workOrders.filter(wo => wo.status === 'in_progress' || wo.status === 'in-progress').length;
-    const completed = workOrders.filter(wo => wo.status === 'completed').length;
-    const closed = workOrders.filter(wo => wo.status === 'closed').length;
-    const cancelled = workOrders.filter(wo => wo.status === 'cancelled').length;
+    const normalizeStatus = (status) => status?.toLowerCase().replace('-', '_').replace(' ', '_');
+    const pending = workOrders.filter(wo => normalizeStatus(wo.status) === 'pending').length;
+    const assigned = workOrders.filter(wo => normalizeStatus(wo.status) === 'assigned').length;
+    const inProgress = workOrders.filter(wo => normalizeStatus(wo.status) === 'in_progress').length;
+    const completed = workOrders.filter(wo => normalizeStatus(wo.status) === 'completed').length;
+    const closed = workOrders.filter(wo => normalizeStatus(wo.status) === 'closed').length;
+    const cancelled = workOrders.filter(wo => normalizeStatus(wo.status) === 'cancelled').length;
     
     return { total, pending, assigned, inProgress, completed, closed, cancelled };
   };
@@ -188,7 +186,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
     };
     
     filtered.forEach(wo => {
-      const status = wo.status?.toLowerCase().replace('-', '_');
+      const status = wo.status?.toLowerCase().replace(/-/g, '_').replace(/\s/g, '_');
       if (statusCounts.hasOwnProperty(status)) {
         statusCounts[status]++;
       }
@@ -201,7 +199,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       { name: 'Completed', value: statusCounts.completed, color: '#10B981' },
       { name: 'Closed', value: statusCounts.closed, color: '#6B7280' },
       { name: 'Cancelled', value: statusCounts.cancelled, color: '#EF4444' }
-    ].filter(item => item.value > 0);
+    ];
   };
 
   // Priority chart data
@@ -354,39 +352,6 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
     };
   };
 
-  // Table data
-  const getTableData = () => {
-    let filtered = [...workOrders];
-    
-    if (tablePriorityFilter !== 'all') {
-      filtered = filtered.filter(wo => wo.priority?.toLowerCase() === tablePriorityFilter);
-    }
-    if (tablePropertyTypeFilter !== 'all') {
-      filtered = filtered.filter(wo => normalizePropertyType(wo.property_type || wo.propertyType) === tablePropertyTypeFilter);
-    }
-    if (tableStatusFilter !== 'all') {
-      filtered = filtered.filter(wo => wo.status === tableStatusFilter);
-    }
-    if (tableSearch) {
-      const search = tableSearch.toLowerCase();
-      filtered = filtered.filter(wo => 
-        wo.work_order_id?.toLowerCase().includes(search) ||
-        wo.property_name?.toLowerCase().includes(search) ||
-        wo.customer_name?.toLowerCase().includes(search) ||
-        wo.vendor_name?.toLowerCase().includes(search)
-      );
-    }
-
-    // Sort by created date descending
-    filtered.sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
-    
-    return filtered;
-  };
-
-  const tableData = getTableData();
-  const totalPages = Math.ceil(tableData.length / itemsPerPage);
-  const paginatedData = tableData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
   // Format date
   const formatDate = (dateString) => {
     if (!dateString) return '-';
@@ -436,11 +401,12 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       onChange={(e) => onChange(e.target.value)}
       className={`text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
     >
+      <option value="all">All Time</option>
       <option value="week">This Week</option>
       <option value="month">This Month</option>
       <option value="quarter">This Quarter</option>
+      <option value="sixmonths">Last 6 Months</option>
       <option value="year">This Year</option>
-      <option value="all">All Time</option>
     </select>
   );
 
@@ -575,7 +541,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={statusData}
+                    data={totalFiltered > 0 ? statusData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
                     cx="50%"
                     cy="50%"
                     innerRadius={45}
@@ -583,7 +549,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                     dataKey="value"
                     strokeWidth={0}
                   >
-                    {statusData.map((entry, index) => (
+                    {(totalFiltered > 0 ? statusData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -596,12 +562,10 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
             </div>
             <div className="flex-1 ml-4 space-y-2">
               {statusData.map((item, index) => (
-                <div key={index} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                    <span className="text-gray-600">{item.name}</span>
-                  </div>
-                  <span className="font-medium text-gray-900">{item.value} ({totalFiltered ? ((item.value / totalFiltered) * 100).toFixed(1) : 0}%)</span>
+                <div key={index} className="flex items-center gap-2 text-sm">
+                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                  <span className="text-gray-600 w-20 flex-shrink-0">{item.name}</span>
+                  <span className="font-medium text-gray-900 whitespace-nowrap">{item.value} ({totalFiltered ? ((item.value / totalFiltered) * 100).toFixed(1) : 0}%)</span>
                 </div>
               ))}
             </div>
@@ -614,42 +578,46 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
             <h3 className="font-semibold text-gray-900">Work Orders by Priority</h3>
             <PeriodDropdown value={priorityChartFilter} onChange={setPriorityChartFilter} />
           </div>
-          <div className="flex items-center">
-            <div className="w-40 h-40">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={priorityData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={45}
-                    outerRadius={70}
-                    dataKey="value"
-                    strokeWidth={0}
-                  >
-                    {priorityData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                    <tspan x="50%" dy="-5" className="text-2xl font-bold fill-gray-900">{applyPeriodFilter(workOrders, priorityChartFilter).length}</tspan>
-                    <tspan x="50%" dy="18" className="text-xs fill-gray-500">Total</tspan>
-                  </text>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex-1 ml-4 space-y-3">
-              {priorityData.map((item, index) => (
-                <div key={index} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                    <span className="text-gray-600">{item.name}</span>
-                  </div>
-                  <span className="font-medium text-gray-900">{item.value} ({applyPeriodFilter(workOrders, priorityChartFilter).length ? ((item.value / applyPeriodFilter(workOrders, priorityChartFilter).length) * 100).toFixed(1) : 0}%)</span>
+          {(() => {
+            const priorityTotal = applyPeriodFilter(workOrders, priorityChartFilter).length;
+            const chartData = priorityTotal > 0 ? priorityData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }];
+            return (
+              <div className="flex items-center">
+                <div className="w-40 h-40">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={chartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={70}
+                        dataKey="value"
+                        strokeWidth={0}
+                      >
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
+                        <tspan x="50%" dy="-5" className="text-2xl font-bold fill-gray-900">{priorityTotal}</tspan>
+                        <tspan x="50%" dy="18" className="text-xs fill-gray-500">Total</tspan>
+                      </text>
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="flex-1 ml-4 space-y-3">
+                  {priorityData.map((item, index) => (
+                    <div key={index} className="flex items-center gap-2 text-sm">
+                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                      <span className="text-gray-600 w-16 flex-shrink-0">{item.name}</span>
+                      <span className="font-medium text-gray-900 whitespace-nowrap">{item.value} ({priorityTotal ? ((item.value / priorityTotal) * 100).toFixed(1) : 0}%)</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Work Orders by Property Type */}
@@ -659,23 +627,29 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
             <PeriodDropdown value={propertyTypeFilter} onChange={setPropertyTypeFilter} />
           </div>
           <div className="space-y-3">
-            {propertyTypeData.slice(0, 5).map((item, index) => (
-              <div key={index} className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">{item.name}</span>
-                  <span className="font-medium text-gray-900">{item.value}</span>
+            {propertyTypeData.length > 0 ? (
+              propertyTypeData.slice(0, 5).map((item, index) => (
+                <div key={index} className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">{item.name}</span>
+                    <span className="font-medium text-gray-900">{item.value}</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full rounded-full transition-all"
+                      style={{ 
+                        width: `${Math.max(5, (item.value / (propertyTypeData[0]?.value || 1)) * 100)}%`,
+                        backgroundColor: item.color
+                      }}
+                    ></div>
+                  </div>
                 </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full rounded-full transition-all"
-                    style={{ 
-                      width: `${Math.max(5, (item.value / (propertyTypeData[0]?.value || 1)) * 100)}%`,
-                      backgroundColor: item.color
-                    }}
-                  ></div>
-                </div>
+              ))
+            ) : (
+              <div className="text-center text-gray-500 py-8">
+                <p className="text-sm">No data available</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>
@@ -812,185 +786,6 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
         </div>
       </div>
-
-      {/* Recent Work Orders Table */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-          <h3 className="font-semibold text-gray-900">Recent Work Orders</h3>
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Priority Filter */}
-            <select 
-              value={tablePriorityFilter}
-              onChange={(e) => { setTablePriorityFilter(e.target.value); setCurrentPage(1); }}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Priority</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-            
-            {/* Property Type Filter */}
-            <select 
-              value={tablePropertyTypeFilter}
-              onChange={(e) => { setTablePropertyTypeFilter(e.target.value); setCurrentPage(1); }}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Property Types</option>
-              <option value="Gated Community">Gated Community</option>
-              <option value="Apartment">Apartment</option>
-              <option value="Villa">Villa</option>
-              <option value="Flat">Flat</option>
-              <option value="Plot">Plot</option>
-            </select>
-            
-            {/* Status Filter */}
-            <select 
-              value={tableStatusFilter}
-              onChange={(e) => { setTableStatusFilter(e.target.value); setCurrentPage(1); }}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="assigned">Assigned</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="closed">Closed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-            
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input 
-                type="text"
-                placeholder="Search by Work Order ID, Property, Customer..."
-                value={tableSearch}
-                onChange={(e) => { setTableSearch(e.target.value); setCurrentPage(1); }}
-                className="pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg w-80 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            
-            {/* View All Link */}
-            <button 
-              onClick={() => navigate(`${getBasePath()}/work-orders`)}
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1"
-            >
-              View All Work Orders
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Work Order ID</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Property / Customer</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Service / Issue</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Property Type</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Priority</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Vendor / Technician</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created Date</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Due Date</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedData.length === 0 ? (
-                <tr>
-                  <td colSpan="10" className="text-center py-8 text-gray-500">
-                    No work orders found
-                  </td>
-                </tr>
-              ) : (
-                paginatedData.map((wo, index) => (
-                  <tr key={wo.id || index} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-sm font-medium text-blue-600">{wo.work_order_id || wo.workOrderId || `WO-${wo.id}`}</td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm font-medium text-gray-900">{wo.property_name || wo.propertyName || '-'}</div>
-                      <div className="text-xs text-gray-500">{wo.customer_name || wo.customerName || '-'}</div>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-600">{wo.category_name || wo.categoryName || wo.title || '-'}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600">{normalizePropertyType(wo.property_type || wo.propertyType)}</td>
-                    <td className="py-3 px-4">{getPriorityBadge(wo.priority)}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600">{wo.vendor_name || wo.vendorName || wo.assignee || '-'}</td>
-                    <td className="py-3 px-4">{getStatusBadge(wo.status)}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600">{formatDate(wo.created_at || wo.createdAt)}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600">{formatDate(wo.due_date || wo.dueDate)}</td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="View">
-                          <Eye className="w-4 h-4 text-gray-500" />
-                        </button>
-                        <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="Edit">
-                          <Edit className="w-4 h-4 text-gray-500" />
-                        </button>
-                        <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="Delete">
-                          <Trash2 className="w-4 h-4 text-gray-500" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {tableData.length > 0 && (
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-            <div className="text-sm text-gray-500">
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, tableData.length)} of {tableData.length} entries
-            </div>
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum;
-                if (totalPages <= 5) {
-                  pageNum = i + 1;
-                } else if (currentPage <= 3) {
-                  pageNum = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i;
-                } else {
-                  pageNum = currentPage - 2 + i;
-                }
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
-                    className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
-                      currentPage === pageNum 
-                        ? 'bg-blue-600 text-white' 
-                        : 'border border-gray-200 hover:bg-gray-50 text-gray-600'
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-              <button 
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 };
@@ -1018,7 +813,7 @@ const StatCard = ({ title, value, percentage, icon: Icon, color, linkText }) => 
           <Icon className="w-5 h-5" />
         </div>
       </div>
-      <p className="text-xs text-gray-500">{percentage}</p>
+      <p className="text-xs text-gray-500 whitespace-nowrap">{percentage}</p>
       <button className={`text-xs ${colors.text} font-medium mt-2 flex items-center gap-1 hover:underline`}>
         {linkText} <ChevronRight className="w-3 h-3" />
       </button>
