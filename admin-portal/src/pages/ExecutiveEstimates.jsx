@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
-import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link } from 'lucide-react';
+import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { exportEstimateToPDF } from '../utils/pdfExport';
+
+const ITEMS_PER_PAGE = 10;
 
 // Decode HTML entities (e.g., &amp; -> &)
 const decodeHtml = (html) => {
@@ -143,6 +145,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const [toDateDisplay, setToDateDisplay] = useState('');
   const clearAllFilters = () => { setEstimateTypeFilter('all'); setStatusFilter('all'); setCategoryFilter('all'); setFromDate(''); setToDate(''); setFromDateDisplay(''); setToDateDisplay(''); setSearchTerm(''); };
   const [fpPortalLinks, setFpPortalLinks] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [estimateForm, setEstimateForm] = useState({ clientId: '', propertyId: '', title: '', description: '', estimateType: '', subtotal: 0, taxPercentage: 18, discountPercentage: 0, validUntil: '', items: [{ description: '', quantity: 1, unitPrice: 0 }] });
   const [amcForm, setAmcForm] = useState({ name: '', description: '', durationMonths: 12, basePrice: 0, services: '', termsConditions: '', hidePricing: true });
@@ -697,6 +700,17 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
     return matchSearch && matchType && matchStatus && matchCategory && matchDate;
   });
 
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, estimateTypeFilter, statusFilter, categoryFilter, fromDate, toDate]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredEstimates.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedEstimates = filteredEstimates.slice(startIndex, endIndex);
+
   return (
     <div className="space-y-6">
       
@@ -772,7 +786,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                         <tr><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estimate ID</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Division</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created By</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th><th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th></tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {filteredEstimates.map((estimate) => {
+                        {paginatedEstimates.map((estimate) => {
                           const TypeIcon = estimate.property_type === 'Apt' ? Home : Building2;
                           return (
                             <tr key={estimate.id} className="hover:bg-gray-50">
@@ -792,6 +806,43 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                   </div>
                 )}
               </div>
+              {/* Pagination Controls */}
+              {filteredEstimates.length > ITEMS_PER_PAGE && (
+                <div className="flex items-center justify-between bg-white px-4 py-3 border border-gray-200 rounded-xl mt-4">
+                  <div className="text-sm text-gray-500">
+                    Showing {startIndex + 1} to {Math.min(endIndex, filteredEstimates.length)} of {filteredEstimates.length} estimates
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(page => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
+                      .map((page, idx, arr) => (
+                        <React.Fragment key={page}>
+                          {idx > 0 && arr[idx - 1] !== page - 1 && <span className="text-gray-400">...</span>}
+                          <button
+                            onClick={() => setCurrentPage(page)}
+                            className={`px-3 py-1 rounded-lg text-sm font-medium ${currentPage === page ? 'bg-indigo-600 text-white' : 'hover:bg-gray-100 text-gray-700'}`}
+                          >
+                            {page}
+                          </button>
+                        </React.Fragment>
+                      ))}
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

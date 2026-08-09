@@ -236,7 +236,18 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
                   <ClipboardList className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.workOrders || (isWorkOrdersActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
                   {!sidebarCollapsed && <span className="whitespace-nowrap">Work Orders</span>}
                 </div>
-                {!sidebarCollapsed && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.workOrders ? 'rotate-180' : ''}`} />}
+                {!sidebarCollapsed && (
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                    expandedMenus.workOrders ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        expandedMenus.workOrders ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: expandedMenus.workOrders ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
+                )}
               </button>
               {expandedMenus.workOrders && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 pl-3" >
@@ -282,7 +293,18 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
                   <Store className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
                   {!sidebarCollapsed && <span className="whitespace-nowrap">Vendor Management</span>}
                 </div>
-                {!sidebarCollapsed && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.vendors ? 'rotate-180' : ''}`} />}
+                {!sidebarCollapsed && (
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                    expandedMenus.vendors ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        expandedMenus.vendors ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: expandedMenus.vendors ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
+                )}
               </button>
               {expandedMenus.vendors && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 pl-3" >
@@ -329,7 +351,18 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
                   <FileText className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.estimates || (isEstimatesActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
                   {!sidebarCollapsed && <span className="whitespace-nowrap">Estimates / AMC</span>}
                 </div>
-                {!sidebarCollapsed && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.estimates ? 'rotate-180' : ''}`} />}
+                {!sidebarCollapsed && (
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                    expandedMenus.estimates ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        expandedMenus.estimates ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: expandedMenus.estimates ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
+                )}
               </button>
               {expandedMenus.estimates && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 pl-3" >

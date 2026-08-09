@@ -181,7 +181,16 @@ const Layout = ({ admin, onLogout, children }) => {
                   {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Work Orders</span>}
                 </div>
                 {!sidebarCollapsed && (
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${workOrdersOpen ? 'rotate-180' : ''}`} />
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                    workOrdersOpen ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        workOrdersOpen ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: workOrdersOpen ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
                 )}
               </button>
               {workOrdersOpen && !sidebarCollapsed && (

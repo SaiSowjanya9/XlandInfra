@@ -319,7 +319,16 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
                   {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Work Orders</span>}
                 </div>
                 {!sidebarCollapsed && (
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${workOrdersOpen ? 'rotate-180' : ''}`} />
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                    workOrdersOpen ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        workOrdersOpen ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: workOrdersOpen ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
                 )}
               </button>
               {workOrdersOpen && !sidebarCollapsed && (
@@ -346,7 +355,16 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
                   {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Vendor Management</span>}
                 </div>
                 {!sidebarCollapsed && (
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${vendorOpen ? 'rotate-180' : ''}`} />
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                    vendorOpen ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        vendorOpen ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: vendorOpen ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
                 )}
               </button>
               {vendorOpen && !sidebarCollapsed && (
@@ -373,7 +391,16 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
                   {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Employee Management</span>}
                 </div>
                 {!sidebarCollapsed && (
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${employeeOpen ? 'rotate-180' : ''}`} />
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                    employeeOpen ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        employeeOpen ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: employeeOpen ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
                 )}
               </button>
               {employeeOpen && !sidebarCollapsed && (
@@ -400,7 +427,16 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
                   {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Estimates / AMC</span>}
                 </div>
                 {!sidebarCollapsed && (
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${estimatesOpen ? 'rotate-180' : ''}`} />
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                    estimatesOpen ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        estimatesOpen ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: estimatesOpen ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
                 )}
               </button>
               {estimatesOpen && !sidebarCollapsed && (
