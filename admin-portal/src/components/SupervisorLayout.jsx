@@ -20,6 +20,10 @@ import {
   ChevronLeft,
   ChevronRight,
   BarChart3,
+  CreditCard,
+  Receipt,
+  Wallet,
+  History,
 } from 'lucide-react';
 
 const SupervisorLayout = ({ admin, onLogout, children }) => {
@@ -62,8 +66,19 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
     { path: '/supervisor/estimates/archived', icon: Archive, label: 'Archived Estimates' }
   ];
 
+  // Billing & Payments sub-items
+  const billingPaymentsSubItems = [
+    { path: '/supervisor/billing/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/supervisor/billing/generate-invoices', icon: FileText, label: 'Generate Invoices' },
+    { path: '/supervisor/billing/invoices', icon: Receipt, label: 'Invoices' },
+    { path: '/supervisor/billing/payments', icon: CreditCard, label: 'Payments' },
+    { path: '/supervisor/billing/make-payments', icon: Wallet, label: 'Make Payments' },
+    { path: '/supervisor/billing/payment-history', icon: History, label: 'Payment History' }
+  ];
+
   const isVendorActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEstimatesActive = estimatesSubItems.some(item => location.pathname === item.path) || location.pathname === '/supervisor/estimates';
+  const isBillingPaymentsActive = billingPaymentsSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/supervisor/billing');
   
   // Color constants for sidebar
   const colors = {
@@ -83,25 +98,33 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
   useEffect(() => {
     if (isVendorActive) setExpandedMenus(prev => ({ ...prev, vendors: true }));
     if (isEstimatesActive) setExpandedMenus(prev => ({ ...prev, estimates: true }));
-  }, [location.pathname, isVendorActive, isEstimatesActive]);
+    if (isBillingPaymentsActive) setExpandedMenus(prev => ({ ...prev, billingPayments: true }));
+  }, [location.pathname, isVendorActive, isEstimatesActive, isBillingPaymentsActive]);
 
   // Accordion toggle functions - close other sections when opening one
   const toggleVendors = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.vendors;
-      setExpandedMenus({ vendors: opening, estimates: false });
+      setExpandedMenus({ vendors: opening, estimates: false, billingPayments: false });
     }
   };
 
   const toggleEstimates = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.estimates;
-      setExpandedMenus({ vendors: false, estimates: opening });
+      setExpandedMenus({ vendors: false, estimates: opening, billingPayments: false });
+    }
+  };
+
+  const toggleBillingPayments = () => {
+    if (!sidebarCollapsed) {
+      const opening = !expandedMenus.billingPayments;
+      setExpandedMenus({ vendors: false, estimates: false, billingPayments: opening });
     }
   };
 
   // Check if any dropdown is open
-  const isAnyDropdownOpen = expandedMenus.vendors || expandedMenus.estimates;
+  const isAnyDropdownOpen = expandedMenus.vendors || expandedMenus.estimates || expandedMenus.billingPayments;
 
   const NavLink = ({ item, mobile = false }) => {
     const Icon = item.icon;
@@ -110,7 +133,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
     const handleClick = () => {
       if (mobile) setSidebarOpen(false);
       // Close all dropdowns when clicking on main nav items
-      setExpandedMenus({ vendors: false, estimates: false });
+      setExpandedMenus({ vendors: false, estimates: false, billingPayments: false });
     };
     return (
       <Link
@@ -287,6 +310,63 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
               {expandedMenus.estimates && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 pl-3" >
                   {estimatesSubItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setSidebarOpen(false)}
+                        className="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 font-medium"
+                        style={{
+                          background: isActive ? colors.activeBg : 'transparent',
+                          color: isActive ? colors.activeText : colors.primaryText,
+                        }}
+                        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }}
+                        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                      >
+                        <Icon className="w-4 h-4" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Billing & Payments Section */}
+            <div className="mt-1">
+              <button
+                onClick={toggleBillingPayments}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{
+                  background: (expandedMenus.billingPayments || (isBillingPaymentsActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
+                  color: (expandedMenus.billingPayments || (isBillingPaymentsActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
+                }}
+                onMouseEnter={(e) => { if (!expandedMenus.billingPayments && !(isBillingPaymentsActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!expandedMenus.billingPayments && !(isBillingPaymentsActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Billing & Payments' : ''}
+              >
+                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <CreditCard className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.billingPayments || (isBillingPaymentsActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Billing & Payments</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                    expandedMenus.billingPayments ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        expandedMenus.billingPayments ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: expandedMenus.billingPayments ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
+                )}
+              </button>
+              {expandedMenus.billingPayments && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3">
+                  {billingPaymentsSubItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = location.pathname === item.path;
                     return (

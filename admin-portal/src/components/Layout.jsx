@@ -22,6 +22,11 @@ import {
   Archive,
   XCircle,
   BarChart3,
+  CreditCard,
+  Receipt,
+  FileText,
+  Wallet,
+  History,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -31,6 +36,9 @@ const Layout = ({ admin, onLogout, children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [workOrdersOpen, setWorkOrdersOpen] = useState(
     location.pathname.startsWith('/work-orders')
+  );
+  const [billingPaymentsOpen, setBillingPaymentsOpen] = useState(
+    location.pathname.startsWith('/billing')
   );
 
   // Get user initials for avatar
@@ -58,15 +66,35 @@ const Layout = ({ admin, onLogout, children }) => {
     { path: '/work-orders', icon: List, label: 'All Work Orders' }
   ];
 
+  // Billing & Payments sub-items
+  const billingPaymentsSubItems = [
+    { path: '/billing/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/billing/generate-invoices', icon: FileText, label: 'Generate Invoices' },
+    { path: '/billing/invoices', icon: Receipt, label: 'Invoices' },
+    { path: '/billing/payments', icon: CreditCard, label: 'Payments' },
+    { path: '/billing/make-payments', icon: Wallet, label: 'Make Payments' },
+    { path: '/billing/payment-history', icon: History, label: 'Payment History' }
+  ];
+
   const isWorkOrdersSectionActive = workOrdersSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/work-orders');
+  const isBillingPaymentsSectionActive = billingPaymentsSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/billing');
 
   useEffect(() => {
     if (isWorkOrdersSectionActive) setWorkOrdersOpen(true);
+    if (isBillingPaymentsSectionActive) setBillingPaymentsOpen(true);
   }, [location.pathname]);
 
   const toggleWorkOrders = () => {
     if (!sidebarCollapsed) {
       setWorkOrdersOpen(!workOrdersOpen);
+      if (!workOrdersOpen) setBillingPaymentsOpen(false);
+    }
+  };
+
+  const toggleBillingPayments = () => {
+    if (!sidebarCollapsed) {
+      setBillingPaymentsOpen(!billingPaymentsOpen);
+      if (!billingPaymentsOpen) setWorkOrdersOpen(false);
     }
   };
 
@@ -85,14 +113,19 @@ const Layout = ({ admin, onLogout, children }) => {
     profileBg: '#1F1C18',
   };
 
+  const isAnyDropdownOpen = workOrdersOpen || billingPaymentsOpen;
+
   const NavLink = ({ item, mobile = false, collapsed = false, isSubItem = false }) => {
     const Icon = item.icon;
-    // Only highlight main nav if path matches AND work orders dropdown is not open (for main nav items only)
-    const isActive = isSubItem ? location.pathname === item.path : (location.pathname === item.path && !workOrdersOpen);
+    // Only highlight main nav if path matches AND no dropdown is open (for main nav items only)
+    const isActive = isSubItem ? location.pathname === item.path : (location.pathname === item.path && !isAnyDropdownOpen);
     const handleClick = () => {
       if (mobile) setSidebarOpen(false);
-      // Close work orders dropdown when clicking on main nav items (not sub-items)
-      if (!isSubItem) setWorkOrdersOpen(false);
+      // Close all dropdowns when clicking on main nav items (not sub-items)
+      if (!isSubItem) {
+        setWorkOrdersOpen(false);
+        setBillingPaymentsOpen(false);
+      }
     };
     return (
       <Link
@@ -196,6 +229,42 @@ const Layout = ({ admin, onLogout, children }) => {
               {workOrdersOpen && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 pl-3" >
                   {workOrdersSubItems.map((item) => (
+                    <NavLink key={item.path} item={item} mobile collapsed={sidebarCollapsed} isSubItem />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Billing & Payments Section */}
+            <div className="mt-1">
+              <button
+                onClick={toggleBillingPayments}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{ background: (billingPaymentsOpen || isBillingPaymentsSectionActive) ? colors.activeBg : 'transparent', color: (billingPaymentsOpen || isBillingPaymentsSectionActive) ? colors.activeText : colors.primaryText }}
+                onMouseEnter={(e) => { if (!billingPaymentsOpen && !isBillingPaymentsSectionActive) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!billingPaymentsOpen && !isBillingPaymentsSectionActive) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Billing & Payments' : ''}
+              >
+                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <CreditCard className="w-5 h-5 flex-shrink-0" style={{ color: (billingPaymentsOpen || isBillingPaymentsSectionActive) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Billing & Payments</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                    billingPaymentsOpen ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        billingPaymentsOpen ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: billingPaymentsOpen ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
+                )}
+              </button>
+              {billingPaymentsOpen && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3">
+                  {billingPaymentsSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile collapsed={sidebarCollapsed} isSubItem />
                   ))}
                 </div>
