@@ -3,8 +3,10 @@ import { getAuthToken } from '../utils/safeStorage';
 import {
   ClipboardList, Plus, Search, RefreshCw, X, XCircle, AlertCircle,
   CheckCircle, Clock, CheckCircle2, Eye, Image, Camera, FileText, Trash2, List,
-  ChevronDown, Pencil, Truck, UserPlus, Store, User
+  ChevronDown, Pencil, Truck, UserPlus, Store, User, ChevronLeft, ChevronRight
 } from 'lucide-react';
+
+const ITEMS_PER_PAGE = 10;
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -17,6 +19,7 @@ const SupervisorWorkOrders = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingImage, setViewingImage] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -547,6 +550,17 @@ const SupervisorWorkOrders = ({ user }) => {
     wo.customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, activeTab]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredWorkOrders.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedWorkOrders = filteredWorkOrders.slice(startIndex, endIndex);
+
   const allCount = workOrders.length;
   const completedCount = workOrders.filter(wo => wo.status === 'completed').length;
 
@@ -1046,7 +1060,7 @@ const SupervisorWorkOrders = ({ user }) => {
               <div className="flex items-center justify-center py-12">
                 <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
               </div>
-            ) : filteredWorkOrders.length === 0 ? (
+            ) : paginatedWorkOrders.length === 0 ? (
               <div className="text-center py-12">
                 <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500">No work orders found</p>
@@ -1066,7 +1080,7 @@ const SupervisorWorkOrders = ({ user }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredWorkOrders.map((wo) => (
+                    {paginatedWorkOrders.map((wo) => (
                       <tr key={wo.id} className="border-b border-gray-50 hover:bg-gray-50">
                         <td className="py-4 px-4">
                           <p className="font-medium text-gray-900">{wo.work_order_id}</p>
@@ -1156,6 +1170,55 @@ const SupervisorWorkOrders = ({ user }) => {
               </div>
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {filteredWorkOrders.length > 0 && (
+            <div className="flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-xl mt-4">
+              <div className="text-sm text-gray-600">
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredWorkOrders.length)} of {filteredWorkOrders.length} work orders
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(page => {
+                    if (totalPages <= 7) return true;
+                    if (page === 1 || page === totalPages) return true;
+                    if (Math.abs(page - currentPage) <= 1) return true;
+                    return false;
+                  })
+                  .map((page, idx, arr) => (
+                    <span key={page}>
+                      {idx > 0 && arr[idx - 1] !== page - 1 && (
+                        <span className="px-2 text-gray-400">...</span>
+                      )}
+                      <button
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-1 rounded-lg text-sm font-medium ${
+                          currentPage === page
+                            ? 'bg-blue-600 text-white'
+                            : 'hover:bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    </span>
+                  ))}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
 

@@ -318,7 +318,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
         title={sidebarCollapsed ? item.label : ''}
       >
         <Icon className="w-5 h-5 flex-shrink-0" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
-        {!sidebarCollapsed && <span>{item.label}</span>}
+        {!sidebarCollapsed && <span className="whitespace-nowrap">{item.label}</span>}
       </Link>
     );
   };
@@ -541,7 +541,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <ClipboardList className="w-5 h-5 flex-shrink-0" style={{ color: (workOrdersOpen || (isWorkOrdersSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span>Work Orders</span>}
+                  {!sidebarCollapsed && <span className="whitespace-nowrap">Work Orders</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <ChevronDown
@@ -575,7 +575,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <Store className="w-5 h-5 flex-shrink-0" style={{ color: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span>Vendor Management</span>}
+                  {!sidebarCollapsed && <span className="whitespace-nowrap">Vendor Management</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <ChevronDown
@@ -609,7 +609,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <Users className="w-5 h-5 flex-shrink-0" style={{ color: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span>Employee Management</span>}
+                  {!sidebarCollapsed && <span className="whitespace-nowrap">Employee Management</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <ChevronDown
@@ -643,7 +643,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <FileText className="w-5 h-5 flex-shrink-0" style={{ color: (estimatesOpen || (isEstimatesSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span>Estimates / AMC</span>}
+                  {!sidebarCollapsed && <span className="whitespace-nowrap">Estimates / AMC</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <ChevronDown

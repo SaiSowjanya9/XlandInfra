@@ -28,8 +28,12 @@ import {
   Pencil,
   List,
   Download,
-  Lock
+  Lock,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
+
+const ITEMS_PER_PAGE = 10;
 import * as XLSX from 'xlsx';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -46,6 +50,7 @@ const FPWorkOrders = ({ user }) => {
   const [searchInput, setSearchInput] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -605,6 +610,17 @@ const FPWorkOrders = ({ user }) => {
     }
     return true;
   });
+
+  // Reset to page 1 when filters or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, activeTab, statusFilter]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredWorkOrders.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedWorkOrders = filteredWorkOrders.slice(startIndex, endIndex);
 
   const handleSearch = () => {
     setSearchTerm(searchInput);
@@ -1476,6 +1492,7 @@ const FPWorkOrders = ({ user }) => {
                 <p className="text-gray-500">No work orders found</p>
               </div>
             ) : (
+              <>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="border-b border-gray-100">
@@ -1490,7 +1507,7 @@ const FPWorkOrders = ({ user }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredWorkOrders.map((wo) => (
+                    {paginatedWorkOrders.map((wo) => (
                       <tr key={wo.id} className="border-b border-gray-50 hover:bg-gray-50">
                         <td className="py-4 px-4">
                           <span className="text-sm text-gray-900">{wo.work_order_id}</span>
@@ -1611,6 +1628,59 @@ const FPWorkOrders = ({ user }) => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Controls */}
+              {filteredWorkOrders.length > 0 && (
+                <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-sm text-gray-500">
+                    Showing {startIndex + 1} to {Math.min(endIndex, filteredWorkOrders.length)} of {filteredWorkOrders.length} work orders
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`w-8 h-8 rounded-lg text-sm font-medium ${
+                              currentPage === pageNum
+                                ? 'bg-indigo-600 text-white'
+                                : 'hover:bg-gray-100 text-gray-600'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+              </>
             )}
           </div>
         </>

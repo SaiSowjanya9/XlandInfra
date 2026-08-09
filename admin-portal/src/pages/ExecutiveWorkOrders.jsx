@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import {
   ClipboardList, Plus, Search, RefreshCw, X, XCircle, AlertCircle,
-  CheckCircle, Clock, Eye, Building2, User, Camera, Upload, FileText, Image, List
+  CheckCircle, Clock, Eye, Building2, User, Camera, Upload, FileText, Image, List,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+const ITEMS_PER_PAGE = 10;
 
 const ExecutiveWorkOrders = ({ user }) => {
   const [workOrders, setWorkOrders] = useState([]);
@@ -17,6 +19,7 @@ const ExecutiveWorkOrders = ({ user }) => {
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState('all');
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingImage, setViewingImage] = useState(null);
@@ -110,6 +113,17 @@ const ExecutiveWorkOrders = ({ user }) => {
     }
     return true;
   });
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, activeTab]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredWorkOrders.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedWorkOrders = filteredWorkOrders.slice(startIndex, endIndex);
 
   const handleSearch = () => setSearchTerm(searchInput);
   const handleClear = () => { setSearchInput(''); setSearchTerm(''); };
@@ -454,7 +468,7 @@ const ExecutiveWorkOrders = ({ user }) => {
                 </tr>
               </thead>
               <tbody>
-                {filteredWorkOrders.map((wo) => (
+                {paginatedWorkOrders.map((wo) => (
                   <tr key={wo.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="py-4 px-4">
                       <p className="font-medium text-gray-900">{wo.work_order_id}</p>
@@ -506,6 +520,50 @@ const ExecutiveWorkOrders = ({ user }) => {
                 ))}
               </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {filteredWorkOrders.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-gray-100">
+              <p className="text-sm text-gray-600">
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredWorkOrders.length)} of {filteredWorkOrders.length} work orders
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(page => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
+                  .map((page, index, array) => (
+                    <span key={page} className="flex items-center">
+                      {index > 0 && array[index - 1] !== page - 1 && (
+                        <span className="px-2 text-gray-400">...</span>
+                      )}
+                      <button
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-8 h-8 rounded-lg text-sm font-medium ${
+                          currentPage === page
+                            ? 'bg-blue-600 text-white'
+                            : 'border border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    </span>
+                  ))}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
         </div>

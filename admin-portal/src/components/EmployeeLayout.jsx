@@ -236,7 +236,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
         title={sidebarCollapsed ? item.label : ''}
       >
         <Icon className="w-5 h-5 flex-shrink-0" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
-        {!sidebarCollapsed && <span className="text-sm max-w-[160px] leading-tight">{item.label}</span>}
+        {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">{item.label}</span>}
       </Link>
     );
   };
@@ -316,7 +316,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <ClipboardList className="w-5 h-5 flex-shrink-0" style={{ color: (workOrdersOpen || (isWorkOrdersSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="text-sm">Work Orders</span>}
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Work Orders</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${workOrdersOpen ? 'rotate-180' : ''}`} />
@@ -343,7 +343,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <Store className="w-5 h-5 flex-shrink-0" style={{ color: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="text-sm">Vendor Management</span>}
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Vendor Management</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${vendorOpen ? 'rotate-180' : ''}`} />
@@ -370,7 +370,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <Users className="w-5 h-5 flex-shrink-0" style={{ color: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="text-sm">Employee Management</span>}
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Employee Management</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${employeeOpen ? 'rotate-180' : ''}`} />
@@ -397,7 +397,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <FileText className="w-5 h-5 flex-shrink-0" style={{ color: (estimatesOpen || (isEstimatesSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="text-sm">Estimates / AMC</span>}
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Estimates / AMC</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${estimatesOpen ? 'rotate-180' : ''}`} />

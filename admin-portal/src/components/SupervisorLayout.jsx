@@ -126,7 +126,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
         title={sidebarCollapsed ? item.label : ''}
       >
         <Icon className="w-5 h-5 flex-shrink-0" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
-        {!sidebarCollapsed && <span className="text-sm max-w-[160px] leading-tight">{item.label}</span>}
+        {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">{item.label}</span>}
       </Link>
     );
   };
@@ -212,7 +212,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <Store className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="text-sm">Vendor Management</span>}
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Vendor Management</span>}
                 </div>
                 {!sidebarCollapsed && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.vendors ? 'rotate-180' : ''}`} />}
               </button>
@@ -258,7 +258,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <FileText className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.estimates || (isEstimatesActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="text-sm">Estimates / AMC</span>}
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Estimates / AMC</span>}
                 </div>
                 {!sidebarCollapsed && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.estimates ? 'rotate-180' : ''}`} />}
               </button>

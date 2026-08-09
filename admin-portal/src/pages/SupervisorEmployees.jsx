@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
-import { Users, Plus, Search, Edit, Trash2, Download, RefreshCw, X, Save, AlertCircle, CheckCircle, Phone, Mail, Eye, MapPin } from 'lucide-react';
+import { Users, Plus, Search, Edit, Trash2, Download, RefreshCw, X, Save, AlertCircle, CheckCircle, Phone, Mail, Eye, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+const ITEMS_PER_PAGE = 10;
 
 const SupervisorEmployees = ({ user }) => {
   const [employees, setEmployees] = useState([]);
@@ -15,6 +16,7 @@ const SupervisorEmployees = ({ user }) => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [formData, setFormData] = useState({ firstName: '', email: '', phone: '', role: 'sup_executive', assignedZones: [] });
+  const [currentPage, setCurrentPage] = useState(1);
 
   const token = getAuthToken();
 
@@ -124,6 +126,17 @@ const SupervisorEmployees = ({ user }) => {
     e.employee_code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedEmployees = filteredEmployees.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const roleOptions = [
     { value: 'sup_executive', label: 'Executive' },
     { value: 'sup_helper', label: 'Helper' }
@@ -165,7 +178,7 @@ const SupervisorEmployees = ({ user }) => {
                 </tr>
               </thead>
               <tbody>
-                {filteredEmployees.map((employee) => (
+                {paginatedEmployees.map((employee) => (
                   <tr key={employee.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="py-4 px-4">
                       <p className="font-medium text-gray-900">{employee.first_name}</p>
@@ -184,6 +197,39 @@ const SupervisorEmployees = ({ user }) => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {/* Pagination Controls */}
+        {!loading && filteredEmployees.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 border-t border-gray-100">
+            <p className="text-sm text-gray-600">
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredEmployees.length)} of {filteredEmployees.length} employees
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium ${currentPage === page ? 'bg-amber-600 text-white' : 'border border-gray-200 hover:bg-gray-50'}`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>

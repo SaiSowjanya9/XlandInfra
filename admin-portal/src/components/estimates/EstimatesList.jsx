@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import {
   Search, Filter, Eye, Edit, Edit2, Download, Send, Trash2, X, ChevronDown, Save, RefreshCw,
   Calendar, DollarSign, Building2, User, Home, LayoutGrid, Layers,
-  TreePine, Map, Briefcase, Archive, CheckSquare, Square
+  TreePine, Map, Briefcase, Archive, CheckSquare, Square, ChevronLeft, ChevronRight
 } from 'lucide-react';
+
+const ITEMS_PER_PAGE = 10;
 import {
   searchEstimates, updateEstimate, deleteEstimate, calculateEstimateTotal,
   PROPERTY_TYPES, ESTIMATE_STATUSES, normalizePropertyType
@@ -112,6 +114,7 @@ const EstimatesList = ({
   const [savingEstimate, setSavingEstimate] = useState(false);
   const [amcPackages, setAmcPackages] = useState([]);
   const [addons, setAddons] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const token = getAuthToken();
 
   // Sync internal filter with external prop when it changes
@@ -301,6 +304,17 @@ const EstimatesList = ({
     
     return matchSearch && matchType && matchStatus && matchProperty && matchFromDate && matchToDate;
   });
+
+  // Reset to page 1 when filters or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filters]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredEstimates.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedEstimates = filteredEstimates.slice(startIndex, endIndex);
 
   // Export all estimates to Excel
   const exportAllEstimates = () => {
@@ -733,7 +747,7 @@ const EstimatesList = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredEstimates.map((estimate) => {
+              {paginatedEstimates.map((estimate) => {
                 const Icon = PROPERTY_ICONS[estimate.propertyType] || (estimate.estimateType === 'direct' ? User : Building2);
                 const isSelected = selectedEstimates.includes(estimate.id);
                 return (
@@ -842,6 +856,58 @@ const EstimatesList = ({
               })}
             </tbody>
           </table>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {filteredEstimates.length > 0 && (
+          <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-gray-500">
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredEstimates.length)} of {filteredEstimates.length} estimates
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-8 h-8 rounded-lg text-sm font-medium ${
+                        currentPage === pageNum
+                          ? 'bg-indigo-600 text-white'
+                          : 'hover:bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>
