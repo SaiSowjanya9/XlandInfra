@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import SVGDonutChart from './common/DonutChart';
 
 // Helper to normalize property type
 const normalizePropertyType = (type) => {
@@ -73,39 +74,10 @@ const FilterSelect = ({ value, onChange }) => (
 );
 
 // Donut chart component with legend
-const DonutChart = ({ data, dataAll, total, title }) => (
+const DonutChartWithLegend = ({ data, dataAll, total, title }) => (
   <div className="flex items-center">
-    <div className="w-1/2 relative">
-      {data.length > 0 ? (
-        <ResponsiveContainer width="100%" height={140}>
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={40}
-              outerRadius={55}
-              dataKey="value"
-              strokeWidth={0}
-            >
-              {data.map((entry, index) => (
-                <Cell key={index} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip content={<CustomTooltip />} />
-          </PieChart>
-        </ResponsiveContainer>
-      ) : (
-        <div className="h-36 flex items-center justify-center">
-          <div className="w-[110px] h-[110px] rounded-full border-8 border-gray-200"></div>
-        </div>
-      )}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="text-center bg-white rounded-full p-1">
-          <div className="text-xl font-bold text-gray-800">{total}</div>
-          <div className="text-[9px] text-gray-500">Total</div>
-        </div>
-      </div>
+    <div className="w-1/2 relative flex items-center justify-center">
+      <SVGDonutChart data={dataAll} centerValue={total} size={120} strokeWidth={16} />
     </div>
     <div className="w-1/2 space-y-1.5 pl-3">
       {dataAll.map((item, index) => (
@@ -259,7 +231,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
             <h3 className="text-sm font-semibold text-gray-800">Estimates by Estimate Type</h3>
             <FilterSelect value={filter3} onChange={setFilter3} />
           </div>
-          <DonutChart 
+          <DonutChartWithLegend 
             data={typeData} 
             dataAll={typeDataAll}
             total={block1Filtered.length}
@@ -281,7 +253,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
             <h3 className="text-sm font-semibold text-gray-800">Property-Based Status</h3>
             <FilterSelect value={filter6} onChange={setFilter6} />
           </div>
-          <DonutChart 
+          <DonutChartWithLegend 
             data={propertyStatusData} 
             dataAll={propertyStatusDataAll}
             total={block3Filtered.length}
@@ -297,7 +269,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
             <h3 className="text-sm font-semibold text-gray-800">Estimate Status Overview</h3>
             <FilterSelect value={filter2} onChange={setFilter2} />
           </div>
-          <DonutChart 
+          <DonutChartWithLegend 
             data={statusData} 
             dataAll={statusDataAll}
             total={block4Filtered.length}
@@ -319,7 +291,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
             <h3 className="text-sm font-semibold text-gray-800">Direct Estimate Status</h3>
             <FilterSelect value={filter5} onChange={setFilter5} />
           </div>
-          <DonutChart 
+          <DonutChartWithLegend 
             data={directStatusData} 
             dataAll={directStatusDataAll}
             total={block6Filtered.length}

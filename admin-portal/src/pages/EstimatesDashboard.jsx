@@ -27,6 +27,7 @@ import {
   Line,
   CartesianGrid
 } from 'recharts';
+import DonutChart from '../components/common/DonutChart';
 import { getAuthToken } from '../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -782,38 +783,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
           
           <div className="flex items-center">
-            <div className="w-1/2 relative">
-              {typeData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={150}>
-                  <PieChart>
-                    <Pie
-                      data={typeData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={65}
-                      dataKey="value"
-                      strokeWidth={0}
-                    >
-                      {typeData.map((entry, index) => (
-                        <Cell key={index} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} position={{ x: 0, y: -10 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-44 flex items-center justify-center">
-                  <div className="w-[150px] h-[150px] rounded-full border-8 border-gray-200"></div>
-                </div>
-              )}
-              {/* Center text - always shows count including 0 */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                <div className="text-center bg-white rounded-full p-1">
-                  <div className="text-2xl font-bold text-gray-800">{block3Data.length}</div>
-                  <div className="text-[10px] text-gray-500">Total</div>
-                </div>
-              </div>
+            <div className="w-1/2 flex items-center justify-center">
+              <DonutChart data={typeData} centerValue={block3Data.length} size={130} strokeWidth={18} />
             </div>
             <div className="w-1/2 space-y-2 pl-3">
               {[
@@ -911,38 +882,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
           
           <div className="flex items-center">
-            <div className="w-1/2 relative">
-              {propertyBasedStatusData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={150}>
-                  <PieChart>
-                    <Pie
-                      data={propertyBasedStatusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={65}
-                      dataKey="value"
-                      strokeWidth={0}
-                    >
-                      {propertyBasedStatusData.map((entry, index) => (
-                        <Cell key={index} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} position={{ x: 0, y: -10 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-44 flex items-center justify-center">
-                  <div className="w-[150px] h-[150px] rounded-full border-8 border-gray-200"></div>
-                </div>
-              )}
-              {/* Center text - always shows count including 0 */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                <div className="text-center bg-white rounded-full p-1">
-                  <div className="text-2xl font-bold text-gray-800">{block6Data.length}</div>
-                  <div className="text-[10px] text-gray-500">Total</div>
-                </div>
-              </div>
+            <div className="w-1/2 flex items-center justify-center">
+              <DonutChart data={propertyBasedStatusDataAll} centerValue={block6Data.length} size={130} strokeWidth={18} />
             </div>
             <div className="w-1/2 space-y-1.5 pl-3">
               {propertyBasedStatusDataAll.map((item, index) => (
@@ -983,38 +924,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
           
           <div className="flex items-center">
-            <div className="w-1/2 relative">
-              {statusData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={150}>
-                  <PieChart>
-                    <Pie
-                      data={statusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={65}
-                      dataKey="value"
-                      strokeWidth={0}
-                    >
-                      {statusData.map((entry, index) => (
-                        <Cell key={index} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} position={{ x: 0, y: -10 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-44 flex items-center justify-center">
-                  <div className="w-[150px] h-[150px] rounded-full border-8 border-gray-200"></div>
-                </div>
-              )}
-              {/* Center text - always shows count including 0 */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                <div className="text-center bg-white rounded-full p-1">
-                  <div className="text-2xl font-bold text-gray-800">{block2Data.length}</div>
-                  <div className="text-[10px] text-gray-500">Total</div>
-                </div>
-              </div>
+            <div className="w-1/2 flex items-center justify-center">
+              <DonutChart data={statusDataAll} centerValue={block2Data.length} size={130} strokeWidth={18} />
             </div>
             <div className="w-1/2 space-y-1.5 pl-3">
               {statusDataAll.map((item, index) => (
@@ -1108,38 +1019,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
           
           <div className="flex items-center">
-            <div className="w-1/2 relative">
-              {directStatusData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={150}>
-                  <PieChart>
-                    <Pie
-                      data={directStatusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={65}
-                      dataKey="value"
-                      strokeWidth={0}
-                    >
-                      {directStatusData.map((entry, index) => (
-                        <Cell key={index} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} position={{ x: 0, y: -10 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-44 flex items-center justify-center">
-                  <div className="w-[150px] h-[150px] rounded-full border-8 border-gray-200"></div>
-                </div>
-              )}
-              {/* Center text - always shows count including 0 */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                <div className="text-center bg-white rounded-full p-1">
-                  <div className="text-2xl font-bold text-gray-800">{block5Data.length}</div>
-                  <div className="text-[10px] text-gray-500">Total</div>
-                </div>
-              </div>
+            <div className="w-1/2 flex items-center justify-center">
+              <DonutChart data={directStatusDataAll} centerValue={block5Data.length} size={130} strokeWidth={18} />
             </div>
             <div className="w-1/2 space-y-1.5 pl-3">
               {directStatusDataAll.map((item, index) => (

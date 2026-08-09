@@ -35,6 +35,7 @@ import {
   Line,
   CartesianGrid
 } from 'recharts';
+import DonutChart from './common/DonutChart';
 import { getAuthToken } from '../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -735,27 +736,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
           <div className="flex items-center">
             <div className="w-36 h-36">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={totalFiltered > 0 ? statusData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={40}
-                    outerRadius={65}
-                    dataKey="value"
-                    strokeWidth={0}
-                  >
-                    {(totalFiltered > 0 ? statusData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }]).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                    <tspan x="50%" dy="-3" className="text-xl font-bold fill-gray-900">{totalFiltered}</tspan>
-                    <tspan x="50%" dy="16" className="text-[10px] fill-gray-500">Total</tspan>
-                  </text>
-                </PieChart>
-              </ResponsiveContainer>
+              <DonutChart data={statusData} centerValue={totalFiltered} />
             </div>
             <div className="flex-1 ml-4 space-y-1.5">
               {statusData.map((item, index) => (
@@ -777,31 +758,10 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
           {(() => {
             const priorityTotal = applyPeriodFilter(dateFilteredWorkOrders, priorityChartFilter).length;
-            const chartData = priorityTotal > 0 ? priorityData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }];
             return (
               <div className="flex items-center">
                 <div className="w-36 h-36">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={chartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={40}
-                        outerRadius={65}
-                        dataKey="value"
-                        strokeWidth={0}
-                      >
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                        <tspan x="50%" dy="-3" className="text-xl font-bold fill-gray-900">{priorityTotal}</tspan>
-                        <tspan x="50%" dy="16" className="text-[10px] fill-gray-500">Total</tspan>
-                      </text>
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <DonutChart data={priorityData} centerValue={priorityTotal} />
                 </div>
                 <div className="flex-1 ml-4 space-y-3">
                   {priorityData.map((item, index) => (

@@ -10,6 +10,7 @@ import { getAuthToken } from '../utils/safeStorage';
 import { useFP } from '../contexts/FPContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import EstimatesOverviewBlocks from '../components/EstimatesOverviewBlocks';
+import DonutChart from '../components/common/DonutChart';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -655,27 +656,17 @@ const Dashboard = () => {
                 <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Status</h3>
                 <div className="flex items-center">
                   <div className="w-36 h-36 relative">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={statusChartData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={65}
-                          dataKey="value"
-                          strokeWidth={0}
-                        >
-                          {statusChartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                          <tspan x="50%" dy="-3" fontSize="18" fontWeight="bold" fill="#111827">{totalWorkOrders}</tspan>
-                          <tspan x="50%" dy="16" fontSize="10" fill="#6B7280">Total</tspan>
-                        </text>
-                      </PieChart>
-                    </ResponsiveContainer>
+                    <DonutChart
+                      data={[
+                        { name: 'Pending', value: pendingWO, color: '#F59E0B' },
+                        { name: 'Assigned', value: assignedWO, color: '#3B82F6' },
+                        { name: 'In Progress', value: inProgressWO, color: '#8B5CF6' },
+                        { name: 'Completed', value: completedWO, color: '#10B981' },
+                        { name: 'Closed', value: closedWO, color: '#6B7280' },
+                        { name: 'Cancelled', value: cancelledWO, color: '#EF4444' },
+                      ]}
+                      centerValue={totalWorkOrders}
+                    />
                   </div>
                   <div className="flex-1 ml-4 space-y-1.5">
                     {[
@@ -701,34 +692,10 @@ const Dashboard = () => {
                 <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Priority</h3>
                 <div className="flex items-center">
                   <div className="w-36 h-36 relative">
-                    {(() => {
-                      const priorityChartData = priorityTotal > 0 
-                        ? priorityData.filter(d => d.value > 0) 
-                        : [{ name: 'No Data', value: 1, color: '#E5E7EB' }];
-                      return (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={priorityChartData}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={40}
-                              outerRadius={65}
-                              dataKey="value"
-                              strokeWidth={0}
-                            >
-                              {priorityChartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                              ))}
-                            </Pie>
-                            <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                              <tspan x="50%" dy="-3" fontSize="18" fontWeight="bold" fill="#111827">{priorityTotal || totalWorkOrders}</tspan>
-                              <tspan x="50%" dy="16" fontSize="10" fill="#6B7280">Total</tspan>
-                            </text>
-                          </PieChart>
-                        </ResponsiveContainer>
-                      );
-                    })()}
+                    <DonutChart
+                      data={priorityData}
+                      centerValue={priorityTotal || totalWorkOrders}
+                    />
                   </div>
                   <div className="flex-1 ml-4 space-y-3">
                     {priorityData.map((item, index) => (
