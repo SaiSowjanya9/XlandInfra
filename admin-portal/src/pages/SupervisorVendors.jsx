@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
-import { Store, Search, RefreshCw, X, AlertCircle, CheckCircle, Eye, Wrench, Zap, Wind, Sparkles, Shield } from 'lucide-react';
+import { Store, Search, RefreshCw, X, AlertCircle, CheckCircle, Eye, Wrench, Zap, Wind, Sparkles, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+const ITEMS_PER_PAGE = 10;
 
 const SERVICE_TYPES = [
   { id: 'all', label: 'All Vendors', icon: Store },
@@ -25,6 +26,7 @@ const SupervisorVendors = ({ user }) => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [currentPage, setCurrentPage] = useState(1);
 
   const token = getAuthToken();
 
@@ -116,6 +118,17 @@ const SupervisorVendors = ({ user }) => {
     return matchSearch && matchService && matchZone && matchStatus;
   });
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredVendors.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedVendors = filteredVendors.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, serviceFilter, zoneFilter, statusFilter]);
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -189,7 +202,7 @@ const SupervisorVendors = ({ user }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {filteredVendors.map((vendor) => (
+                {paginatedVendors.map((vendor) => (
                   <tr key={vendor.id} className="hover:bg-gray-50">
                     <td className="py-4 px-4">
                       <p className="font-semibold text-gray-900">{vendor.owner_name || vendor.company_name || '-'}</p>
@@ -213,6 +226,40 @@ const SupervisorVendors = ({ user }) => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && filteredVendors.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+            <p className="text-sm text-gray-600">
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredVendors.length)} of {filteredVendors.length} vendors
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium ${currentPage === page ? 'bg-amber-500 text-white' : 'hover:bg-gray-100 text-gray-700'}`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>

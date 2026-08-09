@@ -24,8 +24,12 @@ import {
   Sparkles,
   Shield,
   EyeOff,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
+
+const ITEMS_PER_PAGE = 10;
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -43,6 +47,7 @@ const CoordinatorVendors = ({ user }) => {
   const [statusFilter, setStatusFilter] = useState('active');
   const [zones, setZones] = useState([]);
   const [divisions, setDivisions] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [editingVendor, setEditingVendor] = useState(null);
@@ -297,6 +302,17 @@ const CoordinatorVendors = ({ user }) => {
     return matchesSearch && matchesTab && matchesZone;
   });
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredVendors.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedVendors = filteredVendors.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, activeTab, zoneFilter, statusFilter]);
+
   // Get count for each service tab (based on status + zone filters)
   const getTabCount = (tabId) => {
     let filtered = statusFilteredVendors;
@@ -454,7 +470,7 @@ const CoordinatorVendors = ({ user }) => {
                 </tr>
               </thead>
               <tbody>
-                {filteredVendors.map((vendor) => (
+                {paginatedVendors.map((vendor) => (
                   <tr key={vendor.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="py-4 px-4">
                       <div>
@@ -503,6 +519,44 @@ const CoordinatorVendors = ({ user }) => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && filteredVendors.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+            <div className="text-sm text-gray-600">
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredVendors.length)} of {filteredVendors.length} vendors
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-1 rounded-lg text-sm ${
+                    currentPage === page
+                      ? 'bg-teal-600 text-white'
+                      : 'border border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>

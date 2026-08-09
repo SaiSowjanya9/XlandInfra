@@ -25,9 +25,13 @@ import {
   Users,
   ExternalLink,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
   Truck
 } from 'lucide-react';
+
+const ITEMS_PER_PAGE = 10;
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import StaticMapView from '../components/common/StaticMapView';
@@ -69,6 +73,7 @@ const ManagerProperties = ({ user }) => {
   const [assignedEmployeesProperty, setAssignedEmployeesProperty] = useState(null);
   const [assignedEmployees, setAssignedEmployees] = useState([]);
   const [loadingAssignedEmployees, setLoadingAssignedEmployees] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Property type tabs config
   const propertyTabs = [
@@ -609,6 +614,17 @@ const ManagerProperties = ({ user }) => {
     return dateB.getTime() - dateA.getTime(); // Sort by latest first
   });
 
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, activeTab, zoneFilter, divisionFilter]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredProperties.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedProperties = filteredProperties.slice(startIndex, endIndex);
+
   // Get counts for each tab (filtered by zone if selected)
   const getTabCount = (tabId) => {
     // First filter by zone if selected
@@ -818,7 +834,7 @@ const ManagerProperties = ({ user }) => {
                 </tr>
               </thead>
               <tbody>
-                {filteredProperties.map((property) => (
+                {paginatedProperties.map((property) => (
                   <tr key={property.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="py-4 px-4">
                       <div>
@@ -910,6 +926,55 @@ const ManagerProperties = ({ user }) => {
                 ))}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+                <div className="text-sm text-gray-600">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredProperties.length)} of {filteredProperties.length} properties
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(page => {
+                      if (totalPages <= 7) return true;
+                      if (page === 1 || page === totalPages) return true;
+                      if (Math.abs(page - currentPage) <= 1) return true;
+                      return false;
+                    })
+                    .map((page, index, array) => (
+                      <React.Fragment key={page}>
+                        {index > 0 && array[index - 1] !== page - 1 && (
+                          <span className="px-2 text-gray-400">...</span>
+                        )}
+                        <button
+                          onClick={() => setCurrentPage(page)}
+                          className={`px-3 py-1 rounded-lg text-sm font-medium ${
+                            currentPage === page
+                              ? 'bg-blue-600 text-white'
+                              : 'hover:bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      </React.Fragment>
+                    ))}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

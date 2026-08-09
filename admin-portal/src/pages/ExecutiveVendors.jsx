@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
-import { Store, Search, RefreshCw, X, AlertCircle, CheckCircle, Eye, Wrench, Zap, Wind, Sparkles, Shield } from 'lucide-react';
+import { Store, Search, RefreshCw, X, AlertCircle, CheckCircle, Eye, Wrench, Zap, Wind, Sparkles, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+const ITEMS_PER_PAGE = 10;
 
 const SERVICE_TYPES = [
   { id: 'all', label: 'All Vendors', icon: Store },
@@ -23,6 +24,7 @@ const ExecutiveVendors = ({ user }) => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [currentPage, setCurrentPage] = useState(1);
 
   const token = getAuthToken();
 
@@ -110,6 +112,17 @@ const ExecutiveVendors = ({ user }) => {
     return matchSearch && matchService && matchZone && matchStatus;
   });
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredVendors.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedVendors = filteredVendors.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, serviceFilter, zoneFilter, statusFilter]);
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -182,7 +195,7 @@ const ExecutiveVendors = ({ user }) => {
                 </tr>
               </thead>
               <tbody>
-                {filteredVendors.map((vendor) => (
+                {paginatedVendors.map((vendor) => (
                   <tr key={vendor.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="py-4 px-4">
                       <p className="font-semibold text-gray-900">{vendor.owner_name || vendor.company_name || '-'}</p>
@@ -217,6 +230,44 @@ const ExecutiveVendors = ({ user }) => {
           </div>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {!loading && filteredVendors.length > 0 && (
+        <div className="flex items-center justify-between bg-white px-4 py-3 border border-gray-100 rounded-xl">
+          <div className="text-sm text-gray-600">
+            Showing {startIndex + 1} to {Math.min(endIndex, filteredVendors.length)} of {filteredVendors.length} vendors
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(page => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
+              .map((page, index, array) => (
+                <span key={page} className="flex items-center">
+                  {index > 0 && array[index - 1] !== page - 1 && <span className="px-2 text-gray-400">...</span>}
+                  <button
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-1 rounded-lg text-sm font-medium ${currentPage === page ? 'bg-indigo-600 text-white' : 'hover:bg-gray-50'}`}
+                  >
+                    {page}
+                  </button>
+                </span>
+              ))}
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* View Details Modal */}
       {showDetailModal && selectedVendor && (

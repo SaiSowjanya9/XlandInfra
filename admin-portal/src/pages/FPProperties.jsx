@@ -34,8 +34,12 @@ import {
   Phone,
   Mail,
   RotateCcw,
-  Loader2
+  Loader2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
+
+const ITEMS_PER_PAGE = 10;
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import * as XLSX from 'xlsx';
@@ -114,6 +118,9 @@ const FPProperties = ({ user }) => {
   // Success popup state
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Derived state for modals based on URL
   const showDetailsModal = !!viewPropertyId;
@@ -1090,6 +1097,17 @@ const FPProperties = ({ user }) => {
     return dateB.getTime() - dateA.getTime(); // Sort by latest first
   });
 
+  // Reset to page 1 when filters or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, activeTab, selectedZone, selectedDivision, statusFilter]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredProperties.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedProperties = filteredProperties.slice(startIndex, endIndex);
+
   // Count properties by type (filtered by zone if selected)
   const getTypeCount = (type) => {
     // First filter by zone if selected
@@ -1343,7 +1361,7 @@ const FPProperties = ({ user }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProperties.map((property) => (
+                  {paginatedProperties.map((property) => (
                     <tr key={property.id} className="border-b border-gray-50 hover:bg-gray-50">
                       <td className="py-3 px-4">
                         <span className="text-sm font-medium text-gray-900">{property.name}</span>
@@ -1494,12 +1512,57 @@ const FPProperties = ({ user }) => {
               </table>
             </div>
 
-            {/* Footer */}
-            <div className="px-4 py-3 border-t border-gray-100">
-              <p className="text-sm text-gray-500">
-                Showing {filteredProperties.length} of {properties.length} properties
-              </p>
-            </div>
+            {/* Pagination Controls */}
+            {filteredProperties.length > 0 && (
+              <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-sm text-gray-500">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredProperties.length)} of {filteredProperties.length} properties
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`w-8 h-8 rounded-lg text-sm font-medium ${
+                            currentPage === pageNum
+                              ? 'bg-indigo-600 text-white'
+                              : 'hover:bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

@@ -16,10 +16,13 @@ import {
   Zap,
   Wind,
   Sparkles,
-  Shield
+  Shield,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+const ITEMS_PER_PAGE = 10;
 
 const ManagerVendors = ({ user }) => {
   // Check if this is an FP-created Manager (has franchisePartnerId)
@@ -30,6 +33,7 @@ const ManagerVendors = ({ user }) => {
   const [vendors, setVendors] = useState({ own: [], assigned: [], all: [] });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState('all');
   const [divisionFilter, setDivisionFilter] = useState('all');
   const [zoneFilter, setZoneFilter] = useState('all');
@@ -245,6 +249,17 @@ const ManagerVendors = ({ user }) => {
     return matchesSearch && matchesTab && matchesZone;
   });
 
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, activeTab, zoneFilter, statusFilter]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredVendors.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedVendors = filteredVendors.slice(startIndex, endIndex);
+
   // Get count for each service tab (based on status + zone filters)
   const getTabCount = (tabId) => {
     let filtered = statusFilteredVendors;
@@ -375,7 +390,7 @@ const ManagerVendors = ({ user }) => {
           <div className="flex items-center justify-center py-12">
             <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
           </div>
-        ) : filteredVendors.length === 0 ? (
+        ) : paginatedVendors.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Truck className="w-8 h-8 text-gray-400" />
@@ -401,7 +416,7 @@ const ManagerVendors = ({ user }) => {
                 </tr>
               </thead>
               <tbody>
-                {filteredVendors.map((vendor) => (
+                {paginatedVendors.map((vendor) => (
                     <tr key={vendor.id} className="border-b border-gray-50 hover:bg-gray-50">
                       <td className="py-4 px-4">
                         <p className="font-semibold text-gray-900">{vendor.owner_name || vendor.company_name || '-'}</p>
@@ -450,9 +465,40 @@ const ManagerVendors = ({ user }) => {
                 ))}
               </tbody>
             </table>
-            {/* Pagination info */}
-            <div className="px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
-              Showing {filteredVendors.length} of {getActiveVendorCount()} vendors
+            {/* Pagination Controls */}
+            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-sm text-gray-500">
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredVendors.length)} of {filteredVendors.length} vendors
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-1 rounded-lg text-sm ${
+                      currentPage === page
+                        ? 'bg-blue-600 text-white'
+                        : 'border border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         )}

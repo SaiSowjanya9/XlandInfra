@@ -14,6 +14,8 @@ import {
   LayoutGrid,
   Users,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   AlertCircle,
   CheckCircle,
   X,
@@ -35,6 +37,8 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 import * as XLSX from 'xlsx';
 import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
+
+const ITEMS_PER_PAGE = 10;
 
 const SupervisorProperties = ({ user }) => {
   // Check if this is an FP-created Supervisor (has franchisePartnerId)
@@ -63,6 +67,7 @@ const SupervisorProperties = ({ user }) => {
   const [loadingEstimates, setLoadingEstimates] = useState(false);
   const [propertyVendorAssignments, setPropertyVendorAssignments] = useState([]);
   const [loadingVendorAssignments, setLoadingVendorAssignments] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const token = getAuthToken();
 
@@ -481,6 +486,17 @@ const SupervisorProperties = ({ user }) => {
     return dateB.getTime() - dateA.getTime(); // Sort by latest first
   });
 
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, activeTab, selectedZone, selectedDivision, statusFilter]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredProperties.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedProperties = filteredProperties.slice(startIndex, endIndex);
+
   // Count properties by type (filtered by zone if selected)
   const getTypeCount = (type) => {
     // First filter by zone if selected
@@ -720,7 +736,7 @@ const SupervisorProperties = ({ user }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProperties.map((property) => (
+                  {paginatedProperties.map((property) => (
                     <tr key={property.id} className="border-b border-gray-50 hover:bg-gray-50">
                       <td className="py-3 px-4">
                         <span className="text-sm font-medium text-gray-900">{property.name}</span>
@@ -833,11 +849,53 @@ const SupervisorProperties = ({ user }) => {
               </table>
             </div>
 
-            {/* Footer */}
-            <div className="px-4 py-3 border-t border-gray-100">
+            {/* Pagination Controls */}
+            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
               <p className="text-sm text-gray-500">
-                Showing {filteredProperties.length} of {properties.length} properties
+                Showing {filteredProperties.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, filteredProperties.length)} of {filteredProperties.length} properties
               </p>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(page => {
+                      if (totalPages <= 7) return true;
+                      if (page === 1 || page === totalPages) return true;
+                      if (Math.abs(page - currentPage) <= 1) return true;
+                      return false;
+                    })
+                    .map((page, idx, arr) => (
+                      <React.Fragment key={page}>
+                        {idx > 0 && arr[idx - 1] !== page - 1 && (
+                          <span className="px-2 text-gray-400">...</span>
+                        )}
+                        <button
+                          onClick={() => setCurrentPage(page)}
+                          className={`px-3 py-1 rounded-lg text-sm font-medium ${
+                            currentPage === page
+                              ? 'bg-blue-600 text-white'
+                              : 'border border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      </React.Fragment>
+                    ))}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           </>
         )}

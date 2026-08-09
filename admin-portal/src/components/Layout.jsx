@@ -105,7 +105,7 @@ const Layout = ({ admin, onLogout, children }) => {
         title={collapsed ? item.label : ''}
       >
         <Icon className="w-5 h-5 flex-shrink-0" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
-        {!collapsed && <span>{item.label}</span>}
+        {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
       </Link>
     );
   };
@@ -178,7 +178,7 @@ const Layout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <ClipboardList className="w-5 h-5 flex-shrink-0" style={{ color: (workOrdersOpen || isWorkOrdersSectionActive) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="text-sm">Work Orders</span>}
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Work Orders</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${workOrdersOpen ? 'rotate-180' : ''}`} />

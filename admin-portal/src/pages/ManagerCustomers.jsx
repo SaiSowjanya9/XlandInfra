@@ -33,6 +33,8 @@ import {
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import GPSLocationCapture from '../components/common/GPSLocationCapture';
 
+const ITEMS_PER_PAGE = 10;
+
 // Category options matching Admin Portal
 const CATEGORIES = [
   {
@@ -145,6 +147,7 @@ const ManagerCustomers = ({ user, defaultTab = 'list' }) => {
   const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [message, setMessage] = useState({ type: '', text: '' });
   
   // View states - 'list' or 'add'
@@ -545,6 +548,17 @@ const ManagerCustomers = ({ user, defaultTab = 'list' }) => {
     c.client_id?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedCustomers = filteredCustomers.slice(startIndex, endIndex);
+
   // Customer List View
   if (activeView === 'list' && !selectedCategory) {
     return (
@@ -553,7 +567,9 @@ const ManagerCustomers = ({ user, defaultTab = 'list' }) => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
-            <p className="text-gray-500 mt-1">{filteredCustomers.length} customers</p>
+            <p className="text-gray-500 mt-1">
+              Showing {filteredCustomers.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, filteredCustomers.length)} of {filteredCustomers.length} customers
+            </p>
           </div>
           <button
             onClick={() => setActiveView('add')}
@@ -597,7 +613,7 @@ const ManagerCustomers = ({ user, defaultTab = 'list' }) => {
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
-              {filteredCustomers.map((customer) => (
+              {paginatedCustomers.map((customer) => (
                 <div key={customer.id} className="p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -621,6 +637,46 @@ const ManagerCustomers = ({ user, defaultTab = 'list' }) => {
             </div>
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {filteredCustomers.length > 0 && totalPages > 1 && (
+          <div className="flex items-center justify-between bg-white rounded-xl border border-gray-100 p-4">
+            <p className="text-sm text-gray-600">
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredCustomers.length)} of {filteredCustomers.length} customers
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                      currentPage === page
+                        ? 'bg-primary-600 text-white'
+                        : 'hover:bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

@@ -90,6 +90,8 @@ const COUNTRY_CODES = [
 // Import division functions from fieldOptionsStore
 import { getDivisions, addDivision as addDivisionToStore } from '../utils/fieldOptionsStore';
 
+const ITEMS_PER_PAGE = 10;
+
 // Indian States in alphabetical order
 const INDIAN_STATES = [
   'Andhra Pradesh',
@@ -145,6 +147,7 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
   const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [message, setMessage] = useState({ type: '', text: '' });
   
   // View states - 'list' or 'add'
@@ -525,6 +528,17 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
     c.client_id?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedCustomers = filteredCustomers.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   // Customer List View
   if (activeView === 'list' && !selectedCategory) {
     return (
@@ -576,8 +590,9 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
               </button>
             </div>
           ) : (
+            <>
             <div className="divide-y divide-gray-100">
-              {filteredCustomers.map((customer) => (
+              {paginatedCustomers.map((customer) => (
                 <div key={customer.id} className="p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -599,6 +614,45 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
                 </div>
               ))}
             </div>
+            
+            {/* Pagination Controls */}
+            {filteredCustomers.length > ITEMS_PER_PAGE && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+                <div className="text-sm text-gray-500">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredCustomers.length)} of {filteredCustomers.length}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-1 rounded-lg text-sm ${
+                        currentPage === page
+                          ? 'bg-primary-600 text-white'
+                          : 'border border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+            </>
           )}
         </div>
       </div>
