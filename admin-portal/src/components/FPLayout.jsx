@@ -236,7 +236,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
   const allEmployeeSubItems = [
     { path: '/fp/employees/add', icon: UserPlus, label: 'Add Employee', fpOnly: true },
     { path: '/fp/employees', icon: Users, label: 'Employee Details', fpOnly: true },
-    { path: '/fp/employees/zones', icon: MapPin, label: 'Employee Zone Management' },
+    { path: '/fp/employees/zones', icon: MapPin, label: 'Employee Zone', subLabel: 'Management' },
   ];
   
   const employeeSubItems = isFPManager
@@ -318,7 +318,16 @@ const FPLayout = ({ admin, onLogout, children }) => {
         title={sidebarCollapsed ? item.label : ''}
       >
         <Icon className="w-5 h-5 flex-shrink-0" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
-        {!sidebarCollapsed && <span className="whitespace-nowrap">{item.label}</span>}
+        {!sidebarCollapsed && (
+          item.subLabel ? (
+            <span className="flex flex-col leading-tight">
+              <span>{item.label}</span>
+              <span className="text-xs opacity-80">{item.subLabel}</span>
+            </span>
+          ) : (
+            <span className="whitespace-nowrap">{item.label}</span>
+          )
+        )}
       </Link>
     );
   };
@@ -481,7 +490,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
       <aside
         className={`fixed top-0 left-0 h-full shadow-xl z-50 transform transition-all duration-300 lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64`}
+        } ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-72'} w-72`}
         style={{ background: colors.sidebarBg }}
       >
         <div className="flex flex-col h-full">
@@ -752,7 +761,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
       </button>
 
       {/* Main Content */}
-      <main className={`${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} min-h-screen transition-all duration-300`}>
+      <main className={`${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'} min-h-screen transition-all duration-300`}>
         <div className="p-4 lg:p-8">{children}</div>
       </main>
     </div>
