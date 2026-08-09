@@ -534,7 +534,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
       <button
         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
         className={`hidden lg:flex fixed top-1/2 -translate-y-1/2 z-50 items-center justify-center w-6 h-12 rounded-r-lg transition-all duration-300 shadow-md ${
-          sidebarCollapsed ? 'left-20' : 'left-64'
+          sidebarCollapsed ? 'left-20' : 'left-72'
         }`}
         style={{
           background: '#1C1A17',
