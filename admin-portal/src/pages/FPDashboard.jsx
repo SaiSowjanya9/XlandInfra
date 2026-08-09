@@ -209,16 +209,18 @@ const FPDashboard = ({ user }) => {
 
   // Pie chart data - All 6 statuses
   const workOrdersByStatus = stats?.workOrders?.byStatus || {};
-  const pieData = [
+  const allStatusData = [
     { name: 'Pending', value: workOrdersByStatus.pending || 0, color: '#F59E0B' },     // Amber
     { name: 'Assigned', value: workOrdersByStatus.assigned || 0, color: '#3B82F6' },   // Blue
     { name: 'In Progress', value: workOrdersByStatus.in_progress || 0, color: '#8B5CF6' }, // Purple
     { name: 'Completed', value: workOrdersByStatus.completed || 0, color: '#10B981' }, // Emerald
     { name: 'Closed', value: workOrdersByStatus.closed || 0, color: '#6B7280' },       // Gray
     { name: 'Cancelled', value: workOrdersByStatus.cancelled || 0, color: '#EF4444' }, // Red
-  ].filter(item => item.value > 0);
-
+  ];
+  const pieData = allStatusData.filter(item => item.value > 0);
   const totalWorkOrders = stats?.workOrders?.total || 0;
+  // Use actual data if available, otherwise show gray placeholder
+  const statusChartData = pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }];
   const totalForPercentage = pieData.reduce((sum, item) => sum + item.value, 0) || 1;
 
   // Work Orders by Priority data
@@ -487,36 +489,22 @@ const FPDashboard = ({ user }) => {
                 <div className="w-36 h-36 relative">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      {/* Background gray ring - always visible */}
                       <Pie
-                        data={[{ value: 1 }]}
+                        data={statusChartData}
                         cx="50%"
                         cy="50%"
                         innerRadius={40}
                         outerRadius={65}
                         dataKey="value"
                         strokeWidth={0}
-                        fill="#E5E7EB"
-                      />
-                      {/* Actual data ring - overlays gray ring */}
-                      {pieData.length > 0 && (
-                        <Pie
-                          data={pieData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={65}
-                          dataKey="value"
-                          strokeWidth={0}
-                        >
-                          {pieData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                      )}
+                      >
+                        {statusChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
                       <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                        <tspan x="50%" dy="-3" className="text-xl font-bold fill-gray-900">{totalWorkOrders}</tspan>
-                        <tspan x="50%" dy="16" className="text-[10px] fill-gray-500">Total</tspan>
+                        <tspan x="50%" dy="-3" fontSize="18" fontWeight="bold" fill="#111827">{totalWorkOrders}</tspan>
+                        <tspan x="50%" dy="16" fontSize="10" fill="#6B7280">Total</tspan>
                       </text>
                     </PieChart>
                   </ResponsiveContainer>
@@ -545,41 +533,34 @@ const FPDashboard = ({ user }) => {
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Priority</h3>
               <div className="flex items-center">
                 <div className="w-36 h-36 relative">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      {/* Background gray ring - always visible */}
-                      <Pie
-                        data={[{ value: 1 }]}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={40}
-                        outerRadius={65}
-                        dataKey="value"
-                        strokeWidth={0}
-                        fill="#E5E7EB"
-                      />
-                      {/* Actual data ring - overlays gray ring */}
-                      {priorityTotal > 0 && (
-                        <Pie
-                          data={priorityData.filter(d => d.value > 0)}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={65}
-                          dataKey="value"
-                          strokeWidth={0}
-                        >
-                          {priorityData.filter(d => d.value > 0).map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                      )}
-                      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                        <tspan x="50%" dy="-3" className="text-xl font-bold fill-gray-900">{priorityTotal || totalWorkOrders}</tspan>
-                        <tspan x="50%" dy="16" className="text-[10px] fill-gray-500">Total</tspan>
-                      </text>
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {(() => {
+                    const priorityChartData = priorityTotal > 0 
+                      ? priorityData.filter(d => d.value > 0) 
+                      : [{ name: 'No Data', value: 1, color: '#E5E7EB' }];
+                    return (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={priorityChartData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={40}
+                            outerRadius={65}
+                            dataKey="value"
+                            strokeWidth={0}
+                          >
+                            {priorityChartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
+                            <tspan x="50%" dy="-3" fontSize="18" fontWeight="bold" fill="#111827">{priorityTotal || totalWorkOrders}</tspan>
+                            <tspan x="50%" dy="16" fontSize="10" fill="#6B7280">Total</tspan>
+                          </text>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    );
+                  })()}
                 </div>
                 <div className="flex-1 ml-4 space-y-3">
                   {priorityData.map((item, index) => (

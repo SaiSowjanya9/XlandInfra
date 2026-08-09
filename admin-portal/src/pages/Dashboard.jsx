@@ -249,6 +249,8 @@ const Dashboard = () => {
   ].filter(item => item.value > 0);
 
   const totalWorkOrders = pieTotal || stats?.totalWorkOrders || 0;
+  // Use actual data if available, otherwise show gray placeholder
+  const statusChartData = pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }];
   const totalForPercentage = pieTotal || 1;
 
   // Work Orders by Priority data
@@ -655,36 +657,22 @@ const Dashboard = () => {
                   <div className="w-36 h-36 relative">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        {/* Background gray ring - always visible */}
                         <Pie
-                          data={[{ value: 1 }]}
+                          data={statusChartData}
                           cx="50%"
                           cy="50%"
                           innerRadius={40}
                           outerRadius={65}
                           dataKey="value"
                           strokeWidth={0}
-                          fill="#E5E7EB"
-                        />
-                        {/* Actual data ring - overlays gray ring */}
-                        {pieData.length > 0 && (
-                          <Pie
-                            data={pieData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={40}
-                            outerRadius={65}
-                            dataKey="value"
-                            strokeWidth={0}
-                          >
-                            {pieData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                        )}
+                        >
+                          {statusChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
                         <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                          <tspan x="50%" dy="-3" className="text-xl font-bold fill-gray-900">{totalWorkOrders}</tspan>
-                          <tspan x="50%" dy="16" className="text-[10px] fill-gray-500">Total</tspan>
+                          <tspan x="50%" dy="-3" fontSize="18" fontWeight="bold" fill="#111827">{totalWorkOrders}</tspan>
+                          <tspan x="50%" dy="16" fontSize="10" fill="#6B7280">Total</tspan>
                         </text>
                       </PieChart>
                     </ResponsiveContainer>
@@ -713,41 +701,34 @@ const Dashboard = () => {
                 <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Priority</h3>
                 <div className="flex items-center">
                   <div className="w-36 h-36 relative">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        {/* Background gray ring - always visible */}
-                        <Pie
-                          data={[{ value: 1 }]}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={65}
-                          dataKey="value"
-                          strokeWidth={0}
-                          fill="#E5E7EB"
-                        />
-                        {/* Actual data ring - overlays gray ring */}
-                        {priorityTotal > 0 && (
-                          <Pie
-                            data={priorityData.filter(d => d.value > 0)}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={40}
-                            outerRadius={65}
-                            dataKey="value"
-                            strokeWidth={0}
-                          >
-                            {priorityData.filter(d => d.value > 0).map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                        )}
-                        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                          <tspan x="50%" dy="-3" className="text-xl font-bold fill-gray-900">{priorityTotal || totalWorkOrders}</tspan>
-                          <tspan x="50%" dy="16" className="text-[10px] fill-gray-500">Total</tspan>
-                        </text>
-                      </PieChart>
-                    </ResponsiveContainer>
+                    {(() => {
+                      const priorityChartData = priorityTotal > 0 
+                        ? priorityData.filter(d => d.value > 0) 
+                        : [{ name: 'No Data', value: 1, color: '#E5E7EB' }];
+                      return (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={priorityChartData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={40}
+                              outerRadius={65}
+                              dataKey="value"
+                              strokeWidth={0}
+                            >
+                              {priorityChartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
+                              <tspan x="50%" dy="-3" fontSize="18" fontWeight="bold" fill="#111827">{priorityTotal || totalWorkOrders}</tspan>
+                              <tspan x="50%" dy="16" fontSize="10" fill="#6B7280">Total</tspan>
+                            </text>
+                          </PieChart>
+                        </ResponsiveContainer>
+                      );
+                    })()}
                   </div>
                   <div className="flex-1 ml-4 space-y-3">
                     {priorityData.map((item, index) => (
