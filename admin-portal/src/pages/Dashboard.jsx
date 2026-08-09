@@ -230,29 +230,25 @@ const Dashboard = () => {
   // Check if we have real data
   const hasData = stats !== null;
 
-  // Pie chart data - All 6 statuses
-  const workOrdersByStatus = stats?.workOrdersByStatus || {};
-  const pendingWO = Number(workOrdersByStatus.pending) || 0;
-  const assignedWO = Number(workOrdersByStatus.assigned) || 0;
-  const inProgressWO = Number(workOrdersByStatus.in_progress) || 0;
-  const completedWO = Number(workOrdersByStatus.completed) || 0;
-  const closedWO = Number(workOrdersByStatus.closed) || 0;
-  const cancelledWO = Number(workOrdersByStatus.cancelled) || 0;
+  // Work Orders by Status data - computed from workOrders array directly
+  const pendingWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'pending').length;
+  const assignedWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'assigned').length;
+  const inProgressWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'in_progress' || (wo.status || '').toLowerCase() === 'in progress').length;
+  const completedWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'completed').length;
+  const closedWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'closed').length;
+  const cancelledWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'cancelled').length;
   const pieTotal = pendingWO + assignedWO + inProgressWO + completedWO + closedWO + cancelledWO;
   
-  const pieData = [
+  const woStatusData = [
     { name: 'Pending', value: pendingWO, color: '#F59E0B' },
     { name: 'Assigned', value: assignedWO, color: '#3B82F6' },
     { name: 'In Progress', value: inProgressWO, color: '#8B5CF6' },
     { name: 'Completed', value: completedWO, color: '#10B981' },
     { name: 'Closed', value: closedWO, color: '#6B7280' },
     { name: 'Cancelled', value: cancelledWO, color: '#EF4444' },
-  ].filter(item => item.value > 0);
+  ];
 
-  const totalWorkOrders = pieTotal || stats?.totalWorkOrders || 0;
-  // Use actual data if available, otherwise show gray placeholder
-  const statusChartData = pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#E5E7EB' }];
-  const totalForPercentage = pieTotal || 1;
+  const totalWorkOrders = workOrders.length;
 
   // Work Orders by Priority data
   const lowPriorityWO = workOrders.filter(wo => (wo.priority || '').toLowerCase() === 'low').length;
@@ -657,26 +653,12 @@ const Dashboard = () => {
                 <div className="flex items-center">
                   <div className="w-36 h-36 relative">
                     <DonutChart
-                      data={[
-                        { name: 'Pending', value: pendingWO, color: '#F59E0B' },
-                        { name: 'Assigned', value: assignedWO, color: '#3B82F6' },
-                        { name: 'In Progress', value: inProgressWO, color: '#8B5CF6' },
-                        { name: 'Completed', value: completedWO, color: '#10B981' },
-                        { name: 'Closed', value: closedWO, color: '#6B7280' },
-                        { name: 'Cancelled', value: cancelledWO, color: '#EF4444' },
-                      ]}
+                      data={woStatusData}
                       centerValue={totalWorkOrders}
                     />
                   </div>
                   <div className="flex-1 ml-4 space-y-1.5">
-                    {[
-                      { name: 'Pending', value: pendingWO, color: '#F59E0B' },
-                      { name: 'Assigned', value: assignedWO, color: '#3B82F6' },
-                      { name: 'In Progress', value: inProgressWO, color: '#8B5CF6' },
-                      { name: 'Completed', value: completedWO, color: '#10B981' },
-                      { name: 'Closed', value: closedWO, color: '#6B7280' },
-                      { name: 'Cancelled', value: cancelledWO, color: '#EF4444' },
-                    ].map((item, index) => (
+                    {woStatusData.map((item, index) => (
                       <div key={index} className="flex items-center gap-2 text-xs">
                         <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
                         <span className="text-gray-600 w-16 flex-shrink-0">{item.name}</span>
