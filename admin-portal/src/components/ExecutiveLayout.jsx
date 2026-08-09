@@ -136,7 +136,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
           item.subLabel ? (
             <span className="flex flex-col leading-tight text-sm">
               <span>{item.label}</span>
-              <span className="text-xs opacity-80">{item.subLabel}</span>
+              <span>{item.subLabel}</span>
             </span>
           ) : (
             <span className="text-sm whitespace-nowrap">{item.label}</span>

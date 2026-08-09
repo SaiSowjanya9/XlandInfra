@@ -149,7 +149,7 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
           item.subLabel ? (
             <span className="flex flex-col leading-tight">
               <span>{item.label}</span>
-              <span className="text-xs opacity-80">{item.subLabel}</span>
+              <span>{item.subLabel}</span>
             </span>
           ) : (
             <span className="whitespace-nowrap">{item.label}</span>

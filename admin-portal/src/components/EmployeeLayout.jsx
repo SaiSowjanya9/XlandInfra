@@ -31,6 +31,10 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  CreditCard,
+  Receipt,
+  Wallet,
+  History,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useFP } from '../contexts/FPContext';
@@ -117,6 +121,10 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     location.pathname.startsWith('/employee/estimates')
   );
 
+  const [billingPaymentsOpen, setBillingPaymentsOpen] = useState(
+    location.pathname.startsWith('/employee/billing')
+  );
+
   // Estimates sub-items - Create Estimate hidden for Ops Manager
   const allEstimatesSubItems = [
     { path: '/employee/estimates/dashboard', icon: BarChart3, label: 'Dashboard' },
@@ -149,13 +157,25 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
 
   const isVendorSectionActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEmployeeSectionActive = employeeSubItems.some(item => location.pathname === item.path);
+
+  // Billing & Payments sub-items
+  const billingPaymentsSubItems = [
+    { path: '/employee/billing/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/employee/billing/generate-invoices', icon: FileText, label: 'Generate Invoices' },
+    { path: '/employee/billing/invoices', icon: Receipt, label: 'Invoices' },
+    { path: '/employee/billing/payments', icon: CreditCard, label: 'Payments' },
+    { path: '/employee/billing/make-payments', icon: Wallet, label: 'Make Payments' },
+    { path: '/employee/billing/payment-history', icon: History, label: 'Payment History' }
+  ];
+
+  const isBillingPaymentsSectionActive = billingPaymentsSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/employee/billing');
   
   // Accordion toggle functions - close other sections when opening one
   const toggleWorkOrders = () => {
     if (!sidebarCollapsed) {
       const opening = !workOrdersOpen;
       setWorkOrdersOpen(opening);
-      if (opening) { setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); }
+      if (opening) { setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); }
     }
   };
 
@@ -163,7 +183,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !vendorOpen;
       setVendorOpen(opening);
-      if (opening) { setWorkOrdersOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); }
     }
   };
 
@@ -171,7 +191,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !employeeOpen;
       setEmployeeOpen(opening);
-      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEstimatesOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); }
     }
   };
 
@@ -179,7 +199,15 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !estimatesOpen;
       setEstimatesOpen(opening);
-      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setBillingPaymentsOpen(false); }
+    }
+  };
+
+  const toggleBillingPayments = () => {
+    if (!sidebarCollapsed) {
+      const opening = !billingPaymentsOpen;
+      setBillingPaymentsOpen(opening);
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); }
     }
   };
 
@@ -199,7 +227,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   };
 
   // Check if any dropdown is open
-  const isAnyDropdownOpen = workOrdersOpen || vendorOpen || employeeOpen || estimatesOpen;
+  const isAnyDropdownOpen = workOrdersOpen || vendorOpen || employeeOpen || estimatesOpen || billingPaymentsOpen;
 
   const NavLink = ({ item, mobile = false, isSubItem = false }) => {
     const Icon = item.icon;
@@ -214,6 +242,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
         setVendorOpen(false);
         setEmployeeOpen(false);
         setEstimatesOpen(false);
+        setBillingPaymentsOpen(false);
       }
 
       if (safeStorage.getItem('formDirty') === 'true') {
@@ -240,7 +269,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
           item.subLabel ? (
             <span className="flex flex-col leading-tight text-sm">
               <span>{item.label}</span>
-              <span className="text-xs opacity-80">{item.subLabel}</span>
+              <span>{item.subLabel}</span>
             </span>
           ) : (
             <span className="text-sm whitespace-nowrap">{item.label}</span>
@@ -451,6 +480,45 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               {estimatesOpen && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 pl-3" >
                   {estimatesSubItems.map((item) => (
+                    <NavLink key={item.path} item={item} mobile isSubItem />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Billing & Payments Section */}
+            <div className="mt-1">
+              <button
+                onClick={toggleBillingPayments}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{
+                  background: (billingPaymentsOpen || (isBillingPaymentsSectionActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
+                  color: (billingPaymentsOpen || (isBillingPaymentsSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
+                }}
+                onMouseEnter={(e) => { if (!billingPaymentsOpen && !(isBillingPaymentsSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!billingPaymentsOpen && !(isBillingPaymentsSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Billing & Payments' : ''}
+              >
+                <div className={`flex items-center flex-1 min-w-0 ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <CreditCard className="w-5 h-5 flex-shrink-0" style={{ color: (billingPaymentsOpen || (isBillingPaymentsSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span className="text-sm truncate">Billing & Payments</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className={`flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ml-2 ${
+                    billingPaymentsOpen ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        billingPaymentsOpen ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: billingPaymentsOpen ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
+                )}
+              </button>
+              {billingPaymentsOpen && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3">
+                  {billingPaymentsSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile isSubItem />
                   ))}
                 </div>
