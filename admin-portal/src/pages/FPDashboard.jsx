@@ -487,27 +487,67 @@ const FPDashboard = ({ user }) => {
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Status</h3>
               <div className="flex items-center">
                 <div className="w-36 h-36 relative">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={statusChartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={40}
-                        outerRadius={65}
-                        dataKey="value"
-                        strokeWidth={0}
-                      >
-                        {statusChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                        <tspan x="50%" dy="-3" fontSize="18" fontWeight="bold" fill="#111827">{totalWorkOrders}</tspan>
-                        <tspan x="50%" dy="16" fontSize="10" fill="#6B7280">Total</tspan>
-                      </text>
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {(() => {
+                    // SVG donut chart
+                    const size = 144;
+                    const strokeWidth = 20;
+                    const radius = (size - strokeWidth) / 2;
+                    const circumference = 2 * Math.PI * radius;
+                    const center = size / 2;
+                    
+                    const statusItems = [
+                      { name: 'Pending', value: workOrdersByStatus.pending || 0, color: '#F59E0B' },
+                      { name: 'Assigned', value: workOrdersByStatus.assigned || 0, color: '#3B82F6' },
+                      { name: 'In Progress', value: workOrdersByStatus.in_progress || 0, color: '#8B5CF6' },
+                      { name: 'Completed', value: workOrdersByStatus.completed || 0, color: '#10B981' },
+                      { name: 'Closed', value: workOrdersByStatus.closed || 0, color: '#6B7280' },
+                      { name: 'Cancelled', value: workOrdersByStatus.cancelled || 0, color: '#EF4444' },
+                    ].filter(item => item.value > 0);
+                    
+                    const total = statusItems.reduce((sum, item) => sum + item.value, 0) || 1;
+                    let currentOffset = 0;
+                    
+                    return (
+                      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                        {/* Background gray ring */}
+                        <circle
+                          cx={center}
+                          cy={center}
+                          r={radius}
+                          fill="none"
+                          stroke="#E5E7EB"
+                          strokeWidth={strokeWidth}
+                        />
+                        {/* Colored segments */}
+                        {statusItems.map((item, index) => {
+                          const segmentLength = (item.value / total) * circumference;
+                          const offset = currentOffset;
+                          currentOffset += segmentLength;
+                          return (
+                            <circle
+                              key={index}
+                              cx={center}
+                              cy={center}
+                              r={radius}
+                              fill="none"
+                              stroke={item.color}
+                              strokeWidth={strokeWidth}
+                              strokeDasharray={`${segmentLength} ${circumference}`}
+                              strokeDashoffset={-offset}
+                              transform={`rotate(-90 ${center} ${center})`}
+                            />
+                          );
+                        })}
+                        {/* Center text */}
+                        <text x={center} y={center - 5} textAnchor="middle" fontSize="18" fontWeight="bold" fill="#111827">
+                          {totalWorkOrders}
+                        </text>
+                        <text x={center} y={center + 12} textAnchor="middle" fontSize="10" fill="#6B7280">
+                          Total
+                        </text>
+                      </svg>
+                    );
+                  })()}
                 </div>
                 <div className="flex-1 ml-4 space-y-1.5">
                   {[
