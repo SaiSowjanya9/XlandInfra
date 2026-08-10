@@ -1592,115 +1592,15 @@ router.patch('/work-orders/:id/status', requireFPScope, async (req, res) => {
         }
       }
 
-      // Auto-generate draft invoice for the completed work order
+      // Auto-generate invoice for completed work order using invoiceService
       try {
-        console.log('[FP] Auto-generating invoice for completed work order...');
-        
-        // Check if invoice already exists for this work order
-        const [existingInvoice] = await pool.execute(
-          'SELECT id FROM invoices WHERE work_order_id = ?',
-          [id]
-        );
-
-        if (existingInvoice.length === 0) {
-          // Generate invoice ID
-          const year = new Date().getFullYear();
-          const prefix = 'INV';
-          let invoiceId;
-          
-          try {
-            const [seqResult] = await pool.execute(
-              'SELECT current_number FROM invoice_sequence WHERE franchise_partner_id <=> ? AND year = ?',
-              [req.fpId, year]
-            );
-            
-            let nextNumber;
-            if (seqResult.length > 0) {
-              nextNumber = seqResult[0].current_number + 1;
-              await pool.execute(
-                'UPDATE invoice_sequence SET current_number = ? WHERE franchise_partner_id <=> ? AND year = ?',
-                [nextNumber, req.fpId, year]
-              );
-            } else {
-              nextNumber = 1;
-              await pool.execute(
-                'INSERT INTO invoice_sequence (franchise_partner_id, year, current_number, prefix) VALUES (?, ?, ?, ?)',
-                [req.fpId, year, nextNumber, prefix]
-              );
-            }
-            invoiceId = `${prefix}-${year}-${String(nextNumber).padStart(5, '0')}`;
-          } catch (seqErr) {
-            const timestamp = Date.now().toString(36).toUpperCase();
-            const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-            invoiceId = `${prefix}-${timestamp}-${random}`;
-          }
-
-          // Get work order details for invoice
-          const [woDetails] = await pool.execute(
-            `SELECT wo.*, 
-                    COALESCE(p.name, op.community_name, wo.property_name) as property_name,
-                    wo.customer_name, wo.customer_email, wo.customer_phone
-             FROM work_orders wo
-             LEFT JOIN properties p ON wo.property_id = p.id
-             LEFT JOIN onboarded_properties op ON wo.property_id = op.id
-             WHERE wo.id = ?`,
-            [id]
-          );
-
-          if (woDetails.length > 0) {
-            const wo = woDetails[0];
-            const invoiceDate = new Date().toISOString().split('T')[0];
-            const dueDate = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-            
-            // Create line item from work order
-            const lineItems = JSON.stringify([{
-              description: `Service: ${wo.category_name || 'General Service'}${wo.subcategory_name ? ' - ' + wo.subcategory_name : ''}`,
-              quantity: 1,
-              rate: 0,
-              amount: 0
-            }]);
-
-            // Create draft invoice
-            await pool.execute(`
-              INSERT INTO invoices (
-                invoice_id, property_id, franchise_partner_id, work_order_id,
-                customer_name, customer_email, customer_phone,
-                invoice_date, due_date, line_items,
-                subtotal, discount_percentage, discount_amount, tax_percentage, tax_amount, total_amount,
-                balance_amount, status, payment_status, notes,
-                created_by, created_by_role
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', 'pending', ?, ?, ?)
-            `, [
-              invoiceId,
-              wo.property_id,
-              req.fpId,
-              id,
-              wo.customer_name || wo.property_name,
-              wo.customer_email || null,
-              wo.customer_phone || null,
-              invoiceDate,
-              dueDate,
-              lineItems,
-              0, // subtotal - to be filled by user
-              0, // discount_percentage
-              0, // discount_amount
-              18, // tax_percentage (GST)
-              0, // tax_amount
-              0, // total_amount - to be calculated
-              0, // balance_amount
-              `Auto-generated for Work Order: ${wo.work_order_id}`,
-              req.user.id,
-              req.user.role
-            ]);
-
-            console.log(`[FP] Draft invoice ${invoiceId} created for work order ${wo.work_order_id}`);
-          }
-        } else {
-          console.log('[FP] Invoice already exists for this work order, skipping auto-generation');
+        const { generateInvoiceFromWorkOrder } = require('../services/invoiceService');
+        const invoiceResult = await generateInvoiceFromWorkOrder(id, req.user?.id);
+        if (invoiceResult.success && !invoiceResult.alreadyExists && invoiceResult.invoiceId) {
+          console.log(`[FP] Auto-generated invoice ${invoiceResult.invoiceId} for work order`);
         }
       } catch (invoiceErr) {
-        console.error('[FP] Auto invoice generation error:', invoiceErr);
-        // Don't fail the request if invoice generation fails
+        console.error('[FP] Invoice generation error:', invoiceErr);
       }
     }
 
