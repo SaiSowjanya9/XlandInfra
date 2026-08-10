@@ -69,7 +69,7 @@ const formatDate = (dateStr) => {
 
 // Create Invoice Form Component
 const CreateInvoiceForm = ({ onSuccess, onCancel, token }) => {
-  const [propertyId, setPropertyId] = useState('');
+  const [estimateId, setEstimateId] = useState('');
   const [customerDetails, setCustomerDetails] = useState({
     name: '',
     email: '',
@@ -84,11 +84,11 @@ const CreateInvoiceForm = ({ onSuccess, onCancel, token }) => {
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(false);
   const [error, setError] = useState('');
-  const [step, setStep] = useState(1); // 1: Enter Property, 2: Select Estimate, 3: Review & Create
+  const [step, setStep] = useState(1); // 1: Enter Estimate ID, 2: Select Estimate, 3: Review & Create
 
-  // Fetch property details and approved estimates when Property ID is entered
-  const fetchPropertyData = async () => {
-    if (!propertyId || propertyId.length < 3) return;
+  // Fetch estimate details when Estimate ID is entered
+  const fetchEstimateData = async () => {
+    if (!estimateId || estimateId.length < 3) return;
     
     setFetchingData(true);
     setError('');
@@ -96,37 +96,28 @@ const CreateInvoiceForm = ({ onSuccess, onCancel, token }) => {
     setSelectedEstimate(null);
     
     try {
-      // Fetch property details
-      const propResponse = await fetch(`${API_BASE}/api/payments/properties/by-code/${propertyId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const propResult = await propResponse.json();
-      
-      if (propResult.success && propResult.data) {
-        const property = propResult.data;
-        setCustomerDetails({
-          name: property.customer_name || property.name || '',
-          email: property.customer_email || '',
-          phone: property.customer_phone || ''
-        });
-      }
-      
-      // Fetch approved estimates for this property
-      const estResponse = await fetch(`${API_BASE}/api/payments/estimates/by-property/${propertyId}?status=approved`, {
+      // Fetch estimate by ID
+      const estResponse = await fetch(`${API_BASE}/api/payments/estimates/by-id/${estimateId}?status=approved`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const estResult = await estResponse.json();
       
-      if (estResult.success && estResult.data && estResult.data.length > 0) {
-        setApprovedEstimates(estResult.data);
+      if (estResult.success && estResult.data) {
+        const estimate = estResult.data;
+        // Set customer details from estimate
+        setCustomerDetails({
+          name: estimate.customer_name || estimate.client_name || '',
+          email: estimate.customer_email || estimate.client_email || '',
+          phone: estimate.customer_phone || estimate.client_phone || ''
+        });
+        setApprovedEstimates([estimate]);
         setStep(2);
       } else {
-        // More helpful message - approved estimates might already have invoices
-        setError('No approved estimates available. Either no estimates are approved, or approved estimates already have invoices generated. Check the "Generated Invoices" tab.');
+        setError(estResult.message || 'No approved estimate found with this ID. Either the estimate is not approved, or an invoice has already been generated.');
       }
     } catch (err) {
       console.log('Fetch failed:', err);
-      setError('Failed to fetch property data');
+      setError('Failed to fetch estimate data');
     } finally {
       setFetchingData(false);
     }
@@ -169,7 +160,7 @@ const CreateInvoiceForm = ({ onSuccess, onCancel, token }) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          propertyId: propertyId,
+          propertyId: selectedEstimate.property_id || selectedEstimate.property_code,
           estimateId: selectedEstimate.estimate_id || selectedEstimate.id,
           customerName: customerDetails.name,
           customerEmail: customerDetails.email,
@@ -216,12 +207,12 @@ const CreateInvoiceForm = ({ onSuccess, onCancel, token }) => {
       <div className="flex items-center gap-2 mb-6">
         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${step >= 1 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
           <span className="w-5 h-5 flex items-center justify-center bg-blue-600 text-white rounded-full text-xs">1</span>
-          Enter Property ID
+          Enter Estimate ID
         </div>
         <ChevronRight className="w-4 h-4 text-gray-400" />
         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${step >= 2 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
           <span className={`w-5 h-5 flex items-center justify-center rounded-full text-xs ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'}`}>2</span>
-          Select Estimate
+          Confirm Estimate
         </div>
         <ChevronRight className="w-4 h-4 text-gray-400" />
         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${step >= 3 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
@@ -230,33 +221,33 @@ const CreateInvoiceForm = ({ onSuccess, onCancel, token }) => {
         </div>
       </div>
 
-      {/* Step 1: Enter Property ID */}
+      {/* Step 1: Enter Estimate ID */}
       {step === 1 && (
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Property ID *
+              Estimate ID *
               {fetchingData && <span className="ml-2 text-blue-500 text-xs animate-pulse">(Loading...)</span>}
             </label>
             <div className="flex gap-2">
               <input
                 type="text"
-                value={propertyId}
-                onChange={(e) => setPropertyId(e.target.value.toUpperCase())}
+                value={estimateId}
+                onChange={(e) => setEstimateId(e.target.value.toUpperCase())}
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter Property ID (e.g., PROP-001)"
+                placeholder="Enter Estimate ID (e.g., EST-1783369179946)"
               />
               <button
                 type="button"
-                onClick={fetchPropertyData}
-                disabled={fetchingData || !propertyId}
+                onClick={fetchEstimateData}
+                disabled={fetchingData || !estimateId}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
               >
                 {fetchingData ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                 Search
               </button>
             </div>
-            <p className="text-xs text-gray-400 mt-1">Enter the Property ID to fetch customer details and approved estimates</p>
+            <p className="text-xs text-gray-400 mt-1">Enter the Estimate ID to fetch estimate details and create invoice</p>
           </div>
         </div>
       )}
