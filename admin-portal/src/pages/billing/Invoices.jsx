@@ -805,14 +805,6 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                           </td>
                           <td className="px-4 py-3.5">
                             <div className="flex items-center justify-center gap-1">
-                              {/* Download */}
-                              <button
-                                onClick={() => handleDownloadPDF(invoice)}
-                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Download PDF"
-                              >
-                                <Download className="w-4 h-4" />
-                              </button>
                               {/* View */}
                               <button
                                 onClick={() => openInvoiceDetail(invoice)}
@@ -829,6 +821,14 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                                 title="Restore Invoice"
                               >
                                 <RotateCcw className="w-4 h-4" />
+                              </button>
+                              {/* Download */}
+                              <button
+                                onClick={() => handleDownloadPDF(invoice)}
+                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Download PDF"
+                              >
+                                <Download className="w-4 h-4" />
                               </button>
                               {/* Delete Permanently */}
                               <button
@@ -932,15 +932,6 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                           </td>
                           <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1">
-                              {/* Download */}
-                              <button
-                                onClick={() => handleDownloadPDF(invoice)}
-                                disabled={actionLoading === invoice.id}
-                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Download PDF"
-                              >
-                                <Download className="w-4 h-4" />
-                              </button>
                               {/* View */}
                               <button
                                 onClick={() => openInvoiceDetail(invoice)}
@@ -949,13 +940,22 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
-                              {/* Edit */}
+                              {/* Edit/Modify */}
                               <button
                                 onClick={() => openInvoiceDetail(invoice)}
                                 className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                title="Edit Invoice"
+                                title="Modify Invoice"
                               >
                                 <Edit className="w-4 h-4" />
+                              </button>
+                              {/* Download */}
+                              <button
+                                onClick={() => handleDownloadPDF(invoice)}
+                                disabled={actionLoading === invoice.id}
+                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Download PDF"
+                              >
+                                <Download className="w-4 h-4" />
                               </button>
                               {/* Archive (soft delete) */}
                               <button

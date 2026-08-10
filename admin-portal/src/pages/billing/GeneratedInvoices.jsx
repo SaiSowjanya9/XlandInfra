@@ -4,6 +4,7 @@ import {
   Download,
   Plus,
   Eye,
+  Edit,
   X,
   ChevronDown,
   ChevronLeft,
@@ -23,6 +24,7 @@ import {
   Phone,
   IndianRupee,
   Briefcase,
+  Trash2,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import * as XLSX from 'xlsx';
@@ -551,13 +553,7 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => onDownload(invoice)}
-                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                          title="Download"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
+                        {/* View */}
                         <button
                           onClick={() => onView(invoice)}
                           className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
@@ -565,15 +561,29 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {invoice.status === 'draft' && (
-                          <button
-                            onClick={() => onSend(invoice)}
-                            className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg"
-                            title="Send Invoice"
-                          >
-                            <Send className="w-4 h-4" />
-                          </button>
-                        )}
+                        {/* Modify */}
+                        <button
+                          onClick={() => onView(invoice)}
+                          className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg"
+                          title="Modify"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        {/* Download */}
+                        <button
+                          onClick={() => onDownload(invoice)}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                          title="Download"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                        {/* Delete/Archive */}
+                        <button
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
