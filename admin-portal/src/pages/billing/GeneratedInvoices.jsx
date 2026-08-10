@@ -543,7 +543,7 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
                     </td>
                     <td className="px-4 py-3.5 text-sm text-gray-800">{invoice.customerName || '-'}</td>
                     <td className="px-4 py-3.5 text-sm text-gray-600">{invoice.propertyCode || '-'}</td>
-                    <td className="px-4 py-3.5 text-sm text-gray-600">{formatDate(invoice.invoiceDate)}</td>
+                    <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{formatDate(invoice.invoiceDate)}</td>
                     <td className="px-4 py-3.5 text-right text-sm font-semibold text-gray-900">
                       {formatCurrency(invoice.totalAmount)}
                     </td>
