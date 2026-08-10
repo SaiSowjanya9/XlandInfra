@@ -31,8 +31,8 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // Tab configuration
 const TABS = [
-  { id: 'generated', label: 'Generated Invoices', icon: FileText, description: 'Auto-generated from approved estimates' },
   { id: 'create', label: 'Create Invoice', icon: Plus, description: 'Create manual invoice for other requirements' },
+  { id: 'generated', label: 'Generated Invoices', icon: FileText, description: 'Auto-generated from approved estimates' },
   { id: 'work_order', label: 'Work Order Invoices', icon: Briefcase, description: 'Invoices from work order submissions' }
 ];
 
@@ -67,55 +67,90 @@ const formatDate = (dateStr) => {
 
 // Create Invoice Form Component
 const CreateInvoiceForm = ({ onSuccess, onCancel, token }) => {
-  const [formData, setFormData] = useState({
-    customerName: '',
-    customerEmail: '',
-    customerPhone: '',
-    propertyId: '',
-    description: '',
-    items: [{ description: '', quantity: 1, rate: 0 }],
-    discountPercent: 0,
-    taxPercent: 18,
-    dueDate: '',
-    notes: ''
+  const [propertyId, setPropertyId] = useState('');
+  const [customerDetails, setCustomerDetails] = useState({
+    name: '',
+    email: '',
+    phone: ''
   });
+  const [approvedEstimates, setApprovedEstimates] = useState([]);
+  const [selectedEstimate, setSelectedEstimate] = useState(null);
+  const [discountPercent, setDiscountPercent] = useState(0);
+  const [gstPercent, setGstPercent] = useState(18);
+  const [dueDate, setDueDate] = useState('');
+  const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fetchingData, setFetchingData] = useState(false);
   const [error, setError] = useState('');
+  const [step, setStep] = useState(1); // 1: Enter Property, 2: Select Estimate, 3: Review & Create
 
-  const addItem = () => {
-    setFormData(prev => ({
-      ...prev,
-      items: [...prev.items, { description: '', quantity: 1, rate: 0 }]
-    }));
+  // Fetch property details and approved estimates when Property ID is entered
+  const fetchPropertyData = async () => {
+    if (!propertyId || propertyId.length < 3) return;
+    
+    setFetchingData(true);
+    setError('');
+    setApprovedEstimates([]);
+    setSelectedEstimate(null);
+    
+    try {
+      // Fetch property details
+      const propResponse = await fetch(`${API_BASE}/api/payments/properties/by-code/${propertyId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const propResult = await propResponse.json();
+      
+      if (propResult.success && propResult.data) {
+        const property = propResult.data;
+        setCustomerDetails({
+          name: property.customer_name || property.name || '',
+          email: property.customer_email || '',
+          phone: property.customer_phone || ''
+        });
+      }
+      
+      // Fetch approved estimates for this property
+      const estResponse = await fetch(`${API_BASE}/api/payments/estimates/by-property/${propertyId}?status=approved`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const estResult = await estResponse.json();
+      
+      if (estResult.success && estResult.data && estResult.data.length > 0) {
+        setApprovedEstimates(estResult.data);
+        setStep(2);
+      } else {
+        setError('No approved estimates found for this property');
+      }
+    } catch (err) {
+      console.log('Fetch failed:', err);
+      setError('Failed to fetch property data');
+    } finally {
+      setFetchingData(false);
+    }
   };
 
-  const removeItem = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      items: prev.items.filter((_, i) => i !== index)
-    }));
-  };
-
-  const updateItem = (index, field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      items: prev.items.map((item, i) => i === index ? { ...item, [field]: value } : item)
-    }));
-  };
-
+  // Calculate totals based on selected estimate
   const calculateTotals = () => {
-    const subtotal = formData.items.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
-    const discountAmount = subtotal * (formData.discountPercent / 100);
+    if (!selectedEstimate) return { subtotal: 0, discountAmount: 0, gstAmount: 0, total: 0 };
+    
+    const subtotal = parseFloat(selectedEstimate.total) || parseFloat(selectedEstimate.subtotal) || 0;
+    const discountAmount = subtotal * (discountPercent / 100);
     const taxableAmount = subtotal - discountAmount;
-    const taxAmount = taxableAmount * (formData.taxPercent / 100);
-    const total = taxableAmount + taxAmount;
-    return { subtotal, discountAmount, taxAmount, total };
+    const gstAmount = taxableAmount * (gstPercent / 100);
+    const total = taxableAmount + gstAmount;
+    
+    return { subtotal, discountAmount, gstAmount, total };
+  };
+
+  const handleSelectEstimate = (estimate) => {
+    setSelectedEstimate(estimate);
+    setStep(3);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.customerName || formData.items.length === 0) {
-      setError('Please fill in required fields');
+    if (!selectedEstimate) {
+      setError('Please select an estimate');
       return;
     }
 
@@ -131,13 +166,22 @@ const CreateInvoiceForm = ({ onSuccess, onCancel, token }) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ...formData,
-          invoiceType: 'manual',
+          propertyId: propertyId,
+          estimateId: selectedEstimate.estimate_id || selectedEstimate.id,
+          customerName: customerDetails.name,
+          customerEmail: customerDetails.email,
+          customerPhone: customerDetails.phone,
+          invoiceType: 'estimate',
+          lineItems: selectedEstimate.line_items || selectedEstimate.items || [],
           subtotal: totals.subtotal,
+          discountPercent: discountPercent,
           discountAmount: totals.discountAmount,
-          taxAmount: totals.taxAmount,
+          taxPercent: gstPercent,
+          taxAmount: totals.gstAmount,
           totalAmount: totals.total,
-          balanceAmount: totals.total
+          balanceAmount: totals.total,
+          dueDate: dueDate,
+          notes: notes
         })
       });
 
@@ -158,202 +202,258 @@ const CreateInvoiceForm = ({ onSuccess, onCancel, token }) => {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-6">Create New Invoice</h2>
+      <h2 className="text-lg font-semibold text-gray-900 mb-2">Create New Invoice</h2>
+      <p className="text-sm text-gray-500 mb-6">Create invoice from approved estimates</p>
       
       {error && (
         <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">{error}</div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Customer Details */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Step Indicator */}
+      <div className="flex items-center gap-2 mb-6">
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${step >= 1 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+          <span className="w-5 h-5 flex items-center justify-center bg-blue-600 text-white rounded-full text-xs">1</span>
+          Enter Property ID
+        </div>
+        <ChevronRight className="w-4 h-4 text-gray-400" />
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${step >= 2 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+          <span className={`w-5 h-5 flex items-center justify-center rounded-full text-xs ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'}`}>2</span>
+          Select Estimate
+        </div>
+        <ChevronRight className="w-4 h-4 text-gray-400" />
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${step >= 3 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+          <span className={`w-5 h-5 flex items-center justify-center rounded-full text-xs ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'}`}>3</span>
+          Review & Create
+        </div>
+      </div>
+
+      {/* Step 1: Enter Property ID */}
+      {step === 1 && (
+        <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name *</label>
-            <input
-              type="text"
-              value={formData.customerName}
-              onChange={(e) => setFormData(prev => ({ ...prev, customerName: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter customer name"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              value={formData.customerEmail}
-              onChange={(e) => setFormData(prev => ({ ...prev, customerEmail: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="customer@email.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-            <input
-              type="tel"
-              value={formData.customerPhone}
-              onChange={(e) => setFormData(prev => ({ ...prev, customerPhone: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Phone number"
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Property ID *
+              {fetchingData && <span className="ml-2 text-blue-500 text-xs animate-pulse">(Loading...)</span>}
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={propertyId}
+                onChange={(e) => setPropertyId(e.target.value.toUpperCase())}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter Property ID (e.g., PROP-001)"
+              />
+              <button
+                type="button"
+                onClick={fetchPropertyData}
+                disabled={fetchingData || !propertyId}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {fetchingData ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                Search
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Enter the Property ID to fetch customer details and approved estimates</p>
           </div>
         </div>
+      )}
 
-        {/* Property & Due Date */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Property ID</label>
-            <input
-              type="text"
-              value={formData.propertyId}
-              onChange={(e) => setFormData(prev => ({ ...prev, propertyId: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="PROP-XXX"
-            />
+      {/* Step 2: Select Estimate */}
+      {step === 2 && (
+        <div className="space-y-4">
+          {/* Customer Info */}
+          <div className="bg-blue-50 rounded-lg p-4 mb-4">
+            <h3 className="text-sm font-medium text-blue-800 mb-2">Customer Details</h3>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <span className="text-blue-600">Name:</span>
+                <span className="ml-2 text-gray-800">{customerDetails.name || '-'}</span>
+              </div>
+              <div>
+                <span className="text-blue-600">Email:</span>
+                <span className="ml-2 text-gray-800">{customerDetails.email || '-'}</span>
+              </div>
+              <div>
+                <span className="text-blue-600">Phone:</span>
+                <span className="ml-2 text-gray-800">{customerDetails.phone || '-'}</span>
+              </div>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-            <input
-              type="date"
-              value={formData.dueDate}
-              onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
 
-        {/* Line Items */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-700">Line Items *</label>
-            <button
-              type="button"
-              onClick={addItem}
-              className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
-            >
-              <Plus className="w-4 h-4" /> Add Item
-            </button>
-          </div>
-          <div className="space-y-2">
-            {formData.items.map((item, index) => (
-              <div key={index} className="flex gap-2 items-start">
-                <input
-                  type="text"
-                  value={item.description}
-                  onChange={(e) => updateItem(index, 'description', e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                  placeholder="Item description"
-                />
-                <input
-                  type="number"
-                  value={item.quantity}
-                  onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
-                  className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                  placeholder="Qty"
-                  min="1"
-                />
-                <input
-                  type="number"
-                  value={item.rate}
-                  onChange={(e) => updateItem(index, 'rate', parseFloat(e.target.value) || 0)}
-                  className="w-28 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                  placeholder="Rate"
-                />
-                <span className="w-28 py-2 text-sm font-medium text-gray-700 text-right">
-                  {formatCurrency(item.quantity * item.rate)}
-                </span>
-                {formData.items.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeItem(index)}
-                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
+          <h3 className="text-sm font-medium text-gray-700">Select Approved Estimate ({approvedEstimates.length} found)</h3>
+          <div className="space-y-3 max-h-80 overflow-y-auto">
+            {approvedEstimates.map((estimate) => (
+              <div
+                key={estimate.id || estimate.estimate_id}
+                onClick={() => handleSelectEstimate(estimate)}
+                className="border border-gray-200 rounded-lg p-4 hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-all"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-semibold text-blue-600">{estimate.estimate_id}</span>
+                    <span className="ml-3 text-sm text-gray-600">{estimate.property_name || estimate.service_type}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-gray-900">{formatCurrency(estimate.total || estimate.subtotal)}</span>
+                    <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">Approved</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-gray-500">
+                  Created: {formatDate(estimate.created_at)} | Service: {estimate.service_type || 'General'}
+                </div>
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Discount & Tax */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Discount (%)</label>
-            <input
-              type="number"
-              value={formData.discountPercent}
-              onChange={(e) => setFormData(prev => ({ ...prev, discountPercent: parseFloat(e.target.value) || 0 }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              min="0"
-              max="100"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tax/GST (%)</label>
-            <input
-              type="number"
-              value={formData.taxPercent}
-              onChange={(e) => setFormData(prev => ({ ...prev, taxPercent: parseFloat(e.target.value) || 0 }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              min="0"
-            />
-          </div>
-        </div>
-
-        {/* Notes */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-          <textarea
-            value={formData.notes}
-            onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-            rows={2}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            placeholder="Additional notes..."
-          />
-        </div>
-
-        {/* Totals */}
-        <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Subtotal:</span>
-            <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
-          </div>
-          {formData.discountPercent > 0 && (
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Discount ({formData.discountPercent}%):</span>
-              <span className="font-medium text-red-600">-{formatCurrency(totals.discountAmount)}</span>
-            </div>
-          )}
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Tax/GST ({formData.taxPercent}%):</span>
-            <span className="font-medium">{formatCurrency(totals.taxAmount)}</span>
-          </div>
-          <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-2">
-            <span>Total:</span>
-            <span className="text-blue-600">{formatCurrency(totals.total)}</span>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex justify-end gap-3">
           <button
             type="button"
-            onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+            onClick={() => setStep(1)}
+            className="text-sm text-gray-500 hover:text-gray-700"
           >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-          >
-            {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            Create Invoice
+            ← Back to Property Search
           </button>
         </div>
-      </form>
+      )}
+
+      {/* Step 3: Review & Create */}
+      {step === 3 && selectedEstimate && (
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Selected Estimate Info */}
+          <div className="bg-green-50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-green-800">Selected Estimate</h3>
+                <p className="text-lg font-semibold text-green-700">{selectedEstimate.estimate_id}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="text-sm text-green-600 hover:text-green-800"
+              >
+                Change
+              </button>
+            </div>
+          </div>
+
+          {/* Customer Details (Editable) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+              <input
+                type="text"
+                value={customerDetails.name}
+                onChange={(e) => setCustomerDetails(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                type="email"
+                value={customerDetails.email}
+                onChange={(e) => setCustomerDetails(prev => ({ ...prev, email: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <input
+                type="tel"
+                value={customerDetails.phone}
+                onChange={(e) => setCustomerDetails(prev => ({ ...prev, phone: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Discount & GST */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Discount (%)</label>
+              <input
+                type="number"
+                value={discountPercent}
+                onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                min="0"
+                max="100"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">GST (%)</label>
+              <input
+                type="number"
+                value={gstPercent}
+                onChange={(e) => setGstPercent(parseFloat(e.target.value) || 0)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                min="0"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Additional notes..."
+            />
+          </div>
+
+          {/* Totals */}
+          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Subtotal (from Estimate):</span>
+              <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
+            </div>
+            {discountPercent > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Discount ({discountPercent}%):</span>
+                <span className="font-medium text-red-600">-{formatCurrency(totals.discountAmount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">GST ({gstPercent}%):</span>
+              <span className="font-medium">{formatCurrency(totals.gstAmount)}</span>
+            </div>
+            <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-2">
+              <span>Total Amount:</span>
+              <span className="text-blue-600">{formatCurrency(totals.total)}</span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-between">
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+            >
+              ← Back
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            >
+              {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              Create Invoice
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 };
@@ -511,7 +611,7 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
 };
 
 const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
-  const [activeTab, setActiveTab] = useState('generated');
+  const [activeTab, setActiveTab] = useState('create');
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
