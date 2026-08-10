@@ -665,9 +665,9 @@ router.post('/:estimateId/action', async (req, res) => {
     if (action === 'approve') {
       try {
         const { generateInvoiceFromEstimate } = require('../services/invoiceService');
-        // Use internal DB id for invoice generation
-        invoiceResult = await generateInvoiceFromEstimate(est.id, null);
-        console.log(`✅ Auto-generated invoice for customer-approved estimate ${estimateId}:`, invoiceResult);
+        // Use internal DB id for invoice generation, pass source to handle fp_estimates
+        invoiceResult = await generateInvoiceFromEstimate(est.id, null, source);
+        console.log(`✅ Auto-generated invoice for customer-approved estimate ${estimateId} (source: ${source}):`, invoiceResult);
       } catch (invoiceError) {
         console.error('Failed to auto-generate invoice for customer approval:', invoiceError);
         // Don't fail the approval if invoice generation fails

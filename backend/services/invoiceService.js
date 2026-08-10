@@ -72,28 +72,49 @@ const calculateInvoiceAmounts = (subtotal, discountPercentage = 0) => {
  * Generate invoice from an approved estimate
  * @param {number} estimateId - The estimate ID (internal DB ID)
  * @param {number} approvedBy - User ID who approved the estimate
+ * @param {string} source - Source table: 'regular' for estimates, 'fp' for fp_estimates
  * @returns {Object} Created invoice data
  */
-const generateInvoiceFromEstimate = async (estimateId, approvedBy = null) => {
+const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source = 'regular') => {
   const connection = await pool.getConnection();
   
   try {
     await connection.beginTransaction();
     
-    // Get estimate details with client and property info
-    const [estimates] = await connection.execute(`
-      SELECT e.*, 
-             c.name as client_name, c.email as client_email, c.phone as client_phone, c.client_id as client_code,
-             p.name as property_name, p.property_id as property_code,
-             op.community_name as onboarded_property_name, op.property_id as onboarded_property_code,
-             op.contact_email as op_email, op.contact_phone as op_phone,
-             op.franchise_partner_id
-      FROM estimates e
-      LEFT JOIN clients c ON e.client_id = c.id
-      LEFT JOIN properties p ON e.property_id = p.id
-      LEFT JOIN onboarded_properties op ON e.property_id = op.id
-      WHERE e.id = ?
-    `, [estimateId]);
+    let estimates;
+    
+    if (source === 'fp') {
+      // Query fp_estimates table for FP estimates
+      [estimates] = await connection.execute(`
+        SELECT fe.*, 
+               fe.customer_email as estimate_email, fe.customer_name as estimate_customer_name,
+               fe.property_name, fe.property_id as property_code,
+               op.community_name as onboarded_property_name, op.property_id as onboarded_property_code,
+               op.contact_email as op_email, op.contact_phone as op_phone,
+               fe.franchise_partner_id
+        FROM fp_estimates fe
+        LEFT JOIN onboarded_properties op ON fe.property_id = op.id
+        WHERE fe.id = ?
+      `, [estimateId]);
+    } else {
+      // Query regular estimates table
+      [estimates] = await connection.execute(`
+        SELECT e.*, 
+               e.customer_email as estimate_email, e.customer_name as estimate_customer_name,
+               c.name as client_name, c.email as client_email, c.phone as client_phone, c.client_id as client_code,
+               p.name as property_name, p.property_id as property_code,
+               op.community_name as onboarded_property_name, op.property_id as onboarded_property_code,
+               op.contact_email as op_email, op.contact_phone as op_phone,
+               op.franchise_partner_id
+        FROM estimates e
+        LEFT JOIN clients c ON e.client_id = c.id
+        LEFT JOIN properties p ON e.property_id = p.id
+        LEFT JOIN onboarded_properties op ON e.property_id = op.id
+        WHERE e.id = ?
+      `, [estimateId]);
+    }
+    
+    console.log(`📋 Querying ${source === 'fp' ? 'fp_estimates' : 'estimates'} table for ID: ${estimateId}`);
     
     if (estimates.length === 0) {
       throw new Error('Estimate not found');
@@ -101,10 +122,10 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null) => {
     
     const estimate = estimates[0];
     
-    // Check if invoice already exists for this estimate
+    // Check if invoice already exists for this estimate (check by source_estimate_id string)
     const [existingInvoice] = await connection.execute(
-      'SELECT id, invoice_id FROM invoices WHERE estimate_id = ?',
-      [estimateId]
+      'SELECT id, invoice_id FROM invoices WHERE source_estimate_id = ?',
+      [estimate.estimate_id]
     );
     
     if (existingInvoice.length > 0) {
@@ -118,28 +139,42 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null) => {
       };
     }
     
-    // Get estimate line items
-    const [items] = await connection.execute(`
-      SELECT ei.*, p.name as package_name, c.name as category_name
-      FROM estimate_items ei
-      LEFT JOIN packages p ON ei.package_id = p.id
-      LEFT JOIN categories c ON ei.category_id = c.id
-      WHERE ei.estimate_id = ?
-      ORDER BY ei.sort_order
-    `, [estimateId]);
+    // Get estimate line items (only for regular estimates, FP estimates store items in JSON)
+    let items = [];
+    if (source === 'fp') {
+      // FP estimates store services/addons as JSON
+      const services = estimate.services ? (typeof estimate.services === 'string' ? JSON.parse(estimate.services) : estimate.services) : [];
+      const addons = estimate.addons ? (typeof estimate.addons === 'string' ? JSON.parse(estimate.addons) : estimate.addons) : [];
+      items = [...services, ...addons].map(item => ({
+        description: item.name || item.description || 'Service',
+        quantity: item.quantity || 1,
+        unit_price: item.price || item.unitPrice || 0,
+        total_price: (item.price || item.unitPrice || 0) * (item.quantity || 1)
+      }));
+    } else {
+      const [regularItems] = await connection.execute(`
+        SELECT ei.*, p.name as package_name, c.name as category_name
+        FROM estimate_items ei
+        LEFT JOIN packages p ON ei.package_id = p.id
+        LEFT JOIN categories c ON ei.category_id = c.id
+        WHERE ei.estimate_id = ?
+        ORDER BY ei.sort_order
+      `, [estimateId]);
+      items = regularItems;
+    }
     
     // Calculate amounts with 18% GST
-    const amounts = calculateInvoiceAmounts(
-      parseFloat(estimate.subtotal) || 0,
-      parseFloat(estimate.discount_percentage) || 0
-    );
+    // For FP estimates, use 'total' field; for regular estimates, use 'subtotal'
+    const subtotalValue = parseFloat(estimate.subtotal) || parseFloat(estimate.total) || 0;
+    const discountValue = parseFloat(estimate.discount_percentage) || parseFloat(estimate.discount) || 0;
+    const amounts = calculateInvoiceAmounts(subtotalValue, discountValue);
     
     // Prepare line items JSON
     const lineItems = items.map(item => ({
-      description: item.description || item.package_name || item.category_name || 'Service',
+      description: item.description || item.package_name || item.category_name || item.name || 'Service',
       quantity: item.quantity || 1,
-      unitPrice: parseFloat(item.unit_price) || 0,
-      totalPrice: parseFloat(item.total_price) || 0,
+      unitPrice: parseFloat(item.unit_price) || parseFloat(item.price) || 0,
+      totalPrice: parseFloat(item.total_price) || (parseFloat(item.unit_price || item.price || 0) * (item.quantity || 1)),
       packageId: item.package_id,
       categoryId: item.category_id
     }));
@@ -153,10 +188,10 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null) => {
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + DUE_DATE_DAYS);
     
-    // Determine customer details
-    const customerName = estimate.client_name || estimate.onboarded_property_name || estimate.property_name || 'Customer';
-    const customerEmail = estimate.client_email || estimate.op_email || null;
-    const customerPhone = estimate.client_phone || estimate.op_phone || null;
+    // Determine customer details (check estimate's own fields first, then linked tables)
+    const customerName = estimate.estimate_customer_name || estimate.client_name || estimate.onboarded_property_name || estimate.property_name || 'Customer';
+    const customerEmail = estimate.estimate_email || estimate.client_email || estimate.op_email || null;
+    const customerPhone = estimate.customer_phone || estimate.client_phone || estimate.op_phone || null;
     const propertyName = estimate.onboarded_property_name || estimate.property_name || null;
     const propertyCode = estimate.onboarded_property_code || estimate.property_code || null;
     
@@ -203,20 +238,31 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null) => {
     
     const insertedId = result.insertId;
     
-    // Update estimate status to 'converted'
-    await connection.execute(
-      'UPDATE estimates SET status = ? WHERE id = ?',
-      ['converted', estimateId]
-    );
+    // Update estimate status to 'converted' based on source table
+    if (source === 'fp') {
+      await connection.execute(
+        'UPDATE fp_estimates SET status = ? WHERE id = ?',
+        ['converted', estimateId]
+      );
+    } else {
+      await connection.execute(
+        'UPDATE estimates SET status = ? WHERE id = ?',
+        ['converted', estimateId]
+      );
+    }
     
     await connection.commit();
     
     console.log(`✅ Invoice ${invoiceId} generated from estimate ${estimate.estimate_id}`);
+    console.log(`📧 Customer email for invoice: ${customerEmail || 'NOT FOUND'}`);
     
     // Send email notification (don't await to avoid blocking)
     if (customerEmail) {
+      console.log(`📧 Sending invoice email to: ${customerEmail}`);
       sendInvoiceEmailNotification(insertedId, customerEmail, customerName, invoiceId, amounts.totalAmount, dueDate)
-        .catch(err => console.error('Failed to send invoice email:', err));
+        .catch(err => console.error('❌ Failed to send invoice email:', err));
+    } else {
+      console.log(`⚠️ No customer email found for invoice ${invoiceId} - email not sent`);
     }
     
     return {
