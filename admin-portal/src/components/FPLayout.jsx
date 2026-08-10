@@ -274,11 +274,12 @@ const FPLayout = ({ admin, onLogout, children }) => {
   // Billing & Payments sub-items
   const billingPaymentsSubItems = [
     { path: '/fp/billing/dashboard', icon: BarChart3, label: 'Dashboard' },
-    { path: '/fp/billing/generate-invoices', icon: FileText, label: 'Generate Invoices' },
+    { path: '/fp/billing/generate-invoices', icon: FileText, label: 'Generated Invoices' },
     { path: '/fp/billing/invoices', icon: Receipt, label: 'Invoices' },
     { path: '/fp/billing/payments', icon: CreditCard, label: 'Payments' },
     { path: '/fp/billing/make-payments', icon: Wallet, label: 'Make Payments' },
-    { path: '/fp/billing/payment-history', icon: History, label: 'Payment History' }
+    { path: '/fp/billing/payment-history', icon: History, label: 'Payment History' },
+    { path: '/fp/billing/archived', icon: Archive, label: 'Archived' }
   ];
 
   const isWorkOrdersSectionActive = workOrdersSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/fp/work-orders');

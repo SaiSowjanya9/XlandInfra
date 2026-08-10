@@ -83,11 +83,12 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
   // Billing & Payments sub-items
   const billingPaymentsSubItems = [
     { path: '/manager/billing/dashboard', icon: BarChart3, label: 'Dashboard' },
-    { path: '/manager/billing/generate-invoices', icon: FileText, label: 'Generate Invoices' },
+    { path: '/manager/billing/generate-invoices', icon: FileText, label: 'Generated Invoices' },
     { path: '/manager/billing/invoices', icon: Receipt, label: 'Invoices' },
     { path: '/manager/billing/payments', icon: CreditCard, label: 'Payments' },
     { path: '/manager/billing/make-payments', icon: Wallet, label: 'Make Payments' },
-    { path: '/manager/billing/payment-history', icon: History, label: 'Payment History' }
+    { path: '/manager/billing/payment-history', icon: History, label: 'Payment History' },
+    { path: '/manager/billing/archived', icon: Archive, label: 'Archived' }
   ];
 
   const isWorkOrdersActive = workOrdersSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/manager/work-orders');

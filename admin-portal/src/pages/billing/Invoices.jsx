@@ -55,14 +55,14 @@ const INVOICE_TABS = [
   { id: 'archived', label: 'Archived', filter: 'archived', icon: Archive }
 ];
 
-const Invoices = ({ user, portalType = 'admin' }) => {
+const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState([]);
   const [archivedInvoices, setArchivedInvoices] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [activeTab, setActiveTab] = useState('generated');
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
@@ -82,11 +82,10 @@ const Invoices = ({ user, portalType = 'admin' }) => {
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch active invoices
+      // Fetch ALL active invoices (filter by type on client side)
       let url = `${API_BASE}/api/payments/invoices`;
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.append('status', statusFilter);
-      if (typeFilter !== 'all' && typeFilter !== 'archived') params.append('invoiceType', typeFilter);
       if (searchTerm) params.append('search', searchTerm);
       if (dateRange.start) params.append('startDate', dateRange.start);
       if (dateRange.end) params.append('endDate', dateRange.end);
@@ -114,7 +113,7 @@ const Invoices = ({ user, portalType = 'admin' }) => {
     } finally {
       setLoading(false);
     }
-  }, [token, statusFilter, typeFilter, searchTerm, dateRange]);
+  }, [token, statusFilter, searchTerm, dateRange]);
 
   useEffect(() => {
     fetchInvoices();
@@ -650,32 +649,24 @@ const Invoices = ({ user, portalType = 'admin' }) => {
               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
 
-            {/* Date Range */}
+            {/* Date Range - IST Format */}
             <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
               <Calendar className="w-4 h-4 text-gray-400" />
-              <div className="relative">
-                <input
-                  type="date"
-                  value={dateRange.start}
-                  onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                  className="text-sm border-none focus:outline-none bg-transparent w-28 opacity-0 absolute inset-0 cursor-pointer"
-                />
-                <span className="text-sm text-gray-600">
-                  {dateRange.start ? new Date(dateRange.start).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'dd/mm/yyyy'}
-                </span>
-              </div>
+              <input
+                type="date"
+                value={dateRange.start}
+                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                className="text-sm border-none focus:outline-none bg-transparent w-[110px] cursor-pointer"
+                style={{ colorScheme: 'light' }}
+              />
               <span className="text-gray-400">-</span>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={dateRange.end}
-                  onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                  className="text-sm border-none focus:outline-none bg-transparent w-28 opacity-0 absolute inset-0 cursor-pointer"
-                />
-                <span className="text-sm text-gray-600">
-                  {dateRange.end ? new Date(dateRange.end).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'dd/mm/yyyy'}
-                </span>
-              </div>
+              <input
+                type="date"
+                value={dateRange.end}
+                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                className="text-sm border-none focus:outline-none bg-transparent w-[110px] cursor-pointer"
+                style={{ colorScheme: 'light' }}
+              />
             </div>
 
             {/* Refresh & Export */}
@@ -1314,7 +1305,7 @@ const RecordPaymentModal = ({ invoice, onClose, onSuccess, formatCurrency }) => 
     { value: 'cash', label: 'Cash', icon: Banknote },
     { value: 'upi_manual', label: 'UPI (QR / UPI ID)', icon: Receipt },
     { value: 'bank_transfer', label: 'Bank Transfer', icon: Building2 },
-    { value: 'razorpay', label: 'Card / Net Banking', icon: CreditCard },
+    { value: 'debit_credit_card', label: 'Debit/Credit Card', icon: CreditCard },
     { value: 'cheque', label: 'Cheque', icon: FileText }
   ];
 
