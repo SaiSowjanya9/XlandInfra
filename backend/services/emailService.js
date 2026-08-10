@@ -916,17 +916,30 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   }
   if (!Array.isArray(addonsList)) addonsList = [];
 
-  // Format addons list with descriptions
-  const addonsHtml = addonsList.map(a => `
+  // Format addons list with descriptions - handle all possible field names
+  const addonsHtml = addonsList.map(a => {
+    // Get addon name - try all possible field names
+    const addonName = decodeHtml(a.name || a.service_name || a.serviceName || a.services?.[0]?.name || 'Add-on');
+    // Get frequency - try frequency_type, frequencyType, frequency
+    const freqType = a.frequency_type || a.frequencyType || a.frequency || '';
+    // Get visits/count - try frequency_count, frequencyCount, visits, quantity
+    const freqCount = a.frequency_count ?? a.frequencyCount ?? a.visits ?? a.quantity ?? 1;
+    // Get price - try price, totalPrice, calculatedPrice
+    const addonPrice = Number(a.price || a.totalPrice || a.calculatedPrice || a.services?.[0]?.price || 0);
+    // Get description
+    const desc = a.description ? decodeHtml(a.description) : '';
+    
+    return `
     <tr>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
-        <strong>${decodeHtml(a.name || a.serviceName || a.services?.[0]?.name || 'Add-on')}</strong>
-        ${a.frequency_type || a.frequencyType ? `<br><span style="font-size: 12px; color: #6b7280;">${a.frequency_type || a.frequencyType} - ${a.frequency_count ?? a.frequencyCount ?? 1} visits</span>` : ''}
-        ${a.description ? `<br><span style="font-size: 12px; color: #6b7280;">${decodeHtml(a.description)}</span>` : ''}
+        <strong>${addonName}</strong>
+        ${freqType ? `<br><span style="font-size: 12px; color: #6b7280;">${freqType} - ${freqCount} visits</span>` : ''}
+        ${desc ? `<br><span style="font-size: 12px; color: #6b7280;">${desc}</span>` : ''}
       </td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">₹${Math.round(Number(a.price || a.totalPrice || a.services?.[0]?.price || 0)).toLocaleString()}</td>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">₹${Math.round(addonPrice).toLocaleString()}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 
   // Calculate expiry date (1 month from now)
   const expiryDate = new Date();
