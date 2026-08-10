@@ -4490,20 +4490,38 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
     // Generate action token for approve/reject links
     const crypto = require('crypto');
     const actionToken = crypto.randomBytes(32).toString('hex');
+    console.log(`📧 Generated new action token for estimate ${estimateId} (ID: ${estimate.id})`);
     
     // Update estimate with action token and status
     try {
-      await pool.execute(
+      const [updateResult] = await pool.execute(
         'UPDATE fp_estimates SET status = ?, action_token = ?, sent_at = NOW() WHERE id = ?',
         ['sent', actionToken, estimateId]
       );
+      console.log(`✅ Updated estimate ${estimateId}: status=sent, action_token stored, affected=${updateResult.affectedRows}`);
+      
+      if (updateResult.affectedRows === 0) {
+        console.error(`❌ No rows updated for estimate ID ${estimateId}!`);
+      }
     } catch (updateErr) {
-      // If action_token column doesn't exist, just update status
-      console.log('Update with token failed, trying without:', updateErr.message);
-      await pool.execute(
-        'UPDATE fp_estimates SET status = ? WHERE id = ?',
-        ['sent', estimateId]
-      );
+      // If action_token column doesn't exist, add it and retry
+      console.log('Update with token failed:', updateErr.message);
+      try {
+        await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN action_token VARCHAR(100)`);
+        console.log('Added action_token column to fp_estimates');
+        await pool.execute(
+          'UPDATE fp_estimates SET status = ?, action_token = ?, sent_at = NOW() WHERE id = ?',
+          ['sent', actionToken, estimateId]
+        );
+        console.log('Retry update successful after adding column');
+      } catch (retryErr) {
+        console.error('Failed to update even after adding column:', retryErr.message);
+        // Last resort: at least update status
+        await pool.execute(
+          'UPDATE fp_estimates SET status = ? WHERE id = ?',
+          ['sent', estimateId]
+        );
+      }
     }
     
     // Try to send email using the email service
