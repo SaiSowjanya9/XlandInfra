@@ -6,6 +6,21 @@ const nodemailer = require('nodemailer');
 const { pool } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 
+// Payment Security Middleware
+const {
+  paymentLinkLimiter,
+  webhookLimiter,
+  validatePaymentAmountMiddleware,
+  fraudDetectionMiddleware,
+  logSecurityEvent
+} = require('../middleware/paymentSecurity');
+const {
+  verifyRazorpayWebhookSignature,
+  generatePaymentToken,
+  getClientIP,
+  hashIP
+} = require('../utils/paymentSecurity');
+
 // Environment variables for Razorpay
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || '';
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '';
@@ -53,7 +68,7 @@ const getFPScope = (req) => {
 // ============================================
 // CREATE PAYMENT LINK
 // ============================================
-router.post('/create-payment-link', authenticate, canManagePayments, async (req, res) => {
+router.post('/create-payment-link', authenticate, canManagePayments, paymentLinkLimiter, fraudDetectionMiddleware, async (req, res) => {
   try {
     const { invoiceId } = req.body;
 
@@ -199,7 +214,7 @@ router.post('/create-payment-link', authenticate, canManagePayments, async (req,
 // ============================================
 // SEND PAYMENT LINK VIA EMAIL
 // ============================================
-router.post('/send-payment-link', authenticate, canManagePayments, async (req, res) => {
+router.post('/send-payment-link', authenticate, canManagePayments, paymentLinkLimiter, async (req, res) => {
   try {
     const { invoiceId, email, customMessage } = req.body;
 
@@ -457,21 +472,34 @@ router.get('/payment-link-status/:invoiceId', authenticate, async (req, res) => 
 // ============================================
 // RAZORPAY WEBHOOK
 // ============================================
-router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+router.post('/webhook', webhookLimiter, express.raw({ type: 'application/json' }), async (req, res) => {
   try {
     const signature = req.headers['x-razorpay-signature'];
+    const ip = getClientIP(req);
     
-    // Verify webhook signature
+    // Verify webhook signature using timing-safe comparison
     if (RAZORPAY_WEBHOOK_SECRET && signature) {
-      const expectedSignature = crypto
-        .createHmac('sha256', RAZORPAY_WEBHOOK_SECRET)
-        .update(req.body)
-        .digest('hex');
+      const isValid = verifyRazorpayWebhookSignature(
+        req.body.toString(),
+        signature,
+        RAZORPAY_WEBHOOK_SECRET
+      );
 
-      if (signature !== expectedSignature) {
+      if (!isValid) {
         console.error('Webhook signature verification failed');
+        // Log security event for invalid signature
+        try {
+          await pool.execute(`
+            INSERT INTO payment_security_logs (event_type, severity, ip_hash, request_path, request_method, details)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `, ['WEBHOOK_INVALID_SIGNATURE', 'WARNING', hashIP(ip), '/api/razorpay/webhook', 'POST', JSON.stringify({ signaturePrefix: signature?.substring(0, 10) })]);
+        } catch (logErr) {
+          console.error('Failed to log security event:', logErr.message);
+        }
         return res.status(400).json({ success: false, message: 'Invalid signature' });
       }
+    } else if (!RAZORPAY_WEBHOOK_SECRET) {
+      console.warn('RAZORPAY_WEBHOOK_SECRET not configured - webhook signature not verified');
     }
 
     const payload = JSON.parse(req.body.toString());
@@ -693,6 +721,183 @@ router.get('/config-status', authenticate, canManagePayments, (req, res) => {
       isTestMode: RAZORPAY_KEY_ID?.startsWith('rzp_test_') || false
     }
   });
+});
+
+// ============================================
+// GENERATE SECURE PAYMENT QR TOKEN
+// Creates a cryptographically signed, time-limited token for QR code payments
+// ============================================
+router.post('/generate-qr-token', authenticate, canManagePayments, paymentLinkLimiter, async (req, res) => {
+  try {
+    const { invoiceId } = req.body;
+
+    if (!invoiceId) {
+      return res.status(400).json({ success: false, message: 'Invoice ID is required' });
+    }
+
+    // Get invoice details
+    const [invoices] = await pool.execute(`
+      SELECT i.*, p.property_id as property_code, p.community_name as property_name
+      FROM invoices i
+      LEFT JOIN onboarded_properties p ON i.property_id = p.id
+      WHERE i.id = ?
+    `, [invoiceId]);
+
+    if (invoices.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    const invoice = invoices[0];
+
+    // Check if invoice has balance
+    if (invoice.balance_amount <= 0) {
+      return res.status(400).json({ success: false, message: 'Invoice is already fully paid' });
+    }
+
+    // Generate secure QR payment token
+    const { generateQRPaymentToken } = require('../utils/paymentSecurity');
+    const tokenData = generateQRPaymentToken({
+      invoiceId: invoice.invoice_id,
+      amount: invoice.balance_amount,
+      propertyCode: invoice.property_code,
+      customerEmail: invoice.customer_email
+    });
+
+    // Store token hash in database for validation
+    const tokenHash = crypto.createHash('sha256').update(tokenData.token).digest('hex');
+    
+    await pool.execute(`
+      UPDATE invoices SET 
+        payment_token_hash = ?,
+        qr_token_generated_at = NOW()
+      WHERE id = ?
+    `, [tokenHash, invoiceId]);
+
+    // Log the action
+    try {
+      await pool.execute(`
+        INSERT INTO payment_security_logs (event_type, severity, ip_hash, user_id, user_role, request_path, details)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [
+        'QR_TOKEN_GENERATED',
+        'INFO',
+        hashIP(getClientIP(req)),
+        req.user.id,
+        req.user.role,
+        '/api/razorpay/generate-qr-token',
+        JSON.stringify({ invoiceId: invoice.invoice_id, amount: invoice.balance_amount })
+      ]);
+    } catch (logErr) {
+      console.error('Failed to log security event:', logErr.message);
+    }
+
+    res.json({
+      success: true,
+      message: 'QR payment token generated successfully',
+      data: {
+        token: tokenData.token,
+        expiresAt: tokenData.expiresAt,
+        expiresIn: tokenData.expiresIn,
+        invoiceId: invoice.invoice_id,
+        amount: invoice.balance_amount,
+        propertyCode: invoice.property_code,
+        customerName: invoice.customer_name
+      }
+    });
+
+  } catch (error) {
+    console.error('Error generating QR token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate QR payment token',
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// VERIFY QR PAYMENT TOKEN
+// Public endpoint for verifying QR tokens (no auth required)
+// ============================================
+router.post('/verify-qr-token', async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Token is required' });
+    }
+
+    // Verify the token
+    const { verifyQRPaymentToken } = require('../utils/paymentSecurity');
+    const verification = verifyQRPaymentToken(token);
+
+    if (!verification.valid) {
+      // Log failed verification attempt
+      try {
+        await pool.execute(`
+          INSERT INTO payment_security_logs (event_type, severity, ip_hash, request_path, details)
+          VALUES (?, ?, ?, ?, ?)
+        `, [
+          'QR_TOKEN_INVALID',
+          'WARNING',
+          hashIP(getClientIP(req)),
+          '/api/razorpay/verify-qr-token',
+          JSON.stringify({ error: verification.error })
+        ]);
+      } catch (logErr) {
+        console.error('Failed to log security event:', logErr.message);
+      }
+
+      return res.status(400).json({
+        success: false,
+        message: verification.error
+      });
+    }
+
+    // Check if token hash matches database (optional additional validation)
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const [invoices] = await pool.execute(`
+      SELECT id, invoice_id, balance_amount, customer_name, payment_token_hash, status
+      FROM invoices 
+      WHERE invoice_id = ? AND payment_token_hash = ?
+    `, [verification.data.invoiceId, tokenHash]);
+
+    if (invoices.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token has been revoked or invoice not found'
+      });
+    }
+
+    const invoice = invoices[0];
+
+    // Check if invoice is still payable
+    if (invoice.status === 'paid' || invoice.status === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: `Invoice is ${invoice.status}`
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Token is valid',
+      data: {
+        invoiceId: invoice.invoice_id,
+        amount: verification.data.amount,
+        currentBalance: invoice.balance_amount,
+        customerName: invoice.customer_name,
+        expiresAt: new Date(verification.data.expiresAt)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error verifying QR token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify token'
+    });
+  }
 });
 
 module.exports = router;

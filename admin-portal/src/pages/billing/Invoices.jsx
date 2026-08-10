@@ -32,6 +32,40 @@ import * as XLSX from 'xlsx';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+// Format date in IST format (dd/mm/yyyy)
+const formatDateIST = (dateStr) => {
+  if (!dateStr) return '';
+  if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  }
+  const date = new Date(dateStr);
+  if (isNaN(date)) return '';
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+// Parse dd/mm/yyyy to yyyy-mm-dd
+const parseISTDate = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return '';
+  const [day, month, year] = parts;
+  if (!day || !month || !year || year.length !== 4) return '';
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+};
+
+// Handle date input with auto-formatting
+const handleDateInput = (value, setter) => {
+  let cleaned = value.replace(/[^\d/]/g, '');
+  if (cleaned.length === 2 && !cleaned.includes('/')) cleaned += '/';
+  else if (cleaned.length === 5 && cleaned.split('/').length === 2) cleaned += '/';
+  if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
+  setter(cleaned);
+};
+
 const STATUS_CONFIG = {
   draft: { label: 'Draft', color: 'bg-gray-100 text-gray-600 border border-gray-300' },
   sent: { label: 'Sent', color: 'bg-blue-50 text-blue-600 border border-blue-300' },
@@ -64,6 +98,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [dateRangeDisplay, setDateRangeDisplay] = useState({ start: '', end: '' });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
   const [showRecordPayment, setShowRecordPayment] = useState(false);
@@ -649,24 +684,56 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
 
-            {/* Date Range - IST Format */}
-            <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
-              <Calendar className="w-4 h-4 text-gray-400" />
-              <input
-                type="date"
-                value={dateRange.start}
-                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                className="text-sm border-none focus:outline-none bg-transparent w-[110px] cursor-pointer"
-                style={{ colorScheme: 'light' }}
-              />
+            {/* Date Range - IST Format (dd/mm/yyyy) */}
+            <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-2 py-1.5 bg-white">
+              <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="dd/mm/yyyy"
+                  value={dateRangeDisplay.start}
+                  onChange={(e) => {
+                    handleDateInput(e.target.value, (val) => setDateRangeDisplay(prev => ({ ...prev, start: val })));
+                    const parsed = parseISTDate(e.target.value);
+                    if (parsed) setDateRange(prev => ({ ...prev, start: parsed }));
+                  }}
+                  className="text-sm border-none focus:outline-none bg-transparent w-[90px]"
+                />
+                <input
+                  type="date"
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setDateRange(prev => ({ ...prev, start: e.target.value }));
+                      setDateRangeDisplay(prev => ({ ...prev, start: formatDateIST(e.target.value) }));
+                    }
+                  }}
+                />
+              </div>
               <span className="text-gray-400">-</span>
-              <input
-                type="date"
-                value={dateRange.end}
-                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                className="text-sm border-none focus:outline-none bg-transparent w-[110px] cursor-pointer"
-                style={{ colorScheme: 'light' }}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="dd/mm/yyyy"
+                  value={dateRangeDisplay.end}
+                  onChange={(e) => {
+                    handleDateInput(e.target.value, (val) => setDateRangeDisplay(prev => ({ ...prev, end: val })));
+                    const parsed = parseISTDate(e.target.value);
+                    if (parsed) setDateRange(prev => ({ ...prev, end: parsed }));
+                  }}
+                  className="text-sm border-none focus:outline-none bg-transparent w-[90px]"
+                />
+                <input
+                  type="date"
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setDateRange(prev => ({ ...prev, end: e.target.value }));
+                      setDateRangeDisplay(prev => ({ ...prev, end: formatDateIST(e.target.value) }));
+                    }
+                  }}
+                />
+              </div>
             </div>
 
             {/* Refresh & Export */}
