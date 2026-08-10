@@ -879,7 +879,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                           </td>
                           <td className="px-4 py-3.5 text-sm text-gray-600">{invoice.propertyCode || invoice.propertyName || '-'}</td>
                           <td className="px-4 py-3.5 text-sm text-gray-800">{invoice.customerName || '-'}</td>
-                          <td className="px-4 py-3.5 text-sm text-gray-500">{formatDate(invoice.archivedAt || invoice.updatedAt)}</td>
+                          <td className="px-4 py-3.5 text-sm text-gray-500 whitespace-nowrap">{formatDate(invoice.archivedAt || invoice.updatedAt)}</td>
                           <td className="px-4 py-3.5 text-right">
                             <span className="text-sm font-semibold text-gray-900">{formatCurrency(invoice.totalAmount)}</span>
                           </td>
@@ -986,10 +986,10 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                               {INVOICE_TYPE_CONFIG[invoice.invoiceType]?.label || 'Manual'}
                             </span>
                           </td>
-                          <td className="px-4 py-3.5">
+                          <td className="px-4 py-3.5 whitespace-nowrap">
                             <span className="text-sm text-gray-600">{formatDate(invoice.invoiceDate)}</span>
                           </td>
-                          <td className="px-4 py-3.5">
+                          <td className="px-4 py-3.5 whitespace-nowrap">
                             <span className={`text-sm ${invoice.status === 'overdue' ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
                               {formatDate(invoice.dueDate)}
                             </span>
