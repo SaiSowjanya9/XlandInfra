@@ -166,42 +166,42 @@ const ManagerDashboard = ({ user }) => {
       )}
 
       {/* First Stats Row - 3 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <button onClick={() => navigate('/manager/properties')} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group text-left">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Building2 className="w-6 h-6 text-blue-600" />
+      <div className="flex flex-wrap gap-3">
+        <button onClick={() => navigate('/manager/properties')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group text-left">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Building2 className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Properties</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.properties || 0}</p>
-              <p className="text-xs text-gray-400">Total Properties</p>
+              <p className="text-xs text-gray-500">Properties</p>
+              <p className="text-xl font-bold text-gray-900">{stats?.properties || 0}</p>
+              <p className="text-[10px] text-gray-400">Total Properties</p>
             </div>
           </div>
         </button>
 
-        <button onClick={() => navigate('/manager/vendors')} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-purple-200 transition-all duration-200 group text-left">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Store className="w-6 h-6 text-purple-600" />
+        <button onClick={() => navigate('/manager/vendors')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-purple-200 transition-all duration-200 group text-left">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Store className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Vendors</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.vendors || 0}</p>
-              <p className="text-xs text-gray-400">Total Vendors</p>
+              <p className="text-xs text-gray-500">Vendors</p>
+              <p className="text-xl font-bold text-gray-900">{stats?.vendors || 0}</p>
+              <p className="text-[10px] text-gray-400">Total Vendors</p>
             </div>
           </div>
         </button>
 
-        <button onClick={() => navigate('/manager/employees/zones')} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-orange-200 transition-all duration-200 group text-left">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Users className="w-6 h-6 text-orange-600" />
+        <button onClick={() => navigate('/manager/employees/zones')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-orange-200 transition-all duration-200 group text-left">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Users className="w-5 h-5 text-orange-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Employees</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.employees || 0}</p>
-              <p className="text-xs text-gray-400">Total Employees</p>
+              <p className="text-xs text-gray-500">Employees</p>
+              <p className="text-xl font-bold text-gray-900">{stats?.employees || 0}</p>
+              <p className="text-[10px] text-gray-400">Total Employees</p>
             </div>
           </div>
         </button>
