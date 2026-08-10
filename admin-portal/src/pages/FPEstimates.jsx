@@ -531,8 +531,23 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     // Parse package services from multiple sources
     let packageServices = [];
     
+    // Try packageServices (camelCase from backend) or package_services (snake_case)
+    const rawPackageServices = estimate.packageServices || estimate.package_services;
+    if (rawPackageServices) {
+      try {
+        const parsed = typeof rawPackageServices === 'string' ? JSON.parse(rawPackageServices) : rawPackageServices;
+        if (parsed.serviceRows && Array.isArray(parsed.serviceRows)) {
+          packageServices = parsed.serviceRows;
+        } else if (parsed.services && Array.isArray(parsed.services)) {
+          packageServices = parsed.services;
+        } else if (Array.isArray(parsed)) {
+          packageServices = parsed;
+        }
+        console.log('Parsed packageServices:', packageServices.length, 'services');
+      } catch (e) { console.log('Package services parse error:', e); }
+    }
     // Try services_data JSON string (contains package services)
-    if (estimate.services_data) {
+    if (packageServices.length === 0 && estimate.services_data) {
       try {
         const parsed = typeof estimate.services_data === 'string' ? JSON.parse(estimate.services_data) : estimate.services_data;
         if (parsed.serviceRows && Array.isArray(parsed.serviceRows)) {
@@ -542,24 +557,20 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         }
       } catch (e) { console.log('Services parse error:', e); }
     }
-    // Try package_services
-    else if (estimate.package_services) {
-      try {
-        const parsed = typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services;
-        if (Array.isArray(parsed)) packageServices = parsed;
-      } catch (e) { console.log('Package services parse error:', e); }
-    }
     // If we have a package_id, try to find package services from amcPackages
-    else if (estimate.package_id && amcPackages.length > 0) {
+    if (packageServices.length === 0 && estimate.package_id && amcPackages.length > 0) {
       const pkg = amcPackages.find(p => p.id?.toString() === estimate.package_id?.toString());
       if (pkg) {
         try {
           const servicesData = typeof pkg.services === 'string' ? JSON.parse(pkg.services) : pkg.services;
           if (servicesData?.serviceRows) {
             packageServices = servicesData.serviceRows;
+          } else if (servicesData?.services) {
+            packageServices = servicesData.services;
           } else if (Array.isArray(servicesData)) {
             packageServices = servicesData;
           }
+          console.log('Found services from AMC package lookup:', packageServices.length);
         } catch (e) { console.log('Package lookup error:', e); }
       }
     }
@@ -3567,12 +3578,25 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               {/* Package */}
               {viewEstimate.package_name && (() => {
                 // Try to get description from estimate, fallback to AMC package lookup
-                const pkgFromList = amcPackages.find(p => p.id == viewEstimate.package_id || p.name === viewEstimate.package_name);
+                // Try multiple matching strategies for package lookup
+                let pkgFromList = amcPackages.find(p => p.id == viewEstimate.package_id);
+                if (!pkgFromList) {
+                  pkgFromList = amcPackages.find(p => p.name === viewEstimate.package_name);
+                }
+                if (!pkgFromList) {
+                  // Try case-insensitive name match
+                  pkgFromList = amcPackages.find(p => p.name?.toLowerCase() === viewEstimate.package_name?.toLowerCase());
+                }
+                console.log('[ViewEstimate] package_id:', viewEstimate.package_id, 'package_name:', viewEstimate.package_name, 
+                  'found pkg:', pkgFromList?.id, pkgFromList?.name);
+                
                 const pkgDescription = viewEstimate.amc_package_description || pkgFromList?.description || '';
                 // Get services from estimate or from package lookup
                 // Backend returns as 'packageServices' (camelCase) or 'package_services' (snake_case)
                 let pkgServices = [];
                 const rawServices = viewEstimate.packageServices || viewEstimate.package_services;
+                console.log('[ViewEstimate] rawServices from estimate:', rawServices ? 'exists' : 'null/empty');
+                
                 if (rawServices) {
                   try {
                     const parsed = typeof rawServices === 'string' ? JSON.parse(rawServices) : rawServices;
@@ -3584,15 +3608,20 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     } else if (parsed?.services) {
                       pkgServices = parsed.services;
                     }
+                    console.log('[ViewEstimate] Parsed services from estimate:', pkgServices.length);
                   } catch (e) { console.log('Error parsing package services:', e); }
                 }
                 // Fallback to AMC package lookup if no services found
                 if (pkgServices.length === 0 && pkgFromList?.services) {
+                  console.log('[ViewEstimate] Falling back to AMC package services lookup');
                   try {
                     const svc = typeof pkgFromList.services === 'string' ? JSON.parse(pkgFromList.services) : pkgFromList.services;
                     pkgServices = svc?.serviceRows || svc?.services || (Array.isArray(svc) ? svc : []);
+                    console.log('[ViewEstimate] Found services from AMC package:', pkgServices.length);
                   } catch (e) { console.log('Error parsing pkg services from list:', e); }
                 }
+                
+                console.log('[ViewEstimate] Final pkgServices count:', pkgServices.length);
                 return (
                   <div className="border-t border-gray-100 pt-4">
                     <p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p>
