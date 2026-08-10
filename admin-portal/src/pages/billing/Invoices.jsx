@@ -23,6 +23,9 @@ import {
   Receipt,
   ChevronDown,
   Calendar,
+  Trash2,
+  RotateCcw,
+  Archive,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import * as XLSX from 'xlsx';
@@ -45,13 +48,22 @@ const INVOICE_TYPE_CONFIG = {
   manual: { label: 'Manual', color: 'text-gray-600' }
 };
 
+// Tab configuration for invoice types
+const INVOICE_TABS = [
+  { id: 'generated', label: 'Generated Invoices', filter: 'estimate', icon: FileText, description: 'Auto-generated from approved estimates' },
+  { id: 'manual', label: 'Manual Invoices', filter: 'manual', icon: Plus, description: 'Invoices for other requirements' },
+  { id: 'work_order', label: 'Work Order Invoices', filter: 'work_order', icon: Receipt, description: 'Related to work order submissions' },
+  { id: 'archived', label: 'Archived', filter: 'archived', icon: Archive, description: 'Archived invoices' }
+];
+
 const Invoices = ({ user, portalType = 'admin' }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState([]);
+  const [archivedInvoices, setArchivedInvoices] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [activeTab, setActiveTab] = useState('generated');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
@@ -59,20 +71,27 @@ const Invoices = ({ user, portalType = 'admin' }) => {
   const [toast, setToast] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [actionLoading, setActionLoading] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const itemsPerPage = 10;
+  
+  // Get the current tab's filter value
+  const typeFilter = INVOICE_TABS.find(t => t.id === activeTab)?.filter || 'all';
 
   const token = getAuthToken();
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
     try {
+      // Fetch active invoices
       let url = `${API_BASE}/api/payments/invoices`;
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.append('status', statusFilter);
-      if (typeFilter !== 'all') params.append('invoiceType', typeFilter);
+      if (typeFilter !== 'all' && typeFilter !== 'archived') params.append('invoiceType', typeFilter);
       if (searchTerm) params.append('search', searchTerm);
       if (dateRange.start) params.append('startDate', dateRange.start);
       if (dateRange.end) params.append('endDate', dateRange.end);
+      params.append('archived', 'false');
       if (params.toString()) url += `?${params.toString()}`;
 
       const response = await fetch(url, {
@@ -81,6 +100,15 @@ const Invoices = ({ user, portalType = 'admin' }) => {
       const result = await response.json();
       if (result.success) {
         setInvoices(result.data || []);
+      }
+      
+      // Fetch archived invoices
+      const archivedResponse = await fetch(`${API_BASE}/api/payments/invoices?archived=true`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const archivedResult = await archivedResponse.json();
+      if (archivedResult.success) {
+        setArchivedInvoices(archivedResult.data || []);
       }
     } catch (err) {
       console.error('Error fetching invoices:', err);
@@ -188,35 +216,253 @@ const Invoices = ({ user, portalType = 'admin' }) => {
     }
   };
 
+  // Archive invoice (soft delete)
+  const handleArchiveInvoice = async (invoice) => {
+    try {
+      setActionLoading(invoice.id);
+      const response = await fetch(`${API_BASE}/api/payments/invoices/${invoice.id}/archive`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast('Invoice archived successfully');
+        fetchInvoices();
+      } else {
+        showToast(result.message || 'Failed to archive invoice', 'error');
+      }
+    } catch (err) {
+      showToast('Failed to archive invoice', 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Restore archived invoice
+  const handleRestoreInvoice = async (invoice) => {
+    try {
+      setActionLoading(invoice.id);
+      const response = await fetch(`${API_BASE}/api/payments/invoices/${invoice.id}/restore`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast('Invoice restored successfully');
+        fetchInvoices();
+      } else {
+        showToast(result.message || 'Failed to restore invoice', 'error');
+      }
+    } catch (err) {
+      showToast('Failed to restore invoice', 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Permanently delete invoice
+  const handleDeleteInvoice = async (invoiceId) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/payments/invoices/${invoiceId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast('Invoice deleted permanently');
+        setDeleteConfirm(null);
+        fetchInvoices();
+      } else {
+        showToast(result.message || 'Failed to delete invoice', 'error');
+      }
+    } catch (err) {
+      showToast('Failed to delete invoice', 'error');
+    }
+  };
+
+  // Delete all archived invoices
+  const handleDeleteAllArchived = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/payments/invoices/archived/delete-all`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast(`Deleted ${result.deletedCount || archivedInvoices.length} archived invoices`);
+        setShowDeleteAllConfirm(false);
+        fetchInvoices();
+      } else {
+        showToast(result.message || 'Failed to delete archived invoices', 'error');
+      }
+    } catch (err) {
+      showToast('Failed to delete archived invoices', 'error');
+    }
+  };
+
+  // Download invoice PDF
+  const handleDownloadPDF = async (invoice) => {
+    try {
+      setActionLoading(invoice.id);
+      const response = await fetch(`${API_BASE}/api/payments/invoices/${invoice.id}/pdf`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Invoice_${invoice.invoiceId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        showToast('Invoice downloaded successfully');
+      } else {
+        showToast('Failed to download invoice', 'error');
+      }
+    } catch (err) {
+      showToast('Failed to download invoice', 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Comprehensive export with all page details
   const exportToExcel = () => {
-    if (invoices.length === 0) {
+    if (filteredInvoices.length === 0) {
       showToast('No invoices to export', 'error');
       return;
     }
 
-    const exportData = invoices.map(inv => ({
+    const wb = XLSX.utils.book_new();
+    const exportDate = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+    const currentTabLabel = INVOICE_TABS.find(t => t.id === activeTab)?.label || 'All';
+    
+    // Calculate totals
+    const totalAmount = filteredInvoices.reduce((sum, i) => sum + (parseFloat(i.totalAmount) || 0), 0);
+    const totalPaid = filteredInvoices.reduce((sum, i) => sum + (parseFloat(i.amountPaid) || 0), 0);
+    const totalBalance = filteredInvoices.reduce((sum, i) => sum + (parseFloat(i.balanceAmount) || 0), 0);
+
+    // Sheet 1: Summary
+    const summaryData = [
+      ['INVOICES REPORT'],
+      ['Generated on:', exportDate],
+      [''],
+      ['CURRENT VIEW'],
+      ['Tab:', currentTabLabel],
+      ['Total Records:', filteredInvoices.length],
+      [''],
+      ['SUMMARY STATISTICS'],
+      ['Metric', 'Count', 'Amount (₹)'],
+      ['Total Invoices', filteredInvoices.length, totalAmount],
+      ['Draft', filteredInvoices.filter(i => i.status === 'draft').length, filteredInvoices.filter(i => i.status === 'draft').reduce((sum, i) => sum + (parseFloat(i.totalAmount) || 0), 0)],
+      ['Sent', filteredInvoices.filter(i => i.status === 'sent').length, filteredInvoices.filter(i => i.status === 'sent').reduce((sum, i) => sum + (parseFloat(i.totalAmount) || 0), 0)],
+      ['Paid', filteredInvoices.filter(i => i.status === 'paid').length, filteredInvoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + (parseFloat(i.totalAmount) || 0), 0)],
+      ['Partially Paid', filteredInvoices.filter(i => i.status === 'partially_paid').length, filteredInvoices.filter(i => i.status === 'partially_paid').reduce((sum, i) => sum + (parseFloat(i.amountPaid) || 0), 0)],
+      ['Overdue', filteredInvoices.filter(i => i.status === 'overdue').length, filteredInvoices.filter(i => i.status === 'overdue').reduce((sum, i) => sum + (parseFloat(i.balanceAmount) || 0), 0)],
+      [''],
+      ['AMOUNT SUMMARY'],
+      ['Total Invoice Amount:', '', totalAmount],
+      ['Total Amount Paid:', '', totalPaid],
+      ['Total Balance Due:', '', totalBalance],
+      [''],
+      ['FILTERS APPLIED'],
+      ['Status Filter:', statusFilter === 'all' ? 'All Status' : STATUS_CONFIG[statusFilter]?.label || statusFilter],
+      ['Date Range:', dateRange.start || dateRange.end ? `${dateRange.start || 'Start'} to ${dateRange.end || 'End'}` : 'All Dates'],
+      ['Search Term:', searchTerm || 'None']
+    ];
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    wsSummary['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+    // Sheet 2: All Invoices Data
+    const invoicesData = filteredInvoices.map((inv, idx) => ({
+      'S.No': idx + 1,
       'Invoice ID': inv.invoiceId,
       'Property ID': inv.propertyCode || '-',
-      'Customer': inv.customerName || '-',
+      'Property Name': inv.propertyName || '-',
+      'Customer Name': inv.customerName || '-',
+      'Customer Email': inv.customerEmail || '-',
+      'Customer Phone': inv.customerPhone || '-',
       'Invoice Type': INVOICE_TYPE_CONFIG[inv.invoiceType]?.label || 'Manual',
       'Invoice Date': formatDate(inv.invoiceDate),
       'Due Date': formatDate(inv.dueDate),
-      'Amount': inv.totalAmount,
-      'Paid': inv.amountPaid,
-      'Balance': inv.balanceAmount,
-      'Status': STATUS_CONFIG[inv.status]?.label || inv.status
+      'Subtotal (₹)': parseFloat(inv.subtotal) || 0,
+      'Discount (%)': parseFloat(inv.discountPercent) || 0,
+      'Discount Amount (₹)': parseFloat(inv.discountAmount) || 0,
+      'Tax/GST (%)': parseFloat(inv.taxPercent) || 0,
+      'Tax Amount (₹)': parseFloat(inv.taxAmount) || 0,
+      'Total Amount (₹)': parseFloat(inv.totalAmount) || 0,
+      'Amount Paid (₹)': parseFloat(inv.amountPaid) || 0,
+      'Balance Due (₹)': parseFloat(inv.balanceAmount) || 0,
+      'Status': STATUS_CONFIG[inv.status]?.label || inv.status,
+      'Payment Status': inv.paymentStatus || '-',
+      'Created At': formatDate(inv.createdAt)
     }));
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Invoices');
-    XLSX.writeFile(wb, `invoices_${new Date().toISOString().split('T')[0]}.xlsx`);
+    const wsInvoices = XLSX.utils.json_to_sheet(invoicesData);
+    wsInvoices['!cols'] = [
+      { wch: 6 }, { wch: 16 }, { wch: 14 }, { wch: 20 }, { wch: 20 },
+      { wch: 25 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
+      { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 12 },
+      { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 18 }
+    ];
+    XLSX.utils.book_append_sheet(wb, wsInvoices, 'Invoices');
+
+    // Sheet 3: Status Breakdown
+    const statusBreakdown = Object.entries(STATUS_CONFIG).map(([key, config]) => {
+      const statusInvoices = filteredInvoices.filter(i => i.status === key);
+      return {
+        'Status': config.label,
+        'Count': statusInvoices.length,
+        'Total Amount (₹)': statusInvoices.reduce((sum, i) => sum + (parseFloat(i.totalAmount) || 0), 0),
+        'Amount Paid (₹)': statusInvoices.reduce((sum, i) => sum + (parseFloat(i.amountPaid) || 0), 0),
+        'Balance Due (₹)': statusInvoices.reduce((sum, i) => sum + (parseFloat(i.balanceAmount) || 0), 0)
+      };
+    }).filter(s => s.Count > 0);
+    
+    if (statusBreakdown.length > 0) {
+      const wsStatus = XLSX.utils.json_to_sheet(statusBreakdown);
+      wsStatus['!cols'] = [{ wch: 18 }, { wch: 10 }, { wch: 18 }, { wch: 16 }, { wch: 16 }];
+      XLSX.utils.book_append_sheet(wb, wsStatus, 'By Status');
+    }
+
+    // Sheet 4: Invoice Type Breakdown
+    const typeBreakdown = Object.entries(INVOICE_TYPE_CONFIG).map(([key, config]) => {
+      const typeInvoices = filteredInvoices.filter(i => i.invoiceType === key);
+      return {
+        'Invoice Type': config.label,
+        'Count': typeInvoices.length,
+        'Total Amount (₹)': typeInvoices.reduce((sum, i) => sum + (parseFloat(i.totalAmount) || 0), 0)
+      };
+    }).filter(t => t.Count > 0);
+    
+    if (typeBreakdown.length > 0) {
+      const wsType = XLSX.utils.json_to_sheet(typeBreakdown);
+      wsType['!cols'] = [{ wch: 18 }, { wch: 10 }, { wch: 18 }];
+      XLSX.utils.book_append_sheet(wb, wsType, 'By Type');
+    }
+
+    const fileName = `Invoices_${currentTabLabel.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
     showToast('Exported successfully!');
   };
 
+  // Filter invoices based on active tab
+  const filteredInvoices = activeTab === 'archived' 
+    ? archivedInvoices 
+    : invoices.filter(i => {
+        const currentFilter = INVOICE_TABS.find(t => t.id === activeTab)?.filter;
+        if (currentFilter === 'estimate') return i.invoiceType === 'estimate';
+        if (currentFilter === 'manual') return i.invoiceType === 'manual';
+        if (currentFilter === 'work_order') return i.invoiceType === 'work_order';
+        return true;
+      });
+
   // Pagination
-  const totalPages = Math.ceil(invoices.length / itemsPerPage);
-  const paginatedInvoices = invoices.slice(
+  const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
+  const paginatedInvoices = filteredInvoices.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -245,13 +491,46 @@ const Invoices = ({ user, portalType = 'admin' }) => {
               Home &gt; Billing & Payments &gt; Invoices
             </p>
           </div>
-          <button
-            onClick={() => navigate(`/${portalType === 'admin' ? 'employee' : portalType}/billing/generate-invoices`)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-          >
-            <Plus className="w-4 h-4" />
-            Create Invoice
-          </button>
+          {activeTab === 'manual' && (
+            <button
+              onClick={() => navigate(`/${portalType === 'admin' ? 'employee' : portalType}/billing/create-invoice`)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              Create Invoice
+            </button>
+          )}
+        </div>
+        
+        {/* Invoice Type Tabs */}
+        <div className="flex gap-1 mt-4 border-b border-gray-200 -mb-4">
+          {INVOICE_TABS.map(tab => {
+            const Icon = tab.icon;
+            const count = tab.filter === 'archived' 
+              ? archivedInvoices.length
+              : invoices.filter(i => 
+                  tab.filter === 'estimate' ? i.invoiceType === 'estimate' :
+                  tab.filter === 'manual' ? i.invoiceType === 'manual' :
+                  tab.filter === 'work_order' ? i.invoiceType === 'work_order' : true
+                ).length;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => { setActiveTab(tab.id); setCurrentPage(1); }}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-blue-600 text-blue-600 bg-blue-50/50'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {tab.label}
+                <span className={`px-2 py-0.5 rounded-full text-xs ${
+                  activeTab === tab.id ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                }`}>{count}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -373,18 +652,11 @@ const Invoices = ({ user, portalType = 'admin' }) => {
               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
 
-            {/* Type Filter */}
-            <div className="relative">
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-700 cursor-pointer min-w-[140px]"
-              >
-                <option value="all">All Invoice Type</option>
-                <option value="estimate">Estimate</option>
-                <option value="work_order">Work Order</option>
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            {/* Tab description */}
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span className="px-2 py-1 bg-gray-100 rounded text-xs font-medium">
+                {INVOICE_TABS.find(t => t.id === activeTab)?.description}
+              </span>
             </div>
 
             {/* Date Range */}
@@ -434,6 +706,109 @@ const Invoices = ({ user, portalType = 'admin' }) => {
         </div>
 
         {/* Main Content Area */}
+        {activeTab === 'archived' ? (
+          /* Archived Invoices Section */
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            {/* Archived Header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-red-50 rounded-lg">
+                  <Archive className="w-5 h-5 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800">Archived Invoices</h3>
+                  <p className="text-sm text-gray-500">{archivedInvoices.length} archived invoices</p>
+                </div>
+              </div>
+              {archivedInvoices.length > 0 && (
+                <button
+                  onClick={() => setShowDeleteAllConfirm(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete All ({archivedInvoices.length})
+                </button>
+              )}
+            </div>
+            
+            {archivedInvoices.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                <Archive className="w-12 h-12 mb-3 text-gray-300" />
+                <p className="text-lg font-medium">No archived invoices</p>
+                <p className="text-sm">Archived invoices will appear here</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-gray-50">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice ID</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property ID</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Type</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Archived On</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {archivedInvoices.map((invoice) => (
+                      <tr key={invoice.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3.5 font-mono text-sm text-gray-900">{invoice.invoiceId}</td>
+                        <td className="px-4 py-3.5 text-sm text-gray-600">{invoice.propertyCode || '-'}</td>
+                        <td className="px-4 py-3.5 text-sm text-gray-800">{invoice.customerName || '-'}</td>
+                        <td className="px-4 py-3.5">
+                          <span className={`text-sm font-medium ${INVOICE_TYPE_CONFIG[invoice.invoiceType]?.color || 'text-gray-600'}`}>
+                            {INVOICE_TYPE_CONFIG[invoice.invoiceType]?.label || 'Manual'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-gray-500">{formatDate(invoice.archivedAt || invoice.updatedAt)}</td>
+                        <td className="px-4 py-3.5 text-right text-sm font-semibold text-gray-900">{formatCurrency(invoice.totalAmount)}</td>
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center justify-center gap-1">
+                            {/* Download */}
+                            <button
+                              onClick={() => handleDownloadPDF(invoice)}
+                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Download PDF"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                            {/* View */}
+                            <button
+                              onClick={() => openInvoiceDetail(invoice)}
+                              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            {/* Restore */}
+                            <button
+                              onClick={() => handleRestoreInvoice(invoice)}
+                              disabled={actionLoading === invoice.id}
+                              className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                              title="Restore Invoice"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </button>
+                            {/* Delete Permanently */}
+                            <button
+                              onClick={() => setDeleteConfirm(invoice)}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete Permanently"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : (
         <div className="flex gap-6">
           {/* Table */}
           <div className={`flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all duration-300 ${showDetailPanel ? 'mr-[380px]' : ''}`}>
@@ -441,7 +816,7 @@ const Invoices = ({ user, portalType = 'admin' }) => {
               <div className="flex items-center justify-center h-64">
                 <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
               </div>
-            ) : invoices.length === 0 ? (
+            ) : paginatedInvoices.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-gray-500">
                 <FileText className="w-12 h-12 mb-3 text-gray-300" />
                 <p className="text-lg font-medium">No invoices found</p>
@@ -453,27 +828,12 @@ const Invoices = ({ user, portalType = 'admin' }) => {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-gray-100">
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          <div className="flex items-center gap-1 cursor-pointer hover:text-gray-700">
-                            Invoice ID
-                            <ChevronDown className="w-3 h-3" />
-                          </div>
-                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice ID</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property ID</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Type</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          <div className="flex items-center gap-1 cursor-pointer hover:text-gray-700">
-                            Invoice Date
-                            <ChevronDown className="w-3 h-3" />
-                          </div>
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          <div className="flex items-center gap-1 cursor-pointer hover:text-gray-700">
-                            Due Date
-                            <ChevronDown className="w-3 h-3" />
-                          </div>
-                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Paid</th>
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
@@ -530,13 +890,43 @@ const Invoices = ({ user, portalType = 'admin' }) => {
                               {STATUS_CONFIG[invoice.status]?.label || invoice.status}
                             </span>
                           </td>
-                          <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              onClick={() => openInvoiceDetail(invoice)}
-                              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                            >
-                              <MoreHorizontal className="w-4 h-4" />
-                            </button>
+                          <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-center gap-1">
+                              {/* Download */}
+                              <button
+                                onClick={() => handleDownloadPDF(invoice)}
+                                disabled={actionLoading === invoice.id}
+                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Download PDF"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+                              {/* View */}
+                              <button
+                                onClick={() => openInvoiceDetail(invoice)}
+                                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                title="View Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              {/* Edit */}
+                              <button
+                                onClick={() => openInvoiceDetail(invoice)}
+                                className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                title="Edit Invoice"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              {/* Archive (soft delete) */}
+                              <button
+                                onClick={() => handleArchiveInvoice(invoice)}
+                                disabled={actionLoading === invoice.id}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Archive Invoice"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -547,7 +937,7 @@ const Invoices = ({ user, portalType = 'admin' }) => {
                 {/* Pagination */}
                 <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
                   <p className="text-sm text-gray-500">
-                    Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, invoices.length)} of {invoices.length} invoices
+                    Showing {filteredInvoices.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} to {Math.min(currentPage * itemsPerPage, filteredInvoices.length)} of {filteredInvoices.length} invoices
                   </p>
                   <div className="flex items-center gap-1">
                     <button
@@ -623,7 +1013,70 @@ const Invoices = ({ user, portalType = 'admin' }) => {
             />
           )}
         </div>
+        )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2.5 bg-red-100 rounded-full">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Delete Invoice</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to permanently delete invoice <strong>{deleteConfirm.invoiceId}</strong>? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteInvoice(deleteConfirm.id)}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete Permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete All Confirmation Modal */}
+      {showDeleteAllConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2.5 bg-red-100 rounded-full">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Delete All Archived Invoices</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to permanently delete all <strong>{archivedInvoices.length}</strong> archived invoices? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteAllConfirm(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAllArchived}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Record Payment Modal */}
       {showRecordPayment && selectedInvoice && (

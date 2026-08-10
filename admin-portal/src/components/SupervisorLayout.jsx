@@ -69,7 +69,6 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
   // Billing & Payments sub-items
   const billingPaymentsSubItems = [
     { path: '/supervisor/billing/dashboard', icon: BarChart3, label: 'Dashboard' },
-    { path: '/supervisor/billing/generate-invoices', icon: FileText, label: 'Generate Invoices' },
     { path: '/supervisor/billing/invoices', icon: Receipt, label: 'Invoices' },
     { path: '/supervisor/billing/payments', icon: CreditCard, label: 'Payments' },
     { path: '/supervisor/billing/make-payments', icon: Wallet, label: 'Make Payments' },
