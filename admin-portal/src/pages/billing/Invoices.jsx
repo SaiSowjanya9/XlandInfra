@@ -383,8 +383,6 @@ const Invoices = ({ user, portalType = 'admin' }) => {
                 <option value="all">All Invoice Type</option>
                 <option value="estimate">Estimate</option>
                 <option value="work_order">Work Order</option>
-                <option value="amc">AMC</option>
-                <option value="manual">Manual</option>
               </select>
               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
@@ -392,19 +390,29 @@ const Invoices = ({ user, portalType = 'admin' }) => {
             {/* Date Range */}
             <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
               <Calendar className="w-4 h-4 text-gray-400" />
-              <input
-                type="date"
-                value={dateRange.start}
-                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                className="text-sm border-none focus:outline-none bg-transparent w-28"
-              />
+              <div className="relative">
+                <input
+                  type="date"
+                  value={dateRange.start}
+                  onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                  className="text-sm border-none focus:outline-none bg-transparent w-28 opacity-0 absolute inset-0 cursor-pointer"
+                />
+                <span className="text-sm text-gray-600">
+                  {dateRange.start ? new Date(dateRange.start).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'dd/mm/yyyy'}
+                </span>
+              </div>
               <span className="text-gray-400">-</span>
-              <input
-                type="date"
-                value={dateRange.end}
-                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                className="text-sm border-none focus:outline-none bg-transparent w-28"
-              />
+              <div className="relative">
+                <input
+                  type="date"
+                  value={dateRange.end}
+                  onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                  className="text-sm border-none focus:outline-none bg-transparent w-28 opacity-0 absolute inset-0 cursor-pointer"
+                />
+                <span className="text-sm text-gray-600">
+                  {dateRange.end ? new Date(dateRange.end).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'dd/mm/yyyy'}
+                </span>
+              </div>
             </div>
 
             {/* Refresh & Export */}
