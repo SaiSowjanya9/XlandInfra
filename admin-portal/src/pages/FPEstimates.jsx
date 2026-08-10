@@ -3570,12 +3570,28 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 const pkgFromList = amcPackages.find(p => p.id == viewEstimate.package_id || p.name === viewEstimate.package_name);
                 const pkgDescription = viewEstimate.amc_package_description || pkgFromList?.description || '';
                 // Get services from estimate or from package lookup
+                // Backend returns as 'packageServices' (camelCase) or 'package_services' (snake_case)
                 let pkgServices = [];
-                if (viewEstimate.package_services) {
-                  pkgServices = typeof viewEstimate.package_services === 'string' ? JSON.parse(viewEstimate.package_services) : viewEstimate.package_services;
-                } else if (pkgFromList?.services) {
-                  const svc = typeof pkgFromList.services === 'string' ? JSON.parse(pkgFromList.services) : pkgFromList.services;
-                  pkgServices = svc?.serviceRows || svc?.services || svc || [];
+                const rawServices = viewEstimate.packageServices || viewEstimate.package_services;
+                if (rawServices) {
+                  try {
+                    const parsed = typeof rawServices === 'string' ? JSON.parse(rawServices) : rawServices;
+                    // Handle different data structures
+                    if (Array.isArray(parsed)) {
+                      pkgServices = parsed;
+                    } else if (parsed?.serviceRows) {
+                      pkgServices = parsed.serviceRows;
+                    } else if (parsed?.services) {
+                      pkgServices = parsed.services;
+                    }
+                  } catch (e) { console.log('Error parsing package services:', e); }
+                }
+                // Fallback to AMC package lookup if no services found
+                if (pkgServices.length === 0 && pkgFromList?.services) {
+                  try {
+                    const svc = typeof pkgFromList.services === 'string' ? JSON.parse(pkgFromList.services) : pkgFromList.services;
+                    pkgServices = svc?.serviceRows || svc?.services || (Array.isArray(svc) ? svc : []);
+                  } catch (e) { console.log('Error parsing pkg services from list:', e); }
                 }
                 return (
                   <div className="border-t border-gray-100 pt-4">
@@ -3631,7 +3647,19 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               })()}
 
               {/* Add-ons - Horizontal Table */}
-              {viewEstimate.addons && viewEstimate.addons.length > 0 && (
+              {(() => {
+                // Parse addons from addons array or addons_data JSON
+                let addonsList = viewEstimate.addons || [];
+                if ((!addonsList || addonsList.length === 0) && viewEstimate.addons_data) {
+                  try {
+                    addonsList = typeof viewEstimate.addons_data === 'string' 
+                      ? JSON.parse(viewEstimate.addons_data) 
+                      : viewEstimate.addons_data;
+                  } catch (e) { addonsList = []; }
+                }
+                if (!Array.isArray(addonsList) || addonsList.length === 0) return null;
+                
+                return (
                 <div className="border-t border-gray-100 pt-4">
                   <p className="text-sm font-semibold text-gray-700 mb-3">Add-on Services</p>
                   <div>
@@ -3645,7 +3673,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </div>
                     {/* Rows */}
                     <div className="border border-green-100 divide-y divide-green-50">
-                      {viewEstimate.addons.map((addon, idx) => {
+                      {addonsList.map((addon, idx) => {
                         const addonName = decodeHtml(addon.name || addon.service_name) || '';
                         const estPropertyType = (viewEstimate.property_type || '').toUpperCase();
                         // Priority 1: Match by ID
@@ -3684,11 +3712,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     {/* Total Add-ons Price */}
                     <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-lg">
                       <p className="font-semibold text-green-800">Total Add-ons Price</p>
-                      <p className="font-bold text-green-700">{formatCurrency(viewEstimate.addons.reduce((sum, a) => sum + Number(a.price || 0), 0))}</p>
+                      <p className="font-bold text-green-700">{formatCurrency(addonsList.reduce((sum, a) => sum + Number(a.price || a.totalPrice || a.calculatedPrice || 0), 0))}</p>
                     </div>
                   </div>
                 </div>
-              )}
+                );
+              })()}
 
               {/* Price Summary */}
               <div className="border-t border-gray-100 pt-4">
