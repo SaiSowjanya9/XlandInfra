@@ -1046,14 +1046,6 @@ export const exportInvoiceToPDF = (invoice) => {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text('Total Amount: ' + formatCurrency(invoice.totalAmount || 0), margin + 6, y + 8);
-    
-    const status = (invoice.status || 'draft').toLowerCase();
-    const statusColors = { draft: [107,114,128], sent: [59,130,246], paid: [34,197,94], partially_paid: [249,115,22], overdue: [239,68,68] };
-    doc.setFillColor(...(statusColors[status] || [107,114,128]));
-    doc.roundedRect(pageWidth - margin - 26, y + 3, 20, 6, 1, 1, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(7);
-    doc.text(status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '), pageWidth - margin - 16, y + 7.5, { align: 'center' });
     y += 16;
 
     // Property & Customer Cards
@@ -1105,33 +1097,118 @@ export const exportInvoiceToPDF = (invoice) => {
     
     y += cardHeight + 8;
 
-    // Line Items Table
-    doc.setTextColor(...navy);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('LINE ITEMS', margin, y);
-    y += 4;
+    // Separate services and add-ons
+    const allItems = lineItems.filter(item => {
+      const desc = String(item.description || item.name || '').toLowerCase();
+      return !desc.includes('amc package:') && !desc.includes('amc services');
+    });
 
-    if (lineItems.length > 0) {
+    // Helper to check if item is an addon
+    const isAddon = (item) => {
+      const typeStr = String(item.type || '').toLowerCase();
+      return typeStr === 'addon' || typeStr === 'add-on' || typeStr === 'add_on';
+    };
+
+    // Services (type = 'service' or items not marked as addon)
+    const services = allItems
+      .filter(item => !isAddon(item))
+      .map(item => {
+        const fullDesc = String(item.description || item.name || 'Service');
+        const parts = fullDesc.split(' - ');
+        return {
+          name: parts[0] || 'Service',
+          description: parts.slice(1).join(' - ') || '-',
+          frequency: item.frequency || item.frequencyType || item.frequency_type || '-',
+          visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
+        };
+      });
+
+    // Add-ons (type contains 'addon')
+    const addons = allItems
+      .filter(item => isAddon(item))
+      .map(item => {
+        const fullDesc = String(item.description || item.name || 'Add-on');
+        const parts = fullDesc.split(' - ');
+        return {
+          name: parts[0] || 'Add-on',
+          description: parts.slice(1).join(' - ') || '-',
+          frequency: item.frequency || item.frequencyType || item.frequency_type || '-',
+          visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
+        };
+      });
+
+    // Services Included Table
+    if (services.length > 0) {
+      doc.setTextColor(...navy);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('SERVICES INCLUDED', margin, y);
+      y += 4;
+
       autoTable(doc, {
         startY: y,
-        head: [['#', 'Description', 'Qty', 'Unit Price', 'Total']],
-        body: lineItems.map((item, idx) => [
+        head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
+        body: services.map((item, idx) => [
           String(idx + 1),
-          String(item.description || item.name || 'Service').substring(0, 50),
-          String(item.quantity || 1),
-          formatCurrency(item.unit_price || item.unitPrice || 0),
-          formatCurrency(item.total_price || item.totalPrice || (item.quantity || 1) * (item.unit_price || item.unitPrice || 0))
+          String(item.name).substring(0, 25),
+          String(item.description).substring(0, 80) || '-',
+          String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1),
+          String(item.visits)
         ]),
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 3 },
+        styles: { fontSize: 8, cellPadding: 3, valign: 'middle' },
         headStyles: { fillColor: navy, textColor: [255,255,255], fontStyle: 'bold', fontSize: 7 },
-        columnStyles: { 0: { cellWidth: 12, halign: 'center' }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 18, halign: 'center' }, 3: { cellWidth: 28, halign: 'right' }, 4: { cellWidth: 28, halign: 'right' } },
+        columnStyles: { 
+          0: { cellWidth: 10, halign: 'center' }, 
+          1: { cellWidth: 35 }, 
+          2: { cellWidth: 'auto', halign: 'center' }, 
+          3: { cellWidth: 25, halign: 'center' }, 
+          4: { cellWidth: 18, halign: 'center' } 
+        },
         margin: { left: margin, right: margin }
       });
       y = doc.lastAutoTable.finalY + 8;
-    } else {
-      y += 10;
+    }
+
+    // Add-ons Table
+    if (addons.length > 0) {
+      doc.setTextColor(...navy);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ADD-ONS', margin, y);
+      y += 4;
+
+      autoTable(doc, {
+        startY: y,
+        head: [['#', 'Add-on Service', 'Description', 'Frequency', 'Visits']],
+        body: addons.map((item, idx) => [
+          String(idx + 1),
+          String(item.name).substring(0, 25),
+          String(item.description).substring(0, 80) || '-',
+          String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1),
+          String(item.visits)
+        ]),
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 3, valign: 'middle' },
+        headStyles: { fillColor: navy, textColor: [255,255,255], fontStyle: 'bold', fontSize: 7 },
+        columnStyles: { 
+          0: { cellWidth: 10, halign: 'center' }, 
+          1: { cellWidth: 35 }, 
+          2: { cellWidth: 'auto', halign: 'center' }, 
+          3: { cellWidth: 25, halign: 'center' }, 
+          4: { cellWidth: 18, halign: 'center' } 
+        },
+        margin: { left: margin, right: margin }
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    }
+
+    // If no services or add-ons
+    if (services.length === 0 && addons.length === 0) {
+      doc.setFontSize(8);
+      doc.setTextColor(...mediumText);
+      doc.text('No services included', margin, y + 6);
+      y += 14;
     }
 
     // Price Summary

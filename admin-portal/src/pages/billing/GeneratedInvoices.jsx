@@ -528,7 +528,7 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
                 <tr className="border-b border-gray-100 bg-gray-50">
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice ID</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Property</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Property ID</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -626,8 +626,17 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showDetailPanel, setShowDetailPanel] = useState(false);
 
   const token = getAuthToken();
+  
+  // Format helpers
+  const formatCurrency = (amount) => `₹${Math.round(Number(amount) || 0).toLocaleString('en-IN')}`;
+  const formatDate = (date) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
@@ -694,8 +703,8 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
   };
 
   const handleView = (invoice) => {
-    // Open in new tab or modal
-    window.open(`${API_BASE}/api/payments/invoices/${invoice.id}/pdf`, '_blank');
+    setSelectedInvoice(invoice);
+    setShowDetailPanel(true);
   };
 
   const handleCreateSuccess = (data) => {
@@ -777,6 +786,160 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
           />
         )}
       </div>
+
+      {/* Invoice Detail Modal */}
+      {showDetailPanel && selectedInvoice && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowDetailPanel(false); setSelectedInvoice(null); }}>
+          <div 
+            className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-600 to-blue-700">
+              <div className="flex items-center gap-3">
+                <FileText className="w-6 h-6 text-white" />
+                <div>
+                  <h2 className="text-xl font-bold text-white">{selectedInvoice.invoiceId}</h2>
+                  <p className="text-blue-100 text-sm">Invoice Details</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`px-3 py-1 text-xs font-medium rounded-full bg-white/20 text-white`}>
+                  {selectedInvoice.status}
+                </span>
+                <button onClick={() => { setShowDetailPanel(false); setSelectedInvoice(null); }} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors">
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="overflow-y-auto max-h-[calc(90vh-140px)] p-6">
+              {/* Customer & Property Info */}
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Customer Details</h3>
+                  <p className="text-sm font-medium text-gray-900">{selectedInvoice.customerName || '-'}</p>
+                  <p className="text-sm text-gray-600">{selectedInvoice.customerEmail || '-'}</p>
+                  <p className="text-sm text-gray-600">{selectedInvoice.customerPhone || '-'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Property Details</h3>
+                  <p className="text-sm font-medium text-gray-900">{selectedInvoice.propertyName || '-'}</p>
+                  <p className="text-sm text-gray-600">Property ID: {selectedInvoice.propertyCode || '-'}</p>
+                  {selectedInvoice.sourceEstimateId && <p className="text-sm text-gray-600">Estimate: {selectedInvoice.sourceEstimateId}</p>}
+                </div>
+              </div>
+
+              {/* Invoice Info */}
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                <div className="text-center p-3 bg-blue-50 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Invoice Date</p>
+                  <p className="text-sm font-semibold text-gray-900">{formatDate(selectedInvoice.invoiceDate)}</p>
+                </div>
+                <div className="text-center p-3 bg-orange-50 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Due Date</p>
+                  <p className="text-sm font-semibold text-gray-900">{formatDate(selectedInvoice.dueDate)}</p>
+                </div>
+                <div className="text-center p-3 bg-purple-50 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Invoice Type</p>
+                  <p className="text-sm font-semibold text-gray-900">{selectedInvoice.invoiceType === 'estimate' ? 'From Estimate' : selectedInvoice.invoiceType === 'work_order' ? 'Work Order' : 'Manual'}</p>
+                </div>
+                <div className="text-center p-3 bg-green-50 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Payment Status</p>
+                  <p className={`text-sm font-semibold ${selectedInvoice.paymentStatus === 'paid' ? 'text-green-600' : selectedInvoice.paymentStatus === 'partially_paid' ? 'text-orange-600' : 'text-red-600'}`}>
+                    {selectedInvoice.paymentStatus === 'paid' ? 'Paid' : selectedInvoice.paymentStatus === 'partially_paid' ? 'Partial' : 'Unpaid'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Line Items */}
+              {(() => {
+                const lineItems = selectedInvoice.lineItems ? (typeof selectedInvoice.lineItems === 'string' ? JSON.parse(selectedInvoice.lineItems) : selectedInvoice.lineItems) : [];
+                return lineItems.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Line Items</h3>
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Description</th>
+                            <th className="px-4 py-2 text-center text-xs font-medium text-gray-500">Qty</th>
+                            <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Unit Price</th>
+                            <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {lineItems.map((item, idx) => (
+                            <tr key={idx}>
+                              <td className="px-4 py-2 text-sm text-gray-900">{item.description || item.name || 'Service'}</td>
+                              <td className="px-4 py-2 text-sm text-gray-600 text-center">{item.quantity || 1}</td>
+                              <td className="px-4 py-2 text-sm text-gray-600 text-right">{formatCurrency(item.unitPrice || item.unit_price || 0)}</td>
+                              <td className="px-4 py-2 text-sm font-medium text-gray-900 text-right">{formatCurrency(item.totalPrice || item.total_price || 0)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Amount Summary */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Subtotal</span>
+                    <span className="text-gray-900">{formatCurrency(selectedInvoice.subtotal)}</span>
+                  </div>
+                  {selectedInvoice.discountAmount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Discount ({selectedInvoice.discountPercentage}%)</span>
+                      <span className="text-green-600">-{formatCurrency(selectedInvoice.discountAmount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">GST ({selectedInvoice.taxPercentage || 18}%)</span>
+                    <span className="text-gray-900">{formatCurrency(selectedInvoice.taxAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-base font-semibold pt-2 border-t border-gray-200">
+                    <span className="text-gray-900">Total Amount</span>
+                    <span className="text-gray-900">{formatCurrency(selectedInvoice.totalAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Amount Paid</span>
+                    <span className="text-green-600">{formatCurrency(selectedInvoice.amountPaid || 0)}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200">
+                    <span className="text-gray-900">Balance Due</span>
+                    <span className={selectedInvoice.balanceAmount > 0 ? 'text-red-600' : 'text-green-600'}>
+                      {formatCurrency(selectedInvoice.balanceAmount)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-3">
+              <button
+                onClick={() => { setShowDetailPanel(false); setSelectedInvoice(null); }}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100"
+              >
+                Close
+              </button>
+              {selectedInvoice.balanceAmount > 0 && (
+                <button
+                  onClick={() => { /* TODO: Record payment */ }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  <Receipt className="w-4 h-4" /> Record Payment
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

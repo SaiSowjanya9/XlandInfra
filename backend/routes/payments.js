@@ -667,14 +667,60 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
     const formatAmount = (amt) => `₹${(parseFloat(amt) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
     const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 
-    // Generate line items HTML
-    const lineItemsHtml = lineItems.map((item, idx) => `
+    // Filter out AMC Package entries
+    const allItems = lineItems.filter(item => {
+      const desc = String(item.description || item.name || '').toLowerCase();
+      return !desc.includes('amc package:') && !desc.includes('amc services');
+    });
+
+    // Helper to check if item is an addon
+    const isAddon = (item) => {
+      const typeStr = String(item.type || '').toLowerCase();
+      return typeStr === 'addon' || typeStr === 'add-on' || typeStr === 'add_on';
+    };
+
+    // Separate services and add-ons
+    const services = allItems.filter(item => !isAddon(item)).map(item => {
+      const fullDesc = String(item.description || item.name || 'Service');
+      const parts = fullDesc.split(' - ');
+      return {
+        name: parts[0] || 'Service',
+        description: parts.slice(1).join(' - ') || '-',
+        frequency: item.frequency || item.frequencyType || item.frequency_type || '-',
+        visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
+      };
+    });
+
+    const addons = allItems.filter(item => isAddon(item)).map(item => {
+      const fullDesc = String(item.description || item.name || 'Add-on');
+      const parts = fullDesc.split(' - ');
+      return {
+        name: parts[0] || 'Add-on',
+        description: parts.slice(1).join(' - ') || '-',
+        frequency: item.frequency || item.frequencyType || item.frequency_type || '-',
+        visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
+      };
+    });
+
+    // Generate services HTML
+    const servicesHtml = services.map((item, idx) => `
       <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${idx + 1}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.description || item.name || 'Service'}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity || 1}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatAmount(item.unit_price || item.unitPrice || 0)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatAmount((item.quantity || 1) * (item.unit_price || item.unitPrice || 0))}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${idx + 1}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.name}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.description}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.visits}</td>
+      </tr>
+    `).join('');
+
+    // Generate add-ons HTML
+    const addonsHtml = addons.map((item, idx) => `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${idx + 1}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.name}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.description}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.visits}</td>
       </tr>
     `).join('');
 
@@ -727,9 +773,6 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
             <div class="invoice-title">
               <h1>INVOICE</h1>
               <div class="invoice-id">${invoice.invoice_id}</div>
-              <div style="margin-top: 10px;">
-                <span class="status-badge status-${invoice.status}">${(invoice.status || 'draft').toUpperCase()}</span>
-              </div>
             </div>
           </div>
 
@@ -763,20 +806,45 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
             </div>
           </div>
 
+          ${servicesHtml ? `
+          <h2 style="font-size: 14px; color: #1e3a5f; margin-bottom: 10px; text-transform: uppercase;">Services Included</h2>
           <table>
             <thead>
               <tr>
-                <th style="width: 50px;">#</th>
+                <th style="width: 40px; text-align: center;">#</th>
+                <th style="width: 120px;">Service</th>
                 <th>Description</th>
-                <th style="width: 80px; text-align: center;">Qty</th>
-                <th style="width: 120px; text-align: right;">Unit Price</th>
-                <th style="width: 120px; text-align: right;">Amount</th>
+                <th style="width: 90px; text-align: center;">Frequency</th>
+                <th style="width: 60px; text-align: center;">Visits</th>
               </tr>
             </thead>
             <tbody>
-              ${lineItemsHtml || `<tr><td colspan="5" style="padding: 20px; text-align: center; color: #6b7280;">No line items</td></tr>`}
+              ${servicesHtml}
             </tbody>
           </table>
+          ` : ''}
+
+          ${addonsHtml ? `
+          <h2 style="font-size: 14px; color: #1e3a5f; margin-bottom: 10px; margin-top: 20px; text-transform: uppercase;">Add-Ons</h2>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;">#</th>
+                <th style="width: 120px;">Add-on Service</th>
+                <th>Description</th>
+                <th style="width: 90px; text-align: center;">Frequency</th>
+                <th style="width: 60px; text-align: center;">Visits</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${addonsHtml}
+            </tbody>
+          </table>
+          ` : ''}
+
+          ${!servicesHtml && !addonsHtml ? `
+          <p style="padding: 20px; text-align: center; color: #6b7280;">No services included</p>
+          ` : ''}
 
           <div class="totals">
             <div class="total-row">
