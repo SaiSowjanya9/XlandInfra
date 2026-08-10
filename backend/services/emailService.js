@@ -2153,6 +2153,198 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
 };
 
 /**
+ * Send invoice email to customer after estimate approval
+ * @param {Object} invoice - Invoice data
+ * @returns {Promise<Object>} Result with success status
+ */
+const sendInvoiceEmail = async (invoice) => {
+  const {
+    invoiceId, customerName, customerEmail, customerPhone,
+    propertyName, propertyCode, estimateId,
+    subtotal, discountAmount, taxAmount, totalAmount, balanceAmount,
+    invoiceDate, dueDate, lineItems, paymentLink
+  } = invoice;
+
+  if (!customerEmail) {
+    return { success: false, error: 'No customer email provided' };
+  }
+
+  // Format currency
+  const formatCurrency = (amount) => `₹${Math.round(Number(amount) || 0).toLocaleString('en-IN')}`;
+  
+  // Format date
+  const formatDate = (date) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  // Parse line items
+  let items = [];
+  try {
+    items = typeof lineItems === 'string' ? JSON.parse(lineItems) : (lineItems || []);
+  } catch (e) { items = []; }
+
+  // Generate line items HTML
+  const itemsHtml = items.map((item, idx) => `
+    <tr>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${idx + 1}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.description || item.name || 'Service'}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity || 1}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.unitPrice || item.unit_price || 0)}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.totalPrice || item.total_price || 0)}</td>
+    </tr>
+  `).join('');
+
+  // Payment link section (if provided)
+  const paymentSection = paymentLink ? `
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${paymentLink}" style="display: inline-block; background: #059669; color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
+        💳 Pay Now
+      </a>
+    </div>
+  ` : '';
+
+  const mailOptions = {
+    from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+    to: customerEmail,
+    subject: `Invoice ${invoiceId} from XLAND INFRA - Payment Due`,
+    headers: getDefaultHeaders(),
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background-color: #f3f4f6;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">XLAND INFRA</h1>
+            <p style="color: #bfdbfe; margin: 8px 0 0 0; font-size: 14px;">Pvt. Ltd.</p>
+          </div>
+          
+          <!-- Content -->
+          <div style="background: #ffffff; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 20px;">Hello ${customerName || 'Valued Customer'},</h2>
+            
+            <p style="color: #4b5563; line-height: 1.6; margin: 0 0 20px 0;">
+              Thank you for approving our estimate. Your invoice has been generated and is ready for payment.
+            </p>
+            
+            <!-- Invoice Info -->
+            <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+              <table style="width: 100%;">
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Invoice ID:</td>
+                  <td style="padding: 8px 0; padding-left: 15px; color: #1f2937; font-weight: 600;">${invoiceId}</td>
+                </tr>
+                ${estimateId ? `<tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Estimate ID:</td>
+                  <td style="padding: 8px 0; padding-left: 15px; color: #1f2937;">${estimateId}</td>
+                </tr>` : ''}
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Invoice Date:</td>
+                  <td style="padding: 8px 0; padding-left: 15px; color: #1f2937;">${formatDate(invoiceDate)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Due Date:</td>
+                  <td style="padding: 8px 0; padding-left: 15px; color: #dc2626; font-weight: 600;">${formatDate(dueDate)}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <!-- Property Details -->
+            ${propertyName ? `
+            <div style="background: #eff6ff; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+              <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Property</h3>
+              <p style="margin: 0; color: #1f2937;">${propertyName} ${propertyCode ? `(${propertyCode})` : ''}</p>
+            </div>
+            ` : ''}
+            
+            <!-- Line Items -->
+            ${items.length > 0 ? `
+            <div style="margin-bottom: 20px;">
+              <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 14px; font-weight: 600;">Services</h3>
+              <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 8px;">
+                <thead>
+                  <tr style="background: #f9fafb;">
+                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">#</th>
+                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Description</th>
+                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Qty</th>
+                    <th style="padding: 10px; text-align: right; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Unit Price</th>
+                    <th style="padding: 10px; text-align: right; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsHtml}
+                </tbody>
+              </table>
+            </div>
+            ` : ''}
+            
+            <!-- Price Summary -->
+            <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+              <table style="width: 100%;">
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Subtotal:</td>
+                  <td style="padding: 8px 0; text-align: right; color: #1f2937;">${formatCurrency(subtotal)}</td>
+                </tr>
+                ${discountAmount > 0 ? `<tr>
+                  <td style="padding: 8px 0; color: #059669; font-size: 14px;">Discount:</td>
+                  <td style="padding: 8px 0; text-align: right; color: #059669;">-${formatCurrency(discountAmount)}</td>
+                </tr>` : ''}
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">GST (18%):</td>
+                  <td style="padding: 8px 0; text-align: right; color: #1f2937;">${formatCurrency(taxAmount)}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <!-- Total Amount -->
+            <div style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); border-radius: 8px; padding: 20px; margin-bottom: 20px; text-align: center;">
+              <p style="color: #e0e7ff; margin: 0 0 5px 0; font-size: 14px;">Total Amount Due</p>
+              <p style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 700;">${formatCurrency(balanceAmount || totalAmount)}</p>
+            </div>
+            
+            ${paymentSection}
+            
+            <!-- Payment Instructions -->
+            <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+              <h4 style="color: #92400e; margin: 0 0 10px 0; font-size: 14px;">Payment Instructions</h4>
+              <p style="color: #92400e; margin: 0; font-size: 13px; line-height: 1.5;">
+                Please make the payment before the due date to avoid service interruption.
+                For bank transfer details or any queries, contact us at <a href="mailto:info@xlandinfra.com" style="color: #1e40af;">info@xlandinfra.com</a>
+              </p>
+            </div>
+            
+            <p style="color: #4b5563; line-height: 1.6; margin: 20px 0 0 0; font-size: 14px;">
+              Thank you for choosing XLAND INFRA!
+            </p>
+          </div>
+          
+          <!-- Footer -->
+          <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
+            <p style="margin: 0;">© ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.</p>
+            <p style="margin: 8px 0 0 0;">This is an automated email. Please do not reply directly.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`📧 Invoice email sent to ${customerEmail} (Invoice: ${invoiceId}, Message ID: ${info.messageId})`);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Error sending invoice email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
  * Generic email sending function
  * Used by other services (e.g., invoiceService) to send emails
  * @param {Object} options - Email options
@@ -2202,6 +2394,7 @@ module.exports = {
   sendFPEmployeeWelcomeEmail,
   sendEstimateEmail,
   sendEstimateActionNotification,
+  sendInvoiceEmail,
   sendPasswordResetEmail,
   sendPasswordResetSuccess,
   sendPasswordUpdatedByAdminEmail,

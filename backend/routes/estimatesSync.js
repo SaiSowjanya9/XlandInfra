@@ -683,12 +683,47 @@ router.post('/:estimateId/action', async (req, res) => {
     let invoiceResult = null;
     if (action === 'approve') {
       console.log(`🔔 Starting invoice generation for estimate ${estimateId}`);
-      console.log(`📋 Estimate details: ID=${est.id}, Source=${source}, Email=${est.customer_email}, Total=${est.total}`);
+      console.log(`📋 Estimate details: ID=${est.id}, Source=${source}, Email=${est.customer_email || est.client_email}, Total=${est.total || est.total_amount}`);
       try {
         const { generateInvoiceFromEstimate } = require('../services/invoiceService');
         // Use internal DB id for invoice generation, pass source to handle fp_estimates
         invoiceResult = await generateInvoiceFromEstimate(est.id, null, source);
         console.log(`✅ Auto-generated invoice for customer-approved estimate ${estimateId} (source: ${source}):`, invoiceResult);
+        
+        // Send invoice email to customer
+        if (invoiceResult && invoiceResult.success && !invoiceResult.alreadyExists) {
+          try {
+            const { sendInvoiceEmail } = require('../services/emailService');
+            const customerEmail = est.customer_email || est.client_email;
+            const customerName = est.customer_name || est.client_name;
+            
+            if (customerEmail) {
+              const emailResult = await sendInvoiceEmail({
+                invoiceId: invoiceResult.invoiceId,
+                customerName: customerName,
+                customerEmail: customerEmail,
+                customerPhone: est.customer_phone || est.client_phone,
+                propertyName: est.property_name,
+                propertyCode: est.property_code,
+                estimateId: estimateId,
+                subtotal: invoiceResult.subtotal || est.subtotal || est.total || est.total_amount,
+                discountAmount: invoiceResult.discountAmount || 0,
+                taxAmount: invoiceResult.taxAmount || 0,
+                totalAmount: invoiceResult.totalAmount,
+                balanceAmount: invoiceResult.balanceAmount || invoiceResult.totalAmount,
+                invoiceDate: new Date(),
+                dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
+                lineItems: invoiceResult.lineItems || []
+              });
+              console.log(`📧 Invoice email result:`, emailResult);
+            } else {
+              console.log(`⚠️ No customer email found, skipping invoice email`);
+            }
+          } catch (emailError) {
+            console.error('❌ Failed to send invoice email:', emailError.message);
+            // Don't fail the approval if email sending fails
+          }
+        }
       } catch (invoiceError) {
         console.error('❌ Failed to auto-generate invoice for customer approval:', invoiceError);
         console.error('❌ Error stack:', invoiceError.stack);

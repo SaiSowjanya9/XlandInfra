@@ -289,12 +289,16 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       ]);
       const [estData, amcData, addData, propData, archivedData, linksData] = await Promise.all([estRes.json(), amcRes.json(), addRes.json(), propRes.json(), archivedRes.json(), linksRes.json()]);
       const estArr = estData.success ? (Array.isArray(estData.data) ? estData.data : []) : [];
+      // Sort active estimates by created_at date descending (latest first)
+      const sortedEstArr = estArr.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       const amcArr = amcData.success ? (Array.isArray(amcData.data) ? amcData.data : []) : [];
       const addArr = addData.success ? (Array.isArray(addData.data) ? addData.data : []) : [];
       const propArr = propData.success ? (Array.isArray(propData.data) ? propData.data : []) : [];
       const archArr = archivedData.success ? (Array.isArray(archivedData.data) ? archivedData.data : []) : [];
+      // Sort archived estimates by archived_at date descending (latest first)
+      const sortedArchArr = archArr.sort((a, b) => new Date(b.archived_at) - new Date(a.archived_at));
       const linksArr = linksData.success ? (Array.isArray(linksData.data) ? linksData.data : []) : [];
-      setEstimates(estArr); setAmcPackages(amcArr); setAddons(addArr); setProperties(propArr); setArchivedEstimates(archArr);
+      setEstimates(sortedEstArr); setAmcPackages(amcArr); setAddons(addArr); setProperties(propArr); setArchivedEstimates(sortedArchArr);
       setStats({ estimates: estArr.length, amcPackages: amcArr.length, addons: addArr.length, archived: archArr.length });
       
       // Set portal links and populate forms

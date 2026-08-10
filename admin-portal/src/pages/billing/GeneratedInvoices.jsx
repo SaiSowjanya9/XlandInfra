@@ -121,7 +121,8 @@ const CreateInvoiceForm = ({ onSuccess, onCancel, token }) => {
         setApprovedEstimates(estResult.data);
         setStep(2);
       } else {
-        setError('No approved estimates found for this property');
+        // More helpful message - approved estimates might already have invoices
+        setError('No approved estimates available. Either no estimates are approved, or approved estimates already have invoices generated. Check the "Generated Invoices" tab.');
       }
     } catch (err) {
       console.log('Fetch failed:', err);
