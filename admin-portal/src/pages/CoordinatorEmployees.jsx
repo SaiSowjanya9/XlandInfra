@@ -328,27 +328,33 @@ const CoordinatorEmployees = ({ user }) => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-500">Total Employees</p>
-            <p className="text-2xl font-bold text-gray-900">{totalEmployees}</p>
+      <div className="flex flex-wrap gap-3">
+        <div className="bg-white rounded-xl border border-gray-100 px-4 py-3 flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+            <Users className="w-5 h-5 text-blue-600" />
           </div>
-          <Users className="w-10 h-10 text-blue-500" />
+          <div>
+            <p className="text-xs text-gray-500">Total Employees</p>
+            <p className="text-xl font-bold text-gray-900">{totalEmployees}</p>
+          </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-500">Zones Assigned</p>
-            <p className="text-2xl font-bold text-green-600">{zonesAssigned}</p>
+        <div className="bg-white rounded-xl border border-gray-100 px-4 py-3 flex items-center gap-3">
+          <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+            <CheckCircle className="w-5 h-5 text-green-600" />
           </div>
-          <CheckCircle className="w-10 h-10 text-green-500" />
+          <div>
+            <p className="text-xs text-gray-500">Zones Assigned</p>
+            <p className="text-xl font-bold text-green-600">{zonesAssigned}</p>
+          </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-500">Pending Assignment</p>
-            <p className="text-2xl font-bold text-orange-600">{pendingAssignment}</p>
+        <div className="bg-white rounded-xl border border-gray-100 px-4 py-3 flex items-center gap-3">
+          <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
+            <XCircle className="w-5 h-5 text-orange-600" />
           </div>
-          <XCircle className="w-10 h-10 text-orange-500" />
+          <div>
+            <p className="text-xs text-gray-500">Pending Assignment</p>
+            <p className="text-xl font-bold text-orange-600">{pendingAssignment}</p>
+          </div>
         </div>
       </div>
 
