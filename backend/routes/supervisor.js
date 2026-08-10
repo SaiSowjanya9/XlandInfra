@@ -1347,6 +1347,17 @@ router.patch('/work-orders/:id/status', requireSupervisorScope, async (req, res)
         } catch (err) {
           console.error('[Supervisor] Completion email error:', err);
         }
+        
+        // Auto-generate invoice for completed work order
+        try {
+          const { generateInvoiceFromWorkOrder } = require('../services/invoiceService');
+          const invoiceResult = await generateInvoiceFromWorkOrder(req.params.id, req.user?.id);
+          if (invoiceResult.success && !invoiceResult.alreadyExists && invoiceResult.invoiceId) {
+            console.log(`[Supervisor] Auto-generated invoice ${invoiceResult.invoiceId} for work order`);
+          }
+        } catch (invoiceErr) {
+          console.error('[Supervisor] Invoice generation error:', invoiceErr);
+        }
       }
     }
 

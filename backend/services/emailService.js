@@ -2139,6 +2139,44 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
   }
 };
 
+/**
+ * Generic email sending function
+ * Used by other services (e.g., invoiceService) to send emails
+ * @param {Object} options - Email options
+ * @param {string} options.to - Recipient email address
+ * @param {string} options.subject - Email subject
+ * @param {string} options.html - HTML email body
+ * @param {string} [options.text] - Plain text email body (optional)
+ * @param {Array} [options.attachments] - Email attachments (optional)
+ * @returns {Promise<Object>} Result with success status
+ */
+const sendEmail = async ({ to, subject, html, text, attachments }) => {
+  try {
+    const mailOptions = {
+      from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      html,
+      headers: getDefaultHeaders()
+    };
+    
+    if (text) {
+      mailOptions.text = text;
+    }
+    
+    if (attachments && attachments.length > 0) {
+      mailOptions.attachments = attachments;
+    }
+    
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`📧 Email sent to ${to} (Subject: ${subject}, Message ID: ${info.messageId})`);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error(`❌ Error sending email to ${to}:`, error.message);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWorkOrderNotification,
   sendWorkOrderCreatedNotification,
@@ -2156,5 +2194,6 @@ module.exports = {
   sendPasswordUpdatedByAdminEmail,
   sendVendorAssignmentEmail,
   getWorkOrderNotificationRecipients,
+  sendEmail,
   NOTIFICATION_EMAIL
 };

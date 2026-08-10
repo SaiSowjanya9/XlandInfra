@@ -660,10 +660,28 @@ router.post('/:estimateId/action', async (req, res) => {
       );
     }
     
+    // Auto-generate invoice when customer approves estimate
+    let invoiceResult = null;
+    if (action === 'approve') {
+      try {
+        const { generateInvoiceFromEstimate } = require('../services/invoiceService');
+        // Use internal DB id for invoice generation
+        invoiceResult = await generateInvoiceFromEstimate(est.id, null);
+        console.log(`✅ Auto-generated invoice for customer-approved estimate ${estimateId}:`, invoiceResult);
+      } catch (invoiceError) {
+        console.error('Failed to auto-generate invoice for customer approval:', invoiceError);
+        // Don't fail the approval if invoice generation fails
+      }
+    }
+    
     res.json({ 
       success: true, 
       message: `Estimate ${newStatus} successfully`,
-      status: action === 'approve' ? 'Approved' : 'Rejected'
+      status: action === 'approve' ? 'Approved' : 'Rejected',
+      invoice: invoiceResult ? {
+        invoiceId: invoiceResult.invoiceId,
+        totalAmount: invoiceResult.totalAmount
+      } : null
     });
   } catch (error) {
     console.error('Estimate action error:', error);

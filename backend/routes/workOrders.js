@@ -630,6 +630,17 @@ router.patch('/:id/status', async (req, res) => {
           } catch (err) {
             console.error('[Admin] Completion email error:', err);
           }
+          
+          // Auto-generate invoice for completed work order
+          try {
+            const { generateInvoiceFromWorkOrder } = require('../services/invoiceService');
+            const invoiceResult = await generateInvoiceFromWorkOrder(id, adminId);
+            if (invoiceResult.success && !invoiceResult.alreadyExists && invoiceResult.invoiceId) {
+              console.log(`[Admin] Auto-generated invoice ${invoiceResult.invoiceId} for work order`);
+            }
+          } catch (invoiceErr) {
+            console.error('[Admin] Invoice generation error:', invoiceErr);
+          }
         }
       }
 

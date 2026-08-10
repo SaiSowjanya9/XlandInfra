@@ -89,6 +89,7 @@ import Phase2Documentation from './pages/Phase2Documentation';
 import EstimatesDashboard from './pages/EstimatesDashboard';
 import WorkOrdersDashboard from './components/WorkOrdersDashboard';
 import BillingPlaceholder from './pages/billing/BillingPlaceholder';
+import Invoices from './pages/billing/Invoices';
 import { FPProvider } from './contexts/FPContext';
 
 // Session timeout in milliseconds (30 minutes)
@@ -360,7 +361,7 @@ function App() {
                     <Route path="estimates/archived" element={<Estimates admin={user} defaultTab="archived" />} />
                     <Route path="billing/dashboard" element={<BillingPlaceholder page="dashboard" portalName="Admin" />} />
                     <Route path="billing/generate-invoices" element={<BillingPlaceholder page="generate-invoices" portalName="Admin" />} />
-                    <Route path="billing/invoices" element={<BillingPlaceholder page="invoices" portalName="Admin" />} />
+                    <Route path="billing/invoices" element={<Invoices user={user} portalType="employee" />} />
                     <Route path="billing/payments" element={<BillingPlaceholder page="payments" portalName="Admin" />} />
                     <Route path="billing/make-payments" element={<BillingPlaceholder page="make-payments" portalName="Admin" />} />
                     <Route path="billing/payment-history" element={<BillingPlaceholder page="payment-history" portalName="Admin" />} />
@@ -439,7 +440,7 @@ function App() {
                     <Route path="qr-management" element={<QRManagement />} />
                     <Route path="billing/dashboard" element={<BillingPlaceholder page="dashboard" portalName="Franchise Partner" />} />
                     <Route path="billing/generate-invoices" element={<BillingPlaceholder page="generate-invoices" portalName="Franchise Partner" />} />
-                    <Route path="billing/invoices" element={<BillingPlaceholder page="invoices" portalName="Franchise Partner" />} />
+                    <Route path="billing/invoices" element={<Invoices user={user} portalType="fp" />} />
                     <Route path="billing/payments" element={<BillingPlaceholder page="payments" portalName="Franchise Partner" />} />
                     <Route path="billing/make-payments" element={<BillingPlaceholder page="make-payments" portalName="Franchise Partner" />} />
                     <Route path="billing/payment-history" element={<BillingPlaceholder page="payment-history" portalName="Franchise Partner" />} />
@@ -487,7 +488,7 @@ function App() {
                     <Route path="estimates/archived" element={<ManagerEstimates user={user} defaultTab="archived" />} />
                     <Route path="billing/dashboard" element={<BillingPlaceholder page="dashboard" portalName="Manager" />} />
                     <Route path="billing/generate-invoices" element={<BillingPlaceholder page="generate-invoices" portalName="Manager" />} />
-                    <Route path="billing/invoices" element={<BillingPlaceholder page="invoices" portalName="Manager" />} />
+                    <Route path="billing/invoices" element={<Invoices user={user} portalType="manager" />} />
                     <Route path="billing/payments" element={<BillingPlaceholder page="payments" portalName="Manager" />} />
                     <Route path="billing/make-payments" element={<BillingPlaceholder page="make-payments" portalName="Manager" />} />
                     <Route path="billing/payment-history" element={<BillingPlaceholder page="payment-history" portalName="Manager" />} />
@@ -529,6 +530,9 @@ function App() {
                     <Route path="estimates/amc" element={<CoordinatorEstimates user={user} defaultTab="amc" />} />
                     <Route path="estimates/addons" element={<CoordinatorEstimates user={user} defaultTab="addons" />} />
                     <Route path="estimates/archived" element={<CoordinatorEstimates user={user} defaultTab="archived" />} />
+                    <Route path="billing/generate-invoices" element={<BillingPlaceholder page="generate-invoices" portalName="Coordinator" />} />
+                    <Route path="billing/invoices" element={<Invoices user={user} portalType="coordinator" />} />
+                    <Route path="billing/payments" element={<BillingPlaceholder page="payments" portalName="Coordinator" />} />
                     <Route path="*" element={<Navigate to="/coordinator" replace />} />
                   </Routes>
                 </CoordinatorLayout>
@@ -567,7 +571,7 @@ function App() {
                     <Route path="estimates/archived" element={<SupervisorEstimates user={user} defaultTab="archived" />} />
                     <Route path="billing/dashboard" element={<BillingPlaceholder page="dashboard" portalName="Supervisor" />} />
                     <Route path="billing/generate-invoices" element={<BillingPlaceholder page="generate-invoices" portalName="Supervisor" />} />
-                    <Route path="billing/invoices" element={<BillingPlaceholder page="invoices" portalName="Supervisor" />} />
+                    <Route path="billing/invoices" element={<Invoices user={user} portalType="supervisor" />} />
                     <Route path="billing/payments" element={<BillingPlaceholder page="payments" portalName="Supervisor" />} />
                     <Route path="billing/make-payments" element={<BillingPlaceholder page="make-payments" portalName="Supervisor" />} />
                     <Route path="billing/payment-history" element={<BillingPlaceholder page="payment-history" portalName="Supervisor" />} />
@@ -608,6 +612,9 @@ function App() {
                     <Route path="estimates/amc" element={<ExecutiveEstimates user={user} defaultTab="amc" />} />
                     <Route path="estimates/addons" element={<ExecutiveEstimates user={user} defaultTab="addons" />} />
                     <Route path="estimates/archived" element={<ExecutiveEstimates user={user} defaultTab="archived" />} />
+                    <Route path="billing/generate-invoices" element={<BillingPlaceholder page="generate-invoices" portalName="Executive" />} />
+                    <Route path="billing/invoices" element={<Invoices user={user} portalType="executive" />} />
+                    <Route path="billing/payments" element={<BillingPlaceholder page="payments" portalName="Executive" />} />
                     <Route path="*" element={<Navigate to="/executive" replace />} />
                   </Routes>
                 </ExecutiveLayout>

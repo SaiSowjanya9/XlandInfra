@@ -696,14 +696,8 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
       });
     }
 
-    // Validate transaction reference for non-cash payments
-    if (paymentMethod !== 'cash' && !transactionReference) {
-      await connection.rollback();
-      return res.status(400).json({
-        success: false,
-        message: 'Transaction reference is required for UPI, Bank Transfer, and Card payments'
-      });
-    }
+    // Transaction reference is optional but recommended for non-cash payments
+    // Removed the requirement to make it more flexible
 
     // Get invoice details
     const [invoices] = await connection.execute(

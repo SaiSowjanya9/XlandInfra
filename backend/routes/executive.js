@@ -1097,6 +1097,17 @@ router.patch('/work-orders/:id/status', requireExecutiveScope, async (req, res) 
         } catch (err) {
           console.error('[Executive] Completion email error:', err);
         }
+        
+        // Auto-generate invoice for completed work order
+        try {
+          const { generateInvoiceFromWorkOrder } = require('../services/invoiceService');
+          const invoiceResult = await generateInvoiceFromWorkOrder(req.params.id, req.user?.id);
+          if (invoiceResult.success && !invoiceResult.alreadyExists && invoiceResult.invoiceId) {
+            console.log(`[Executive] Auto-generated invoice ${invoiceResult.invoiceId} for work order`);
+          }
+        } catch (invoiceErr) {
+          console.error('[Executive] Invoice generation error:', invoiceErr);
+        }
       }
     }
 

@@ -372,6 +372,27 @@ router.post('/:id/approve', authenticate, canApprove, async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Check if estimate exists and is pending approval
+    const [existing] = await pool.execute(
+      'SELECT id, estimate_id, status FROM estimates WHERE id = ?',
+      [id]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Estimate not found'
+      });
+    }
+
+    if (existing[0].status !== 'pending_approval') {
+      return res.status(400).json({
+        success: false,
+        message: 'Estimate is not pending approval'
+      });
+    }
+
+    // Update estimate status to approved
     await pool.execute(
       `UPDATE estimates SET 
         status = 'approved', 
@@ -381,9 +402,25 @@ router.post('/:id/approve', authenticate, canApprove, async (req, res) => {
       [req.user.id, id]
     );
 
+    // Auto-generate invoice from approved estimate
+    let invoiceResult = null;
+    try {
+      const { generateInvoiceFromEstimate } = require('../services/invoiceService');
+      invoiceResult = await generateInvoiceFromEstimate(id, req.user.id);
+      console.log(`✅ Auto-generated invoice for estimate ${existing[0].estimate_id}:`, invoiceResult);
+    } catch (invoiceError) {
+      console.error('Failed to auto-generate invoice:', invoiceError);
+      // Don't fail the approval if invoice generation fails
+    }
+
     res.json({
       success: true,
-      message: 'Estimate approved successfully'
+      message: 'Estimate approved successfully',
+      invoice: invoiceResult ? {
+        invoiceId: invoiceResult.invoiceId,
+        totalAmount: invoiceResult.totalAmount,
+        emailSent: !!invoiceResult.customerEmail
+      } : null
     });
   } catch (error) {
     console.error('Error approving estimate:', error);
