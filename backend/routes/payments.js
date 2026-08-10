@@ -355,6 +355,85 @@ router.get('/estimates/by-property/:code', authenticate, canViewPayments, async 
   }
 });
 
+// Get approved estimate by estimate ID (for invoice creation)
+router.get('/estimates/by-id/:estimateId', authenticate, canViewPayments, async (req, res) => {
+  try {
+    const { estimateId } = req.params;
+    const { status } = req.query;
+    const fpId = getFPScope(req);
+    
+    // Search in fp_estimates table first
+    let query = `
+      SELECT fe.id, fe.estimate_id, fe.property_id, fe.property_name, fe.property_code,
+             fe.client_name as customer_name, fe.client_email as customer_email, fe.client_phone as customer_phone,
+             fe.service_type, fe.subtotal, fe.discount, fe.tax, fe.total_amount as total,
+             fe.package_services, fe.addons_data, fe.status, fe.created_at,
+             fe.package_name, fe.package_price, fe.billing_duration
+      FROM fp_estimates fe
+      WHERE fe.estimate_id = ?
+    `;
+    const params = [estimateId];
+    
+    if (status) {
+      query += ' AND fe.status = ?';
+      params.push(status);
+    }
+    
+    if (fpId) {
+      query += ' AND fe.franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    
+    // Exclude estimates that already have invoices
+    query += ` AND fe.estimate_id NOT IN (
+      SELECT COALESCE(source_estimate_id, '') FROM invoices WHERE source_estimate_id IS NOT NULL
+    )`;
+    
+    const [estimates] = await pool.execute(query, params);
+    
+    if (estimates.length > 0) {
+      return res.json({ success: true, data: estimates[0] });
+    }
+    
+    // Also check regular estimates table
+    let query2 = `
+      SELECT e.id, e.estimate_id, e.property_id, p.name as property_name, p.property_id as property_code,
+             e.customer_name, e.customer_email, e.customer_phone,
+             e.service_type, e.subtotal, e.discount_amount as discount, e.tax_amount as tax, e.total,
+             e.line_items, e.status, e.created_at
+      FROM estimates e
+      LEFT JOIN properties p ON e.property_id = p.id
+      WHERE e.estimate_id = ?
+    `;
+    const params2 = [estimateId];
+    
+    if (status) {
+      query2 += ' AND e.status = ?';
+      params2.push(status);
+    }
+    
+    if (fpId) {
+      query2 += ' AND e.franchise_partner_id = ?';
+      params2.push(fpId);
+    }
+    
+    query2 += ` AND e.estimate_id NOT IN (
+      SELECT COALESCE(source_estimate_id, '') FROM invoices WHERE source_estimate_id IS NOT NULL
+    )`;
+    
+    const [regularEstimates] = await pool.execute(query2, params2);
+    
+    if (regularEstimates.length > 0) {
+      return res.json({ success: true, data: regularEstimates[0] });
+    }
+    
+    res.json({ success: false, message: 'No approved estimate found with this ID, or an invoice has already been generated for this estimate.' });
+  } catch (error) {
+    console.error('Error fetching estimate by ID:', error);
+    res.status(500).json({ success: false, message: 'Error fetching estimate' });
+  }
+});
+
 // ============================================
 // PAYMENT DASHBOARD
 // ============================================
