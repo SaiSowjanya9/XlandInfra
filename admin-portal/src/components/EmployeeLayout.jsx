@@ -161,7 +161,6 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   // Billing & Payments sub-items
   const billingPaymentsSubItems = [
     { path: '/employee/billing/dashboard', icon: BarChart3, label: 'Dashboard' },
-    { path: '/employee/billing/generate-invoices', icon: FileText, label: 'Generate Invoices' },
     { path: '/employee/billing/invoices', icon: Receipt, label: 'Invoices' },
     { path: '/employee/billing/payments', icon: CreditCard, label: 'Payments' },
     { path: '/employee/billing/make-payments', icon: Wallet, label: 'Make Payments' },

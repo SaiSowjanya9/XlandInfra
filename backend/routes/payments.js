@@ -278,7 +278,7 @@ router.get('/dashboard', authenticate, canViewPayments, async (req, res) => {
 router.get('/invoices', authenticate, canViewPayments, async (req, res) => {
   try {
     const fpId = getFPScope(req);
-    const { status, paymentStatus, search, propertyId, customerId } = req.query;
+    const { status, paymentStatus, search, propertyId, customerId, archived, invoiceType } = req.query;
     
     let query = `
       SELECT i.*, 
@@ -296,6 +296,19 @@ router.get('/invoices', authenticate, canViewPayments, async (req, res) => {
     if (fpId) {
       query += ' AND i.franchise_partner_id = ?';
       params.push(fpId);
+    }
+
+    // Filter by archived status
+    if (archived === 'true') {
+      query += ' AND i.archived = 1';
+    } else if (archived === 'false') {
+      query += ' AND (i.archived = 0 OR i.archived IS NULL)';
+    }
+
+    // Filter by invoice type
+    if (invoiceType && invoiceType !== 'all') {
+      query += ' AND i.invoice_type = ?';
+      params.push(invoiceType);
     }
 
     if (status) {
@@ -589,6 +602,99 @@ router.put('/invoices/:id', authenticate, canEditPayments, async (req, res) => {
   }
 });
 
+// Archive invoice (soft delete)
+router.put('/invoices/:id/archive', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+    
+    // Ensure archived column exists
+    try {
+      await pool.execute(`ALTER TABLE invoices ADD COLUMN archived TINYINT(1) DEFAULT 0`);
+      await pool.execute(`ALTER TABLE invoices ADD COLUMN archived_at TIMESTAMP NULL`);
+    } catch (e) { /* Column might already exist */ }
+    
+    let query = 'UPDATE invoices SET archived = 1, archived_at = NOW() WHERE id = ?';
+    const params = [id];
+    
+    if (fpId) {
+      query = 'UPDATE invoices SET archived = 1, archived_at = NOW() WHERE id = ? AND franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    
+    await pool.execute(query, params);
+    res.json({ success: true, message: 'Invoice archived successfully' });
+  } catch (error) {
+    console.error('Error archiving invoice:', error);
+    res.status(500).json({ success: false, message: 'Error archiving invoice', error: error.message });
+  }
+});
+
+// Restore archived invoice
+router.put('/invoices/:id/restore', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+    
+    let query = 'UPDATE invoices SET archived = 0, archived_at = NULL WHERE id = ?';
+    const params = [id];
+    
+    if (fpId) {
+      query = 'UPDATE invoices SET archived = 0, archived_at = NULL WHERE id = ? AND franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    
+    await pool.execute(query, params);
+    res.json({ success: true, message: 'Invoice restored successfully' });
+  } catch (error) {
+    console.error('Error restoring invoice:', error);
+    res.status(500).json({ success: false, message: 'Error restoring invoice', error: error.message });
+  }
+});
+
+// Delete invoice permanently
+router.delete('/invoices/:id', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+    
+    let query = 'DELETE FROM invoices WHERE id = ?';
+    const params = [id];
+    
+    if (fpId) {
+      query = 'DELETE FROM invoices WHERE id = ? AND franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    
+    await pool.execute(query, params);
+    res.json({ success: true, message: 'Invoice deleted permanently' });
+  } catch (error) {
+    console.error('Error deleting invoice:', error);
+    res.status(500).json({ success: false, message: 'Error deleting invoice', error: error.message });
+  }
+});
+
+// Delete all archived invoices
+router.delete('/invoices/archived/delete-all', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const fpId = getFPScope(req);
+    
+    let query = 'DELETE FROM invoices WHERE archived = 1';
+    const params = [];
+    
+    if (fpId) {
+      query += ' AND franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    
+    const [result] = await pool.execute(query, params);
+    res.json({ success: true, message: 'All archived invoices deleted', deletedCount: result.affectedRows });
+  } catch (error) {
+    console.error('Error deleting archived invoices:', error);
+    res.status(500).json({ success: false, message: 'Error deleting archived invoices', error: error.message });
+  }
+});
+
 // Send invoice (mark as sent, generate payment link placeholder)
 router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res) => {
   try {
@@ -649,6 +755,8 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
     let query = `
       SELECT p.*, 
              i.invoice_id as invoice_code, i.estimate_id as invoice_estimate_id,
+             i.total_amount as invoice_amount, i.balance_amount as invoice_balance,
+             i.customer_name as invoice_customer_name, i.customer_email as invoice_customer_email,
              prop.community_name as property_name, prop.property_id as property_code
       FROM payments p
       LEFT JOIN invoices i ON p.invoice_id = i.id
@@ -701,23 +809,28 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
       success: true,
       data: payments.map(p => ({
         id: p.id,
-        paymentId: p.payment_id,
-        invoiceId: p.invoice_id,
+        paymentId: p.payment_id || `PYMT-${String(p.id).padStart(4, '0')}`,
+        invoiceId: p.invoice_code || p.invoice_id,
         invoiceCode: p.invoice_code,
         propertyId: p.property_id,
         propertyName: p.property_name,
         propertyCode: p.property_code,
         estimateId: p.estimate_id || p.invoice_estimate_id,
         customerId: p.customer_id,
-        customerName: p.customer_name,
+        customerName: p.customer_name || p.invoice_customer_name,
+        customerEmail: p.customer_email || p.invoice_customer_email,
         amount: parseFloat(p.amount),
+        invoiceAmount: parseFloat(p.invoice_amount) || 0,
+        balanceAmount: parseFloat(p.invoice_balance) || 0,
         paymentMethod: p.payment_method,
         paymentType: p.payment_type,
         transactionReference: p.transaction_reference,
+        bankName: p.bank_name,
         paymentDate: p.payment_date,
-        paymentProofUrl: p.payment_proof_url,
+        proofUrl: p.payment_proof_url,
+        proofFilename: p.proof_filename,
         status: p.status,
-        receivedBy: p.received_by_name,
+        recordedBy: p.received_by_name,
         receivedByRole: p.received_by_role,
         remarks: p.remarks,
         createdAt: p.created_at
@@ -896,6 +1009,170 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
     res.status(500).json({ success: false, message: 'Error recording payment', error: error.message });
   } finally {
     connection.release();
+  }
+});
+
+// Alias for record payment (frontend uses /record)
+router.post('/record', authenticate, canEditPayments, upload.single('paymentProof'), async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const fpId = getFPScope(req);
+    const {
+      invoiceId, amount, paymentMethod, transactionReference, paymentDate, 
+      bankName, remarks
+    } = req.body;
+
+    if (!invoiceId || !amount || !paymentMethod || !paymentDate) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Invoice ID, amount, payment method, and payment date are required'
+      });
+    }
+
+    const [invoices] = await connection.execute('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
+    if (invoices.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    const invoice = invoices[0];
+    const paymentAmount = parseFloat(amount);
+
+    // Generate payment ID
+    const [maxPayment] = await connection.execute('SELECT MAX(id) as maxId FROM payments');
+    const nextId = (maxPayment[0]?.maxId || 0) + 1;
+    const paymentId = `PYMT-${String(nextId).padStart(4, '0')}`;
+
+    // Ensure bank_name column exists
+    try {
+      await connection.execute('ALTER TABLE payments ADD COLUMN bank_name VARCHAR(255)');
+    } catch (e) { /* Column might exist */ }
+
+    const paymentProofUrl = req.file ? `/uploads/payments/${req.file.filename}` : null;
+    const receivedByName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.username;
+
+    const [result] = await connection.execute(`
+      INSERT INTO payments (
+        payment_id, invoice_id, invoice_number, property_id, property_code,
+        estimate_id, customer_id, franchise_partner_id,
+        customer_name, amount, payment_method, payment_type,
+        transaction_reference, bank_name, payment_date, payment_proof_url,
+        status, received_by, received_by_name, received_by_role, remarks
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      paymentId,
+      invoiceId,
+      invoice.invoice_id,
+      invoice.property_id,
+      invoice.property_code,
+      invoice.source_estimate_id,
+      invoice.customer_id,
+      fpId || invoice.franchise_partner_id,
+      invoice.customer_name,
+      paymentAmount,
+      paymentMethod,
+      'manual',
+      transactionReference || null,
+      bankName || null,
+      paymentDate,
+      paymentProofUrl,
+      'paid',
+      req.user.id,
+      receivedByName,
+      req.user.role,
+      remarks || null
+    ]);
+
+    // Update invoice
+    const newAmountPaid = parseFloat(invoice.amount_paid || 0) + paymentAmount;
+    const newBalance = parseFloat(invoice.total_amount) - newAmountPaid;
+    const newStatus = newBalance <= 0 ? 'paid' : 'partially_paid';
+
+    await connection.execute(`
+      UPDATE invoices SET amount_paid = ?, balance_amount = ?, payment_status = ?, status = ? WHERE id = ?
+    `, [newAmountPaid, Math.max(0, newBalance), newStatus, newStatus, invoiceId]);
+
+    await connection.commit();
+
+    res.status(201).json({
+      success: true,
+      message: 'Payment recorded successfully',
+      data: { id: result.insertId, paymentId, newBalance: Math.max(0, newBalance) }
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error recording payment:', error);
+    res.status(500).json({ success: false, message: 'Error recording payment', error: error.message });
+  } finally {
+    connection.release();
+  }
+});
+
+// Archive payment (soft delete)
+router.put('/payments/:id/archive', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+    
+    // Ensure archived column exists
+    try {
+      await pool.execute('ALTER TABLE payments ADD COLUMN archived TINYINT(1) DEFAULT 0');
+      await pool.execute('ALTER TABLE payments ADD COLUMN archived_at TIMESTAMP NULL');
+    } catch (e) { /* Column might exist */ }
+    
+    let query = 'UPDATE payments SET archived = 1, archived_at = NOW() WHERE id = ?';
+    const params = [id];
+    
+    if (fpId) {
+      query = 'UPDATE payments SET archived = 1, archived_at = NOW() WHERE id = ? AND franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    
+    await pool.execute(query, params);
+    res.json({ success: true, message: 'Payment archived successfully' });
+  } catch (error) {
+    console.error('Error archiving payment:', error);
+    res.status(500).json({ success: false, message: 'Error archiving payment', error: error.message });
+  }
+});
+
+// Update payment
+router.put('/payments/:id', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+    const { amount, transactionReference, remarks, bankName, status } = req.body;
+    
+    let query = `UPDATE payments SET 
+      amount = COALESCE(?, amount),
+      transaction_reference = COALESCE(?, transaction_reference),
+      remarks = COALESCE(?, remarks),
+      bank_name = COALESCE(?, bank_name),
+      status = COALESCE(?, status),
+      updated_at = NOW()
+      WHERE id = ?`;
+    const params = [amount, transactionReference, remarks, bankName, status, id];
+    
+    if (fpId) {
+      query = `UPDATE payments SET 
+        amount = COALESCE(?, amount),
+        transaction_reference = COALESCE(?, transaction_reference),
+        remarks = COALESCE(?, remarks),
+        bank_name = COALESCE(?, bank_name),
+        status = COALESCE(?, status),
+        updated_at = NOW()
+        WHERE id = ? AND franchise_partner_id = ?`;
+      params.push(fpId);
+    }
+    
+    await pool.execute(query, params);
+    res.json({ success: true, message: 'Payment updated successfully' });
+  } catch (error) {
+    console.error('Error updating payment:', error);
+    res.status(500).json({ success: false, message: 'Error updating payment', error: error.message });
   }
 });
 
