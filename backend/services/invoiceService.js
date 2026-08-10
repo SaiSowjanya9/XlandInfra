@@ -170,10 +170,11 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
       // - package_services: Services included in the package (JSON array with descriptions)
       // - addons_data: Add-on services (JSON array with name, description, price, frequency, visits, totalPrice)
       
-      // Parse package_services
+      // Parse package_services - check multiple possible field names and structures
       let packageServices = [];
       try {
-        const rawPkgServices = estimate.package_services;
+        // Try package_services first
+        const rawPkgServices = estimate.package_services || estimate.service_rows || estimate.serviceRows;
         if (rawPkgServices) {
           const parsed = typeof rawPkgServices === 'string' ? JSON.parse(rawPkgServices) : rawPkgServices;
           if (Array.isArray(parsed)) {
@@ -182,16 +183,36 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
             packageServices = parsed.serviceRows;
           } else if (parsed?.services) {
             packageServices = parsed.services;
+          } else if (parsed?.rows) {
+            packageServices = parsed.rows;
           }
         }
-      } catch (e) { packageServices = []; }
+        console.log(`📦 Raw package_services parsed: ${packageServices.length} services`);
+        if (packageServices.length > 0) {
+          console.log(`📦 First service sample:`, JSON.stringify(packageServices[0]));
+        }
+      } catch (e) { 
+        console.log(`⚠️ Error parsing package_services:`, e.message);
+        packageServices = []; 
+      }
       
       // Parse addons_data
       let addonsData = [];
       try {
-        addonsData = estimate.addons_data ? 
-          (typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data) : [];
-      } catch (e) { addonsData = []; }
+        const rawAddons = estimate.addons_data || estimate.addons || estimate.addon_services;
+        addonsData = rawAddons ? 
+          (typeof rawAddons === 'string' ? JSON.parse(rawAddons) : rawAddons) : [];
+        if (!Array.isArray(addonsData)) {
+          addonsData = addonsData?.addons || addonsData?.rows || [];
+        }
+        console.log(`📦 Raw addons_data parsed: ${addonsData.length} addons`);
+        if (addonsData.length > 0) {
+          console.log(`📦 First addon sample:`, JSON.stringify(addonsData[0]));
+        }
+      } catch (e) { 
+        console.log(`⚠️ Error parsing addons_data:`, e.message);
+        addonsData = []; 
+      }
       
       console.log(`📦 FP Estimate - Package: ${estimate.package_name}, Services: ${packageServices.length}, Addons: ${addonsData.length}`);
       
