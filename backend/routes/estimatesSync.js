@@ -653,15 +653,22 @@ router.post('/:estimateId/action', async (req, res) => {
     
     // Update estimate status based on source table
     if (source === 'fp') {
-      await pool.execute(
+      console.log(`📝 Updating FP estimate ${estimateId} to status: ${newStatus}`);
+      const [updateResult] = await pool.execute(
         `UPDATE fp_estimates SET status = ? WHERE estimate_id = ?`,
         [newStatus, estimateId]
       );
+      console.log(`✅ FP estimate update result: ${updateResult.affectedRows} rows affected`);
+      if (updateResult.affectedRows === 0) {
+        console.error(`❌ No rows updated! estimate_id=${estimateId} may not exist`);
+      }
     } else {
-      await pool.execute(
+      console.log(`📝 Updating regular estimate ${estimateId} to status: ${action === 'approve' ? 'Approved' : 'Rejected'}`);
+      const [updateResult] = await pool.execute(
         `UPDATE estimates SET status = ?, actioned_at = NOW() WHERE estimate_id = ?`,
         [action === 'approve' ? 'Approved' : 'Rejected', estimateId]
       );
+      console.log(`✅ Regular estimate update result: ${updateResult.affectedRows} rows affected`);
     }
     
     // Auto-generate invoice when customer approves estimate
