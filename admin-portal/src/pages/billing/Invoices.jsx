@@ -333,26 +333,29 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
     }
   };
 
-  // Download invoice PDF
+  // Download invoice PDF (opens print preview)
   const handleDownloadPDF = async (invoice) => {
     try {
       setActionLoading(invoice.id);
-      const response = await fetch(`${API_BASE}/api/payments/invoices/${invoice.id}/pdf`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Invoice_${invoice.invoiceId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        a.remove();
-        showToast('Invoice downloaded successfully');
+      // Open invoice PDF in new window for print/save as PDF
+      const pdfUrl = `${API_BASE}/api/payments/invoices/${invoice.id}/pdf`;
+      const printWindow = window.open(pdfUrl, '_blank', 'width=800,height=600');
+      if (printWindow) {
+        // Add auth token via fetch and inject HTML
+        const response = await fetch(pdfUrl, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const html = await response.text();
+          printWindow.document.write(html);
+          printWindow.document.close();
+          showToast('Invoice opened for printing');
+        } else {
+          printWindow.close();
+          showToast('Failed to load invoice', 'error');
+        }
       } else {
-        showToast('Failed to download invoice', 'error');
+        showToast('Please allow popups to download invoice', 'error');
       }
     } catch (err) {
       showToast('Failed to download invoice', 'error');
@@ -1103,25 +1106,26 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
             )}
           </div>
 
-          {/* Detail Panel */}
-          {showDetailPanel && selectedInvoice && (
-            <InvoiceDetailPanel
-              invoice={selectedInvoice}
-              onClose={() => {
-                setShowDetailPanel(false);
-                setSelectedInvoice(null);
-              }}
-              onSend={handleSendInvoice}
-              onCreatePaymentLink={handleCreatePaymentLink}
-              onRecordPayment={() => setShowRecordPayment(true)}
-              formatCurrency={formatCurrency}
-              formatDate={formatDate}
-              actionLoading={actionLoading}
-            />
-          )}
         </div>
         )}
       </div>
+
+      {/* Invoice Detail Modal/Lightbox */}
+      {showDetailPanel && selectedInvoice && (
+        <InvoiceDetailPanel
+          invoice={selectedInvoice}
+          onClose={() => {
+            setShowDetailPanel(false);
+            setSelectedInvoice(null);
+          }}
+          onSend={handleSendInvoice}
+          onCreatePaymentLink={handleCreatePaymentLink}
+          onRecordPayment={() => setShowRecordPayment(true)}
+          formatCurrency={formatCurrency}
+          formatDate={formatDate}
+          actionLoading={actionLoading}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
