@@ -629,12 +629,20 @@ router.post('/:estimateId/action', async (req, res) => {
     }
     
     if (estimates.length === 0) {
-      console.log(`❌ Estimate ${estimateId} not found in any table`);
-      return res.status(404).json({ success: false, message: 'Estimate not found or invalid token' });
+      console.log(`❌ Estimate ${estimateId} not found with token ${token ? token.substring(0, 10) + '...' : 'null'}`);
+      // Check if estimate exists at all (with any token)
+      const [anyEst] = await pool.execute(
+        `SELECT estimate_id, status, action_token FROM fp_estimates WHERE estimate_id = ?`,
+        [estimateId]
+      );
+      if (anyEst.length > 0) {
+        console.log(`⚠️ Estimate exists but token mismatch. DB token: ${anyEst[0].action_token ? anyEst[0].action_token.substring(0, 10) + '...' : 'null'}, Status: ${anyEst[0].status}`);
+      }
+      return res.status(404).json({ success: false, message: 'Estimate not found or link expired. Please request a new estimate email.' });
     }
     
     const est = estimates[0];
-    console.log(`✅ Found estimate in ${source} table: ID=${est.id}, Status=${est.status}`);
+    console.log(`✅ Found estimate in ${source} table: ID=${est.id}, Status=${est.status}, Token match: yes`);
     
     // Check if already actioned
     if (['Approved', 'Rejected', 'approved', 'rejected'].includes(est.status)) {
@@ -734,10 +742,21 @@ router.get('/:estimateId/status', async (req, res) => {
     }
     
     if (estimates.length === 0) {
+      console.log(`❌ Status lookup: Estimate ${estimateId} not found with token ${token ? token.substring(0, 10) + '...' : 'null'}`);
+      // Check if estimate exists with any token
+      const [anyEst] = await pool.execute(
+        `SELECT estimate_id, status, action_token FROM fp_estimates WHERE estimate_id = ?`,
+        [estimateId]
+      );
+      if (anyEst.length > 0) {
+        console.log(`⚠️ Estimate exists but token mismatch. DB token: ${anyEst[0].action_token ? anyEst[0].action_token.substring(0, 10) + '...' : 'null'}, Status: ${anyEst[0].status}`);
+        return res.status(404).json({ success: false, message: 'This link has expired. The estimate was updated and a new email was sent.' });
+      }
       return res.status(404).json({ success: false, message: 'Estimate not found or invalid token' });
     }
     
     const est = estimates[0];
+    console.log(`✅ Status lookup: Found estimate ${estimateId}, status=${est.status}`);
     res.json({ 
       success: true, 
       data: {
