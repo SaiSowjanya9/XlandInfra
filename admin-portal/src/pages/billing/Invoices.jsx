@@ -50,10 +50,9 @@ const INVOICE_TYPE_CONFIG = {
 
 // Tab configuration for invoice types
 const INVOICE_TABS = [
-  { id: 'generated', label: 'Generated Invoices', filter: 'estimate', icon: FileText, description: 'Auto-generated from approved estimates' },
-  { id: 'manual', label: 'Manual Invoices', filter: 'manual', icon: Plus, description: 'Invoices for other requirements' },
-  { id: 'work_order', label: 'Work Order Invoices', filter: 'work_order', icon: Receipt, description: 'Related to work order submissions' },
-  { id: 'archived', label: 'Archived', filter: 'archived', icon: Archive, description: 'Archived invoices' }
+  { id: 'generated', label: 'Estimate Invoices', filter: 'estimate', icon: FileText },
+  { id: 'work_order', label: 'Work Order Invoices', filter: 'work_order', icon: Receipt },
+  { id: 'archived', label: 'Archived', filter: 'archived', icon: Archive }
 ];
 
 const Invoices = ({ user, portalType = 'admin' }) => {
@@ -454,8 +453,7 @@ const Invoices = ({ user, portalType = 'admin' }) => {
     ? archivedInvoices 
     : invoices.filter(i => {
         const currentFilter = INVOICE_TABS.find(t => t.id === activeTab)?.filter;
-        if (currentFilter === 'estimate') return i.invoiceType === 'estimate';
-        if (currentFilter === 'manual') return i.invoiceType === 'manual';
+        if (currentFilter === 'estimate') return i.invoiceType === 'estimate' || i.invoiceType === 'manual';
         if (currentFilter === 'work_order') return i.invoiceType === 'work_order';
         return true;
       });
@@ -650,13 +648,6 @@ const Invoices = ({ user, portalType = 'admin' }) => {
                 <option value="overdue">Overdue</option>
               </select>
               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
-
-            {/* Tab description */}
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span className="px-2 py-1 bg-gray-100 rounded text-xs font-medium">
-                {INVOICE_TABS.find(t => t.id === activeTab)?.description}
-              </span>
             </div>
 
             {/* Date Range */}
