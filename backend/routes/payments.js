@@ -362,6 +362,22 @@ router.get('/estimates/by-id/:estimateId', authenticate, canViewPayments, async 
     const { status } = req.query;
     const fpId = getFPScope(req);
     
+    console.log(`🔍 Searching estimate by ID: ${estimateId}, status: ${status}, fpId: ${fpId}`);
+    
+    // First, check if estimate exists at all (without filters)
+    const [existCheck] = await pool.execute(
+      'SELECT id, estimate_id, status FROM fp_estimates WHERE estimate_id = ?',
+      [estimateId]
+    );
+    console.log(`📋 Estimate existence check:`, existCheck.length > 0 ? existCheck[0] : 'NOT FOUND');
+    
+    // Check if invoice already exists for this estimate
+    const [invoiceCheck] = await pool.execute(
+      'SELECT id, invoice_id, source_estimate_id FROM invoices WHERE source_estimate_id = ?',
+      [estimateId]
+    );
+    console.log(`🧾 Invoice check for estimate:`, invoiceCheck.length > 0 ? invoiceCheck[0] : 'NO INVOICE');
+    
     // Search in fp_estimates table first
     let query = `
       SELECT fe.id, fe.estimate_id, fe.property_id, fe.property_name, fe.property_code,
@@ -375,7 +391,7 @@ router.get('/estimates/by-id/:estimateId', authenticate, canViewPayments, async 
     const params = [estimateId];
     
     if (status) {
-      query += ' AND fe.status = ?';
+      query += ' AND LOWER(fe.status) = LOWER(?)';
       params.push(status);
     }
     
@@ -389,7 +405,9 @@ router.get('/estimates/by-id/:estimateId', authenticate, canViewPayments, async 
       SELECT COALESCE(source_estimate_id, '') FROM invoices WHERE source_estimate_id IS NOT NULL
     )`;
     
+    console.log(`📝 Query params:`, params);
     const [estimates] = await pool.execute(query, params);
+    console.log(`📊 Query result:`, estimates.length, 'estimates found');
     
     if (estimates.length > 0) {
       return res.json({ success: true, data: estimates[0] });
