@@ -896,10 +896,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     const pkgServices = pkg?.parsedServices || [];
 
     try {
+      // For direct estimates, don't include property_id or property_code
+      const isDirectEstimate = estimateType === 'direct';
       const payload = {
-        estimate_type: estimateType === 'property-based' ? 'property_based' : 'direct',
-        property_id: selectedProperty?.id || null,
-        property_code: selectedProperty?.property_id || selectedProperty?.property_code || '',
+        estimate_type: isDirectEstimate ? 'direct' : 'property_based',
+        property_id: isDirectEstimate ? null : (selectedProperty?.id || null),
+        property_code: isDirectEstimate ? '' : (selectedProperty?.property_id || selectedProperty?.property_code || ''),
         client_name: clientName,
         client_phone: clientPhone,
         client_email: clientEmail,
@@ -3464,7 +3466,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">Property Details</p>
                 <div className="bg-slate-50 p-4 rounded-lg grid grid-cols-2 gap-3">
-                  <div><p className="text-xs text-gray-500">Property ID</p><p className="font-medium text-sm">{viewEstimate.property_code || viewEstimate.property_id || '-'}</p></div>
+                  {(viewEstimate.estimate_type === 'property_based' || viewEstimate.estimate_type === 'property-based') && viewEstimate.property_code && (
+                    <div><p className="text-xs text-gray-500">Property ID</p><p className="font-medium text-sm">{viewEstimate.property_code}</p></div>
+                  )}
                   <div><p className="text-xs text-gray-500">Property Name</p><p className="font-medium text-sm">{viewEstimate.property_name || '-'}</p></div>
                   <div><p className="text-xs text-gray-500">Property Type</p><p className="font-medium text-sm">{getPropertyTypeLabel(viewEstimate.property_type)}</p></div>
                   <div><p className="text-xs text-gray-500">Zone</p><p className="font-medium text-sm">{viewEstimate.zone || '-'}</p></div>
