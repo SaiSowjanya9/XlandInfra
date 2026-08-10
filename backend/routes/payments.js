@@ -304,9 +304,11 @@ router.get('/estimates/by-property/:code', authenticate, canViewPayments, async 
       params.push(fpId);
     }
     
-    // Exclude estimates that already have invoices
+    // Exclude estimates that already have invoices (check both id and estimate_id string)
     query += ` AND fe.id NOT IN (
-      SELECT COALESCE(source_estimate_id, 0) FROM invoices WHERE source_estimate_id IS NOT NULL
+      SELECT COALESCE(estimate_id, 0) FROM invoices WHERE estimate_id IS NOT NULL
+    ) AND fe.estimate_id NOT IN (
+      SELECT COALESCE(source_estimate_id, '') FROM invoices WHERE source_estimate_id IS NOT NULL
     )`;
     
     query += ' ORDER BY fe.created_at DESC';
