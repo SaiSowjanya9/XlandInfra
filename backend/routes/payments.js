@@ -14,6 +14,19 @@ const { pool } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { ROLES } = require('../config/roles');
 
+// Payment Security Middleware
+const {
+  paymentCreationLimiter,
+  validatePaymentAmountMiddleware,
+  fraudDetectionMiddleware,
+  logSecurityEvent
+} = require('../middleware/paymentSecurity');
+const {
+  validatePaymentAmount,
+  getClientIP,
+  hashIP
+} = require('../utils/paymentSecurity');
+
 // Configure multer for payment proof uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'uploads/payments/'),
@@ -624,7 +637,7 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
 });
 
 // Create invoice
-router.post('/invoices', authenticate, canEditPayments, async (req, res) => {
+router.post('/invoices', authenticate, canEditPayments, paymentCreationLimiter, async (req, res) => {
   try {
     const fpId = getFPScope(req);
     const {
@@ -633,8 +646,17 @@ router.post('/invoices', authenticate, canEditPayments, async (req, res) => {
       notes, termsAndConditions, workOrderId
     } = req.body;
 
+    // Validate subtotal amount for security
+    const subtotalValidation = validatePaymentAmount(subtotal, { minAmount: 0, allowZero: true });
+    if (!subtotalValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid subtotal: ' + subtotalValidation.error
+      });
+    }
+
     // Calculate amounts
-    const sub = parseFloat(subtotal) || 0;
+    const sub = subtotalValidation.sanitizedAmount;
     const discPct = parseFloat(discountPercentage) || 0;
     const taxPct = parseFloat(taxPercentage) || 18;
     const discountAmount = sub * (discPct / 100);
@@ -1323,7 +1345,7 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
 });
 
 // Alias for record payment (frontend uses /record)
-router.post('/record', authenticate, canEditPayments, upload.single('paymentProof'), async (req, res) => {
+router.post('/record', authenticate, canEditPayments, paymentCreationLimiter, upload.single('paymentProof'), async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -1339,6 +1361,25 @@ router.post('/record', authenticate, canEditPayments, upload.single('paymentProo
       return res.status(400).json({
         success: false,
         message: 'Invoice ID, amount, payment method, and payment date are required'
+      });
+    }
+
+    // Validate payment amount for security
+    const amountValidation = validatePaymentAmount(amount);
+    if (!amountValidation.valid) {
+      await connection.rollback();
+      // Log suspicious amount attempt
+      try {
+        await pool.execute(`
+          INSERT INTO payment_security_logs (event_type, severity, ip_hash, user_id, user_role, request_path, details)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, ['INVALID_PAYMENT_AMOUNT', 'WARNING', hashIP(getClientIP(req)), req.user?.id, req.user?.role, '/api/payments/record', JSON.stringify({ attemptedAmount: amount, error: amountValidation.error })]);
+      } catch (logErr) {
+        console.error('Failed to log security event:', logErr.message);
+      }
+      return res.status(400).json({
+        success: false,
+        message: amountValidation.error
       });
     }
 
