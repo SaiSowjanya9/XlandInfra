@@ -665,10 +665,13 @@ const Payments = ({ user, portalType = 'admin' }) => {
                                   <Eye className="w-4 h-4" /> View
                                 </button>
                                 <button className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                  <Edit className="w-4 h-4" /> Edit
+                                  <Edit className="w-4 h-4" /> Modify
                                 </button>
                                 <button className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                   <Download className="w-4 h-4" /> Download
+                                </button>
+                                <button className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                  <Trash2 className="w-4 h-4" /> Delete
                                 </button>
                               </div>
                             )}

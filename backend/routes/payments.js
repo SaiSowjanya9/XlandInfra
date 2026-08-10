@@ -848,16 +848,24 @@ router.delete('/invoices/archived/delete-all', authenticate, canEditPayments, as
   }
 });
 
-// Send invoice (mark as sent, generate payment link placeholder)
+// Send invoice (mark as sent, send email to customer)
 router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res) => {
   try {
     const { id } = req.params;
     const fpId = getFPScope(req);
 
-    let query = 'SELECT * FROM invoices WHERE id = ?';
+    // Get invoice with all details
+    let query = `
+      SELECT i.*, 
+             p.community_name as property_name, p.property_id as property_code,
+             p.zone, p.division
+      FROM invoices i
+      LEFT JOIN onboarded_properties p ON i.property_id = p.id
+      WHERE i.id = ?
+    `;
     const params = [id];
     if (fpId) {
-      query += ' AND franchise_partner_id = ?';
+      query += ' AND i.franchise_partner_id = ?';
       params.push(fpId);
     }
     const [invoices] = await pool.execute(query, params);
@@ -868,26 +876,175 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
 
     const invoice = invoices[0];
     
-    // For Phase 1, we generate a placeholder payment link (Static QR approach)
-    // In future, this will integrate with Razorpay
+    if (!invoice.customer_email) {
+      return res.status(400).json({ success: false, message: 'Customer email not found. Please update the invoice with customer email.' });
+    }
+    
+    // Generate payment link
     const paymentLink = `${process.env.FRONTEND_URL || 'https://xlandinfra.com'}/pay/${invoice.invoice_id}`;
 
+    // Update invoice status
     await pool.execute(`
       UPDATE invoices SET 
         status = 'sent',
         payment_link = ?,
         payment_link_created_at = NOW(),
         sent_at = NOW(),
-        sent_by = ?
+        sent_by = ?,
+        email_sent_at = NOW()
       WHERE id = ?
     `, [paymentLink, req.user.id, id]);
 
-    // TODO: Send email to customer with payment link
+    // Parse line items for email
+    let lineItemsHtml = '';
+    let lineItems = [];
+    try {
+      lineItems = invoice.line_items ? (typeof invoice.line_items === 'string' ? JSON.parse(invoice.line_items) : invoice.line_items) : [];
+      if (lineItems.length > 0) {
+        lineItemsHtml = lineItems.map(item => `
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.description || item.name || 'Service'}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity || 1}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₹${(item.unit_price || item.unitPrice || 0).toLocaleString('en-IN')}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₹${(item.total_price || item.totalPrice || 0).toLocaleString('en-IN')}</td>
+          </tr>
+        `).join('');
+      }
+    } catch (e) {
+      console.log('Error parsing line items:', e);
+    }
+
+    // Format amounts
+    const formatAmount = (amt) => `₹${(parseFloat(amt) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+    const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+
+    // Send email to customer
+    const { sendEmail } = require('../services/emailService');
+    await sendEmail({
+      to: invoice.customer_email,
+      subject: `Invoice ${invoice.invoice_id} from XLand Infra`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #fff; padding: 30px; border: 1px solid #e5e7eb; }
+            .footer { background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none; }
+            .invoice-box { background: #f8fafc; border-radius: 8px; padding: 20px; margin: 20px 0; }
+            .amount-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+            .total-row { font-size: 18px; font-weight: bold; color: #2563eb; border-top: 2px solid #2563eb; padding-top: 12px; margin-top: 12px; }
+            .pay-btn { display: inline-block; background: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+            table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+            th { background: #f1f5f9; padding: 10px; text-align: left; font-size: 12px; text-transform: uppercase; color: #64748b; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0; font-size: 28px;">Invoice</h1>
+              <p style="margin: 10px 0 0; opacity: 0.9;">${invoice.invoice_id}</p>
+            </div>
+            
+            <div class="content">
+              <p>Dear <strong>${invoice.customer_name || 'Customer'}</strong>,</p>
+              <p>Please find below the details of your invoice from XLand Infra.</p>
+              
+              <div class="invoice-box">
+                <table style="width: 100%; margin-bottom: 15px;">
+                  <tr>
+                    <td><strong>Invoice Date:</strong></td>
+                    <td style="text-align: right;">${formatDate(invoice.invoice_date)}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Due Date:</strong></td>
+                    <td style="text-align: right;">${formatDate(invoice.due_date)}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Property:</strong></td>
+                    <td style="text-align: right;">${invoice.property_name || invoice.property_code || '-'}</td>
+                  </tr>
+                </table>
+
+                ${lineItems.length > 0 ? `
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Description</th>
+                      <th style="text-align: center;">Qty</th>
+                      <th style="text-align: right;">Unit Price</th>
+                      <th style="text-align: right;">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${lineItemsHtml}
+                  </tbody>
+                </table>
+                ` : ''}
+
+                <div style="margin-top: 20px;">
+                  <div class="amount-row">
+                    <span>Subtotal:</span>
+                    <span>${formatAmount(invoice.subtotal)}</span>
+                  </div>
+                  ${invoice.discount_amount > 0 ? `
+                  <div class="amount-row">
+                    <span>Discount:</span>
+                    <span style="color: #dc2626;">-${formatAmount(invoice.discount_amount)}</span>
+                  </div>
+                  ` : ''}
+                  <div class="amount-row">
+                    <span>GST (${invoice.tax_percent || 18}%):</span>
+                    <span>${formatAmount(invoice.tax_amount)}</span>
+                  </div>
+                  <div class="amount-row total-row">
+                    <span>Total Amount:</span>
+                    <span>${formatAmount(invoice.total_amount)}</span>
+                  </div>
+                  ${invoice.amount_paid > 0 ? `
+                  <div class="amount-row">
+                    <span>Amount Paid:</span>
+                    <span style="color: #16a34a;">${formatAmount(invoice.amount_paid)}</span>
+                  </div>
+                  <div class="amount-row" style="font-weight: bold;">
+                    <span>Balance Due:</span>
+                    <span style="color: #dc2626;">${formatAmount(invoice.balance_amount)}</span>
+                  </div>
+                  ` : ''}
+                </div>
+              </div>
+
+              <div style="text-align: center;">
+                <a href="${paymentLink}" class="pay-btn">Pay Now</a>
+                <p style="color: #6b7280; font-size: 14px;">Or copy this link: ${paymentLink}</p>
+              </div>
+
+              ${invoice.notes ? `
+              <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                <strong>Notes:</strong><br/>
+                ${invoice.notes}
+              </div>
+              ` : ''}
+            </div>
+            
+            <div class="footer">
+              <p style="margin: 0; color: #6b7280; font-size: 14px;">Thank you for your business!</p>
+              <p style="margin: 5px 0 0; color: #9ca3af; font-size: 12px;">XLand Infra - Property Management Services</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    });
+
+    console.log(`📧 Invoice ${invoice.invoice_id} sent to ${invoice.customer_email}`);
 
     res.json({
       success: true,
-      message: 'Invoice sent successfully',
-      data: { paymentLink }
+      message: `Invoice sent successfully to ${invoice.customer_email}`,
+      data: { paymentLink, emailSentTo: invoice.customer_email }
     });
   } catch (error) {
     console.error('Error sending invoice:', error);
