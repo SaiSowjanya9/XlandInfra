@@ -101,11 +101,13 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     if (source === 'fp') {
       // Query fp_estimates table for FP estimates
       // FP estimates use client_name, client_email, client_phone (not customer_*)
+      // Note: FP estimates store property_id as the property code string (e.g., "APT-1782187354586")
       [estimates] = await connection.execute(`
         SELECT fe.*, 
                fe.client_email as estimate_email, fe.client_name as estimate_customer_name,
                fe.client_phone as customer_phone,
-               fe.property_name, fe.property_code,
+               fe.property_name, 
+               COALESCE(fe.property_code, fe.property_id) as property_code,
                fe.total_amount as total,
                op.community_name as onboarded_property_name, op.property_id as onboarded_property_code,
                op.contact_email as op_email, op.contact_phone as op_phone,
@@ -165,14 +167,23 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     if (source === 'fp') {
       // FP estimates store:
       // - package_name, package_price: Main AMC package
-      // - package_services: Services included in the package (JSON array)
+      // - package_services: Services included in the package (JSON array with descriptions)
       // - addons_data: Add-on services (JSON array with name, description, price, frequency, visits, totalPrice)
       
       // Parse package_services
       let packageServices = [];
       try {
-        packageServices = estimate.package_services ? 
-          (typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services) : [];
+        const rawPkgServices = estimate.package_services;
+        if (rawPkgServices) {
+          const parsed = typeof rawPkgServices === 'string' ? JSON.parse(rawPkgServices) : rawPkgServices;
+          if (Array.isArray(parsed)) {
+            packageServices = parsed;
+          } else if (parsed?.serviceRows) {
+            packageServices = parsed.serviceRows;
+          } else if (parsed?.services) {
+            packageServices = parsed.services;
+          }
+        }
       } catch (e) { packageServices = []; }
       
       // Parse addons_data
@@ -184,51 +195,60 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
       
       console.log(`📦 FP Estimate - Package: ${estimate.package_name}, Services: ${packageServices.length}, Addons: ${addonsData.length}`);
       
-      // Add main AMC package as first item
-      if (estimate.package_name) {
+      // Calculate package price per service (distribute evenly if services exist)
+      const packagePrice = parseFloat(estimate.package_price) || 0;
+      const numServices = packageServices.length || 1;
+      const pricePerService = packagePrice / numServices;
+      
+      // Add package services with their descriptions (NOT the package name)
+      if (Array.isArray(packageServices) && packageServices.length > 0) {
+        packageServices.forEach(service => {
+          const serviceName = service.name || service.serviceName || service.service_name || service.service || 'Service';
+          const serviceDesc = service.description || '';
+          const frequency = service.frequencyType || service.frequency_type || service.frequency || '';
+          const visits = service.frequencyCount || service.frequency_count || service.visits || 1;
+          
+          items.push({
+            description: `${serviceName}${serviceDesc ? ' - ' + serviceDesc.substring(0, 60) : ''}`,
+            quantity: 1,
+            unit_price: Math.round(pricePerService),
+            total_price: Math.round(pricePerService),
+            type: 'service',
+            frequency: frequency,
+            visits: visits
+          });
+        });
+      } else if (estimate.package_name && packagePrice > 0) {
+        // Fallback: if no service details, show package services as single item
         items.push({
-          description: `AMC Package: ${estimate.package_name}`,
+          description: `AMC Services (${estimate.package_name})`,
           quantity: 1,
-          unit_price: parseFloat(estimate.package_price) || 0,
-          total_price: parseFloat(estimate.package_price) || 0,
-          type: 'package',
+          unit_price: packagePrice,
+          total_price: packagePrice,
+          type: 'service',
           billingDuration: estimate.billing_duration || 'yearly'
         });
       }
       
-      // Add package services (if any)
-      if (Array.isArray(packageServices) && packageServices.length > 0) {
-        packageServices.forEach(service => {
-          const serviceName = service.name || service.serviceName || service.service_name || 'Service';
-          items.push({
-            description: serviceName,
-            quantity: 1,
-            unit_price: 0, // Package services are included in package price
-            total_price: 0,
-            type: 'package_service',
-            included: true
-          });
-        });
-      }
-      
-      // Add add-on services
+      // Add add-on services with their descriptions
       if (Array.isArray(addonsData) && addonsData.length > 0) {
         addonsData.forEach(addon => {
           const addonName = addon.name || addon.serviceName || addon.service_name || 'Add-on Service';
           const addonDesc = addon.description || '';
-          const frequency = addon.frequency || '';
-          const visits = addon.visits || addon.quantity || 1;
+          const frequency = addon.frequency_type || addon.frequencyType || addon.frequency || '';
+          const visits = addon.frequency_count || addon.frequencyCount || addon.visits || addon.quantity || 1;
           // Get the price - could be totalPrice, price, calculatedPrice, etc.
           const addonPrice = parseFloat(addon.totalPrice) || parseFloat(addon.calculatedPrice) || 
                             parseFloat(addon.price) || parseFloat(addon.unitPrice) || 0;
           
           items.push({
-            description: `${addonName}${addonDesc ? ' - ' + addonDesc.substring(0, 50) : ''}`,
-            quantity: visits,
-            unit_price: addonPrice / visits || addonPrice,
+            description: `${addonName}${addonDesc ? ' - ' + addonDesc.substring(0, 60) : ''}`,
+            quantity: 1,
+            unit_price: addonPrice,
             total_price: addonPrice,
             type: 'addon',
-            frequency: frequency
+            frequency: frequency,
+            visits: visits
           });
         });
       }
@@ -255,20 +275,19 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     
     console.log(`💰 Invoice amounts: Subtotal=${subtotalValue}, Discount=${discountValue}%, Total=${amounts.totalAmount}`);
     
-    // Prepare line items JSON (filter out items with zero price that are included in package)
-    const lineItems = items
-      .filter(item => item.type !== 'package_service') // Exclude services that are part of package
-      .map(item => ({
-        description: item.description || item.package_name || item.category_name || item.name || 'Service',
-        quantity: item.quantity || 1,
-        unitPrice: parseFloat(item.unit_price) || parseFloat(item.price) || 0,
-        totalPrice: parseFloat(item.total_price) || (parseFloat(item.unit_price || item.price || 0) * (item.quantity || 1)),
-        type: item.type || 'service',
-        frequency: item.frequency || null,
-        billingDuration: item.billingDuration || null,
-        packageId: item.package_id,
-        categoryId: item.category_id
-      }));
+    // Prepare line items JSON - include all services and addons
+    const lineItems = items.map(item => ({
+      description: item.description || item.package_name || item.category_name || item.name || 'Service',
+      quantity: item.quantity || 1,
+      unitPrice: parseFloat(item.unit_price) || parseFloat(item.price) || 0,
+      totalPrice: parseFloat(item.total_price) || (parseFloat(item.unit_price || item.price || 0) * (item.quantity || 1)),
+      type: item.type || 'service',
+      frequency: item.frequency || null,
+      visits: item.visits || null,
+      billingDuration: item.billingDuration || null,
+      packageId: item.package_id,
+      categoryId: item.category_id
+    }));
     
     console.log(`📋 Line items for invoice: ${JSON.stringify(lineItems)}`);
     
@@ -286,11 +305,16 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     const customerEmail = estimate.estimate_email || estimate.client_email || estimate.op_email || null;
     const customerPhone = estimate.customer_phone || estimate.client_phone || estimate.op_phone || null;
     const propertyName = estimate.onboarded_property_name || estimate.property_name || null;
-    const propertyCode = estimate.onboarded_property_code || estimate.property_code || null;
+    // Property code: use stored property_code, or property_id if it looks like a code (APT-xxx, GC-xxx, etc.)
+    let propertyCode = estimate.onboarded_property_code || estimate.property_code || null;
+    if (!propertyCode && estimate.property_id && typeof estimate.property_id === 'string' && 
+        /^(APT|GC|VILLA|PLOT|FL)-/.test(estimate.property_id)) {
+      propertyCode = estimate.property_id;
+    }
     
     // Insert invoice
     console.log(`📝 Inserting invoice with ID: ${invoiceId}`);
-    console.log(`📝 Customer: ${customerName}, Email: ${customerEmail}, Total: ${amounts.totalAmount}`);
+    console.log(`📝 Customer: ${customerName}, Email: ${customerEmail}, Property: ${propertyName} (${propertyCode}), Total: ${amounts.totalAmount}`);
     
     let result;
     try {
