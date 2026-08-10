@@ -196,6 +196,159 @@ const generateReceiptId = async (fpId = null) => {
 };
 
 // ============================================
+// PROPERTY LOOKUP BY CODE
+// ============================================
+
+// Get property details by property code (for auto-fill in invoice creation)
+router.get('/properties/by-code/:code', authenticate, canViewPayments, async (req, res) => {
+  try {
+    const { code } = req.params;
+    const fpId = getFPScope(req);
+    
+    // Try onboarded_properties first
+    let query = `
+      SELECT op.id, op.property_id, op.community_name as name,
+             op.contact_person as customer_name,
+             op.contact_email as customer_email,
+             op.contact_phone as customer_phone,
+             op.property_type, op.zone, op.division
+      FROM onboarded_properties op
+      WHERE op.property_id = ?
+    `;
+    const params = [code];
+    
+    if (fpId) {
+      query += ' AND op.franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    
+    let [properties] = await pool.execute(query, params);
+    
+    // If not found, try properties table
+    if (properties.length === 0) {
+      let query2 = `
+        SELECT p.id, p.property_id, p.name,
+               p.contact_person as customer_name,
+               p.contact_email as customer_email,
+               p.contact_phone as customer_phone,
+               p.property_type, p.zone_id as zone
+        FROM properties p
+        WHERE p.property_id = ?
+      `;
+      const params2 = [code];
+      
+      if (fpId) {
+        query2 += ' AND p.franchise_partner_id = ?';
+        params2.push(fpId);
+      }
+      
+      [properties] = await pool.execute(query2, params2);
+    }
+    
+    // Also check customer_accounts for customer info
+    if (properties.length > 0) {
+      const propId = properties[0].id;
+      const [customers] = await pool.execute(
+        `SELECT name, email, phone FROM customer_accounts WHERE property_id = ? LIMIT 1`,
+        [propId]
+      );
+      
+      if (customers.length > 0) {
+        properties[0].customer_name = customers[0].name || properties[0].customer_name;
+        properties[0].customer_email = customers[0].email || properties[0].customer_email;
+        properties[0].customer_phone = customers[0].phone || properties[0].customer_phone;
+      }
+    }
+    
+    if (properties.length === 0) {
+      return res.json({ success: false, message: 'Property not found' });
+    }
+    
+    res.json({ success: true, data: properties[0] });
+  } catch (error) {
+    console.error('Error fetching property by code:', error);
+    res.status(500).json({ success: false, message: 'Error fetching property' });
+  }
+});
+
+// Get approved estimates by property code (for invoice creation)
+router.get('/estimates/by-property/:code', authenticate, canViewPayments, async (req, res) => {
+  try {
+    const { code } = req.params;
+    const { status } = req.query;
+    const fpId = getFPScope(req);
+    
+    // Search in fp_estimates table
+    let query = `
+      SELECT fe.id, fe.estimate_id, fe.property_id, fe.property_name, fe.property_code,
+             fe.customer_name, fe.customer_email, fe.customer_phone,
+             fe.service_type, fe.subtotal, fe.discount, fe.tax, fe.total,
+             fe.line_items, fe.status, fe.created_at
+      FROM fp_estimates fe
+      WHERE (fe.property_code = ? OR fe.property_id = ?)
+    `;
+    const params = [code, code];
+    
+    if (status) {
+      query += ' AND fe.status = ?';
+      params.push(status);
+    }
+    
+    if (fpId) {
+      query += ' AND fe.franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    
+    // Exclude estimates that already have invoices
+    query += ` AND fe.id NOT IN (
+      SELECT COALESCE(source_estimate_id, 0) FROM invoices WHERE source_estimate_id IS NOT NULL
+    )`;
+    
+    query += ' ORDER BY fe.created_at DESC';
+    
+    const [estimates] = await pool.execute(query, params);
+    
+    // Also check regular estimates table
+    let query2 = `
+      SELECT e.id, e.estimate_id, e.property_id, p.name as property_name, p.property_id as property_code,
+             e.customer_name, e.customer_email, e.customer_phone,
+             e.service_type, e.subtotal, e.discount_amount as discount, e.tax_amount as tax, e.total,
+             e.line_items, e.status, e.created_at
+      FROM estimates e
+      LEFT JOIN properties p ON e.property_id = p.id
+      WHERE (p.property_id = ? OR e.property_id = ?)
+    `;
+    const params2 = [code, code];
+    
+    if (status) {
+      query2 += ' AND e.status = ?';
+      params2.push(status);
+    }
+    
+    if (fpId) {
+      query2 += ' AND e.franchise_partner_id = ?';
+      params2.push(fpId);
+    }
+    
+    query2 += ` AND e.id NOT IN (
+      SELECT COALESCE(estimate_id, 0) FROM invoices WHERE estimate_id IS NOT NULL
+    )`;
+    
+    query2 += ' ORDER BY e.created_at DESC';
+    
+    const [regularEstimates] = await pool.execute(query2, params2);
+    
+    // Combine and return
+    const allEstimates = [...estimates, ...regularEstimates];
+    
+    res.json({ success: true, data: allEstimates });
+  } catch (error) {
+    console.error('Error fetching estimates by property:', error);
+    res.status(500).json({ success: false, message: 'Error fetching estimates' });
+  }
+});
+
+// ============================================
 // PAYMENT DASHBOARD
 // ============================================
 

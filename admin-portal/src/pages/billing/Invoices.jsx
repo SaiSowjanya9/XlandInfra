@@ -689,106 +689,164 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
 
         {/* Main Content Area */}
         {activeTab === 'archived' ? (
-          /* Archived Invoices Section */
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            {/* Archived Header */}
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-red-50 rounded-lg">
-                  <Archive className="w-5 h-5 text-red-500" />
+          /* Archived Invoices Section - Matching Archived Estimates Design */
+          <div className="space-y-4">
+            {/* Header Card */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-50 rounded-xl">
+                    <FileText className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Archived Invoices</h2>
+                    <p className="text-sm text-gray-500">View and manage archived invoices</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800">Archived Invoices</h3>
-                  <p className="text-sm text-gray-500">{archivedInvoices.length} archived invoices</p>
+                
+                <div className="flex items-center gap-6">
+                  <button
+                    onClick={fetchInvoices}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="Refresh"
+                  >
+                    <RefreshCw className={`w-5 h-5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
+                  </button>
+                  
+                  {/* Stats */}
+                  <div className="flex items-center gap-6 border-l border-gray-200 pl-6">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-gray-900">{invoices.length}</p>
+                      <p className="text-xs text-gray-500">Active Invoices</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-green-600">{invoices.filter(i => i.status === 'paid').length}</p>
+                      <p className="text-xs text-gray-500">Paid</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-orange-600">{invoices.filter(i => i.status === 'partially_paid').length}</p>
+                      <p className="text-xs text-gray-500">Partial</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-red-600">{archivedInvoices.length}</p>
+                      <p className="text-xs text-gray-500">Archived</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-              {archivedInvoices.length > 0 && (
-                <button
-                  onClick={() => setShowDeleteAllConfirm(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete All ({archivedInvoices.length})
-                </button>
+            </div>
+
+            {/* Filter Row */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600">Type:</span>
+                  <select
+                    className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium cursor-pointer"
+                    defaultValue="all"
+                  >
+                    <option value="all">All Types</option>
+                    <option value="estimate">Estimate</option>
+                    <option value="work_order">Work Order</option>
+                    <option value="manual">Manual</option>
+                  </select>
+                </div>
+                
+                {archivedInvoices.length > 0 && (
+                  <button
+                    onClick={() => setShowDeleteAllConfirm(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete All ({archivedInvoices.length})
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              {archivedInvoices.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                  <Archive className="w-12 h-12 mb-3 text-gray-300" />
+                  <p className="text-lg font-medium">No archived invoices</p>
+                  <p className="text-sm">Archived invoices will appear here</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200 bg-gray-50">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Invoice ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Property</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Client</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Archived On</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Total</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {archivedInvoices.map((invoice) => (
+                        <tr key={invoice.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3.5">
+                            <span className="font-medium text-blue-600">{invoice.invoiceId}</span>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span className={`text-sm font-medium ${INVOICE_TYPE_CONFIG[invoice.invoiceType]?.color || 'text-gray-600'}`}>
+                              {INVOICE_TYPE_CONFIG[invoice.invoiceType]?.label || 'Manual'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 text-sm text-gray-600">{invoice.propertyCode || invoice.propertyName || '-'}</td>
+                          <td className="px-4 py-3.5 text-sm text-gray-800">{invoice.customerName || '-'}</td>
+                          <td className="px-4 py-3.5 text-sm text-gray-500">{formatDate(invoice.archivedAt || invoice.updatedAt)}</td>
+                          <td className="px-4 py-3.5 text-right">
+                            <span className="text-sm font-semibold text-gray-900">{formatCurrency(invoice.totalAmount)}</span>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <div className="flex items-center justify-center gap-1">
+                              {/* Download */}
+                              <button
+                                onClick={() => handleDownloadPDF(invoice)}
+                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Download PDF"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+                              {/* View */}
+                              <button
+                                onClick={() => openInvoiceDetail(invoice)}
+                                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                title="View Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              {/* Restore */}
+                              <button
+                                onClick={() => handleRestoreInvoice(invoice)}
+                                disabled={actionLoading === invoice.id}
+                                className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                title="Restore Invoice"
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </button>
+                              {/* Delete Permanently */}
+                              <button
+                                onClick={() => setDeleteConfirm(invoice)}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete Permanently"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
-            
-            {archivedInvoices.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-                <Archive className="w-12 h-12 mb-3 text-gray-300" />
-                <p className="text-lg font-medium">No archived invoices</p>
-                <p className="text-sm">Archived invoices will appear here</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice ID</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property ID</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Type</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Archived On</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {archivedInvoices.map((invoice) => (
-                      <tr key={invoice.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3.5 font-mono text-sm text-gray-900">{invoice.invoiceId}</td>
-                        <td className="px-4 py-3.5 text-sm text-gray-600">{invoice.propertyCode || '-'}</td>
-                        <td className="px-4 py-3.5 text-sm text-gray-800">{invoice.customerName || '-'}</td>
-                        <td className="px-4 py-3.5">
-                          <span className={`text-sm font-medium ${INVOICE_TYPE_CONFIG[invoice.invoiceType]?.color || 'text-gray-600'}`}>
-                            {INVOICE_TYPE_CONFIG[invoice.invoiceType]?.label || 'Manual'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-sm text-gray-500">{formatDate(invoice.archivedAt || invoice.updatedAt)}</td>
-                        <td className="px-4 py-3.5 text-right text-sm font-semibold text-gray-900">{formatCurrency(invoice.totalAmount)}</td>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center justify-center gap-1">
-                            {/* Download */}
-                            <button
-                              onClick={() => handleDownloadPDF(invoice)}
-                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Download PDF"
-                            >
-                              <Download className="w-4 h-4" />
-                            </button>
-                            {/* View */}
-                            <button
-                              onClick={() => openInvoiceDetail(invoice)}
-                              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                              title="View Details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            {/* Restore */}
-                            <button
-                              onClick={() => handleRestoreInvoice(invoice)}
-                              disabled={actionLoading === invoice.id}
-                              className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Restore Invoice"
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                            </button>
-                            {/* Delete Permanently */}
-                            <button
-                              onClick={() => setDeleteConfirm(invoice)}
-                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Delete Permanently"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </div>
         ) : (
         <div className="flex gap-6">
