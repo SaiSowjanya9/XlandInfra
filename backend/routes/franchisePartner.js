@@ -4540,9 +4540,18 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
             }
             return addon;
           });
-          console.log('[Email] Enriched addons with descriptions:', addons.map(a => ({ name: a.name || a.serviceName, desc: a.description })));
+          console.log('[Email] Enriched addons with descriptions:', addons.map(a => ({ 
+            name: a.name || a.service_name || a.serviceName, 
+            desc: a.description,
+            frequency: a.frequency_type || a.frequencyType || a.frequency,
+            visits: a.frequency_count ?? a.frequencyCount ?? a.visits,
+            price: a.price || a.totalPrice || a.calculatedPrice
+          })));
         } catch (e) { console.log('Addon parse error:', e); }
       }
+      
+      console.log('[Email] Final addons count:', addons.length);
+      console.log('[Email] Raw addons_data from DB:', estimate.addons_data);
       
       // Parse block data for GC
       let blockNames = {};

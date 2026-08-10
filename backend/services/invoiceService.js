@@ -13,38 +13,53 @@ const GST_RATE = 18;
 const DUE_DATE_DAYS = 14;
 
 /**
- * Generate unique invoice ID
+ * Generate unique invoice ID in format INV-00001
  */
 const generateInvoiceId = async (fpId = null) => {
-  const year = new Date().getFullYear();
   const prefix = 'INV';
   
   try {
+    // Get the max invoice number across all invoices (global sequence)
     const [existing] = await pool.execute(
-      'SELECT current_number FROM invoice_sequence WHERE franchise_partner_id <=> ? AND year = ?',
-      [fpId, year]
+      'SELECT MAX(current_number) as max_number FROM invoice_sequence WHERE franchise_partner_id <=> ?',
+      [fpId]
     );
     
     let nextNumber;
-    if (existing.length > 0) {
-      nextNumber = existing[0].current_number + 1;
+    if (existing.length > 0 && existing[0].max_number) {
+      nextNumber = existing[0].max_number + 1;
       await pool.execute(
-        'UPDATE invoice_sequence SET current_number = ? WHERE franchise_partner_id <=> ? AND year = ?',
-        [nextNumber, fpId, year]
+        'UPDATE invoice_sequence SET current_number = ? WHERE franchise_partner_id <=> ?',
+        [nextNumber, fpId]
       );
     } else {
-      nextNumber = 1;
-      await pool.execute(
-        'INSERT INTO invoice_sequence (franchise_partner_id, year, current_number, prefix) VALUES (?, ?, ?, ?)',
-        [fpId, year, nextNumber, prefix]
+      // Check if there's already a sequence record
+      const [seqExists] = await pool.execute(
+        'SELECT id FROM invoice_sequence WHERE franchise_partner_id <=> ?',
+        [fpId]
       );
+      
+      nextNumber = 1;
+      if (seqExists.length > 0) {
+        await pool.execute(
+          'UPDATE invoice_sequence SET current_number = ? WHERE franchise_partner_id <=> ?',
+          [nextNumber, fpId]
+        );
+      } else {
+        await pool.execute(
+          'INSERT INTO invoice_sequence (franchise_partner_id, year, current_number, prefix) VALUES (?, ?, ?, ?)',
+          [fpId, new Date().getFullYear(), nextNumber, prefix]
+        );
+      }
     }
     
-    return `${prefix}-${year}-${String(nextNumber).padStart(5, '0')}`;
+    // Format: INV-00001
+    return `${prefix}-${String(nextNumber).padStart(5, '0')}`;
   } catch (error) {
+    console.error('Error generating invoice ID:', error);
+    // Fallback with timestamp
     const timestamp = Date.now().toString(36).toUpperCase();
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `${prefix}-${timestamp}-${random}`;
+    return `${prefix}-${timestamp}`;
   }
 };
 
@@ -148,32 +163,77 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     // Get estimate line items (only for regular estimates, FP estimates store items in JSON)
     let items = [];
     if (source === 'fp') {
-      // FP estimates store package_name, package_price, and addons_data (JSON)
-      const addonsData = estimate.addons_data ? (typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data) : [];
+      // FP estimates store:
+      // - package_name, package_price: Main AMC package
+      // - package_services: Services included in the package (JSON array)
+      // - addons_data: Add-on services (JSON array with name, description, price, frequency, visits, totalPrice)
       
-      // Add main package as first item
+      // Parse package_services
+      let packageServices = [];
+      try {
+        packageServices = estimate.package_services ? 
+          (typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services) : [];
+      } catch (e) { packageServices = []; }
+      
+      // Parse addons_data
+      let addonsData = [];
+      try {
+        addonsData = estimate.addons_data ? 
+          (typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data) : [];
+      } catch (e) { addonsData = []; }
+      
+      console.log(`📦 FP Estimate - Package: ${estimate.package_name}, Services: ${packageServices.length}, Addons: ${addonsData.length}`);
+      
+      // Add main AMC package as first item
       if (estimate.package_name) {
         items.push({
-          description: estimate.package_name,
+          description: `AMC Package: ${estimate.package_name}`,
           quantity: 1,
           unit_price: parseFloat(estimate.package_price) || 0,
-          total_price: parseFloat(estimate.package_price) || 0
+          total_price: parseFloat(estimate.package_price) || 0,
+          type: 'package',
+          billingDuration: estimate.billing_duration || 'yearly'
         });
       }
       
-      // Add addons
-      if (Array.isArray(addonsData)) {
-        addonsData.forEach(addon => {
+      // Add package services (if any)
+      if (Array.isArray(packageServices) && packageServices.length > 0) {
+        packageServices.forEach(service => {
+          const serviceName = service.name || service.serviceName || service.service_name || 'Service';
           items.push({
-            description: addon.name || addon.description || 'Addon',
-            quantity: addon.quantity || 1,
-            unit_price: parseFloat(addon.price) || parseFloat(addon.unitPrice) || 0,
-            total_price: (parseFloat(addon.price) || parseFloat(addon.unitPrice) || 0) * (addon.quantity || 1)
+            description: serviceName,
+            quantity: 1,
+            unit_price: 0, // Package services are included in package price
+            total_price: 0,
+            type: 'package_service',
+            included: true
           });
         });
       }
       
-      console.log(`📦 FP Estimate line items: ${items.length} items`);
+      // Add add-on services
+      if (Array.isArray(addonsData) && addonsData.length > 0) {
+        addonsData.forEach(addon => {
+          const addonName = addon.name || addon.serviceName || addon.service_name || 'Add-on Service';
+          const addonDesc = addon.description || '';
+          const frequency = addon.frequency || '';
+          const visits = addon.visits || addon.quantity || 1;
+          // Get the price - could be totalPrice, price, calculatedPrice, etc.
+          const addonPrice = parseFloat(addon.totalPrice) || parseFloat(addon.calculatedPrice) || 
+                            parseFloat(addon.price) || parseFloat(addon.unitPrice) || 0;
+          
+          items.push({
+            description: `${addonName}${addonDesc ? ' - ' + addonDesc.substring(0, 50) : ''}`,
+            quantity: visits,
+            unit_price: addonPrice / visits || addonPrice,
+            total_price: addonPrice,
+            type: 'addon',
+            frequency: frequency
+          });
+        });
+      }
+      
+      console.log(`📦 FP Estimate total line items: ${items.length}`);
     } else {
       const [regularItems] = await connection.execute(`
         SELECT ei.*, p.name as package_name, c.name as category_name
@@ -195,15 +255,22 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     
     console.log(`💰 Invoice amounts: Subtotal=${subtotalValue}, Discount=${discountValue}%, Total=${amounts.totalAmount}`);
     
-    // Prepare line items JSON
-    const lineItems = items.map(item => ({
-      description: item.description || item.package_name || item.category_name || item.name || 'Service',
-      quantity: item.quantity || 1,
-      unitPrice: parseFloat(item.unit_price) || parseFloat(item.price) || 0,
-      totalPrice: parseFloat(item.total_price) || (parseFloat(item.unit_price || item.price || 0) * (item.quantity || 1)),
-      packageId: item.package_id,
-      categoryId: item.category_id
-    }));
+    // Prepare line items JSON (filter out items with zero price that are included in package)
+    const lineItems = items
+      .filter(item => item.type !== 'package_service') // Exclude services that are part of package
+      .map(item => ({
+        description: item.description || item.package_name || item.category_name || item.name || 'Service',
+        quantity: item.quantity || 1,
+        unitPrice: parseFloat(item.unit_price) || parseFloat(item.price) || 0,
+        totalPrice: parseFloat(item.total_price) || (parseFloat(item.unit_price || item.price || 0) * (item.quantity || 1)),
+        type: item.type || 'service',
+        frequency: item.frequency || null,
+        billingDuration: item.billingDuration || null,
+        packageId: item.package_id,
+        categoryId: item.category_id
+      }));
+    
+    console.log(`📋 Line items for invoice: ${JSON.stringify(lineItems)}`);
     
     // Generate invoice ID
     const fpId = estimate.franchise_partner_id || null;
@@ -229,18 +296,19 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     try {
       [result] = await connection.execute(`
         INSERT INTO invoices (
-          invoice_id, invoice_type, property_id, estimate_id, source_estimate_id,
+          invoice_id, invoice_type, property_id, property_code, estimate_id, source_estimate_id,
           customer_id, franchise_partner_id, customer_name, customer_email, customer_phone,
           invoice_date, due_date, line_items, 
           subtotal, discount_percentage, discount_amount, 
           tax_percentage, tax_amount, total_amount, 
           amount_paid, balance_amount, status, payment_status,
           auto_generated, created_by, created_by_role, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         invoiceId,
         'estimate',
         estimate.property_id || null,
+        propertyCode, // Store property code string for direct lookup
         estimateId,
         estimate.estimate_id,
         estimate.client_id || null,
@@ -487,78 +555,205 @@ const generateInvoiceFromWorkOrder = async (workOrderId, completedBy = null) => 
 };
 
 /**
- * Send invoice email notification
+ * Send invoice email notification with full details matching estimate design
  */
 const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customerName, invoiceId, totalAmount, dueDate) => {
   try {
     // Import email service here to avoid circular dependency
     const emailService = require('./emailService');
     
+    // Fetch full invoice details
+    const [invoices] = await pool.execute(`
+      SELECT i.*, 
+             fe.property_name, fe.property_code, fe.property_type, fe.zone, fe.city, fe.address,
+             fe.client_name, fe.client_phone, fe.client_email,
+             fe.package_name, fe.package_price, fe.billing_duration,
+             fe.subtotal as estimate_subtotal, fe.discount_percent, fe.discount_amount as estimate_discount,
+             fe.gst_percent, fe.gst_amount as estimate_gst, fe.total_amount as estimate_total
+      FROM invoices i
+      LEFT JOIN fp_estimates fe ON i.source_estimate_id = fe.estimate_id
+      WHERE i.id = ?
+    `, [invoiceDbId]);
+    
+    const invoice = invoices[0] || {};
+    
     const formatCurrency = (amount) => {
-      return new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency: 'INR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-      }).format(amount);
+      const num = parseFloat(amount) || 0;
+      return '₹' + num.toLocaleString('en-IN');
     };
     
-    const formattedDueDate = new Date(dueDate).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
+    const formatDate = (date) => {
+      if (!date) return '-';
+      return new Date(date).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'numeric',
+        year: 'numeric'
+      });
+    };
+    
+    // Parse line items
+    let lineItems = [];
+    try {
+      lineItems = invoice.line_items ? (typeof invoice.line_items === 'string' ? JSON.parse(invoice.line_items) : invoice.line_items) : [];
+    } catch (e) { lineItems = []; }
+    
+    // Generate line items HTML
+    const lineItemsHtml = lineItems.map((item, idx) => `
+      <tr style="border-bottom: 1px solid #e2e8f0;">
+        <td style="padding: 12px; color: #4a5568;">${idx + 1}</td>
+        <td style="padding: 12px; color: #2d3748;">${item.description || item.name || 'Service'}</td>
+        <td style="padding: 12px; text-align: center; color: #4a5568;">${item.quantity || 1}</td>
+        <td style="padding: 12px; text-align: right; color: #4a5568;">${formatCurrency(item.unitPrice || item.unit_price || 0)}</td>
+        <td style="padding: 12px; text-align: right; color: #2d3748; font-weight: 600;">${formatCurrency(item.totalPrice || item.total_price || 0)}</td>
+      </tr>
+    `).join('');
     
     const subject = `Invoice ${invoiceId} from XLAND INFRA`;
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%); padding: 30px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 24px;">XLAND INFRA</h1>
-          <p style="color: #cbd5e0; margin: 10px 0 0 0;">Property Management Services</p>
+      <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; background: #ffffff;">
+        <!-- Header with Logo -->
+        <div style="background: #1a1a1a; padding: 20px 30px; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <img src="https://xlandinfra.com/logo.png" alt="XLAND INFRA" style="height: 50px;" onerror="this.style.display='none'"/>
+            <div>
+              <h1 style="color: #d4a853; margin: 0; font-size: 28px; font-weight: bold; letter-spacing: 1px;">XLAND INFRA</h1>
+              <p style="color: #888; margin: 0; font-size: 12px; letter-spacing: 3px;">——— PVT LTD ———</p>
+            </div>
+          </div>
+          <div style="background: #d4a853; color: #1a1a1a; padding: 10px 25px; border-radius: 5px; font-weight: bold; font-size: 14px;">
+            INVOICE
+          </div>
         </div>
         
-        <div style="padding: 30px; background: #ffffff;">
-          <h2 style="color: #1a365d; margin-top: 0;">Invoice Generated</h2>
-          
-          <p style="color: #4a5568;">Dear ${customerName},</p>
-          
-          <p style="color: #4a5568;">
-            A new invoice has been generated for your services. Please find the details below:
-          </p>
-          
-          <div style="background: #f7fafc; border-radius: 8px; padding: 20px; margin: 20px 0;">
-            <table style="width: 100%; border-collapse: collapse;">
+        <!-- Invoice Info Row -->
+        <div style="padding: 20px 30px; background: #f8f9fa; border-bottom: 1px solid #e2e8f0;">
+          <table style="width: 100%;">
+            <tr>
+              <td style="color: #4a5568;">
+                <strong>ID:</strong> ${invoiceId}
+                ${invoice.source_estimate_id ? `<br><span style="color: #718096; font-size: 12px;">Estimate: ${invoice.source_estimate_id}</span>` : ''}
+              </td>
+              <td style="text-align: right; color: #4a5568;">
+                <strong>Invoice Date:</strong> ${formatDate(invoice.invoice_date)}<br>
+                <strong style="color: #e53e3e;">Due Date:</strong> <span style="color: #e53e3e;">${formatDate(dueDate)}</span>
+              </td>
+            </tr>
+          </table>
+        </div>
+        
+        <!-- Package Info -->
+        <div style="background: #e8f4f8; padding: 15px 30px; display: flex; justify-content: space-between; border-bottom: 1px solid #d1e7ef;">
+          <div>
+            <span style="color: #2b6cb0; font-weight: 600;">Total Amount: ${formatCurrency(totalAmount)}</span>
+          </div>
+          <div>
+            <span style="color: #2b6cb0; font-weight: 600;">Billing: ${invoice.billing_duration || 'One-time'}</span>
+          </div>
+        </div>
+        
+        <!-- Two Column Section: Property & Customer Details -->
+        <div style="padding: 25px 30px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <!-- Property Details -->
+              <td style="width: 48%; vertical-align: top; padding-right: 15px;">
+                <div style="background: #e8f4f8; border-radius: 8px; padding: 20px; border-left: 4px solid #3182ce;">
+                  <h3 style="color: #2b6cb0; margin: 0 0 15px 0; font-size: 16px;">Property Details</h3>
+                  <p style="margin: 8px 0; color: #4a5568;"><strong>Property ID:</strong> ${invoice.property_code || invoice.propertyCode || '-'}</p>
+                  <p style="margin: 8px 0; color: #4a5568;"><strong>Name:</strong> ${invoice.property_name || invoice.customer_name || '-'}</p>
+                  <p style="margin: 8px 0; color: #4a5568;"><strong>Type:</strong> ${invoice.property_type || 'Gated Community'}</p>
+                  <p style="margin: 8px 0; color: #4a5568;"><strong>Zone:</strong> ${invoice.zone || '-'}</p>
+                  ${invoice.city ? `<p style="margin: 8px 0; color: #4a5568;"><strong>City:</strong> ${invoice.city}</p>` : ''}
+                </div>
+              </td>
+              
+              <!-- Customer Details -->
+              <td style="width: 48%; vertical-align: top; padding-left: 15px;">
+                <div style="background: #e8f4f8; border-radius: 8px; padding: 20px; border-left: 4px solid #3182ce;">
+                  <h3 style="color: #2b6cb0; margin: 0 0 15px 0; font-size: 16px;">Customer Details</h3>
+                  <p style="margin: 8px 0; color: #4a5568;"><strong>Name:</strong> ${customerName || invoice.client_name || '-'}</p>
+                  <p style="margin: 8px 0; color: #4a5568;"><strong>Phone:</strong> ${invoice.customer_phone || invoice.client_phone || '-'}</p>
+                  <p style="margin: 8px 0; color: #4a5568;"><strong>Email:</strong> ${customerEmail || invoice.client_email || '-'}</p>
+                  ${invoice.city ? `<p style="margin: 8px 0; color: #4a5568;"><strong>City:</strong> ${invoice.city}</p>` : ''}
+                </div>
+              </td>
+            </tr>
+          </table>
+        </div>
+        
+        <!-- Line Items Table -->
+        ${lineItems.length > 0 ? `
+        <div style="padding: 0 30px 25px;">
+          <h3 style="color: #2d3748; margin: 0 0 15px 0; font-size: 16px;">Services & Items</h3>
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <thead>
+              <tr style="background: #f7fafc;">
+                <th style="padding: 12px; text-align: left; color: #4a5568; font-weight: 600; border-bottom: 2px solid #e2e8f0;">#</th>
+                <th style="padding: 12px; text-align: left; color: #4a5568; font-weight: 600; border-bottom: 2px solid #e2e8f0;">Description</th>
+                <th style="padding: 12px; text-align: center; color: #4a5568; font-weight: 600; border-bottom: 2px solid #e2e8f0;">Qty</th>
+                <th style="padding: 12px; text-align: right; color: #4a5568; font-weight: 600; border-bottom: 2px solid #e2e8f0;">Unit Price</th>
+                <th style="padding: 12px; text-align: right; color: #4a5568; font-weight: 600; border-bottom: 2px solid #e2e8f0;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${lineItemsHtml}
+            </tbody>
+          </table>
+        </div>
+        ` : ''}
+        
+        <!-- Amount Summary -->
+        <div style="padding: 0 30px 25px;">
+          <div style="background: #f7fafc; border-radius: 8px; padding: 20px; max-width: 350px; margin-left: auto;">
+            <table style="width: 100%;">
               <tr>
-                <td style="padding: 8px 0; color: #718096;">Invoice Number:</td>
-                <td style="padding: 8px 0; color: #1a365d; font-weight: bold; text-align: right;">${invoiceId}</td>
+                <td style="padding: 8px 0; color: #718096;">Subtotal</td>
+                <td style="padding: 8px 0; text-align: right; color: #2d3748;">${formatCurrency(invoice.subtotal)}</td>
+              </tr>
+              ${parseFloat(invoice.discount_amount) > 0 ? `
+              <tr>
+                <td style="padding: 8px 0; color: #718096;">Discount (${invoice.discount_percentage || 0}%)</td>
+                <td style="padding: 8px 0; text-align: right; color: #38a169;">-${formatCurrency(invoice.discount_amount)}</td>
+              </tr>
+              ` : ''}
+              <tr>
+                <td style="padding: 8px 0; color: #718096;">GST (${invoice.tax_percentage || 18}%)</td>
+                <td style="padding: 8px 0; text-align: right; color: #2d3748;">${formatCurrency(invoice.tax_amount)}</td>
+              </tr>
+              <tr style="border-top: 2px solid #e2e8f0;">
+                <td style="padding: 12px 0 8px; color: #1a365d; font-weight: bold; font-size: 16px;">Total Amount</td>
+                <td style="padding: 12px 0 8px; text-align: right; color: #1a365d; font-weight: bold; font-size: 18px;">${formatCurrency(totalAmount)}</td>
               </tr>
               <tr>
-                <td style="padding: 8px 0; color: #718096;">Total Amount:</td>
-                <td style="padding: 8px 0; color: #1a365d; font-weight: bold; text-align: right; font-size: 18px;">${formatCurrency(totalAmount)}</td>
+                <td style="padding: 8px 0; color: #718096;">Amount Paid</td>
+                <td style="padding: 8px 0; text-align: right; color: #38a169;">${formatCurrency(invoice.amount_paid || 0)}</td>
               </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #718096;">Due Date:</td>
-                <td style="padding: 8px 0; color: #e53e3e; font-weight: bold; text-align: right;">${formattedDueDate}</td>
+              <tr style="border-top: 1px solid #e2e8f0;">
+                <td style="padding: 12px 0; color: #e53e3e; font-weight: bold;">Balance Due</td>
+                <td style="padding: 12px 0; text-align: right; color: #e53e3e; font-weight: bold; font-size: 18px;">${formatCurrency(invoice.balance_amount || totalAmount)}</td>
               </tr>
             </table>
           </div>
-          
-          <p style="color: #4a5568;">
-            Please make the payment before the due date to avoid any late fees.
-          </p>
-          
-          <p style="color: #4a5568;">
-            For any queries, please contact us at <a href="mailto:info@xlandinfra.com" style="color: #3182ce;">info@xlandinfra.com</a>
-          </p>
-          
-          <p style="color: #4a5568; margin-top: 30px;">
-            Thank you for choosing XLAND INFRA!
-          </p>
         </div>
         
-        <div style="background: #edf2f7; padding: 20px; text-align: center;">
-          <p style="color: #718096; margin: 0; font-size: 12px;">
-            © ${new Date().getFullYear()} XLAND INFRA. All rights reserved.
+        <!-- Payment Instructions -->
+        <div style="padding: 0 30px 25px;">
+          <div style="background: #fff3cd; border-radius: 8px; padding: 15px; border-left: 4px solid #d4a853;">
+            <p style="margin: 0; color: #856404; font-weight: 600;">Payment Instructions</p>
+            <p style="margin: 10px 0 0; color: #856404; font-size: 14px;">
+              Please make the payment before the due date to avoid any late fees.<br>
+              For any queries, contact us at <a href="mailto:info@xlandinfra.com" style="color: #2b6cb0;">info@xlandinfra.com</a>
+            </p>
+          </div>
+        </div>
+        
+        <!-- Footer -->
+        <div style="background: #1a1a1a; padding: 20px 30px; text-align: center;">
+          <p style="color: #888; margin: 0; font-size: 12px;">
+            © ${new Date().getFullYear()} XLAND INFRA PVT LTD. All rights reserved.
+          </p>
+          <p style="color: #666; margin: 10px 0 0; font-size: 11px;">
+            This is an auto-generated invoice. Please do not reply to this email.
           </p>
         </div>
       </div>

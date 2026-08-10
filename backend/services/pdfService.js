@@ -267,12 +267,14 @@ const generateEstimatePDF = async (estimate) => {
           doc.rect(50, y, 500, rowHeight).fill(rowColor).stroke('#e0e0e0');
           doc.fontSize(8).fillColor('#333333');
           doc.text(String(idx + 1), 55, y + 6, { continued: false });
-          const addonName = decodeHtml(a.name || a.service_name || 'Add-on');
+          // Handle all possible addon name fields
+          const addonName = decodeHtml(a.name || a.service_name || a.serviceName || a.service || 'Add-on');
           doc.text(addonName.substring(0, 28), 75, y + 6, { continued: false });
           // Full description with height constraint to prevent page overflow
           doc.text(addonDesc, 190, y + 6, { width: 200, height: rowHeight - 8, align: 'center', continued: false });
-          const freqCount = a.frequency_count ?? a.frequencyCount ?? 1;
-          let freqType = a.frequency_type || a.frequencyType || 'Monthly';
+          // Handle all possible frequency field names (frequency, frequency_type, frequencyType)
+          const freqCount = a.frequency_count ?? a.frequencyCount ?? a.visits ?? a.quantity ?? 1;
+          let freqType = a.frequency_type || a.frequencyType || a.frequency || 'Monthly';
           freqType = freqType.replace(/^\d+x\s*/i, '');
           doc.text(freqType, 400, y + 6, { continued: false });
           doc.text(String(freqCount), 490, y + 6, { continued: false });
