@@ -591,6 +591,7 @@ router.post('/:estimateId/send', async (req, res) => {
 
 // PUBLIC: Customer approve/reject estimate
 router.post('/:estimateId/action', async (req, res) => {
+  console.log(`🔔 Estimate action called: ${req.params.estimateId}, action: ${req.body.action}`);
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
@@ -598,6 +599,7 @@ router.post('/:estimateId/action', async (req, res) => {
     
     const { estimateId } = req.params;
     const { action, token } = req.body;
+    console.log(`📋 Processing estimate action: ${estimateId}, action: ${action}`);
     
     if (!action || !['approve', 'reject'].includes(action)) {
       return res.status(400).json({ success: false, message: 'Invalid action' });
@@ -627,10 +629,12 @@ router.post('/:estimateId/action', async (req, res) => {
     }
     
     if (estimates.length === 0) {
+      console.log(`❌ Estimate ${estimateId} not found in any table`);
       return res.status(404).json({ success: false, message: 'Estimate not found or invalid token' });
     }
     
     const est = estimates[0];
+    console.log(`✅ Found estimate in ${source} table: ID=${est.id}, Status=${est.status}`);
     
     // Check if already actioned
     if (['Approved', 'Rejected', 'approved', 'rejected'].includes(est.status)) {
@@ -663,15 +667,20 @@ router.post('/:estimateId/action', async (req, res) => {
     // Auto-generate invoice when customer approves estimate
     let invoiceResult = null;
     if (action === 'approve') {
+      console.log(`🔔 Starting invoice generation for estimate ${estimateId}`);
+      console.log(`📋 Estimate details: ID=${est.id}, Source=${source}, Email=${est.customer_email}, Total=${est.total}`);
       try {
         const { generateInvoiceFromEstimate } = require('../services/invoiceService');
         // Use internal DB id for invoice generation, pass source to handle fp_estimates
         invoiceResult = await generateInvoiceFromEstimate(est.id, null, source);
         console.log(`✅ Auto-generated invoice for customer-approved estimate ${estimateId} (source: ${source}):`, invoiceResult);
       } catch (invoiceError) {
-        console.error('Failed to auto-generate invoice for customer approval:', invoiceError);
+        console.error('❌ Failed to auto-generate invoice for customer approval:', invoiceError);
+        console.error('❌ Error stack:', invoiceError.stack);
         // Don't fail the approval if invoice generation fails
       }
+    } else {
+      console.log(`ℹ️ Estimate ${estimateId} was rejected, no invoice generated`);
     }
     
     res.json({ 

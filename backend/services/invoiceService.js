@@ -85,10 +85,13 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     
     if (source === 'fp') {
       // Query fp_estimates table for FP estimates
+      // FP estimates use client_name, client_email, client_phone (not customer_*)
       [estimates] = await connection.execute(`
         SELECT fe.*, 
-               fe.customer_email as estimate_email, fe.customer_name as estimate_customer_name,
-               fe.property_name, fe.property_id as property_code,
+               fe.client_email as estimate_email, fe.client_name as estimate_customer_name,
+               fe.client_phone as customer_phone,
+               fe.property_name, fe.property_code,
+               fe.total_amount as total,
                op.community_name as onboarded_property_name, op.property_id as onboarded_property_code,
                op.contact_email as op_email, op.contact_phone as op_phone,
                fe.franchise_partner_id
@@ -142,15 +145,32 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     // Get estimate line items (only for regular estimates, FP estimates store items in JSON)
     let items = [];
     if (source === 'fp') {
-      // FP estimates store services/addons as JSON
-      const services = estimate.services ? (typeof estimate.services === 'string' ? JSON.parse(estimate.services) : estimate.services) : [];
-      const addons = estimate.addons ? (typeof estimate.addons === 'string' ? JSON.parse(estimate.addons) : estimate.addons) : [];
-      items = [...services, ...addons].map(item => ({
-        description: item.name || item.description || 'Service',
-        quantity: item.quantity || 1,
-        unit_price: item.price || item.unitPrice || 0,
-        total_price: (item.price || item.unitPrice || 0) * (item.quantity || 1)
-      }));
+      // FP estimates store package_name, package_price, and addons_data (JSON)
+      const addonsData = estimate.addons_data ? (typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data) : [];
+      
+      // Add main package as first item
+      if (estimate.package_name) {
+        items.push({
+          description: estimate.package_name,
+          quantity: 1,
+          unit_price: parseFloat(estimate.package_price) || 0,
+          total_price: parseFloat(estimate.package_price) || 0
+        });
+      }
+      
+      // Add addons
+      if (Array.isArray(addonsData)) {
+        addonsData.forEach(addon => {
+          items.push({
+            description: addon.name || addon.description || 'Addon',
+            quantity: addon.quantity || 1,
+            unit_price: parseFloat(addon.price) || parseFloat(addon.unitPrice) || 0,
+            total_price: (parseFloat(addon.price) || parseFloat(addon.unitPrice) || 0) * (addon.quantity || 1)
+          });
+        });
+      }
+      
+      console.log(`📦 FP Estimate line items: ${items.length} items`);
     } else {
       const [regularItems] = await connection.execute(`
         SELECT ei.*, p.name as package_name, c.name as category_name
@@ -164,10 +184,13 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     }
     
     // Calculate amounts with 18% GST
-    // For FP estimates, use 'total' field; for regular estimates, use 'subtotal'
-    const subtotalValue = parseFloat(estimate.subtotal) || parseFloat(estimate.total) || 0;
-    const discountValue = parseFloat(estimate.discount_percentage) || parseFloat(estimate.discount) || 0;
+    // For FP estimates: subtotal, discount_percent, total_amount
+    // For regular estimates: subtotal, discount_percentage
+    const subtotalValue = parseFloat(estimate.subtotal) || parseFloat(estimate.total) || parseFloat(estimate.total_amount) || 0;
+    const discountValue = parseFloat(estimate.discount_percentage) || parseFloat(estimate.discount_percent) || parseFloat(estimate.discount) || 0;
     const amounts = calculateInvoiceAmounts(subtotalValue, discountValue);
+    
+    console.log(`💰 Invoice amounts: Subtotal=${subtotalValue}, Discount=${discountValue}%, Total=${amounts.totalAmount}`);
     
     // Prepare line items JSON
     const lineItems = items.map(item => ({
