@@ -118,12 +118,15 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     }
     
     console.log(`📋 Querying ${source === 'fp' ? 'fp_estimates' : 'estimates'} table for ID: ${estimateId}`);
+    console.log(`📋 Query result: Found ${estimates.length} estimate(s)`);
     
     if (estimates.length === 0) {
-      throw new Error('Estimate not found');
+      console.error(`❌ Estimate not found in ${source === 'fp' ? 'fp_estimates' : 'estimates'} table for ID: ${estimateId}`);
+      throw new Error(`Estimate not found in ${source === 'fp' ? 'fp_estimates' : 'estimates'} table`);
     }
     
     const estimate = estimates[0];
+    console.log(`📋 Estimate found: ${estimate.estimate_id}, Client: ${estimate.client_name || estimate.estimate_customer_name}, Email: ${estimate.client_email || estimate.estimate_email}`);
     
     // Check if invoice already exists for this estimate (check by source_estimate_id string)
     const [existingInvoice] = await connection.execute(
@@ -219,45 +222,57 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     const propertyCode = estimate.onboarded_property_code || estimate.property_code || null;
     
     // Insert invoice
-    const [result] = await connection.execute(`
-      INSERT INTO invoices (
-        invoice_id, invoice_type, property_id, estimate_id, source_estimate_id,
-        customer_id, franchise_partner_id, customer_name, customer_email, customer_phone,
-        invoice_date, due_date, line_items, 
-        subtotal, discount_percentage, discount_amount, 
-        tax_percentage, tax_amount, total_amount, 
-        amount_paid, balance_amount, status, payment_status,
-        auto_generated, created_by, created_by_role, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      invoiceId,
-      'estimate',
-      estimate.property_id,
-      estimateId,
-      estimate.estimate_id,
-      estimate.client_id,
-      fpId,
-      customerName,
-      customerEmail,
-      customerPhone,
-      invoiceDate.toISOString().split('T')[0],
-      dueDate.toISOString().split('T')[0],
-      JSON.stringify(lineItems),
-      amounts.subtotal,
-      amounts.discountPercentage,
-      amounts.discountAmount,
-      amounts.taxPercentage,
-      amounts.taxAmount,
-      amounts.totalAmount,
-      0, // amount_paid
-      amounts.balanceAmount,
-      'sent', // Auto-generated invoices are marked as sent
-      'pending',
-      true,
-      approvedBy,
-      'system',
-      `Auto-generated from Estimate ${estimate.estimate_id}`
-    ]);
+    console.log(`📝 Inserting invoice with ID: ${invoiceId}`);
+    console.log(`📝 Customer: ${customerName}, Email: ${customerEmail}, Total: ${amounts.totalAmount}`);
+    
+    let result;
+    try {
+      [result] = await connection.execute(`
+        INSERT INTO invoices (
+          invoice_id, invoice_type, property_id, estimate_id, source_estimate_id,
+          customer_id, franchise_partner_id, customer_name, customer_email, customer_phone,
+          invoice_date, due_date, line_items, 
+          subtotal, discount_percentage, discount_amount, 
+          tax_percentage, tax_amount, total_amount, 
+          amount_paid, balance_amount, status, payment_status,
+          auto_generated, created_by, created_by_role, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        invoiceId,
+        'estimate',
+        estimate.property_id || null,
+        estimateId,
+        estimate.estimate_id,
+        estimate.client_id || null,
+        fpId,
+        customerName,
+        customerEmail,
+        customerPhone,
+        invoiceDate.toISOString().split('T')[0],
+        dueDate.toISOString().split('T')[0],
+        JSON.stringify(lineItems),
+        amounts.subtotal,
+        amounts.discountPercentage,
+        amounts.discountAmount,
+        amounts.taxPercentage,
+        amounts.taxAmount,
+        amounts.totalAmount,
+        0, // amount_paid
+        amounts.balanceAmount,
+        'sent', // Auto-generated invoices are marked as sent
+        'pending',
+        true,
+        approvedBy,
+        'system',
+        `Auto-generated from Estimate ${estimate.estimate_id}`
+      ]);
+      console.log(`✅ Invoice INSERT successful, ID: ${result.insertId}`);
+    } catch (insertError) {
+      console.error(`❌ Invoice INSERT failed:`, insertError.message);
+      console.error(`❌ SQL Error Code:`, insertError.code);
+      console.error(`❌ SQL Error:`, insertError.sqlMessage);
+      throw insertError;
+    }
     
     const insertedId = result.insertId;
     
