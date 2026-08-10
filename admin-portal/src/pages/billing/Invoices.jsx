@@ -1020,14 +1020,6 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
-                              {/* Edit/Modify */}
-                              <button
-                                onClick={() => openInvoiceDetail(invoice)}
-                                className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                title="Modify Invoice"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
                               {/* Download */}
                               <button
                                 onClick={() => handleDownloadPDF(invoice)}
