@@ -562,14 +562,6 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {/* Modify */}
-                        <button
-                          onClick={() => onView(invoice)}
-                          className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg"
-                          title="Modify"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
                         {/* Download */}
                         <button
                           onClick={() => onDownload(invoice)}
@@ -853,35 +845,109 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                 </div>
               </div>
 
-              {/* Line Items */}
+              {/* Services & Add-ons */}
               {(() => {
-                const lineItems = selectedInvoice.lineItems ? (typeof selectedInvoice.lineItems === 'string' ? JSON.parse(selectedInvoice.lineItems) : selectedInvoice.lineItems) : [];
-                return lineItems.length > 0 && (
-                  <div className="mb-6">
-                    <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Line Items</h3>
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
-                      <table className="w-full">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Description</th>
-                            <th className="px-4 py-2 text-center text-xs font-medium text-gray-500">Qty</th>
-                            <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Unit Price</th>
-                            <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Total</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                          {lineItems.map((item, idx) => (
-                            <tr key={idx}>
-                              <td className="px-4 py-2 text-sm text-gray-900">{item.description || item.name || 'Service'}</td>
-                              <td className="px-4 py-2 text-sm text-gray-600 text-center">{item.quantity || 1}</td>
-                              <td className="px-4 py-2 text-sm text-gray-600 text-right">{formatCurrency(item.unitPrice || item.unit_price || 0)}</td>
-                              <td className="px-4 py-2 text-sm font-medium text-gray-900 text-right">{formatCurrency(item.totalPrice || item.total_price || 0)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                const rawItems = selectedInvoice.lineItems ? (typeof selectedInvoice.lineItems === 'string' ? JSON.parse(selectedInvoice.lineItems) : selectedInvoice.lineItems) : [];
+                
+                // Filter out AMC Package entries
+                const allItems = rawItems.filter(item => {
+                  const desc = String(item.description || item.name || '').toLowerCase();
+                  return !desc.includes('amc package') && !desc.includes('amc services');
+                });
+
+                // Helper to check if item is addon
+                const isAddon = (item) => {
+                  const typeStr = String(item.type || '').toLowerCase();
+                  return typeStr === 'addon' || typeStr === 'add-on' || typeStr === 'add_on';
+                };
+
+                // Separate services and addons
+                const services = allItems.filter(item => !isAddon(item)).map(item => {
+                  const fullDesc = String(item.description || item.name || 'Service');
+                  const parts = fullDesc.split(' - ');
+                  return {
+                    name: parts[0] || 'Service',
+                    description: parts.slice(1).join(' - ') || '-',
+                    frequency: item.frequency || item.frequencyType || '-',
+                    visits: item.visits || item.frequencyCount || item.quantity || 1
+                  };
+                });
+
+                const addons = allItems.filter(item => isAddon(item)).map(item => {
+                  const fullDesc = String(item.description || item.name || 'Add-on');
+                  const parts = fullDesc.split(' - ');
+                  return {
+                    name: parts[0] || 'Add-on',
+                    description: parts.slice(1).join(' - ') || '-',
+                    frequency: item.frequency || item.frequencyType || '-',
+                    visits: item.visits || item.frequencyCount || item.quantity || 1
+                  };
+                });
+
+                return (
+                  <>
+                    {/* Services Included */}
+                    {services.length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Services Included</h3>
+                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                          <table className="w-full">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 w-8">#</th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Service</th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Description</th>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">Frequency</th>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">Visits</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {services.map((item, idx) => (
+                                <tr key={idx}>
+                                  <td className="px-3 py-2 text-sm text-gray-600 text-center">{idx + 1}</td>
+                                  <td className="px-3 py-2 text-sm font-medium text-gray-900">{item.name}</td>
+                                  <td className="px-3 py-2 text-sm text-gray-600">{item.description}</td>
+                                  <td className="px-3 py-2 text-sm text-gray-600 text-center">{String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1)}</td>
+                                  <td className="px-3 py-2 text-sm text-gray-600 text-center">{item.visits}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Add-ons */}
+                    {addons.length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Add-Ons</h3>
+                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                          <table className="w-full">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 w-8">#</th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Add-on Service</th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Description</th>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">Frequency</th>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">Visits</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {addons.map((item, idx) => (
+                                <tr key={idx}>
+                                  <td className="px-3 py-2 text-sm text-gray-600 text-center">{idx + 1}</td>
+                                  <td className="px-3 py-2 text-sm font-medium text-gray-900">{item.name}</td>
+                                  <td className="px-3 py-2 text-sm text-gray-600">{item.description}</td>
+                                  <td className="px-3 py-2 text-sm text-gray-600 text-center">{String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1)}</td>
+                                  <td className="px-3 py-2 text-sm text-gray-600 text-center">{item.visits}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 );
               })()}
 
