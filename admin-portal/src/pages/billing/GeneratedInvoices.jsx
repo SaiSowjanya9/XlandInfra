@@ -866,6 +866,14 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                   return typeStr === 'addon' || typeStr === 'add-on' || typeStr === 'add_on';
                 };
 
+                // Helper to extract frequency
+                const getFrequency = (item) => {
+                  const freq = item.frequency || item.frequencyType || item.frequency_type || item.billingDuration || '';
+                  if (!freq || freq === '-') return '-';
+                  // Capitalize first letter
+                  return String(freq).charAt(0).toUpperCase() + String(freq).slice(1).toLowerCase();
+                };
+
                 // Separate services and addons
                 const services = allItems.filter(item => !isAddon(item)).map(item => {
                   const fullDesc = String(item.description || item.name || 'Service');
@@ -873,8 +881,8 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                   return {
                     name: parts[0] || 'Service',
                     description: parts.slice(1).join(' - ') || '-',
-                    frequency: item.frequency || item.frequencyType || '-',
-                    visits: item.visits || item.frequencyCount || item.quantity || 1
+                    frequency: getFrequency(item),
+                    visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
                   };
                 });
 
@@ -884,8 +892,8 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                   return {
                     name: parts[0] || 'Add-on',
                     description: parts.slice(1).join(' - ') || '-',
-                    frequency: item.frequency || item.frequencyType || '-',
-                    visits: item.visits || item.frequencyCount || item.quantity || 1
+                    frequency: getFrequency(item),
+                    visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
                   };
                 });
 
@@ -912,7 +920,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                                   <td className="px-3 py-2 text-sm text-gray-600 text-center">{idx + 1}</td>
                                   <td className="px-3 py-2 text-sm font-medium text-gray-900">{item.name}</td>
                                   <td className="px-3 py-2 text-sm text-gray-600">{item.description}</td>
-                                  <td className="px-3 py-2 text-sm text-gray-600 text-center">{String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1)}</td>
+                                  <td className="px-3 py-2 text-sm text-gray-600 text-center">{item.frequency}</td>
                                   <td className="px-3 py-2 text-sm text-gray-600 text-center">{item.visits}</td>
                                 </tr>
                               ))}
@@ -943,7 +951,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                                   <td className="px-3 py-2 text-sm text-gray-600 text-center">{idx + 1}</td>
                                   <td className="px-3 py-2 text-sm font-medium text-gray-900">{item.name}</td>
                                   <td className="px-3 py-2 text-sm text-gray-600">{item.description}</td>
-                                  <td className="px-3 py-2 text-sm text-gray-600 text-center">{String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1)}</td>
+                                  <td className="px-3 py-2 text-sm text-gray-600 text-center">{item.frequency}</td>
                                   <td className="px-3 py-2 text-sm text-gray-600 text-center">{item.visits}</td>
                                 </tr>
                               ))}
