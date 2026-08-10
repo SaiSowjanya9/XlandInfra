@@ -28,6 +28,7 @@ import {
   Archive,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import { exportInvoiceToPDF } from '../../utils/pdfExport';
 import * as XLSX from 'xlsx';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -333,31 +334,40 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
     }
   };
 
-  // Download invoice PDF (opens print preview)
+  // Download invoice PDF using frontend jsPDF (matches Estimate format)
   const handleDownloadPDF = async (invoice) => {
     try {
       setActionLoading(invoice.id);
-      // Open invoice PDF in new window for print/save as PDF
-      const pdfUrl = `${API_BASE}/api/payments/invoices/${invoice.id}/pdf`;
-      const printWindow = window.open(pdfUrl, '_blank', 'width=800,height=600');
-      if (printWindow) {
-        // Add auth token via fetch and inject HTML
-        const response = await fetch(pdfUrl, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) {
-          const html = await response.text();
-          printWindow.document.write(html);
-          printWindow.document.close();
-          showToast('Invoice opened for printing');
-        } else {
-          printWindow.close();
-          showToast('Failed to load invoice', 'error');
-        }
+      
+      // Use frontend PDF export (consistent with Estimate PDF format)
+      const success = exportInvoiceToPDF({
+        invoiceId: invoice.invoiceId || invoice.invoice_id,
+        invoiceDate: invoice.invoiceDate || invoice.invoice_date,
+        dueDate: invoice.dueDate || invoice.due_date,
+        status: invoice.status,
+        propertyCode: invoice.propertyCode || invoice.property_code,
+        propertyName: invoice.propertyName || invoice.property_name,
+        customerName: invoice.customerName || invoice.customer_name,
+        customerEmail: invoice.customerEmail || invoice.customer_email,
+        customerPhone: invoice.customerPhone || invoice.customer_phone,
+        lineItems: invoice.lineItems || invoice.line_items || [],
+        subtotal: invoice.subtotal,
+        discountAmount: invoice.discountAmount || invoice.discount_amount,
+        taxPercentage: invoice.taxPercentage || invoice.tax_percentage,
+        taxAmount: invoice.taxAmount || invoice.tax_amount,
+        totalAmount: invoice.totalAmount || invoice.total_amount,
+        amountPaid: invoice.amountPaid || invoice.amount_paid,
+        balanceAmount: invoice.balanceAmount || invoice.balance_amount,
+        sourceEstimateId: invoice.sourceEstimateId || invoice.source_estimate_id
+      });
+      
+      if (success) {
+        showToast('Invoice PDF downloaded');
       } else {
-        showToast('Please allow popups to download invoice', 'error');
+        showToast('Failed to generate PDF', 'error');
       }
     } catch (err) {
+      console.error('PDF download error:', err);
       showToast('Failed to download invoice', 'error');
     } finally {
       setActionLoading(null);

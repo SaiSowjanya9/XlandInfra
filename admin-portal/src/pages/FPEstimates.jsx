@@ -668,6 +668,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       const result = await res.json();
       if (result.success) {
         showToast(`Email sent to ${clientEmail}`);
+        loadData(); // Refresh to update status to "Sent"
       } else {
         showToast(result.message || 'Failed to send email', 'error');
       }
