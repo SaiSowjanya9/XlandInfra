@@ -274,6 +274,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
   // Billing & Payments sub-items
   const billingPaymentsSubItems = [
     { path: '/fp/billing/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/fp/billing/generate-invoices', icon: FileText, label: 'Generate Invoices' },
     { path: '/fp/billing/invoices', icon: Receipt, label: 'Invoices' },
     { path: '/fp/billing/payments', icon: CreditCard, label: 'Payments' },
     { path: '/fp/billing/make-payments', icon: Wallet, label: 'Make Payments' },

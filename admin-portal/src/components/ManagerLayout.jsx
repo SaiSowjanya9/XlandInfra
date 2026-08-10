@@ -83,6 +83,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
   // Billing & Payments sub-items
   const billingPaymentsSubItems = [
     { path: '/manager/billing/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/manager/billing/generate-invoices', icon: FileText, label: 'Generate Invoices' },
     { path: '/manager/billing/invoices', icon: Receipt, label: 'Invoices' },
     { path: '/manager/billing/payments', icon: CreditCard, label: 'Payments' },
     { path: '/manager/billing/make-payments', icon: Wallet, label: 'Make Payments' },
