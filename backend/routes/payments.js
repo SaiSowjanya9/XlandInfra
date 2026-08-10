@@ -366,7 +366,7 @@ router.get('/estimates/by-id/:estimateId', authenticate, canViewPayments, async 
     let query = `
       SELECT fe.id, fe.estimate_id, fe.property_id, fe.property_name, fe.property_code,
              fe.client_name as customer_name, fe.client_email as customer_email, fe.client_phone as customer_phone,
-             fe.service_type, fe.subtotal, fe.discount, fe.tax, fe.total_amount as total,
+             fe.service_type, fe.subtotal, fe.discount, fe.tax, fe.total,
              fe.package_services, fe.addons_data, fe.status, fe.created_at,
              fe.package_name, fe.package_price, fe.billing_duration
       FROM fp_estimates fe
