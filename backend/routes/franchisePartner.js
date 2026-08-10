@@ -3948,10 +3948,11 @@ router.get('/estimates', requireFPScope, async (req, res) => {
     }
 
     let query = `SELECT fe.*, 
-                        COALESCE(fe.package_services, fpamc.services) as packageServices,
-                        COALESCE(fe.amc_package_description, fpamc.description) as amc_package_description
+                        COALESCE(fe.package_services, fpamc_id.services, fpamc_name.services) as packageServices,
+                        COALESCE(fe.amc_package_description, fpamc_id.description, fpamc_name.description) as amc_package_description
                  FROM fp_estimates fe 
-                 LEFT JOIN fp_amc_packages fpamc ON fe.package_id = fpamc.id
+                 LEFT JOIN fp_amc_packages fpamc_id ON fe.package_id = fpamc_id.id
+                 LEFT JOIN fp_amc_packages fpamc_name ON fe.package_name = fpamc_name.name AND fpamc_name.franchise_partner_id = fe.franchise_partner_id
                  WHERE fe.franchise_partner_id = ?`;
     const params = [req.fpId];
 
@@ -4563,9 +4564,13 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
 
       // Parse package services with descriptions
       let packageServices = [];
+      // Check both package_services and packageServices (camelCase alias from some queries)
+      const rawPkgServices = estimate.package_services || estimate.packageServices;
+      console.log('[Email] Estimate package_services raw value:', rawPkgServices ? 'exists' : 'null/undefined', 
+        'package_id:', estimate.package_id, 'package_name:', estimate.package_name);
       try {
-        if (estimate.package_services) {
-          const parsed = typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services;
+        if (rawPkgServices) {
+          const parsed = typeof rawPkgServices === 'string' ? JSON.parse(rawPkgServices) : rawPkgServices;
           if (Array.isArray(parsed)) {
             packageServices = parsed;
           } else if (parsed?.serviceRows) {
