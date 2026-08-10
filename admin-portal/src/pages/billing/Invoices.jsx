@@ -870,7 +870,12 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                       {archivedInvoices.map((invoice) => (
                         <tr key={invoice.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3.5">
-                            <span className="font-medium text-blue-600">{invoice.invoiceId}</span>
+                            <button
+                              onClick={() => openInvoiceDetail(invoice)}
+                              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                            >
+                              {invoice.invoiceId}
+                            </button>
                           </td>
                           <td className="px-4 py-3.5">
                             <span className={`text-sm font-medium ${INVOICE_TYPE_CONFIG[invoice.invoiceType]?.color || 'text-gray-600'}`}>
@@ -1308,34 +1313,109 @@ const InvoiceDetailPanel = ({
             </div>
           </div>
 
-          {/* Line Items */}
-          {lineItems.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Line Items</h3>
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Description</th>
-                      <th className="px-4 py-2 text-center text-xs font-medium text-gray-500">Qty</th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Unit Price</th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {lineItems.map((item, idx) => (
-                      <tr key={idx}>
-                        <td className="px-4 py-2 text-sm text-gray-900">{item.description || item.name || 'Service'}</td>
-                        <td className="px-4 py-2 text-sm text-gray-600 text-center">{item.quantity || 1}</td>
-                        <td className="px-4 py-2 text-sm text-gray-600 text-right">{formatCurrency(item.unitPrice || item.unit_price || 0)}</td>
-                        <td className="px-4 py-2 text-sm font-medium text-gray-900 text-right">{formatCurrency(item.totalPrice || item.total_price || 0)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+          {/* Services & Add-ons */}
+          {(() => {
+            // Filter out AMC Package entries
+            const filteredItems = lineItems.filter(item => {
+              const desc = String(item.description || item.name || '').toLowerCase();
+              return !desc.includes('amc package') && !desc.includes('amc services');
+            });
+
+            // Helper to check if item is addon
+            const isAddon = (item) => {
+              const typeStr = String(item.type || '').toLowerCase();
+              return typeStr === 'addon' || typeStr === 'add-on' || typeStr === 'add_on';
+            };
+
+            // Separate services and addons
+            const services = filteredItems.filter(item => !isAddon(item)).map(item => {
+              const fullDesc = String(item.description || item.name || 'Service');
+              const parts = fullDesc.split(' - ');
+              return {
+                name: parts[0] || 'Service',
+                description: parts.slice(1).join(' - ') || '-',
+                frequency: item.frequency || item.frequencyType || '-',
+                visits: item.visits || item.frequencyCount || item.quantity || 1
+              };
+            });
+
+            const addons = filteredItems.filter(item => isAddon(item)).map(item => {
+              const fullDesc = String(item.description || item.name || 'Add-on');
+              const parts = fullDesc.split(' - ');
+              return {
+                name: parts[0] || 'Add-on',
+                description: parts.slice(1).join(' - ') || '-',
+                frequency: item.frequency || item.frequencyType || '-',
+                visits: item.visits || item.frequencyCount || item.quantity || 1
+              };
+            });
+
+            return (
+              <>
+                {/* Services Included */}
+                {services.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Services Included</h3>
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 w-8">#</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Service</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Description</th>
+                            <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">Frequency</th>
+                            <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">Visits</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {services.map((item, idx) => (
+                            <tr key={idx}>
+                              <td className="px-3 py-2 text-sm text-gray-600 text-center">{idx + 1}</td>
+                              <td className="px-3 py-2 text-sm font-medium text-gray-900">{item.name}</td>
+                              <td className="px-3 py-2 text-sm text-gray-600">{item.description}</td>
+                              <td className="px-3 py-2 text-sm text-gray-600 text-center">{String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1)}</td>
+                              <td className="px-3 py-2 text-sm text-gray-600 text-center">{item.visits}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Add-ons */}
+                {addons.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Add-Ons</h3>
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 w-8">#</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Add-on Service</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Description</th>
+                            <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">Frequency</th>
+                            <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">Visits</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {addons.map((item, idx) => (
+                            <tr key={idx}>
+                              <td className="px-3 py-2 text-sm text-gray-600 text-center">{idx + 1}</td>
+                              <td className="px-3 py-2 text-sm font-medium text-gray-900">{item.name}</td>
+                              <td className="px-3 py-2 text-sm text-gray-600">{item.description}</td>
+                              <td className="px-3 py-2 text-sm text-gray-600 text-center">{String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1)}</td>
+                              <td className="px-3 py-2 text-sm text-gray-600 text-center">{item.visits}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           {/* Amount Summary */}
           <div className="bg-gray-50 rounded-lg p-4 mb-6">

@@ -539,7 +539,12 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
                 {paginatedInvoices.map(invoice => (
                   <tr key={invoice.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3.5">
-                      <span className="text-sm font-medium text-blue-600">{invoice.invoiceId}</span>
+                      <button
+                        onClick={() => onView(invoice)}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      >
+                        {invoice.invoiceId}
+                      </button>
                     </td>
                     <td className="px-4 py-3.5 text-sm text-gray-800">{invoice.customerName || '-'}</td>
                     <td className="px-4 py-3.5 text-sm text-gray-600">{invoice.propertyCode || '-'}</td>

@@ -440,11 +440,12 @@ router.get('/invoices', authenticate, canViewPayments, async (req, res) => {
     
     let query = `
       SELECT i.*, 
-             COALESCE(p.community_name, fe.property_name) as property_name, 
-             COALESCE(p.property_id, fe.property_code) as property_code,
+             COALESCE(p.community_name, p2.community_name, fe.property_name) as property_name, 
+             COALESCE(p.property_id, p2.property_id, fe.property_code, i.property_code) as property_code,
              c.name as client_name
       FROM invoices i
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
+      LEFT JOIN onboarded_properties p2 ON i.property_code = p2.property_id
       LEFT JOIN fp_estimates fe ON i.source_estimate_id = fe.estimate_id
       LEFT JOIN clients c ON i.customer_id = c.id
       WHERE 1=1
@@ -548,10 +549,12 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
 
     let query = `
       SELECT i.*, 
-             p.community_name as property_name, p.property_id as property_code,
+             COALESCE(p.community_name, p2.community_name) as property_name, 
+             COALESCE(p.property_id, p2.property_id, i.property_code) as property_code,
              c.name as client_name
       FROM invoices i
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
+      LEFT JOIN onboarded_properties p2 ON i.property_code = p2.property_id
       LEFT JOIN clients c ON i.customer_id = c.id
       WHERE i.id = ?
     `;
@@ -636,10 +639,16 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
 
     let query = `
       SELECT i.*, 
-             p.community_name as property_name, p.property_id as property_code,
-             p.zone, p.division, p.contact_person, p.contact_phone, p.contact_email
+             COALESCE(p.community_name, p2.community_name) as property_name, 
+             COALESCE(p.property_id, p2.property_id, i.property_code) as property_code,
+             COALESCE(p.zone, p2.zone) as zone, 
+             COALESCE(p.division, p2.division) as division, 
+             COALESCE(p.contact_person, p2.contact_person) as contact_person, 
+             COALESCE(p.contact_phone, p2.contact_phone) as contact_phone, 
+             COALESCE(p.contact_email, p2.contact_email) as contact_email
       FROM invoices i
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
+      LEFT JOIN onboarded_properties p2 ON i.property_code = p2.property_id
       WHERE i.id = ?
     `;
     const params = [id];
@@ -1145,10 +1154,13 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
     // Get invoice with all details
     let query = `
       SELECT i.*, 
-             p.community_name as property_name, p.property_id as property_code,
-             p.zone, p.division
+             COALESCE(p.community_name, p2.community_name) as property_name, 
+             COALESCE(p.property_id, p2.property_id, i.property_code) as property_code,
+             COALESCE(p.zone, p2.zone) as zone, 
+             COALESCE(p.division, p2.division) as division
       FROM invoices i
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
+      LEFT JOIN onboarded_properties p2 ON i.property_code = p2.property_id
       WHERE i.id = ?
     `;
     const params = [id];
