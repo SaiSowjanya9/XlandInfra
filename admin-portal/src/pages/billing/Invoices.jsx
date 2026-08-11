@@ -1319,6 +1319,20 @@ const InvoiceDetailPanel = ({
 
           {/* Services & Add-ons */}
           {(() => {
+            // Decode HTML entities (fix triple/double encoded ampersands etc.)
+            const decodeHtml = (str) => {
+              if (!str) return str;
+              return String(str)
+                .replace(/&amp;amp;amp;/g, '&')
+                .replace(/&amp;amp;/g, '&')
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/&nbsp;/g, ' ');
+            };
+
             // Filter out AMC Package entries
             const filteredItems = lineItems.filter(item => {
               const desc = String(item.description || item.name || '').toLowerCase();
@@ -1341,7 +1355,7 @@ const InvoiceDetailPanel = ({
 
             // Separate services and addons
             const services = filteredItems.filter(item => !isAddon(item)).map(item => {
-              const fullDesc = String(item.description || item.name || 'Service');
+              const fullDesc = decodeHtml(String(item.description || item.name || 'Service'));
               const parts = fullDesc.split(' - ');
               return {
                 name: parts[0] || 'Service',
@@ -1352,7 +1366,7 @@ const InvoiceDetailPanel = ({
             });
 
             const addons = filteredItems.filter(item => isAddon(item)).map(item => {
-              const fullDesc = String(item.description || item.name || 'Add-on');
+              const fullDesc = decodeHtml(String(item.description || item.name || 'Add-on'));
               const parts = fullDesc.split(' - ');
               return {
                 name: parts[0] || 'Add-on',
@@ -1483,21 +1497,13 @@ const InvoiceDetailPanel = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
-          <div className="flex gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-              <Eye className="w-4 h-4" />
-              View PDF
-            </button>
-            <button 
-              onClick={() => onSend(invoice)}
-              disabled={actionLoading === invoice.id}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              <Send className="w-4 h-4" />
-              Send Invoice
-            </button>
-          </div>
+        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Close
+          </button>
           <button
             onClick={onRecordPayment}
             disabled={invoice.balanceAmount <= 0}
