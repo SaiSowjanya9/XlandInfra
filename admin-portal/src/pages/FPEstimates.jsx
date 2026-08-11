@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
@@ -83,6 +83,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   
   // Check if user is FP Manager (restricted access)
   const isFPManager = user?.role === 'manager';
+  
+  // Ref to prevent circular updates between URL and state
+  const isUpdatingFromStateRef = useRef(false);
+  const isUpdatingFromUrlRef = useRef(false);
   
   // URL-synced state for filters and modals
   const urlSearchTerm = searchParams.get('search') || '';
@@ -198,8 +202,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   
   // Sync estimate creation step with URL for browser back button support
   useEffect(() => {
-    // When state changes, update URL - only if URL doesn't already match
+    // Skip if this update was triggered by URL change (prevents circular loop)
+    if (isUpdatingFromUrlRef.current) {
+      isUpdatingFromUrlRef.current = false;
+      return;
+    }
+    
     if (defaultTab === 'create') {
+      isUpdatingFromStateRef.current = true;
       let targetStep = '';
       if (estimateType === 'property-based' && selectedProperty) {
         targetStep = 'property-form';
@@ -212,12 +222,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       if ((urlEstimateStep || '') !== targetStep) {
         updateUrlParam('estimateStep', targetStep);
       }
+      // Reset the flag after a short delay to allow the URL update to complete
+      requestAnimationFrame(() => {
+        isUpdatingFromStateRef.current = false;
+      });
     }
   }, [estimateType, selectedProperty, defaultTab, urlEstimateStep]);
   
   // Handle browser back button - sync URL to state
   useEffect(() => {
+    // Skip if this update was triggered by state change (prevents circular loop)
+    if (isUpdatingFromStateRef.current) {
+      return;
+    }
+    
     if (defaultTab === 'create') {
+      isUpdatingFromUrlRef.current = true;
       if (!urlEstimateStep) {
         // No step in URL = type selection
         if (estimateType !== null) {
@@ -245,6 +265,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           setPropertyIdInput('');
         }
       }
+      // Reset the flag after state updates are processed
+      requestAnimationFrame(() => {
+        isUpdatingFromUrlRef.current = false;
+      });
     }
   }, [urlEstimateStep, defaultTab]);
   
