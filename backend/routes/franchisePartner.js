@@ -4069,9 +4069,13 @@ router.get('/estimates', requireFPScope, async (req, res) => {
     let query = `SELECT fe.*, 
                         COALESCE(fe.package_services, fpamc_id.services, fpamc_name.services) as packageServices,
                         COALESCE(fe.amc_package_description, fpamc_id.description, fpamc_name.description) as amc_package_description,
-                        -- Populate property details from linked property or work order (use NULLIF to treat empty strings as NULL)
+                        -- Populate property details from linked property or work order
                         COALESCE(NULLIF(fe.property_name, ''), op.community_name, p.name, wo_prop.community_name, wo_prop2.name, wo.property_name) as property_name,
-                        COALESCE(NULLIF(fe.property_code, ''), op.property_id, p.property_id, wo_prop.property_id, wo_prop2.property_id) as property_code,
+                        -- Skip property_code if it starts with 'WO-' (incorrectly stored work order ID)
+                        COALESCE(
+                          CASE WHEN fe.property_code IS NOT NULL AND fe.property_code != '' AND fe.property_code NOT LIKE 'WO-%' THEN fe.property_code ELSE NULL END,
+                          op.property_id, p.property_id, wo_prop.property_id, wo_prop2.property_id
+                        ) as property_code,
                         COALESCE(NULLIF(fe.property_type, ''), op.property_type, p.property_type, wo_prop.property_type, wo_prop2.property_type, wo.property_type) as property_type,
                         COALESCE(NULLIF(fe.zone, ''), op.zone, p.zone_id, wo_prop.zone, wo_prop2.zone_id) as zone,
                         COALESCE(NULLIF(fe.division, ''), op.division, p.division_id, wo_prop.division, wo_prop2.division_id) as division,
