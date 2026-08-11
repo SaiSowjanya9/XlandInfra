@@ -281,7 +281,9 @@ const EstimatesList = ({
     const matchSearch = !search || 
       est.estimateId?.toLowerCase().includes(search) ||
       est.customerName?.toLowerCase().includes(search) ||
-      est.propertyName?.toLowerCase().includes(search);
+      est.propertyName?.toLowerCase().includes(search) ||
+      (est.propertyCode || est.property_code || '').toLowerCase().includes(search) ||
+      (est.propertyId?.toString() || est.property_id?.toString() || '').toLowerCase().includes(search);
     
     // Normalize estimate type for comparison (handle property_based vs property-based)
     const estType = (est.estimateType || '').toLowerCase().replace(/_/g, '-');
@@ -570,7 +572,7 @@ const EstimatesList = ({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search estimates..."
+              placeholder="Search by Estimate ID, Property ID, or client name..."
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
             />
           </div>

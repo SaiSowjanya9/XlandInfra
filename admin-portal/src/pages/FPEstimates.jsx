@@ -199,6 +199,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [workOrderDiscount, setWorkOrderDiscount] = useState('');
   const [workOrderNotes, setWorkOrderNotes] = useState('');
   const [savingWorkOrder, setSavingWorkOrder] = useState(false);
+  const [completedWorkOrders, setCompletedWorkOrders] = useState([]);
+  const [loadingCompletedWO, setLoadingCompletedWO] = useState(false);
   
   // FP Portal Links state
   const [portalLinks, setPortalLinks] = useState([]);
@@ -354,6 +356,19 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       setLinkForms(newForms);
     } catch (e) { console.error('Load error:', e); }
     finally { setLoading(false); }
+  };
+
+  // Fetch completed work orders for the estimate form
+  const fetchCompletedWorkOrders = async () => {
+    setLoadingCompletedWO(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/fp/work-orders?status=completed`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await res.json();
+      if (data.success) {
+        setCompletedWorkOrders(Array.isArray(data.data) ? data.data : []);
+      }
+    } catch (e) { console.error('Error fetching completed work orders:', e); }
+    finally { setLoadingCompletedWO(false); }
   };
 
   const showToast = (msg, type = 'success') => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3500); };
@@ -1086,7 +1101,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <p className="text-sm text-gray-500 mt-1">Enter customer details manually</p>
             </button>
             {/* Work Order Estimate */}
-            <button onClick={() => { setEstimateType('work_order'); setWorkOrderStep('input'); setWorkOrderData(null); setWorkOrderError(''); setWorkOrderIdInput(''); }} className="p-6 border-2 border-gray-200 rounded-xl hover:border-orange-500 hover:bg-orange-50 transition-all group">
+            <button onClick={() => { setEstimateType('work_order'); setWorkOrderStep('input'); setWorkOrderData(null); setWorkOrderError(''); setWorkOrderIdInput(''); fetchCompletedWorkOrders(); }} className="p-6 border-2 border-gray-200 rounded-xl hover:border-orange-500 hover:bg-orange-50 transition-all group">
               <ClipboardList className="w-10 h-10 text-gray-400 group-hover:text-orange-500 mx-auto mb-3" />
               <p className="font-semibold text-gray-800 group-hover:text-orange-600">Work Order Estimate</p>
               <p className="text-sm text-gray-500 mt-1">Create estimate from existing Work Order</p>
@@ -1870,76 +1885,112 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       {/* Work Order Estimate Form */}
       {estimateType === 'work_order' && (
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-          {/* Work Order ID Input Step */}
+          {/* Completed Work Orders List */}
           {workOrderStep === 'input' && (
             <div className="p-6">
-              <div className="flex items-center justify-center gap-3 mb-6">
+              <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-orange-100 rounded-lg">
                   <ClipboardList className="w-5 h-5 text-orange-600" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-gray-800">Work Order Estimate</h3>
-                  <p className="text-xs text-gray-500">Enter Work Order ID to fetch details and create estimate</p>
+                  <h3 className="text-base font-semibold text-gray-800">Completed Work Orders</h3>
+                  <p className="text-xs text-gray-500">Select a work order to create an estimate</p>
                 </div>
               </div>
               
-              <div className="max-w-md mx-auto">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Work Order ID <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <ClipboardList className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    value={workOrderIdInput}
-                    onChange={(e) => { setWorkOrderIdInput(e.target.value.toUpperCase()); setWorkOrderError(''); }}
-                    placeholder="e.g., WO-XXXX-20250101-0001"
-                    className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-400"
-                  />
+              {workOrderError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-600">{workOrderError}</p>
                 </div>
-                
-                {workOrderError && (
-                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-red-600">{workOrderError}</p>
+              )}
+
+              {loadingCompletedWO ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+                  <span className="ml-2 text-gray-500">Loading work orders...</span>
+                </div>
+              ) : completedWorkOrders.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <ClipboardList className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p className="font-medium">No completed work orders found</p>
+                  <p className="text-sm mt-1">Complete some work orders first to create estimates</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 bg-gray-50">
+                        <th className="text-left py-3 px-3 font-medium text-gray-600">Work Order ID</th>
+                        <th className="text-left py-3 px-3 font-medium text-gray-600">Customer</th>
+                        <th className="text-left py-3 px-3 font-medium text-gray-600">Category</th>
+                        <th className="text-left py-3 px-3 font-medium text-gray-600">Status</th>
+                        <th className="text-left py-3 px-3 font-medium text-gray-600">Created</th>
+                        <th className="text-left py-3 px-3 font-medium text-gray-600">Property</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {completedWorkOrders.map((wo) => (
+                        <tr 
+                          key={wo.id} 
+                          onClick={async () => {
+                            setWorkOrderLoading(true);
+                            setWorkOrderError('');
+                            try {
+                              const response = await fetch(`${API_BASE}/api/fp/work-orders/by-order-id/${encodeURIComponent(wo.work_order_id)}`, {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                              });
+                              const result = await response.json();
+                              if (result.success && result.data) {
+                                setWorkOrderData(result.data);
+                                setWorkOrderStep('review');
+                              } else {
+                                setWorkOrderError(result.message || 'Failed to load work order details.');
+                              }
+                            } catch (error) {
+                              setWorkOrderError('Failed to fetch work order. Please try again.');
+                            } finally {
+                              setWorkOrderLoading(false);
+                            }
+                          }}
+                          className="border-b border-gray-100 hover:bg-orange-50 cursor-pointer transition-colors"
+                        >
+                          <td className="py-3 px-3 font-medium text-gray-900">{wo.work_order_id}</td>
+                          <td className="py-3 px-3">
+                            <div className="font-medium text-gray-800">{wo.customer_name || wo.client_name || '-'}</div>
+                            <div className="text-xs text-gray-500">{wo.property_name || wo.community_name || '-'}</div>
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="font-medium">{wo.category_name || '-'}</div>
+                            <div className="text-xs text-gray-500">{wo.subcategory_name || '-'}</div>
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                              {wo.status || 'Completed'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-gray-600">
+                            {wo.created_at ? new Date(wo.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="font-medium text-gray-800">{wo.customer_name || wo.client_name || '-'}</div>
+                            <div className="text-xs text-gray-500">{wo.property_code || wo.property_id || '-'}</div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              
+              {workOrderLoading && (
+                <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+                  <div className="bg-white p-6 rounded-lg shadow-xl flex items-center gap-3">
+                    <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+                    <span className="text-gray-700">Loading work order details...</span>
                   </div>
-                )}
-                
-                <button
-                  onClick={async () => {
-                    if (!workOrderIdInput.trim()) {
-                      setWorkOrderError('Please enter a Work Order ID');
-                      return;
-                    }
-                    setWorkOrderLoading(true);
-                    setWorkOrderError('');
-                    try {
-                      const response = await fetch(`${API_BASE}/api/fp/work-orders/by-order-id/${encodeURIComponent(workOrderIdInput.trim())}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                      });
-                      const result = await response.json();
-                      if (result.success && result.data) {
-                        setWorkOrderData(result.data);
-                        setWorkOrderStep('review');
-                      } else {
-                        setWorkOrderError(result.message || 'Work order not found. Please check the ID and try again.');
-                      }
-                    } catch (error) {
-                      setWorkOrderError('Failed to fetch work order. Please try again.');
-                    } finally {
-                      setWorkOrderLoading(false);
-                    }
-                  }}
-                  disabled={workOrderLoading || !workOrderIdInput.trim()}
-                  className="mt-4 w-full py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {workOrderLoading ? (
-                    <><Loader2 className="w-5 h-5 animate-spin" /> Searching...</>
-                  ) : (
-                    <><Search className="w-5 h-5" /> Find Work Order</>
-                  )}
-                </button>
-              </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -2046,11 +2097,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         client_name: workOrderData.client_name || workOrderData.customer_name || '',
                         client_email: workOrderData.client_email || workOrderData.customer_email || '',
                         client_phone: workOrderData.client_phone || workOrderData.customer_phone || '',
+                        // Property details from work order
+                        property_name: workOrderData.property_name || '',
+                        property_type: workOrderData.property_type || workOrderData.entry_type || '',
+                        zone: workOrderData.zone || '',
+                        division: workOrderData.division || '',
+                        city: workOrderData.city || '',
+                        address: workOrderData.address || '',
+                        // Pricing with correct field names
                         subtotal: amt,
-                        discount: discPercent,
-                        gst: gstPercent,
-                        total: Math.round(total),
+                        discount_percent: discPercent,
+                        discount_amount: discAmt,
+                        gst_percent: gstPercent,
+                        gst_amount: gstAmt,
+                        total_amount: Math.round(total),
                         description: workOrderNotes,
+                        // Work order details
                         work_order_id: workOrderData.work_order_id,
                         work_order_category: workOrderData.category_name,
                         work_order_subcategory: workOrderData.subcategory_name,
@@ -2076,7 +2138,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         setWorkOrderDiscount('');
                         setWorkOrderGst('18');
                         setWorkOrderNotes('');
-                        fetchEstimates();
+                        loadData();
                       } else {
                         showToast(result.message || 'Failed to create estimate', 'error');
                       }
@@ -2368,7 +2430,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
   // ALL ESTIMATES
   const filteredEstimates = estimates.filter(e => {
-    const matchSearch = (e.title || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.estimate_id || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.client_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const search = searchTerm.toLowerCase();
+    const matchSearch = !searchTerm || (
+      (e.title || '').toLowerCase().includes(search) || 
+      (e.estimate_id || '').toLowerCase().includes(search) || 
+      (e.client_name || '').toLowerCase().includes(search) ||
+      (e.property_code || '').toLowerCase().includes(search) ||
+      (e.property_id?.toString() || '').toLowerCase().includes(search)
+    );
     const matchStatus = filterStatus === 'all' || e.status === filterStatus;
     const matchType = filterType === 'all' || e.estimate_type === filterType || (filterType === 'property_based' && (e.estimate_type === 'property_based' || e.estimate_type === 'property-based'));
     // Property category filter should work for ALL estimates that have a property_type (both direct and property-based)
@@ -2408,7 +2477,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <div className="flex gap-3">
-          <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input type="text" placeholder="Search estimates..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm" /></div>
+          <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input type="text" placeholder="Search by Estimate ID, Property ID, or client name..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm" /></div>
           <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 hover:bg-gray-50"><Filter className="w-4 h-4" />Filters<ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} /></button>
           <button onClick={exportAllEstimates} className="px-4 py-2 bg-emerald-600 text-white rounded-lg flex items-center gap-2 hover:bg-emerald-700 transition-colors text-sm font-medium"><Download className="w-4 h-4" />Export All</button>
           {/* Archive Selected button - only visible when items are selected and not FP Manager */}
@@ -2575,9 +2644,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         <Link2 className="w-3 h-3" />
                         {est.estimate_type === 'work_order' ? 'Work Order' : est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}
                       </span>
-                      {est.estimate_type === 'work_order' && est.work_order_id && (
-                        <div className="text-xs text-orange-500 mt-1 font-mono">{est.work_order_id}</div>
-                      )}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">
                       {(est.estimate_type === 'property_based' || est.estimate_type === 'property-based') 
