@@ -182,13 +182,12 @@ const PAYMENT_METHOD_CARDS = [
   }
 ];
 
-// Record Payment Modal
+// Record Payment Modal - Single View with Indian Payment Gateway Style
 const RecordPaymentModal = ({ isOpen, onClose, onSuccess, invoices }) => {
-  const [step, setStep] = useState(1); // 1: Invoice & Amount, 2: Payment Method, 3: Details
   const [formData, setFormData] = useState({
     invoiceId: '',
     amount: '',
-    paymentMethod: '',
+    paymentMethod: 'bank_transfer',
     transactionId: '',
     paymentDate: new Date().toISOString().split('T')[0],
     notes: '',
@@ -226,11 +225,10 @@ const RecordPaymentModal = ({ isOpen, onClose, onSuccess, invoices }) => {
       if (result.success) {
         onSuccess();
         onClose();
-        setStep(1);
         setFormData({
           invoiceId: '',
           amount: '',
-          paymentMethod: '',
+          paymentMethod: 'bank_transfer',
           transactionId: '',
           paymentDate: new Date().toISOString().split('T')[0],
           notes: '',
@@ -247,11 +245,10 @@ const RecordPaymentModal = ({ isOpen, onClose, onSuccess, invoices }) => {
   };
 
   const handleClose = () => {
-    setStep(1);
     setFormData({
       invoiceId: '',
       amount: '',
-      paymentMethod: '',
+      paymentMethod: 'bank_transfer',
       transactionId: '',
       paymentDate: new Date().toISOString().split('T')[0],
       notes: '',
@@ -269,79 +266,50 @@ const RecordPaymentModal = ({ isOpen, onClose, onSuccess, invoices }) => {
         <div className="bg-white flex items-center justify-between px-6 py-4 border-b">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Record Payment</h2>
-            <p className="text-sm text-gray-500">
-              {step === 1 && 'Enter invoice and amount details'}
-              {step === 2 && 'Choose payment method to proceed'}
-              {step === 3 && 'Enter transaction details'}
-            </p>
+            <p className="text-sm text-gray-500">Enter payment details to record</p>
           </div>
           <button onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-full">
             <X className="w-5 h-5 text-gray-400" />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-          {error && <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">{error}</div>}
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-5">
+          {error && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">{error}</div>}
 
-          {/* Step 1: Invoice & Amount */}
-          {step === 1 && (
-            <div className="space-y-4">
-              <div className="bg-white rounded-xl p-5 border border-gray-200">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Invoice ID *</label>
-                    <input
-                      type="text"
-                      value={formData.invoiceId}
-                      onChange={(e) => setFormData({ ...formData, invoiceId: e.target.value })}
-                      placeholder="Enter Invoice ID (e.g., INV-00001)"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Amount *</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
-                      <input
-                        type="number"
-                        value={formData.amount}
-                        onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                        placeholder="0.00"
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-medium"
-                      />
-                    </div>
-                  </div>
-                </div>
+          {/* Invoice & Amount */}
+          <div className="bg-white rounded-xl p-5 border border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-700 mb-4">Invoice Details</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Invoice ID *</label>
+                <input
+                  type="text"
+                  value={formData.invoiceId}
+                  onChange={(e) => setFormData({ ...formData, invoiceId: e.target.value })}
+                  placeholder="e.g., INV-00001"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!formData.invoiceId || !formData.amount) {
-                      setError('Please enter Invoice ID and Amount');
-                      return;
-                    }
-                    setError('');
-                    setStep(2);
-                  }}
-                  className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-                >
-                  Continue
-                </button>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Amount *</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
+                  <input
+                    type="number"
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    placeholder="0.00"
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Step 2: Payment Method Selection - Indian Gateway Style */}
-          {step === 2 && (
-            <div className="space-y-3">
-              <div className="bg-white rounded-xl p-4 border border-gray-200 mb-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Amount to Pay</span>
-                  <span className="text-xl font-bold text-gray-900">₹{parseFloat(formData.amount || 0).toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-
+          {/* Payment Method Selection - Indian Gateway Style */}
+          <div className="bg-white rounded-xl p-5 border border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-700 mb-4">Choose Payment Method</h3>
+            <div className="space-y-2">
               {PAYMENT_METHOD_CARDS.map((method) => {
                 const Icon = method.icon;
                 const isSelected = formData.paymentMethod === method.id;
@@ -349,51 +317,39 @@ const RecordPaymentModal = ({ isOpen, onClose, onSuccess, invoices }) => {
                   <div
                     key={method.id}
                     onClick={() => setFormData({ ...formData, paymentMethod: method.id })}
-                    className={`bg-white rounded-xl border-2 p-4 cursor-pointer transition-all ${
-                      isSelected ? 'border-blue-500 bg-blue-50/30' : 'border-gray-200 hover:border-gray-300'
+                    className={`rounded-xl border-2 p-3 cursor-pointer transition-all ${
+                      isSelected ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-center gap-3">
                       {/* Radio Button */}
-                      <div className="pt-1">
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                          isSelected ? 'border-blue-500' : 'border-gray-300'
-                        }`}>
-                          {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
-                        </div>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                        isSelected ? 'border-blue-500' : 'border-gray-300'
+                      }`}>
+                        {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
                       </div>
 
                       {/* Icon */}
-                      <div className={`p-3 rounded-lg ${method.iconBg}`}>
-                        <Icon className={`w-6 h-6 ${method.iconColor}`} />
+                      <div className={`p-2 rounded-lg ${method.iconBg} flex-shrink-0`}>
+                        <Icon className={`w-5 h-5 ${method.iconColor}`} />
                       </div>
 
                       {/* Content */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-gray-900">{method.title}</h3>
-                          <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">Your Collection</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium text-gray-900 text-sm">{method.title}</h4>
+                          <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">Your Collection</span>
                         </div>
-                        <p className="text-sm text-gray-500 mb-2">{method.description}</p>
-                        {method.brands.length > 0 && (
-                          <div className="flex items-center gap-2">
-                            {method.brands.map((brand, idx) => (
-                              <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded">
-                                {brand}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                        <p className="text-xs text-gray-500">{method.description}</p>
                       </div>
 
                       {/* Fee Info */}
-                      <div className="text-right">
-                        <p className={`text-sm font-medium ${method.noFees ? 'text-green-600' : 'text-gray-600'}`}>
+                      <div className="text-right flex-shrink-0">
+                        <p className={`text-xs font-medium ${method.noFees ? 'text-green-600' : 'text-gray-600'}`}>
                           {method.fee}
                         </p>
-                        <p className="text-xs text-gray-400">{method.feeType}</p>
                         {method.noFees && (
-                          <div className="flex items-center justify-end gap-1 mt-1">
+                          <div className="flex items-center justify-end gap-1">
                             <CheckCircle className="w-3 h-3 text-green-500" />
                             <span className="text-xs text-green-600">No Fees</span>
                           </div>
@@ -403,103 +359,64 @@ const RecordPaymentModal = ({ isOpen, onClose, onSuccess, invoices }) => {
                   </div>
                 );
               })}
+            </div>
+          </div>
 
-              <div className="flex justify-between pt-4">
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!formData.paymentMethod) {
-                      setError('Please select a payment method');
-                      return;
-                    }
-                    setError('');
-                    setStep(3);
-                  }}
-                  className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-                >
-                  Continue
-                </button>
+          {/* Transaction Details */}
+          <div className="bg-white rounded-xl p-5 border border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-700 mb-4">Transaction Details</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Reference / Transaction No.</label>
+                <input
+                  type="text"
+                  value={formData.transactionId}
+                  onChange={(e) => setFormData({ ...formData, transactionId: e.target.value })}
+                  placeholder="UTR, Check No., Transaction ID..."
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Payment Date *</label>
+                <input
+                  type="date"
+                  value={formData.paymentDate}
+                  onChange={(e) => setFormData({ ...formData, paymentDate: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
               </div>
             </div>
-          )}
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                rows={2}
+                placeholder="Additional notes..."
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
 
-          {/* Step 3: Transaction Details */}
-          {step === 3 && (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="bg-white rounded-xl p-4 border border-gray-200 mb-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Invoice: <span className="font-medium text-gray-900">{formData.invoiceId}</span></span>
-                  <span className="text-gray-600">Amount: <span className="font-bold text-gray-900">₹{parseFloat(formData.amount || 0).toLocaleString('en-IN')}</span></span>
-                </div>
-                <div className="mt-2 pt-2 border-t">
-                  <span className="text-sm text-gray-600">Method: </span>
-                  <span className="text-sm font-medium text-blue-600">
-                    {PAYMENT_METHOD_CARDS.find(m => m.id === formData.paymentMethod)?.title}
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl p-5 border border-gray-200 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Reference / Transaction No.</label>
-                  <input
-                    type="text"
-                    value={formData.transactionId}
-                    onChange={(e) => setFormData({ ...formData, transactionId: e.target.value })}
-                    placeholder="UTR, Check No., Transaction ID..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Payment Date *</label>
-                  <input
-                    type="date"
-                    value={formData.paymentDate}
-                    onChange={(e) => setFormData({ ...formData, paymentDate: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    rows={2}
-                    placeholder="Additional notes..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-between pt-2">
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
-                >
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2"
-                >
-                  {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                  Confirm Payment
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2"
+            >
+              {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+              Record Payment
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
