@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { getAuthToken } from '../../utils/safeStorage';
 import { 
@@ -39,6 +39,10 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   // URL-based navigation for browser back button support
   const [searchParams, setSearchParams] = useSearchParams();
   const urlEstimateStep = searchParams.get('estimateStep');
+  
+  // Ref to prevent circular updates between URL and state
+  const isUpdatingFromStateRef = useRef(false);
+  const isUpdatingFromUrlRef = useRef(false);
   
   // Helper to update URL params (push new history entry for back button support)
   const updateUrlParam = useCallback((key, value) => {
@@ -257,6 +261,13 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
 
   // Sync estimate creation step with URL for browser back button support
   useEffect(() => {
+    // Skip if this update was triggered by URL change (prevents circular loop)
+    if (isUpdatingFromUrlRef.current) {
+      isUpdatingFromUrlRef.current = false;
+      return;
+    }
+    
+    isUpdatingFromStateRef.current = true;
     if (estimateType === 'property' && selectedProperty) {
       updateUrlParam('estimateStep', 'property-form');
     } else if (estimateType === 'property') {
@@ -266,10 +277,20 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     } else {
       updateUrlParam('estimateStep', '');
     }
+    // Reset the flag after a short delay to allow the URL update to complete
+    requestAnimationFrame(() => {
+      isUpdatingFromStateRef.current = false;
+    });
   }, [estimateType, selectedProperty, updateUrlParam]);
 
   // Handle browser back button - sync URL to state
   useEffect(() => {
+    // Skip if this update was triggered by state change (prevents circular loop)
+    if (isUpdatingFromStateRef.current) {
+      return;
+    }
+    
+    isUpdatingFromUrlRef.current = true;
     if (!urlEstimateStep) {
       // No step in URL = type selection
       if (estimateType !== null) {
@@ -297,6 +318,10 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
         setEstimateType('direct');
       }
     }
+    // Reset the flag after state updates are processed
+    requestAnimationFrame(() => {
+      isUpdatingFromUrlRef.current = false;
+    });
   }, [urlEstimateStep]);
 
   useEffect(() => {

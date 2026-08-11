@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -101,6 +101,10 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const urlEstimateStep = searchParams.get('estimateStep');
+  
+  // Ref to prevent circular updates between URL and state
+  const isUpdatingFromStateRef = useRef(false);
+  const isUpdatingFromUrlRef = useRef(false);
   
   // Helper to update URL params (push new history entry for back button support)
   const updateUrlParam = useCallback((key, value) => {
@@ -416,7 +420,14 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
 
   // Sync estimate creation step with URL for browser back button support
   useEffect(() => {
+    // Skip if this update was triggered by URL change (prevents circular loop)
+    if (isUpdatingFromUrlRef.current) {
+      isUpdatingFromUrlRef.current = false;
+      return;
+    }
+    
     if (defaultTab === 'create') {
+      isUpdatingFromStateRef.current = true;
       if (estimateForm.estimateType === 'property_based' && selectedProperty) {
         updateUrlParam('estimateStep', 'property-form');
       } else if (estimateForm.estimateType === 'property_based') {
@@ -426,12 +437,22 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
       } else {
         updateUrlParam('estimateStep', '');
       }
+      // Reset the flag after a short delay to allow the URL update to complete
+      requestAnimationFrame(() => {
+        isUpdatingFromStateRef.current = false;
+      });
     }
   }, [estimateForm.estimateType, selectedProperty, defaultTab, updateUrlParam]);
 
   // Handle browser back button - sync URL to state
   useEffect(() => {
+    // Skip if this update was triggered by state change (prevents circular loop)
+    if (isUpdatingFromStateRef.current) {
+      return;
+    }
+    
     if (defaultTab === 'create') {
+      isUpdatingFromUrlRef.current = true;
       if (!urlEstimateStep) {
         // No step in URL = type selection
         if (estimateForm.estimateType) {
@@ -457,6 +478,10 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           setEstimateForm(prev => ({ ...prev, estimateType: 'direct' }));
         }
       }
+      // Reset the flag after state updates are processed
+      requestAnimationFrame(() => {
+        isUpdatingFromUrlRef.current = false;
+      });
     }
   }, [urlEstimateStep, defaultTab]);
 
