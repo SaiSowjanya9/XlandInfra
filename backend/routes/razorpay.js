@@ -543,9 +543,10 @@ router.get('/payment-links', authenticate, canManagePayments, async (req, res) =
       params.push(searchTerm, searchTerm, searchTerm);
     }
 
-    // Order and pagination
-    query += ' ORDER BY i.payment_link_created_at DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), parseInt(offset));
+    // Order and pagination - embed LIMIT/OFFSET directly to avoid MySQL prepared statement issues
+    const safeLimit = Math.max(1, Math.min(100, parseInt(limit) || 50));
+    const safeOffset = Math.max(0, parseInt(offset) || 0);
+    query += ` ORDER BY i.payment_link_created_at DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`;
 
     const [links] = await pool.execute(query, params);
 
