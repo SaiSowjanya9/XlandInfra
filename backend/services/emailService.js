@@ -865,12 +865,15 @@ const sendFPEmployeeWelcomeEmail = async (userData) => {
 // Send estimate email to customer with Approve/Reject buttons
 const sendEstimateEmail = async (estimate, actionToken) => {
   const { 
-    customerName, customerEmail, customerPhone, estimateId, propertyName, propertyType,
+    customerName, customerEmail, customerPhone, estimateId, estimateType, propertyName, propertyType,
     zone, division, city, address,
     numberOfBlocks, blockNames, unitsPerBlock, totalUnits,
     towerName, blockNumber, villaPlotNumber,
     services, addons, subtotal, discount, tax, total, validUntil,
-    amcPackageDescription, packageName, description
+    amcPackageDescription, packageName, description,
+    // Work Order Estimate fields
+    workOrderId, workOrderCategory, workOrderSubcategory, workOrderDescription,
+    workOrderPriority, workOrderStatus, isWorkOrderEstimate
   } = estimate;
   
   if (!customerEmail) {
@@ -991,6 +994,23 @@ const sendEstimateEmail = async (estimate, actionToken) => {
     `;
   }
 
+  // Build Work Order section HTML (only for work order estimates) - same blue style as Property Details
+  let workOrderHtml = '';
+  if (isWorkOrderEstimate && workOrderId) {
+    workOrderHtml = `
+      <div style="background: #eff6ff; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+        <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Work Order Details</h3>
+        <table style="width: 100%;">
+          <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Work Order ID:</td><td style="padding: 6px 0; padding-left: 15px; color: #1e40af; font-weight: 600;">${workOrderId}</td></tr>
+          ${workOrderCategory ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Category:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937; font-weight: 500;">${workOrderCategory}</td></tr>` : ''}
+          ${workOrderSubcategory ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Subcategory:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${workOrderSubcategory}</td></tr>` : ''}
+          ${workOrderPriority ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Priority:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937; font-weight: 500;">${workOrderPriority.toUpperCase()}</td></tr>` : ''}
+          ${workOrderDescription ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Description:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${workOrderDescription}</td></tr>` : ''}
+        </table>
+      </div>
+    `;
+  }
+
   // Generate PDF attachment
   let pdfBuffer = null;
   try {
@@ -1001,22 +1021,30 @@ const sendEstimateEmail = async (estimate, actionToken) => {
     });
     
     pdfBuffer = await generateEstimatePDF({
-      estimateId, customerName, customerEmail, customerPhone: estimate.customerPhone,
+      estimateId, estimateType, customerName, customerEmail, customerPhone: estimate.customerPhone,
       propertyName, propertyType, propertyCode: estimate.propertyCode, zone, division, city, address,
       numberOfBlocks, totalUnits, towerName, blockNumber, villaPlotNumber,
       packageName, packagePrice: estimate.packagePrice, amcPackageDescription, 
       services: servicesList, addons: addonsList, subtotal, discount, discountAmount: estimate.discountAmount,
-      tax, gstPercent: estimate.gstPercent, total, description, createdAt: estimate.createdAt
+      tax, gstPercent: estimate.gstPercent, total, description, createdAt: estimate.createdAt,
+      // Work Order fields
+      isWorkOrderEstimate, workOrderId, workOrderCategory, workOrderSubcategory,
+      workOrderDescription, workOrderPriority, workOrderStatus
     });
     console.log(`📄 PDF generated for estimate ${estimateId}`);
   } catch (pdfError) {
     console.error('PDF generation failed:', pdfError.message);
   }
 
+  // Email subject - different for work order estimates
+  const emailSubject = isWorkOrderEstimate 
+    ? `Work Order Estimate ${estimateId} (${workOrderId}) from XLAND INFRA - Action Required`
+    : `Your Estimate ${estimateId} from XLAND INFRA - Action Required`;
+
   const mailOptions = {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
     to: customerEmail,
-    subject: `Your Estimate ${estimateId} from XLAND INFRA - Action Required`,
+    subject: emailSubject,
     headers: getDefaultHeaders(),
     attachments: pdfBuffer ? [{
       filename: `Estimate_${estimateId}.pdf`,
@@ -1068,6 +1096,9 @@ const sendEstimateEmail = async (estimate, actionToken) => {
                 ${propertyDetailsHtml}
               </table>
             </div>
+            
+            <!-- Work Order Details (only for work order estimates) -->
+            ${workOrderHtml}
             
             <!-- Customer Details -->
             <div style="background: #fef3c7; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">

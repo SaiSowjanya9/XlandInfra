@@ -4,7 +4,8 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { 
   Building2, User, Phone, Mail, Search, FileText, 
   Home, LayoutGrid, Layers, TreePine, Map, Briefcase,
-  Package, Send, Plus, Trash2, Lock, ChevronDown, FolderOpen, ExternalLink, ArrowLeft
+  Package, Send, Plus, Trash2, Lock, ChevronDown, FolderOpen, ExternalLink, ArrowLeft,
+  ClipboardList, Loader2, AlertCircle, CheckCircle, Calendar, Tag, Image, Download, Eye, X
 } from 'lucide-react';
 import { useFP } from '../../contexts/FPContext';
 import PhoneInput from '../common/PhoneInput';
@@ -195,6 +196,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   const [lockedServices, setLockedServices] = useState([]); // Services from existing AMC package (locked/read-only)
   const [hasStartedTyping, setHasStartedTyping] = useState(false); // Track if user started typing in ID field
   const [sendingEmail, setSendingEmail] = useState(false); // Guard against double email sending
+  const [isSubmitting, setIsSubmitting] = useState(false); // Guard for form submission
   
   // New state for AMC Package selection and Add-ons
   const [availablePackages, setAvailablePackages] = useState([]); // AMC Packages from manager
@@ -226,6 +228,19 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   const [directGstRate, setDirectGstRate] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [emailError, setEmailError] = useState('');
+  
+  // Work Order Estimate States
+  const [workOrderIdInput, setWorkOrderIdInput] = useState('');
+  const [workOrderLoading, setWorkOrderLoading] = useState(false);
+  const [workOrderError, setWorkOrderError] = useState('');
+  const [workOrderData, setWorkOrderData] = useState(null);
+  const [workOrderStep, setWorkOrderStep] = useState('input'); // 'input', 'review', 'pricing'
+  const [workOrderAmount, setWorkOrderAmount] = useState('');
+  const [workOrderGst, setWorkOrderGst] = useState('');
+  const [workOrderDiscount, setWorkOrderDiscount] = useState('');
+  const [workOrderServices, setWorkOrderServices] = useState([]);
+  const [workOrderNotes, setWorkOrderNotes] = useState('');
+  
   const [estimateForm, setEstimateForm] = useState({
     // Property-based auto-populated fields
     propertyId: '',
@@ -1046,6 +1061,17 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     setSelectedAddons([]);
     setDiscount('');
     setHasStartedTyping(false); // Reset typing state
+    // Reset Work Order Estimate states
+    setWorkOrderIdInput('');
+    setWorkOrderLoading(false);
+    setWorkOrderError('');
+    setWorkOrderData(null);
+    setWorkOrderStep('input');
+    setWorkOrderAmount('');
+    setWorkOrderGst('');
+    setWorkOrderDiscount('');
+    setWorkOrderServices([]);
+    setWorkOrderNotes('');
     setEstimateForm({
       propertyId: '',
       propertyName: '',
@@ -1089,11 +1115,161 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       setDirectSelectedAddons([]);
       setDirectDiscount('');
       setDirectGstRate('');
+    } else if (estimateType === 'work_order' && workOrderData) {
+      // If work order data is loaded, go back to input step
+      setWorkOrderData(null);
+      setWorkOrderStep('input');
+      setWorkOrderAmount('');
+      setWorkOrderGst('');
+      setWorkOrderDiscount('');
+      setWorkOrderNotes('');
     } else {
       // Otherwise go back to estimate type selection
       resetForm();
     }
-  }, [estimateType, selectedProperty, directSelectedPackage]);
+  }, [estimateType, selectedProperty, directSelectedPackage, workOrderData]);
+
+  // Calculate Work Order Estimate Total
+  const calculateWorkOrderTotal = useCallback(() => {
+    const amount = parseFloat(workOrderAmount || 0);
+    const discountPercent = parseFloat(workOrderDiscount || 0);
+    const gstPercent = parseFloat(workOrderGst || 0);
+    
+    const discountAmount = (amount * discountPercent) / 100;
+    const afterDiscount = amount - discountAmount;
+    const gstAmount = (afterDiscount * gstPercent) / 100;
+    
+    return afterDiscount + gstAmount;
+  }, [workOrderAmount, workOrderDiscount, workOrderGst]);
+
+  // Fetch Work Order by ID
+  const handleFetchWorkOrder = async () => {
+    if (!workOrderIdInput.trim()) {
+      setWorkOrderError('Please enter a Work Order ID');
+      return;
+    }
+    
+    setWorkOrderLoading(true);
+    setWorkOrderError('');
+    
+    try {
+      const response = await fetch(`${API_BASE}/api/fp/work-orders/by-order-id/${encodeURIComponent(workOrderIdInput.trim())}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setWorkOrderData(result.data);
+        setWorkOrderStep('review');
+        console.log('[Work Order Estimate] Fetched work order:', result.data.work_order_id);
+      } else {
+        setWorkOrderError(result.message || 'Work order not found. Please check the ID and try again.');
+      }
+    } catch (error) {
+      console.error('Error fetching work order:', error);
+      setWorkOrderError('Failed to fetch work order details. Please try again.');
+    } finally {
+      setWorkOrderLoading(false);
+    }
+  };
+
+  // Save Work Order Estimate
+  const handleSaveWorkOrderEstimate = async () => {
+    if (!workOrderData || !workOrderAmount || parseFloat(workOrderAmount) <= 0) {
+      showToast?.('Please enter a valid amount', 'error');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const amount = parseFloat(workOrderAmount || 0);
+      const discountPercent = parseFloat(workOrderDiscount || 0);
+      const gstPercent = parseFloat(workOrderGst || 0);
+      const discountAmount = (amount * discountPercent) / 100;
+      const afterDiscount = amount - discountAmount;
+      const gstAmount = (afterDiscount * gstPercent) / 100;
+      const total = afterDiscount + gstAmount;
+      
+      const estimatePayload = {
+        estimate_type: 'work_order',
+        property_id: workOrderData.property_id,
+        property_code: workOrderData.property_code || workOrderData.actual_property_id,
+        client_name: workOrderData.customer_name,
+        client_phone: workOrderData.customer_phone,
+        client_email: workOrderData.customer_email,
+        property_name: workOrderData.property_name,
+        property_type: workOrderData.property_type || workOrderData.entry_type,
+        zone: workOrderData.zone,
+        division: workOrderData.division,
+        city: workOrderData.city,
+        address: workOrderData.address,
+        subtotal: amount,
+        discount_percent: discountPercent,
+        discount_amount: discountAmount,
+        gst_percent: gstPercent,
+        gst_amount: gstAmount,
+        total_amount: total,
+        description: workOrderNotes,
+        // Work Order specific fields
+        work_order_id: workOrderData.work_order_id,
+        work_order_category: workOrderData.category_name,
+        work_order_subcategory: workOrderData.subcategory_name,
+        work_order_description: workOrderData.description,
+        work_order_priority: workOrderData.priority,
+        work_order_status: workOrderData.status
+      };
+      
+      console.log('[Work Order Estimate] Saving estimate:', estimatePayload);
+      
+      const response = await fetch(`${API_BASE}/api/fp/estimates`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(estimatePayload)
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('[Work Order Estimate] Saved successfully:', result.data);
+        
+        // Store last created estimate for email modal
+        setLastCreatedEstimate({
+          id: result.data.id,
+          estimateId: result.data.estimateId,
+          customerEmail: workOrderData.customer_email,
+          clientName: workOrderData.customer_name,
+          workOrderId: workOrderData.work_order_id
+        });
+        
+        // Show email confirmation modal
+        setShowEmailConfirm(true);
+        
+        // Reset work order form
+        setWorkOrderData(null);
+        setWorkOrderStep('input');
+        setWorkOrderIdInput('');
+        setWorkOrderAmount('');
+        setWorkOrderGst('');
+        setWorkOrderDiscount('');
+        setWorkOrderNotes('');
+        
+        showToast?.('Work Order Estimate created successfully!', 'success');
+        onSuccess?.();
+      } else {
+        showToast?.(result.message || 'Failed to create estimate', 'error');
+      }
+    } catch (error) {
+      console.error('Error saving work order estimate:', error);
+      showToast?.('Failed to create estimate. Please try again.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Keyboard shortcut handler for back navigation (Escape key)
   useEffect(() => {
@@ -1175,6 +1351,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
           <h2 className="text-lg font-semibold text-gray-800">
             {estimateType === 'property' 
               ? (selectedProperty ? 'Property Estimate Form' : 'Select Property')
+              : estimateType === 'work_order'
+              ? (workOrderData ? 'Work Order Estimate Review' : 'Work Order Estimate')
               : 'Direct Estimate Form'}
           </h2>
         </div>
@@ -1184,7 +1362,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       {!hasStartedTyping && (
         <div className={`bg-white rounded-xl p-6 shadow-sm border border-gray-100 transition-all duration-300 ${estimateType ? 'opacity-100' : 'opacity-100'}`}>
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Estimate Type</h3>
-          <div className={`grid gap-4 ${isOpsManager ? 'grid-cols-1 max-w-md' : 'grid-cols-2'}`}>
+          <div className={`grid gap-4 ${isOpsManager ? 'grid-cols-1 max-w-md' : 'grid-cols-3'}`}>
             {/* Property-Based Estimate - Hidden for Operations Manager */}
             {!isOpsManager && (
               <button
@@ -1212,6 +1390,28 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               <p className="font-medium text-gray-800">Direct-Based Estimate</p>
               <p className="text-sm text-gray-500 mt-1">Enter customer details manually</p>
             </button>
+            {/* Work Order Estimate - Hidden for Operations Manager */}
+            {!isOpsManager && (
+              <button
+                onClick={() => { 
+                  setEstimateType('work_order'); 
+                  setHasStartedTyping(true);
+                  setWorkOrderStep('input');
+                  setWorkOrderData(null);
+                  setWorkOrderError('');
+                  setWorkOrderIdInput('');
+                }}
+                className={`p-6 rounded-xl border-2 transition-all ${
+                  estimateType === 'work_order'
+                    ? 'border-orange-400 bg-orange-50'
+                    : 'border-gray-200 hover:border-orange-300 hover:bg-orange-50'
+                }`}
+              >
+                <ClipboardList className={`w-8 h-8 mx-auto mb-3 ${estimateType === 'work_order' ? 'text-orange-600' : 'text-gray-400'}`} />
+                <p className="font-medium text-gray-800">Work Order Estimate</p>
+                <p className="text-sm text-gray-500 mt-1">Create estimate from existing Work Order</p>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -2811,6 +3011,412 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               </p>
             </div>
           </>
+        </div>
+      )}
+
+      {/* Work Order Estimate Form */}
+      {estimateType === 'work_order' && (
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+          {/* Work Order ID Input Step */}
+          {workOrderStep === 'input' && !workOrderData && (
+            <>
+              <div className="px-6 py-4 bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-200">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <ClipboardList className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-gray-800">Work Order Estimate</h3>
+                    <p className="text-xs text-gray-500">Enter Work Order ID to fetch details and create estimate</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="px-6 py-6">
+                <div className="max-w-md mx-auto space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Work Order ID <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <ClipboardList className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="text"
+                        value={workOrderIdInput}
+                        onChange={(e) => {
+                          setWorkOrderIdInput(e.target.value.trim());
+                          setWorkOrderError('');
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && workOrderIdInput) {
+                            handleFetchWorkOrder();
+                          }
+                        }}
+                        placeholder="Enter or Paste Work Order ID (e.g., WO-1234567890)"
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500"
+                      />
+                    </div>
+                    {workOrderError && (
+                      <div className="mt-2 flex items-center gap-2 text-red-600 text-sm">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>{workOrderError}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={handleBackFromEstimate}
+                      className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleFetchWorkOrder}
+                      disabled={!workOrderIdInput || workOrderLoading}
+                      className={`flex-1 px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 ${
+                        !workOrderIdInput || workOrderLoading 
+                          ? 'bg-gray-300 cursor-not-allowed' 
+                          : 'bg-orange-600 hover:bg-orange-700 text-white'
+                      }`}
+                    >
+                      {workOrderLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Fetching...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="w-4 h-4" />
+                          Fetch Details
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Work Order Details Review Step */}
+          {workOrderData && (
+            <>
+              <div className="px-6 py-4 bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-800">Work Order Found</h3>
+                      <p className="text-xs text-gray-500">Review details and add pricing information</p>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-700">
+                    {workOrderData.work_order_id}
+                  </span>
+                </div>
+              </div>
+
+              <div className="px-6 py-4 space-y-6">
+                {/* Work Order Info Section */}
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                    <ClipboardList className="w-4 h-4" />
+                    Work Order Information
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Work Order ID</label>
+                      <p className="text-sm font-medium text-gray-800">{workOrderData.work_order_id}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Status</label>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        workOrderData.status === 'completed' ? 'bg-green-100 text-green-700' :
+                        workOrderData.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                        workOrderData.status === 'assigned' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {workOrderData.status?.replace('_', ' ').toUpperCase() || 'N/A'}
+                      </span>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Priority</label>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        workOrderData.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                        workOrderData.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                        workOrderData.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-green-100 text-green-700'
+                      }`}>
+                        {workOrderData.priority?.toUpperCase() || 'N/A'}
+                      </span>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Created Date</label>
+                      <p className="text-sm font-medium text-gray-800">
+                        {workOrderData.created_at ? new Date(workOrderData.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Customer Info Section */}
+                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                  <h4 className="text-sm font-semibold text-purple-800 mb-3 flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Customer Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Customer Name</label>
+                      <p className="text-sm font-medium text-gray-800">{workOrderData.customer_name || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Email</label>
+                      <p className="text-sm font-medium text-gray-800">{workOrderData.customer_email || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Phone</label>
+                      <p className="text-sm font-medium text-gray-800">{workOrderData.customer_phone || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Property Info Section */}
+                <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                  <h4 className="text-sm font-semibold text-indigo-800 mb-3 flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    Property Information
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Property Name</label>
+                      <p className="text-sm font-medium text-gray-800">{workOrderData.property_name || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Property Code</label>
+                      <p className="text-sm font-medium text-gray-800">{workOrderData.property_code || workOrderData.actual_property_id || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Property Type</label>
+                      <p className="text-sm font-medium text-gray-800">{workOrderData.property_type || workOrderData.entry_type || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Zone</label>
+                      <p className="text-sm font-medium text-gray-800">{workOrderData.zone || 'N/A'}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs text-gray-500 mb-1">Address</label>
+                      <p className="text-sm font-medium text-gray-800">{workOrderData.address || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">City</label>
+                      <p className="text-sm font-medium text-gray-800">{workOrderData.city || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Division</label>
+                      <p className="text-sm font-medium text-gray-800">{workOrderData.division || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Service Details Section */}
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                  <h4 className="text-sm font-semibold text-emerald-800 mb-3 flex items-center gap-2">
+                    <Tag className="w-4 h-4" />
+                    Service Details
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Category</label>
+                      <p className="text-sm font-medium text-gray-800">{workOrderData.category_name || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Subcategory</label>
+                      <p className="text-sm font-medium text-gray-800">{workOrderData.subcategory_name || 'N/A'}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs text-gray-500 mb-1">Description</label>
+                      <p className="text-sm font-medium text-gray-800">{workOrderData.description || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes Section (if any) */}
+                {(workOrderData.admin_notes || workOrderData.vendor_notes || workOrderData.closing_notes) && (
+                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Notes
+                    </h4>
+                    <div className="space-y-3">
+                      {workOrderData.admin_notes && (
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Admin Notes</label>
+                          <p className="text-sm text-gray-700 bg-white p-2 rounded border">{workOrderData.admin_notes}</p>
+                        </div>
+                      )}
+                      {workOrderData.vendor_notes && (
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Vendor Notes</label>
+                          <p className="text-sm text-gray-700 bg-white p-2 rounded border">{workOrderData.vendor_notes}</p>
+                        </div>
+                      )}
+                      {workOrderData.closing_notes && (
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Closing Notes</label>
+                          <p className="text-sm text-gray-700 bg-white p-2 rounded border">{workOrderData.closing_notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Attachments Section */}
+                {workOrderData.attachments && workOrderData.attachments.length > 0 && (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <h4 className="text-sm font-semibold text-amber-800 mb-3 flex items-center gap-2">
+                      <Image className="w-4 h-4" />
+                      Attachments ({workOrderData.attachments.length})
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {workOrderData.attachments.map((att, idx) => (
+                        <div key={idx} className="bg-white border rounded-lg p-2 flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-gray-400" />
+                          <span className="text-xs text-gray-600 truncate flex-1">{att.original_name || att.file_name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pricing Section */}
+                <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
+                  <h4 className="text-sm font-semibold text-green-800 mb-4 flex items-center gap-2">
+                    <Package className="w-4 h-4" />
+                    Estimate Pricing
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Amount <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                        <input
+                          type="number"
+                          value={workOrderAmount}
+                          onChange={(e) => setWorkOrderAmount(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-green-500"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        GST (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={workOrderGst}
+                        onChange={(e) => setWorkOrderGst(e.target.value)}
+                        placeholder="18"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-green-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Discount (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={workOrderDiscount}
+                        onChange={(e) => setWorkOrderDiscount(e.target.value)}
+                        placeholder="0"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-green-500"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Additional Notes */}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Additional Notes (Optional)
+                    </label>
+                    <textarea
+                      value={workOrderNotes}
+                      onChange={(e) => setWorkOrderNotes(e.target.value)}
+                      placeholder="Any additional notes for this estimate..."
+                      rows={3}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-green-500"
+                    />
+                  </div>
+                  
+                  {/* Price Summary */}
+                  <div className="mt-4 p-3 bg-white rounded-lg border border-green-300">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Subtotal</span>
+                        <span className="font-medium">₹{parseFloat(workOrderAmount || 0).toLocaleString()}</span>
+                      </div>
+                      {parseFloat(workOrderDiscount) > 0 && (
+                        <div className="flex justify-between text-green-600">
+                          <span>Discount ({workOrderDiscount}%)</span>
+                          <span>-₹{((parseFloat(workOrderAmount || 0) * parseFloat(workOrderDiscount || 0)) / 100).toLocaleString()}</span>
+                        </div>
+                      )}
+                      {parseFloat(workOrderGst) > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">GST ({workOrderGst}%)</span>
+                          <span className="font-medium">₹{(((parseFloat(workOrderAmount || 0) - ((parseFloat(workOrderAmount || 0) * parseFloat(workOrderDiscount || 0)) / 100)) * parseFloat(workOrderGst || 0)) / 100).toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between pt-2 border-t border-green-200 text-base font-bold text-green-700">
+                        <span>Total</span>
+                        <span>₹{calculateWorkOrderTotal().toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 justify-end pt-4">
+                  <button
+                    onClick={() => {
+                      setWorkOrderData(null);
+                      setWorkOrderStep('input');
+                      setWorkOrderAmount('');
+                      setWorkOrderGst('');
+                      setWorkOrderDiscount('');
+                      setWorkOrderNotes('');
+                    }}
+                    className="px-6 py-2.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleSaveWorkOrderEstimate}
+                    disabled={!workOrderAmount || parseFloat(workOrderAmount) <= 0 || isSubmitting}
+                    className={`px-6 py-2.5 text-sm font-medium rounded-md flex items-center gap-2 ${
+                      !workOrderAmount || parseFloat(workOrderAmount) <= 0 || isSubmitting
+                        ? 'bg-gray-300 cursor-not-allowed text-gray-500'
+                        : 'bg-orange-600 hover:bg-orange-700 text-white'
+                    }`}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Estimate'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 

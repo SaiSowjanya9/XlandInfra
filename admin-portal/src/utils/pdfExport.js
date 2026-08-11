@@ -403,6 +403,50 @@ const generatePDF = (data, type, filename) => {
       y += cardHeight + 8;
     }
 
+    // ===== WORK ORDER DETAILS (only for work order estimates) =====
+    if (data.isWorkOrderEstimate && data.workOrderId) {
+      // Use same blue card style as Property & Customer Details for consistency
+      doc.setFillColor(239, 246, 255); // cardBgBlue - same as other cards
+      doc.setDrawColor(229, 231, 235); // borderLight - same as other cards
+      doc.roundedRect(margin, y, pageWidth - margin * 2, 28, 2, 2, 'FD');
+      
+      doc.setTextColor(...navy);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Work Order Details', margin + 6, y + 6);
+      
+      let wy = y + 12;
+      doc.setFontSize(8);
+      
+      // Row 1: Work Order ID & Category (using same layout as Property/Customer cards)
+      const leftCol = margin + 6;
+      const midCol = margin + 90;
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...lightText);
+      doc.text('Work Order ID', leftCol, wy);
+      doc.text('Category', midCol, wy);
+      wy += 5;
+      doc.setTextColor(...darkText);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(data.workOrderId || '-'), leftCol, wy);
+      doc.text(String(data.workOrderCategory || '-'), midCol, wy);
+      wy += 7;
+      
+      // Row 2: Subcategory & Priority
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...lightText);
+      doc.text('Subcategory', leftCol, wy);
+      doc.text('Priority', midCol, wy);
+      wy += 5;
+      doc.setTextColor(...darkText);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(data.workOrderSubcategory || '-'), leftCol, wy);
+      doc.text(String(data.workOrderPriority || '-').toUpperCase(), midCol, wy);
+      
+      y += 34;
+    }
+
     // ===== AMC PACKAGE DESCRIPTION =====
     if (data.amcPackageDescription && data.amcPackageDescription.trim()) {
       doc.setTextColor(...navy);
@@ -824,7 +868,15 @@ export const exportEstimateToPDF = (estimate) => {
       gstPercent: parseFloat(estimate.gstPercent || estimate.gst_percent || estimate.gst || 0),
       gstAmount: parseFloat(estimate.gstAmount || estimate.gst_amount || 0),
       totalPrice: parseFloat(estimate.totalPrice || estimate.total || estimate.total_price || estimate.total_amount || 0),
-      createdAt: estimate.createdAt || estimate.created_at || new Date().toISOString()
+      createdAt: estimate.createdAt || estimate.created_at || new Date().toISOString(),
+      // Work Order Estimate fields
+      isWorkOrderEstimate: estimate.estimate_type === 'work_order' || estimate.estimateType === 'work_order',
+      workOrderId: estimate.work_order_id || estimate.workOrderId,
+      workOrderCategory: estimate.work_order_category || estimate.workOrderCategory,
+      workOrderSubcategory: estimate.work_order_subcategory || estimate.workOrderSubcategory,
+      workOrderDescription: estimate.work_order_description || estimate.workOrderDescription,
+      workOrderPriority: estimate.work_order_priority || estimate.workOrderPriority,
+      workOrderStatus: estimate.work_order_status || estimate.workOrderStatus
     };
 
     debug('[PDF] Generating PDF for:', exportData.estimateId);

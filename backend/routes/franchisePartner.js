@@ -1793,6 +1793,118 @@ router.delete('/work-orders/:id', requireFPScope, async (req, res) => {
 });
 
 // ============================================
+// WORK ORDER ESTIMATE - Fetch work order details by work_order_id
+// ============================================
+
+// Get work order by work_order_id (string ID like WO-123456789) for estimate creation
+router.get('/work-orders/by-order-id/:workOrderId', requireFPScope, async (req, res) => {
+  try {
+    const { workOrderId } = req.params;
+    console.log('[FP Work Order Lookup] Searching for:', workOrderId, 'FP ID:', req.fpId);
+
+    // Fetch work order with all related details
+    const [workOrders] = await pool.execute(`
+      SELECT wo.*, 
+        COALESCE(p.name, op.community_name, wo.property_name) as property_name,
+        COALESCE(p.property_id, op.property_id, wo.property_id) as property_code,
+        COALESCE(op.property_type, p.property_type, wo.property_type) as property_type,
+        COALESCE(op.zone, p.zone_id) as zone,
+        COALESCE(op.division, p.division_id) as division,
+        COALESCE(op.address, p.address) as address,
+        COALESCE(op.city, p.city) as city,
+        COALESCE(op.state, p.state) as state,
+        COALESCE(p.zip_code, op.postal_code) as property_pincode,
+        COALESCE(p.contact_person, op.contact_person) as contact_person,
+        COALESCE(p.contact_phone, op.contact_phone) as contact_phone,
+        COALESCE(p.contact_email, op.contact_email) as contact_email,
+        op.total_units,
+        op.number_of_blocks as total_blocks,
+        op.entry_type,
+        op.units_per_block,
+        op.block_names,
+        COALESCE(c.name, wo.category_name) as category_name,
+        wo.subcategory_name,
+        v.company_name as vendor_name,
+        v.owner_name as vendor_owner_name,
+        v.owner_mobile as vendor_phone,
+        wo.customer_name,
+        wo.customer_email,
+        wo.customer_phone,
+        wo.closing_notes,
+        wo.admin_notes,
+        wo.vendor_notes,
+        COALESCE(
+          CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+          CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+          wo.created_by, 'System'
+        ) as created_by_name
+      FROM work_orders wo
+      LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+      LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+      LEFT JOIN categories c ON wo.category_id = c.id
+      LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
+      LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username OR CAST(wo.created_by AS UNSIGNED) = fpe.id
+      LEFT JOIN users u ON wo.created_by = u.email OR wo.created_by = u.username OR wo.created_by = u.user_id OR CAST(wo.created_by AS UNSIGNED) = u.id
+      WHERE wo.work_order_id = ? AND wo.franchise_partner_id = ?
+    `, [workOrderId, req.fpId]);
+
+    if (workOrders.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Work order not found. Please check the Work Order ID and try again.'
+      });
+    }
+
+    const wo = workOrders[0];
+
+    // Fetch attachments
+    const [attachments] = await pool.execute(
+      `SELECT id, file_name, original_name, file_path, file_type, file_size, created_at 
+       FROM work_order_attachments WHERE work_order_id = ?`,
+      [wo.id]
+    );
+    wo.attachments = attachments;
+
+    // Fetch status history
+    let statusHistory = [];
+    try {
+      const [history] = await pool.execute(
+        `SELECT wsh.*, 
+                COALESCE(
+                  CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                  CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+                  wsh.changed_by, 'System'
+                ) as changed_by_name
+         FROM work_order_status_history wsh
+         LEFT JOIN fp_employees fpe ON wsh.changed_by = fpe.id
+         LEFT JOIN users u ON wsh.changed_by = u.id
+         WHERE wsh.work_order_id = ?
+         ORDER BY wsh.created_at DESC`,
+        [wo.id]
+      );
+      statusHistory = history;
+    } catch (e) {
+      // Status history table may not exist
+    }
+    wo.status_history = statusHistory;
+
+    console.log('[FP Work Order Lookup] Found:', wo.work_order_id);
+
+    res.json({
+      success: true,
+      data: wo
+    });
+  } catch (error) {
+    console.error('Get work order by ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch work order details',
+      error: error.message
+    });
+  }
+});
+
+// ============================================
 // CUSTOMER MANAGEMENT
 // ============================================
 
@@ -3936,7 +4048,15 @@ router.get('/estimates', requireFPScope, async (req, res) => {
       { name: 'block_number', def: 'VARCHAR(100)' },
       { name: 'villa_plot_number', def: 'VARCHAR(100)' },
       { name: 'amc_package_description', def: 'TEXT' },
-      { name: 'package_services', def: 'TEXT' }
+      { name: 'package_services', def: 'TEXT' },
+      // Work Order Estimate columns
+      { name: 'work_order_id', def: 'VARCHAR(50)' },
+      { name: 'work_order_category', def: 'VARCHAR(255)' },
+      { name: 'work_order_subcategory', def: 'VARCHAR(255)' },
+      { name: 'work_order_description', def: 'TEXT' },
+      { name: 'work_order_priority', def: 'VARCHAR(50)' },
+      { name: 'work_order_status', def: 'VARCHAR(50)' },
+      { name: 'work_order_services', def: 'TEXT' }
     ];
     for (const col of columnsToAdd) {
       try {
@@ -4141,7 +4261,10 @@ router.post('/estimates', requireFPScope, async (req, res) => {
       tower_name, block_number, villa_plot_number,
       package_id, package_name, package_price, amc_package_description, package_services, billing_duration,
       addons, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
-      description
+      description,
+      // Work Order Estimate fields
+      work_order_id, work_order_category, work_order_subcategory, work_order_description,
+      work_order_priority, work_order_status, work_order_services
     } = req.body;
     
     console.log('Creating estimate with division:', division, 'property_code:', property_code);
@@ -4272,9 +4395,33 @@ router.post('/estimates', requireFPScope, async (req, res) => {
     try {
       await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN block_unit_types JSON`);
     } catch (e) { /* Column exists */ }
+    // Add work_order_id column for Work Order Estimates
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN work_order_id VARCHAR(50)`);
+    } catch (e) { /* Column exists */ }
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN work_order_category VARCHAR(255)`);
+    } catch (e) { /* Column exists */ }
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN work_order_subcategory VARCHAR(255)`);
+    } catch (e) { /* Column exists */ }
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN work_order_description TEXT`);
+    } catch (e) { /* Column exists */ }
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN work_order_priority VARCHAR(50)`);
+    } catch (e) { /* Column exists */ }
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN work_order_status VARCHAR(50)`);
+    } catch (e) { /* Column exists */ }
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN work_order_services TEXT`);
+    } catch (e) { /* Column exists */ }
 
     // Stringify package_services for storage
     const packageServicesJson = package_services ? JSON.stringify(package_services) : null;
+    // Stringify work_order_services for storage
+    const workOrderServicesJson = work_order_services ? JSON.stringify(work_order_services) : null;
 
     // Insert into fp_estimates table (no FK constraints)
     const [result] = await pool.execute(
@@ -4287,8 +4434,10 @@ router.post('/estimates', requireFPScope, async (req, res) => {
         package_id, package_name, package_price, amc_package_description, package_services, billing_duration,
         subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
         addons_data, description, status,
-        created_by_id, created_by_name, created_by_role
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)`,
+        created_by_id, created_by_name, created_by_role,
+        work_order_id, work_order_category, work_order_subcategory, work_order_description,
+        work_order_priority, work_order_status, work_order_services
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         estimateId, req.fpId, property_id || null, estimate_type || 'property_based',
         client_name || '', client_phone || '', client_email || '',
@@ -4298,7 +4447,9 @@ router.post('/estimates', requireFPScope, async (req, res) => {
         package_id || null, package_name || '', safeNum(package_price, 0), amc_package_description || '', packageServicesJson, billing_duration || 'yearly',
         finalSubtotal, finalDiscountPercent, finalDiscountAmount, finalGstPercent, finalGstAmount, finalTotal,
         addonsJson, description || '', 
-        creatorId, creatorName, creatorRole
+        creatorId, creatorName, creatorRole,
+        work_order_id || null, work_order_category || null, work_order_subcategory || null, work_order_description || null,
+        work_order_priority || null, work_order_status || null, workOrderServicesJson
       ]
     );
 
@@ -4633,6 +4784,7 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
 
       const estimateData = {
         estimateId: estimate.estimate_id,
+        estimateType: estimate.estimate_type,
         customerName: estimate.client_name,
         customerEmail: email,
         customerPhone: estimate.client_phone || '',
@@ -4668,7 +4820,15 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         gstPercent: parseFloat(estimate.gst_percent) || 0,
         total: parseFloat(estimate.total_amount) || 0,
         validUntil: estimate.valid_until,
-        createdAt: estimate.created_at
+        createdAt: estimate.created_at,
+        // Work Order Estimate fields
+        workOrderId: estimate.work_order_id,
+        workOrderCategory: estimate.work_order_category,
+        workOrderSubcategory: estimate.work_order_subcategory,
+        workOrderDescription: estimate.work_order_description,
+        workOrderPriority: estimate.work_order_priority,
+        workOrderStatus: estimate.work_order_status,
+        isWorkOrderEstimate: estimate.estimate_type === 'work_order'
       };
       
       // Debug log price summary values

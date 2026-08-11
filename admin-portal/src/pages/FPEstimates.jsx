@@ -2095,7 +2095,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     }
     const exportData = filteredEstimates.map(e => ({
       'Estimate ID': e.estimate_id || '-',
-      'Type': e.estimate_type === 'property_based' || e.estimate_type === 'property-based' ? 'Property Based' : 'Direct',
+      'Type': e.estimate_type === 'work_order' ? 'Work Order' : e.estimate_type === 'property_based' || e.estimate_type === 'property-based' ? 'Property Based' : 'Direct',
+      'Work Order ID': e.work_order_id || '-',
       'Client Name': e.client_name || '-',
       'Property': e.property_name || '-',
       'Property Type': e.property_type || '-',
@@ -2181,6 +2182,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <option value="all">All Estimates</option>
                   <option value="property_based">Property Based</option>
                   <option value="direct">Direct</option>
+                  <option value="work_order">Work Order</option>
                 </select>
               </div>
               <div>
@@ -2315,10 +2317,17 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     )}
                     <td className="px-4 py-4 font-mono text-sm text-gray-900">{est.estimate_id}</td>
                     <td className="px-4 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${
+                        est.estimate_type === 'work_order' ? 'bg-orange-50 text-orange-600' :
+                        est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-blue-50 text-blue-600' : 
+                        'bg-purple-50 text-purple-600'
+                      }`}>
                         <Link2 className="w-3 h-3" />
-                        {est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}
+                        {est.estimate_type === 'work_order' ? 'Work Order' : est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}
                       </span>
+                      {est.estimate_type === 'work_order' && est.work_order_id && (
+                        <div className="text-xs text-orange-500 mt-1 font-mono">{est.work_order_id}</div>
+                      )}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">
                       {(est.estimate_type === 'property_based' || est.estimate_type === 'property-based') 
@@ -3532,9 +3541,32 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     viewEstimate.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
                   }`}>{viewEstimate.status || 'draft'}</span>
                 </div>
-                <div><p className="text-xs text-gray-500">Type</p><p className="font-medium text-sm capitalize">{viewEstimate.estimate_type?.replace('_', ' ')}</p></div>
+                <div><p className="text-xs text-gray-500">Type</p><p className={`font-medium text-sm capitalize ${viewEstimate.estimate_type === 'work_order' ? 'text-orange-600' : ''}`}>{viewEstimate.estimate_type === 'work_order' ? 'Work Order' : viewEstimate.estimate_type?.replace('_', ' ')}</p></div>
                 <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{formatDateIST(viewEstimate.created_at)}</p></div>
               </div>
+
+              {/* Work Order Details - Only for Work Order Estimates */}
+              {viewEstimate.estimate_type === 'work_order' && viewEstimate.work_order_id && (
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-sm font-semibold text-orange-700 mb-3">Work Order Details</p>
+                  <div className="bg-orange-50 p-4 rounded-lg grid grid-cols-2 gap-3">
+                    <div><p className="text-xs text-gray-500">Work Order ID</p><p className="font-medium text-sm font-mono text-orange-700">{viewEstimate.work_order_id}</p></div>
+                    <div><p className="text-xs text-gray-500">Category</p><p className="font-medium text-sm">{viewEstimate.work_order_category || '-'}</p></div>
+                    <div><p className="text-xs text-gray-500">Subcategory</p><p className="font-medium text-sm">{viewEstimate.work_order_subcategory || '-'}</p></div>
+                    <div><p className="text-xs text-gray-500">Priority</p>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        viewEstimate.work_order_priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                        viewEstimate.work_order_priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                        viewEstimate.work_order_priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-green-100 text-green-700'
+                      }`}>{viewEstimate.work_order_priority?.toUpperCase() || 'N/A'}</span>
+                    </div>
+                    {viewEstimate.work_order_description && (
+                      <div className="col-span-2"><p className="text-xs text-gray-500">Work Order Description</p><p className="font-medium text-sm">{viewEstimate.work_order_description}</p></div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Property Details */}
               <div className="border-t border-gray-100 pt-4">
