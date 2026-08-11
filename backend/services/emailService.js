@@ -1,5 +1,5 @@
 const nodemailer = require('nodemailer');
-const { generateEstimatePDF } = require('./pdfService');
+const { generateEstimatePDF, generateInvoicePDF } = require('./pdfService');
 const { pool } = require('../config/database');
 
 /**
@@ -2162,7 +2162,7 @@ const sendInvoiceEmail = async (invoice) => {
     invoiceId, customerName, customerEmail, customerPhone,
     propertyName, propertyCode, estimateId,
     subtotal, discountAmount, taxAmount, totalAmount, balanceAmount,
-    invoiceDate, dueDate, lineItems, paymentLink
+    invoiceDate, dueDate, lineItems, paymentLink, billingDuration
   } = invoice;
 
   if (!customerEmail) {
@@ -2184,16 +2184,37 @@ const sendInvoiceEmail = async (invoice) => {
     items = typeof lineItems === 'string' ? JSON.parse(lineItems) : (lineItems || []);
   } catch (e) { items = []; }
 
-  // Generate line items HTML
-  const itemsHtml = items.map((item, idx) => `
+  // Decode HTML entities helper
+  const decodeHtml = (str) => {
+    if (!str) return str;
+    return String(str)
+      .replace(/&amp;amp;amp;/g, '&')
+      .replace(/&amp;amp;/g, '&')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+  };
+
+  // Generate line items HTML with Service, Description, Frequency, Visits format
+  const itemsHtml = items.map((item, idx) => {
+    const fullDesc = decodeHtml(item.description || item.name || 'Service');
+    const parts = fullDesc.split(' - ');
+    const serviceName = parts[0] || 'Service';
+    const serviceDesc = parts.slice(1).join(' - ') || '-';
+    const freq = item.frequency || item.frequencyType || item.frequency_type || item.billingDuration || '-';
+    const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
+    const visits = item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1;
+    return `
     <tr>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${idx + 1}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.description || item.name || 'Service'}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity || 1}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.unitPrice || item.unit_price || 0)}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.totalPrice || item.total_price || 0)}</td>
-    </tr>
-  `).join('');
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4a5568;">${idx + 1}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #1a365d; font-weight: 600;">${serviceName}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #4a5568;">${serviceDesc}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4a5568;">${freqDisplay}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4a5568;">${visits}</td>
+    </tr>`;
+  }).join('');
 
   // Payment link section (if provided)
   const paymentSection = paymentLink ? `
@@ -2204,11 +2225,42 @@ const sendInvoiceEmail = async (invoice) => {
     </div>
   ` : '';
 
+  // Generate PDF attachment
+  let pdfBuffer = null;
+  try {
+    pdfBuffer = await generateInvoicePDF({
+      invoiceId,
+      estimateId,
+      customerName,
+      customerEmail,
+      customerPhone,
+      propertyName,
+      propertyCode,
+      invoiceDate,
+      dueDate,
+      billingDuration,
+      lineItems,
+      subtotal,
+      discountAmount,
+      taxAmount,
+      totalAmount,
+      balanceAmount
+    });
+    console.log(`📄 Invoice PDF generated for email: ${invoiceId}`);
+  } catch (pdfError) {
+    console.error('Failed to generate invoice PDF for email:', pdfError.message);
+  }
+
   const mailOptions = {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
     to: customerEmail,
     subject: `Invoice ${invoiceId} from XLAND INFRA - Payment Due`,
     headers: getDefaultHeaders(),
+    attachments: pdfBuffer ? [{
+      filename: `Invoice_${invoiceId}.pdf`,
+      content: pdfBuffer,
+      contentType: 'application/pdf'
+    }] : [],
     html: `
       <!DOCTYPE html>
       <html>
@@ -2251,29 +2303,49 @@ const sendInvoiceEmail = async (invoice) => {
                   <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Due Date:</td>
                   <td style="padding: 8px 0; padding-left: 15px; color: #dc2626; font-weight: 600;">${formatDate(dueDate)}</td>
                 </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Billing:</td>
+                  <td style="padding: 8px 0; padding-left: 15px; color: #2563eb; font-weight: 500;">${billingDuration || 'One-time'}</td>
+                </tr>
               </table>
             </div>
             
-            <!-- Property Details -->
-            ${propertyName ? `
-            <div style="background: #eff6ff; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
-              <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Property</h3>
-              <p style="margin: 0; color: #1f2937;">${propertyName} ${propertyCode ? `(${propertyCode})` : ''}</p>
-            </div>
-            ` : ''}
+            <!-- Property Details & Customer Details - Side by Side -->
+            <table style="width: 100%; margin-bottom: 20px;">
+              <tr>
+                <!-- Property Details -->
+                <td style="width: 48%; vertical-align: top; padding-right: 10px;">
+                  <div style="background: #eff6ff; border-radius: 8px; padding: 15px; border-left: 4px solid #3b82f6; height: 100%;">
+                    <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Property Details</h3>
+                    <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 13px;"><strong style="color: #1f2937;">Property ID:</strong> ${propertyCode || '-'}</p>
+                    <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 13px;"><strong style="color: #1f2937;">Name:</strong> ${propertyName || '-'}</p>
+                    ${estimateId ? `<p style="margin: 0; color: #6b7280; font-size: 13px;"><strong style="color: #1f2937;">Estimate:</strong> ${estimateId}</p>` : ''}
+                  </div>
+                </td>
+                <!-- Customer Details -->
+                <td style="width: 48%; vertical-align: top; padding-left: 10px;">
+                  <div style="background: #eff6ff; border-radius: 8px; padding: 15px; border-left: 4px solid #3b82f6; height: 100%;">
+                    <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Customer Details</h3>
+                    <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 13px;"><strong style="color: #1f2937;">Name:</strong> ${customerName || '-'}</p>
+                    <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 13px;"><strong style="color: #1f2937;">Phone:</strong> ${customerPhone || '-'}</p>
+                    <p style="margin: 0; color: #6b7280; font-size: 13px;"><strong style="color: #1f2937;">Email:</strong> ${customerEmail || '-'}</p>
+                  </div>
+                </td>
+              </tr>
+            </table>
             
-            <!-- Line Items -->
+            <!-- Services Included -->
             ${items.length > 0 ? `
             <div style="margin-bottom: 20px;">
-              <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 14px; font-weight: 600;">Services</h3>
+              <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Services Included</h3>
               <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 8px;">
                 <thead>
                   <tr style="background: #f9fafb;">
-                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">#</th>
-                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Description</th>
-                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Qty</th>
-                    <th style="padding: 10px; text-align: right; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Unit Price</th>
-                    <th style="padding: 10px; text-align: right; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Total</th>
+                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #4a5568; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 30px;">#</th>
+                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #4a5568; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 120px;">Service</th>
+                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #4a5568; font-weight: 600; border-bottom: 1px solid #e5e7eb;">Description</th>
+                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #4a5568; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 80px;">Frequency</th>
+                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #4a5568; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 50px;">Visits</th>
                   </tr>
                 </thead>
                 <tbody>
