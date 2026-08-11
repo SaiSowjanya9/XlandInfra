@@ -386,7 +386,10 @@ const EmployeeWorkOrders = ({ admin }) => {
       wo.last_name?.toLowerCase().includes(search) ||
       wo.category_name?.toLowerCase().includes(search) ||
       wo.property_code?.toLowerCase().includes(search) ||
-      wo.property_id?.toString().toLowerCase().includes(search)
+      wo.actual_property_id?.toLowerCase().includes(search) ||
+      wo.property_id?.toString().toLowerCase().includes(search) ||
+      wo.property_name?.toLowerCase().includes(search) ||
+      wo.customer_name?.toLowerCase().includes(search)
     );
     const matchesStatus = statusFilter === 'all' || wo.status === statusFilter;
     return matchesSearch && matchesStatus;

@@ -740,6 +740,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
       e.estimate_id?.toLowerCase().includes(search) || 
       e.client_name?.toLowerCase().includes(search) ||
       (e.property_code || '').toLowerCase().includes(search) ||
+      (e.property_name || '').toLowerCase().includes(search) ||
       (e.property_id?.toString() || '').toLowerCase().includes(search)
     );
     const matchType = estimateTypeFilter === 'all' || e.estimate_type === estimateTypeFilter;

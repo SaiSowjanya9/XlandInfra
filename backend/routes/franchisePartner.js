@@ -4068,10 +4068,25 @@ router.get('/estimates', requireFPScope, async (req, res) => {
 
     let query = `SELECT fe.*, 
                         COALESCE(fe.package_services, fpamc_id.services, fpamc_name.services) as packageServices,
-                        COALESCE(fe.amc_package_description, fpamc_id.description, fpamc_name.description) as amc_package_description
+                        COALESCE(fe.amc_package_description, fpamc_id.description, fpamc_name.description) as amc_package_description,
+                        -- Populate property details from linked property or work order
+                        COALESCE(fe.property_name, op.community_name, p.name, wo_prop.community_name, wo_prop2.name, wo.property_name) as property_name,
+                        COALESCE(fe.property_code, op.property_id, p.property_id, wo_prop.property_id, wo_prop2.property_id, wo.property_id) as property_code,
+                        COALESCE(fe.property_type, op.property_type, p.property_type, wo_prop.property_type, wo_prop2.property_type, wo.property_type) as property_type,
+                        COALESCE(fe.zone, op.zone, p.zone_id, wo_prop.zone, wo_prop2.zone_id) as zone,
+                        COALESCE(fe.division, op.division, p.division_id, wo_prop.division, wo_prop2.division_id) as division,
+                        COALESCE(fe.city, op.city, p.city, wo_prop.city, wo_prop2.city) as city,
+                        COALESCE(fe.address, op.address, p.address, wo_prop.address, wo_prop2.address) as address
                  FROM fp_estimates fe 
                  LEFT JOIN fp_amc_packages fpamc_id ON fe.package_id = fpamc_id.id
                  LEFT JOIN fp_amc_packages fpamc_name ON fe.package_name = fpamc_name.name AND fpamc_name.franchise_partner_id = fe.franchise_partner_id
+                 -- Join properties for property_based estimates
+                 LEFT JOIN onboarded_properties op ON fe.property_id = op.id
+                 LEFT JOIN properties p ON fe.property_id = p.id AND op.id IS NULL
+                 -- Join work_orders to get property details for work_order type estimates
+                 LEFT JOIN work_orders wo ON fe.work_order_id = wo.work_order_id AND fe.estimate_type = 'work_order'
+                 LEFT JOIN onboarded_properties wo_prop ON wo.property_id = wo_prop.id
+                 LEFT JOIN properties wo_prop2 ON wo.property_id = wo_prop2.id AND wo_prop.id IS NULL
                  WHERE fe.franchise_partner_id = ?`;
     const params = [req.fpId];
 

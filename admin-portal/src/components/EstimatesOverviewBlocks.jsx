@@ -145,17 +145,22 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   const [filter4, setFilter4] = useState('all'); // Direct Property Type
   const [filter5, setFilter5] = useState('all'); // Direct Status
   const [filter6, setFilter6] = useState('all'); // Property-Based Status
+  const [filter7, setFilter7] = useState('all'); // Work Order Status
+  const [filter8, setFilter8] = useState('all'); // Work Order Category
+  const [filter9, setFilter9] = useState('all'); // Work Order Overview
 
-  // Block 1: Estimates by Estimate Type
+  // Block 1: Estimates by Estimate Type (includes Work Order)
   const block1Filtered = applyPeriodFilter(estimates, filter3);
   const block1Direct = block1Filtered.filter(e => e.estimate_type === 'direct' || e.estimateType === 'direct').length;
   const block1PropertyBased = block1Filtered.filter(e => 
     e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
     e.estimateType === 'property_based' || e.estimateType === 'property-based'
   ).length;
+  const block1WorkOrder = block1Filtered.filter(e => e.estimate_type === 'work_order' || e.estimateType === 'work_order').length;
   const typeDataAll = [
     { name: 'Direct Estimates', value: block1Direct, color: '#8B5CF6' },
-    { name: 'Property-Based', value: block1PropertyBased, color: '#06B6D4' }
+    { name: 'Property-Based', value: block1PropertyBased, color: '#06B6D4' },
+    { name: 'Work Order', value: block1WorkOrder, color: '#F97316' }
   ];
   const typeData = typeDataAll.filter(item => item.value > 0);
 
@@ -220,6 +225,43 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
     { name: 'Rejected', value: block6Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
   ];
   const directStatusData = directStatusDataAll.filter(item => item.value > 0);
+
+  // Block 7: Work Order Estimate Overview (count by status)
+  const block7Filtered = applyPeriodFilter(estimates, filter9).filter(e => 
+    e.estimate_type === 'work_order' || e.estimateType === 'work_order'
+  );
+  const workOrderOverviewDataAll = [
+    { name: 'Draft', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#5B8DEF' },
+    { name: 'Sent', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#FBBF24' },
+    { name: 'Approved', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#14B8A6' },
+    { name: 'Rejected', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
+  ];
+  const workOrderOverviewData = workOrderOverviewDataAll.filter(item => item.value > 0);
+
+  // Block 8: Work Order Estimates by Category
+  const block8Filtered = applyPeriodFilter(estimates, filter8).filter(e => 
+    e.estimate_type === 'work_order' || e.estimateType === 'work_order'
+  );
+  const workOrderCategoryCount = {};
+  block8Filtered.forEach(est => {
+    const category = est.work_order_category || est.workOrderCategory || 'Other';
+    workOrderCategoryCount[category] = (workOrderCategoryCount[category] || 0) + 1;
+  });
+  const workOrderCategoryData = Object.entries(workOrderCategoryCount)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+
+  // Block 9: Work Order Estimate Status
+  const block9Filtered = applyPeriodFilter(estimates, filter7).filter(e => 
+    e.estimate_type === 'work_order' || e.estimateType === 'work_order'
+  );
+  const workOrderStatusDataAll = [
+    { name: 'Draft', value: block9Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#5B8DEF' },
+    { name: 'Sent', value: block9Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#FBBF24' },
+    { name: 'Approved', value: block9Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#14B8A6' },
+    { name: 'Rejected', value: block9Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
+  ];
+  const workOrderStatusData = workOrderStatusDataAll.filter(item => item.value > 0);
 
   return (
     <div className="space-y-4">
@@ -295,6 +337,44 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
             data={directStatusData} 
             dataAll={directStatusDataAll}
             total={block6Filtered.length}
+          />
+        </div>
+      </div>
+
+      {/* Row 3: Work Order Estimates */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Block 7: Work Order Estimate Overview */}
+        <div className="bg-white rounded-xl p-4 border border-gray-100">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Work Order Estimate Status</h3>
+            <FilterSelect value={filter9} onChange={setFilter9} />
+          </div>
+          <DonutChartWithLegend 
+            data={workOrderOverviewData} 
+            dataAll={workOrderOverviewDataAll}
+            total={block7Filtered.length}
+          />
+        </div>
+
+        {/* Block 8: Work Order Estimates by Category */}
+        <div className="bg-white rounded-xl p-4 border border-gray-100">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Work Order Estimates by Category</h3>
+            <FilterSelect value={filter8} onChange={setFilter8} />
+          </div>
+          <HorizontalBarChart data={workOrderCategoryData} />
+        </div>
+
+        {/* Block 9: Work Order Estimate Count */}
+        <div className="bg-white rounded-xl p-4 border border-gray-100">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Work Order Estimate Breakdown</h3>
+            <FilterSelect value={filter7} onChange={setFilter7} />
+          </div>
+          <DonutChartWithLegend 
+            data={workOrderStatusData} 
+            dataAll={workOrderStatusDataAll}
+            total={block9Filtered.length}
           />
         </div>
       </div>

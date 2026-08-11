@@ -10,7 +10,8 @@ import {
   RefreshCw,
   Mail,
   Calendar,
-  ChevronDown
+  ChevronDown,
+  Wrench
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -77,6 +78,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const [filter4, setFilter4] = useState('all'); // Direct Property Type
   const [filter5, setFilter5] = useState('all'); // Direct Status
   const [filter6, setFilter6] = useState('all'); // Property-Based Status
+  const [filter7, setFilter7] = useState('all'); // Work Order Status
+  const [filter8, setFilter8] = useState('all'); // Work Order Category
+  const [filter9, setFilter9] = useState('all'); // Work Order Overview
   const [trendPeriod, setTrendPeriod] = useState('all'); // Default to All Time
   const [funnelFilter, setFunnelFilter] = useState('all'); // Default to All Time
 
@@ -258,6 +262,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
     e.estimateType === 'property_based' || e.estimateType === 'property-based'
   ).length;
+  const workOrderEstimates = mainFilteredEstimates.filter(e => 
+    e.estimate_type === 'work_order' || e.estimateType === 'work_order'
+  ).length;
   
   const draftEstimates = mainFilteredEstimates.filter(e => 
     (e.status || '').toLowerCase() === 'draft'
@@ -338,6 +345,16 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       iconColor: '#14B8A6',
       borderColor: '#14B8A6',
       gradientEnd: 'rgba(20, 184, 166, 0.08)'
+    },
+    {
+      label: 'Work Order',
+      value: workOrderEstimates,
+      percentage: totalEstimates ? `${((workOrderEstimates / totalEstimates) * 100).toFixed(1)}% of total` : '0% of total',
+      icon: Wrench,
+      iconBg: '#FFEDD5',
+      iconColor: '#F97316',
+      borderColor: '#F97316',
+      gradientEnd: 'rgba(249, 115, 22, 0.08)'
     },
     {
       label: 'Draft',
@@ -422,10 +439,13 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
     e.estimateType === 'property_based' || e.estimateType === 'property-based'
   ).length;
-  const typeData = [
+  const block3WorkOrder = block3Data.filter(e => e.estimate_type === 'work_order' || e.estimateType === 'work_order').length;
+  const typeDataAll = [
     { name: 'Direct Estimates', value: block3Direct, color: '#8B5CF6' },
-    { name: 'Property-Based', value: block3PropertyBased, color: '#06B6D4' }
-  ].filter(item => item.value > 0);
+    { name: 'Property-Based', value: block3PropertyBased, color: '#06B6D4' },
+    { name: 'Work Order', value: block3WorkOrder, color: '#F97316' }
+  ];
+  const typeData = typeDataAll.filter(item => item.value > 0);
 
   // Block 4: Direct Property Type (uses filter4)
   const block4Data = applyPeriodFilter(mainFilteredEstimates, filter4).filter(e => 
@@ -469,6 +489,43 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   // Only non-zero for chart display
   const propertyBasedStatusData = propertyBasedStatusDataAll.filter(item => item.value > 0);
 
+  // Block 7: Work Order Estimate Status (uses filter7)
+  const block7Data = applyPeriodFilter(mainFilteredEstimates, filter7).filter(e => 
+    e.estimate_type === 'work_order' || e.estimateType === 'work_order'
+  );
+  const workOrderStatusDataAll = [
+    { name: 'Draft', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#5B8DEF' },
+    { name: 'Sent', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#FBBF24' },
+    { name: 'Approved', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#14B8A6' },
+    { name: 'Rejected', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
+  ];
+  const workOrderStatusData = workOrderStatusDataAll.filter(item => item.value > 0);
+
+  // Block 8: Work Order Estimates by Category (uses filter8)
+  const block8Data = applyPeriodFilter(mainFilteredEstimates, filter8).filter(e => 
+    e.estimate_type === 'work_order' || e.estimateType === 'work_order'
+  );
+  const workOrderCategoryCount = {};
+  block8Data.forEach(est => {
+    const category = est.work_order_category || est.workOrderCategory || 'Other';
+    workOrderCategoryCount[category] = (workOrderCategoryCount[category] || 0) + 1;
+  });
+  const workOrderCategoryData = Object.entries(workOrderCategoryCount)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+
+  // Block 9: Work Order Overview (uses filter9)
+  const block9Data = applyPeriodFilter(mainFilteredEstimates, filter9).filter(e => 
+    e.estimate_type === 'work_order' || e.estimateType === 'work_order'
+  );
+  const workOrderOverviewDataAll = [
+    { name: 'Draft', value: block9Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#5B8DEF' },
+    { name: 'Sent', value: block9Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#FBBF24' },
+    { name: 'Approved', value: block9Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#14B8A6' },
+    { name: 'Rejected', value: block9Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
+  ];
+  const workOrderOverviewData = workOrderOverviewDataAll.filter(item => item.value > 0);
+
   // Legacy variables for compatibility
   const propertyBasedOnly = block1Data;
   const directOnly = block4Data;
@@ -482,7 +539,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     for (let i = 5; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = date.toLocaleString('default', { month: 'short' }) + ' ' + date.getFullYear();
-      monthlyData[key] = { name: key, direct: 0, property: 0, sortDate: date };
+      monthlyData[key] = { name: key, direct: 0, property: 0, workOrder: 0, sortDate: date };
     }
     
     mainFilteredEstimates.forEach(est => {
@@ -495,6 +552,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           monthlyData[key].direct++;
         } else if (estType === 'property_based' || estType === 'property-based') {
           monthlyData[key].property++;
+        } else if (estType === 'work_order') {
+          monthlyData[key].workOrder++;
         }
       }
     });
@@ -1040,6 +1099,142 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
       </div>
 
+      {/* Row 3: Work Order Estimates */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Work Order Estimate Status (Donut) */}
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Work Order Estimate Status</h3>
+            <select
+              value={filter7}
+              onChange={(e) => setFilter7(e.target.value)}
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
+            >
+              <option value="all">All Time</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
+            </select>
+          </div>
+          
+          <div className="flex items-center">
+            <div className="w-1/2 flex items-center justify-center">
+              <DonutChart data={workOrderStatusDataAll} centerValue={block7Data.length} size={130} strokeWidth={18} />
+            </div>
+            <div className="w-1/2 space-y-1.5 pl-3">
+              {workOrderStatusDataAll.map((item, index) => (
+                <div key={index} className="flex items-center gap-1.5 text-xs">
+                  <div 
+                    className="w-2 h-2 rounded-full flex-shrink-0" 
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
+                  <span className="text-gray-800 whitespace-nowrap">
+                    {item.value} ({block7Data.length ? ((item.value / block7Data.length) * 100).toFixed(1) : 0}%)
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Work Order Estimates by Category (Bar) */}
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Work Order by Category</h3>
+            <select
+              value={filter8}
+              onChange={(e) => setFilter8(e.target.value)}
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
+            >
+              <option value="all">All Time</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
+            </select>
+          </div>
+          
+          {workOrderCategoryData.length > 0 ? (
+            <div className="space-y-2">
+              {workOrderCategoryData.map((item, index) => {
+                const maxValue = Math.max(...workOrderCategoryData.map(d => d.value));
+                const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+                const colors = ['#F97316', '#FB923C', '#FDBA74', '#FED7AA', '#FFEDD5'];
+                return (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="w-20 text-xs text-gray-600 truncate">{item.name}</div>
+                    <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+                      <div 
+                        className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
+                        style={{ 
+                          width: `${Math.max(widthPercent, 15)}%`,
+                          backgroundColor: colors[index % colors.length]
+                        }}
+                      >
+                        <span className="text-white text-[10px] font-medium">{item.value}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="flex justify-between text-[10px] text-gray-400 mt-1 px-1">
+                <span>0</span>
+                <span>Number of Estimates</span>
+                <span>{Math.max(...workOrderCategoryData.map(d => d.value))}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="h-36 flex flex-col items-center justify-center text-gray-400">
+              <div className="text-3xl font-bold text-gray-300 mb-1">0</div>
+              <div className="text-sm">No work order estimates</div>
+            </div>
+          )}
+        </div>
+
+        {/* Work Order Estimate Breakdown (Donut) */}
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Work Order Breakdown</h3>
+            <select
+              value={filter9}
+              onChange={(e) => setFilter9(e.target.value)}
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
+            >
+              <option value="all">All Time</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
+            </select>
+          </div>
+          
+          <div className="flex items-center">
+            <div className="w-1/2 flex items-center justify-center">
+              <DonutChart data={workOrderOverviewDataAll} centerValue={block9Data.length} size={130} strokeWidth={18} />
+            </div>
+            <div className="w-1/2 space-y-1.5 pl-3">
+              {workOrderOverviewDataAll.map((item, index) => (
+                <div key={index} className="flex items-center gap-1.5 text-xs">
+                  <div 
+                    className="w-2 h-2 rounded-full flex-shrink-0" 
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
+                  <span className="text-gray-800 whitespace-nowrap">
+                    {item.value} ({block9Data.length ? ((item.value / block9Data.length) * 100).toFixed(1) : 0}%)
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Bottom Row - Trend & Funnel */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Estimate Trend (Line Chart) */}
@@ -1084,6 +1279,15 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   stroke="#14B8A6" 
                   strokeWidth={2}
                   dot={{ fill: '#14B8A6', r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="workOrder" 
+                  name="Work Order Estimates"
+                  stroke="#F97316" 
+                  strokeWidth={2}
+                  dot={{ fill: '#F97316', r: 4 }}
                   activeDot={{ r: 6 }}
                 />
               </LineChart>
