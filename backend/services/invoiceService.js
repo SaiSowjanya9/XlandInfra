@@ -9,6 +9,20 @@ const { pool } = require('../config/database');
 // GST Rate (fixed at 18%)
 const GST_RATE = 18;
 
+// Decode HTML entities (fix triple/double encoded ampersands etc.)
+const decodeHtmlEntities = (str) => {
+  if (!str || typeof str !== 'string') return str;
+  return str
+    .replace(/&amp;amp;amp;/g, '&')
+    .replace(/&amp;amp;/g, '&')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ');
+};
+
 // Due date offset in days
 const DUE_DATE_DAYS = 14;
 
@@ -224,8 +238,8 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
       // Add package services with their descriptions (NOT the package name)
       if (Array.isArray(packageServices) && packageServices.length > 0) {
         packageServices.forEach(service => {
-          const serviceName = service.name || service.serviceName || service.service_name || service.service || 'Service';
-          const serviceDesc = service.description || '';
+          const serviceName = decodeHtmlEntities(service.name || service.serviceName || service.service_name || service.service || 'Service');
+          const serviceDesc = decodeHtmlEntities(service.description || '');
           const frequency = service.frequencyType || service.frequency_type || service.frequency || '';
           const visits = service.frequencyCount || service.frequency_count || service.visits || 1;
           
@@ -242,7 +256,7 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
       } else if (estimate.package_name && packagePrice > 0) {
         // Fallback: if no service details, show package services as single item
         items.push({
-          description: `AMC Services (${estimate.package_name})`,
+          description: `AMC Services (${decodeHtmlEntities(estimate.package_name)})`,
           quantity: 1,
           unit_price: packagePrice,
           total_price: packagePrice,
@@ -254,8 +268,8 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
       // Add add-on services with their descriptions
       if (Array.isArray(addonsData) && addonsData.length > 0) {
         addonsData.forEach(addon => {
-          const addonName = addon.name || addon.serviceName || addon.service_name || 'Add-on Service';
-          const addonDesc = addon.description || '';
+          const addonName = decodeHtmlEntities(addon.name || addon.serviceName || addon.service_name || 'Add-on Service');
+          const addonDesc = decodeHtmlEntities(addon.description || '');
           const frequency = addon.frequency_type || addon.frequencyType || addon.frequency || '';
           const visits = addon.frequency_count || addon.frequencyCount || addon.visits || addon.quantity || 1;
           // Get the price - could be totalPrice, price, calculatedPrice, etc.
@@ -640,6 +654,12 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
     let lineItems = [];
     try {
       lineItems = invoice.line_items ? (typeof invoice.line_items === 'string' ? JSON.parse(invoice.line_items) : invoice.line_items) : [];
+      // Decode HTML entities in descriptions
+      lineItems = lineItems.map(item => ({
+        ...item,
+        description: decodeHtmlEntities(item.description),
+        name: decodeHtmlEntities(item.name)
+      }));
     } catch (e) { lineItems = []; }
     
     // Generate line items HTML
