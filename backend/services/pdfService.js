@@ -42,11 +42,14 @@ const generateEstimatePDF = async (estimate) => {
       doc.on('error', reject);
 
       const {
-        estimateId, customerName, customerEmail, customerPhone,
+        estimateId, estimateType, customerName, customerEmail, customerPhone,
         propertyName, propertyType, propertyCode, zone, division, city, address,
         numberOfBlocks, totalUnits, towerName, blockNumber, villaPlotNumber,
         packageName, packagePrice, amcPackageDescription, services, addons,
-        subtotal, discount, discountAmount, tax, gstPercent, total, description, createdAt
+        subtotal, discount, discountAmount, tax, gstPercent, total, description, createdAt,
+        // Work Order Estimate fields
+        isWorkOrderEstimate, workOrderId, workOrderCategory, workOrderSubcategory,
+        workOrderDescription, workOrderPriority, workOrderStatus
       } = estimate;
 
       // Debug log received price values
@@ -145,6 +148,35 @@ const generateEstimatePDF = async (estimate) => {
       if (city) { doc.text(`City: ${city}`, 315, cy); cy += 12; }
 
       y += 115;
+
+      // Work Order Details (only for work order estimates) - same style as Property & Customer cards
+      if (isWorkOrderEstimate && workOrderId) {
+        doc.rect(50, y, 500, 60).fill('#e8f4fc').stroke('#cce7f7'); // Same blue as other cards
+        doc.fontSize(10).fillColor(navy).text('Work Order Details', 60, y + 10);
+        doc.fontSize(8).fillColor('#666666');
+        let wy = y + 28;
+        
+        // Row 1: Work Order ID & Category
+        doc.text('Work Order ID:', 60, wy);
+        doc.fillColor('#333333').text(workOrderId, 130, wy);
+        if (workOrderCategory) { 
+          doc.fillColor('#666666').text('Category:', 280, wy); 
+          doc.fillColor('#333333').text(workOrderCategory, 330, wy);
+        }
+        wy += 14;
+        
+        // Row 2: Subcategory & Priority
+        doc.fillColor('#666666');
+        if (workOrderSubcategory) { 
+          doc.text('Subcategory:', 60, wy); 
+          doc.fillColor('#333333').text(workOrderSubcategory, 130, wy);
+        }
+        if (workOrderPriority) { 
+          doc.fillColor('#666666').text('Priority:', 280, wy); 
+          doc.fillColor('#333333').text(workOrderPriority.toUpperCase(), 330, wy);
+        }
+        y += 70;
+      }
 
       // Package Description - dynamic height based on content
       if (amcPackageDescription) {
