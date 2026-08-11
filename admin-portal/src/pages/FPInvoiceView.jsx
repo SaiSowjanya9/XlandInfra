@@ -41,6 +41,20 @@ const PAYMENT_LINK_STATUS = {
   cancelled: { label: 'Link Cancelled', color: 'bg-gray-100 text-gray-600', icon: XCircle },
 };
 
+// Helper to decode HTML entities (fix triple/double encoded ampersands etc.)
+const decodeHtmlEntities = (str) => {
+  if (!str) return str;
+  return String(str)
+    .replace(/&amp;amp;amp;/g, '&')
+    .replace(/&amp;amp;/g, '&')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ');
+};
+
 const FPInvoiceView = ({ user }) => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -463,9 +477,9 @@ const FPInvoiceView = ({ user }) => {
                   <tr key={index} className="border-b border-gray-200">
                     <td className="py-3 px-4 text-gray-600">{index + 1}</td>
                     <td className="py-3 px-4">
-                      <p className="font-medium text-gray-900">{item.description}</p>
+                      <p className="font-medium text-gray-900">{decodeHtmlEntities(item.description)}</p>
                       {item.details && (
-                        <p className="text-sm text-gray-500">{item.details}</p>
+                        <p className="text-sm text-gray-500">{decodeHtmlEntities(item.details)}</p>
                       )}
                     </td>
                     <td className="py-3 px-4 text-center text-gray-600">{item.quantity || 1}</td>
