@@ -4056,13 +4056,16 @@ router.get('/estimates', requireFPScope, async (req, res) => {
       }
       
       // If division, property_code, phone or email is missing, try to fetch from property tables
+      // BUT only for property_based estimates - NOT for direct estimates
       let division = est.division;
       let property_code = est.property_code;
       let client_phone = est.client_phone;
       let client_email = est.client_email;
       const propName = est.property_name || '';
+      const isPropertyBased = est.estimate_type === 'property_based' || est.estimate_type === 'property-based';
       
-      if (propName && (!division || !property_code || !client_phone || !client_email)) {
+      // Only auto-fill property_code for property-based estimates
+      if (isPropertyBased && propName && (!division || !property_code || !client_phone || !client_email)) {
         try {
           // Try properties table first
           let [props] = await pool.execute(

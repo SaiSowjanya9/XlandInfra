@@ -653,155 +653,260 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
       </tr>
     `).join('');
     
-    const subject = `Invoice ${invoiceId} from XLAND INFRA`;
+    const subject = `Invoice ${invoiceId} from XLAND INFRA - Payment Due`;
     const html = `
-      <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; background: #ffffff;">
-        <!-- Header with Logo -->
-        <div style="background: #1a1a1a; padding: 20px 30px; display: flex; align-items: center; justify-content: space-between;">
-          <div style="display: flex; align-items: center; gap: 15px;">
-            <img src="https://xlandinfra.com/logo.png" alt="XLAND INFRA" style="height: 50px;" onerror="this.style.display='none'"/>
-            <div>
-              <h1 style="color: #d4a853; margin: 0; font-size: 28px; font-weight: bold; letter-spacing: 1px;">XLAND INFRA</h1>
-              <p style="color: #888; margin: 0; font-size: 12px; letter-spacing: 3px;">——— PVT LTD ———</p>
-            </div>
-          </div>
-          <div style="background: #d4a853; color: #1a1a1a; padding: 10px 25px; border-radius: 5px; font-weight: bold; font-size: 14px;">
-            INVOICE
-          </div>
-        </div>
-        
-        <!-- Invoice Info Row -->
-        <div style="padding: 20px 30px; background: #f8f9fa; border-bottom: 1px solid #e2e8f0;">
-          <table style="width: 100%;">
-            <tr>
-              <td style="color: #4a5568;">
-                <strong>ID:</strong> ${invoiceId}
-                ${invoice.source_estimate_id ? `<br><span style="color: #718096; font-size: 12px;">Estimate: ${invoice.source_estimate_id}</span>` : ''}
-              </td>
-              <td style="text-align: right; color: #4a5568;">
-                <strong>Invoice Date:</strong> ${formatDate(invoice.invoice_date)}<br>
-                <strong style="color: #e53e3e;">Due Date:</strong> <span style="color: #e53e3e;">${formatDate(dueDate)}</span>
-              </td>
-            </tr>
-          </table>
-        </div>
-        
-        <!-- Package Info -->
-        <div style="background: #e8f4f8; padding: 15px 30px; display: flex; justify-content: space-between; border-bottom: 1px solid #d1e7ef;">
-          <div>
-            <span style="color: #2b6cb0; font-weight: 600;">Total Amount: ${formatCurrency(totalAmount)}</span>
-          </div>
-          <div>
-            <span style="color: #2b6cb0; font-weight: 600;">Billing: ${invoice.billing_duration || 'One-time'}</span>
-          </div>
-        </div>
-        
-        <!-- Two Column Section: Property & Customer Details -->
-        <div style="padding: 25px 30px;">
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <!-- Property Details -->
-              <td style="width: 48%; vertical-align: top; padding-right: 15px;">
-                <div style="background: #e8f4f8; border-radius: 8px; padding: 20px; border-left: 4px solid #3182ce;">
-                  <h3 style="color: #2b6cb0; margin: 0 0 15px 0; font-size: 16px;">Property Details</h3>
-                  <p style="margin: 8px 0; color: #4a5568;"><strong>Property ID:</strong> ${invoice.property_code || invoice.propertyCode || '-'}</p>
-                  <p style="margin: 8px 0; color: #4a5568;"><strong>Name:</strong> ${invoice.property_name || invoice.customer_name || '-'}</p>
-                  <p style="margin: 8px 0; color: #4a5568;"><strong>Type:</strong> ${invoice.property_type || 'Gated Community'}</p>
-                  <p style="margin: 8px 0; color: #4a5568;"><strong>Zone:</strong> ${invoice.zone || '-'}</p>
-                  ${invoice.city ? `<p style="margin: 8px 0; color: #4a5568;"><strong>City:</strong> ${invoice.city}</p>` : ''}
-                </div>
-              </td>
-              
-              <!-- Customer Details -->
-              <td style="width: 48%; vertical-align: top; padding-left: 15px;">
-                <div style="background: #e8f4f8; border-radius: 8px; padding: 20px; border-left: 4px solid #3182ce;">
-                  <h3 style="color: #2b6cb0; margin: 0 0 15px 0; font-size: 16px;">Customer Details</h3>
-                  <p style="margin: 8px 0; color: #4a5568;"><strong>Name:</strong> ${customerName || invoice.client_name || '-'}</p>
-                  <p style="margin: 8px 0; color: #4a5568;"><strong>Phone:</strong> ${invoice.customer_phone || invoice.client_phone || '-'}</p>
-                  <p style="margin: 8px 0; color: #4a5568;"><strong>Email:</strong> ${customerEmail || invoice.client_email || '-'}</p>
-                  ${invoice.city ? `<p style="margin: 8px 0; color: #4a5568;"><strong>City:</strong> ${invoice.city}</p>` : ''}
-                </div>
-              </td>
-            </tr>
-          </table>
-        </div>
-        
-        <!-- Line Items Table -->
-        ${lineItems.length > 0 ? `
-        <div style="padding: 0 30px 25px;">
-          <h3 style="color: #2d3748; margin: 0 0 15px 0; font-size: 16px;">Services & Items</h3>
-          <table style="width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0; border-radius: 8px;">
-            <thead>
-              <tr style="background: #f7fafc;">
-                <th style="padding: 12px; text-align: left; color: #4a5568; font-weight: 600; border-bottom: 2px solid #e2e8f0;">#</th>
-                <th style="padding: 12px; text-align: left; color: #4a5568; font-weight: 600; border-bottom: 2px solid #e2e8f0;">Description</th>
-                <th style="padding: 12px; text-align: center; color: #4a5568; font-weight: 600; border-bottom: 2px solid #e2e8f0;">Qty</th>
-                <th style="padding: 12px; text-align: right; color: #4a5568; font-weight: 600; border-bottom: 2px solid #e2e8f0;">Unit Price</th>
-                <th style="padding: 12px; text-align: right; color: #4a5568; font-weight: 600; border-bottom: 2px solid #e2e8f0;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${lineItemsHtml}
-            </tbody>
-          </table>
-        </div>
-        ` : ''}
-        
-        <!-- Amount Summary -->
-        <div style="padding: 0 30px 25px;">
-          <div style="background: #f7fafc; border-radius: 8px; padding: 20px; max-width: 350px; margin-left: auto;">
-            <table style="width: 100%;">
-              <tr>
-                <td style="padding: 8px 0; color: #718096;">Subtotal</td>
-                <td style="padding: 8px 0; text-align: right; color: #2d3748;">${formatCurrency(invoice.subtotal)}</td>
-              </tr>
-              ${parseFloat(invoice.discount_amount) > 0 ? `
-              <tr>
-                <td style="padding: 8px 0; color: #718096;">Discount (${invoice.discount_percentage || 0}%)</td>
-                <td style="padding: 8px 0; text-align: right; color: #38a169;">-${formatCurrency(invoice.discount_amount)}</td>
-              </tr>
-              ` : ''}
-              <tr>
-                <td style="padding: 8px 0; color: #718096;">GST (${invoice.tax_percentage || 18}%)</td>
-                <td style="padding: 8px 0; text-align: right; color: #2d3748;">${formatCurrency(invoice.tax_amount)}</td>
-              </tr>
-              <tr style="border-top: 2px solid #e2e8f0;">
-                <td style="padding: 12px 0 8px; color: #1a365d; font-weight: bold; font-size: 16px;">Total Amount</td>
-                <td style="padding: 12px 0 8px; text-align: right; color: #1a365d; font-weight: bold; font-size: 18px;">${formatCurrency(totalAmount)}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #718096;">Amount Paid</td>
-                <td style="padding: 8px 0; text-align: right; color: #38a169;">${formatCurrency(invoice.amount_paid || 0)}</td>
-              </tr>
-              <tr style="border-top: 1px solid #e2e8f0;">
-                <td style="padding: 12px 0; color: #e53e3e; font-weight: bold;">Balance Due</td>
-                <td style="padding: 12px 0; text-align: right; color: #e53e3e; font-weight: bold; font-size: 18px;">${formatCurrency(invoice.balance_amount || totalAmount)}</td>
-              </tr>
-            </table>
-          </div>
-        </div>
-        
-        <!-- Payment Instructions -->
-        <div style="padding: 0 30px 25px;">
-          <div style="background: #fff3cd; border-radius: 8px; padding: 15px; border-left: 4px solid #d4a853;">
-            <p style="margin: 0; color: #856404; font-weight: 600;">Payment Instructions</p>
-            <p style="margin: 10px 0 0; color: #856404; font-size: 14px;">
-              Please make the payment before the due date to avoid any late fees.<br>
-              For any queries, contact us at <a href="mailto:info@xlandinfra.com" style="color: #2b6cb0;">info@xlandinfra.com</a>
-            </p>
-          </div>
-        </div>
-        
-        <!-- Footer -->
-        <div style="background: #1a1a1a; padding: 20px 30px; text-align: center;">
-          <p style="color: #888; margin: 0; font-size: 12px;">
-            © ${new Date().getFullYear()} XLAND INFRA PVT LTD. All rights reserved.
-          </p>
-          <p style="color: #666; margin: 10px 0 0; font-size: 11px;">
-            This is an auto-generated invoice. Please do not reply to this email.
-          </p>
-        </div>
-      </div>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Invoice ${invoiceId}</title>
+        <!--[if mso]>
+        <style type="text/css">
+          table { border-collapse: collapse; }
+          .mobile-hide { display: table-cell !important; }
+        </style>
+        <![endif]-->
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7;">
+          <tr>
+            <td align="center" style="padding: 20px 10px;">
+              <!-- Main Container -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                
+                <!-- Header -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); padding: 24px 20px; text-align: center;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center">
+                          <h1 style="color: #d4a853; margin: 0; font-size: 24px; font-weight: bold; letter-spacing: 1px;">XLAND INFRA</h1>
+                          <p style="color: #888; margin: 4px 0 0; font-size: 11px; letter-spacing: 2px;">PVT LTD</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td align="center" style="padding-top: 16px;">
+                          <span style="background: #d4a853; color: #1a1a1a; padding: 8px 24px; border-radius: 20px; font-weight: bold; font-size: 13px; display: inline-block;">INVOICE</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+                <!-- Invoice Info -->
+                <tr>
+                  <td style="padding: 20px; background: #f8f9fa; border-bottom: 1px solid #e2e8f0;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding-bottom: 8px;">
+                          <span style="color: #718096; font-size: 12px;">Invoice ID</span><br>
+                          <span style="color: #1a365d; font-size: 18px; font-weight: bold;">${invoiceId}</span>
+                        </td>
+                      </tr>
+                      ${invoice.source_estimate_id ? `
+                      <tr>
+                        <td style="padding-bottom: 12px;">
+                          <span style="color: #718096; font-size: 11px;">Estimate: ${invoice.source_estimate_id}</span>
+                        </td>
+                      </tr>
+                      ` : ''}
+                      <tr>
+                        <td>
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                            <tr>
+                              <td width="50%" style="vertical-align: top;">
+                                <span style="color: #718096; font-size: 11px;">Invoice Date</span><br>
+                                <span style="color: #2d3748; font-size: 14px; font-weight: 500;">${formatDate(invoice.invoice_date)}</span>
+                              </td>
+                              <td width="50%" style="vertical-align: top; text-align: right;">
+                                <span style="color: #e53e3e; font-size: 11px;">Due Date</span><br>
+                                <span style="color: #e53e3e; font-size: 14px; font-weight: 600;">${formatDate(dueDate)}</span>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+                <!-- Amount Highlight -->
+                <tr>
+                  <td style="padding: 20px; background: linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%); text-align: center;">
+                    <span style="color: rgba(255,255,255,0.8); font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Total Amount Due</span><br>
+                    <span style="color: #ffffff; font-size: 32px; font-weight: bold;">${formatCurrency(totalAmount)}</span>
+                    <br><span style="color: rgba(255,255,255,0.7); font-size: 12px;">${invoice.billing_duration || 'One-time Payment'}</span>
+                  </td>
+                </tr>
+                
+                <!-- Customer Details -->
+                <tr>
+                  <td style="padding: 20px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f7fafc; border-radius: 8px; overflow: hidden;">
+                      <tr>
+                        <td style="padding: 16px; border-left: 4px solid #3182ce;">
+                          <span style="color: #2b6cb0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Customer Details</span>
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 12px;">
+                            <tr>
+                              <td style="padding: 4px 0; color: #4a5568; font-size: 14px;">
+                                <strong style="color: #2d3748;">${customerName || invoice.client_name || '-'}</strong>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 4px 0; color: #718096; font-size: 13px;">
+                                📧 ${customerEmail || invoice.client_email || '-'}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 4px 0; color: #718096; font-size: 13px;">
+                                📱 ${invoice.customer_phone || invoice.client_phone || '-'}
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+                <!-- Property Details (only for property-based) -->
+                ${invoice.property_code ? `
+                <tr>
+                  <td style="padding: 0 20px 20px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #e8f4f8; border-radius: 8px; overflow: hidden;">
+                      <tr>
+                        <td style="padding: 16px; border-left: 4px solid #38b2ac;">
+                          <span style="color: #2c7a7b; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Property Details</span>
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 12px;">
+                            <tr>
+                              <td style="padding: 4px 0; color: #4a5568; font-size: 14px;">
+                                <strong>${invoice.property_name || '-'}</strong>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 4px 0; color: #718096; font-size: 13px;">
+                                ID: ${invoice.property_code} | Type: ${invoice.property_type || 'Gated Community'}
+                              </td>
+                            </tr>
+                            ${invoice.zone || invoice.city ? `
+                            <tr>
+                              <td style="padding: 4px 0; color: #718096; font-size: 13px;">
+                                📍 ${[invoice.zone, invoice.city].filter(Boolean).join(', ')}
+                              </td>
+                            </tr>
+                            ` : ''}
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                ` : ''}
+                
+                <!-- Line Items -->
+                ${lineItems.length > 0 ? `
+                <tr>
+                  <td style="padding: 0 20px 20px;">
+                    <span style="color: #2d3748; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Services & Items</span>
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 12px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                      ${lineItems.map((item, idx) => `
+                      <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#f7fafc'};">
+                        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">
+                          <span style="color: #2d3748; font-size: 14px; font-weight: 500;">${item.description || item.name || 'Service'}</span>
+                          <br><span style="color: #718096; font-size: 12px;">Qty: ${item.quantity || 1} × ${formatCurrency(item.unitPrice || item.unit_price || 0)}</span>
+                        </td>
+                        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: right; vertical-align: top;">
+                          <span style="color: #2d3748; font-size: 14px; font-weight: 600;">${formatCurrency(item.totalPrice || item.total_price || 0)}</span>
+                        </td>
+                      </tr>
+                      `).join('')}
+                    </table>
+                  </td>
+                </tr>
+                ` : ''}
+                
+                <!-- Amount Summary -->
+                <tr>
+                  <td style="padding: 0 20px 20px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f7fafc; border-radius: 8px; overflow: hidden;">
+                      <tr>
+                        <td style="padding: 16px;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                            <tr>
+                              <td style="padding: 6px 0; color: #718096; font-size: 13px;">Subtotal</td>
+                              <td style="padding: 6px 0; text-align: right; color: #2d3748; font-size: 13px;">${formatCurrency(invoice.subtotal)}</td>
+                            </tr>
+                            ${parseFloat(invoice.discount_amount) > 0 ? `
+                            <tr>
+                              <td style="padding: 6px 0; color: #718096; font-size: 13px;">Discount (${invoice.discount_percentage || 0}%)</td>
+                              <td style="padding: 6px 0; text-align: right; color: #38a169; font-size: 13px;">-${formatCurrency(invoice.discount_amount)}</td>
+                            </tr>
+                            ` : ''}
+                            <tr>
+                              <td style="padding: 6px 0; color: #718096; font-size: 13px;">GST (${invoice.tax_percentage || 18}%)</td>
+                              <td style="padding: 6px 0; text-align: right; color: #2d3748; font-size: 13px;">${formatCurrency(invoice.tax_amount)}</td>
+                            </tr>
+                            <tr>
+                              <td colspan="2" style="padding: 8px 0;"><hr style="border: none; border-top: 1px solid #e2e8f0; margin: 0;"></td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #1a365d; font-size: 15px; font-weight: bold;">Total</td>
+                              <td style="padding: 6px 0; text-align: right; color: #1a365d; font-size: 18px; font-weight: bold;">${formatCurrency(totalAmount)}</td>
+                            </tr>
+                            ${parseFloat(invoice.amount_paid) > 0 ? `
+                            <tr>
+                              <td style="padding: 6px 0; color: #38a169; font-size: 13px;">Paid</td>
+                              <td style="padding: 6px 0; text-align: right; color: #38a169; font-size: 13px;">${formatCurrency(invoice.amount_paid)}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #e53e3e; font-size: 15px; font-weight: bold;">Balance Due</td>
+                              <td style="padding: 6px 0; text-align: right; color: #e53e3e; font-size: 18px; font-weight: bold;">${formatCurrency(invoice.balance_amount || totalAmount)}</td>
+                            </tr>
+                            ` : ''}
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+                <!-- Payment Instructions -->
+                <tr>
+                  <td style="padding: 0 20px 20px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fffbeb; border-radius: 8px; border-left: 4px solid #d4a853;">
+                      <tr>
+                        <td style="padding: 16px;">
+                          <span style="color: #92400e; font-size: 14px; font-weight: 600;">💳 Payment Instructions</span>
+                          <p style="margin: 8px 0 0; color: #92400e; font-size: 13px; line-height: 1.5;">
+                            Please make the payment before the due date to avoid any late fees.<br>
+                            For queries: <a href="mailto:info@xlandinfra.com" style="color: #2563eb; text-decoration: none;">info@xlandinfra.com</a>
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td style="background: #1a1a1a; padding: 20px; text-align: center;">
+                    <p style="color: #d4a853; margin: 0 0 8px; font-size: 14px; font-weight: 600;">XLAND INFRA PVT LTD</p>
+                    <p style="color: #888; margin: 0; font-size: 11px;">
+                      © ${new Date().getFullYear()} All rights reserved.
+                    </p>
+                    <p style="color: #666; margin: 8px 0 0; font-size: 10px;">
+                      This is an auto-generated invoice. Please do not reply to this email.
+                    </p>
+                  </td>
+                </tr>
+                
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `;
     
     await emailService.sendEmail({

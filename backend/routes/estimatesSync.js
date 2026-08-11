@@ -663,12 +663,16 @@ router.post('/:estimateId/action', async (req, res) => {
     if (source === 'fp') {
       console.log(`📝 Updating FP estimate ${estimateId} to status: ${newStatus}`);
       const [updateResult] = await pool.execute(
-        `UPDATE fp_estimates SET status = ? WHERE estimate_id = ?`,
+        `UPDATE fp_estimates SET status = ?, updated_at = NOW() WHERE estimate_id = ?`,
         [newStatus, estimateId]
       );
       console.log(`✅ FP estimate update result: ${updateResult.affectedRows} rows affected`);
       if (updateResult.affectedRows === 0) {
-        console.error(`❌ No rows updated! estimate_id=${estimateId} may not exist`);
+        console.error(`❌ No rows updated! estimate_id=${estimateId} may not exist in fp_estimates table`);
+        // Double check by querying
+        const [check] = await pool.execute(`SELECT id, estimate_id, status FROM fp_estimates WHERE estimate_id = ?`, [estimateId]);
+        console.error(`❌ Debug: Found ${check.length} estimates with estimate_id=${estimateId}`, check[0] || 'none');
+        return res.status(500).json({ success: false, message: 'Failed to update estimate status. Please try again.' });
       }
     } else {
       console.log(`📝 Updating regular estimate ${estimateId} to status: ${action === 'approve' ? 'Approved' : 'Rejected'}`);
@@ -677,6 +681,10 @@ router.post('/:estimateId/action', async (req, res) => {
         [action === 'approve' ? 'Approved' : 'Rejected', estimateId]
       );
       console.log(`✅ Regular estimate update result: ${updateResult.affectedRows} rows affected`);
+      if (updateResult.affectedRows === 0) {
+        console.error(`❌ No rows updated! estimate_id=${estimateId} may not exist in estimates table`);
+        return res.status(500).json({ success: false, message: 'Failed to update estimate status. Please try again.' });
+      }
     }
     
     // Auto-generate invoice when customer approves estimate
@@ -689,41 +697,8 @@ router.post('/:estimateId/action', async (req, res) => {
         // Use internal DB id for invoice generation, pass source to handle fp_estimates
         invoiceResult = await generateInvoiceFromEstimate(est.id, null, source);
         console.log(`✅ Auto-generated invoice for customer-approved estimate ${estimateId} (source: ${source}):`, invoiceResult);
-        
-        // Send invoice email to customer
-        if (invoiceResult && invoiceResult.success && !invoiceResult.alreadyExists) {
-          try {
-            const { sendInvoiceEmail } = require('../services/emailService');
-            const customerEmail = est.customer_email || est.client_email;
-            const customerName = est.customer_name || est.client_name;
-            
-            if (customerEmail) {
-              const emailResult = await sendInvoiceEmail({
-                invoiceId: invoiceResult.invoiceId,
-                customerName: customerName,
-                customerEmail: customerEmail,
-                customerPhone: est.customer_phone || est.client_phone,
-                propertyName: est.property_name,
-                propertyCode: est.property_code,
-                estimateId: estimateId,
-                subtotal: invoiceResult.subtotal || est.subtotal || est.total || est.total_amount,
-                discountAmount: invoiceResult.discountAmount || 0,
-                taxAmount: invoiceResult.taxAmount || 0,
-                totalAmount: invoiceResult.totalAmount,
-                balanceAmount: invoiceResult.balanceAmount || invoiceResult.totalAmount,
-                invoiceDate: new Date(),
-                dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
-                lineItems: invoiceResult.lineItems || []
-              });
-              console.log(`📧 Invoice email result:`, emailResult);
-            } else {
-              console.log(`⚠️ No customer email found, skipping invoice email`);
-            }
-          } catch (emailError) {
-            console.error('❌ Failed to send invoice email:', emailError.message);
-            // Don't fail the approval if email sending fails
-          }
-        }
+        // Note: Invoice email is sent automatically inside generateInvoiceFromEstimate()
+        // No need to send again here to avoid duplicate emails
       } catch (invoiceError) {
         console.error('❌ Failed to auto-generate invoice for customer approval:', invoiceError);
         console.error('❌ Error stack:', invoiceError.stack);

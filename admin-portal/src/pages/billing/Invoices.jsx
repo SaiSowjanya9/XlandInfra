@@ -580,92 +580,95 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
       </div>
 
       <div className="p-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-6 gap-4 mb-6">
-          {/* Total Invoices */}
-          <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-lg bg-blue-100">
-                <FileText className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 font-medium">Total Invoices</p>
-                <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.total}</p>
-                <p className="text-xs text-gray-400 mt-0.5">This Month</p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Draft */}
-          <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-lg bg-amber-100">
-                <FileText className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 font-medium">Draft</p>
-                <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.draft}</p>
+        {/* Stats Cards - Hide for Archived tab */}
+        {activeTab !== 'archived' && (
+          <div className="grid grid-cols-6 gap-4 mb-6">
+            {/* Total Invoices */}
+            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 rounded-lg bg-blue-100">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 font-medium">Total Invoices</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.total}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">This Month</p>
+                </div>
               </div>
             </div>
-          </div>
+            
+            {/* Draft */}
+            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 rounded-lg bg-amber-100">
+                  <FileText className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 font-medium">Draft</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.draft}</p>
+                </div>
+              </div>
+            </div>
 
-          {/* Sent */}
-          <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-lg bg-blue-100">
-                <Send className="w-5 h-5 text-blue-600" />
+            {/* Sent */}
+            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 rounded-lg bg-blue-100">
+                  <Send className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 font-medium">Sent</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.sent}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-gray-500 font-medium">Sent</p>
-                <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.sent}</p>
+            </div>
+
+            {/* Partially Paid */}
+            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 rounded-lg bg-teal-100">
+                  <Receipt className="w-5 h-5 text-teal-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 font-medium">Partially Paid</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.partiallyPaid}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{formatCurrency(stats.partiallyPaidAmount)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Paid */}
+            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 rounded-lg bg-green-100">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 font-medium">Paid</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.paid}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{formatCurrency(stats.paidAmount)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Overdue */}
+            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 rounded-lg bg-red-100">
+                  <AlertCircle className="w-5 h-5 text-red-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 font-medium">Overdue</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.overdue}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{formatCurrency(stats.overdueAmount)}</p>
+                </div>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Partially Paid */}
-          <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-lg bg-teal-100">
-                <Receipt className="w-5 h-5 text-teal-600" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 font-medium">Partially Paid</p>
-                <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.partiallyPaid}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{formatCurrency(stats.partiallyPaidAmount)}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Paid */}
-          <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-lg bg-green-100">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 font-medium">Paid</p>
-                <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.paid}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{formatCurrency(stats.paidAmount)}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Overdue */}
-          <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-lg bg-red-100">
-                <AlertCircle className="w-5 h-5 text-red-500" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 font-medium">Overdue</p>
-                <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.overdue}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{formatCurrency(stats.overdueAmount)}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters */}
+        {/* Filters - Hide for Archived tab */}
+        {activeTab !== 'archived' && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6">
           <div className="p-4 flex items-center gap-3">
             {/* Search */}
@@ -766,6 +769,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
             </button>
           </div>
         </div>
+        )}
 
         {/* Main Content Area */}
         {activeTab === 'archived' ? (
