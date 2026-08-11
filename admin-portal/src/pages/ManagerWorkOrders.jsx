@@ -757,7 +757,7 @@ const ManagerWorkOrders = ({ user }) => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by Work Order ID, Property ID, category, or name..."
+                placeholder="Search by Property ID..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
