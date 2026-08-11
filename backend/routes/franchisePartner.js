@@ -1832,7 +1832,6 @@ router.get('/work-orders/by-order-id/:workOrderId', requireFPScope, async (req, 
         wo.customer_phone,
         wo.closing_notes,
         wo.admin_notes,
-        wo.vendor_notes,
         COALESCE(
           CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
           CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
