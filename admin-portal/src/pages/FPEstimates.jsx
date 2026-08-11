@@ -4,7 +4,7 @@ import {
   FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
   List, ChevronDown, ChevronLeft, ChevronRight, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
   DollarSign, Layers, Filter, Download, Mail, Save, Edit, Send, Link2, RefreshCw,
-  FolderOpen, ExternalLink, Link, CheckSquare, Square, ArrowLeft
+  FolderOpen, ExternalLink, Link, CheckSquare, Square, ArrowLeft, ClipboardList, Loader2
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
@@ -187,6 +187,18 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [sendingEmailId, setSendingEmailId] = useState(null); // Track which estimate email is being sent
   const [selectedEstimates, setSelectedEstimates] = useState([]);
   const [archivingSelected, setArchivingSelected] = useState(false);
+  
+  // Work Order Estimate States
+  const [workOrderIdInput, setWorkOrderIdInput] = useState('');
+  const [workOrderLoading, setWorkOrderLoading] = useState(false);
+  const [workOrderError, setWorkOrderError] = useState('');
+  const [workOrderData, setWorkOrderData] = useState(null);
+  const [workOrderStep, setWorkOrderStep] = useState('input'); // 'input', 'review'
+  const [workOrderAmount, setWorkOrderAmount] = useState('');
+  const [workOrderGst, setWorkOrderGst] = useState('18');
+  const [workOrderDiscount, setWorkOrderDiscount] = useState('');
+  const [workOrderNotes, setWorkOrderNotes] = useState('');
+  const [savingWorkOrder, setSavingWorkOrder] = useState(false);
   
   // FP Portal Links state
   const [portalLinks, setPortalLinks] = useState([]);
@@ -1050,6 +1062,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           <h2 className="text-lg font-semibold text-gray-800">
             {estimateType === 'property-based' 
               ? (selectedProperty ? 'Property Estimate Form' : 'Select Property')
+              : estimateType === 'work_order'
+              ? (workOrderData ? 'Work Order Estimate Review' : 'Work Order Estimate')
               : 'Direct Estimate Form'}
           </h2>
         </div>
@@ -1058,7 +1072,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       {!estimateType && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-2">Select Estimate Type</h2>
-          <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="grid grid-cols-3 gap-4 mt-4">
             {/* Property-Based Estimate */}
             <button onClick={() => setEstimateType('property-based')} className="p-6 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all group">
               <Building2 className="w-10 h-10 text-gray-400 group-hover:text-indigo-500 mx-auto mb-3" />
@@ -1070,6 +1084,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <User className="w-10 h-10 text-gray-400 group-hover:text-indigo-500 mx-auto mb-3" />
               <p className="font-semibold text-gray-800 group-hover:text-indigo-600">Direct-Based Estimate</p>
               <p className="text-sm text-gray-500 mt-1">Enter customer details manually</p>
+            </button>
+            {/* Work Order Estimate */}
+            <button onClick={() => { setEstimateType('work_order'); setWorkOrderStep('input'); setWorkOrderData(null); setWorkOrderError(''); setWorkOrderIdInput(''); }} className="p-6 border-2 border-gray-200 rounded-xl hover:border-orange-500 hover:bg-orange-50 transition-all group">
+              <ClipboardList className="w-10 h-10 text-gray-400 group-hover:text-orange-500 mx-auto mb-3" />
+              <p className="font-semibold text-gray-800 group-hover:text-orange-600">Work Order Estimate</p>
+              <p className="text-sm text-gray-500 mt-1">Create estimate from existing Work Order</p>
             </button>
           </div>
         </div>
@@ -1844,6 +1864,233 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             <button onClick={() => setEstimateType(null)} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Back</button>
             <button onClick={handleSaveEstimate} disabled={savingEstimate} className={`px-6 py-2.5 rounded-lg text-sm font-medium ${savingEstimate ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"} text-white`}>{savingEstimate ? "Saving..." : "Save"}</button>
           </div>
+        </div>
+      )}
+
+      {/* Work Order Estimate Form */}
+      {estimateType === 'work_order' && (
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+          {/* Work Order ID Input Step */}
+          {workOrderStep === 'input' && (
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <ClipboardList className="w-5 h-5 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-gray-800">Work Order Estimate</h3>
+                  <p className="text-xs text-gray-500">Enter Work Order ID to fetch details and create estimate</p>
+                </div>
+              </div>
+              
+              <div className="max-w-md">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Work Order ID <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <ClipboardList className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={workOrderIdInput}
+                    onChange={(e) => { setWorkOrderIdInput(e.target.value.toUpperCase()); setWorkOrderError(''); }}
+                    placeholder="e.g., WO-XXXX-20250101-0001"
+                    className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-400"
+                  />
+                </div>
+                
+                {workOrderError && (
+                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-600">{workOrderError}</p>
+                  </div>
+                )}
+                
+                <button
+                  onClick={async () => {
+                    if (!workOrderIdInput.trim()) {
+                      setWorkOrderError('Please enter a Work Order ID');
+                      return;
+                    }
+                    setWorkOrderLoading(true);
+                    setWorkOrderError('');
+                    try {
+                      const response = await fetch(`${API_BASE}/api/fp/work-orders/by-order-id/${encodeURIComponent(workOrderIdInput.trim())}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                      });
+                      const result = await response.json();
+                      if (result.success && result.data) {
+                        setWorkOrderData(result.data);
+                        setWorkOrderStep('review');
+                      } else {
+                        setWorkOrderError(result.message || 'Work order not found. Please check the ID and try again.');
+                      }
+                    } catch (error) {
+                      setWorkOrderError('Failed to fetch work order. Please try again.');
+                    } finally {
+                      setWorkOrderLoading(false);
+                    }
+                  }}
+                  disabled={workOrderLoading || !workOrderIdInput.trim()}
+                  className="mt-4 w-full py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {workOrderLoading ? (
+                    <><Loader2 className="w-5 h-5 animate-spin" /> Searching...</>
+                  ) : (
+                    <><Search className="w-5 h-5" /> Find Work Order</>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Work Order Review & Pricing Step */}
+          {workOrderStep === 'review' && workOrderData && (
+            <div className="p-6 space-y-6">
+              {/* Work Order Info */}
+              <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <h4 className="text-sm font-semibold text-orange-800 mb-3 flex items-center gap-2">
+                  <ClipboardList className="w-4 h-4" /> Work Order Information
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div><span className="text-xs text-gray-500 block">Work Order ID</span><span className="font-medium text-orange-700">{workOrderData.work_order_id}</span></div>
+                  <div><span className="text-xs text-gray-500 block">Category</span><span className="font-medium">{workOrderData.category_name || '-'}</span></div>
+                  <div><span className="text-xs text-gray-500 block">Subcategory</span><span className="font-medium">{workOrderData.subcategory_name || '-'}</span></div>
+                  <div><span className="text-xs text-gray-500 block">Priority</span><span className={`font-medium uppercase ${workOrderData.priority === 'high' ? 'text-red-600' : workOrderData.priority === 'medium' ? 'text-yellow-600' : 'text-green-600'}`}>{workOrderData.priority || '-'}</span></div>
+                </div>
+                {workOrderData.description && (
+                  <div className="mt-3 pt-3 border-t border-orange-200">
+                    <span className="text-xs text-gray-500 block mb-1">Description</span>
+                    <p className="text-sm text-gray-700">{workOrderData.description}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Property & Customer Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="text-sm font-semibold text-blue-800 mb-3">Property Details</h4>
+                  <div className="space-y-2 text-sm">
+                    <div><span className="text-gray-500">Property:</span> <span className="font-medium">{workOrderData.property_name || workOrderData.community_name || '-'}</span></div>
+                    <div><span className="text-gray-500">Type:</span> <span className="font-medium">{workOrderData.property_type || '-'}</span></div>
+                    <div><span className="text-gray-500">Address:</span> <span className="font-medium">{workOrderData.address || '-'}</span></div>
+                  </div>
+                </div>
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <h4 className="text-sm font-semibold text-green-800 mb-3">Customer Details</h4>
+                  <div className="space-y-2 text-sm">
+                    <div><span className="text-gray-500">Name:</span> <span className="font-medium">{workOrderData.client_name || workOrderData.customer_name || '-'}</span></div>
+                    <div><span className="text-gray-500">Email:</span> <span className="font-medium">{workOrderData.client_email || workOrderData.customer_email || '-'}</span></div>
+                    <div><span className="text-gray-500">Phone:</span> <span className="font-medium">{workOrderData.client_phone || workOrderData.customer_phone || '-'}</span></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pricing */}
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <h4 className="text-sm font-semibold text-gray-800 mb-4">Estimate Pricing</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹) <span className="text-red-500">*</span></label>
+                    <input type="number" value={workOrderAmount} onChange={(e) => setWorkOrderAmount(e.target.value)} placeholder="Enter amount" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-400" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Discount (%)</label>
+                    <input type="number" value={workOrderDiscount} onChange={(e) => setWorkOrderDiscount(e.target.value)} placeholder="0" min="0" max="100" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-400" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">GST (%)</label>
+                    <input type="number" value={workOrderGst} onChange={(e) => setWorkOrderGst(e.target.value)} placeholder="18" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-400" />
+                  </div>
+                </div>
+                
+                {/* Price Summary */}
+                {workOrderAmount && parseFloat(workOrderAmount) > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="flex justify-between text-sm mb-1"><span className="text-gray-500">Subtotal:</span><span>₹{parseFloat(workOrderAmount || 0).toLocaleString('en-IN')}</span></div>
+                    {parseFloat(workOrderDiscount || 0) > 0 && <div className="flex justify-between text-sm mb-1 text-red-600"><span>Discount ({workOrderDiscount}%):</span><span>-₹{(parseFloat(workOrderAmount || 0) * parseFloat(workOrderDiscount || 0) / 100).toLocaleString('en-IN')}</span></div>}
+                    {parseFloat(workOrderGst || 0) > 0 && <div className="flex justify-between text-sm mb-1 text-blue-600"><span>GST ({workOrderGst}%):</span><span>+₹{((parseFloat(workOrderAmount || 0) - (parseFloat(workOrderAmount || 0) * parseFloat(workOrderDiscount || 0) / 100)) * parseFloat(workOrderGst || 0) / 100).toLocaleString('en-IN')}</span></div>}
+                    <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-gray-300"><span>Total:</span><span className="text-orange-600">₹{(() => { const amt = parseFloat(workOrderAmount || 0); const disc = amt * parseFloat(workOrderDiscount || 0) / 100; const afterDisc = amt - disc; const gst = afterDisc * parseFloat(workOrderGst || 0) / 100; return (afterDisc + gst).toLocaleString('en-IN'); })()}</span></div>
+                  </div>
+                )}
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+                <textarea value={workOrderNotes} onChange={(e) => setWorkOrderNotes(e.target.value)} rows={3} placeholder="Add any additional notes..." className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-400" />
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                <button onClick={() => { setWorkOrderStep('input'); setWorkOrderData(null); }} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Back</button>
+                <button
+                  onClick={async () => {
+                    if (!workOrderAmount || parseFloat(workOrderAmount) <= 0) { showToast('Please enter a valid amount', 'error'); return; }
+                    setSavingWorkOrder(true);
+                    try {
+                      const amt = parseFloat(workOrderAmount || 0);
+                      const discPercent = parseFloat(workOrderDiscount || 0);
+                      const gstPercent = parseFloat(workOrderGst || 0);
+                      const discAmt = amt * discPercent / 100;
+                      const afterDisc = amt - discAmt;
+                      const gstAmt = afterDisc * gstPercent / 100;
+                      const total = afterDisc + gstAmt;
+                      
+                      const payload = {
+                        estimate_type: 'work_order',
+                        property_id: workOrderData.property_id || null,
+                        property_code: workOrderData.property_code || null,
+                        client_name: workOrderData.client_name || workOrderData.customer_name || '',
+                        client_email: workOrderData.client_email || workOrderData.customer_email || '',
+                        client_phone: workOrderData.client_phone || workOrderData.customer_phone || '',
+                        subtotal: amt,
+                        discount: discPercent,
+                        gst: gstPercent,
+                        total: Math.round(total),
+                        description: workOrderNotes,
+                        work_order_id: workOrderData.work_order_id,
+                        work_order_category: workOrderData.category_name,
+                        work_order_subcategory: workOrderData.subcategory_name,
+                        work_order_description: workOrderData.description,
+                        work_order_priority: workOrderData.priority,
+                        work_order_status: workOrderData.status
+                      };
+                      
+                      const response = await fetch(`${API_BASE}/api/fp/estimates`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify(payload)
+                      });
+                      const result = await response.json();
+                      
+                      if (result.success) {
+                        showToast('Work Order Estimate created successfully!', 'success');
+                        setEstimateType(null);
+                        setWorkOrderStep('input');
+                        setWorkOrderData(null);
+                        setWorkOrderIdInput('');
+                        setWorkOrderAmount('');
+                        setWorkOrderDiscount('');
+                        setWorkOrderGst('18');
+                        setWorkOrderNotes('');
+                        fetchEstimates();
+                      } else {
+                        showToast(result.message || 'Failed to create estimate', 'error');
+                      }
+                    } catch (error) {
+                      showToast('Failed to create estimate. Please try again.', 'error');
+                    } finally {
+                      setSavingWorkOrder(false);
+                    }
+                  }}
+                  disabled={savingWorkOrder || !workOrderAmount || parseFloat(workOrderAmount) <= 0}
+                  className="px-6 py-2.5 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {savingWorkOrder ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Save Estimate'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
