@@ -1419,6 +1419,9 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
       }
     }
 
+    // Use the validated property's integer ID for consistent JOINs
+    const validatedPropertyId = property[0].id;
+    
     const [result] = await pool.execute(
       `INSERT INTO work_orders (
         work_order_id, property_id, category_id, subcategory_id, category_name, subcategory_name, 
@@ -1426,7 +1429,7 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
         customer_name, customer_email, customer_phone, status, franchise_partner_id, created_by
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
       [
-        workOrderId, propertyId, categoryId || null, subcategoryId || null, categoryName, subcategoryName,
+        workOrderId, validatedPropertyId, categoryId || null, subcategoryId || null, categoryName, subcategoryName,
         title, description || '', priority || 'medium', permissionToEnter || 'no', hasPet || 'no', 
         entryNotes || null, customerName || null, customerEmail || null, customerPhone || null,
         req.fpId, req.user?.id || null

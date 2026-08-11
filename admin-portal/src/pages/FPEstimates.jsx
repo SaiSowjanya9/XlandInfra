@@ -2645,7 +2645,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         <Link2 className="w-3 h-3" />
                         {est.estimate_type === 'work_order' ? 'Work Order' : est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}
                       </span>
-                      {est.estimate_type === 'work_order' && (est.property_code || est.work_order_id) && <div className="text-xs text-orange-600 mt-1">{est.property_code && !est.property_code.startsWith('WO-') ? est.property_code : (est.property_name ? `Property: ${est.property_name}` : `WO: ${est.work_order_id}`)}</div>}
+                      {est.estimate_type === 'work_order' && <div className="text-xs text-orange-600 mt-1">{est.property_name || est.property_code || est.work_order_id}</div>}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">
                       {(est.estimate_type === 'property_based' || est.estimate_type === 'property-based') 
