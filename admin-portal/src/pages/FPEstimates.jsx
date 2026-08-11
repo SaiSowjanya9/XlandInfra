@@ -4,7 +4,7 @@ import {
   FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
   List, ChevronDown, ChevronLeft, ChevronRight, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
   DollarSign, Layers, Filter, Download, Mail, Save, Edit, Send, Link2, RefreshCw,
-  FolderOpen, ExternalLink, Link, CheckSquare, Square
+  FolderOpen, ExternalLink, Link, CheckSquare, Square, ArrowLeft
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
@@ -850,7 +850,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   };
 
   // Back navigation handler for estimate subsections
-  const handleBackFromEstimate = () => {
+  const handleBackFromEstimate = useCallback(() => {
     if (estimateType === 'property-based' && selectedProperty) {
       // If property is selected, go back to property ID entry
       setSelectedProperty(null);
@@ -863,7 +863,31 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       setPropertyIdInput('');
       setEstimateForm({ customerName: '', phone: '', countryCode: '+91', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: '', gst: '', description: '', numberOfBlocks: '', blockNumber: '', blockName: '', numberOfUnits: '', villaNumber: '', flatNumber: '', plotNumber: '' });
     }
-  };
+  }, [estimateType, selectedProperty]);
+
+  // Keyboard shortcut handler for back navigation (Escape key)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Only handle Escape key when on create tab and estimate type is selected
+      if (e.key === 'Escape' && defaultTab === 'create' && estimateType) {
+        const activeElement = document.activeElement;
+        const isInputField = activeElement?.tagName === 'INPUT' || 
+                            activeElement?.tagName === 'TEXTAREA' || 
+                            activeElement?.tagName === 'SELECT';
+        
+        // If in input field, just blur it; otherwise navigate back
+        if (isInputField) {
+          activeElement.blur();
+        } else {
+          e.preventDefault();
+          handleBackFromEstimate();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [defaultTab, estimateType, handleBackFromEstimate]);
 
   const calculatePricing = () => {
     const pkg = amcPackages.find(p => p.id == estimateForm.selectedPackage);
@@ -1007,6 +1031,26 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // CREATE ESTIMATE - Both Property-Based and Direct-Based available for FP Manager
   const renderCreateEstimate = () => (
     <div className="space-y-6">
+      {/* Back Arrow - Show when estimate type is selected */}
+      {estimateType && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleBackFromEstimate}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+            title="Go back (Esc)"
+          >
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm font-medium">Back</span>
+          </button>
+          <span className="text-gray-300">|</span>
+          <h2 className="text-lg font-semibold text-gray-800">
+            {estimateType === 'property-based' 
+              ? (selectedProperty ? 'Property Estimate Form' : 'Select Property')
+              : 'Direct Estimate Form'}
+          </h2>
+        </div>
+      )}
+
       {!estimateType && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-2">Select Estimate Type</h2>

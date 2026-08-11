@@ -4,7 +4,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { 
   Building2, User, Phone, Mail, Search, FileText, 
   Home, LayoutGrid, Layers, TreePine, Map, Briefcase,
-  Package, Send, Plus, Trash2, Lock, ChevronDown, FolderOpen, ExternalLink
+  Package, Send, Plus, Trash2, Lock, ChevronDown, FolderOpen, ExternalLink, ArrowLeft
 } from 'lucide-react';
 import { useFP } from '../../contexts/FPContext';
 import PhoneInput from '../common/PhoneInput';
@@ -1067,7 +1067,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   };
 
   // Back navigation handler for estimate subsections
-  const handleBackFromEstimate = () => {
+  const handleBackFromEstimate = useCallback(() => {
     if (estimateType === 'property' && selectedProperty) {
       // If property is selected, go back to property ID entry
       setSelectedProperty(null);
@@ -1086,7 +1086,31 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       // Otherwise go back to estimate type selection
       resetForm();
     }
-  };
+  }, [estimateType, selectedProperty, directSelectedPackage]);
+
+  // Keyboard shortcut handler for back navigation (Escape key)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Only handle Escape key when estimate type is selected and not in an input field
+      if (e.key === 'Escape' && estimateType) {
+        const activeElement = document.activeElement;
+        const isInputField = activeElement?.tagName === 'INPUT' || 
+                            activeElement?.tagName === 'TEXTAREA' || 
+                            activeElement?.tagName === 'SELECT';
+        
+        // If in input field, just blur it; otherwise navigate back
+        if (isInputField) {
+          activeElement.blur();
+        } else {
+          e.preventDefault();
+          handleBackFromEstimate();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [estimateType, handleBackFromEstimate]);
 
   const handleAddNewService = (serviceName) => {
     if (serviceName && serviceName.trim()) {
@@ -1129,6 +1153,26 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
 
   return (
     <div className="space-y-6">
+      {/* Back Arrow - Show when estimate type is selected */}
+      {estimateType && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleBackFromEstimate}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+            title="Go back (Esc)"
+          >
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm font-medium">Back</span>
+          </button>
+          <span className="text-gray-300">|</span>
+          <h2 className="text-lg font-semibold text-gray-800">
+            {estimateType === 'property' 
+              ? (selectedProperty ? 'Property Estimate Form' : 'Select Property')
+              : 'Direct Estimate Form'}
+          </h2>
+        </div>
+      )}
+
       {/* Estimate Type Selection - Hidden after user starts typing/interacting */}
       {!hasStartedTyping && (
         <div className={`bg-white rounded-xl p-6 shadow-sm border border-gray-100 transition-all duration-300 ${estimateType ? 'opacity-100' : 'opacity-100'}`}>
