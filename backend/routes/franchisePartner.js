@@ -1259,8 +1259,8 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
           wo.created_by, 'System'
         ) as created_by_name
       FROM work_orders wo
-      LEFT JOIN onboarded_properties op ON wo.property_id = op.id
-      LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+      LEFT JOIN onboarded_properties op ON (wo.property_id = op.id OR wo.property_id = op.property_id)
+      LEFT JOIN properties p ON (wo.property_id = p.id OR wo.property_id = p.property_id) AND op.id IS NULL
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
       LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username OR CAST(wo.created_by AS UNSIGNED) = fpe.id
@@ -1838,8 +1838,8 @@ router.get('/work-orders/by-order-id/:workOrderId', requireFPScope, async (req, 
           wo.created_by, 'System'
         ) as created_by_name
       FROM work_orders wo
-      LEFT JOIN onboarded_properties op ON wo.property_id = op.id
-      LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+      LEFT JOIN onboarded_properties op ON (wo.property_id = op.id OR wo.property_id = op.property_id)
+      LEFT JOIN properties p ON (wo.property_id = p.id OR wo.property_id = p.property_id) AND op.id IS NULL
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
       LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username OR CAST(wo.created_by AS UNSIGNED) = fpe.id
@@ -4080,13 +4080,13 @@ router.get('/estimates', requireFPScope, async (req, res) => {
                  FROM fp_estimates fe 
                  LEFT JOIN fp_amc_packages fpamc_id ON fe.package_id = fpamc_id.id
                  LEFT JOIN fp_amc_packages fpamc_name ON fe.package_name = fpamc_name.name AND fpamc_name.franchise_partner_id = fe.franchise_partner_id
-                 -- Join properties for property_based estimates
-                 LEFT JOIN onboarded_properties op ON fe.property_id = op.id
-                 LEFT JOIN properties p ON fe.property_id = p.id AND op.id IS NULL
+                 -- Join properties for property_based estimates (match by id or property_code string)
+                 LEFT JOIN onboarded_properties op ON (fe.property_id = op.id OR fe.property_code = op.property_id)
+                 LEFT JOIN properties p ON (fe.property_id = p.id OR fe.property_code = p.property_id) AND op.id IS NULL
                  -- Join work_orders to get property details for work_order type estimates
                  LEFT JOIN work_orders wo ON fe.work_order_id = wo.work_order_id AND fe.estimate_type = 'work_order'
-                 LEFT JOIN onboarded_properties wo_prop ON wo.property_id = wo_prop.id
-                 LEFT JOIN properties wo_prop2 ON wo.property_id = wo_prop2.id AND wo_prop.id IS NULL
+                 LEFT JOIN onboarded_properties wo_prop ON (wo.property_id = wo_prop.id OR wo.property_id = wo_prop.property_id)
+                 LEFT JOIN properties wo_prop2 ON (wo.property_id = wo_prop2.id OR wo.property_id = wo_prop2.property_id) AND wo_prop.id IS NULL
                  WHERE fe.franchise_partner_id = ?`;
     const params = [req.fpId];
 
