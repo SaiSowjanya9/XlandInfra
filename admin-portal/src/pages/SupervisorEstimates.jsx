@@ -4,7 +4,7 @@ import { getAuthToken } from '../utils/safeStorage';
 import {
   FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
   List, ChevronDown, ChevronLeft, ChevronRight, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
-  DollarSign, Layers, Filter, Download, Mail, Save, Edit, RefreshCw, FolderOpen, ExternalLink, Link
+  DollarSign, Layers, Filter, Download, Mail, Save, Edit, RefreshCw, FolderOpen, ExternalLink, Link, ArrowLeft
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -488,7 +488,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   };
 
   // Back navigation handler for estimate subsections
-  const handleBackFromEstimate = () => {
+  const handleBackFromEstimate = useCallback(() => {
     if (estimateType === 'property-based' && selectedProperty) {
       // If property is selected, go back to property ID entry
       setSelectedProperty(null);
@@ -501,7 +501,31 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
       // Otherwise go back to estimate type selection
       resetEstimateForm();
     }
-  };
+  }, [estimateType, selectedProperty]);
+
+  // Keyboard shortcut handler for back navigation (Escape key)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Only handle Escape key when on create tab and estimate type is selected
+      if (e.key === 'Escape' && defaultTab === 'create' && estimateType) {
+        const activeElement = document.activeElement;
+        const isInputField = activeElement?.tagName === 'INPUT' || 
+                            activeElement?.tagName === 'TEXTAREA' || 
+                            activeElement?.tagName === 'SELECT';
+        
+        // If in input field, just blur it; otherwise navigate back
+        if (isInputField) {
+          activeElement.blur();
+        } else {
+          e.preventDefault();
+          handleBackFromEstimate();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [defaultTab, estimateType, handleBackFromEstimate]);
 
   // AMC Package and Price Summary shared component
   const renderAmcAndPriceSummary = (showSaveButton = false) => (
@@ -693,6 +717,26 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
 
   const renderCreateEstimate = () => (
     <div className="space-y-6">
+      {/* Back Arrow - Show when estimate type is selected */}
+      {estimateType && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleBackFromEstimate}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+            title="Go back (Esc)"
+          >
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm font-medium">Back</span>
+          </button>
+          <span className="text-gray-300">|</span>
+          <h2 className="text-lg font-semibold text-gray-800">
+            {estimateType === 'property-based' 
+              ? (selectedProperty ? 'Property Estimate Form' : 'Select Property')
+              : 'Direct Estimate Form'}
+          </h2>
+        </div>
+      )}
+
       {/* FP Shared Resources Section - Read-only for employees, only show before selecting estimate type */}
       {!estimateType && fpPortalLinks.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
