@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Download,
@@ -33,7 +34,6 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // Tab configuration
 const TABS = [
-  { id: 'create', label: 'Create Invoice', icon: Plus, description: 'Create manual invoice for other requirements' },
   { id: 'generated', label: 'Generated Invoices', icon: FileText, description: 'Auto-generated from approved estimates' },
   { id: 'work_order', label: 'Work Order Invoices', icon: Briefcase, description: 'Invoices from work order submissions' }
 ];
@@ -610,7 +610,8 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
 };
 
 const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
-  const [activeTab, setActiveTab] = useState('create');
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('generated');
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
@@ -618,6 +619,19 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
   const [showDetailPanel, setShowDetailPanel] = useState(false);
 
   const token = getAuthToken();
+  
+  // Get base path for navigation based on portal type
+  const getBasePath = () => {
+    switch (portalType) {
+      case 'fp': return '/fp';
+      case 'manager': return '/manager';
+      case 'employee': return '/employee';
+      case 'coordinator': return '/coordinator';
+      case 'supervisor': return '/supervisor';
+      case 'executive': return '/executive';
+      default: return '/admin';
+    }
+  };
   
   // Format helpers
   const formatCurrency = (amount) => `₹${Math.round(Number(amount) || 0).toLocaleString('en-IN')}`;
@@ -718,11 +732,20 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
       )}
 
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <h1 className="text-xl font-semibold text-gray-900">Generated Invoices</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
-          Home &gt; Billing & Payments &gt; Generated Invoices
-        </p>
+      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">Generated Invoices</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Home &gt; Billing & Payments &gt; Generated Invoices
+          </p>
+        </div>
+        <button
+          onClick={() => navigate(`${getBasePath()}/billing/create-invoice`)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          Create Invoice
+        </button>
       </div>
 
       <div className="p-6">
@@ -756,23 +779,15 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
         </div>
 
         {/* Content */}
-        {activeTab === 'create' ? (
-          <CreateInvoiceForm
-            onSuccess={handleCreateSuccess}
-            onCancel={() => setActiveTab('generated')}
-            token={token}
-          />
-        ) : (
-          <InvoiceList
-            invoices={invoices}
-            loading={loading}
-            type={activeTab}
-            onRefresh={fetchInvoices}
-            onView={handleView}
-            onDownload={handleDownload}
-            onSend={handleSend}
-          />
-        )}
+        <InvoiceList
+          invoices={invoices}
+          loading={loading}
+          type={activeTab}
+          onRefresh={fetchInvoices}
+          onView={handleView}
+          onDownload={handleDownload}
+          onSend={handleSend}
+        />
       </div>
 
       {/* Invoice Detail Modal */}

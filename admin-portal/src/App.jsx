@@ -93,6 +93,7 @@ import Invoices from './pages/billing/Invoices';
 import Payments from './pages/billing/Payments';
 import PaymentLinks from './pages/billing/PaymentLinks';
 import GeneratedInvoices from './pages/billing/GeneratedInvoices';
+import CreateInvoice from './pages/billing/CreateInvoice';
 import { FPProvider } from './contexts/FPContext';
 
 // Session timeout in milliseconds (30 minutes)
@@ -364,6 +365,7 @@ function App() {
                     <Route path="estimates/archived" element={<Estimates admin={user} defaultTab="archived" />} />
                     <Route path="billing/dashboard" element={<BillingPlaceholder page="dashboard" portalName="Admin" />} />
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="employee" />} />
+                    <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="employee" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="employee" />} />
                     <Route path="billing/payments" element={<Payments user={user} portalType="employee" />} />
                     <Route path="billing/make-payments" element={<BillingPlaceholder page="make-payments" portalName="Admin" />} />
@@ -444,6 +446,7 @@ function App() {
                     <Route path="qr-management" element={<QRManagement />} />
                     <Route path="billing/dashboard" element={<BillingPlaceholder page="dashboard" portalName="Franchise Partner" />} />
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="fp" />} />
+                    <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="fp" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="fp" />} />
                     <Route path="billing/payments" element={<Payments user={user} portalType="fp" />} />
                     <Route path="billing/payment-links" element={<PaymentLinks user={user} portalType="fp" />} />
@@ -494,6 +497,7 @@ function App() {
                     <Route path="estimates/archived" element={<ManagerEstimates user={user} defaultTab="archived" />} />
                     <Route path="billing/dashboard" element={<BillingPlaceholder page="dashboard" portalName="Manager" />} />
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="manager" />} />
+                    <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="manager" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="manager" />} />
                     <Route path="billing/payments" element={<Payments user={user} portalType="manager" />} />
                     <Route path="billing/payment-links" element={<PaymentLinks user={user} portalType="manager" />} />
@@ -539,6 +543,7 @@ function App() {
                     <Route path="estimates/addons" element={<CoordinatorEstimates user={user} defaultTab="addons" />} />
                     <Route path="estimates/archived" element={<CoordinatorEstimates user={user} defaultTab="archived" />} />
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="coordinator" />} />
+                    <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="coordinator" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="coordinator" />} />
                     <Route path="billing/payments" element={<Payments user={user} portalType="coordinator" />} />
                     <Route path="*" element={<Navigate to="/coordinator" replace />} />
@@ -579,6 +584,7 @@ function App() {
                     <Route path="estimates/archived" element={<SupervisorEstimates user={user} defaultTab="archived" />} />
                     <Route path="billing/dashboard" element={<BillingPlaceholder page="dashboard" portalName="Supervisor" />} />
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="supervisor" />} />
+                    <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="supervisor" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="supervisor" />} />
                     <Route path="billing/payments" element={<Payments user={user} portalType="supervisor" />} />
                     <Route path="billing/make-payments" element={<BillingPlaceholder page="make-payments" portalName="Supervisor" />} />
@@ -622,6 +628,7 @@ function App() {
                     <Route path="estimates/addons" element={<ExecutiveEstimates user={user} defaultTab="addons" />} />
                     <Route path="estimates/archived" element={<ExecutiveEstimates user={user} defaultTab="archived" />} />
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="executive" />} />
+                    <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="executive" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="executive" />} />
                     <Route path="billing/payments" element={<Payments user={user} portalType="executive" />} />
                     <Route path="*" element={<Navigate to="/executive" replace />} />
