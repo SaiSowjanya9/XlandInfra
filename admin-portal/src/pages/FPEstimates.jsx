@@ -1873,7 +1873,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           {/* Work Order ID Input Step */}
           {workOrderStep === 'input' && (
             <div className="p-6">
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center justify-center gap-3 mb-6">
                 <div className="p-2 bg-orange-100 rounded-lg">
                   <ClipboardList className="w-5 h-5 text-orange-600" />
                 </div>
@@ -1883,7 +1883,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
               </div>
               
-              <div className="max-w-md">
+              <div className="max-w-md mx-auto">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Work Order ID <span className="text-red-500">*</span>
                 </label>
@@ -1951,11 +1951,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <h4 className="text-sm font-semibold text-orange-800 mb-3 flex items-center gap-2">
                   <ClipboardList className="w-4 h-4" /> Work Order Information
                 </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <div><span className="text-xs text-gray-500 block">Work Order ID</span><span className="font-medium text-orange-700">{workOrderData.work_order_id}</span></div>
                   <div><span className="text-xs text-gray-500 block">Category</span><span className="font-medium">{workOrderData.category_name || '-'}</span></div>
                   <div><span className="text-xs text-gray-500 block">Subcategory</span><span className="font-medium">{workOrderData.subcategory_name || '-'}</span></div>
                   <div><span className="text-xs text-gray-500 block">Priority</span><span className={`font-medium uppercase ${workOrderData.priority === 'high' ? 'text-red-600' : workOrderData.priority === 'medium' ? 'text-yellow-600' : 'text-green-600'}`}>{workOrderData.priority || '-'}</span></div>
+                  <div><span className="text-xs text-gray-500 block">Created</span><span className="font-medium">{workOrderData.created_at ? new Date(workOrderData.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}</span></div>
                 </div>
                 {workOrderData.description && (
                   <div className="mt-3 pt-3 border-t border-orange-200">
@@ -1971,7 +1972,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <h4 className="text-sm font-semibold text-blue-800 mb-3">Property Details</h4>
                   <div className="space-y-2 text-sm">
                     <div><span className="text-gray-500">Property:</span> <span className="font-medium">{workOrderData.property_name || workOrderData.community_name || '-'}</span></div>
+                    <div><span className="text-gray-500">Property ID:</span> <span className="font-medium">{workOrderData.property_code || workOrderData.property_id || '-'}</span></div>
                     <div><span className="text-gray-500">Type:</span> <span className="font-medium">{workOrderData.property_type || '-'}</span></div>
+                    <div><span className="text-gray-500">Zone / Division:</span> <span className="font-medium">{workOrderData.zone || '-'} / {workOrderData.division || '-'}</span></div>
                     <div><span className="text-gray-500">Address:</span> <span className="font-medium">{workOrderData.address || '-'}</span></div>
                   </div>
                 </div>
