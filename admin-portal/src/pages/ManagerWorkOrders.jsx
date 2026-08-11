@@ -194,7 +194,9 @@ const ManagerWorkOrders = ({ user }) => {
         wo.property_name?.toLowerCase().includes(search) ||
         wo.category_name?.toLowerCase().includes(search) ||
         wo.property_code?.toLowerCase().includes(search) ||
-        wo.property_id?.toString().toLowerCase().includes(search)
+        wo.actual_property_id?.toLowerCase().includes(search) ||
+        wo.property_id?.toString().toLowerCase().includes(search) ||
+        wo.customer_name?.toLowerCase().includes(search)
       );
     }
     return true;

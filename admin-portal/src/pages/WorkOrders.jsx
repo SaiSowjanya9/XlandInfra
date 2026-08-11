@@ -492,7 +492,9 @@ const WorkOrders = ({ admin }) => {
       wo.property_name?.toLowerCase().includes(q) ||
       wo.category_name?.toLowerCase().includes(q) ||
       wo.property_code?.toLowerCase().includes(q) ||
-      wo.property_id?.toString().toLowerCase().includes(q)
+      wo.actual_property_id?.toLowerCase().includes(q) ||
+      wo.property_id?.toString().toLowerCase().includes(q) ||
+      wo.customer_name?.toLowerCase().includes(q)
     );
   });
 
