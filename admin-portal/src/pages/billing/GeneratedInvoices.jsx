@@ -48,6 +48,20 @@ const STATUS_CONFIG = {
   cancelled: { label: 'Cancelled', color: 'bg-gray-100 text-gray-500' }
 };
 
+// Helper to decode HTML entities (fix triple/double encoded ampersands etc.)
+const decodeHtmlEntities = (str) => {
+  if (!str) return str;
+  return String(str)
+    .replace(/&amp;amp;amp;/g, '&')
+    .replace(/&amp;amp;/g, '&')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ');
+};
+
 const formatCurrency = (amount) => {
   const num = parseFloat(amount) || 0;
   return new Intl.NumberFormat('en-IN', {
@@ -882,22 +896,22 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
 
                 // Separate services and addons
                 const services = allItems.filter(item => !isAddon(item)).map(item => {
-                  const fullDesc = String(item.description || item.name || 'Service');
+                  const fullDesc = decodeHtmlEntities(String(item.description || item.name || 'Service'));
                   const parts = fullDesc.split(' - ');
                   return {
-                    name: parts[0] || 'Service',
-                    description: parts.slice(1).join(' - ') || '-',
+                    name: decodeHtmlEntities(parts[0] || 'Service'),
+                    description: decodeHtmlEntities(parts.slice(1).join(' - ') || '-'),
                     frequency: getFrequency(item),
                     visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
                   };
                 });
 
                 const addons = allItems.filter(item => isAddon(item)).map(item => {
-                  const fullDesc = String(item.description || item.name || 'Add-on');
+                  const fullDesc = decodeHtmlEntities(String(item.description || item.name || 'Add-on'));
                   const parts = fullDesc.split(' - ');
                   return {
-                    name: parts[0] || 'Add-on',
-                    description: parts.slice(1).join(' - ') || '-',
+                    name: decodeHtmlEntities(parts[0] || 'Add-on'),
+                    description: decodeHtmlEntities(parts.slice(1).join(' - ') || '-'),
                     frequency: getFrequency(item),
                     visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
                   };

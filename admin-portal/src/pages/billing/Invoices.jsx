@@ -76,6 +76,14 @@ const STATUS_CONFIG = {
   cancelled: { label: 'Cancelled', color: 'bg-gray-100 text-gray-500' }
 };
 
+// Helper to decode HTML entities
+const decodeHtmlEntities = (str) => {
+  if (!str) return str;
+  const txt = document.createElement('textarea');
+  txt.innerHTML = str;
+  return txt.value;
+};
+
 const INVOICE_TYPE_CONFIG = {
   estimate: { label: 'Estimate', color: 'text-purple-600' },
   work_order: { label: 'Work Order', color: 'text-blue-600' },
@@ -826,7 +834,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-gray-600">Type:</span>
                   <select
-                    className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium cursor-pointer"
+                    className="px-3 py-1.5 bg-gray-700 text-white rounded-lg text-sm font-medium cursor-pointer"
                     defaultValue="all"
                   >
                     <option value="all">All Types</option>
