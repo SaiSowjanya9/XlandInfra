@@ -238,9 +238,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           setEstimateType('property-based');
         }
       } else if (urlEstimateStep === 'direct-form') {
-        // Direct form step
-        if (estimateType !== 'direct') {
+        // Direct form step - clear selectedProperty for direct estimates
+        if (estimateType !== 'direct' || selectedProperty !== null) {
           setEstimateType('direct');
+          setSelectedProperty(null);
+          setPropertyIdInput('');
         }
       }
     }
@@ -992,7 +994,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <p className="text-sm text-gray-500 mt-1">Enter Property ID to auto-fill details</p>
             </button>
             {/* Direct-Based Estimate */}
-            <button onClick={() => setEstimateType('direct')} className="p-6 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all group">
+            <button onClick={() => { setEstimateType('direct'); setSelectedProperty(null); setPropertyIdInput(''); }} className="p-6 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all group">
               <User className="w-10 h-10 text-gray-400 group-hover:text-indigo-500 mx-auto mb-3" />
               <p className="font-semibold text-gray-800 group-hover:text-indigo-600">Direct-Based Estimate</p>
               <p className="text-sm text-gray-500 mt-1">Enter customer details manually</p>
