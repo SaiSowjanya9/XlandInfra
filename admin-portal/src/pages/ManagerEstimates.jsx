@@ -193,22 +193,33 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     }
     
     if (defaultTab === 'create') {
-      isUpdatingFromStateRef.current = true;
+      let targetStep = '';
       if (estimateType === 'property-based' && selectedProperty) {
-        updateUrlParam('estimateStep', 'property-form');
+        targetStep = 'property-form';
       } else if (estimateType === 'property-based') {
-        updateUrlParam('estimateStep', 'property-id');
+        targetStep = 'property-id';
       } else if (estimateType === 'direct') {
-        updateUrlParam('estimateStep', 'direct-form');
-      } else {
-        updateUrlParam('estimateStep', '');
+        targetStep = 'direct-form';
       }
-      // Reset the flag after a short delay to allow the URL update to complete
-      requestAnimationFrame(() => {
-        isUpdatingFromStateRef.current = false;
-      });
+      
+      // Only update if different from current URL
+      if ((urlEstimateStep || '') !== targetStep) {
+        isUpdatingFromStateRef.current = true;
+        setSearchParams(prev => {
+          const newParams = new URLSearchParams(prev);
+          if (!targetStep) {
+            newParams.delete('estimateStep');
+          } else {
+            newParams.set('estimateStep', targetStep);
+          }
+          return newParams;
+        });
+        setTimeout(() => {
+          isUpdatingFromStateRef.current = false;
+        }, 100);
+      }
     }
-  }, [estimateType, selectedProperty, defaultTab, updateUrlParam]);
+  }, [estimateType, selectedProperty, defaultTab, urlEstimateStep, setSearchParams]);
 
   // Handle browser back button - sync URL to state
   useEffect(() => {
@@ -221,33 +232,24 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
       isUpdatingFromUrlRef.current = true;
       if (!urlEstimateStep) {
         // No step in URL = type selection
-        if (estimateType !== null) {
-          setEstimateType(null);
-          setSelectedProperty(null);
-          setPropertyIdInput('');
-        }
+        setEstimateType(null);
+        setSelectedProperty(null);
+        setPropertyIdInput('');
       } else if (urlEstimateStep === 'property-id') {
         // Property ID entry step
-        if (estimateType !== 'property-based' || selectedProperty !== null) {
-          setEstimateType('property-based');
-          setSelectedProperty(null);
-          setPropertyIdInput('');
-        }
+        setEstimateType('property-based');
+        setSelectedProperty(null);
+        setPropertyIdInput('');
       } else if (urlEstimateStep === 'property-form') {
-        // Property form step - keep current state if already there
-        if (estimateType !== 'property-based') {
-          setEstimateType('property-based');
-        }
+        // Property form step
+        setEstimateType('property-based');
       } else if (urlEstimateStep === 'direct-form') {
         // Direct form step
-        if (estimateType !== 'direct') {
-          setEstimateType('direct');
-        }
+        setEstimateType('direct');
       }
-      // Reset the flag after state updates are processed
-      requestAnimationFrame(() => {
+      setTimeout(() => {
         isUpdatingFromUrlRef.current = false;
-      });
+      }, 100);
     }
   }, [urlEstimateStep, defaultTab]);
 

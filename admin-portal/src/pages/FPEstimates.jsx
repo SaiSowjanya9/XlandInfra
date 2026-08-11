@@ -209,7 +209,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     }
     
     if (defaultTab === 'create') {
-      isUpdatingFromStateRef.current = true;
       let targetStep = '';
       if (estimateType === 'property-based' && selectedProperty) {
         targetStep = 'property-form';
@@ -220,14 +219,24 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       }
       // Only update if different from current URL to prevent infinite loop
       if ((urlEstimateStep || '') !== targetStep) {
-        updateUrlParam('estimateStep', targetStep);
+        isUpdatingFromStateRef.current = true;
+        // Use setSearchParams directly without replace to push to history
+        setSearchParams(prev => {
+          const newParams = new URLSearchParams(prev);
+          if (!targetStep) {
+            newParams.delete('estimateStep');
+          } else {
+            newParams.set('estimateStep', targetStep);
+          }
+          return newParams;
+        }); // Default is push, not replace
+        // Reset the flag after a short delay
+        setTimeout(() => {
+          isUpdatingFromStateRef.current = false;
+        }, 100);
       }
-      // Reset the flag after a short delay to allow the URL update to complete
-      requestAnimationFrame(() => {
-        isUpdatingFromStateRef.current = false;
-      });
     }
-  }, [estimateType, selectedProperty, defaultTab, urlEstimateStep]);
+  }, [estimateType, selectedProperty, defaultTab, urlEstimateStep, setSearchParams]);
   
   // Handle browser back button - sync URL to state
   useEffect(() => {
@@ -240,35 +249,30 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       isUpdatingFromUrlRef.current = true;
       if (!urlEstimateStep) {
         // No step in URL = type selection
-        if (estimateType !== null) {
-          setEstimateType(null);
-          setSelectedProperty(null);
-          setPropertyIdInput('');
-        }
+        setEstimateType(null);
+        setSelectedProperty(null);
+        setPropertyIdInput('');
+        setEstimateForm({ customerName: '', phone: '', countryCode: '+91', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: '', gst: '', description: '', numberOfBlocks: '', blockNumber: '', blockName: '', numberOfUnits: '', villaNumber: '', flatNumber: '', plotNumber: '' });
       } else if (urlEstimateStep === 'property-id') {
         // Property ID entry step
-        if (estimateType !== 'property-based' || selectedProperty !== null) {
-          setEstimateType('property-based');
-          setSelectedProperty(null);
-          setPropertyIdInput('');
-        }
+        setEstimateType('property-based');
+        setSelectedProperty(null);
+        setPropertyIdInput('');
       } else if (urlEstimateStep === 'property-form') {
         // Property form step - keep current state if already there
         if (estimateType !== 'property-based') {
           setEstimateType('property-based');
         }
       } else if (urlEstimateStep === 'direct-form') {
-        // Direct form step - clear selectedProperty for direct estimates
-        if (estimateType !== 'direct' || selectedProperty !== null) {
-          setEstimateType('direct');
-          setSelectedProperty(null);
-          setPropertyIdInput('');
-        }
+        // Direct form step
+        setEstimateType('direct');
+        setSelectedProperty(null);
+        setPropertyIdInput('');
       }
       // Reset the flag after state updates are processed
-      requestAnimationFrame(() => {
+      setTimeout(() => {
         isUpdatingFromUrlRef.current = false;
-      });
+      }, 100);
     }
   }, [urlEstimateStep, defaultTab]);
   
