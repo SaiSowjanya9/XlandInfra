@@ -4,6 +4,7 @@
  */
 
 const { pool } = require('../config/database');
+const { generateInvoicePDF } = require('./pdfService');
 // Email sending is handled via sendEmail function imported dynamically to avoid circular dependencies
 
 // GST Rate (fixed at 18%)
@@ -705,11 +706,7 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                           <p style="color: #888; margin: 4px 0 0; font-size: 11px; letter-spacing: 2px;">PVT LTD</p>
                         </td>
                       </tr>
-                      <tr>
-                        <td align="center" style="padding-top: 16px;">
-                          <span style="background: #d4a853; color: #1a1a1a; padding: 8px 24px; border-radius: 20px; font-weight: bold; font-size: 13px; display: inline-block;">INVOICE</span>
-                        </td>
-                      </tr>
+
                     </table>
                   </td>
                 </tr>
@@ -742,6 +739,7 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                               <td width="50%" style="vertical-align: top; text-align: right;">
                                 <span style="color: #e53e3e; font-size: 11px;">Due Date</span><br>
                                 <span style="color: #e53e3e; font-size: 14px; font-weight: 600;">${formatDate(dueDate)}</span>
+                                <br><span style="color: #2b6cb0; font-size: 12px; font-weight: 500;">Billing: ${invoice.billing_duration || 'One-time'}</span>
                               </td>
                             </tr>
                           </table>
@@ -756,31 +754,55 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                   <td style="padding: 20px; background: linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%); text-align: center;">
                     <span style="color: rgba(255,255,255,0.8); font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Total Amount Due</span><br>
                     <span style="color: #ffffff; font-size: 32px; font-weight: bold;">${formatCurrency(totalAmount)}</span>
-                    <br><span style="color: rgba(255,255,255,0.7); font-size: 12px;">${invoice.billing_duration || 'One-time Payment'}</span>
                   </td>
                 </tr>
                 
-                <!-- Customer Details -->
+                <!-- Property Details & Customer Details - Side by Side -->
                 <tr>
                   <td style="padding: 20px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f7fafc; border-radius: 8px; overflow: hidden;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td style="padding: 16px; border-left: 4px solid #3182ce;">
-                          <span style="color: #2b6cb0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Customer Details</span>
-                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 12px;">
+                        <!-- Property Details -->
+                        <td width="48%" style="vertical-align: top; padding-right: 10px;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #e8f4f8; border-radius: 8px; overflow: hidden; height: 100%;">
                             <tr>
-                              <td style="padding: 4px 0; color: #4a5568; font-size: 14px;">
-                                <strong style="color: #2d3748;">${customerName || invoice.client_name || '-'}</strong>
+                              <td style="padding: 16px; border-left: 4px solid #3182ce;">
+                                <span style="color: #2b6cb0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Property Details</span>
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 12px;">
+                                  <tr>
+                                    <td style="padding: 4px 0; color: #718096; font-size: 13px;">Property ID: ${invoice.property_code || '-'}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 4px 0; color: #718096; font-size: 13px;"><strong style="color: #2d3748;">Name:</strong> ${invoice.property_name || invoice.customer_name || '-'}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 4px 0; color: #718096; font-size: 13px;"><strong style="color: #2d3748;">Type:</strong> ${invoice.property_type || '-'}</td>
+                                  </tr>
+                                  ${invoice.zone ? `<tr><td style="padding: 4px 0; color: #718096; font-size: 13px;"><strong style="color: #2d3748;">Zone:</strong> ${invoice.zone}</td></tr>` : ''}
+                                  ${invoice.city ? `<tr><td style="padding: 4px 0; color: #718096; font-size: 13px;"><strong style="color: #2d3748;">City:</strong> ${invoice.city}</td></tr>` : ''}
+                                </table>
                               </td>
                             </tr>
+                          </table>
+                        </td>
+                        <!-- Customer Details -->
+                        <td width="48%" style="vertical-align: top; padding-left: 10px;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #e8f4f8; border-radius: 8px; overflow: hidden; height: 100%;">
                             <tr>
-                              <td style="padding: 4px 0; color: #718096; font-size: 13px;">
-                                📧 ${customerEmail || invoice.client_email || '-'}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="padding: 4px 0; color: #718096; font-size: 13px;">
-                                📱 ${invoice.customer_phone || invoice.client_phone || '-'}
+                              <td style="padding: 16px; border-left: 4px solid #3182ce;">
+                                <span style="color: #2b6cb0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Customer Details</span>
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 12px;">
+                                  <tr>
+                                    <td style="padding: 4px 0; color: #718096; font-size: 13px;"><strong style="color: #2d3748;">Name:</strong> ${customerName || invoice.client_name || '-'}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 4px 0; color: #718096; font-size: 13px;"><strong style="color: #2d3748;">Phone:</strong> ${invoice.customer_phone || invoice.client_phone || '-'}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 4px 0; color: #718096; font-size: 13px;"><strong style="color: #2d3748;">Email:</strong> ${customerEmail || invoice.client_email || '-'}</td>
+                                  </tr>
+                                  ${invoice.city ? `<tr><td style="padding: 4px 0; color: #718096; font-size: 13px;"><strong style="color: #2d3748;">City:</strong> ${invoice.city}</td></tr>` : ''}
+                                </table>
                               </td>
                             </tr>
                           </table>
@@ -790,57 +812,36 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                   </td>
                 </tr>
                 
-                <!-- Property Details (only for property-based) -->
-                ${invoice.property_code ? `
-                <tr>
-                  <td style="padding: 0 20px 20px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #e8f4f8; border-radius: 8px; overflow: hidden;">
-                      <tr>
-                        <td style="padding: 16px; border-left: 4px solid #38b2ac;">
-                          <span style="color: #2c7a7b; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Property Details</span>
-                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 12px;">
-                            <tr>
-                              <td style="padding: 4px 0; color: #4a5568; font-size: 14px;">
-                                <strong>${invoice.property_name || '-'}</strong>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="padding: 4px 0; color: #718096; font-size: 13px;">
-                                ID: ${invoice.property_code} | Type: ${invoice.property_type || 'Gated Community'}
-                              </td>
-                            </tr>
-                            ${invoice.zone || invoice.city ? `
-                            <tr>
-                              <td style="padding: 4px 0; color: #718096; font-size: 13px;">
-                                📍 ${[invoice.zone, invoice.city].filter(Boolean).join(', ')}
-                              </td>
-                            </tr>
-                            ` : ''}
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-                ` : ''}
-                
-                <!-- Line Items -->
+                <!-- Services Included -->
                 ${lineItems.length > 0 ? `
                 <tr>
                   <td style="padding: 0 20px 20px;">
-                    <span style="color: #2d3748; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Services & Items</span>
+                    <span style="color: #2d3748; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Services Included</span>
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 12px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                      ${lineItems.map((item, idx) => `
-                      <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#f7fafc'};">
-                        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">
-                          <span style="color: #2d3748; font-size: 14px; font-weight: 500;">${item.description || item.name || 'Service'}</span>
-                          <br><span style="color: #718096; font-size: 12px;">Qty: ${item.quantity || 1} × ${formatCurrency(item.unitPrice || item.unit_price || 0)}</span>
-                        </td>
-                        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: right; vertical-align: top;">
-                          <span style="color: #2d3748; font-size: 14px; font-weight: 600;">${formatCurrency(item.totalPrice || item.total_price || 0)}</span>
-                        </td>
+                      <tr style="background: #f7fafc;">
+                        <th style="padding: 10px 8px; text-align: center; color: #4a5568; font-size: 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0; width: 30px;">#</th>
+                        <th style="padding: 10px 8px; text-align: left; color: #4a5568; font-size: 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0; width: 120px;">Service</th>
+                        <th style="padding: 10px 8px; text-align: left; color: #4a5568; font-size: 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Description</th>
+                        <th style="padding: 10px 8px; text-align: center; color: #4a5568; font-size: 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0; width: 80px;">Frequency</th>
+                        <th style="padding: 10px 8px; text-align: center; color: #4a5568; font-size: 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0; width: 50px;">Visits</th>
                       </tr>
-                      `).join('')}
+                      ${lineItems.map((item, idx) => {
+                        const fullDesc = item.description || item.name || 'Service';
+                        const parts = fullDesc.split(' - ');
+                        const serviceName = parts[0] || 'Service';
+                        const serviceDesc = parts.slice(1).join(' - ') || '-';
+                        const freq = item.frequency || item.frequencyType || item.frequency_type || item.billingDuration || '-';
+                        const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
+                        const visits = item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1;
+                        return `
+                      <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#f7fafc'};">
+                        <td style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0; text-align: center; color: #4a5568; font-size: 13px;">${idx + 1}</td>
+                        <td style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0; color: #1a365d; font-size: 13px; font-weight: 600;">${serviceName}</td>
+                        <td style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0; color: #4a5568; font-size: 13px;">${serviceDesc}</td>
+                        <td style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0; text-align: center; color: #4a5568; font-size: 13px;">${freqDisplay}</td>
+                        <td style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0; text-align: center; color: #4a5568; font-size: 13px;">${visits}</td>
+                      </tr>`;
+                      }).join('')}
                     </table>
                   </td>
                 </tr>
@@ -929,10 +930,47 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
       </html>
     `;
     
+    // Generate PDF attachment
+    let pdfBuffer = null;
+    try {
+      pdfBuffer = await generateInvoicePDF({
+        invoiceId,
+        estimateId: invoice.source_estimate_id,
+        customerName: customerName || invoice.client_name,
+        customerEmail: customerEmail || invoice.client_email,
+        customerPhone: invoice.customer_phone || invoice.client_phone,
+        propertyName: invoice.property_name,
+        propertyCode: invoice.property_code,
+        propertyType: invoice.property_type,
+        zone: invoice.zone,
+        city: invoice.city,
+        invoiceDate: invoice.invoice_date,
+        dueDate: dueDate,
+        billingDuration: invoice.billing_duration,
+        lineItems: lineItems,
+        subtotal: invoice.subtotal,
+        discountAmount: invoice.discount_amount,
+        discountPercentage: invoice.discount_percentage,
+        taxAmount: invoice.tax_amount,
+        taxPercentage: invoice.tax_percentage || 18,
+        totalAmount: totalAmount,
+        balanceAmount: invoice.balance_amount || totalAmount
+      });
+      console.log(`📄 Invoice PDF generated for ${invoiceId}`);
+    } catch (pdfError) {
+      console.error('Failed to generate invoice PDF:', pdfError.message);
+      // Continue without PDF attachment
+    }
+
     await emailService.sendEmail({
       to: customerEmail,
       subject,
-      html
+      html,
+      attachments: pdfBuffer ? [{
+        filename: `Invoice_${invoiceId}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }] : []
     });
     
     // Update invoice to mark email as sent
@@ -941,7 +979,7 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
       [invoiceDbId]
     );
     
-    console.log(`📧 Invoice email sent to ${customerEmail} for invoice ${invoiceId}`);
+    console.log(`📧 Invoice email sent to ${customerEmail} for invoice ${invoiceId} (with PDF: ${pdfBuffer ? 'yes' : 'no'})`);
     
   } catch (error) {
     console.error('Error sending invoice email:', error);

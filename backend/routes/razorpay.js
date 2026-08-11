@@ -470,6 +470,116 @@ router.get('/payment-link-status/:invoiceId', authenticate, async (req, res) => 
 });
 
 // ============================================
+// LIST ALL PAYMENT LINKS
+// ============================================
+router.get('/payment-links', authenticate, canManagePayments, async (req, res) => {
+  try {
+    const fpId = getFPScope(req);
+    const { status, search, page = 1, limit = 50 } = req.query;
+    const offset = (page - 1) * limit;
+
+    let query = `
+      SELECT 
+        i.id as invoice_db_id,
+        i.invoice_id,
+        i.customer_name,
+        i.customer_email,
+        i.customer_phone,
+        i.balance_amount,
+        i.total_amount,
+        i.payment_link,
+        i.razorpay_payment_link_id,
+        i.razorpay_short_url,
+        i.payment_link_status,
+        i.payment_link_created_at,
+        i.payment_link_sent_at,
+        i.payment_link_sent_via,
+        i.payment_link_expires_at,
+        i.source_estimate_id,
+        p.community_name as property_name,
+        p.property_id as property_code
+      FROM invoices i
+      LEFT JOIN onboarded_properties p ON i.property_id = p.id
+      WHERE i.razorpay_payment_link_id IS NOT NULL
+    `;
+    const params = [];
+
+    // Filter by FP
+    if (fpId) {
+      query += ' AND i.franchise_partner_id = ?';
+      params.push(fpId);
+    }
+
+    // Filter by status
+    if (status && status !== 'all') {
+      query += ' AND i.payment_link_status = ?';
+      params.push(status);
+    }
+
+    // Search
+    if (search) {
+      query += ' AND (i.invoice_id LIKE ? OR i.customer_name LIKE ? OR i.customer_email LIKE ?)';
+      const searchTerm = `%${search}%`;
+      params.push(searchTerm, searchTerm, searchTerm);
+    }
+
+    // Get total count
+    const countQuery = query.replace('SELECT \n        i.id as invoice_db_id,', 'SELECT COUNT(*) as total FROM (SELECT i.id,').replace(/LEFT JOIN.*$/s, ') as subq');
+    
+    // Order and pagination
+    query += ' ORDER BY i.payment_link_created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
+
+    const [links] = await pool.execute(query, params);
+
+    // Get counts by status
+    const [statusCounts] = await pool.execute(`
+      SELECT 
+        payment_link_status as status,
+        COUNT(*) as count
+      FROM invoices
+      WHERE razorpay_payment_link_id IS NOT NULL
+      ${fpId ? 'AND franchise_partner_id = ?' : ''}
+      GROUP BY payment_link_status
+    `, fpId ? [fpId] : []);
+
+    const counts = {
+      all: 0,
+      created: 0,
+      sent: 0,
+      paid: 0,
+      expired: 0,
+      cancelled: 0
+    };
+    statusCounts.forEach(row => {
+      counts[row.status] = row.count;
+      counts.all += row.count;
+    });
+
+    res.json({
+      success: true,
+      data: {
+        paymentLinks: links,
+        counts,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: counts.all
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error listing payment links:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to list payment links',
+      error: error.message
+    });
+  }
+});
+
+// ============================================
 // RAZORPAY WEBHOOK
 // ============================================
 router.post('/webhook', webhookLimiter, express.raw({ type: 'application/json' }), async (req, res) => {

@@ -34,6 +34,7 @@ import {
   Receipt,
   Wallet,
   History,
+  Link2,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
@@ -277,6 +278,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
     { path: '/fp/billing/generate-invoices', icon: FileText, label: 'Generated Invoices' },
     { path: '/fp/billing/invoices', icon: Receipt, label: 'Invoices' },
     { path: '/fp/billing/payments', icon: CreditCard, label: 'Payments' },
+    { path: '/fp/billing/payment-links', icon: Link2, label: 'Payment Links' },
     { path: '/fp/billing/make-payments', icon: Wallet, label: 'Make Payments' },
     { path: '/fp/billing/payment-history', icon: History, label: 'Payment History' },
     { path: '/fp/billing/archived', icon: Archive, label: 'Archived' }
