@@ -601,11 +601,14 @@ const FPWorkOrders = ({ user }) => {
 
     // Search filter
     if (searchTerm) {
+      const search = searchTerm.toLowerCase();
       return (
-        wo.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        wo.work_order_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        wo.property_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        wo.category_name?.toLowerCase().includes(searchTerm.toLowerCase())
+        wo.title?.toLowerCase().includes(search) ||
+        wo.work_order_id?.toLowerCase().includes(search) ||
+        wo.property_name?.toLowerCase().includes(search) ||
+        wo.category_name?.toLowerCase().includes(search) ||
+        wo.property_code?.toLowerCase().includes(search) ||
+        wo.property_id?.toString().toLowerCase().includes(search)
       );
     }
     return true;
@@ -1435,7 +1438,7 @@ const FPWorkOrders = ({ user }) => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by Work Order ID, category, or name..."
+                  placeholder="Search by Work Order ID, Property ID, category, or name..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}

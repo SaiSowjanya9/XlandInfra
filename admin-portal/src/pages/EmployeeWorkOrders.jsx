@@ -379,11 +379,15 @@ const EmployeeWorkOrders = ({ admin }) => {
   };
 
   const filtered = workOrders.filter(wo => {
-    const matchesSearch =
-      wo.work_order_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      wo.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      wo.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      wo.category_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const search = searchTerm.toLowerCase();
+    const matchesSearch = !searchTerm || (
+      wo.work_order_id?.toLowerCase().includes(search) ||
+      wo.first_name?.toLowerCase().includes(search) ||
+      wo.last_name?.toLowerCase().includes(search) ||
+      wo.category_name?.toLowerCase().includes(search) ||
+      wo.property_code?.toLowerCase().includes(search) ||
+      wo.property_id?.toString().toLowerCase().includes(search)
+    );
     const matchesStatus = statusFilter === 'all' || wo.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -931,7 +935,7 @@ const EmployeeWorkOrders = ({ admin }) => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by Work Order ID, category, or name..."
+                  placeholder="Search by Work Order ID, Property ID, category, or name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value.trim())}
                   onKeyPress={handleSearchKeyPress}

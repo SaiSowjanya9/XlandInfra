@@ -490,7 +490,9 @@ const WorkOrders = ({ admin }) => {
       wo.work_order_id?.toLowerCase().includes(q) ||
       wo.title?.toLowerCase().includes(q) ||
       wo.property_name?.toLowerCase().includes(q) ||
-      wo.category_name?.toLowerCase().includes(q)
+      wo.category_name?.toLowerCase().includes(q) ||
+      wo.property_code?.toLowerCase().includes(q) ||
+      wo.property_id?.toString().toLowerCase().includes(q)
     );
   });
 
@@ -923,7 +925,7 @@ const WorkOrders = ({ admin }) => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input 
               type="text" 
-              placeholder="Search by Work Order ID, category, or name..." 
+              placeholder="Search by Work Order ID, Property ID, category, or name..." 
               value={searchInput} 
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && setSearchTerm(searchInput)}

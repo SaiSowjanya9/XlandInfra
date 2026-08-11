@@ -734,7 +734,14 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   );
 
   const filteredEstimates = estimates.filter(e => {
-    const matchSearch = !searchTerm || e.title?.toLowerCase().includes(searchTerm.toLowerCase()) || e.estimate_id?.toLowerCase().includes(searchTerm.toLowerCase()) || e.client_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const search = searchTerm.toLowerCase();
+    const matchSearch = !searchTerm || (
+      e.title?.toLowerCase().includes(search) || 
+      e.estimate_id?.toLowerCase().includes(search) || 
+      e.client_name?.toLowerCase().includes(search) ||
+      (e.property_code || '').toLowerCase().includes(search) ||
+      (e.property_id?.toString() || '').toLowerCase().includes(search)
+    );
     const matchType = estimateTypeFilter === 'all' || e.estimate_type === estimateTypeFilter;
     const matchStatus = statusFilter === 'all' || e.status === statusFilter;
     // Property category filter should work for ALL estimates that have a property_type (both direct and property-based)
@@ -812,7 +819,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           {activeTab === 'list' && (
             <div className="space-y-4">
               <div className="flex gap-4">
-                <div className="flex-1 relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="text" placeholder="Search estimates..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" /></div>
+                <div className="flex-1 relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="text" placeholder="Search by Estimate ID, Property ID, or client name..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" /></div>
                 <button onClick={() => setShowFilters(!showFilters)} className={`px-4 py-2.5 rounded-lg border font-medium flex items-center gap-2 ${showFilters ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}><Filter className="w-4 h-4" />Filters</button>
               </div>
               {showFilters && (
