@@ -476,7 +476,27 @@ router.get('/payment-links', authenticate, canManagePayments, async (req, res) =
   try {
     const fpId = getFPScope(req);
     const { status, search, page = 1, limit = 50 } = req.query;
-    const offset = (page - 1) * limit;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // First check if payment link columns exist
+    let hasPaymentLinkColumns = true;
+    try {
+      await pool.execute('SELECT razorpay_payment_link_id FROM invoices LIMIT 1');
+    } catch (colErr) {
+      hasPaymentLinkColumns = false;
+    }
+
+    if (!hasPaymentLinkColumns) {
+      // Return empty result if columns don't exist
+      return res.json({
+        success: true,
+        data: {
+          paymentLinks: [],
+          counts: { all: 0, created: 0, sent: 0, paid: 0, expired: 0, cancelled: 0 },
+          pagination: { page: parseInt(page), limit: parseInt(limit), total: 0 }
+        }
+      });
+    }
 
     let query = `
       SELECT 
@@ -523,9 +543,6 @@ router.get('/payment-links', authenticate, canManagePayments, async (req, res) =
       params.push(searchTerm, searchTerm, searchTerm);
     }
 
-    // Get total count
-    const countQuery = query.replace('SELECT \n        i.id as invoice_db_id,', 'SELECT COUNT(*) as total FROM (SELECT i.id,').replace(/LEFT JOIN.*$/s, ') as subq');
-    
     // Order and pagination
     query += ' ORDER BY i.payment_link_created_at DESC LIMIT ? OFFSET ?';
     params.push(parseInt(limit), parseInt(offset));
@@ -533,15 +550,21 @@ router.get('/payment-links', authenticate, canManagePayments, async (req, res) =
     const [links] = await pool.execute(query, params);
 
     // Get counts by status
-    const [statusCounts] = await pool.execute(`
-      SELECT 
-        payment_link_status as status,
-        COUNT(*) as count
-      FROM invoices
-      WHERE razorpay_payment_link_id IS NOT NULL
-      ${fpId ? 'AND franchise_partner_id = ?' : ''}
-      GROUP BY payment_link_status
-    `, fpId ? [fpId] : []);
+    let statusCounts = [];
+    try {
+      const countQuery = `
+        SELECT 
+          payment_link_status as status,
+          COUNT(*) as count
+        FROM invoices
+        WHERE razorpay_payment_link_id IS NOT NULL
+        ${fpId ? 'AND franchise_partner_id = ?' : ''}
+        GROUP BY payment_link_status
+      `;
+      [statusCounts] = await pool.execute(countQuery, fpId ? [fpId] : []);
+    } catch (countErr) {
+      console.error('Error getting status counts:', countErr.message);
+    }
 
     const counts = {
       all: 0,
@@ -552,8 +575,10 @@ router.get('/payment-links', authenticate, canManagePayments, async (req, res) =
       cancelled: 0
     };
     statusCounts.forEach(row => {
-      counts[row.status] = row.count;
-      counts.all += row.count;
+      if (row.status && counts.hasOwnProperty(row.status)) {
+        counts[row.status] = parseInt(row.count) || 0;
+      }
+      counts.all += parseInt(row.count) || 0;
     });
 
     res.json({
