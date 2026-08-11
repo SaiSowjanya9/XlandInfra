@@ -1006,9 +1006,8 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
               {estimateForm.estimateType === 'property_based' && (
                 <>
                   <div className="bg-white rounded-xl border border-gray-200">
-                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <div className="px-6 py-4 border-b border-gray-100">
                       <h2 className="font-semibold text-gray-900">Estimate Details</h2>
-                      <button onClick={handleBackFromEstimate} className="text-sm text-gray-500 hover:text-gray-700">← Back</button>
                     </div>
                     <div className="p-6">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Property ID <span className="text-red-500">*</span></label>
@@ -1169,9 +1168,8 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
               {estimateForm.estimateType === 'direct' && (
                 <>
                   <div className="bg-white rounded-xl border border-gray-200">
-                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <div className="px-6 py-4 border-b border-gray-100">
                       <h2 className="font-semibold text-gray-900">Customer Information</h2>
-                      <button onClick={resetEstimateForm} className="text-sm text-gray-500 hover:text-gray-700">← Back</button>
                     </div>
                     <div className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
