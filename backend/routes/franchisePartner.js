@@ -1259,8 +1259,8 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
           wo.created_by, 'System'
         ) as created_by_name
       FROM work_orders wo
-      LEFT JOIN onboarded_properties op ON wo.property_id = op.id
-      LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+      LEFT JOIN onboarded_properties op ON (wo.property_id = op.id OR CAST(wo.property_id AS CHAR) = op.property_id)
+      LEFT JOIN properties p ON (wo.property_id = p.id OR CAST(wo.property_id AS CHAR) = p.property_id) AND op.id IS NULL
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
       LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username OR CAST(wo.created_by AS UNSIGNED) = fpe.id
@@ -1841,8 +1841,8 @@ router.get('/work-orders/by-order-id/:workOrderId', requireFPScope, async (req, 
           wo.created_by, 'System'
         ) as created_by_name
       FROM work_orders wo
-      LEFT JOIN onboarded_properties op ON wo.property_id = op.id
-      LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+      LEFT JOIN onboarded_properties op ON (wo.property_id = op.id OR CAST(wo.property_id AS CHAR) = op.property_id)
+      LEFT JOIN properties p ON (wo.property_id = p.id OR CAST(wo.property_id AS CHAR) = p.property_id) AND op.id IS NULL
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
       LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username OR CAST(wo.created_by AS UNSIGNED) = fpe.id
@@ -4085,8 +4085,8 @@ router.get('/estimates', requireFPScope, async (req, res) => {
                  LEFT JOIN onboarded_properties op ON fe.property_id = op.id
                  LEFT JOIN properties p ON fe.property_id = p.id AND op.id IS NULL
                  LEFT JOIN work_orders wo ON fe.work_order_id = wo.work_order_id AND fe.estimate_type = 'work_order'
-                 LEFT JOIN onboarded_properties wo_prop ON wo.property_id = wo_prop.id
-                 LEFT JOIN properties wo_prop2 ON wo.property_id = wo_prop2.id AND wo_prop.id IS NULL
+                 LEFT JOIN onboarded_properties wo_prop ON (wo.property_id = wo_prop.id OR CAST(wo.property_id AS CHAR) = wo_prop.property_id)
+                 LEFT JOIN properties wo_prop2 ON (wo.property_id = wo_prop2.id OR CAST(wo.property_id AS CHAR) = wo_prop2.property_id) AND wo_prop.id IS NULL
                  WHERE fe.franchise_partner_id = ?`;
     const params = [req.fpId];
 

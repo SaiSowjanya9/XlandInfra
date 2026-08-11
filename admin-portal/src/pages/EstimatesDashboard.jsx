@@ -439,11 +439,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
     e.estimateType === 'property_based' || e.estimateType === 'property-based'
   ).length;
-  const block3WorkOrder = block3Data.filter(e => e.estimate_type === 'work_order' || e.estimateType === 'work_order').length;
+  // Note: Work Order estimates are shown in their own row, not in this chart
   const typeDataAll = [
     { name: 'Direct Estimates', value: block3Direct, color: '#8B5CF6' },
-    { name: 'Property-Based', value: block3PropertyBased, color: '#06B6D4' },
-    { name: 'Work Order', value: block3WorkOrder, color: '#F97316' }
+    { name: 'Property-Based', value: block3PropertyBased, color: '#06B6D4' }
   ];
   const typeData = typeDataAll.filter(item => item.value > 0);
 
