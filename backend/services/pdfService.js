@@ -130,22 +130,28 @@ const generateEstimatePDF = async (estimate) => {
       doc.fontSize(10).fillColor(navy).text('Property Details', 60, y + 10);
       doc.fontSize(8).fillColor('#666666');
       let py = y + 28;
-      if (propertyCode) { doc.text(`Property ID: ${propertyCode}`, 60, py); py += 12; }
-      if (propertyName) { doc.text(`Name: ${decodeHtml(propertyName)}`, 60, py); py += 12; }
+      if (propertyCode) { doc.text(`Property ID: ${propertyCode}`, 60, py, { width: cardWidth - 20 }); py += 12; }
+      if (propertyName) { doc.text(`Name: ${decodeHtml(propertyName)}`, 60, py, { width: cardWidth - 20 }); py += 12; }
       const propTypeLabel = { 'GC': 'Gated Community', 'APT': 'Apartment', 'VILLA': 'Villa', 'PLOT': 'Plot' }[propertyType] || propertyType;
-      if (propTypeLabel) { doc.text(`Type: ${propTypeLabel}`, 60, py); py += 12; }
-      if (zone) { doc.text(`Zone: ${zone}`, 60, py); py += 12; }
-      if (division) { doc.text(`Division: ${division}`, 60, py); py += 12; }
+      if (propTypeLabel) { doc.text(`Type: ${propTypeLabel}`, 60, py, { width: cardWidth - 20 }); py += 12; }
+      if (zone) { doc.text(`Zone: ${zone}`, 60, py, { width: cardWidth - 20 }); py += 12; }
+      if (division) { doc.text(`Division: ${division}`, 60, py, { width: cardWidth - 20 }); py += 12; }
 
       // Customer Details Card
       doc.rect(305, y, cardWidth, 100).fill('#e8f4fc').stroke('#cce7f7');
       doc.fontSize(10).fillColor(navy).text('Customer Details', 315, y + 10);
       doc.fontSize(8).fillColor('#666666');
       let cy = y + 28;
-      if (customerName) { doc.text(`Name: ${decodeHtml(customerName)}`, 315, cy); cy += 12; }
-      if (customerPhone) { doc.text(`Phone: ${customerPhone}`, 315, cy); cy += 12; }
-      if (customerEmail) { doc.text(`Email: ${customerEmail}`, 315, cy); cy += 12; }
-      if (city) { doc.text(`City: ${city}`, 315, cy); cy += 12; }
+      if (customerName) { doc.text(`Name: ${decodeHtml(customerName)}`, 315, cy, { width: cardWidth - 20 }); cy += 12; }
+      if (customerPhone) { doc.text(`Phone: ${customerPhone}`, 315, cy, { width: cardWidth - 20 }); cy += 12; }
+      if (customerEmail) { 
+        // Use smaller font for long emails to ensure they fit
+        const emailFontSize = customerEmail.length > 25 ? 7 : 8;
+        doc.fontSize(emailFontSize).text(`Email: ${customerEmail}`, 315, cy, { width: cardWidth - 20 }); 
+        cy += (customerEmail.length > 35 ? 20 : 12); // Extra space if email wraps
+        doc.fontSize(8); // Reset font size
+      }
+      if (city) { doc.text(`City: ${city}`, 315, cy, { width: cardWidth - 20 }); cy += 12; }
 
       y += 115;
 
