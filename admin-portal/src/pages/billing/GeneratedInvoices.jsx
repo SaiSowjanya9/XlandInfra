@@ -588,8 +588,8 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
                             </div>
                           </td>
                           <td className="px-4 py-3.5 text-center">
-                            <span className="inline-flex px-2.5 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700">
-                              Awaiting Estimate
+                            <span className="inline-flex px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                              completed
                             </span>
                           </td>
                           <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">
