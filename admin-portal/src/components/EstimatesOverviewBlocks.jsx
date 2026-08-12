@@ -341,8 +341,8 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
         </div>
       </div>
 
-      {/* Row 3: Work Order Estimates - Always in one line */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* Row 3: Work Order Estimates - Same width as above rows */}
+      <div className="grid grid-cols-3 gap-4">
         {/* Block 7: Work Order Estimate Overview */}
         <div className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">

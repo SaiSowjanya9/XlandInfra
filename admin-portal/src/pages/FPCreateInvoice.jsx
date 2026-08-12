@@ -95,11 +95,11 @@ const FPCreateInvoice = ({ user }) => {
     }
   };
 
-  // Fetch completed work orders
+  // Fetch completed work orders (exclude work orders that already have estimates)
   const fetchWorkOrders = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/fp/work-orders?status=Completed`, {
+      const response = await fetch(`${API_BASE}/api/fp/work-orders?status=completed&excludeWithEstimates=true`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
