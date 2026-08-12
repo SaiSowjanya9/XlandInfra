@@ -1162,7 +1162,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               {workOrderCategoryData.map((item, index) => {
                 const maxValue = Math.max(...workOrderCategoryData.map(d => d.value));
                 const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-                const colors = ['#F97316', '#FB923C', '#FDBA74', '#FED7AA', '#FFEDD5'];
+                const colors = ['#3B82F6', '#22C55E', '#8B5CF6', '#F59E0B', '#EC4899'];
                 return (
                   <div key={index} className="flex items-center gap-2">
                     <div className="w-20 text-xs text-gray-600 truncate">{item.name}</div>
