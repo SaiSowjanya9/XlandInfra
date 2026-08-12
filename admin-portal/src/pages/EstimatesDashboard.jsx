@@ -963,10 +963,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
 
       {/* Direct Estimates Row - 3 Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Estimate Status Overview (Donut) - Position 1 */}
+        {/* Estimate Status (Donut) - Position 1 */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Estimate Status Overview</h3>
+            <h3 className="text-sm font-semibold text-gray-800">Estimate Status</h3>
             <select
               value={filter2}
               onChange={(e) => setFilter2(e.target.value)}

@@ -191,7 +191,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   ];
   const propertyStatusData = propertyStatusDataAll.filter(item => item.value > 0);
 
-  // Block 4: Estimate Status Overview (All)
+  // Block 4: Estimate Status (All)
   const block4Filtered = applyPeriodFilter(estimates, filter2);
   const statusDataAll = [
     { name: 'Draft', value: block4Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#5B8DEF' },
@@ -305,10 +305,10 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
 
       {/* Row 2: 3 Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Block 4: Estimate Status Overview */}
+        {/* Block 4: Estimate Status */}
         <div className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Estimate Status Overview</h3>
+            <h3 className="text-sm font-semibold text-gray-800">Estimate Status</h3>
             <FilterSelect value={filter2} onChange={setFilter2} />
           </div>
           <DonutChartWithLegend 
