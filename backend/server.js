@@ -111,7 +111,14 @@ app.use(cors({
 }));
 
 // 3. Body Parsers with size limits (prevent large payload attacks)
-app.use(express.json(bodyParserLimits.json));
+// IMPORTANT: Skip JSON parsing for Razorpay webhook to preserve raw body for signature verification
+app.use((req, res, next) => {
+  if (req.path === '/api/razorpay/webhook') {
+    // Skip JSON parsing for webhook - it handles its own body parsing
+    return next();
+  }
+  express.json(bodyParserLimits.json)(req, res, next);
+});
 app.use(express.urlencoded(bodyParserLimits.urlencoded));
 
 // 4. HTTP Parameter Pollution prevention

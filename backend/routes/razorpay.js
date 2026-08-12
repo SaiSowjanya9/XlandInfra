@@ -671,6 +671,19 @@ router.post('/webhook', webhookLimiter, express.raw({ type: 'application/json' }
         await handlePaymentCaptured(payload, webhookId);
         break;
 
+      case 'payment.failed':
+        await handlePaymentFailed(payload, webhookId);
+        break;
+
+      case 'payment_link.cancelled':
+        await handlePaymentLinkCancelled(payload, webhookId);
+        break;
+
+      case 'refund.created':
+      case 'refund.processed':
+        await handleRefund(payload, webhookId);
+        break;
+
       default:
         console.log('[Razorpay Webhook] Unhandled event type:', event);
     }
@@ -842,6 +855,128 @@ async function handlePaymentCaptured(payload, webhookId) {
 
   // The payment link webhook should handle this
   console.log(`[Webhook] Payment captured for invoice ${internalInvoiceId}`);
+}
+
+// Handle payment failed
+async function handlePaymentFailed(payload, webhookId) {
+  const paymentEntity = payload.payload.payment?.entity;
+  
+  if (!paymentEntity) {
+    console.log('[Webhook] Payment failed but no payment entity');
+    return;
+  }
+
+  const notes = paymentEntity.notes || {};
+  const internalInvoiceId = notes.internal_invoice_id;
+  const errorCode = paymentEntity.error_code;
+  const errorDescription = paymentEntity.error_description;
+
+  console.log(`[Webhook] Payment failed: ${errorCode} - ${errorDescription}`);
+
+  // Log the failure for audit
+  if (internalInvoiceId) {
+    try {
+      await pool.execute(`
+        INSERT INTO payment_history (invoice_id, action, new_status, description, performed_by_name, performed_by_role)
+        VALUES (?, 'failed', 'failed', ?, 'Razorpay', 'system')
+      `, [internalInvoiceId, `Payment failed: ${errorCode} - ${errorDescription}`]);
+
+      // Update webhook record
+      await pool.execute(
+        'UPDATE razorpay_webhooks SET invoice_id = ?, razorpay_payment_id = ?, error_message = ? WHERE id = ?',
+        [internalInvoiceId, paymentEntity.id, `${errorCode}: ${errorDescription}`, webhookId]
+      );
+    } catch (err) {
+      console.error('[Webhook] Error logging payment failure:', err.message);
+    }
+  }
+}
+
+// Handle payment link cancelled
+async function handlePaymentLinkCancelled(payload, webhookId) {
+  const paymentLinkEntity = payload.payload.payment_link?.entity;
+  
+  if (!paymentLinkEntity) return;
+
+  const internalInvoiceId = paymentLinkEntity.notes?.internal_invoice_id;
+
+  if (!internalInvoiceId) return;
+
+  await pool.execute(`
+    UPDATE invoices SET payment_link_status = 'cancelled' WHERE id = ?
+  `, [internalInvoiceId]);
+
+  await pool.execute(
+    'UPDATE razorpay_webhooks SET invoice_id = ?, razorpay_payment_link_id = ? WHERE id = ?',
+    [internalInvoiceId, paymentLinkEntity.id, webhookId]
+  );
+
+  console.log(`[Webhook] Payment link cancelled for invoice ${internalInvoiceId}`);
+}
+
+// Handle refund events
+async function handleRefund(payload, webhookId) {
+  const refundEntity = payload.payload.refund?.entity;
+  const paymentEntity = payload.payload.payment?.entity;
+  
+  if (!refundEntity) {
+    console.log('[Webhook] Refund event but no refund entity');
+    return;
+  }
+
+  const paymentId = refundEntity.payment_id;
+  const refundAmount = refundEntity.amount / 100; // Convert from paise
+  const refundStatus = refundEntity.status;
+
+  console.log(`[Webhook] Refund ${refundStatus}: ₹${refundAmount} for payment ${paymentId}`);
+
+  // Find the payment in our database
+  try {
+    const [payments] = await pool.execute(`
+      SELECT p.*, i.id as invoice_db_id, i.invoice_id
+      FROM payments p
+      LEFT JOIN invoices i ON p.invoice_id = i.id
+      WHERE p.razorpay_payment_id = ?
+    `, [paymentId]);
+
+    if (payments.length > 0) {
+      const payment = payments[0];
+
+      // Log the refund
+      await pool.execute(`
+        INSERT INTO payment_history (invoice_id, action, new_status, amount, description, performed_by_name, performed_by_role)
+        VALUES (?, 'refund', ?, ?, ?, 'Razorpay', 'system')
+      `, [
+        payment.invoice_db_id,
+        refundStatus,
+        refundAmount,
+        `Refund ${refundStatus}: ₹${refundAmount} (Refund ID: ${refundEntity.id})`
+      ]);
+
+      // Update invoice balance if refund is processed
+      if (refundStatus === 'processed') {
+        await pool.execute(`
+          UPDATE invoices SET
+            amount_paid = amount_paid - ?,
+            balance_amount = balance_amount + ?,
+            payment_status = CASE 
+              WHEN balance_amount + ? >= total_amount THEN 'unpaid'
+              WHEN balance_amount + ? > 0 THEN 'partially_paid'
+              ELSE payment_status
+            END
+          WHERE id = ?
+        `, [refundAmount, refundAmount, refundAmount, refundAmount, payment.invoice_db_id]);
+      }
+
+      // Update webhook record
+      await pool.execute(
+        'UPDATE razorpay_webhooks SET invoice_id = ?, razorpay_payment_id = ? WHERE id = ?',
+        [payment.invoice_db_id, paymentId, webhookId]
+      );
+    }
+  } catch (err) {
+    console.error('[Webhook] Error processing refund:', err.message);
+  }
 }
 
 // ============================================
@@ -1032,6 +1167,128 @@ router.post('/verify-qr-token', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to verify token'
+    });
+  }
+});
+
+// ============================================
+// VERIFY PAYMENT CALLBACK SIGNATURE
+// Public endpoint for verifying payment link callback params
+// ============================================
+router.post('/verify-payment-callback', async (req, res) => {
+  try {
+    const {
+      razorpay_payment_id,
+      razorpay_payment_link_id,
+      razorpay_payment_link_reference_id,
+      razorpay_payment_link_status,
+      razorpay_signature
+    } = req.body;
+
+    // If no signature provided, just return status without verification
+    if (!razorpay_signature) {
+      return res.json({
+        success: true,
+        verified: false,
+        message: 'No signature provided for verification',
+        data: {
+          paymentId: razorpay_payment_id,
+          paymentLinkId: razorpay_payment_link_id,
+          status: razorpay_payment_link_status
+        }
+      });
+    }
+
+    // Verify the signature
+    // For payment links, signature is HMAC-SHA256 of: payment_link_id|payment_link_reference_id|payment_link_status|razorpay_payment_id
+    const payload = `${razorpay_payment_link_id}|${razorpay_payment_link_reference_id}|${razorpay_payment_link_status}|${razorpay_payment_id}`;
+    
+    const expectedSignature = crypto
+      .createHmac('sha256', RAZORPAY_KEY_SECRET)
+      .update(payload)
+      .digest('hex');
+
+    let isValid = false;
+    try {
+      isValid = crypto.timingSafeEqual(
+        Buffer.from(razorpay_signature),
+        Buffer.from(expectedSignature)
+      );
+    } catch (compareError) {
+      // Lengths don't match - signature is invalid
+      isValid = false;
+    }
+
+    if (!isValid) {
+      // Log security event
+      try {
+        await pool.execute(`
+          INSERT INTO payment_security_logs (event_type, severity, ip_hash, request_path, details)
+          VALUES (?, ?, ?, ?, ?)
+        `, [
+          'PAYMENT_CALLBACK_INVALID_SIGNATURE',
+          'WARNING',
+          hashIP(getClientIP(req)),
+          '/api/razorpay/verify-payment-callback',
+          JSON.stringify({ paymentId: razorpay_payment_id, paymentLinkId: razorpay_payment_link_id })
+        ]);
+      } catch (logErr) {
+        console.error('Failed to log security event:', logErr.message);
+      }
+
+      return res.status(400).json({
+        success: false,
+        verified: false,
+        message: 'Invalid payment signature'
+      });
+    }
+
+    // Signature is valid - get payment details from database
+    let paymentDetails = null;
+    try {
+      const [payments] = await pool.execute(`
+        SELECT p.payment_id, p.amount, p.status, p.payment_date,
+               i.invoice_id, i.customer_name
+        FROM payments p
+        LEFT JOIN invoices i ON p.invoice_id = i.id
+        WHERE p.razorpay_payment_id = ?
+        ORDER BY p.created_at DESC
+        LIMIT 1
+      `, [razorpay_payment_id]);
+
+      if (payments.length > 0) {
+        paymentDetails = {
+          paymentId: payments[0].payment_id,
+          amount: payments[0].amount,
+          status: payments[0].status,
+          invoiceId: payments[0].invoice_id,
+          customerName: payments[0].customer_name,
+          paymentDate: payments[0].payment_date
+        };
+      }
+    } catch (dbErr) {
+      console.error('Error fetching payment details:', dbErr.message);
+    }
+
+    res.json({
+      success: true,
+      verified: true,
+      message: 'Payment signature verified successfully',
+      data: {
+        paymentId: razorpay_payment_id,
+        paymentLinkId: razorpay_payment_link_id,
+        status: razorpay_payment_link_status,
+        referenceId: razorpay_payment_link_reference_id,
+        ...paymentDetails
+      }
+    });
+
+  } catch (error) {
+    console.error('Error verifying payment callback:', error);
+    res.status(500).json({
+      success: false,
+      verified: false,
+      message: 'Failed to verify payment'
     });
   }
 });
