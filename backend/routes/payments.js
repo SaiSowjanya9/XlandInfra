@@ -682,10 +682,13 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
       data: {
         id: i.id,
         invoiceId: i.invoice_id,
+        invoiceType: i.invoice_type,
         propertyId: i.property_id,
         propertyName: i.property_name,
         propertyCode: i.property_code,
         estimateId: i.estimate_id,
+        sourceEstimateId: i.source_estimate_id,
+        sourceWorkOrderId: i.source_work_order_id,
         customerId: i.customer_id,
         customerName: i.customer_name || i.client_name,
         customerEmail: i.customer_email,
