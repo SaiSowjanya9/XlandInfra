@@ -530,71 +530,152 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
         </button>
       </div>
 
-      {/* Table */}
-      {paginatedInvoices.length === 0 ? (
-        type === 'work_order' && completedWorkOrders.length > 0 ? (
-          /* Show Completed Work Orders when no work order invoices */
-          <div className="p-4">
-            <div className="flex items-center gap-3 mb-4 px-2">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Briefcase className="w-5 h-5 text-orange-600" />
+      {/* For Work Order tab: Always show pending work orders section first, then invoices */}
+      {type === 'work_order' ? (
+        <div className="space-y-6">
+          {/* Section 1: Pending Estimate Creation - Completed work orders without estimates */}
+          {completedWorkOrders.length > 0 && (
+            <div className="border border-orange-200 rounded-lg overflow-hidden">
+              <div className="flex items-center gap-3 p-4 bg-orange-50 border-b border-orange-200">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <Clock className="w-5 h-5 text-orange-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-orange-800">Pending Estimate Creation</h3>
+                  <p className="text-sm text-orange-600">Completed work orders waiting for estimate - Click to create</p>
+                </div>
+                <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
+                  {completedWorkOrders.length}
+                </span>
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Completed Work Orders</h3>
-                <p className="text-sm text-gray-500">Select a work order to create an estimate</p>
-              </div>
+              {loadingWorkOrders ? (
+                <div className="flex items-center justify-center h-32 bg-white">
+                  <RefreshCw className="w-6 h-6 text-orange-500 animate-spin" />
+                </div>
+              ) : (
+                <div className="overflow-x-auto bg-white">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-100 bg-gray-50">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Work Order ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Property</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {completedWorkOrders.map(wo => (
+                        <tr 
+                          key={wo.id} 
+                          className="hover:bg-orange-50 cursor-pointer transition-colors"
+                          onClick={() => onWorkOrderClick && onWorkOrderClick(wo)}
+                        >
+                          <td className="px-4 py-3.5">
+                            <span className="text-sm font-medium text-orange-600 font-mono">{wo.work_order_id}</span>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">{wo.customer_name || '-'}</p>
+                              <p className="text-xs text-gray-500">{wo.community_name || wo.property_name || '-'}</p>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">{wo.category_name || '-'}</p>
+                              <p className="text-xs text-gray-500">{wo.subcategory_name || '-'}</p>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5 text-center">
+                            <span className="inline-flex px-2.5 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700">
+                              Awaiting Estimate
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">
+                            {formatDateTime(wo.created_at)}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">{wo.customer_name || wo.community_name || '-'}</p>
+                              <p className="text-xs text-gray-500">{wo.property_code || wo.property_id || '-'}</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-            {loadingWorkOrders ? (
-              <div className="flex items-center justify-center h-32">
-                <RefreshCw className="w-6 h-6 text-blue-500 animate-spin" />
+          )}
+
+          {/* Section 2: Generated Invoices from Work Orders */}
+          <div className="border border-green-200 rounded-lg overflow-hidden">
+            <div className="flex items-center gap-3 p-4 bg-green-50 border-b border-green-200">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-green-800">Generated Invoices</h3>
+                <p className="text-sm text-green-600">Invoices created from approved work order estimates</p>
+              </div>
+              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                {paginatedInvoices.length}
+              </span>
+            </div>
+            {paginatedInvoices.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-32 text-gray-400 bg-white">
+                <FileText className="w-8 h-8 mb-2" />
+                <p className="text-sm">No work order invoices yet</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto bg-white">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Work Order ID</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice ID</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Property ID</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Property</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {completedWorkOrders.map(wo => (
-                      <tr 
-                        key={wo.id} 
-                        className="hover:bg-orange-50 cursor-pointer transition-colors"
-                        onClick={() => onWorkOrderClick && onWorkOrderClick(wo)}
-                      >
+                    {paginatedInvoices.map(invoice => (
+                      <tr key={invoice.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3.5">
-                          <span className="text-sm font-medium text-orange-600 font-mono">{wo.work_order_id}</span>
+                          <button
+                            onClick={() => onView(invoice)}
+                            className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                          >
+                            {invoice.invoiceId}
+                          </button>
                         </td>
-                        <td className="px-4 py-3.5">
-                          <div>
-                            <p className="text-sm font-medium text-gray-800">{wo.customer_name || '-'}</p>
-                            <p className="text-xs text-gray-500">{wo.community_name || wo.property_name || '-'}</p>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <div>
-                            <p className="text-sm font-medium text-gray-800">{wo.category_name || '-'}</p>
-                            <p className="text-xs text-gray-500">{wo.subcategory_name || '-'}</p>
-                          </div>
+                        <td className="px-4 py-3.5 text-sm text-gray-800">{invoice.customerName || '-'}</td>
+                        <td className="px-4 py-3.5 text-sm text-gray-600">{invoice.propertyCode || '-'}</td>
+                        <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{formatDate(invoice.invoiceDate)}</td>
+                        <td className="px-4 py-3.5 text-right text-sm font-semibold text-gray-900">
+                          {formatCurrency(invoice.totalAmount)}
                         </td>
                         <td className="px-4 py-3.5 text-center">
-                          <span className="inline-flex px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
-                            completed
+                          <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${STATUS_CONFIG[invoice.status]?.color || 'bg-gray-100 text-gray-600'}`}>
+                            {STATUS_CONFIG[invoice.status]?.label || invoice.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">
-                          {formatDateTime(wo.created_at)}
-                        </td>
                         <td className="px-4 py-3.5">
-                          <div>
-                            <p className="text-sm font-medium text-gray-800">{wo.customer_name || wo.community_name || '-'}</p>
-                            <p className="text-xs text-gray-500">{wo.property_code || wo.property_id || '-'}</p>
+                          <div className="flex items-center justify-center gap-1">
+                            <button onClick={() => onView(invoice)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg" title="View">
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => onDownload(invoice)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Download">
+                              <Download className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => onSend(invoice)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Send">
+                              <Send className="w-4 h-4" />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -604,13 +685,22 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
               </div>
             )}
           </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-            <FileText className="w-12 h-12 mb-3 text-gray-300" />
-            <p className="text-lg font-medium">No invoices found</p>
-            <p className="text-sm">{type === 'generated' ? 'Invoices will appear here when estimates are approved' : 'No work order invoices yet'}</p>
-          </div>
-        )
+
+          {/* Show message if both sections are empty */}
+          {completedWorkOrders.length === 0 && paginatedInvoices.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+              <Briefcase className="w-12 h-12 mb-3 text-gray-300" />
+              <p className="text-lg font-medium">No work order activity</p>
+              <p className="text-sm">Complete work orders will appear here for estimate creation</p>
+            </div>
+          )}
+        </div>
+      ) : paginatedInvoices.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+          <FileText className="w-12 h-12 mb-3 text-gray-300" />
+          <p className="text-lg font-medium">No invoices found</p>
+          <p className="text-sm">Invoices will appear here when estimates are approved</p>
+        </div>
       ) : (
         <>
           <div className="overflow-x-auto">

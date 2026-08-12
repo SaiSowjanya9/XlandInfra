@@ -821,7 +821,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       </div>
 
       {/* Middle Row - 3 Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         {/* Estimates by Estimate Type (Donut) - Position 1 */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
@@ -962,7 +962,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       </div>
 
       {/* Direct Estimates Row - 3 Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         {/* Estimate Status (Donut) - Position 1 */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
@@ -1099,7 +1099,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       </div>
 
       {/* Row 3: Work Order Estimates */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         {/* Work Order Estimate Status (Donut) */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
@@ -1196,7 +1196,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       </div>
 
       {/* Bottom Row - Trend & Funnel */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         {/* Estimate Trend (Line Chart) */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">

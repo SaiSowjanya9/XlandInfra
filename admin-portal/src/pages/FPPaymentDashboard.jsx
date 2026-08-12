@@ -241,7 +241,7 @@ const FPPaymentDashboard = ({ user }) => {
       </div>
 
       {/* Today's Collection & Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-6">
         {/* Today's Collection */}
         <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl p-6 text-white">
           <div className="flex items-center justify-between">
