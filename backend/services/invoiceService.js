@@ -117,6 +117,7 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
       // Query fp_estimates table for FP estimates
       // FP estimates use client_name, client_email, client_phone (not customer_*)
       // Note: FP estimates store property_id as the property code string (e.g., "APT-1782187354586")
+      // Also fetch estimate_type to determine if this is a work order estimate
       [estimates] = await connection.execute(`
         SELECT fe.*, 
                fe.client_email as estimate_email, fe.client_name as estimate_customer_name,
@@ -124,6 +125,8 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
                fe.property_name, 
                COALESCE(fe.property_code, fe.property_id) as property_code,
                fe.total_amount as total,
+               fe.estimate_type,
+               fe.work_order_id,
                op.community_name as onboarded_property_name, op.property_id as onboarded_property_code,
                op.contact_email as op_email, op.contact_phone as op_phone,
                fe.franchise_partner_id
@@ -348,29 +351,40 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
       propertyCode = estimate.property_id;
     }
     
+    // Determine invoice type based on estimate type
+    // Work order estimates should create work_order invoices
+    const invoiceType = estimate.estimate_type === 'work_order' ? 'work_order' : 'estimate';
+    const workOrderId = estimate.work_order_id || null;
+    
     // Insert invoice
-    console.log(`📝 Inserting invoice with ID: ${invoiceId}`);
+    console.log(`📝 Inserting invoice with ID: ${invoiceId}, Type: ${invoiceType}`);
     console.log(`📝 Customer: ${customerName}, Email: ${customerEmail}, Property: ${propertyName} (${propertyCode}), Total: ${amounts.totalAmount}`);
+    if (workOrderId) {
+      console.log(`📝 Work Order ID: ${workOrderId}`);
+    }
     
     let result;
     try {
       [result] = await connection.execute(`
         INSERT INTO invoices (
           invoice_id, invoice_type, property_id, property_code, estimate_id, source_estimate_id,
+          work_order_id, source_work_order_id,
           customer_id, franchise_partner_id, customer_name, customer_email, customer_phone,
           invoice_date, due_date, line_items, 
           subtotal, discount_percentage, discount_amount, 
           tax_percentage, tax_amount, total_amount, 
           amount_paid, balance_amount, status, payment_status,
           auto_generated, created_by, created_by_role, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         invoiceId,
-        'estimate',
+        invoiceType,
         estimate.property_id || null,
         propertyCode, // Store property code string for direct lookup
         estimateId,
         estimate.estimate_id,
+        workOrderId ? null : null, // work_order_id (internal ID) - we don't have it here
+        workOrderId, // source_work_order_id (string ID like WO-123456)
         estimate.client_id || null,
         fpId,
         customerName,
@@ -392,7 +406,7 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
         true,
         approvedBy,
         'system',
-        `Auto-generated from Estimate ${estimate.estimate_id}`
+        workOrderId ? `Auto-generated from Work Order Estimate ${estimate.estimate_id} (WO: ${workOrderId})` : `Auto-generated from Estimate ${estimate.estimate_id}`
       ]);
       console.log(`✅ Invoice INSERT successful, ID: ${result.insertId}`);
     } catch (insertError) {

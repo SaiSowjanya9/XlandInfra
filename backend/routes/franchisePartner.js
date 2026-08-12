@@ -4748,12 +4748,52 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         if (estimate.units_per_block) unitsPerBlock = typeof estimate.units_per_block === 'string' ? JSON.parse(estimate.units_per_block) : estimate.units_per_block;
       } catch (e) {}
 
+      // Check if this is a work order estimate
+      const isWorkOrderEstimate = estimate.estimate_type === 'work_order';
+      
+      // For work order estimates, fetch property details from work order if not in estimate
+      let woPropertyName = estimate.property_name;
+      let woPropertyCode = estimate.property_code;
+      let woPropertyType = estimate.property_type;
+      let woZone = estimate.zone;
+      
+      if (isWorkOrderEstimate && estimate.work_order_id) {
+        console.log('[Email] Work Order Estimate - fetching property details from work order:', estimate.work_order_id);
+        try {
+          const [[workOrder]] = await pool.execute(`
+            SELECT wo.*, 
+                   COALESCE(op.community_name, p.name, wo.property_name) as property_name,
+                   COALESCE(op.property_id, p.property_id) as property_code,
+                   COALESCE(op.property_type, p.property_type) as property_type,
+                   op.zone
+            FROM work_orders wo
+            LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+            LEFT JOIN properties p ON wo.property_id = p.id AND op.id IS NULL
+            WHERE wo.work_order_id = ?
+          `, [estimate.work_order_id]);
+          
+          if (workOrder) {
+            woPropertyName = workOrder.property_name || woPropertyName;
+            woPropertyCode = workOrder.property_code || woPropertyCode;
+            woPropertyType = workOrder.property_type || woPropertyType;
+            woZone = workOrder.zone || woZone;
+            console.log('[Email] Fetched WO property details:', { woPropertyName, woPropertyCode, woPropertyType });
+          }
+        } catch (woErr) {
+          console.log('[Email] Could not fetch work order details:', woErr.message);
+        }
+      }
+      
       // Parse package services with descriptions
       let packageServices = [];
-      // Check both package_services and packageServices (camelCase alias from some queries)
-      const rawPkgServices = estimate.package_services || estimate.packageServices;
-      console.log('[Email] Estimate package_services raw value:', rawPkgServices ? 'exists' : 'null/undefined', 
-        'package_id:', estimate.package_id, 'package_name:', estimate.package_name);
+      
+      // For work order estimates, use work_order_services; otherwise use package_services
+      const rawPkgServices = isWorkOrderEstimate 
+        ? (estimate.work_order_services || estimate.package_services)
+        : (estimate.package_services || estimate.packageServices);
+      
+      console.log('[Email] Estimate services raw value:', rawPkgServices ? 'exists' : 'null/undefined', 
+        'isWorkOrder:', isWorkOrderEstimate, 'package_id:', estimate.package_id, 'package_name:', estimate.package_name);
       try {
         if (rawPkgServices) {
           const parsed = typeof rawPkgServices === 'string' ? JSON.parse(rawPkgServices) : rawPkgServices;
@@ -4764,10 +4804,10 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
           } else if (parsed?.services) {
             packageServices = parsed.services;
           }
-          console.log('Found package_services in estimate:', packageServices.length);
+          console.log('Found services in estimate:', packageServices.length);
         }
-        // If no package_services stored, fetch from FP AMC package by ID or name
-        if ((!packageServices || packageServices.length === 0) && (estimate.package_id || estimate.package_name)) {
+        // If no package_services stored and NOT a work order estimate, fetch from FP AMC package
+        if ((!packageServices || packageServices.length === 0) && !isWorkOrderEstimate && (estimate.package_id || estimate.package_name)) {
           let pkgRows = [];
           // First try fp_amc_packages table (FP-specific packages)
           if (estimate.package_id) {
@@ -4802,10 +4842,11 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         customerName: estimate.client_name,
         customerEmail: email,
         customerPhone: estimate.client_phone || '',
-        propertyName: estimate.property_name,
-        propertyType: estimate.property_type,
-        propertyCode: estimate.property_code || '',
-        zone: estimate.zone,
+        // Use work order property details if available, otherwise estimate's own
+        propertyName: isWorkOrderEstimate ? woPropertyName : estimate.property_name,
+        propertyType: isWorkOrderEstimate ? woPropertyType : estimate.property_type,
+        propertyCode: isWorkOrderEstimate ? woPropertyCode : (estimate.property_code || ''),
+        zone: isWorkOrderEstimate ? woZone : estimate.zone,
         division: estimate.division,
         city: estimate.city,
         address: estimate.address,
@@ -4824,7 +4865,7 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         packagePrice: parseFloat(estimate.package_price) || 0,
         amcPackageDescription: estimate.amc_package_description || '',
         description: estimate.description || '',
-        // Services with descriptions (no fallback to package name)
+        // Services with descriptions
         services: packageServices,
         addons: addons,
         subtotal: parseFloat(estimate.subtotal) || 0,
@@ -4842,7 +4883,7 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         workOrderDescription: estimate.work_order_description,
         workOrderPriority: estimate.work_order_priority,
         workOrderStatus: estimate.work_order_status,
-        isWorkOrderEstimate: estimate.estimate_type === 'work_order'
+        isWorkOrderEstimate: isWorkOrderEstimate
       };
       
       // Debug log price summary values
