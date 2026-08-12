@@ -467,7 +467,7 @@ const CreateInvoiceForm = ({ onSuccess, onCancel, token }) => {
 };
 
 // Invoice List Component
-const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, onSend }) => {
+const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, onSend, completedWorkOrders = [], loadingWorkOrders = false, onWorkOrderClick, getBasePath }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -487,6 +487,18 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  // Format date/time for work orders
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   if (loading) {
     return (
@@ -520,11 +532,85 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
 
       {/* Table */}
       {paginatedInvoices.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-          <FileText className="w-12 h-12 mb-3 text-gray-300" />
-          <p className="text-lg font-medium">No invoices found</p>
-          <p className="text-sm">{type === 'generated' ? 'Invoices will appear here when estimates are approved' : 'No work order invoices yet'}</p>
-        </div>
+        type === 'work_order' && completedWorkOrders.length > 0 ? (
+          /* Show Completed Work Orders when no work order invoices */
+          <div className="p-4">
+            <div className="flex items-center gap-3 mb-4 px-2">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <Briefcase className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Completed Work Orders</h3>
+                <p className="text-sm text-gray-500">Select a work order to create an estimate</p>
+              </div>
+            </div>
+            {loadingWorkOrders ? (
+              <div className="flex items-center justify-center h-32">
+                <RefreshCw className="w-6 h-6 text-blue-500 animate-spin" />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-gray-50">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Work Order ID</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Property</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {completedWorkOrders.map(wo => (
+                      <tr 
+                        key={wo.id} 
+                        className="hover:bg-orange-50 cursor-pointer transition-colors"
+                        onClick={() => onWorkOrderClick && onWorkOrderClick(wo)}
+                      >
+                        <td className="px-4 py-3.5">
+                          <span className="text-sm font-medium text-orange-600 font-mono">{wo.work_order_id}</span>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">{wo.customer_name || '-'}</p>
+                            <p className="text-xs text-gray-500">{wo.community_name || wo.property_name || '-'}</p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">{wo.category_name || '-'}</p>
+                            <p className="text-xs text-gray-500">{wo.subcategory_name || '-'}</p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className="inline-flex px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                            completed
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">
+                          {formatDateTime(wo.created_at)}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">{wo.customer_name || wo.community_name || '-'}</p>
+                            <p className="text-xs text-gray-500">{wo.property_code || wo.property_id || '-'}</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+            <FileText className="w-12 h-12 mb-3 text-gray-300" />
+            <p className="text-lg font-medium">No invoices found</p>
+            <p className="text-sm">{type === 'generated' ? 'Invoices will appear here when estimates are approved' : 'No work order invoices yet'}</p>
+          </div>
+        )
       ) : (
         <>
           <div className="overflow-x-auto">
@@ -627,7 +713,9 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('generated');
   const [invoices, setInvoices] = useState([]);
+  const [completedWorkOrders, setCompletedWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingWorkOrders, setLoadingWorkOrders] = useState(false);
   const [toast, setToast] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
@@ -671,9 +759,32 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
     }
   }, [token]);
 
+  const fetchCompletedWorkOrders = useCallback(async () => {
+    setLoadingWorkOrders(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/fp/work-orders?status=completed`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setCompletedWorkOrders(result.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching completed work orders:', err);
+    } finally {
+      setLoadingWorkOrders(false);
+    }
+  }, [token]);
+
   useEffect(() => {
     fetchInvoices();
   }, [fetchInvoices]);
+
+  useEffect(() => {
+    if (activeTab === 'work_order') {
+      fetchCompletedWorkOrders();
+    }
+  }, [activeTab, fetchCompletedWorkOrders]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -801,6 +912,10 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
           onView={handleView}
           onDownload={handleDownload}
           onSend={handleSend}
+          completedWorkOrders={completedWorkOrders}
+          loadingWorkOrders={loadingWorkOrders}
+          onWorkOrderClick={(wo) => navigate(`${getBasePath()}/estimates/create?workOrderId=${wo.work_order_id}`)}
+          getBasePath={getBasePath}
         />
       </div>
 
