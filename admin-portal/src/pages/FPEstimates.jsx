@@ -359,16 +359,16 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     finally { setLoading(false); }
   };
 
-  // Fetch completed work orders for the estimate form (exclude work orders that already have estimates)
+  // Fetch pending work orders for the estimate form (exclude work orders that already have estimates)
   const fetchCompletedWorkOrders = async () => {
     setLoadingCompletedWO(true);
     try {
-      const res = await fetch(`${API_BASE}/api/fp/work-orders?status=completed&excludeWithEstimates=true`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`${API_BASE}/api/fp/work-orders?status=pending&excludeWithEstimates=true`, { headers: { 'Authorization': `Bearer ${token}` } });
       const data = await res.json();
       if (data.success) {
         setCompletedWorkOrders(Array.isArray(data.data) ? data.data : []);
       }
-    } catch (e) { console.error('Error fetching completed work orders:', e); }
+    } catch (e) { console.error('Error fetching pending work orders:', e); }
     finally { setLoadingCompletedWO(false); }
   };
 
@@ -1935,7 +1935,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <ClipboardList className="w-5 h-5 text-orange-600" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-gray-800">Completed Work Orders</h3>
+                  <h3 className="text-base font-semibold text-gray-800">Pending Work Orders</h3>
                   <p className="text-xs text-gray-500">Select a work order to create an estimate</p>
                 </div>
               </div>
@@ -1955,8 +1955,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               ) : completedWorkOrders.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <ClipboardList className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p className="font-medium">No completed work orders found</p>
-                  <p className="text-sm mt-1">Complete some work orders first to create estimates</p>
+                  <p className="font-medium">No pending work orders found</p>
+                  <p className="text-sm mt-1">Create work orders first to generate estimates</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -2007,8 +2007,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                             <div className="text-xs text-gray-500">{wo.subcategory_name || '-'}</div>
                           </td>
                           <td className="py-3 px-3">
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                              {wo.status || 'Completed'}
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                              {wo.status || 'Pending'}
                             </span>
                           </td>
                           <td className="py-3 px-3 text-gray-600">
