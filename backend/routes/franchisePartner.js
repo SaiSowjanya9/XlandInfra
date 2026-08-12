@@ -1226,8 +1226,8 @@ router.post('/properties/:id/assign-employee', requireFPScope, async (req, res) 
 // Get all FP work orders (shows ALL work orders for FP visibility)
 router.get('/work-orders', requireFPScope, async (req, res) => {
   try {
-    const { status, priority } = req.query;
-    console.log('[FP Work Orders GET] fpId:', req.fpId, 'status filter:', status);
+    const { status, priority, excludeWithEstimates } = req.query;
+    console.log('[FP Work Orders GET] fpId:', req.fpId, 'status filter:', status, 'excludeWithEstimates:', excludeWithEstimates);
 
     let query = `
       SELECT wo.*, 
@@ -1283,6 +1283,15 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
     if (priority) {
       query += ' AND wo.priority = ?';
       params.push(priority);
+    }
+
+    // Exclude work orders that already have estimates created
+    if (excludeWithEstimates === 'true') {
+      query += ` AND wo.work_order_id NOT IN (
+        SELECT DISTINCT work_order_id FROM fp_estimates 
+        WHERE work_order_id IS NOT NULL AND franchise_partner_id = ?
+      )`;
+      params.push(req.fpId);
     }
 
     query += ' ORDER BY wo.created_at DESC LIMIT 500';
