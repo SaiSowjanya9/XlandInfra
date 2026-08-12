@@ -95,6 +95,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const viewEstimateId = searchParams.get('viewEstimate');
   const viewPackageId = searchParams.get('viewPackage');
   const urlEstimateStep = searchParams.get('estimateStep'); // For browser back navigation
+  const urlWorkOrderId = searchParams.get('workOrderId'); // For direct work order estimate creation
   
   // Helper to update URL params (push new history entry for back button support)
   const updateUrlParam = useCallback((key, value, defaultValue = '') => {
@@ -370,6 +371,47 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     } catch (e) { console.error('Error fetching completed work orders:', e); }
     finally { setLoadingCompletedWO(false); }
   };
+
+  // Handle workOrderId URL parameter - auto-fetch and show review form
+  useEffect(() => {
+    if (urlWorkOrderId && defaultTab === 'create') {
+      // Set estimate type to work_order and fetch the work order details
+      setEstimateType('work_order');
+      setWorkOrderLoading(true);
+      setWorkOrderError('');
+      
+      const fetchWorkOrderFromUrl = async () => {
+        try {
+          const response = await fetch(`${API_BASE}/api/fp/work-orders/by-order-id/${encodeURIComponent(urlWorkOrderId)}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const result = await response.json();
+          if (result.success && result.data) {
+            setWorkOrderData(result.data);
+            setWorkOrderStep('review');
+            // Clear the URL param after loading
+            setSearchParams(prev => {
+              const newParams = new URLSearchParams(prev);
+              newParams.delete('workOrderId');
+              return newParams;
+            }, { replace: true });
+          } else {
+            setWorkOrderError(result.message || 'Failed to load work order details.');
+            setWorkOrderStep('input');
+            fetchCompletedWorkOrders();
+          }
+        } catch (error) {
+          setWorkOrderError('Failed to fetch work order. Please try again.');
+          setWorkOrderStep('input');
+          fetchCompletedWorkOrders();
+        } finally {
+          setWorkOrderLoading(false);
+        }
+      };
+      
+      fetchWorkOrderFromUrl();
+    }
+  }, [urlWorkOrderId, defaultTab, token, setSearchParams]);
 
   const showToast = (msg, type = 'success') => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3500); };
   
