@@ -1069,6 +1069,388 @@ router.post('/invoices', authenticate, canEditPayments, paymentCreationLimiter, 
   }
 });
 
+// Create invoice from approved estimate
+router.post('/invoices/create-from-estimate', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const fpId = getFPScope(req);
+    const { estimateId, customerDetails, discountPercent, gstPercent, dueDate, notes } = req.body;
+
+    if (!estimateId) {
+      return res.status(400).json({ success: false, message: 'Estimate ID is required' });
+    }
+
+    // Fetch estimate details
+    let estimate = null;
+    
+    // Try fp_estimates first
+    const [fpEstimates] = await pool.execute(`
+      SELECT fe.*, 
+             fe.client_name as customerName, fe.client_email as customerEmail, fe.client_phone as customerPhone,
+             fe.property_name as propertyName, fe.property_code as propertyCode,
+             fe.total_amount as total, fe.subtotal
+      FROM fp_estimates fe
+      WHERE fe.estimate_id = ? AND LOWER(fe.status) = 'approved'
+    `, [estimateId]);
+
+    if (fpEstimates.length > 0) {
+      estimate = fpEstimates[0];
+    } else {
+      // Try regular estimates
+      const [regularEstimates] = await pool.execute(`
+        SELECT e.*, 
+               e.customer_name as customerName, e.customer_email as customerEmail, e.customer_phone as customerPhone,
+               p.name as propertyName, p.property_id as propertyCode,
+               e.total, e.subtotal
+        FROM estimates e
+        LEFT JOIN properties p ON e.property_id = p.id
+        WHERE e.estimate_id = ? AND LOWER(e.status) = 'approved'
+      `, [estimateId]);
+      
+      if (regularEstimates.length > 0) {
+        estimate = regularEstimates[0];
+      }
+    }
+
+    if (!estimate) {
+      return res.status(404).json({ success: false, message: 'Approved estimate not found' });
+    }
+
+    // Check if invoice already exists
+    const [existingInvoice] = await pool.execute(
+      'SELECT id, invoice_id FROM invoices WHERE source_estimate_id = ?',
+      [estimateId]
+    );
+    
+    if (existingInvoice.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invoice ${existingInvoice[0].invoice_id} already exists for this estimate` 
+      });
+    }
+
+    // Calculate amounts
+    const subtotal = parseFloat(estimate.total) || parseFloat(estimate.subtotal) || 0;
+    const discPct = parseFloat(discountPercent) || 0;
+    const taxPct = parseFloat(gstPercent) || 18;
+    const discountAmount = subtotal * (discPct / 100);
+    const taxableAmount = subtotal - discountAmount;
+    const taxAmount = taxableAmount * (taxPct / 100);
+    const totalAmount = taxableAmount + taxAmount;
+
+    // Parse line items from estimate
+    let lineItems = [];
+    try {
+      if (estimate.package_services) {
+        const services = typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services;
+        if (Array.isArray(services)) {
+          lineItems = services.map(s => ({
+            description: s.name || s.serviceName || s.description || 'Service',
+            quantity: 1,
+            unitPrice: 0,
+            totalPrice: 0,
+            type: 'service'
+          }));
+        }
+      }
+    } catch (e) { /* ignore parse errors */ }
+
+    // Generate invoice ID
+    const invoiceId = await generateInvoiceId(fpId);
+    const invoiceDate = new Date();
+    const dueDateValue = dueDate || new Date(invoiceDate.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    // Use customer details from request or estimate
+    const finalCustomerName = customerDetails?.name || estimate.customerName;
+    const finalCustomerEmail = customerDetails?.email || estimate.customerEmail;
+    const finalCustomerPhone = customerDetails?.phone || estimate.customerPhone;
+
+    const [result] = await pool.execute(`
+      INSERT INTO invoices (
+        invoice_id, invoice_type, property_id, property_code, estimate_id, source_estimate_id,
+        customer_id, franchise_partner_id, customer_name, customer_email, customer_phone,
+        invoice_date, due_date, line_items, 
+        subtotal, discount_percentage, discount_amount, 
+        tax_percentage, tax_amount, total_amount, 
+        amount_paid, balance_amount, status, payment_status,
+        created_by, created_by_role, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      invoiceId,
+      'estimate',
+      estimate.property_id || null,
+      estimate.propertyCode || estimate.property_code || null,
+      estimate.id,
+      estimateId,
+      estimate.customer_id || null,
+      fpId || estimate.franchise_partner_id,
+      finalCustomerName,
+      finalCustomerEmail,
+      finalCustomerPhone,
+      invoiceDate.toISOString().split('T')[0],
+      dueDateValue,
+      JSON.stringify(lineItems),
+      subtotal,
+      discPct,
+      discountAmount,
+      taxPct,
+      taxAmount,
+      totalAmount,
+      0,
+      totalAmount,
+      'draft',
+      'pending',
+      req.user.id,
+      req.user.role,
+      notes || `Created from Estimate ${estimateId}`
+    ]);
+
+    res.status(201).json({
+      success: true,
+      message: 'Invoice created successfully from estimate',
+      data: { 
+        id: result.insertId, 
+        invoiceId,
+        totalAmount,
+        customerEmail: finalCustomerEmail
+      }
+    });
+  } catch (error) {
+    console.error('Error creating invoice from estimate:', error);
+    res.status(500).json({ success: false, message: 'Error creating invoice', error: error.message });
+  }
+});
+
+// Create generic invoice (for walk-in customers or ad-hoc services)
+router.post('/invoices/create-generic', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const fpId = getFPScope(req);
+    const { customerDetails, lineItems, discountPercent, gstPercent, dueDate, notes, sendEmail } = req.body;
+
+    // Validate required fields
+    if (!customerDetails?.name || !customerDetails?.email) {
+      return res.status(400).json({ success: false, message: 'Customer name and email are required' });
+    }
+
+    if (!lineItems || !Array.isArray(lineItems) || lineItems.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one line item is required' });
+    }
+
+    // Filter valid line items
+    const validItems = lineItems.filter(item => item.description && item.totalPrice > 0);
+    if (validItems.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one valid line item is required' });
+    }
+
+    // Calculate amounts
+    const subtotal = validItems.reduce((sum, item) => sum + (parseFloat(item.totalPrice) || 0), 0);
+    const discPct = parseFloat(discountPercent) || 0;
+    const taxPct = parseFloat(gstPercent) || 18;
+    const discountAmount = subtotal * (discPct / 100);
+    const taxableAmount = subtotal - discountAmount;
+    const taxAmount = taxableAmount * (taxPct / 100);
+    const totalAmount = taxableAmount + taxAmount;
+
+    // Generate invoice ID
+    const invoiceId = await generateInvoiceId(fpId);
+    const invoiceDate = new Date();
+    const dueDateValue = dueDate || new Date(invoiceDate.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    // Format line items for storage
+    const formattedLineItems = validItems.map(item => ({
+      description: item.description,
+      quantity: parseFloat(item.quantity) || 1,
+      unitPrice: parseFloat(item.unitPrice) || 0,
+      totalPrice: parseFloat(item.totalPrice) || 0,
+      type: 'service'
+    }));
+
+    const [result] = await pool.execute(`
+      INSERT INTO invoices (
+        invoice_id, invoice_type, franchise_partner_id,
+        customer_name, customer_email, customer_phone, customer_address,
+        invoice_date, due_date, line_items, 
+        subtotal, discount_percentage, discount_amount, 
+        tax_percentage, tax_amount, total_amount, 
+        amount_paid, balance_amount, status, payment_status,
+        created_by, created_by_role, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      invoiceId,
+      'generic',
+      fpId,
+      customerDetails.name,
+      customerDetails.email,
+      customerDetails.phone || null,
+      customerDetails.address || null,
+      invoiceDate.toISOString().split('T')[0],
+      dueDateValue,
+      JSON.stringify(formattedLineItems),
+      subtotal,
+      discPct,
+      discountAmount,
+      taxPct,
+      taxAmount,
+      totalAmount,
+      0,
+      totalAmount,
+      'sent', // Generic invoices are marked as sent since we email them
+      'pending',
+      req.user.id,
+      req.user.role,
+      notes || 'Generic invoice'
+    ]);
+
+    const insertedId = result.insertId;
+
+    // Send email automatically if requested
+    if (sendEmail && customerDetails.email) {
+      try {
+        const { sendEmail: sendEmailService } = require('../services/emailService');
+        
+        // Format amounts for email
+        const formatAmount = (amt) => `₹${(parseFloat(amt) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+        const formatDate = (d) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+        // Generate line items HTML
+        const lineItemsHtml = formattedLineItems.map(item => `
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.description}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatAmount(item.unitPrice)}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatAmount(item.totalPrice)}</td>
+          </tr>
+        `).join('');
+
+        await sendEmailService({
+          to: customerDetails.email,
+          subject: `Invoice ${invoiceId} from XLand Infra`,
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #fff; padding: 30px; border: 1px solid #e5e7eb; }
+                .footer { background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none; }
+                table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+                th { background: #f1f5f9; padding: 10px; text-align: left; font-size: 12px; text-transform: uppercase; color: #64748b; }
+                .total-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+                .grand-total { font-size: 18px; font-weight: bold; color: #10b981; border-top: 2px solid #10b981; padding-top: 12px; margin-top: 12px; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1 style="margin: 0; font-size: 28px;">Invoice</h1>
+                  <p style="margin: 10px 0 0; opacity: 0.9;">${invoiceId}</p>
+                </div>
+                
+                <div class="content">
+                  <p>Dear <strong>${customerDetails.name}</strong>,</p>
+                  <p>Please find below the details of your invoice from XLand Infra.</p>
+                  
+                  <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                    <table style="width: 100%; margin-bottom: 15px;">
+                      <tr>
+                        <td><strong>Invoice Date:</strong></td>
+                        <td style="text-align: right;">${formatDate(invoiceDate)}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Due Date:</strong></td>
+                        <td style="text-align: right;">${formatDate(dueDateValue)}</td>
+                      </tr>
+                    </table>
+
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Description</th>
+                          <th style="text-align: center;">Qty</th>
+                          <th style="text-align: right;">Unit Price</th>
+                          <th style="text-align: right;">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${lineItemsHtml}
+                      </tbody>
+                    </table>
+
+                    <div style="margin-top: 20px;">
+                      <div class="total-row">
+                        <span>Subtotal:</span>
+                        <span>${formatAmount(subtotal)}</span>
+                      </div>
+                      ${discountAmount > 0 ? `
+                      <div class="total-row">
+                        <span>Discount (${discPct}%):</span>
+                        <span style="color: #dc2626;">-${formatAmount(discountAmount)}</span>
+                      </div>
+                      ` : ''}
+                      <div class="total-row">
+                        <span>GST (${taxPct}%):</span>
+                        <span>${formatAmount(taxAmount)}</span>
+                      </div>
+                      <div class="total-row grand-total">
+                        <span>Total Amount:</span>
+                        <span>${formatAmount(totalAmount)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  ${notes ? `
+                  <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                    <strong>Notes:</strong><br/>
+                    ${notes}
+                  </div>
+                  ` : ''}
+
+                  <p style="margin-top: 20px; color: #6b7280; font-size: 14px;">
+                    A payment link will be sent to you shortly. If you have any questions, please contact us.
+                  </p>
+                </div>
+                
+                <div class="footer">
+                  <p style="margin: 0; color: #6b7280; font-size: 14px;">Thank you for your business!</p>
+                  <p style="margin: 5px 0 0; color: #9ca3af; font-size: 12px;">XLand Infra - Property Management Services</p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `
+        });
+
+        // Update invoice to mark email as sent
+        await pool.execute(
+          'UPDATE invoices SET email_sent_at = NOW(), sent_at = NOW() WHERE id = ?',
+          [insertedId]
+        );
+
+        console.log(`📧 Generic invoice ${invoiceId} sent to ${customerDetails.email}`);
+      } catch (emailError) {
+        console.error('Failed to send invoice email:', emailError);
+        // Don't fail the request, just log the error
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: sendEmail ? `Invoice created and sent to ${customerDetails.email}` : 'Invoice created successfully',
+      data: { 
+        id: insertedId, 
+        invoiceId,
+        totalAmount,
+        customerEmail: customerDetails.email,
+        emailSent: sendEmail
+      }
+    });
+  } catch (error) {
+    console.error('Error creating generic invoice:', error);
+    res.status(500).json({ success: false, message: 'Error creating invoice', error: error.message });
+  }
+});
+
 // Update invoice
 router.put('/invoices/:id', authenticate, canEditPayments, async (req, res) => {
   try {
