@@ -106,13 +106,20 @@ const generateEstimatePDF = async (estimate) => {
       doc.roundedRect(455, 12, 100, 26, 4).fill(gold);
       doc.fontSize(11).fillColor(black).text('ESTIMATE', 455, 19, { width: 100, align: 'center', lineBreak: false });
 
-      let y = 90;
+      let y = 75;
 
-      // Estimate Info
-      doc.fontSize(9).fillColor('#666666');
-      doc.text(`ID: ${estimateId || 'N/A'}`, 60, y);
-      doc.text(`Date: ${createdAt ? new Date(createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}`, 400, y);
-      y += 25;
+      // Estimate Info - styled like invoice
+      // ID label
+      doc.fontSize(10).fillColor('#666666').font('Helvetica-Bold').text('ID:', 60, y);
+      // ID value in larger bold font
+      doc.fontSize(14).fillColor(black).text(estimateId || 'N/A', 85, y - 2);
+      
+      // Date on right side
+      doc.fontSize(10).fillColor('#666666').font('Helvetica-Bold').text('Date:', 400, y);
+      const dateStr = createdAt ? new Date(createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
+      doc.fontSize(12).fillColor(black).text(dateStr, 435, y - 1);
+      doc.font('Helvetica'); // Reset font
+      y += 30;
 
       // Package Price Bar (NO package name - per requirement)
       if (packagePrice) {
