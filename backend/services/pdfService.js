@@ -440,23 +440,30 @@ const generateInvoicePDF = async (invoice) => {
       doc.moveTo(95, lineY).lineTo(pvtLtdX - lineGap, lineY).stroke();
       doc.moveTo(pvtLtdX + pvtLtdWidth + lineGap, lineY).lineTo(95 + mainTextWidth, lineY).stroke();
 
-      let y = 80;
+      let y = 75;
 
-      // Invoice Info Section
-      doc.fontSize(9).fillColor('#666666');
-      doc.text(`Invoice ID: ${invoiceId || 'N/A'}`, 50, y);
+      // Invoice Info Section - styled like estimate
+      // ID label and value
+      doc.fontSize(10).fillColor('#666666').font('Helvetica-Bold').text('ID:', 50, y);
+      doc.fontSize(14).fillColor(black).text(invoiceId || 'N/A', 75, y - 2);
+      
+      // Estimate ID below (if exists)
       if (estimateId) {
-        doc.text(`Estimate: ${estimateId}`, 50, y + 12);
+        doc.fontSize(9).fillColor('#666666').font('Helvetica').text(`Estimate: ${estimateId}`, 50, y + 16);
       }
       
-      // Right side - dates
-      doc.text(`Invoice Date: ${invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')}`, 350, y);
-      doc.text(`Due Date: ${dueDate ? new Date(dueDate).toLocaleDateString('en-IN') : '-'}`, 350, y + 12);
-      if (billingDuration) {
-        doc.fillColor('#2563eb').text(`Billing: ${billingDuration}`, 350, y + 24);
-      }
+      // Right side - dates with bold labels
+      doc.fontSize(10).fillColor('#666666').font('Helvetica-Bold').text('Date:', 380, y);
+      const invDateStr = invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+      doc.fontSize(12).fillColor(black).text(invDateStr, 420, y - 1);
       
-      y += 50;
+      doc.fontSize(10).fillColor('#666666').font('Helvetica-Bold').text('Due:', 380, y + 18);
+      const dueDateStr = dueDate ? new Date(dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+      doc.fontSize(12).fillColor(black).text(dueDateStr, 420, y + 17);
+      
+      doc.font('Helvetica'); // Reset font
+      
+      y += 55;
 
       // Total Amount Banner
       doc.rect(50, y, 500, 40).fill('#2563eb');
@@ -472,20 +479,25 @@ const generateInvoicePDF = async (invoice) => {
       doc.fontSize(10).fillColor(navy).text('Property Details', 60, y + 10);
       doc.fontSize(8).fillColor('#666666');
       let py = y + 26;
-      doc.text(`Property ID: ${propertyCode || '-'}`, 60, py); py += 12;
-      doc.text(`Name: ${decodeHtml(propertyName) || '-'}`, 60, py); py += 12;
-      if (propertyType) { doc.text(`Type: ${propertyType}`, 60, py); py += 12; }
-      if (zone) { doc.text(`Zone: ${zone}`, 60, py); py += 12; }
-      if (city) { doc.text(`City: ${city}`, 60, py); }
+      doc.text(`Property ID: ${propertyCode || '-'}`, 60, py, { width: cardWidth - 20 }); py += 12;
+      doc.text(`Name: ${decodeHtml(propertyName) || '-'}`, 60, py, { width: cardWidth - 20 }); py += 12;
+      if (propertyType) { doc.text(`Type: ${propertyType}`, 60, py, { width: cardWidth - 20 }); py += 12; }
+      if (zone) { doc.text(`Zone: ${zone}`, 60, py, { width: cardWidth - 20 }); py += 12; }
+      if (city) { doc.text(`City: ${city}`, 60, py, { width: cardWidth - 20 }); }
 
       // Customer Details Card
       doc.rect(305, y, cardWidth, 90).fill(lightBlue).stroke('#cce7f7');
       doc.fontSize(10).fillColor(navy).text('Customer Details', 315, y + 10);
       doc.fontSize(8).fillColor('#666666');
       let cy = y + 26;
-      doc.text(`Name: ${decodeHtml(customerName) || '-'}`, 315, cy); cy += 12;
-      doc.text(`Phone: ${customerPhone || '-'}`, 315, cy); cy += 12;
-      doc.text(`Email: ${customerEmail || '-'}`, 315, cy); cy += 12;
+      doc.text(`Name: ${decodeHtml(customerName) || '-'}`, 315, cy, { width: cardWidth - 20 }); cy += 12;
+      doc.text(`Phone: ${customerPhone || '-'}`, 315, cy, { width: cardWidth - 20 }); cy += 12;
+      // Use smaller font for long emails
+      const emailText = customerEmail || '-';
+      const emailFontSize = emailText.length > 25 ? 7 : 8;
+      doc.fontSize(emailFontSize).text(`Email: ${emailText}`, 315, cy, { width: cardWidth - 20 }); 
+      cy += (emailText.length > 35 ? 18 : 12);
+      doc.fontSize(8); // Reset font size
       if (city) { doc.text(`City: ${city}`, 315, cy); }
 
       y += 105;
