@@ -1294,7 +1294,7 @@ const InvoiceDetailPanel = ({
               <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Property Details</h3>
               <p className="text-sm font-medium text-gray-900">{invoice.propertyName || '-'}</p>
               <p className="text-sm text-gray-600">Property ID: {invoice.propertyCode || '-'}</p>
-              {invoice.sourceEstimateId && <p className="text-sm text-gray-600">Estimate: {invoice.sourceEstimateId}</p>}
+              <p className="text-sm text-gray-600">Estimate: {invoice.sourceEstimateId || 'N/A'}</p>
               {invoice.sourceWorkOrderId && <p className="text-sm text-gray-600">Work Order: {invoice.sourceWorkOrderId}</p>}
             </div>
           </div>

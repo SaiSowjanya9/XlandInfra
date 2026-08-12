@@ -691,7 +691,8 @@ const PaymentLinks = () => {
                         Property Details
                       </h4>
                       <p className="text-sm font-medium text-gray-900">{foundInvoice.propertyName || foundInvoice.property_name || '-'}</p>
-                      <p className="text-sm text-gray-600">ID: {foundInvoice.propertyCode || foundInvoice.property_code || '-'}</p>
+                      <p className="text-sm text-gray-600">Property ID: {foundInvoice.propertyCode || foundInvoice.property_code || '-'}</p>
+                      <p className="text-sm text-gray-600">Estimate: {foundInvoice.sourceEstimateId || foundInvoice.source_estimate_id || 'N/A'}</p>
                     </div>
                   </div>
 
