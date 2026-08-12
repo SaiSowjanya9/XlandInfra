@@ -88,13 +88,15 @@ const INVOICE_TYPE_CONFIG = {
   estimate: { label: 'Estimate', color: 'text-purple-600' },
   work_order: { label: 'Work Order', color: 'text-blue-600' },
   amc: { label: 'AMC', color: 'text-teal-600' },
-  manual: { label: 'Manual', color: 'text-gray-600' }
+  manual: { label: 'Manual', color: 'text-gray-600' },
+  generic: { label: 'Generic', color: 'text-green-600' }
 };
 
 // Tab configuration for invoice types
 const INVOICE_TABS = [
   { id: 'generated', label: 'Estimate Invoices', filter: 'estimate', icon: FileText },
   { id: 'work_order', label: 'Work Order Invoices', filter: 'work_order', icon: Receipt },
+  { id: 'generic', label: 'Generic Invoices', filter: 'generic', icon: Receipt },
   { id: 'archived', label: 'Archived', filter: 'archived', icon: Archive }
 ];
 
@@ -510,6 +512,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
         const currentFilter = INVOICE_TABS.find(t => t.id === activeTab)?.filter;
         if (currentFilter === 'estimate') return i.invoiceType === 'estimate' || i.invoiceType === 'manual';
         if (currentFilter === 'work_order') return i.invoiceType === 'work_order';
+        if (currentFilter === 'generic') return i.invoiceType === 'generic';
         return true;
       });
 
@@ -562,9 +565,9 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
             const count = tab.filter === 'archived' 
               ? archivedInvoices.length
               : invoices.filter(i => 
-                  tab.filter === 'estimate' ? i.invoiceType === 'estimate' :
-                  tab.filter === 'manual' ? i.invoiceType === 'manual' :
-                  tab.filter === 'work_order' ? i.invoiceType === 'work_order' : true
+                  tab.filter === 'estimate' ? (i.invoiceType === 'estimate' || i.invoiceType === 'manual') :
+                  tab.filter === 'work_order' ? i.invoiceType === 'work_order' :
+                  tab.filter === 'generic' ? i.invoiceType === 'generic' : true
                 ).length;
             return (
               <button
