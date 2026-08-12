@@ -762,7 +762,8 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
   const fetchCompletedWorkOrders = useCallback(async () => {
     setLoadingWorkOrders(true);
     try {
-      const response = await fetch(`${API_BASE}/api/fp/work-orders?status=completed`, {
+      // Fetch completed work orders that don't have estimates yet
+      const response = await fetch(`${API_BASE}/api/fp/work-orders?status=completed&excludeWithEstimates=true`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
