@@ -844,7 +844,8 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                   <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Property Details</h3>
                   <p className="text-sm font-medium text-gray-900">{selectedInvoice.propertyName || '-'}</p>
                   <p className="text-sm text-gray-600">Property ID: {selectedInvoice.propertyCode || '-'}</p>
-                  {selectedInvoice.sourceEstimateId && <p className="text-sm text-gray-600">Estimate: {selectedInvoice.sourceEstimateId}</p>}
+                  <p className="text-sm text-gray-600">Estimate: {selectedInvoice.sourceEstimateId || 'N/A'}</p>
+                  {selectedInvoice.sourceWorkOrderId && <p className="text-sm text-gray-600">Work Order: {selectedInvoice.sourceWorkOrderId}</p>}
                 </div>
               </div>
 
