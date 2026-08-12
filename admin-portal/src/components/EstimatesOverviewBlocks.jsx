@@ -342,7 +342,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
       </div>
 
       {/* Row 3: Work Order Estimates */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Block 7: Work Order Estimate Overview */}
         <div className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
@@ -363,19 +363,6 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
             <FilterSelect value={filter8} onChange={setFilter8} />
           </div>
           <HorizontalBarChart data={workOrderCategoryData} />
-        </div>
-
-        {/* Block 9: Work Order Estimate Count */}
-        <div className="bg-white rounded-xl p-4 border border-gray-100">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Work Order Estimate Breakdown</h3>
-            <FilterSelect value={filter7} onChange={setFilter7} />
-          </div>
-          <DonutChartWithLegend 
-            data={workOrderStatusData} 
-            dataAll={workOrderStatusDataAll}
-            total={block9Filtered.length}
-          />
         </div>
       </div>
     </div>

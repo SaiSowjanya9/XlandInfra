@@ -852,7 +852,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                               <td className="py-4 px-4"><span className="font-medium text-gray-900">{estimate.estimate_id || `EST-${estimate.id}`}</span></td>
                               <td className="py-4 px-4"><div className="flex items-center gap-2"><TypeIcon className="w-4 h-4 text-gray-400" /><span className={`px-2 py-0.5 text-xs font-medium rounded ${estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span></div></td>
                               <td className="py-4 px-4"><span className="text-gray-600">{(estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based') ? (estimate.division || estimate.property_division || '-') : '-'}</span></td>
-                              <td className="py-4 px-4"><span className="text-gray-700">{estimate.client_name || '-'}</span></td>
+                              <td className="py-4 px-4"><div className="font-medium text-gray-900">{estimate.client_name || '-'}</div>{estimate.property_code && <div className="text-xs text-gray-400">{estimate.property_code}</div>}</td>
                               <td className="py-4 px-4"><div className="flex items-center gap-1.5 text-gray-600"><Calendar className="w-4 h-4" />{formatDateIST(estimate.created_at)}</div></td>
                               <td className="py-4 px-4"><div><p className="font-medium text-gray-900">{estimate.created_by_name || (estimate.created_by_role ? estimate.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</p>{estimate.created_by_name && estimate.created_by_role && <p className="text-xs text-gray-400 capitalize">{estimate.created_by_role.replace(/_/g, ' ')}</p>}</div></td>
                               <td className="py-4 px-4"><span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(estimate.status)}`}>{estimate.status?.charAt(0).toUpperCase() + estimate.status?.slice(1) || 'Draft'}</span></td>
@@ -927,7 +927,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                         <tr key={e.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 font-mono text-xs">{e.estimate_id || `EST-${e.id}`}</td>
                           <td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td>
-                          <td className="px-4 py-3">{e.client_name || '-'}</td>
+                          <td className="px-4 py-3"><div className="font-medium text-gray-900">{e.client_name || '-'}</div>{e.property_code && <div className="text-xs text-gray-400">{e.property_code}</div>}</td>
                           <td className="px-4 py-3 text-gray-500">{formatDateIST(e.archived_at)}</td>
                           <td className="px-4 py-3 font-semibold">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(e.total_amount || 0)}</td>
                           <td className="px-4 py-3"><div className="flex items-center justify-center"><button onClick={() => setViewEstimate(e)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details"><Eye className="w-4 h-4" /></button></div></td>

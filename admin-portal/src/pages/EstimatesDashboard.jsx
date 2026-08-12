@@ -1099,7 +1099,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       </div>
 
       {/* Row 3: Work Order Estimates */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Work Order Estimate Status (Donut) */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
@@ -1192,45 +1192,6 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               <div className="text-sm">No work order estimates</div>
             </div>
           )}
-        </div>
-
-        {/* Work Order Estimate Breakdown (Donut) */}
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Work Order Breakdown</h3>
-            <select
-              value={filter9}
-              onChange={(e) => setFilter9(e.target.value)}
-              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
-            >
-              <option value="all">All Time</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="quarter">This Quarter</option>
-              <option value="half">Last 6 Months</option>
-              <option value="year">This Year</option>
-            </select>
-          </div>
-          
-          <div className="flex items-center">
-            <div className="w-1/2 flex items-center justify-center">
-              <DonutChart data={workOrderOverviewDataAll} centerValue={block9Data.length} size={130} strokeWidth={18} />
-            </div>
-            <div className="w-1/2 space-y-1.5 pl-3">
-              {workOrderOverviewDataAll.map((item, index) => (
-                <div key={index} className="flex items-center gap-1.5 text-xs">
-                  <div 
-                    className="w-2 h-2 rounded-full flex-shrink-0" 
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
-                  <span className="text-gray-800 whitespace-nowrap">
-                    {item.value} ({block9Data.length ? ((item.value / block9Data.length) * 100).toFixed(1) : 0}%)
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
 
