@@ -2,12 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
-  Plus,
   RefreshCw,
   CheckCircle,
   AlertCircle,
   Trash2,
-  Mail,
+  Plus,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 
@@ -400,17 +399,6 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
             </div>
           </div>
 
-          {/* Email Notice */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
-            <Mail className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-blue-900">Invoice will be emailed automatically</p>
-              <p className="text-sm text-blue-700">
-                After creating this invoice, it will be automatically sent to <strong>{customerDetails.email || 'the customer email'}</strong>.
-              </p>
-            </div>
-          </div>
-
           {/* Submit Button */}
           <div className="flex justify-end">
             <button
@@ -418,7 +406,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
               disabled={loading}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 font-medium"
             >
-              {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+              {loading && <RefreshCw className="w-5 h-5 animate-spin" />}
               Create & Send Invoice
             </button>
           </div>
