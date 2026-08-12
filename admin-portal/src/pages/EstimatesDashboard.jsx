@@ -1098,8 +1098,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
       </div>
 
-      {/* Row 3: Work Order Estimates */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* Row 3: Work Order Estimates - Same width as above rows */}
+      <div className="grid grid-cols-3 gap-4">
         {/* Work Order Estimate Status (Donut) */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">

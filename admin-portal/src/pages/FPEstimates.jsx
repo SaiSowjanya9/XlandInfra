@@ -358,11 +358,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     finally { setLoading(false); }
   };
 
-  // Fetch completed work orders for the estimate form
+  // Fetch completed work orders for the estimate form (exclude work orders that already have estimates)
   const fetchCompletedWorkOrders = async () => {
     setLoadingCompletedWO(true);
     try {
-      const res = await fetch(`${API_BASE}/api/fp/work-orders?status=completed`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`${API_BASE}/api/fp/work-orders?status=completed&excludeWithEstimates=true`, { headers: { 'Authorization': `Bearer ${token}` } });
       const data = await res.json();
       if (data.success) {
         setCompletedWorkOrders(Array.isArray(data.data) ? data.data : []);
