@@ -1294,6 +1294,9 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
       params.push(req.fpId);
     }
 
+    // Include estimate status for each work order (to show progress)
+    // This will be used to differentiate: No Estimate, Estimate Pending, Invoice Generated
+
     query += ' ORDER BY wo.created_at DESC LIMIT 500';
 
     const [workOrders] = await pool.execute(query, params);

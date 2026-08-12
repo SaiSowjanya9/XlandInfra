@@ -495,7 +495,7 @@ const FPDashboard = ({ user }) => {
           </div>
           
           {/* Three Chart Boxes */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-3 gap-6">
             {/* Work Orders by Status */}
             <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Status</h3>

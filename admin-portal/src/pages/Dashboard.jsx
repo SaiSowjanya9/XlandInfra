@@ -646,7 +646,7 @@ const Dashboard = () => {
             </div>
             
             {/* Three Chart Boxes */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-3 gap-6">
               {/* Work Orders by Status */}
               <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
                 <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Status</h3>
@@ -836,7 +836,7 @@ const Dashboard = () => {
         </div>
 
         {/* Summary Cards Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           {/* Work Orders Summary */}
           <div className="bg-white rounded-xl p-5 border border-gray-100">
             <div className="flex items-center justify-between mb-4">

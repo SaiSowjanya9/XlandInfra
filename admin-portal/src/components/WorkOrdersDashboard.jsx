@@ -727,7 +727,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       </div>
 
       {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-6">
         {/* Work Orders by Status */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex justify-between items-center mb-4">
@@ -812,7 +812,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       </div>
 
       {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-6">
         {/* Work Orders Trend */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex justify-between items-center mb-4">
