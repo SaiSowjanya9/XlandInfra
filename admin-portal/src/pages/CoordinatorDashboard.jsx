@@ -143,7 +143,7 @@ const CoordinatorDashboard = ({ user }) => {
       </div>
 
       {/* First Stats Row - 3 cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <button onClick={() => navigate('/coordinator/properties')} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group text-left">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -235,7 +235,7 @@ const CoordinatorDashboard = ({ user }) => {
             </div>
 
             {/* Legend - All 6 statuses in grid */}
-            <div className="grid grid-cols-3 gap-x-6 gap-y-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-amber-500"></span>

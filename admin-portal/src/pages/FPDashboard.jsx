@@ -495,23 +495,23 @@ const FPDashboard = ({ user }) => {
           </div>
           
           {/* Three Chart Boxes */}
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
             {/* Work Orders by Status */}
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Status</h3>
-              <div className="flex items-center">
-                <div className="w-36 h-36 relative">
+              <div className="flex items-center gap-4">
+                <div className="w-28 h-28 lg:w-36 lg:h-36 flex-shrink-0">
                   <DonutChart
                     data={woStatusData}
                     centerValue={totalWorkOrders}
                   />
                 </div>
-                <div className="flex-1 ml-4 space-y-1.5">
+                <div className="flex-1 min-w-0 space-y-1.5">
                   {woStatusData.map((item, index) => (
                     <div key={index} className="flex items-center gap-2 text-xs">
-                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
-                      <span className="text-gray-600 w-16 flex-shrink-0">{item.name}</span>
-                      <span className="font-medium text-gray-900 whitespace-nowrap">{item.value} ({totalWorkOrders ? ((item.value / totalWorkOrders) * 100).toFixed(1) : 0}%)</span>
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                      <span className="text-gray-600 truncate flex-1 min-w-0">{item.name}</span>
+                      <span className="font-medium text-gray-900 flex-shrink-0">{item.value} ({totalWorkOrders ? ((item.value / totalWorkOrders) * 100).toFixed(0) : 0}%)</span>
                     </div>
                   ))}
                 </div>
@@ -519,21 +519,21 @@ const FPDashboard = ({ user }) => {
             </div>
 
             {/* Work Orders by Priority */}
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Priority</h3>
-              <div className="flex items-center">
-                <div className="w-36 h-36 relative">
+              <div className="flex items-center gap-4">
+                <div className="w-28 h-28 lg:w-36 lg:h-36 flex-shrink-0">
                   <DonutChart
                     data={priorityData}
                     centerValue={priorityTotal || totalWorkOrders}
                   />
                 </div>
-                <div className="flex-1 ml-4 space-y-3">
+                <div className="flex-1 min-w-0 space-y-3">
                   {priorityData.map((item, index) => (
                     <div key={index} className="flex items-center gap-2 text-xs">
-                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
-                      <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
-                      <span className="font-medium text-gray-900 whitespace-nowrap">{item.value} ({(priorityTotal || totalWorkOrders) ? ((item.value / (priorityTotal || totalWorkOrders)) * 100).toFixed(1) : 0}%)</span>
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                      <span className="text-gray-600 truncate flex-1 min-w-0">{item.name}</span>
+                      <span className="font-medium text-gray-900 flex-shrink-0">{item.value} ({(priorityTotal || totalWorkOrders) ? ((item.value / (priorityTotal || totalWorkOrders)) * 100).toFixed(0) : 0}%)</span>
                     </div>
                   ))}
                 </div>
@@ -541,7 +541,7 @@ const FPDashboard = ({ user }) => {
             </div>
 
             {/* Work Orders by Property Type */}
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Property Type</h3>
               <div className="space-y-3">
                 {(() => {
@@ -571,9 +571,9 @@ const FPDashboard = ({ user }) => {
                   
                   return mergedData.slice(0, 5).map((item, index) => (
                     <div key={index} className="space-y-1">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-600">{item.name}</span>
-                        <span className="font-medium text-gray-900">{item.value}</span>
+                      <div className="flex justify-between items-center gap-2 text-xs">
+                        <span className="text-gray-600 truncate flex-1 min-w-0">{item.name}</span>
+                        <span className="font-medium text-gray-900 flex-shrink-0">{item.value}</span>
                       </div>
                       <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                         {item.value > 0 && (
