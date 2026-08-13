@@ -204,20 +204,6 @@ const generateEstimatePDF = async (estimate) => {
         y += descBoxHeight + 10;
       }
 
-      // Services Table
-      doc.fontSize(10).fillColor(navy).text('SERVICES INCLUDED', 50, y, { continued: false });
-      y += 15;
-      
-      // Table header - separate Service and Description columns
-      doc.rect(50, y, 500, 20).fill('#475569');
-      doc.fontSize(8).fillColor('#ffffff');
-      doc.text('#', 55, y + 6, { continued: false });
-      doc.text('Service', 75, y + 6, { continued: false });
-      doc.text('Description', 260, y + 6, { width: 130, align: 'center', continued: false });
-      doc.text('Frequency', 400, y + 6, { continued: false });
-      doc.text('Visits', 480, y + 6, { continued: false });
-      y += 20;
-
       // Services rows - ensure it's an array
       let svcList = services;
       if (!Array.isArray(svcList)) {
@@ -230,37 +216,55 @@ const generateEstimatePDF = async (estimate) => {
       if (!Array.isArray(svcList)) svcList = [];
       const pageHeight = 780; // A4 usable height
       
-      svcList.forEach((s, idx) => {
-        const svcDesc = decodeHtml(s.description) || '-';
-        // Calculate row height based on description length (approx 40 chars per line)
-        const descLines = Math.ceil(svcDesc.length / 40);
-        const rowHeight = Math.max(22, descLines * 11);
+      // Only show Services Table for NON-work order estimates that have services
+      // Work Order Estimates don't need services table - they show work order details instead
+      if (!isWorkOrderEstimate && svcList.length > 0) {
+        doc.fontSize(10).fillColor(navy).text('SERVICES INCLUDED', 50, y, { continued: false });
+        y += 15;
         
-        // Check if we need a new page
-        if (y + rowHeight > pageHeight) {
-          doc.addPage();
-          y = 50;
-        }
-        
-        const rowColor = idx % 2 === 0 ? '#f8f9fa' : '#ffffff';
-        doc.rect(50, y, 500, rowHeight).fill(rowColor).stroke('#e0e0e0');
-        doc.fontSize(8).fillColor('#333333');
-        doc.text(String(idx + 1), 55, y + 6, { continued: false });
-        const svcName = decodeHtml(s.name || s.service || 'Service');
-        doc.text(svcName, 75, y + 6, { width: 110, continued: false });
-        // Full description with height constraint to prevent page overflow
-        doc.text(svcDesc, 190, y + 6, { width: 200, height: rowHeight - 8, align: 'center', continued: false });
-        const freqCount = s.frequencyCount ?? s.frequency_count ?? 1;
-        let freqType = s.frequencyType || s.frequency_type || 'Monthly';
-        freqType = freqType.replace(/^\d+x\s*/i, '');
-        doc.text(freqType, 400, y + 6, { continued: false });
-        doc.text(String(freqCount), 490, y + 6, { continued: false });
-        y += rowHeight;
-      });
+        // Table header - separate Service and Description columns
+        doc.rect(50, y, 500, 20).fill('#475569');
+        doc.fontSize(8).fillColor('#ffffff');
+        doc.text('#', 55, y + 6, { continued: false });
+        doc.text('Service', 75, y + 6, { continued: false });
+        doc.text('Description', 260, y + 6, { width: 130, align: 'center', continued: false });
+        doc.text('Frequency', 400, y + 6, { continued: false });
+        doc.text('Visits', 480, y + 6, { continued: false });
+        y += 20;
 
-      y += 10;
+        svcList.forEach((s, idx) => {
+          const svcDesc = decodeHtml(s.description) || '-';
+          // Calculate row height based on description length (approx 40 chars per line)
+          const descLines = Math.ceil(svcDesc.length / 40);
+          const rowHeight = Math.max(22, descLines * 11);
+          
+          // Check if we need a new page
+          if (y + rowHeight > pageHeight) {
+            doc.addPage();
+            y = 50;
+          }
+          
+          const rowColor = idx % 2 === 0 ? '#f8f9fa' : '#ffffff';
+          doc.rect(50, y, 500, rowHeight).fill(rowColor).stroke('#e0e0e0');
+          doc.fontSize(8).fillColor('#333333');
+          doc.text(String(idx + 1), 55, y + 6, { continued: false });
+          const svcName = decodeHtml(s.name || s.service || 'Service');
+          doc.text(svcName, 75, y + 6, { width: 110, continued: false });
+          // Full description with height constraint to prevent page overflow
+          doc.text(svcDesc, 190, y + 6, { width: 200, height: rowHeight - 8, align: 'center', continued: false });
+          const freqCount = s.frequencyCount ?? s.frequency_count ?? 1;
+          let freqType = s.frequencyType || s.frequency_type || 'Monthly';
+          freqType = freqType.replace(/^\d+x\s*/i, '');
+          doc.text(freqType, 400, y + 6, { continued: false });
+          doc.text(String(freqCount), 490, y + 6, { continued: false });
+          y += rowHeight;
+        });
+
+        y += 10;
+      }
 
       // Add-ons Table (if any) - ensure it's an array
+      // Skip for Work Order Estimates - they don't have add-ons
       let addonList = addons;
       if (!Array.isArray(addonList)) {
         if (typeof addonList === 'string') {
@@ -270,7 +274,7 @@ const generateEstimatePDF = async (estimate) => {
         }
       }
       if (!Array.isArray(addonList)) addonList = [];
-      if (addonList.length > 0) {
+      if (!isWorkOrderEstimate && addonList.length > 0) {
         // Calculate first row height to ensure header + at least one row fit together
         const firstAddonDesc = addonList[0]?.description || '-';
         const firstRowLines = Math.ceil(firstAddonDesc.length / 40);
@@ -391,11 +395,14 @@ const generateInvoicePDF = async (invoice) => {
       doc.on('error', reject);
 
       const {
-        invoiceId, estimateId, customerName, customerEmail, customerPhone,
+        invoiceId, estimateId, invoiceType, customerName, customerEmail, customerPhone,
         propertyName, propertyCode, propertyType, zone, city,
         invoiceDate, dueDate, billingDuration,
         lineItems, subtotal, discountAmount, discountPercentage, taxAmount, taxPercentage, totalAmount, balanceAmount
       } = invoice;
+      
+      // Check if this is a work order invoice
+      const isWorkOrderInvoice = invoiceType === 'work_order';
 
       // Ensure numeric values are valid
       const safeNum = (val) => {
@@ -502,20 +509,6 @@ const generateInvoicePDF = async (invoice) => {
 
       y += 105;
 
-      // Services Table
-      doc.fontSize(10).fillColor(navy).text('SERVICES INCLUDED', 50, y);
-      y += 15;
-      
-      // Table header
-      doc.rect(50, y, 500, 20).fill('#475569');
-      doc.fontSize(8).fillColor('#ffffff');
-      doc.text('#', 55, y + 6);
-      doc.text('Service', 75, y + 6);
-      doc.text('Description', 200, y + 6);
-      doc.text('Frequency', 380, y + 6);
-      doc.text('Visits', 480, y + 6);
-      y += 20;
-
       // Parse line items
       let items = [];
       try {
@@ -524,32 +517,49 @@ const generateInvoicePDF = async (invoice) => {
 
       const pageHeight = 780;
       
-      items.forEach((item, idx) => {
-        const fullDesc = decodeHtml(item.description || item.name || 'Service');
-        const parts = fullDesc.split(' - ');
-        const serviceName = parts[0] || 'Service';
-        const serviceDesc = parts.slice(1).join(' - ') || '-';
-        const freq = item.frequency || item.frequencyType || item.billingDuration || '-';
-        const visits = item.visits || item.frequencyCount || item.quantity || 1;
+      // Only show Services Table for NON-work order invoices that have items
+      // Work Order Invoices don't need services table
+      if (!isWorkOrderInvoice && items.length > 0) {
+        doc.fontSize(10).fillColor(navy).text('SERVICES INCLUDED', 50, y);
+        y += 15;
         
-        const rowHeight = 22;
-        
-        if (y + rowHeight > pageHeight) {
-          doc.addPage();
-          y = 50;
-        }
-        
-        doc.rect(50, y, 500, rowHeight).fill(idx % 2 === 0 ? '#ffffff' : lightGray).stroke('#e0e0e0');
-        doc.fontSize(8).fillColor('#333333');
-        doc.text(`${idx + 1}`, 55, y + 7);
-        doc.fillColor(navy).text(serviceName, 75, y + 7, { width: 120 });
-        doc.fillColor('#666666').text(serviceDesc, 200, y + 7, { width: 170 });
-        doc.text(freq, 380, y + 7);
-        doc.text(`${visits}`, 480, y + 7);
-        y += rowHeight;
-      });
+        // Table header
+        doc.rect(50, y, 500, 20).fill('#475569');
+        doc.fontSize(8).fillColor('#ffffff');
+        doc.text('#', 55, y + 6);
+        doc.text('Service', 75, y + 6);
+        doc.text('Description', 200, y + 6);
+        doc.text('Frequency', 380, y + 6);
+        doc.text('Visits', 480, y + 6);
+        y += 20;
 
-      y += 15;
+        items.forEach((item, idx) => {
+          const fullDesc = decodeHtml(item.description || item.name || 'Service');
+          const parts = fullDesc.split(' - ');
+          const serviceName = parts[0] || 'Service';
+          const serviceDesc = parts.slice(1).join(' - ') || '-';
+          const freq = item.frequency || item.frequencyType || item.billingDuration || '-';
+          const visits = item.visits || item.frequencyCount || item.quantity || 1;
+          
+          const rowHeight = 22;
+          
+          if (y + rowHeight > pageHeight) {
+            doc.addPage();
+            y = 50;
+          }
+          
+          doc.rect(50, y, 500, rowHeight).fill(idx % 2 === 0 ? '#ffffff' : lightGray).stroke('#e0e0e0');
+          doc.fontSize(8).fillColor('#333333');
+          doc.text(`${idx + 1}`, 55, y + 7);
+          doc.fillColor(navy).text(serviceName, 75, y + 7, { width: 120 });
+          doc.fillColor('#666666').text(serviceDesc, 200, y + 7, { width: 170 });
+          doc.text(freq, 380, y + 7);
+          doc.text(`${visits}`, 480, y + 7);
+          y += rowHeight;
+        });
+
+        y += 15;
+      }
 
       // Price Summary
       if (y + 100 > pageHeight) {
