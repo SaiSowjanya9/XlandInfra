@@ -4090,7 +4090,11 @@ router.get('/estimates', requireFPScope, async (req, res) => {
                         COALESCE(NULLIF(fe.zone, ''), op.zone, p.zone_id, wo_prop.zone, wo_prop2.zone_id) as zone,
                         COALESCE(NULLIF(fe.division, ''), op.division, p.division_id, wo_prop.division, wo_prop2.division_id) as division,
                         COALESCE(NULLIF(fe.city, ''), op.city, p.city, wo_prop.city, wo_prop2.city) as city,
-                        COALESCE(NULLIF(fe.address, ''), op.address, p.address, wo_prop.address, wo_prop2.address) as address
+                        COALESCE(NULLIF(fe.address, ''), op.address, p.address, wo_prop.address, wo_prop2.address) as address,
+                        COALESCE(fe.total_units, op.total_units, wo_prop.total_units) as total_units,
+                        COALESCE(fe.number_of_blocks, op.number_of_blocks, wo_prop.number_of_blocks) as number_of_blocks,
+                        COALESCE(fe.units_per_block, op.units_per_block, wo_prop.units_per_block) as units_per_block,
+                        COALESCE(fe.block_names, op.block_names, wo_prop.block_names) as block_names
                  FROM fp_estimates fe 
                  LEFT JOIN fp_amc_packages fpamc_id ON fe.package_id = fpamc_id.id
                  LEFT JOIN fp_amc_packages fpamc_name ON fe.package_name = fpamc_name.name AND fpamc_name.franchise_partner_id = fe.franchise_partner_id

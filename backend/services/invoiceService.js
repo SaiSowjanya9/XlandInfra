@@ -248,7 +248,7 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
           const visits = service.frequencyCount || service.frequency_count || service.visits || 1;
           
           items.push({
-            description: `${serviceName}${serviceDesc ? ' - ' + serviceDesc.substring(0, 60) : ''}`,
+            description: `${serviceName}${serviceDesc ? ' - ' + serviceDesc : ''}`,
             quantity: 1,
             unit_price: Math.round(pricePerService),
             total_price: Math.round(pricePerService),
@@ -281,7 +281,7 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
                             parseFloat(addon.price) || parseFloat(addon.unitPrice) || 0;
           
           items.push({
-            description: `${addonName}${addonDesc ? ' - ' + addonDesc.substring(0, 60) : ''}`,
+            description: `${addonName}${addonDesc ? ' - ' + addonDesc : ''}`,
             quantity: 1,
             unit_price: addonPrice,
             total_price: addonPrice,

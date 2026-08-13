@@ -1427,7 +1427,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           return (
                             <tr key={idx} className="align-top">
                               <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(svc.service || svc.name) || '-'}</td>
-                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-all whitespace-normal text-center max-w-[200px]`}>{decodeHtml(svc.description)?.trim() || '-'}</td>
+                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</td>
                               <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
                               <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             </tr>
@@ -1491,7 +1491,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         return (
                           <tr key={idx} className="align-top">
                             <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(addon.service_name)}</td>
-                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-all whitespace-normal text-center max-w-[200px]`}>{decodeHtml(addon.description || addon.services?.[0]?.description) || '-'}</td>
+                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{decodeHtml(addon.description || addon.services?.[0]?.description) || '-'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type || 'Monthly'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             <td className="px-3 py-2.5 text-center">
@@ -1769,7 +1769,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           return (
                             <tr key={idx} className="align-top">
                               <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(svc.service || svc.name) || '-'}</td>
-                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-all whitespace-normal text-center max-w-[200px]`}>{decodeHtml(svc.description)?.trim() || '-'}</td>
+                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</td>
                               <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
                               <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             </tr>
@@ -1833,7 +1833,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         return (
                           <tr key={idx} className="align-top">
                             <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(addon.service_name)}</td>
-                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-all whitespace-normal text-center max-w-[200px]`}>{decodeHtml(addon.description || addon.services?.[0]?.description) || '-'}</td>
+                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{decodeHtml(addon.description || addon.services?.[0]?.description) || '-'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type || 'Monthly'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             <td className="px-3 py-2.5 text-center">
@@ -2146,6 +2146,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         division: workOrderData.division || '',
                         city: workOrderData.city || '',
                         address: workOrderData.address || '',
+                        // GC/APT specific fields
+                        number_of_blocks: workOrderData.number_of_blocks || workOrderData.total_blocks || workOrderData.numberOfBlocks || null,
+                        total_units: workOrderData.total_units || workOrderData.totalUnits || workOrderData.units || null,
+                        units_per_block: workOrderData.units_per_block || workOrderData.unitsPerBlock || {},
+                        block_names: workOrderData.block_names || workOrderData.blockNames || {},
                         // Pricing with correct field names
                         subtotal: amt,
                         discount_percent: discPercent,

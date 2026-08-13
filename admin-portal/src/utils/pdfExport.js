@@ -1202,8 +1202,8 @@ export const exportInvoiceToPDF = (invoice) => {
         head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
         body: services.map((item, idx) => [
           String(idx + 1),
-          String(item.name).substring(0, 25),
-          String(item.description).substring(0, 80) || '-',
+          String(item.name).substring(0, 40),
+          String(item.description) || '-',
           String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1),
           String(item.visits)
         ]),
@@ -1235,8 +1235,8 @@ export const exportInvoiceToPDF = (invoice) => {
         head: [['#', 'Add-on Service', 'Description', 'Frequency', 'Visits']],
         body: addons.map((item, idx) => [
           String(idx + 1),
-          String(item.name).substring(0, 25),
-          String(item.description).substring(0, 80) || '-',
+          String(item.name).substring(0, 40),
+          String(item.description) || '-',
           String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1),
           String(item.visits)
         ]),

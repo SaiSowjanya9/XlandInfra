@@ -247,7 +247,7 @@ const generateEstimatePDF = async (estimate) => {
         doc.fontSize(8).fillColor('#333333');
         doc.text(String(idx + 1), 55, y + 6, { continued: false });
         const svcName = decodeHtml(s.name || s.service || 'Service');
-        doc.text(svcName.substring(0, 28), 75, y + 6, { continued: false });
+        doc.text(svcName, 75, y + 6, { width: 110, continued: false });
         // Full description with height constraint to prevent page overflow
         doc.text(svcDesc, 190, y + 6, { width: 200, height: rowHeight - 8, align: 'center', continued: false });
         const freqCount = s.frequencyCount ?? s.frequency_count ?? 1;
@@ -314,7 +314,7 @@ const generateEstimatePDF = async (estimate) => {
           doc.text(String(idx + 1), 55, y + 6, { continued: false });
           // Handle all possible addon name fields
           const addonName = decodeHtml(a.name || a.service_name || a.serviceName || a.service || 'Add-on');
-          doc.text(addonName.substring(0, 28), 75, y + 6, { continued: false });
+          doc.text(addonName, 75, y + 6, { width: 110, continued: false });
           // Full description with height constraint to prevent page overflow
           doc.text(addonDesc, 190, y + 6, { width: 200, height: rowHeight - 8, align: 'center', continued: false });
           // Handle all possible frequency field names (frequency, frequency_type, frequencyType)
@@ -542,8 +542,8 @@ const generateInvoicePDF = async (invoice) => {
         doc.rect(50, y, 500, rowHeight).fill(idx % 2 === 0 ? '#ffffff' : lightGray).stroke('#e0e0e0');
         doc.fontSize(8).fillColor('#333333');
         doc.text(`${idx + 1}`, 55, y + 7);
-        doc.fillColor(navy).text(serviceName.substring(0, 20), 75, y + 7);
-        doc.fillColor('#666666').text(serviceDesc.substring(0, 35), 200, y + 7);
+        doc.fillColor(navy).text(serviceName, 75, y + 7, { width: 120 });
+        doc.fillColor('#666666').text(serviceDesc, 200, y + 7, { width: 170 });
         doc.text(freq, 380, y + 7);
         doc.text(`${visits}`, 480, y + 7);
         y += rowHeight;
