@@ -1,0 +1,6 @@
+tree 3866989a746eba9d4895b59c5b9adb85b714a2b1
+parent 977d47febb99ec0873d05a2dae0114ff763dd85e
+author SaiSowjanya9 <saisowjanya218@gmail.com> 1783204810 -0500
+committer SaiSowjanya9 <saisowjanya218@gmail.com> 1783204810 -0500
+
+Fix SQL error: remove non-existent wo.created_by_role column from work orders queries
