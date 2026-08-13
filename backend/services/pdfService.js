@@ -390,11 +390,11 @@ const generateEstimatePDF = async (estimate) => {
   });
 };
 
-// Generate invoice PDF and return as buffer
+// Generate invoice PDF and return as buffer - Premium Design
 const generateInvoicePDF = async (invoice) => {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      const doc = new PDFDocument({ size: 'A4', margin: 0 });
       const chunks = [];
 
       doc.on('data', chunk => chunks.push(chunk));
@@ -405,13 +405,15 @@ const generateInvoicePDF = async (invoice) => {
         invoiceId, estimateId, invoiceType, customerName, customerEmail, customerPhone,
         propertyName, propertyCode, propertyType, zone, city,
         invoiceDate, dueDate, billingDuration,
-        lineItems, subtotal, discountAmount, discountPercentage, taxAmount, taxPercentage, totalAmount, balanceAmount
+        lineItems, subtotal, discountAmount, discountPercentage, taxAmount, taxPercentage, totalAmount, balanceAmount,
+        workOrderId
       } = invoice;
       
-      // Check if this is a work order invoice
       const isWorkOrderInvoice = invoiceType === 'work_order';
+      const pageWidth = 595;
+      const margin = 40;
+      const contentWidth = pageWidth - (margin * 2);
 
-      // Ensure numeric values are valid
       const safeNum = (val) => {
         const num = parseFloat(val);
         return isNaN(num) ? 0 : Math.round(num);
@@ -420,101 +422,110 @@ const generateInvoicePDF = async (invoice) => {
       const safeDiscount = safeNum(discountAmount);
       const safeTax = safeNum(taxAmount);
       const safeTotal = safeNum(totalAmount);
-      const safeBalance = safeNum(balanceAmount || totalAmount);
+      const safeTaxPercent = safeNum(taxPercentage) || 18;
 
       // Colors
       const black = '#1a1a1a';
       const gold = '#d4a84b';
       const navy = '#1e3a5f';
-      const lightGray = '#f8f9fa';
-      const lightBlue = '#e8f4fc';
+      const lightGray = '#f5f5f5';
+      const white = '#ffffff';
 
-      // Header - Black background
-      doc.rect(0, 0, 612, 55).fill(black);
+      // ===== PREMIUM HEADER WITH DIAGONAL GOLD STRIPE =====
+      // Black header background
+      doc.rect(0, 0, pageWidth, 70).fill(black);
       
-      // Logo Icon
+      // Gold diagonal stripe
+      doc.save();
+      doc.moveTo(pageWidth - 150, 0);
+      doc.lineTo(pageWidth - 80, 0);
+      doc.lineTo(pageWidth - 30, 70);
+      doc.lineTo(pageWidth - 100, 70);
+      doc.closePath();
+      doc.fill(gold);
+      doc.restore();
+      
+      // Logo
       try {
-        doc.image(LOGO_PATH, 50, 8, { width: 38, height: 38 });
+        doc.image(LOGO_PATH, margin + 10, 15, { width: 40, height: 40 });
       } catch (logoErr) {
-        doc.rect(50, 8, 38, 38).fill(gold);
+        doc.rect(margin + 10, 15, 40, 40).fill(gold);
       }
       
-      // Company Name
-      doc.fontSize(16).fillColor(gold).text('XLAND INFRA', 95, 20);
-      const mainTextWidth = doc.widthOfString('XLAND INFRA');
-      doc.fontSize(7);
-      const pvtLtdText = 'PVT LTD';
-      const pvtLtdWidth = doc.widthOfString(pvtLtdText);
-      const pvtLtdX = 95 + (mainTextWidth - pvtLtdWidth) / 2;
-      doc.fillColor(gold).text(pvtLtdText, pvtLtdX, 38);
-      // Draw lines
-      const lineY = 43;
-      const lineGap = 4;
-      doc.strokeColor(gold).lineWidth(0.5);
-      doc.moveTo(95, lineY).lineTo(pvtLtdX - lineGap, lineY).stroke();
-      doc.moveTo(pvtLtdX + pvtLtdWidth + lineGap, lineY).lineTo(95 + mainTextWidth, lineY).stroke();
+      // Company name
+      doc.fontSize(18).fillColor(gold).text('XLAND INFRA', margin + 60, 22);
+      doc.fontSize(8).fillColor(gold).text('PVT LTD', margin + 60, 42);
 
-      let y = 75;
+      let y = 85;
 
-      // Invoice Info Section - styled like estimate
-      // ID label and value
-      doc.fontSize(10).fillColor('#666666').font('Helvetica-Bold').text('ID:', 50, y);
-      doc.fontSize(14).fillColor(black).text(invoiceId || 'N/A', 75, y - 2);
+      // ===== INVOICE ID & DATES ROW =====
+      doc.fontSize(9).fillColor('#666666').text('ID:', margin, y);
+      doc.fontSize(12).fillColor(black).font('Helvetica-Bold').text(invoiceId || 'N/A', margin + 20, y - 1);
       
-      // Estimate ID below (if exists)
       if (estimateId) {
-        doc.fontSize(9).fillColor('#666666').font('Helvetica').text(`Estimate: ${estimateId}`, 50, y + 16);
+        doc.fontSize(8).fillColor('#888888').font('Helvetica').text(`Estimate: ${estimateId}`, margin, y + 14);
       }
       
-      // Right side - dates with bold labels
-      doc.fontSize(10).fillColor('#666666').font('Helvetica-Bold').text('Date:', 380, y);
+      // Right side dates
+      const dateX = pageWidth - margin - 120;
+      doc.fontSize(9).fillColor('#666666').font('Helvetica').text('Date:', dateX, y);
       const invDateStr = invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-      doc.fontSize(12).fillColor(black).text(invDateStr, 420, y - 1);
+      doc.fontSize(11).fillColor(black).font('Helvetica-Bold').text(invDateStr, dateX + 35, y - 1);
       
-      doc.fontSize(10).fillColor('#666666').font('Helvetica-Bold').text('Due:', 380, y + 18);
+      doc.fontSize(9).fillColor('#666666').font('Helvetica').text('Due:', dateX, y + 16);
       const dueDateStr = dueDate ? new Date(dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-      doc.fontSize(12).fillColor(black).text(dueDateStr, 420, y + 17);
+      doc.fontSize(11).fillColor(black).font('Helvetica-Bold').text(dueDateStr, dateX + 35, y + 15);
       
-      doc.font('Helvetica'); // Reset font
+      doc.font('Helvetica');
+      y += 45;
+
+      // ===== TOTAL AMOUNT DUE BANNER =====
+      // Gradient effect with two rectangles
+      doc.rect(margin, y, contentWidth / 2, 45).fill('#2d4a5f');
+      doc.rect(margin + contentWidth / 2, y, contentWidth / 2, 45).fill(navy);
       
+      doc.fontSize(10).fillColor(gold).text('TOTAL AMOUNT DUE', margin + 15, y + 10);
+      doc.fontSize(20).fillColor(white).font('Helvetica-Bold').text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, margin + 15, y + 24);
+      doc.font('Helvetica');
       y += 55;
 
-      // Total Amount Banner - softer navy color
-      doc.rect(50, y, 500, 40).fill('#1e3a5f');
-      doc.fontSize(10).fillColor('#d4a84b').text('Total Amount Due', 60, y + 8);
-      doc.fontSize(18).fillColor('#ffffff').text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, 60, y + 20);
-      y += 50;
-
-      // Property & Customer Details (side by side)
-      const cardWidth = 235;
+      // ===== PROPERTY & CUSTOMER DETAILS (SIDE BY SIDE) =====
+      const cardWidth = (contentWidth - 15) / 2;
+      const cardHeight = 85;
       
       // Property Details Card
-      doc.rect(50, y, cardWidth, 90).fill(lightBlue).stroke('#cce7f7');
-      doc.fontSize(10).fillColor(navy).text('Property Details', 60, y + 10);
-      doc.fontSize(8).fillColor('#666666');
+      doc.rect(margin, y, cardWidth, cardHeight).lineWidth(1).stroke('#e0e0e0');
+      doc.rect(margin, y, cardWidth, 20).fill(lightGray);
+      doc.fontSize(9).fillColor(navy).font('Helvetica-Bold').text('PROPERTY DETAILS', margin + 10, y + 6);
+      doc.font('Helvetica');
+      
       let py = y + 26;
-      doc.text(`Property ID: ${propertyCode || '-'}`, 60, py, { width: cardWidth - 20 }); py += 12;
-      doc.text(`Name: ${decodeHtml(propertyName) || '-'}`, 60, py, { width: cardWidth - 20 }); py += 12;
-      if (propertyType) { doc.text(`Type: ${propertyType}`, 60, py, { width: cardWidth - 20 }); py += 12; }
-      if (zone) { doc.text(`Zone: ${zone}`, 60, py, { width: cardWidth - 20 }); py += 12; }
-      if (city) { doc.text(`City: ${city}`, 60, py, { width: cardWidth - 20 }); }
+      doc.fontSize(8).fillColor('#666666');
+      doc.text(`Property ID: ${propertyCode || '-'}`, margin + 10, py); py += 12;
+      doc.text(`Name: ${decodeHtml(propertyName) || '-'}`, margin + 10, py); py += 12;
+      doc.text(`Type: ${propertyType || '-'}`, margin + 10, py); py += 12;
+      doc.text(`Zone: ${zone || '-'}`, margin + 10, py); py += 12;
+      doc.text(`City: ${city || '-'}`, margin + 10, py);
 
       // Customer Details Card
-      doc.rect(305, y, cardWidth, 90).fill(lightBlue).stroke('#cce7f7');
-      doc.fontSize(10).fillColor(navy).text('Customer Details', 315, y + 10);
-      doc.fontSize(8).fillColor('#666666');
+      const custX = margin + cardWidth + 15;
+      doc.rect(custX, y, cardWidth, cardHeight).lineWidth(1).stroke('#e0e0e0');
+      doc.rect(custX, y, cardWidth, 20).fill(lightGray);
+      doc.fontSize(9).fillColor(navy).font('Helvetica-Bold').text('CUSTOMER DETAILS', custX + 10, y + 6);
+      doc.font('Helvetica');
+      
       let cy = y + 26;
-      doc.text(`Name: ${decodeHtml(customerName) || '-'}`, 315, cy, { width: cardWidth - 20 }); cy += 12;
-      doc.text(`Phone: ${customerPhone || '-'}`, 315, cy, { width: cardWidth - 20 }); cy += 12;
-      // Use smaller font for long emails
-      const emailText = customerEmail || '-';
-      const emailFontSize = emailText.length > 25 ? 7 : 8;
-      doc.fontSize(emailFontSize).text(`Email: ${emailText}`, 315, cy, { width: cardWidth - 20 }); 
-      cy += (emailText.length > 35 ? 18 : 12);
-      doc.fontSize(8); // Reset font size
-      if (city) { doc.text(`City: ${city}`, 315, cy); }
+      doc.fontSize(8).fillColor('#666666');
+      doc.text(`Name: ${decodeHtml(customerName) || '-'}`, custX + 10, cy); cy += 12;
+      doc.text(`Phone: ${customerPhone || '-'}`, custX + 10, cy); cy += 12;
+      doc.text(`Email: ${customerEmail || '-'}`, custX + 10, cy, { width: cardWidth - 20 }); cy += 12;
+      doc.text(`City: ${city || '-'}`, custX + 10, cy);
+      if (workOrderId) {
+        cy += 12;
+        doc.text(`Work Order: ${workOrderId}`, custX + 10, cy);
+      }
 
-      y += 105;
+      y += cardHeight + 15;
 
       // Parse line items
       let items = [];
@@ -523,22 +534,22 @@ const generateInvoicePDF = async (invoice) => {
       } catch (e) { items = []; }
 
       const pageHeight = 780;
-      
-      // Only show Services Table for NON-work order invoices that have items
-      // Work Order Invoices don't need services table
+
+      // ===== SERVICES INCLUDED TABLE (Skip for Work Order Invoices) =====
       if (!isWorkOrderInvoice && items.length > 0) {
-        doc.fontSize(10).fillColor(navy).text('SERVICES INCLUDED', 50, y);
+        doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('SERVICES INCLUDED', margin, y);
+        doc.font('Helvetica');
         y += 15;
         
         // Table header
-        doc.rect(50, y, 500, 20).fill('#1e3a5f');
-        doc.fontSize(8).fillColor('#ffffff');
-        doc.text('#', 55, y + 6);
-        doc.text('Service', 75, y + 6);
-        doc.text('Description', 200, y + 6);
-        doc.text('Frequency', 380, y + 6);
-        doc.text('Visits', 480, y + 6);
-        y += 20;
+        doc.rect(margin, y, contentWidth, 22).fill(navy);
+        doc.fontSize(8).fillColor(white);
+        doc.text('#', margin + 8, y + 7);
+        doc.text('Service', margin + 35, y + 7);
+        doc.text('Description', margin + 140, y + 7);
+        doc.text('Frequency', margin + 320, y + 7);
+        doc.text('Visits', margin + 420, y + 7);
+        y += 22;
 
         items.forEach((item, idx) => {
           const fullDesc = decodeHtml(item.description || item.name || 'Service');
@@ -548,62 +559,72 @@ const generateInvoicePDF = async (invoice) => {
           const freq = item.frequency || item.frequencyType || item.billingDuration || '-';
           const visits = item.visits || item.frequencyCount || item.quantity || 1;
           
-          const rowHeight = 22;
+          const rowHeight = 20;
           
           if (y + rowHeight > pageHeight) {
             doc.addPage();
             y = 50;
           }
           
-          doc.rect(50, y, 500, rowHeight).fill(idx % 2 === 0 ? '#ffffff' : lightGray).stroke('#e0e0e0');
+          doc.rect(margin, y, contentWidth, rowHeight).lineWidth(0.5).stroke('#e0e0e0');
           doc.fontSize(8).fillColor('#333333');
-          doc.text(`${idx + 1}`, 55, y + 7);
-          doc.fillColor(navy).text(serviceName, 75, y + 7, { width: 120 });
-          doc.fillColor('#666666').text(serviceDesc, 200, y + 7, { width: 170 });
-          doc.text(freq, 380, y + 7);
-          doc.text(`${visits}`, 480, y + 7);
+          doc.text(`${idx + 1}`, margin + 10, y + 6);
+          doc.fillColor(navy).text(serviceName.substring(0, 25), margin + 35, y + 6);
+          doc.fillColor('#666666').text(serviceDesc.substring(0, 40), margin + 140, y + 6);
+          doc.text(freq, margin + 320, y + 6);
+          doc.text(`${visits}`, margin + 430, y + 6);
           y += rowHeight;
         });
 
-        y += 15;
+        y += 20;
       }
 
-      // Price Summary
-      if (y + 100 > pageHeight) {
+      // ===== PRICE SUMMARY BOX (Right-aligned) =====
+      if (y + 110 > pageHeight) {
         doc.addPage();
         y = 50;
       }
 
-      doc.fontSize(10).fillColor(navy).text('PRICE SUMMARY', 350, y);
-      y += 18;
+      const summaryWidth = 200;
+      const summaryX = pageWidth - margin - summaryWidth;
       
-      doc.rect(350, y, 200, 80).fill(lightGray).stroke('#e0e0e0');
+      doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX, y);
+      doc.font('Helvetica');
+      y += 15;
+      
+      // Summary box with border
+      const summaryHeight = safeDiscount > 0 ? 85 : 70;
+      doc.rect(summaryX, y, summaryWidth, summaryHeight).lineWidth(1).stroke('#e0e0e0');
+      
+      let sy = y + 12;
       doc.fontSize(9).fillColor('#666666');
-      let sy = y + 10;
-      doc.text('Subtotal:', 360, sy);
-      doc.fillColor('#333333').text(`Rs. ${safeSubtotal.toLocaleString('en-IN')}`, 480, sy);
-      sy += 14;
+      doc.text('Subtotal:', summaryX + 12, sy);
+      doc.fillColor('#333333').text(`Rs. ${safeSubtotal.toLocaleString('en-IN')}`, summaryX + 130, sy);
+      sy += 16;
       
       if (safeDiscount > 0) {
-        doc.fillColor('#059669').text(`Discount (${discountPercentage || 0}%):`, 360, sy);
-        doc.text(`-Rs. ${safeDiscount.toLocaleString('en-IN')}`, 470, sy);
-        sy += 14;
+        doc.fillColor('#059669').text(`Discount:`, summaryX + 12, sy);
+        doc.text(`-Rs. ${safeDiscount.toLocaleString('en-IN')}`, summaryX + 130, sy);
+        sy += 16;
       }
       
-      doc.fillColor('#666666').text(`GST (${taxPercentage || 18}%):`, 360, sy);
-      doc.fillColor('#333333').text(`Rs. ${safeTax.toLocaleString('en-IN')}`, 480, sy);
-      sy += 14;
+      doc.fillColor('#666666').text(`GST (${safeTaxPercent}%):`, summaryX + 12, sy);
+      doc.fillColor('#333333').text(`Rs. ${safeTax.toLocaleString('en-IN')}`, summaryX + 130, sy);
+      sy += 16;
       
-      doc.strokeColor('#333333').lineWidth(0.5).moveTo(360, sy).lineTo(540, sy).stroke();
-      sy += 8;
+      // Divider line
+      doc.strokeColor('#333333').lineWidth(0.5).moveTo(summaryX + 10, sy).lineTo(summaryX + summaryWidth - 10, sy).stroke();
+      sy += 10;
       
-      doc.fontSize(11).fillColor(navy).text('Total:', 360, sy);
-      doc.text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, 470, sy);
-      
-      // Footer
-      doc.fontSize(8).fillColor('#999999').text(
-        'This is a computer-generated invoice. For queries, contact info@xlandinfra.com',
-        50, 750, { align: 'center', width: 500 }
+      // Total in gold
+      doc.fontSize(11).fillColor(gold).font('Helvetica-Bold').text('Total:', summaryX + 12, sy);
+      doc.text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, summaryX + 120, sy);
+      doc.font('Helvetica');
+
+      // ===== FOOTER =====
+      doc.fontSize(9).fillColor('#666666').text(
+        'We appreciate your trust in our services.',
+        margin, 780, { align: 'left', width: contentWidth, italic: true }
       );
 
       doc.end();
