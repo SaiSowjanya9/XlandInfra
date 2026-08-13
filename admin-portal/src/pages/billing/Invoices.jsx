@@ -26,6 +26,7 @@ import {
   Trash2,
   RotateCcw,
   Archive,
+  Copy,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { exportInvoiceToPDF } from '../../utils/pdfExport';
@@ -74,6 +75,14 @@ const STATUS_CONFIG = {
   partially_paid: { label: 'Partially Paid', color: 'bg-orange-100 text-orange-700' },
   overdue: { label: 'Overdue', color: 'bg-red-100 text-red-600' },
   cancelled: { label: 'Cancelled', color: 'bg-gray-100 text-gray-500' }
+};
+
+const PAYMENT_LINK_STATUS_CONFIG = {
+  created: { label: 'Link Created', color: 'text-blue-600', icon: 'link' },
+  sent: { label: 'Link Sent', color: 'text-amber-600', icon: 'mail' },
+  paid: { label: 'Online Paid', color: 'text-green-600', icon: 'check' },
+  expired: { label: 'Link Expired', color: 'text-red-500', icon: 'clock' },
+  cancelled: { label: 'Link Cancelled', color: 'text-gray-500', icon: 'x' }
 };
 
 // Helper to decode HTML entities
@@ -1026,9 +1035,17 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                             </span>
                           </td>
                           <td className="px-4 py-3.5 text-center">
-                            <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${STATUS_CONFIG[invoice.status]?.color || 'bg-gray-100 text-gray-600'}`}>
-                              {STATUS_CONFIG[invoice.status]?.label || invoice.status}
-                            </span>
+                            <div className="flex flex-col items-center gap-1">
+                              <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${STATUS_CONFIG[invoice.status]?.color || 'bg-gray-100 text-gray-600'}`}>
+                                {STATUS_CONFIG[invoice.status]?.label || invoice.status}
+                              </span>
+                              {invoice.paymentLinkStatus && invoice.paymentLinkStatus !== 'paid' && (
+                                <span className={`inline-flex items-center gap-1 text-[10px] ${PAYMENT_LINK_STATUS_CONFIG[invoice.paymentLinkStatus]?.color || 'text-gray-500'}`}>
+                                  <LinkIcon className="w-3 h-3" />
+                                  {PAYMENT_LINK_STATUS_CONFIG[invoice.paymentLinkStatus]?.label || invoice.paymentLinkStatus}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1">
@@ -1327,6 +1344,45 @@ const InvoiceDetailPanel = ({
               </p>
             </div>
           </div>
+
+          {/* Payment Link Status (if exists) */}
+          {invoice.paymentLink && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <LinkIcon className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Payment Link</p>
+                    <p className="text-xs text-gray-500 truncate max-w-[200px]">{invoice.paymentLink}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${
+                    invoice.paymentLinkStatus === 'paid' ? 'bg-green-100 text-green-700' :
+                    invoice.paymentLinkStatus === 'sent' ? 'bg-amber-100 text-amber-700' :
+                    invoice.paymentLinkStatus === 'created' ? 'bg-blue-100 text-blue-700' :
+                    invoice.paymentLinkStatus === 'expired' ? 'bg-red-100 text-red-700' :
+                    'bg-gray-100 text-gray-600'
+                  }`}>
+                    {invoice.paymentLinkStatus === 'paid' ? 'Online Paid' :
+                     invoice.paymentLinkStatus === 'sent' ? 'Link Sent' :
+                     invoice.paymentLinkStatus === 'created' ? 'Link Created' :
+                     invoice.paymentLinkStatus === 'expired' ? 'Link Expired' :
+                     invoice.paymentLinkStatus || 'N/A'}
+                  </span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(invoice.paymentLink);
+                    }}
+                    className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                    title="Copy Link"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Services & Add-ons */}
           {(() => {

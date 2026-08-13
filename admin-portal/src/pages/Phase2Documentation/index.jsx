@@ -60,7 +60,7 @@ const Phase2Documentation = () => {
       {/* Footer */}
       <footer className="bg-gray-800 text-gray-400 py-6 px-6 mt-12">
         <div className="max-w-7xl mx-auto text-center text-sm">
-          <p>XlandInfra Phase 2 Documentation • Last Updated: July 2025</p>
+          <p>XlandInfra Phase 2 Documentation • Last Updated: August 2026</p>
         </div>
       </footer>
     </div>
