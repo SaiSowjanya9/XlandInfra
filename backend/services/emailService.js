@@ -880,8 +880,8 @@ const sendEstimateEmail = async (estimate, actionToken) => {
     return { success: false, error: 'No customer email provided' };
   }
 
-  // Base URL for action links
-  const baseUrl = process.env.FRONTEND_URL || 'https://admin.xlandinfra.com';
+  // Base URL for action links - always use admin portal for estimate actions
+  const baseUrl = process.env.ADMIN_PORTAL_URL || 'https://admin.xlandinfra.com';
   const approveUrl = `${baseUrl}/estimate-action/${estimateId}?action=approve&token=${actionToken}`;
   const rejectUrl = `${baseUrl}/estimate-action/${estimateId}?action=reject&token=${actionToken}`;
 
