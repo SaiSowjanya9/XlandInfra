@@ -73,9 +73,8 @@ const PAYMENT_METHODS = {
   cash: { label: 'Cash', icon: Banknote, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200' },
   bank_transfer: { label: 'Bank Transfer', icon: Building2, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
   upi: { label: 'UPI', icon: Smartphone, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
-  razorpay: { label: 'Razorpay', icon: CreditCard, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
   debit_credit_card: { label: 'Card', icon: CreditCard, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200' },
-  check: { label: 'Check', icon: FileCheck, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
+  check: { label: 'Check', icon: FileCheck, color: 'text-teal-600', bg: 'bg-teal-50', border: 'border-teal-200' },
   other: { label: 'Other', icon: Wallet, color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' }
 };
 
@@ -658,7 +657,6 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 <option value="cash">Cash</option>
                 <option value="bank_transfer">Bank Transfer</option>
                 <option value="upi">UPI</option>
-                <option value="razorpay">Razorpay</option>
                 <option value="debit_credit_card">Debit/Credit Card</option>
                 <option value="check">Check</option>
               </select>
