@@ -406,21 +406,22 @@ const generatePDF = (data, type, filename) => {
     // ===== WORK ORDER DETAILS (only for work order estimates) =====
     if (data.isWorkOrderEstimate && data.workOrderId) {
       // Use same blue card style as Property & Customer Details for consistency
+      const woBoxHeight = 32; // Increased height for better spacing
       doc.setFillColor(239, 246, 255); // cardBgBlue - same as other cards
       doc.setDrawColor(229, 231, 235); // borderLight - same as other cards
-      doc.roundedRect(margin, y, pageWidth - margin * 2, 28, 2, 2, 'FD');
+      doc.roundedRect(margin, y, pageWidth - margin * 2, woBoxHeight, 2, 2, 'FD');
       
       doc.setTextColor(...navy);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
       doc.text('Work Order Details', margin + 6, y + 6);
       
-      let wy = y + 12;
+      let wy = y + 13;
       doc.setFontSize(8);
       
       // Row 1: Work Order ID & Category (using same layout as Property/Customer cards)
       const leftCol = margin + 6;
-      const midCol = margin + 90;
+      const midCol = margin + 95;
       
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
@@ -444,7 +445,7 @@ const generatePDF = (data, type, filename) => {
       doc.text(String(data.workOrderSubcategory || '-'), leftCol, wy);
       doc.text(String(data.workOrderPriority || '-').toUpperCase(), midCol, wy);
       
-      y += 34;
+      y += woBoxHeight + 10; // Add proper spacing after the box
     }
 
     // ===== AMC PACKAGE DESCRIPTION =====
