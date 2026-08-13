@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import SVGDonutChart from './common/DonutChart';
+import { STATUS_COLORS, ESTIMATE_TYPE_COLORS, BAR_CHART_COLORS } from '../utils/chartColors';
 
 // Helper to normalize property type
 const normalizePropertyType = (type) => {
@@ -105,7 +106,7 @@ const HorizontalBarChart = ({ data }) => {
   }
 
   const maxValue = Math.max(...data.map(d => d.value));
-  const colors = ['#5B8DEF', '#22C55E', '#14B8A6', '#FBBF24', '#EF4444'];
+  const colors = BAR_CHART_COLORS;
 
   return (
     <div className="space-y-2">
@@ -158,9 +159,9 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   ).length;
   const block1WorkOrder = block1Filtered.filter(e => e.estimate_type === 'work_order' || e.estimateType === 'work_order').length;
   const typeDataAll = [
-    { name: 'Direct Estimates', value: block1Direct, color: '#8B5CF6' },
-    { name: 'Property-Based', value: block1PropertyBased, color: '#06B6D4' },
-    { name: 'Work Order', value: block1WorkOrder, color: '#F97316' }
+    { name: 'Direct Estimates', value: block1Direct, color: ESTIMATE_TYPE_COLORS['Direct Estimates'] },
+    { name: 'Property-Based', value: block1PropertyBased, color: ESTIMATE_TYPE_COLORS['Property-Based'] },
+    { name: 'Work Order', value: block1WorkOrder, color: ESTIMATE_TYPE_COLORS['Work Order'] }
   ];
   const typeData = typeDataAll.filter(item => item.value > 0);
 
@@ -184,20 +185,20 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
     e.estimateType === 'property_based' || e.estimateType === 'property-based'
   );
   const propertyStatusDataAll = [
-    { name: 'Draft', value: block3Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#5B8DEF' },
-    { name: 'Sent', value: block3Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#FBBF24' },
-    { name: 'Approved', value: block3Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#14B8A6' },
-    { name: 'Rejected', value: block3Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
+    { name: 'Draft', value: block3Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block3Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block3Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block3Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
   const propertyStatusData = propertyStatusDataAll.filter(item => item.value > 0);
 
   // Block 4: Estimate Status (All)
   const block4Filtered = applyPeriodFilter(estimates, filter2);
   const statusDataAll = [
-    { name: 'Draft', value: block4Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#5B8DEF' },
-    { name: 'Sent', value: block4Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#FBBF24' },
-    { name: 'Approved', value: block4Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#14B8A6' },
-    { name: 'Rejected', value: block4Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
+    { name: 'Draft', value: block4Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block4Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block4Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block4Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
   const statusData = statusDataAll.filter(item => item.value > 0);
 
@@ -219,10 +220,10 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
     e.estimate_type === 'direct' || e.estimateType === 'direct'
   );
   const directStatusDataAll = [
-    { name: 'Draft', value: block6Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#5B8DEF' },
-    { name: 'Sent', value: block6Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#FBBF24' },
-    { name: 'Approved', value: block6Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#14B8A6' },
-    { name: 'Rejected', value: block6Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
+    { name: 'Draft', value: block6Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block6Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block6Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block6Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
   const directStatusData = directStatusDataAll.filter(item => item.value > 0);
 
@@ -231,10 +232,10 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
     e.estimate_type === 'work_order' || e.estimateType === 'work_order'
   );
   const workOrderOverviewDataAll = [
-    { name: 'Draft', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#5B8DEF' },
-    { name: 'Sent', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#FBBF24' },
-    { name: 'Approved', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#14B8A6' },
-    { name: 'Rejected', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
+    { name: 'Draft', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
   const workOrderOverviewData = workOrderOverviewDataAll.filter(item => item.value > 0);
 
@@ -256,10 +257,10 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
     e.estimate_type === 'work_order' || e.estimateType === 'work_order'
   );
   const workOrderStatusDataAll = [
-    { name: 'Draft', value: block9Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#5B8DEF' },
-    { name: 'Sent', value: block9Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#FBBF24' },
-    { name: 'Approved', value: block9Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#14B8A6' },
-    { name: 'Rejected', value: block9Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
+    { name: 'Draft', value: block9Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block9Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block9Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block9Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
   const workOrderStatusData = workOrderStatusDataAll.filter(item => item.value > 0);
 
