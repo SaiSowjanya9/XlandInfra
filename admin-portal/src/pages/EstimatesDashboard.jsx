@@ -30,6 +30,7 @@ import {
 } from 'recharts';
 import DonutChart from '../components/common/DonutChart';
 import { getAuthToken } from '../utils/safeStorage';
+import { STATUS_COLORS, ESTIMATE_TYPE_COLORS, BAR_CHART_COLORS } from '../utils/chartColors';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -422,12 +423,12 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const block2Sent = block2Data.filter(e => (e.status || '').toLowerCase() === 'sent').length;
   const block2Approved = block2Data.filter(e => (e.status || '').toLowerCase() === 'approved').length;
   const block2Rejected = block2Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length;
-  // All statuses for legend display - matching reference image colors
+  // All statuses for legend display - using shared color constants
   const statusDataAll = [
-    { name: 'Draft', value: block2Draft, color: '#5B8DEF' },
-    { name: 'Sent', value: block2Sent, color: '#FBBF24' },
-    { name: 'Approved', value: block2Approved, color: '#14B8A6' },
-    { name: 'Rejected', value: block2Rejected, color: '#EF4444' }
+    { name: 'Draft', value: block2Draft, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block2Sent, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block2Approved, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block2Rejected, color: STATUS_COLORS.Rejected }
   ];
   // Only non-zero for chart display
   const statusData = statusDataAll.filter(item => item.value > 0);
@@ -441,8 +442,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   ).length;
   // Note: Work Order estimates are shown in their own row, not in this chart
   const typeDataAll = [
-    { name: 'Direct Estimates', value: block3Direct, color: '#8B5CF6' },
-    { name: 'Property-Based', value: block3PropertyBased, color: '#06B6D4' }
+    { name: 'Direct Estimates', value: block3Direct, color: ESTIMATE_TYPE_COLORS['Direct Estimates'] },
+    { name: 'Property-Based', value: block3PropertyBased, color: ESTIMATE_TYPE_COLORS['Property-Based'] }
   ];
   const typeData = typeDataAll.filter(item => item.value > 0);
 
@@ -463,12 +464,12 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const block5Data = applyPeriodFilter(mainFilteredEstimates, filter5).filter(e => 
     e.estimate_type === 'direct' || e.estimateType === 'direct'
   );
-  // All statuses for legend display - matching reference image colors
+  // All statuses for legend display - using shared color constants
   const directStatusDataAll = [
-    { name: 'Draft', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#5B8DEF' },
-    { name: 'Sent', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#FBBF24' },
-    { name: 'Approved', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#14B8A6' },
-    { name: 'Rejected', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
+    { name: 'Draft', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
   // Only non-zero for chart display
   const directStatusData = directStatusDataAll.filter(item => item.value > 0);
@@ -478,12 +479,12 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
     e.estimateType === 'property_based' || e.estimateType === 'property-based'
   );
-  // All statuses for legend display - matching reference image colors
+  // All statuses for legend display - using shared color constants
   const propertyBasedStatusDataAll = [
-    { name: 'Draft', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#5B8DEF' },
-    { name: 'Sent', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#FBBF24' },
-    { name: 'Approved', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#14B8A6' },
-    { name: 'Rejected', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
+    { name: 'Draft', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
   // Only non-zero for chart display
   const propertyBasedStatusData = propertyBasedStatusDataAll.filter(item => item.value > 0);
@@ -493,10 +494,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     e.estimate_type === 'work_order' || e.estimateType === 'work_order'
   );
   const workOrderStatusDataAll = [
-    { name: 'Draft', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#5B8DEF' },
-    { name: 'Sent', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#FBBF24' },
-    { name: 'Approved', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#14B8A6' },
-    { name: 'Rejected', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
+    { name: 'Draft', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
   const workOrderStatusData = workOrderStatusDataAll.filter(item => item.value > 0);
 
@@ -518,10 +519,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     e.estimate_type === 'work_order' || e.estimateType === 'work_order'
   );
   const workOrderOverviewDataAll = [
-    { name: 'Draft', value: block9Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: '#5B8DEF' },
-    { name: 'Sent', value: block9Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: '#FBBF24' },
-    { name: 'Approved', value: block9Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: '#14B8A6' },
-    { name: 'Rejected', value: block9Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: '#EF4444' }
+    { name: 'Draft', value: block9Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block9Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block9Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block9Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
   const workOrderOverviewData = workOrderOverviewDataAll.filter(item => item.value > 0);
 
@@ -887,8 +888,6 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               {propertyTypeData.map((item, index) => {
                 const maxValue = Math.max(...propertyTypeData.map(d => d.value));
                 const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-                const colors = ['#5B8DEF', '#22C55E', '#14B8A6', '#FBBF24', '#EF4444'];
-                const bgColors = ['#EFF6FF', '#D1FAE5', '#CCFBF1', '#FEF3C7', '#FEE2E2'];
                 
                 return (
                   <div key={index} className="flex items-center gap-3">
@@ -898,7 +897,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
                         style={{ 
                           width: `${Math.max(widthPercent, 15)}%`,
-                          backgroundColor: colors[index % colors.length]
+                          backgroundColor: BAR_CHART_COLORS[index % BAR_CHART_COLORS.length]
                         }}
                       >
                         <span className="text-white text-xs font-medium">{item.value}</span>
@@ -1025,7 +1024,6 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               {directPropertyTypeData.map((item, index) => {
                 const maxValue = Math.max(...directPropertyTypeData.map(d => d.value));
                 const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-                const colors = ['#5B8DEF', '#22C55E', '#14B8A6', '#FBBF24', '#EF4444'];
                 
                 return (
                   <div key={index} className="flex items-center gap-3">
@@ -1035,7 +1033,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
                         style={{ 
                           width: `${Math.max(widthPercent, 15)}%`,
-                          backgroundColor: colors[index % colors.length]
+                          backgroundColor: BAR_CHART_COLORS[index % BAR_CHART_COLORS.length]
                         }}
                       >
                         <span className="text-white text-xs font-medium">{item.value}</span>
