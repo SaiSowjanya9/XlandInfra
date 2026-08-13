@@ -4822,6 +4822,19 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
           }
           console.log('Found services in estimate:', packageServices.length);
         }
+        
+        // For work order estimates with no services, create one from the work order data
+        if (isWorkOrderEstimate && (!packageServices || packageServices.length === 0)) {
+          console.log('[Email] Creating service from work order data for existing estimate');
+          packageServices = [{
+            name: estimate.work_order_subcategory || estimate.work_order_category || 'Work Order Service',
+            description: estimate.work_order_description || `Work Order: ${estimate.work_order_id}`,
+            price: parseFloat(estimate.subtotal) || 0,
+            frequencyType: 'One-time',
+            frequencyCount: 1
+          }];
+          console.log('[Email] Created work order service:', packageServices[0]);
+        }
         // If no package_services stored and NOT a work order estimate, fetch from FP AMC package
         if ((!packageServices || packageServices.length === 0) && !isWorkOrderEstimate && (estimate.package_id || estimate.package_name)) {
           let pkgRows = [];
