@@ -26,6 +26,7 @@ const {
   getClientIP,
   hashIP
 } = require('../utils/paymentSecurity');
+const { generateInvoicePDF } = require('../services/pdfService');
 
 // Configure multer for payment proof uploads
 const storage = multer.diskStorage({
@@ -750,8 +751,9 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
       SELECT i.*, 
              COALESCE(p.community_name, p2.community_name) as property_name, 
              COALESCE(p.property_id, p2.property_id, i.property_code) as property_code,
+             COALESCE(p.property_type, p2.property_type) as property_type,
              COALESCE(p.zone, p2.zone) as zone, 
-             COALESCE(p.division, p2.division) as division, 
+             COALESCE(p.city, p2.city) as city,
              COALESCE(p.contact_person, p2.contact_person) as contact_person, 
              COALESCE(p.contact_phone, p2.contact_phone) as contact_phone, 
              COALESCE(p.contact_email, p2.contact_email) as contact_email
@@ -773,247 +775,38 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
 
     const invoice = invoices[0];
     
-    // Parse line items
-    let lineItems = [];
-    try {
-      lineItems = invoice.line_items ? (typeof invoice.line_items === 'string' ? JSON.parse(invoice.line_items) : invoice.line_items) : [];
-    } catch (e) {
-      lineItems = [];
-    }
-
-    // Format helpers
-    const formatAmount = (amt) => `₹${(parseFloat(amt) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-    const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-
-    // Filter out AMC Package entries
-    const allItems = lineItems.filter(item => {
-      const desc = String(item.description || item.name || '').toLowerCase();
-      return !desc.includes('amc package:') && !desc.includes('amc services');
-    });
-
-    // Helper to check if item is an addon
-    const isAddon = (item) => {
-      const typeStr = String(item.type || '').toLowerCase();
-      return typeStr === 'addon' || typeStr === 'add-on' || typeStr === 'add_on';
+    // Generate PDF using pdfService
+    const pdfData = {
+      invoiceId: invoice.invoice_id,
+      estimateId: invoice.source_estimate_id,
+      invoiceType: invoice.invoice_type,
+      customerName: invoice.customer_name,
+      customerEmail: invoice.customer_email,
+      customerPhone: invoice.customer_phone,
+      propertyName: invoice.property_name,
+      propertyCode: invoice.property_code,
+      propertyType: invoice.property_type,
+      zone: invoice.zone,
+      city: invoice.city,
+      invoiceDate: invoice.invoice_date,
+      dueDate: invoice.due_date,
+      billingDuration: invoice.billing_duration,
+      lineItems: invoice.line_items,
+      subtotal: invoice.subtotal,
+      discountAmount: invoice.discount_amount,
+      discountPercentage: invoice.discount_percentage,
+      taxAmount: invoice.tax_amount,
+      taxPercentage: invoice.tax_percentage,
+      totalAmount: invoice.total_amount,
+      balanceAmount: invoice.balance_amount,
+      workOrderId: invoice.work_order_id
     };
-
-    // Separate services and add-ons
-    const services = allItems.filter(item => !isAddon(item)).map(item => {
-      const fullDesc = String(item.description || item.name || 'Service');
-      const parts = fullDesc.split(' - ');
-      return {
-        name: parts[0] || 'Service',
-        description: parts.slice(1).join(' - ') || '-',
-        frequency: item.frequency || item.frequencyType || item.frequency_type || '-',
-        visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
-      };
-    });
-
-    const addons = allItems.filter(item => isAddon(item)).map(item => {
-      const fullDesc = String(item.description || item.name || 'Add-on');
-      const parts = fullDesc.split(' - ');
-      return {
-        name: parts[0] || 'Add-on',
-        description: parts.slice(1).join(' - ') || '-',
-        frequency: item.frequency || item.frequencyType || item.frequency_type || '-',
-        visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
-      };
-    });
-
-    // Generate services HTML
-    const servicesHtml = services.map((item, idx) => `
-      <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${idx + 1}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.name}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.description}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.visits}</td>
-      </tr>
-    `).join('');
-
-    // Generate add-ons HTML
-    const addonsHtml = addons.map((item, idx) => `
-      <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${idx + 1}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.name}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.description}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.visits}</td>
-      </tr>
-    `).join('');
-
-    // Generate PDF HTML
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Invoice ${invoice.invoice_id}</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: 'Segoe UI', Arial, sans-serif; color: #1f2937; line-height: 1.5; padding: 40px; }
-          .invoice-container { max-width: 800px; margin: 0 auto; background: white; }
-          .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #2563eb; }
-          .logo { font-size: 28px; font-weight: bold; color: #2563eb; }
-          .logo-sub { font-size: 12px; color: #6b7280; }
-          .invoice-title { text-align: right; }
-          .invoice-title h1 { font-size: 32px; color: #1f2937; margin-bottom: 5px; }
-          .invoice-id { font-size: 16px; color: #2563eb; font-weight: 600; }
-          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
-          .info-box h3 { font-size: 12px; text-transform: uppercase; color: #6b7280; margin-bottom: 10px; letter-spacing: 0.5px; }
-          .info-box p { font-size: 14px; margin-bottom: 4px; }
-          .info-box .highlight { color: #2563eb; font-weight: 600; }
-          .dates-row { display: flex; gap: 40px; margin-bottom: 30px; padding: 15px; background: #f9fafb; border-radius: 8px; }
-          .date-item { text-align: center; }
-          .date-label { font-size: 11px; text-transform: uppercase; color: #6b7280; }
-          .date-value { font-size: 14px; font-weight: 600; color: #1f2937; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-          th { background: #f3f4f6; padding: 12px 10px; text-align: left; font-size: 12px; text-transform: uppercase; color: #6b7280; border-bottom: 2px solid #e5e7eb; }
-          th:nth-child(3), th:nth-child(4), th:nth-child(5) { text-align: right; }
-          .totals { margin-left: auto; width: 300px; }
-          .total-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
-          .total-row.grand { border-top: 2px solid #2563eb; border-bottom: none; padding-top: 15px; margin-top: 10px; font-size: 18px; font-weight: bold; color: #2563eb; }
-          .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-          .status-sent { background: #dbeafe; color: #2563eb; }
-          .status-paid { background: #d1fae5; color: #059669; }
-          .status-draft { background: #f3f4f6; color: #6b7280; }
-          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px; }
-          @media print { body { padding: 20px; } .invoice-container { max-width: 100%; } }
-        </style>
-      </head>
-      <body>
-        <div class="invoice-container">
-          <div class="header">
-            <div>
-              <div class="logo">XLand Infra</div>
-              <div class="logo-sub">Property Management Services</div>
-            </div>
-            <div class="invoice-title">
-              <h1>INVOICE</h1>
-              <div class="invoice-id">${invoice.invoice_id}</div>
-            </div>
-          </div>
-
-          <div class="info-grid">
-            <div class="info-box">
-              <h3>Bill To</h3>
-              <p><strong>${invoice.customer_name || '-'}</strong></p>
-              <p>${invoice.customer_email || ''}</p>
-              <p>${invoice.customer_phone || ''}</p>
-            </div>
-            <div class="info-box">
-              <h3>Property Details</h3>
-              <p><strong>${invoice.property_name || '-'}</strong></p>
-              <p>Property ID: <span class="highlight">${invoice.property_code || '-'}</span></p>
-              ${invoice.zone ? `<p>Zone: ${invoice.zone}</p>` : ''}
-            </div>
-          </div>
-
-          <div class="dates-row">
-            <div class="date-item">
-              <div class="date-label">Invoice Date</div>
-              <div class="date-value">${formatDate(invoice.invoice_date)}</div>
-            </div>
-            <div class="date-item">
-              <div class="date-label">Due Date</div>
-              <div class="date-value">${formatDate(invoice.due_date)}</div>
-            </div>
-            <div class="date-item">
-              <div class="date-label">Invoice Type</div>
-              <div class="date-value">${(invoice.invoice_type || 'Manual').replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</div>
-            </div>
-          </div>
-
-          ${servicesHtml ? `
-          <h2 style="font-size: 14px; color: #1e3a5f; margin-bottom: 10px; text-transform: uppercase;">Services Included</h2>
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 40px; text-align: center;">#</th>
-                <th style="width: 120px;">Service</th>
-                <th>Description</th>
-                <th style="width: 90px; text-align: center;">Frequency</th>
-                <th style="width: 60px; text-align: center;">Visits</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${servicesHtml}
-            </tbody>
-          </table>
-          ` : ''}
-
-          ${addonsHtml ? `
-          <h2 style="font-size: 14px; color: #1e3a5f; margin-bottom: 10px; margin-top: 20px; text-transform: uppercase;">Add-Ons</h2>
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 40px; text-align: center;">#</th>
-                <th style="width: 120px;">Add-on Service</th>
-                <th>Description</th>
-                <th style="width: 90px; text-align: center;">Frequency</th>
-                <th style="width: 60px; text-align: center;">Visits</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${addonsHtml}
-            </tbody>
-          </table>
-          ` : ''}
-
-          ${!servicesHtml && !addonsHtml ? `
-          <p style="padding: 20px; text-align: center; color: #6b7280;">No services included</p>
-          ` : ''}
-
-          <div class="totals">
-            <div class="total-row">
-              <span>Subtotal</span>
-              <span>${formatAmount(invoice.subtotal)}</span>
-            </div>
-            ${invoice.discount_amount > 0 ? `
-            <div class="total-row">
-              <span>Discount (${invoice.discount_percentage || 0}%)</span>
-              <span style="color: #dc2626;">-${formatAmount(invoice.discount_amount)}</span>
-            </div>
-            ` : ''}
-            <div class="total-row">
-              <span>GST (${invoice.tax_percentage || 18}%)</span>
-              <span>${formatAmount(invoice.tax_amount)}</span>
-            </div>
-            <div class="total-row grand">
-              <span>Total Amount</span>
-              <span>${formatAmount(invoice.total_amount)}</span>
-            </div>
-            ${invoice.amount_paid > 0 ? `
-            <div class="total-row" style="color: #059669;">
-              <span>Amount Paid</span>
-              <span>${formatAmount(invoice.amount_paid)}</span>
-            </div>
-            <div class="total-row" style="font-weight: 600; color: #dc2626;">
-              <span>Balance Due</span>
-              <span>${formatAmount(invoice.balance_amount)}</span>
-            </div>
-            ` : ''}
-          </div>
-
-          ${invoice.notes ? `
-          <div style="margin-top: 30px; padding: 15px; background: #fef3c7; border-radius: 8px;">
-            <strong>Notes:</strong><br/>
-            ${invoice.notes}
-          </div>
-          ` : ''}
-
-          <div class="footer">
-            <p>Thank you for your business!</p>
-            <p style="margin-top: 5px;">XLand Infra - Property Management Services</p>
-          </div>
-        </div>
-        <script>window.onload = function() { window.print(); }</script>
-      </body>
-      </html>
-    `;
-
-    res.setHeader('Content-Type', 'text/html');
-    res.send(html);
+    
+    const pdfBuffer = await generateInvoicePDF(pdfData);
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Invoice_${invoice.invoice_id}.pdf`);
+    res.send(pdfBuffer);
   } catch (error) {
     console.error('Error generating invoice PDF:', error);
     res.status(500).json({ success: false, message: 'Error generating invoice PDF', error: error.message });
