@@ -1010,106 +1010,126 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
         />
       </div>
 
-      {/* Invoice Detail Modal */}
+      {/* Professional Invoice Detail Modal */}
       {showDetailPanel && selectedInvoice && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowDetailPanel(false); setSelectedInvoice(null); }}>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setShowDetailPanel(false); setSelectedInvoice(null); }}>
           <div 
-            className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden"
+            className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-600 to-blue-700">
-              <div className="flex items-center gap-3">
-                <FileText className="w-6 h-6 text-white" />
-                <div>
-                  <h2 className="text-xl font-bold text-white">{selectedInvoice.invoiceId}</h2>
-                  <p className="text-blue-100 text-sm">Invoice Details</p>
+            {/* Professional Header with Company Info */}
+            <div className="bg-gradient-to-r from-gray-900 to-gray-800 px-6 py-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center">
+                    <span className="text-gray-900 text-2xl font-bold">X</span>
+                  </div>
+                  <div>
+                    <h1 className="text-amber-400 text-xl font-bold tracking-wide">XLAND INFRA</h1>
+                    <p className="text-gray-400 text-xs tracking-widest">PVT LTD</p>
+                  </div>
+                </div>
+                <div className="text-right flex items-center gap-3">
+                  <span className="inline-block bg-amber-500 text-gray-900 px-4 py-2 rounded font-bold tracking-wider">INVOICE</span>
+                  <button onClick={() => { setShowDetailPanel(false); setSelectedInvoice(null); }} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
+                    <X className="w-5 h-5 text-gray-400" />
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className={`px-3 py-1 text-xs font-medium rounded-full bg-white/20 text-white`}>
-                  {selectedInvoice.status}
-                </span>
-                <button onClick={() => { setShowDetailPanel(false); setSelectedInvoice(null); }} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors">
-                  <X className="w-5 h-5 text-white" />
-                </button>
+            </div>
+
+            {/* Invoice Meta Row */}
+            <div className="bg-gray-100 px-6 py-4 border-b border-gray-200">
+              <div className="grid grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice No.</p>
+                  <p className="text-base font-bold text-gray-900">{selectedInvoice.invoiceId}</p>
+                  {selectedInvoice.sourceEstimateId && <p className="text-xs text-gray-500">Ref: {selectedInvoice.sourceEstimateId}</p>}
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice Date</p>
+                  <p className="text-sm font-semibold text-gray-900">{formatDate(selectedInvoice.invoiceDate)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-red-500 uppercase tracking-wide">Due Date</p>
+                  <p className="text-sm font-semibold text-gray-900">{formatDate(selectedInvoice.dueDate)}</p>
+                </div>
+                <div className="text-right">
+                  <span className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full ${
+                    selectedInvoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 
+                    selectedInvoice.paymentStatus === 'partially_paid' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                  }`}>
+                    {selectedInvoice.paymentStatus === 'paid' ? '✓ PAID' : selectedInvoice.paymentStatus === 'partially_paid' ? 'PARTIAL' : 'UNPAID'}
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* Content */}
-            <div className="overflow-y-auto max-h-[calc(90vh-140px)] p-6">
-              {/* Customer & Property Info */}
+            <div className="overflow-y-auto max-h-[calc(90vh-200px)] p-6">
+              {/* FROM & BILL TO - Side by Side */}
               <div className="grid grid-cols-2 gap-6 mb-6">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Customer Details</h3>
-                  <p className="text-sm font-medium text-gray-900">{selectedInvoice.customerName || '-'}</p>
-                  <p className="text-sm text-gray-600">{selectedInvoice.customerEmail || '-'}</p>
-                  <p className="text-sm text-gray-600">{selectedInvoice.customerPhone || '-'}</p>
+                {/* FROM: Company Details */}
+                <div className="bg-gray-900 rounded-lg p-4">
+                  <p className="text-amber-400 text-xs font-semibold uppercase tracking-wider mb-2">From</p>
+                  <h3 className="text-white font-bold text-base mb-1">XLAND INFRA PVT LTD</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed">
+                    Property Management Services<br />
+                    D.No. 7-333/A/1, Nri Hospital Road<br />
+                    Mangalagiri, Guntur - 522503<br />
+                    <span className="text-amber-400">Phone:</span> +91 8500 010 111<br />
+                    <span className="text-amber-400">Email:</span> info@xlandinfra.com
+                  </p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Property Details</h3>
-                  <p className="text-sm font-medium text-gray-900">{selectedInvoice.propertyName || '-'}</p>
-                  <p className="text-sm text-gray-600">Property ID: {selectedInvoice.propertyCode || '-'}</p>
-                  <p className="text-sm text-gray-600">Estimate: {selectedInvoice.sourceEstimateId || 'N/A'}</p>
-                  {selectedInvoice.sourceWorkOrderId && <p className="text-sm text-gray-600">Work Order: {selectedInvoice.sourceWorkOrderId}</p>}
+                {/* BILL TO: Customer Details */}
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <p className="text-blue-700 text-xs font-semibold uppercase tracking-wider mb-2">Bill To</p>
+                  <h3 className="text-gray-900 font-bold text-base mb-1">{selectedInvoice.customerName || 'Customer'}</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    {selectedInvoice.propertyName && <><strong>Property:</strong> {selectedInvoice.propertyName}<br /></>}
+                    {selectedInvoice.propertyCode && <><strong>Property ID:</strong> {selectedInvoice.propertyCode}<br /></>}
+                    <strong>Phone:</strong> {selectedInvoice.customerPhone || '-'}<br />
+                    <strong>Email:</strong> {selectedInvoice.customerEmail || '-'}
+                    {selectedInvoice.sourceWorkOrderId && <><br /><strong>Work Order:</strong> {selectedInvoice.sourceWorkOrderId}</>}
+                  </p>
                 </div>
               </div>
 
-              {/* Invoice Info */}
-              <div className="grid grid-cols-4 gap-4 mb-6">
-                <div className="text-center p-3 bg-blue-50 rounded-lg">
-                  <p className="text-xs text-gray-500 mb-1">Invoice Date</p>
-                  <p className="text-sm font-semibold text-gray-900">{formatDate(selectedInvoice.invoiceDate)}</p>
-                </div>
-                <div className="text-center p-3 bg-orange-50 rounded-lg">
-                  <p className="text-xs text-gray-500 mb-1">Due Date</p>
-                  <p className="text-sm font-semibold text-gray-900">{formatDate(selectedInvoice.dueDate)}</p>
-                </div>
-                <div className="text-center p-3 bg-purple-50 rounded-lg">
-                  <p className="text-xs text-gray-500 mb-1">Invoice Type</p>
-                  <p className="text-sm font-semibold text-gray-900">{selectedInvoice.invoiceType === 'estimate' ? 'From Estimate' : selectedInvoice.invoiceType === 'work_order' ? 'Work Order' : 'Manual'}</p>
-                </div>
-                <div className="text-center p-3 bg-green-50 rounded-lg">
-                  <p className="text-xs text-gray-500 mb-1">Payment Status</p>
-                  <p className={`text-sm font-semibold ${selectedInvoice.paymentStatus === 'paid' ? 'text-green-600' : selectedInvoice.paymentStatus === 'partially_paid' ? 'text-orange-600' : 'text-red-600'}`}>
-                    {selectedInvoice.paymentStatus === 'paid' ? 'Paid' : selectedInvoice.paymentStatus === 'partially_paid' ? 'Partial' : 'Unpaid'}
-                  </p>
-                </div>
+              {/* Amount Due Highlight */}
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-5 mb-6 text-center">
+                <p className="text-blue-200 text-xs uppercase tracking-wider mb-1">Total Amount Due</p>
+                <p className="text-white text-3xl font-bold">{formatCurrency(selectedInvoice.totalAmount)}</p>
               </div>
 
               {/* Services & Add-ons */}
               {(() => {
                 const rawItems = selectedInvoice.lineItems ? (typeof selectedInvoice.lineItems === 'string' ? JSON.parse(selectedInvoice.lineItems) : selectedInvoice.lineItems) : [];
                 
-                // Filter out AMC Package entries
                 const allItems = rawItems.filter(item => {
                   const desc = String(item.description || item.name || '').toLowerCase();
                   return !desc.includes('amc package') && !desc.includes('amc services');
                 });
 
-                // Helper to check if item is addon
                 const isAddon = (item) => {
                   const typeStr = String(item.type || '').toLowerCase();
                   return typeStr === 'addon' || typeStr === 'add-on' || typeStr === 'add_on';
                 };
 
-                // Helper to extract frequency
                 const getFrequency = (item) => {
                   const freq = item.frequency || item.frequencyType || item.frequency_type || item.billingDuration || '';
                   if (!freq || freq === '-') return '-';
-                  // Capitalize first letter
                   return String(freq).charAt(0).toUpperCase() + String(freq).slice(1).toLowerCase();
                 };
 
-                // Separate services and addons
                 const services = allItems.filter(item => !isAddon(item)).map(item => {
                   const fullDesc = decodeHtmlEntities(String(item.description || item.name || 'Service'));
                   const parts = fullDesc.split(' - ');
                   return {
                     name: decodeHtmlEntities(parts[0] || 'Service'),
-                    description: decodeHtmlEntities(parts.slice(1).join(' - ') || '-'),
+                    description: decodeHtmlEntities(parts.slice(1).join(' - ') || ''),
                     frequency: getFrequency(item),
-                    visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
+                    visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1,
+                    price: item.totalPrice || item.total_price || item.unitPrice || item.unit_price || item.price || 0
                   };
                 });
 
@@ -1118,37 +1138,43 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                   const parts = fullDesc.split(' - ');
                   return {
                     name: decodeHtmlEntities(parts[0] || 'Add-on'),
-                    description: decodeHtmlEntities(parts.slice(1).join(' - ') || '-'),
+                    description: decodeHtmlEntities(parts.slice(1).join(' - ') || ''),
                     frequency: getFrequency(item),
-                    visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
+                    visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1,
+                    price: item.totalPrice || item.total_price || item.unitPrice || item.unit_price || item.price || 0
                   };
                 });
 
                 return (
                   <>
-                    {/* Services Included */}
+                    {/* AMC Services */}
                     {services.length > 0 && (
                       <div className="mb-6">
-                        <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Services Included</h3>
-                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="bg-green-50 rounded-lg border border-green-200 overflow-hidden">
+                          <div className="bg-green-600 px-4 py-3">
+                            <h3 className="text-white text-sm font-semibold uppercase tracking-wide flex items-center gap-2">
+                              <FileText className="w-4 h-4" /> AMC Services
+                            </h3>
+                          </div>
                           <table className="w-full">
-                            <thead className="bg-gray-50">
+                            <thead className="bg-green-100">
                               <tr>
-                                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 w-8">#</th>
-                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Service</th>
-                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Description</th>
-                                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">Frequency</th>
-                                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">Visits</th>
+                                <th className="px-4 py-2.5 text-left text-xs font-semibold text-green-800 uppercase">Service</th>
+                                <th className="px-4 py-2.5 text-center text-xs font-semibold text-green-800 uppercase w-24">Frequency</th>
+                                <th className="px-4 py-2.5 text-center text-xs font-semibold text-green-800 uppercase w-16">Visits</th>
+                                <th className="px-4 py-2.5 text-right text-xs font-semibold text-green-800 uppercase w-24">Amount</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
+                            <tbody>
                               {services.map((item, idx) => (
-                                <tr key={idx}>
-                                  <td className="px-3 py-2 text-sm text-gray-600 text-center">{idx + 1}</td>
-                                  <td className="px-3 py-2 text-sm font-medium text-gray-900">{item.name}</td>
-                                  <td className="px-3 py-2 text-sm text-gray-600">{item.description}</td>
-                                  <td className="px-3 py-2 text-sm text-gray-600 text-center">{item.frequency}</td>
-                                  <td className="px-3 py-2 text-sm text-gray-600 text-center">{item.visits}</td>
+                                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-green-50'}>
+                                  <td className="px-4 py-3 border-b border-green-100">
+                                    <p className="text-sm font-semibold text-green-700">{item.name}</p>
+                                    {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
+                                  </td>
+                                  <td className="px-4 py-3 text-center text-sm text-gray-600 border-b border-green-100">{item.frequency}</td>
+                                  <td className="px-4 py-3 text-center text-sm text-gray-600 border-b border-green-100">{item.visits}</td>
+                                  <td className="px-4 py-3 text-right text-sm font-semibold text-green-700 border-b border-green-100">{formatCurrency(item.price)}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -1160,26 +1186,31 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                     {/* Add-ons */}
                     {addons.length > 0 && (
                       <div className="mb-6">
-                        <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Add-Ons</h3>
-                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="bg-amber-50 rounded-lg border border-amber-200 overflow-hidden">
+                          <div className="bg-amber-500 px-4 py-3">
+                            <h3 className="text-white text-sm font-semibold uppercase tracking-wide flex items-center gap-2">
+                              <Plus className="w-4 h-4" /> Add-on Services
+                            </h3>
+                          </div>
                           <table className="w-full">
-                            <thead className="bg-gray-50">
+                            <thead className="bg-amber-100">
                               <tr>
-                                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 w-8">#</th>
-                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Add-on Service</th>
-                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Description</th>
-                                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">Frequency</th>
-                                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">Visits</th>
+                                <th className="px-4 py-2.5 text-left text-xs font-semibold text-amber-800 uppercase">Add-on</th>
+                                <th className="px-4 py-2.5 text-center text-xs font-semibold text-amber-800 uppercase w-24">Frequency</th>
+                                <th className="px-4 py-2.5 text-center text-xs font-semibold text-amber-800 uppercase w-16">Visits</th>
+                                <th className="px-4 py-2.5 text-right text-xs font-semibold text-amber-800 uppercase w-24">Amount</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
+                            <tbody>
                               {addons.map((item, idx) => (
-                                <tr key={idx}>
-                                  <td className="px-3 py-2 text-sm text-gray-600 text-center">{idx + 1}</td>
-                                  <td className="px-3 py-2 text-sm font-medium text-gray-900">{item.name}</td>
-                                  <td className="px-3 py-2 text-sm text-gray-600">{item.description}</td>
-                                  <td className="px-3 py-2 text-sm text-gray-600 text-center">{item.frequency}</td>
-                                  <td className="px-3 py-2 text-sm text-gray-600 text-center">{item.visits}</td>
+                                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-amber-50'}>
+                                  <td className="px-4 py-3 border-b border-amber-100">
+                                    <p className="text-sm font-semibold text-amber-700">{item.name}</p>
+                                    {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
+                                  </td>
+                                  <td className="px-4 py-3 text-center text-sm text-gray-600 border-b border-amber-100">{item.frequency}</td>
+                                  <td className="px-4 py-3 text-center text-sm text-gray-600 border-b border-amber-100">{item.visits}</td>
+                                  <td className="px-4 py-3 text-right text-sm font-semibold text-amber-700 border-b border-amber-100">{formatCurrency(item.price)}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -1191,37 +1222,48 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                 );
               })()}
 
-              {/* Amount Summary */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <div className="space-y-2">
+              {/* Price Summary - Dark Theme */}
+              <div className="bg-gray-800 rounded-lg overflow-hidden mb-6">
+                <div className="px-4 py-3 border-b border-gray-700">
+                  <h3 className="text-gray-400 text-xs font-semibold uppercase tracking-wider flex items-center gap-2">
+                    <Receipt className="w-4 h-4" /> Price Summary
+                  </h3>
+                </div>
+                <div className="p-4 space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span className="text-gray-900">{formatCurrency(selectedInvoice.subtotal)}</span>
+                    <span className="text-gray-400">Subtotal</span>
+                    <span className="text-gray-200">{formatCurrency(selectedInvoice.subtotal)}</span>
                   </div>
                   {selectedInvoice.discountAmount > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Discount ({selectedInvoice.discountPercentage}%)</span>
-                      <span className="text-green-600">-{formatCurrency(selectedInvoice.discountAmount)}</span>
+                      <span className="text-gray-400">Discount ({selectedInvoice.discountPercentage || 0}%)</span>
+                      <span className="text-green-400">-{formatCurrency(selectedInvoice.discountAmount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">GST ({selectedInvoice.taxPercentage || 18}%)</span>
-                    <span className="text-gray-900">{formatCurrency(selectedInvoice.taxAmount)}</span>
+                    <span className="text-gray-400">GST ({selectedInvoice.taxPercentage || 18}%)</span>
+                    <span className="text-gray-200">{formatCurrency(selectedInvoice.taxAmount)}</span>
                   </div>
-                  <div className="flex justify-between text-base font-semibold pt-2 border-t border-gray-200">
-                    <span className="text-gray-900">Total Amount</span>
-                    <span className="text-gray-900">{formatCurrency(selectedInvoice.totalAmount)}</span>
+                  <div className="border-t border-gray-600 pt-3 mt-3">
+                    <div className="flex justify-between">
+                      <span className="text-white font-semibold">Grand Total</span>
+                      <span className="text-amber-400 text-xl font-bold">{formatCurrency(selectedInvoice.totalAmount)}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Amount Paid</span>
-                    <span className="text-green-600">{formatCurrency(selectedInvoice.amountPaid || 0)}</span>
-                  </div>
-                  <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200">
-                    <span className="text-gray-900">Balance Due</span>
-                    <span className={selectedInvoice.balanceAmount > 0 ? 'text-red-600' : 'text-green-600'}>
-                      {formatCurrency(selectedInvoice.balanceAmount)}
-                    </span>
-                  </div>
+                  {(selectedInvoice.amountPaid || 0) > 0 && (
+                    <>
+                      <div className="border-t border-gray-700 border-dashed pt-3 mt-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-green-400">Amount Paid</span>
+                          <span className="text-green-400">{formatCurrency(selectedInvoice.amountPaid)}</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-red-400 font-semibold">Balance Due</span>
+                        <span className="text-red-400 text-lg font-bold">{formatCurrency(selectedInvoice.balanceAmount)}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
