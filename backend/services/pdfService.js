@@ -229,7 +229,7 @@ const generateEstimatePDF = async (estimate) => {
         y += 15;
         
         // Table header - separate Service and Description columns
-        doc.rect(50, y, 500, 20).fill('#475569');
+        doc.rect(50, y, 500, 20).fill('#1e3a5f');
         doc.fontSize(8).fillColor('#ffffff');
         doc.text('#', 55, y + 6, { continued: false });
         doc.text('Service', 75, y + 6, { continued: false });
@@ -298,7 +298,7 @@ const generateEstimatePDF = async (estimate) => {
         y += 15;
         
         // Add-ons header - separate Service and Description columns
-        doc.rect(50, y, 500, 20).fill('#475569');
+        doc.rect(50, y, 500, 20).fill('#1e3a5f');
         doc.fontSize(8).fillColor('#ffffff');
         doc.text('#', 55, y + 6, { continued: false });
         doc.text('Add-on Service', 75, y + 6, { continued: false });
@@ -479,9 +479,9 @@ const generateInvoicePDF = async (invoice) => {
       
       y += 55;
 
-      // Total Amount Banner
-      doc.rect(50, y, 500, 40).fill('#2563eb');
-      doc.fontSize(10).fillColor('#ffffff').text('Total Amount Due', 60, y + 8);
+      // Total Amount Banner - softer navy color
+      doc.rect(50, y, 500, 40).fill('#1e3a5f');
+      doc.fontSize(10).fillColor('#d4a84b').text('Total Amount Due', 60, y + 8);
       doc.fontSize(18).fillColor('#ffffff').text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, 60, y + 20);
       y += 50;
 
@@ -531,7 +531,7 @@ const generateInvoicePDF = async (invoice) => {
         y += 15;
         
         // Table header
-        doc.rect(50, y, 500, 20).fill('#475569');
+        doc.rect(50, y, 500, 20).fill('#1e3a5f');
         doc.fontSize(8).fillColor('#ffffff');
         doc.text('#', 55, y + 6);
         doc.text('Service', 75, y + 6);
