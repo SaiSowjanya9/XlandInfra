@@ -431,32 +431,41 @@ const generateInvoicePDF = async (invoice) => {
       const lightGray = '#f5f5f5';
       const white = '#ffffff';
 
-      // ===== PREMIUM HEADER WITH DIAGONAL GOLD STRIPE =====
+      // ===== PREMIUM HEADER - Black with Logo and Centered Text =====
       // Black header background
-      doc.rect(0, 0, pageWidth, 70).fill(black);
+      doc.rect(0, 0, pageWidth, 75).fill(black);
       
-      // Gold diagonal stripe
-      doc.save();
-      doc.moveTo(pageWidth - 150, 0);
-      doc.lineTo(pageWidth - 80, 0);
-      doc.lineTo(pageWidth - 30, 70);
-      doc.lineTo(pageWidth - 100, 70);
-      doc.closePath();
-      doc.fill(gold);
-      doc.restore();
-      
-      // Logo
+      // Logo on left
       try {
-        doc.image(LOGO_PATH, margin + 10, 15, { width: 40, height: 40 });
+        doc.image(LOGO_PATH, margin + 15, 12, { width: 50, height: 50 });
       } catch (logoErr) {
-        doc.rect(margin + 10, 15, 40, 40).fill(gold);
+        doc.rect(margin + 15, 12, 50, 50).fill(gold);
       }
       
-      // Company name
-      doc.fontSize(18).fillColor(gold).text('XLAND INFRA', margin + 60, 22);
-      doc.fontSize(8).fillColor(gold).text('PVT LTD', margin + 60, 42);
+      // Company name - "XLAND INFRA" in gold
+      doc.fontSize(22).fillColor(gold).text('XLAND INFRA', margin + 75, 20);
+      
+      // "PVT LTD" with decorative lines on both sides
+      const pvtLtdText = 'PVT LTD';
+      doc.fontSize(9).fillColor(gold);
+      const pvtLtdWidth = doc.widthOfString(pvtLtdText);
+      const pvtLtdX = margin + 75;
+      const mainTextWidth = doc.fontSize(22).widthOfString('XLAND INFRA');
+      const pvtLtdCenterX = pvtLtdX + (mainTextWidth / 2);
+      const actualPvtX = pvtLtdCenterX - (pvtLtdWidth / 2);
+      
+      // Draw the decorative lines
+      const lineY = 48;
+      const lineLength = 30;
+      const lineGap = 8;
+      doc.strokeColor(gold).lineWidth(0.8);
+      doc.moveTo(actualPvtX - lineGap - lineLength, lineY).lineTo(actualPvtX - lineGap, lineY).stroke();
+      doc.moveTo(actualPvtX + pvtLtdWidth + lineGap, lineY).lineTo(actualPvtX + pvtLtdWidth + lineGap + lineLength, lineY).stroke();
+      
+      // Draw PVT LTD text
+      doc.fontSize(9).fillColor(gold).text(pvtLtdText, actualPvtX, 43);
 
-      let y = 85;
+      let y = 90;
 
       // ===== INVOICE ID & DATES ROW =====
       doc.fontSize(9).fillColor('#666666').text('ID:', margin, y);
