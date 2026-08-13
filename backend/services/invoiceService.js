@@ -189,10 +189,15 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
       // - addons_data: Add-on services (JSON array with name, description, price, frequency, visits, totalPrice)
       
       // Parse package_services - check multiple possible field names and structures
+      // For work order estimates, use work_order_services field
+      const isWorkOrderEstimate = estimate.estimate_type === 'work_order';
       let packageServices = [];
       try {
-        // Try package_services first
-        const rawPkgServices = estimate.package_services || estimate.service_rows || estimate.serviceRows;
+        // For work order estimates, check work_order_services first
+        const rawPkgServices = isWorkOrderEstimate 
+          ? (estimate.work_order_services || estimate.package_services)
+          : (estimate.package_services || estimate.service_rows || estimate.serviceRows);
+        
         if (rawPkgServices) {
           const parsed = typeof rawPkgServices === 'string' ? JSON.parse(rawPkgServices) : rawPkgServices;
           if (Array.isArray(parsed)) {
@@ -205,7 +210,21 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
             packageServices = parsed.rows;
           }
         }
-        console.log(`📦 Raw package_services parsed: ${packageServices.length} services`);
+        
+        // For work order estimates with no services, create one from work order data
+        if (isWorkOrderEstimate && (!packageServices || packageServices.length === 0)) {
+          console.log(`📦 Creating service from work order data for estimate ${estimate.estimate_id}`);
+          const subtotalVal = parseFloat(estimate.subtotal) || parseFloat(estimate.total_amount) || 0;
+          packageServices = [{
+            name: estimate.work_order_subcategory || estimate.work_order_category || 'Work Order Service',
+            description: estimate.work_order_description || estimate.description || `Work Order: ${estimate.work_order_id}`,
+            price: subtotalVal,
+            frequencyType: 'One-time',
+            frequencyCount: 1
+          }];
+        }
+        
+        console.log(`📦 Raw package_services parsed: ${packageServices.length} services (isWorkOrder: ${isWorkOrderEstimate})`);
         if (packageServices.length > 0) {
           console.log(`📦 First service sample:`, JSON.stringify(packageServices[0]));
         }
@@ -232,9 +251,10 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
         addonsData = []; 
       }
       
-      console.log(`📦 FP Estimate - Package: ${estimate.package_name}, Services: ${packageServices.length}, Addons: ${addonsData.length}`);
+      console.log(`📦 FP Estimate - Package: ${estimate.package_name}, Services: ${packageServices.length}, Addons: ${addonsData.length}, isWorkOrder: ${isWorkOrderEstimate}`);
       
       // Calculate package price per service (distribute evenly if services exist)
+      // For work order estimates, use the service's own price
       const packagePrice = parseFloat(estimate.package_price) || 0;
       const numServices = packageServices.length || 1;
       const pricePerService = packagePrice / numServices;
@@ -247,11 +267,16 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
           const frequency = service.frequencyType || service.frequency_type || service.frequency || '';
           const visits = service.frequencyCount || service.frequency_count || service.visits || 1;
           
+          // For work order services, use service's own price; otherwise distribute package price
+          const servicePrice = isWorkOrderEstimate 
+            ? (parseFloat(service.price) || parseFloat(service.totalPrice) || parseFloat(estimate.subtotal) || 0)
+            : pricePerService;
+          
           items.push({
             description: `${serviceName}${serviceDesc ? ' - ' + serviceDesc : ''}`,
             quantity: 1,
-            unit_price: Math.round(pricePerService),
-            total_price: Math.round(pricePerService),
+            unit_price: Math.round(servicePrice),
+            total_price: Math.round(servicePrice),
             type: 'service',
             frequency: frequency,
             visits: visits
