@@ -52,10 +52,11 @@ const generateEstimatePDF = async (estimate) => {
         workOrderDescription, workOrderPriority, workOrderStatus
       } = estimate;
 
-      // Debug log received price values
+      // Debug log received values
       console.log('[PDF Service] Received price values:', {
         subtotal, discount, discountAmount, tax, gstPercent, total
       });
+      console.log('[PDF Service] isWorkOrderEstimate:', isWorkOrderEstimate, 'estimateType:', estimateType, 'workOrderId:', workOrderId);
 
       // Ensure numeric values are valid (handle NaN, undefined, null) - round to whole numbers
       const safeNum = (val) => {
@@ -218,7 +219,9 @@ const generateEstimatePDF = async (estimate) => {
       
       // Only show Services Table for NON-work order estimates that have services
       // Work Order Estimates don't need services table - they show work order details instead
-      if (!isWorkOrderEstimate && svcList.length > 0) {
+      // Check both isWorkOrderEstimate flag AND estimateType field for robustness
+      const isWOEstimate = isWorkOrderEstimate || estimateType === 'work_order' || !!workOrderId;
+      if (!isWOEstimate && svcList.length > 0) {
         doc.fontSize(10).fillColor(navy).text('SERVICES INCLUDED', 50, y, { continued: false });
         y += 15;
         
@@ -274,7 +277,7 @@ const generateEstimatePDF = async (estimate) => {
         }
       }
       if (!Array.isArray(addonList)) addonList = [];
-      if (!isWorkOrderEstimate && addonList.length > 0) {
+      if (!isWOEstimate && addonList.length > 0) {
         // Calculate first row height to ensure header + at least one row fit together
         const firstAddonDesc = addonList[0]?.description || '-';
         const firstRowLines = Math.ceil(firstAddonDesc.length / 40);
