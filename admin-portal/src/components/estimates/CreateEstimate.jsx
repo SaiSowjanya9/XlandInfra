@@ -1192,6 +1192,15 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       const gstAmount = (afterDiscount * gstPercent) / 100;
       const total = afterDiscount + gstAmount;
       
+      // Create service line item from work order
+      const workOrderServiceItem = {
+        name: workOrderData.subcategory_name || workOrderData.category_name || 'Work Order Service',
+        description: workOrderData.description || `Work Order: ${workOrderData.work_order_id}`,
+        price: amount,
+        frequencyType: 'One-time',
+        frequencyCount: 1
+      };
+      
       const estimatePayload = {
         estimate_type: 'work_order',
         property_id: workOrderData.property_id,
@@ -1218,7 +1227,9 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
         work_order_subcategory: workOrderData.subcategory_name,
         work_order_description: workOrderData.description,
         work_order_priority: workOrderData.priority,
-        work_order_status: workOrderData.status
+        work_order_status: workOrderData.status,
+        // Services for the PDF/Email
+        work_order_services: [workOrderServiceItem]
       };
       
       console.log('[Work Order Estimate] Saving estimate:', estimatePayload);
