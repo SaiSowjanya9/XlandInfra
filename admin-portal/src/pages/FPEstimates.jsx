@@ -3752,7 +3752,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // Handle estimate status change (FP only)
   const handleEstimateStatusChange = async (estimateId, newStatus) => {
     try {
-      const res = await fetch(`/api/fp/estimates/${estimateId}/status`, {
+      const res = await fetch(`${API_BASE}/api/fp/estimates/${estimateId}/status`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
