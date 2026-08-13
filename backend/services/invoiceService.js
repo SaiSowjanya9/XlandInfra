@@ -832,9 +832,7 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                           <table role="presentation" cellpadding="0" cellspacing="0">
                             <tr>
                               <td style="padding-right: 12px; vertical-align: middle;">
-                                <div style="width: 50px; height: 50px; background: #d4a853; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                                  <span style="color: #1a1a1a; font-size: 24px; font-weight: bold;">X</span>
-                                </div>
+                                <img src="https://admin.xlandinfra.com/logo.webp" alt="XLAND INFRA" style="width: 50px; height: 50px; object-fit: contain;" />
                               </td>
                               <td style="vertical-align: middle;">
                                 <h1 style="color: #d4a853; margin: 0; font-size: 22px; font-weight: bold; letter-spacing: 1px;">XLAND INFRA</h1>
