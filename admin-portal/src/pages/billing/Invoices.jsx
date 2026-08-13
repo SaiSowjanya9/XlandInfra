@@ -1283,9 +1283,7 @@ const InvoiceDetailPanel = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               {/* Company Logo */}
-              <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center">
-                <span className="text-gray-900 text-2xl font-bold">X</span>
-              </div>
+              <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-auto object-contain" />
               <div>
                 <h1 className="text-amber-400 text-xl font-bold tracking-wide">XLAND INFRA</h1>
                 <p className="text-gray-400 text-xs tracking-widest">PVT LTD</p>
