@@ -217,10 +217,13 @@ const generateEstimatePDF = async (estimate) => {
       if (!Array.isArray(svcList)) svcList = [];
       const pageHeight = 780; // A4 usable height
       
-      // Only show Services Table for NON-work order estimates that have services
-      // Work Order Estimates don't need services table - they show work order details instead
-      // Check both isWorkOrderEstimate flag AND estimateType field for robustness
-      const isWOEstimate = isWorkOrderEstimate || estimateType === 'work_order' || !!workOrderId;
+      // Only show Services Table for NON-work order estimates
+      // Work Order Estimates: SKIP services table entirely - they show work order details instead
+      // IMPORTANT: If workOrderId exists, this is a work order estimate - DO NOT show services
+      const hasWorkOrderId = workOrderId && String(workOrderId).length > 0;
+      const isWOEstimate = isWorkOrderEstimate || hasWorkOrderId || estimateType === 'work_order';
+      console.log('🔴 [PDF Service] SERVICES CHECK v2 - isWorkOrderEstimate:', isWorkOrderEstimate, 'workOrderId:', workOrderId, 'hasWorkOrderId:', hasWorkOrderId, 'estimateType:', estimateType, 'isWOEstimate:', isWOEstimate, 'WILL SHOW SERVICES:', !isWOEstimate && svcList.length > 0);
+      
       if (!isWOEstimate && svcList.length > 0) {
         doc.fontSize(10).fillColor(navy).text('SERVICES INCLUDED', 50, y, { continued: false });
         y += 15;
@@ -277,6 +280,7 @@ const generateEstimatePDF = async (estimate) => {
         }
       }
       if (!Array.isArray(addonList)) addonList = [];
+      // Skip for Work Order Estimates
       if (!isWOEstimate && addonList.length > 0) {
         // Calculate first row height to ensure header + at least one row fit together
         const firstAddonDesc = addonList[0]?.description || '-';
