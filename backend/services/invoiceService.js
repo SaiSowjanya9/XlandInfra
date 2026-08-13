@@ -629,6 +629,96 @@ const generateInvoiceFromWorkOrder = async (workOrderId, completedBy = null) => 
 };
 
 /**
+ * Create Razorpay payment link for invoice
+ */
+const createPaymentLinkForInvoice = async (invoiceDbId, invoice) => {
+  try {
+    const Razorpay = require('razorpay');
+    
+    const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || '';
+    const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '';
+    
+    if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+      console.log('⚠️ Razorpay not configured - skipping payment link creation');
+      return null;
+    }
+    
+    const razorpay = new Razorpay({
+      key_id: RAZORPAY_KEY_ID,
+      key_secret: RAZORPAY_KEY_SECRET
+    });
+    
+    // Calculate expiry (7 days from now)
+    const expiresAt = Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60);
+    const expiresAtDate = new Date(expiresAt * 1000);
+    
+    const balanceAmount = parseFloat(invoice.balance_amount) || parseFloat(invoice.total_amount) || 0;
+    
+    if (balanceAmount <= 0) {
+      console.log('⚠️ Invoice has no balance - skipping payment link');
+      return null;
+    }
+    
+    // Create Razorpay payment link
+    const paymentLinkOptions = {
+      amount: Math.round(balanceAmount * 100), // Amount in paise
+      currency: 'INR',
+      accept_partial: true,
+      first_min_partial_amount: 100,
+      description: `Payment for Invoice: ${invoice.invoice_id}`,
+      customer: {
+        name: invoice.customer_name || 'Customer',
+        email: invoice.customer_email || undefined,
+        contact: invoice.customer_phone || undefined
+      },
+      notify: {
+        sms: false,
+        email: false // We send our own email
+      },
+      reminder_enable: true,
+      notes: {
+        invoice_id: invoice.invoice_id,
+        internal_invoice_id: invoiceDbId.toString(),
+        property_id: invoice.property_id?.toString() || '',
+        customer_name: invoice.customer_name || ''
+      },
+      callback_url: `${process.env.FRONTEND_URL || 'https://xlandinfra.com'}/payment/success`,
+      callback_method: 'get',
+      expire_by: expiresAt
+    };
+    
+    const paymentLink = await razorpay.paymentLink.create(paymentLinkOptions);
+    
+    // Update invoice with payment link details
+    await pool.execute(`
+      UPDATE invoices SET
+        payment_link = ?,
+        razorpay_payment_link_id = ?,
+        razorpay_short_url = ?,
+        payment_link_created_at = NOW(),
+        payment_link_expires_at = ?,
+        payment_link_status = 'sent',
+        payment_link_sent_at = NOW(),
+        status = 'sent'
+      WHERE id = ?
+    `, [
+      paymentLink.short_url,
+      paymentLink.id,
+      paymentLink.short_url,
+      expiresAtDate,
+      invoiceDbId
+    ]);
+    
+    console.log(`✅ Payment link created for invoice ${invoice.invoice_id}: ${paymentLink.short_url}`);
+    return paymentLink.short_url;
+    
+  } catch (error) {
+    console.error('❌ Error creating payment link:', error.message);
+    return null;
+  }
+};
+
+/**
  * Send invoice email notification with full details matching estimate design
  */
 const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customerName, invoiceId, totalAmount, dueDate) => {
@@ -650,6 +740,9 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
     `, [invoiceDbId]);
     
     const invoice = invoices[0] || {};
+    
+    // Create Razorpay payment link
+    const paymentLink = await createPaymentLinkForInvoice(invoiceDbId, invoice);
     
     const formatCurrency = (amount) => {
       const num = parseFloat(amount) || 0;
@@ -905,6 +998,29 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                     </table>
                   </td>
                 </tr>
+                
+                <!-- Pay Now Button -->
+                ${paymentLink ? `
+                <tr>
+                  <td style="padding: 0 20px 20px; text-align: center;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center">
+                          <a href="${paymentLink}" style="display: inline-block; background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.4);">
+                            💳 PAY NOW
+                          </a>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td align="center" style="padding-top: 12px;">
+                          <p style="margin: 0; color: #6b7280; font-size: 12px;">Secure payment powered by Razorpay</p>
+                          <p style="margin: 4px 0 0; color: #9ca3af; font-size: 11px;">UPI • Cards • Net Banking • Wallets</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                ` : ''}
                 
                 <!-- Payment Instructions -->
                 <tr>
