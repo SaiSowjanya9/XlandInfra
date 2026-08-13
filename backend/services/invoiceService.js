@@ -911,90 +911,139 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                   </td>
                 </tr>
                 
-                <!-- Services Included -->
-                ${lineItems.length > 0 ? `
+                <!-- AMC Services Section -->
+                ${lineItems.filter(i => i.type === 'service' || !i.type).length > 0 ? `
                 <tr>
-                  <td style="padding: 0 20px 20px;">
-                    <span style="color: #2d3748; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Services Included</span>
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 12px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                      <tr style="background: #f7fafc;">
-                        <th style="padding: 10px 8px; text-align: center; color: #4a5568; font-size: 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0; width: 30px;">#</th>
-                        <th style="padding: 10px 8px; text-align: left; color: #4a5568; font-size: 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0; width: 120px;">Service</th>
-                        <th style="padding: 10px 8px; text-align: left; color: #4a5568; font-size: 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Description</th>
-                        <th style="padding: 10px 8px; text-align: center; color: #4a5568; font-size: 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0; width: 80px;">Frequency</th>
-                        <th style="padding: 10px 8px; text-align: center; color: #4a5568; font-size: 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0; width: 50px;">Visits</th>
-                      </tr>
-                      ${lineItems.map((item, idx) => {
-                        const fullDesc = item.description || item.name || 'Service';
-                        const parts = fullDesc.split(' - ');
-                        const serviceName = parts[0] || 'Service';
-                        const serviceDesc = parts.slice(1).join(' - ') || '-';
-                        const freq = item.frequency || item.frequencyType || item.frequency_type || item.billingDuration || '-';
-                        const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
-                        const visits = item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1;
-                        return `
-                      <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#f7fafc'};">
-                        <td style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0; text-align: center; color: #4a5568; font-size: 13px;">${idx + 1}</td>
-                        <td style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0; color: #1a365d; font-size: 13px; font-weight: 600;">${serviceName}</td>
-                        <td style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0; color: #4a5568; font-size: 13px;">${serviceDesc}</td>
-                        <td style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0; text-align: center; color: #4a5568; font-size: 13px;">${freqDisplay}</td>
-                        <td style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0; text-align: center; color: #4a5568; font-size: 13px;">${visits}</td>
-                      </tr>`;
-                      }).join('')}
-                    </table>
+                  <td style="padding: 0 30px 20px;">
+                    <div style="background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0; overflow: hidden;">
+                      <div style="background: #16a34a; padding: 12px 16px;">
+                        <span style="color: #ffffff; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">📋 AMC Services</span>
+                      </div>
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                        <tr style="background: #dcfce7;">
+                          <th style="padding: 10px 12px; text-align: left; color: #166534; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #bbf7d0;">Service</th>
+                          <th style="padding: 10px 12px; text-align: center; color: #166534; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #bbf7d0; width: 80px;">Frequency</th>
+                          <th style="padding: 10px 12px; text-align: center; color: #166534; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #bbf7d0; width: 50px;">Visits</th>
+                          <th style="padding: 10px 12px; text-align: right; color: #166534; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #bbf7d0; width: 90px;">Amount</th>
+                        </tr>
+                        ${lineItems.filter(i => i.type === 'service' || !i.type).map((item, idx) => {
+                          const fullDesc = item.description || item.name || 'Service';
+                          const parts = fullDesc.split(' - ');
+                          const serviceName = parts[0] || 'Service';
+                          const serviceDesc = parts.slice(1).join(' - ') || '';
+                          const freq = item.frequency || item.frequencyType || item.frequency_type || item.billingDuration || '-';
+                          const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
+                          const visits = item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1;
+                          const price = item.totalPrice || item.total_price || item.unitPrice || item.unit_price || 0;
+                          return `
+                        <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#f0fdf4'};">
+                          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; vertical-align: top;">
+                            <strong style="color: #166534; font-size: 13px;">${serviceName}</strong>
+                            ${serviceDesc ? `<br><span style="color: #6b7280; font-size: 11px; line-height: 1.4;">${serviceDesc}</span>` : ''}
+                          </td>
+                          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563; font-size: 12px; vertical-align: top;">${freqDisplay}</td>
+                          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563; font-size: 12px; vertical-align: top;">${visits}</td>
+                          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #166534; font-size: 13px; font-weight: 600; vertical-align: top;">${formatCurrency(price)}</td>
+                        </tr>`;
+                        }).join('')}
+                      </table>
+                    </div>
                   </td>
                 </tr>
                 ` : ''}
                 
-                <!-- Amount Summary -->
+                <!-- Add-ons Section -->
+                ${lineItems.filter(i => i.type === 'addon').length > 0 ? `
                 <tr>
-                  <td style="padding: 0 20px 20px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f7fafc; border-radius: 8px; overflow: hidden;">
-                      <tr>
-                        <td style="padding: 16px;">
-                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                            <tr>
-                              <td style="padding: 6px 0; color: #718096; font-size: 13px;">Subtotal</td>
-                              <td style="padding: 6px 0; text-align: right; color: #2d3748; font-size: 13px;">${formatCurrency(invoice.subtotal)}</td>
-                            </tr>
-                            ${parseFloat(invoice.discount_amount) > 0 ? `
-                            <tr>
-                              <td style="padding: 6px 0; color: #718096; font-size: 13px;">Discount (${invoice.discount_percentage || 0}%)</td>
-                              <td style="padding: 6px 0; text-align: right; color: #38a169; font-size: 13px;">-${formatCurrency(invoice.discount_amount)}</td>
-                            </tr>
-                            ` : ''}
-                            <tr>
-                              <td style="padding: 6px 0; color: #718096; font-size: 13px;">GST (${invoice.tax_percentage || 18}%)</td>
-                              <td style="padding: 6px 0; text-align: right; color: #2d3748; font-size: 13px;">${formatCurrency(invoice.tax_amount)}</td>
-                            </tr>
-                            <tr>
-                              <td colspan="2" style="padding: 8px 0;"><hr style="border: none; border-top: 1px solid #e2e8f0; margin: 0;"></td>
-                            </tr>
-                            <tr>
-                              <td style="padding: 6px 0; color: #1a365d; font-size: 15px; font-weight: bold;">Total</td>
-                              <td style="padding: 6px 0; text-align: right; color: #1a365d; font-size: 18px; font-weight: bold;">${formatCurrency(totalAmount)}</td>
-                            </tr>
-                            ${parseFloat(invoice.amount_paid) > 0 ? `
-                            <tr>
-                              <td style="padding: 6px 0; color: #38a169; font-size: 13px;">Paid</td>
-                              <td style="padding: 6px 0; text-align: right; color: #38a169; font-size: 13px;">${formatCurrency(invoice.amount_paid)}</td>
-                            </tr>
-                            <tr>
-                              <td style="padding: 6px 0; color: #e53e3e; font-size: 15px; font-weight: bold;">Balance Due</td>
-                              <td style="padding: 6px 0; text-align: right; color: #e53e3e; font-size: 18px; font-weight: bold;">${formatCurrency(invoice.balance_amount || totalAmount)}</td>
-                            </tr>
-                            ` : ''}
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
+                  <td style="padding: 0 30px 20px;">
+                    <div style="background: #fefce8; border-radius: 8px; border: 1px solid #fde047; overflow: hidden;">
+                      <div style="background: #ca8a04; padding: 12px 16px;">
+                        <span style="color: #ffffff; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">➕ Add-on Services</span>
+                      </div>
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                        <tr style="background: #fef9c3;">
+                          <th style="padding: 10px 12px; text-align: left; color: #854d0e; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #fde047;">Add-on</th>
+                          <th style="padding: 10px 12px; text-align: center; color: #854d0e; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #fde047; width: 80px;">Frequency</th>
+                          <th style="padding: 10px 12px; text-align: center; color: #854d0e; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #fde047; width: 50px;">Visits</th>
+                          <th style="padding: 10px 12px; text-align: right; color: #854d0e; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #fde047; width: 90px;">Amount</th>
+                        </tr>
+                        ${lineItems.filter(i => i.type === 'addon').map((item, idx) => {
+                          const fullDesc = item.description || item.name || 'Add-on';
+                          const parts = fullDesc.split(' - ');
+                          const addonName = parts[0] || 'Add-on';
+                          const addonDesc = parts.slice(1).join(' - ') || '';
+                          const freq = item.frequency || item.frequencyType || item.frequency_type || '-';
+                          const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
+                          const visits = item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1;
+                          const price = item.totalPrice || item.total_price || item.unitPrice || item.unit_price || 0;
+                          return `
+                        <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#fefce8'};">
+                          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; vertical-align: top;">
+                            <strong style="color: #854d0e; font-size: 13px;">${addonName}</strong>
+                            ${addonDesc ? `<br><span style="color: #6b7280; font-size: 11px; line-height: 1.4;">${addonDesc}</span>` : ''}
+                          </td>
+                          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563; font-size: 12px; vertical-align: top;">${freqDisplay}</td>
+                          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563; font-size: 12px; vertical-align: top;">${visits}</td>
+                          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #854d0e; font-size: 13px; font-weight: 600; vertical-align: top;">${formatCurrency(price)}</td>
+                        </tr>`;
+                        }).join('')}
+                      </table>
+                    </div>
+                  </td>
+                </tr>
+                ` : ''}
+                
+                <!-- Price Summary -->
+                <tr>
+                  <td style="padding: 0 30px 20px;">
+                    <div style="background: #1e293b; border-radius: 8px; overflow: hidden;">
+                      <div style="padding: 14px 16px; border-bottom: 1px solid #334155;">
+                        <span style="color: #94a3b8; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">💰 Price Summary</span>
+                      </div>
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding: 16px;">
+                        <tr>
+                          <td style="padding: 8px 16px; color: #94a3b8; font-size: 13px;">Subtotal</td>
+                          <td style="padding: 8px 16px; text-align: right; color: #e2e8f0; font-size: 13px;">${formatCurrency(invoice.subtotal)}</td>
+                        </tr>
+                        ${parseFloat(invoice.discount_amount) > 0 ? `
+                        <tr>
+                          <td style="padding: 8px 16px; color: #94a3b8; font-size: 13px;">Discount (${invoice.discount_percentage || 0}%)</td>
+                          <td style="padding: 8px 16px; text-align: right; color: #4ade80; font-size: 13px;">-${formatCurrency(invoice.discount_amount)}</td>
+                        </tr>
+                        ` : ''}
+                        <tr>
+                          <td style="padding: 8px 16px; color: #94a3b8; font-size: 13px;">GST (${invoice.tax_percentage || 18}%)</td>
+                          <td style="padding: 8px 16px; text-align: right; color: #e2e8f0; font-size: 13px;">${formatCurrency(invoice.tax_amount)}</td>
+                        </tr>
+                        <tr>
+                          <td colspan="2" style="padding: 8px 16px;"><hr style="border: none; border-top: 1px solid #475569; margin: 0;"></td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 10px 16px; color: #ffffff; font-size: 16px; font-weight: bold;">Grand Total</td>
+                          <td style="padding: 10px 16px; text-align: right; color: #fbbf24; font-size: 20px; font-weight: bold;">${formatCurrency(totalAmount)}</td>
+                        </tr>
+                        ${parseFloat(invoice.amount_paid) > 0 ? `
+                        <tr>
+                          <td colspan="2" style="padding: 4px 16px;"><hr style="border: none; border-top: 1px dashed #475569; margin: 0;"></td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 16px; color: #4ade80; font-size: 13px;">Amount Paid</td>
+                          <td style="padding: 8px 16px; text-align: right; color: #4ade80; font-size: 13px;">${formatCurrency(invoice.amount_paid)}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 10px 16px; color: #f87171; font-size: 15px; font-weight: bold;">Balance Due</td>
+                          <td style="padding: 10px 16px; text-align: right; color: #f87171; font-size: 18px; font-weight: bold;">${formatCurrency(invoice.balance_amount || totalAmount)}</td>
+                        </tr>
+                        ` : ''}
+                      </table>
+                    </div>
                   </td>
                 </tr>
                 
                 <!-- Pay Now Button -->
                 ${paymentLink ? `
                 <tr>
-                  <td style="padding: 0 20px 20px; text-align: center;">
+                  <td style="padding: 0 30px 20px; text-align: center;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td align="center">
