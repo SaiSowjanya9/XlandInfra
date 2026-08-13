@@ -781,7 +781,7 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
       </tr>
     `).join('');
     
-    const subject = `Invoice ${invoiceId} from XLAND INFRA - Payment Due`;
+    const subject = `Invoice ${invoiceId} from XLAND INFRA PVT LTD - Payment Due`;
     const html = `
       <!DOCTYPE html>
       <html>
@@ -789,130 +789,122 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Invoice ${invoiceId}</title>
-        <!--[if mso]>
-        <style type="text/css">
-          table { border-collapse: collapse; }
-          .mobile-hide { display: table-cell !important; }
-        </style>
-        <![endif]-->
       </head>
       <body style="margin: 0; padding: 0; background-color: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7;">
           <tr>
             <td align="center" style="padding: 20px 10px;">
               <!-- Main Container -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 650px; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
                 
-                <!-- Header -->
+                <!-- Header with Logo and Company Info -->
                 <tr>
-                  <td style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); padding: 24px 20px; text-align: center;">
+                  <td style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); padding: 24px 30px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td align="center">
-                          <h1 style="color: #d4a853; margin: 0; font-size: 24px; font-weight: bold; letter-spacing: 1px;">XLAND INFRA</h1>
-                          <p style="color: #888; margin: 4px 0 0; font-size: 11px; letter-spacing: 2px;">PVT LTD</p>
-                        </td>
-                      </tr>
-
-                    </table>
-                  </td>
-                </tr>
-                
-                <!-- Invoice Info -->
-                <tr>
-                  <td style="padding: 20px; background: #f8f9fa; border-bottom: 1px solid #e2e8f0;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="padding-bottom: 8px;">
-                          <span style="color: #718096; font-size: 12px;">Invoice ID</span><br>
-                          <span style="color: #1a365d; font-size: 18px; font-weight: bold;">${invoiceId}</span>
-                        </td>
-                      </tr>
-                      ${invoice.source_estimate_id ? `
-                      <tr>
-                        <td style="padding-bottom: 12px;">
-                          <span style="color: #718096; font-size: 11px;">Estimate: ${invoice.source_estimate_id}</span>
-                        </td>
-                      </tr>
-                      ` : ''}
-                      <tr>
-                        <td>
-                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                        <td width="50%" style="vertical-align: middle;">
+                          <!-- Company Logo & Name -->
+                          <table role="presentation" cellpadding="0" cellspacing="0">
                             <tr>
-                              <td width="50%" style="vertical-align: top;">
-                                <span style="color: #718096; font-size: 11px;">Invoice Date</span><br>
-                                <span style="color: #2d3748; font-size: 14px; font-weight: 500;">${formatDate(invoice.invoice_date)}</span>
+                              <td style="padding-right: 12px; vertical-align: middle;">
+                                <div style="width: 50px; height: 50px; background: #d4a853; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                  <span style="color: #1a1a1a; font-size: 24px; font-weight: bold;">X</span>
+                                </div>
                               </td>
-                              <td width="50%" style="vertical-align: top; text-align: right;">
-                                <span style="color: #e53e3e; font-size: 11px;">Due Date</span><br>
-                                <span style="color: #e53e3e; font-size: 14px; font-weight: 600;">${formatDate(dueDate)}</span>
-                                <br><span style="color: #2b6cb0; font-size: 12px; font-weight: 500;">Billing: ${invoice.billing_duration || 'One-time'}</span>
+                              <td style="vertical-align: middle;">
+                                <h1 style="color: #d4a853; margin: 0; font-size: 22px; font-weight: bold; letter-spacing: 1px;">XLAND INFRA</h1>
+                                <p style="color: #888; margin: 2px 0 0; font-size: 11px; letter-spacing: 2px;">PVT LTD</p>
                               </td>
                             </tr>
                           </table>
+                        </td>
+                        <td width="50%" style="vertical-align: middle; text-align: right;">
+                          <span style="display: inline-block; background: #d4a853; color: #1a1a1a; padding: 8px 20px; border-radius: 4px; font-size: 18px; font-weight: bold; letter-spacing: 2px;">INVOICE</span>
                         </td>
                       </tr>
                     </table>
                   </td>
                 </tr>
                 
-                <!-- Amount Highlight -->
+                <!-- Invoice Number & Dates Row -->
                 <tr>
-                  <td style="padding: 20px; background: linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%); text-align: center;">
-                    <span style="color: rgba(255,255,255,0.8); font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Total Amount Due</span><br>
-                    <span style="color: #ffffff; font-size: 32px; font-weight: bold;">${formatCurrency(totalAmount)}</span>
+                  <td style="padding: 20px 30px; background: #f8f9fa; border-bottom: 2px solid #e2e8f0;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td width="33%" style="vertical-align: top;">
+                          <span style="color: #718096; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Invoice No.</span><br>
+                          <span style="color: #1a365d; font-size: 16px; font-weight: bold;">${invoiceId}</span>
+                          ${invoice.source_estimate_id ? `<br><span style="color: #718096; font-size: 10px;">Ref: ${invoice.source_estimate_id}</span>` : ''}
+                        </td>
+                        <td width="33%" style="vertical-align: top; text-align: center;">
+                          <span style="color: #718096; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Invoice Date</span><br>
+                          <span style="color: #2d3748; font-size: 14px; font-weight: 600;">${formatDate(invoice.invoice_date)}</span>
+                        </td>
+                        <td width="33%" style="vertical-align: top; text-align: right;">
+                          <span style="color: #e53e3e; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Due Date</span><br>
+                          <span style="color: #e53e3e; font-size: 14px; font-weight: 600;">${formatDate(dueDate)}</span>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
                 
-                <!-- Property Details & Customer Details - Side by Side -->
+                <!-- From & Bill To Section -->
                 <tr>
-                  <td style="padding: 20px;">
+                  <td style="padding: 25px 30px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                       <tr>
-                        <!-- Property Details -->
-                        <td width="48%" style="vertical-align: top; padding-right: 10px;">
-                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #e8f4f8; border-radius: 8px; overflow: hidden; height: 100%;">
+                        <!-- FROM: Company Details -->
+                        <td width="48%" style="vertical-align: top; padding-right: 15px;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #1a1a1a; border-radius: 8px; overflow: hidden;">
                             <tr>
-                              <td style="padding: 16px; border-left: 4px solid #3182ce;">
-                                <span style="color: #2b6cb0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Property Details</span>
-                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 12px;">
-                                  <tr>
-                                    <td style="padding: 4px 0; color: #718096; font-size: 13px;">Property ID: ${invoice.property_code || '-'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td style="padding: 4px 0; color: #718096; font-size: 13px;"><strong style="color: #2d3748;">Name:</strong> ${invoice.property_name || invoice.customer_name || '-'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td style="padding: 4px 0; color: #718096; font-size: 13px;"><strong style="color: #2d3748;">Type:</strong> ${invoice.property_type || '-'}</td>
-                                  </tr>
-                                  ${invoice.zone ? `<tr><td style="padding: 4px 0; color: #718096; font-size: 13px;"><strong style="color: #2d3748;">Zone:</strong> ${invoice.zone}</td></tr>` : ''}
-                                  ${invoice.city ? `<tr><td style="padding: 4px 0; color: #718096; font-size: 13px;"><strong style="color: #2d3748;">City:</strong> ${invoice.city}</td></tr>` : ''}
-                                </table>
+                              <td style="padding: 16px 18px;">
+                                <span style="color: #d4a853; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">From</span>
+                                <h3 style="color: #ffffff; margin: 8px 0 4px; font-size: 15px; font-weight: bold;">XLAND INFRA PVT LTD</h3>
+                                <p style="color: #a0aec0; margin: 0; font-size: 12px; line-height: 1.6;">
+                                  Property Management Services<br>
+                                  Hyderabad, Telangana, India<br>
+                                  <span style="color: #d4a853;">GST:</span> 36XXXXXXXXXXXZX<br>
+                                  <span style="color: #d4a853;">Email:</span> info@xlandinfra.com<br>
+                                  <span style="color: #d4a853;">Phone:</span> +91 XXXXXXXXXX
+                                </p>
                               </td>
                             </tr>
                           </table>
                         </td>
-                        <!-- Customer Details -->
-                        <td width="48%" style="vertical-align: top; padding-left: 10px;">
-                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #e8f4f8; border-radius: 8px; overflow: hidden; height: 100%;">
+                        <!-- BILL TO: Customer Details -->
+                        <td width="48%" style="vertical-align: top; padding-left: 15px;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f0f9ff; border-radius: 8px; overflow: hidden; border: 1px solid #bfdbfe;">
                             <tr>
-                              <td style="padding: 16px; border-left: 4px solid #3182ce;">
-                                <span style="color: #2b6cb0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Customer Details</span>
-                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 12px;">
-                                  <tr>
-                                    <td style="padding: 4px 0; color: #718096; font-size: 13px;"><strong style="color: #2d3748;">Name:</strong> ${customerName || invoice.client_name || '-'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td style="padding: 4px 0; color: #718096; font-size: 13px;"><strong style="color: #2d3748;">Phone:</strong> ${invoice.customer_phone || invoice.client_phone || '-'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td style="padding: 4px 0; color: #718096; font-size: 13px;"><strong style="color: #2d3748;">Email:</strong> ${customerEmail || invoice.client_email || '-'}</td>
-                                  </tr>
-                                  ${invoice.city ? `<tr><td style="padding: 4px 0; color: #718096; font-size: 13px;"><strong style="color: #2d3748;">City:</strong> ${invoice.city}</td></tr>` : ''}
-                                </table>
+                              <td style="padding: 16px 18px;">
+                                <span style="color: #1e40af; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Bill To</span>
+                                <h3 style="color: #1e3a5f; margin: 8px 0 4px; font-size: 15px; font-weight: bold;">${customerName || invoice.client_name || 'Customer'}</h3>
+                                <p style="color: #475569; margin: 0; font-size: 12px; line-height: 1.6;">
+                                  ${invoice.property_name ? `<strong>Property:</strong> ${invoice.property_name}<br>` : ''}
+                                  ${invoice.property_code ? `<strong>Property ID:</strong> ${invoice.property_code}<br>` : ''}
+                                  ${invoice.property_type ? `<strong>Type:</strong> ${invoice.property_type}<br>` : ''}
+                                  ${invoice.city || invoice.zone ? `${invoice.city || ''}${invoice.city && invoice.zone ? ', ' : ''}${invoice.zone || ''}<br>` : ''}
+                                  <strong>Phone:</strong> ${invoice.customer_phone || invoice.client_phone || '-'}<br>
+                                  <strong>Email:</strong> ${customerEmail || invoice.client_email || '-'}
+                                </p>
                               </td>
                             </tr>
                           </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+                <!-- Amount Due Highlight -->
+                <tr>
+                  <td style="padding: 0 30px 20px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); border-radius: 8px; overflow: hidden;">
+                      <tr>
+                        <td style="padding: 20px; text-align: center;">
+                          <span style="color: rgba(255,255,255,0.8); font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Total Amount Due</span><br>
+                          <span style="color: #ffffff; font-size: 36px; font-weight: bold;">${formatCurrency(totalAmount)}</span>
+                          <br><span style="color: rgba(255,255,255,0.7); font-size: 11px;">Billing: ${invoice.billing_duration || 'One-time'}</span>
                         </td>
                       </tr>
                     </table>
@@ -1022,17 +1014,18 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                 </tr>
                 ` : ''}
                 
-                <!-- Payment Instructions -->
+                <!-- Terms & Payment Info -->
                 <tr>
-                  <td style="padding: 0 20px 20px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fffbeb; border-radius: 8px; border-left: 4px solid #d4a853;">
+                  <td style="padding: 0 30px 20px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fefce8; border-radius: 8px; border: 1px solid #fde047;">
                       <tr>
-                        <td style="padding: 16px;">
-                          <span style="color: #92400e; font-size: 14px; font-weight: 600;">💳 Payment Instructions</span>
-                          <p style="margin: 8px 0 0; color: #92400e; font-size: 13px; line-height: 1.5;">
-                            Please make the payment before the due date to avoid any late fees.<br>
-                            For queries: <a href="mailto:info@xlandinfra.com" style="color: #2563eb; text-decoration: none;">info@xlandinfra.com</a>
-                          </p>
+                        <td style="padding: 16px 18px;">
+                          <span style="color: #854d0e; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Terms & Conditions</span>
+                          <ul style="margin: 10px 0 0; padding-left: 18px; color: #713f12; font-size: 11px; line-height: 1.7;">
+                            <li>Payment is due within 14 days of invoice date</li>
+                            <li>Late payments may incur additional charges</li>
+                            <li>All services are subject to our standard terms of service</li>
+                          </ul>
                         </td>
                       </tr>
                     </table>
@@ -1041,14 +1034,24 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                 
                 <!-- Footer -->
                 <tr>
-                  <td style="background: #1a1a1a; padding: 20px; text-align: center;">
-                    <p style="color: #d4a853; margin: 0 0 8px; font-size: 14px; font-weight: 600;">XLAND INFRA PVT LTD</p>
-                    <p style="color: #888; margin: 0; font-size: 11px;">
-                      © ${new Date().getFullYear()} All rights reserved.
-                    </p>
-                    <p style="color: #666; margin: 8px 0 0; font-size: 10px;">
-                      This is an auto-generated invoice. Please do not reply to this email.
-                    </p>
+                  <td style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); padding: 25px 30px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center">
+                          <h3 style="color: #d4a853; margin: 0 0 4px; font-size: 16px; font-weight: bold; letter-spacing: 1px;">XLAND INFRA PVT LTD</h3>
+                          <p style="color: #9ca3af; margin: 0 0 12px; font-size: 11px;">Your Trusted Property Management Partner</p>
+                          <p style="color: #6b7280; margin: 0; font-size: 11px; line-height: 1.6;">
+                            Hyderabad, Telangana, India<br>
+                            Email: info@xlandinfra.com | Website: www.xlandinfra.com
+                          </p>
+                          <hr style="border: none; border-top: 1px solid #374151; margin: 15px 0;">
+                          <p style="color: #6b7280; margin: 0; font-size: 10px;">
+                            © ${new Date().getFullYear()} XLAND INFRA PVT LTD. All rights reserved.<br>
+                            This is a computer-generated invoice and does not require a signature.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
                 
