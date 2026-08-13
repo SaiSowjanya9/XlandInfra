@@ -725,9 +725,7 @@ const BillingUI = () => {
               <div className="bg-gradient-to-b from-blue-50 to-white p-6">
                 {/* Logo */}
                 <div className="text-center mb-6">
-                  <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
-                    <span className="text-white text-2xl font-bold">X</span>
-                  </div>
+                  <img src="/logo.webp" alt="XLAND INFRA" className="h-16 w-auto object-contain mx-auto mb-3" />
                   <h2 className="text-lg font-bold text-gray-900">XLAND INFRA PVT LTD</h2>
                 </div>
 
