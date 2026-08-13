@@ -727,23 +727,23 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       </div>
 
       {/* Charts Row 1 */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
         {/* Work Orders by Status */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders by Status</h3>
             <PeriodDropdown value={statusChartFilter} onChange={setStatusChartFilter} />
           </div>
-          <div className="flex items-center">
-            <div className="w-36 h-36">
+          <div className="flex items-center gap-4">
+            <div className="w-28 h-28 lg:w-36 lg:h-36 flex-shrink-0">
               <DonutChart data={statusData} centerValue={totalFiltered} />
             </div>
-            <div className="flex-1 ml-4 space-y-1.5">
+            <div className="flex-1 min-w-0 space-y-1.5">
               {statusData.map((item, index) => (
                 <div key={index} className="flex items-center gap-2 text-xs">
-                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
-                  <span className="text-gray-600 w-16 flex-shrink-0">{item.name}</span>
-                  <span className="font-medium text-gray-900 whitespace-nowrap">{item.value} ({totalFiltered ? ((item.value / totalFiltered) * 100).toFixed(1) : 0}%)</span>
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                  <span className="text-gray-600 truncate flex-1 min-w-0">{item.name}</span>
+                  <span className="font-medium text-gray-900 flex-shrink-0">{item.value} ({totalFiltered ? ((item.value / totalFiltered) * 100).toFixed(0) : 0}%)</span>
                 </div>
               ))}
             </div>
@@ -751,7 +751,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
 
         {/* Work Orders by Priority */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders by Priority</h3>
             <PeriodDropdown value={priorityChartFilter} onChange={setPriorityChartFilter} />
@@ -759,16 +759,16 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
           {(() => {
             const priorityTotal = applyPeriodFilter(dateFilteredWorkOrders, priorityChartFilter).length;
             return (
-              <div className="flex items-center">
-                <div className="w-36 h-36">
+              <div className="flex items-center gap-4">
+                <div className="w-28 h-28 lg:w-36 lg:h-36 flex-shrink-0">
                   <DonutChart data={priorityData} centerValue={priorityTotal} />
                 </div>
-                <div className="flex-1 ml-4 space-y-3">
+                <div className="flex-1 min-w-0 space-y-3">
                   {priorityData.map((item, index) => (
                     <div key={index} className="flex items-center gap-2 text-xs">
-                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
-                      <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
-                      <span className="font-medium text-gray-900 whitespace-nowrap">{item.value} ({priorityTotal ? ((item.value / priorityTotal) * 100).toFixed(1) : 0}%)</span>
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                      <span className="text-gray-600 truncate flex-1 min-w-0">{item.name}</span>
+                      <span className="font-medium text-gray-900 flex-shrink-0">{item.value} ({priorityTotal ? ((item.value / priorityTotal) * 100).toFixed(0) : 0}%)</span>
                     </div>
                   ))}
                 </div>
@@ -778,7 +778,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
 
         {/* Work Orders by Property Type */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders by Property Type</h3>
             <PeriodDropdown value={propertyTypeFilter} onChange={setPropertyTypeFilter} />
@@ -787,9 +787,9 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
             {propertyTypeData.length > 0 ? (
               propertyTypeData.slice(0, 5).map((item, index) => (
                 <div key={index} className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-600">{item.name}</span>
-                    <span className="font-medium text-gray-900">{item.value}</span>
+                  <div className="flex justify-between items-center gap-2 text-xs">
+                    <span className="text-gray-600 truncate flex-1 min-w-0">{item.name}</span>
+                    <span className="font-medium text-gray-900 flex-shrink-0">{item.value}</span>
                   </div>
                   <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div 

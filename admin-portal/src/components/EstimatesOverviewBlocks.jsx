@@ -265,8 +265,8 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
 
   return (
     <div className="space-y-4">
-      {/* Row 1: 3 Charts - Always in one line */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Row 1: 3 Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Block 1: Estimates by Estimate Type */}
         <div className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
@@ -303,8 +303,8 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
         </div>
       </div>
 
-      {/* Row 2: 3 Charts - Always in one line */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Row 2: 3 Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Block 4: Estimate Status */}
         <div className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
@@ -341,8 +341,8 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
         </div>
       </div>
 
-      {/* Row 3: Work Order Estimates - Same width as above rows */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Row 3: Work Order Estimates */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Block 7: Work Order Estimate Overview */}
         <div className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
