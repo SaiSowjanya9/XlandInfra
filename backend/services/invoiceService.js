@@ -863,10 +863,10 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                                 <h3 style="color: #ffffff; margin: 8px 0 4px; font-size: 15px; font-weight: bold;">XLAND INFRA PVT LTD</h3>
                                 <p style="color: #a0aec0; margin: 0; font-size: 12px; line-height: 1.6;">
                                   Property Management Services<br>
-                                  Hyderabad, Telangana, India<br>
-                                  <span style="color: #d4a853;">GST:</span> 36XXXXXXXXXXXZX<br>
+                                  D.No. 7-333/A/1, Nri Hospital Road<br>
+                                  Mangalagiri, Guntur, 522503<br>
                                   <span style="color: #d4a853;">Email:</span> info@xlandinfra.com<br>
-                                  <span style="color: #d4a853;">Phone:</span> +91 XXXXXXXXXX
+                                  <span style="color: #d4a853;">Phone:</span> +91 8500 010 111
                                 </p>
                               </td>
                             </tr>
@@ -1090,8 +1090,8 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                           <h3 style="color: #d4a853; margin: 0 0 4px; font-size: 16px; font-weight: bold; letter-spacing: 1px;">XLAND INFRA PVT LTD</h3>
                           <p style="color: #9ca3af; margin: 0 0 12px; font-size: 11px;">Your Trusted Property Management Partner</p>
                           <p style="color: #6b7280; margin: 0; font-size: 11px; line-height: 1.6;">
-                            Hyderabad, Telangana, India<br>
-                            Email: info@xlandinfra.com | Website: www.xlandinfra.com
+                            D.No. 7-333/A/1, Nri Hospital Road, Mangalagiri, Guntur - 522503<br>
+                            Phone: +91 8500 010 111 | Email: info@xlandinfra.com
                           </p>
                           <hr style="border: none; border-top: 1px solid #374151; margin: 15px 0;">
                           <p style="color: #6b7280; margin: 0; font-size: 10px;">

@@ -1339,9 +1339,10 @@ const InvoiceDetailPanel = ({
               <h3 className="text-white font-bold text-base mb-1">XLAND INFRA PVT LTD</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
                 Property Management Services<br />
-                Hyderabad, Telangana, India<br />
-                <span className="text-amber-400">Email:</span> info@xlandinfra.com<br />
-                <span className="text-amber-400">GST:</span> 36XXXXXXXXXXXZX
+                D.No. 7-333/A/1, Nri Hospital Road<br />
+                Mangalagiri, Guntur - 522503<br />
+                <span className="text-amber-400">Phone:</span> +91 8500 010 111<br />
+                <span className="text-amber-400">Email:</span> info@xlandinfra.com
               </p>
             </div>
             {/* BILL TO: Customer Details */}
