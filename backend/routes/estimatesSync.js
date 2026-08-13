@@ -516,15 +516,31 @@ router.post('/:estimateId/send', async (req, res) => {
 
     // Parse package services with descriptions
     let packageServices = [];
+    const isWorkOrderEstimate = est.estimate_type === 'work_order';
     try {
-      if (est.package_services) {
-        packageServices = typeof est.package_services === 'string' ? JSON.parse(est.package_services) : est.package_services;
+      const rawServices = isWorkOrderEstimate 
+        ? (est.work_order_services || est.package_services)
+        : est.package_services;
+      if (rawServices) {
+        packageServices = typeof rawServices === 'string' ? JSON.parse(rawServices) : rawServices;
+      }
+      
+      // For work order estimates with no services, create one from the work order data
+      if (isWorkOrderEstimate && (!packageServices || packageServices.length === 0)) {
+        packageServices = [{
+          name: est.work_order_subcategory || est.work_order_category || 'Work Order Service',
+          description: est.work_order_description || est.description || `Work Order: ${est.work_order_id}`,
+          price: parseFloat(est.subtotal) || 0,
+          frequencyType: 'One-time',
+          frequencyCount: 1
+        }];
       }
     } catch (e) {}
 
     // Prepare estimate data for email
     const estimateData = {
       estimateId: est.estimate_id,
+      estimateType: est.estimate_type,
       customerName: est.customer_name,
       customerEmail: est.customer_email,
       customerPhone: est.customer_phone || est.client_phone || '',
@@ -555,7 +571,15 @@ router.post('/:estimateId/send', async (req, res) => {
       discount: parseFloat(est.discount || 0),
       tax: parseFloat(est.tax || 0),
       total: parseFloat(est.total || 0),
-      validUntil: est.valid_until
+      validUntil: est.valid_until,
+      // Work Order fields
+      isWorkOrderEstimate,
+      workOrderId: est.work_order_id,
+      workOrderCategory: est.work_order_category,
+      workOrderSubcategory: est.work_order_subcategory,
+      workOrderDescription: est.work_order_description,
+      workOrderPriority: est.work_order_priority,
+      workOrderStatus: est.work_order_status
     };
     
     if (!estimateData.customerEmail) {
