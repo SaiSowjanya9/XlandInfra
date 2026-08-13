@@ -1404,8 +1404,8 @@ const InvoiceDetailPanel = ({
             </div>
           )}
 
-          {/* Services & Add-ons */}
-          {(() => {
+          {/* Services & Add-ons - Only show for NON-work order invoices */}
+          {selectedInvoice.invoiceType !== 'work_order' && (() => {
             // Decode HTML entities (fix triple/double encoded ampersands etc.)
             const decodeHtml = (str) => {
               if (!str) return str;

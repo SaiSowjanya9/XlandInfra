@@ -4054,8 +4054,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
               </div>
 
-              {/* Package */}
-              {viewEstimate.package_name && (() => {
+              {/* Package - Skip for Work Order Estimates */}
+              {viewEstimate.estimate_type !== 'work_order' && viewEstimate.package_name && (() => {
                 // Try to get description from estimate, fallback to AMC package lookup
                 // Try multiple matching strategies for package lookup
                 let pkgFromList = amcPackages.find(p => p.id == viewEstimate.package_id);
@@ -4154,8 +4154,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 );
               })()}
 
-              {/* Add-ons - Horizontal Table */}
-              {(() => {
+              {/* Add-ons - Horizontal Table - Skip for Work Order Estimates */}
+              {viewEstimate.estimate_type !== 'work_order' && (() => {
                 // Parse addons from addons array or addons_data JSON
                 let addonsList = viewEstimate.addons || [];
                 if ((!addonsList || addonsList.length === 0) && viewEstimate.addons_data) {

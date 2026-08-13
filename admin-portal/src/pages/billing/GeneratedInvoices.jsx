@@ -1101,8 +1101,8 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                 <p className="text-white text-3xl font-bold">{formatCurrency(selectedInvoice.totalAmount)}</p>
               </div>
 
-              {/* Services & Add-ons */}
-              {(() => {
+              {/* Services & Add-ons - Only show for NON-work order invoices */}
+              {selectedInvoice.invoiceType !== 'work_order' && (() => {
                 const rawItems = selectedInvoice.lineItems ? (typeof selectedInvoice.lineItems === 'string' ? JSON.parse(selectedInvoice.lineItems) : selectedInvoice.lineItems) : [];
                 
                 const allItems = rawItems.filter(item => {
