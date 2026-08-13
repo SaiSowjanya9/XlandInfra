@@ -22,6 +22,50 @@ export const ESTIMATE_TYPE_COLORS = {
 // Bar chart colors - used for horizontal bar charts (property types, categories)
 export const BAR_CHART_COLORS = ['#5B8DEF', '#22C55E', '#14B8A6', '#FBBF24', '#EF4444'];
 
+// Known category colors - ensures same category always gets same color
+export const CATEGORY_COLORS = {
+  // Work Order Categories
+  'Building Interior': '#5B8DEF',    // Blue
+  'Building Exterior': '#22C55E',    // Green
+  'Appliances': '#14B8A6',           // Teal
+  'Electrical': '#FBBF24',           // Yellow
+  'Plumbing': '#8B5CF6',             // Purple
+  'HVAC': '#F97316',                 // Orange
+  'Landscaping': '#EC4899',          // Pink
+  'Other': '#6B7280',                // Gray
+  
+  // Property Types
+  'Apartment': '#5B8DEF',            // Blue
+  'Villa': '#22C55E',                // Green
+  'Flat': '#14B8A6',                 // Teal
+  'Plot': '#FBBF24',                 // Yellow
+  'Gated Community': '#8B5CF6'       // Purple
+};
+
+/**
+ * Get a consistent color for any category/name.
+ * Uses predefined colors for known categories, or generates a deterministic color for unknown ones.
+ * @param {string} name - The category or item name
+ * @returns {string} Hex color code
+ */
+export const getConsistentColor = (name) => {
+  // Check if we have a predefined color for this category
+  if (CATEGORY_COLORS[name]) {
+    return CATEGORY_COLORS[name];
+  }
+  
+  // For unknown categories, generate a consistent color based on the name hash
+  // This ensures the same name always gets the same color
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // Use the hash to pick from our color palette
+  const colorIndex = Math.abs(hash) % BAR_CHART_COLORS.length;
+  return BAR_CHART_COLORS[colorIndex];
+};
+
 /**
  * Helper function to create status data array with consistent colors
  * @param {Object} counts - Object with Draft, Sent, Approved, Rejected counts
@@ -49,6 +93,8 @@ export default {
   STATUS_COLORS,
   ESTIMATE_TYPE_COLORS,
   BAR_CHART_COLORS,
+  CATEGORY_COLORS,
+  getConsistentColor,
   createStatusDataArray,
   createEstimateTypeDataArray
 };
