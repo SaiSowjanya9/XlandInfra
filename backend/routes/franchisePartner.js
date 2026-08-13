@@ -4641,6 +4641,8 @@ router.put('/estimates/:id', requireFPScope, async (req, res) => {
 router.post('/estimates/send-email', requireFPScope, async (req, res) => {
   try {
     const { estimateId, email } = req.body;
+    console.log(`📧 [Send Email] Request received - estimateId: ${estimateId}, email: ${email}, fpId: ${req.fpId}`);
+    
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email address is required' });
     }
@@ -4650,6 +4652,8 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
       'SELECT * FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?',
       [estimateId, req.fpId]
     );
+    
+    console.log(`📧 [Send Email] Estimate found: ${estimate ? 'YES' : 'NO'}, estimate_id: ${estimate?.estimate_id}, current status: ${estimate?.status}`);
     
     if (!estimate) {
       return res.status(404).json({ success: false, message: 'Estimate not found' });
@@ -4678,6 +4682,7 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
     
     // Update estimate with action token and status
     try {
+      console.log(`📧 [Send Email] Updating status to 'sent' for estimate id=${estimateId}`);
       const [updateResult] = await pool.execute(
         'UPDATE fp_estimates SET status = ?, action_token = ?, sent_at = NOW() WHERE id = ?',
         ['sent', actionToken, estimateId]
@@ -4685,7 +4690,11 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
       console.log(`✅ Updated estimate ${estimateId}: status=sent, action_token stored, affected=${updateResult.affectedRows}`);
       
       if (updateResult.affectedRows === 0) {
-        console.error(`❌ No rows updated for estimate ID ${estimateId}!`);
+        console.error(`❌ No rows updated for estimate ID ${estimateId}! Check if ID exists.`);
+      } else {
+        // Verify the update
+        const [[verifyResult]] = await pool.execute('SELECT id, status, sent_at FROM fp_estimates WHERE id = ?', [estimateId]);
+        console.log(`📧 [Send Email] Verify after update: id=${verifyResult?.id}, status=${verifyResult?.status}, sent_at=${verifyResult?.sent_at}`);
       }
     } catch (updateErr) {
       // If action_token column doesn't exist, add it and retry
