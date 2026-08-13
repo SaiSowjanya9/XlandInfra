@@ -2695,8 +2695,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </td>
                     <td className="px-4 py-4">
                       <div className="font-medium text-gray-900">{est.client_name}</div>
-                      {(est.estimate_type === 'property_based' || est.estimate_type === 'property-based') && est.property_code && <div className="text-xs text-gray-400">{est.property_code}</div>}
-                      {est.estimate_type === 'work_order' && (est.property_name || est.property_code) && <div className="text-xs text-gray-400">{est.property_name || est.property_code}</div>}
+                      {est.property_code && <div className="text-xs text-gray-400">{est.property_code}</div>}
                     </td>
                     <td className="px-4 py-4 text-gray-600">
                       <div className="flex items-center gap-1.5">
@@ -3932,7 +3931,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">Property Details</p>
                 <div className="bg-slate-50 p-4 rounded-lg grid grid-cols-2 gap-3">
-                  {(viewEstimate.estimate_type === 'property_based' || viewEstimate.estimate_type === 'property-based') && viewEstimate.property_code && (
+                  {viewEstimate.property_code && (
                     <div><p className="text-xs text-gray-500">Property ID</p><p className="font-medium text-sm">{viewEstimate.property_code}</p></div>
                   )}
                   <div><p className="text-xs text-gray-500">Property Name</p><p className="font-medium text-sm">{viewEstimate.property_name || '-'}</p></div>
