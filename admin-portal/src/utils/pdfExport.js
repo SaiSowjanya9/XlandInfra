@@ -469,31 +469,32 @@ const generatePDF = (data, type, filename) => {
       y += descBoxH + 4;
     }
 
-    // ===== SERVICES TABLE =====
-    doc.setTextColor(...navy);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('SERVICES INCLUDED', margin, y);
-    y += 6;
-
+    // ===== SERVICES TABLE (Skip for Work Order Estimates) =====
+    const isWorkOrder = data.isWorkOrderEstimate || data.estimate_type === 'work_order' || data.estimateType === 'work_order' || data.workOrderId;
     const services = data.services || data.packageServices || [];
-    const tableBody = services.length > 0 
-      ? services.map((s, idx) => {
-          const freqCount = s.frequencyCount ?? s.frequency_count ?? s.frequency ?? 1;
-          let freqType = String(s.frequencyType || s.frequency_type || 'Monthly');
-          // Remove "Nx " prefix if present
-          freqType = freqType.replace(/^\d+x\s*/i, '');
-          return [
-            String(idx + 1),
-            decodeHtml(String(s.name || s.service || 'Service')),
-            decodeHtml(String(s.description || '-')),
-            String(freqType),
-            String(freqCount)
-          ];
-        })
-      : [['1', 'No services listed', '-', '-', '-']];
+    
+    if (!isWorkOrder && services.length > 0) {
+      doc.setTextColor(...navy);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('SERVICES INCLUDED', margin, y);
+      y += 6;
 
-    autoTable(doc, {
+      const tableBody = services.map((s, idx) => {
+            const freqCount = s.frequencyCount ?? s.frequency_count ?? s.frequency ?? 1;
+            let freqType = String(s.frequencyType || s.frequency_type || 'Monthly');
+            // Remove "Nx " prefix if present
+            freqType = freqType.replace(/^\d+x\s*/i, '');
+            return [
+              String(idx + 1),
+              decodeHtml(String(s.name || s.service || 'Service')),
+              decodeHtml(String(s.description || '-')),
+              String(freqType),
+              String(freqCount)
+            ];
+          });
+
+      autoTable(doc, {
       startY: y,
       head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
       body: tableBody,
@@ -510,12 +511,13 @@ const generatePDF = (data, type, filename) => {
       },
       alternateRowStyles: { fillColor: [252, 252, 253] },
       rowPageBreak: 'avoid'
-    });
+      });
 
-    y = doc.lastAutoTable.finalY + 8;
+      y = doc.lastAutoTable.finalY + 8;
+    }
 
-    // ===== ADD-ONS TABLE =====
-    if (data.addons && data.addons.length > 0) {
+    // ===== ADD-ONS TABLE (Skip for Work Order Estimates) =====
+    if (!isWorkOrder && data.addons && data.addons.length > 0) {
       doc.setTextColor(...navy);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
@@ -1189,8 +1191,11 @@ export const exportInvoiceToPDF = (invoice) => {
         };
       });
 
-    // Services Included Table
-    if (services.length > 0) {
+    // Check if this is a work order invoice (skip services for work order invoices)
+    const isWorkOrderInvoice = invoice.invoiceType === 'work_order' || invoice.invoice_type === 'work_order';
+    
+    // Services Included Table (Skip for Work Order Invoices)
+    if (!isWorkOrderInvoice && services.length > 0) {
       doc.setTextColor(...navy);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
@@ -1222,8 +1227,8 @@ export const exportInvoiceToPDF = (invoice) => {
       y = doc.lastAutoTable.finalY + 8;
     }
 
-    // Add-ons Table
-    if (addons.length > 0) {
+    // Add-ons Table (Skip for Work Order Invoices)
+    if (!isWorkOrderInvoice && addons.length > 0) {
       doc.setTextColor(...navy);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
