@@ -30,7 +30,7 @@ import {
 } from 'recharts';
 import DonutChart from '../components/common/DonutChart';
 import { getAuthToken } from '../utils/safeStorage';
-import { STATUS_COLORS, ESTIMATE_TYPE_COLORS, BAR_CHART_COLORS } from '../utils/chartColors';
+import { STATUS_COLORS, ESTIMATE_TYPE_COLORS, getConsistentColor } from '../utils/chartColors';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -897,7 +897,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
                         style={{ 
                           width: `${Math.max(widthPercent, 15)}%`,
-                          backgroundColor: BAR_CHART_COLORS[index % BAR_CHART_COLORS.length]
+                          backgroundColor: getConsistentColor(item.name)
                         }}
                       >
                         <span className="text-white text-xs font-medium">{item.value}</span>
@@ -1033,7 +1033,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
                         style={{ 
                           width: `${Math.max(widthPercent, 15)}%`,
-                          backgroundColor: BAR_CHART_COLORS[index % BAR_CHART_COLORS.length]
+                          backgroundColor: getConsistentColor(item.name)
                         }}
                       >
                         <span className="text-white text-xs font-medium">{item.value}</span>
@@ -1168,7 +1168,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                         className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
                         style={{ 
                           width: `${Math.max(widthPercent, 15)}%`,
-                          backgroundColor: BAR_CHART_COLORS[index % BAR_CHART_COLORS.length]
+                          backgroundColor: getConsistentColor(item.name)
                         }}
                       >
                         <span className="text-white text-[10px] font-medium">{item.value}</span>

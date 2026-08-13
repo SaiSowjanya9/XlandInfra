@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import SVGDonutChart from './common/DonutChart';
-import { STATUS_COLORS, ESTIMATE_TYPE_COLORS, BAR_CHART_COLORS } from '../utils/chartColors';
+import { STATUS_COLORS, ESTIMATE_TYPE_COLORS, getConsistentColor } from '../utils/chartColors';
 
 // Helper to normalize property type
 const normalizePropertyType = (type) => {
@@ -106,7 +106,6 @@ const HorizontalBarChart = ({ data }) => {
   }
 
   const maxValue = Math.max(...data.map(d => d.value));
-  const colors = BAR_CHART_COLORS;
 
   return (
     <div className="space-y-2">
@@ -120,7 +119,7 @@ const HorizontalBarChart = ({ data }) => {
                 className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
                 style={{ 
                   width: `${Math.max(widthPercent, 15)}%`,
-                  backgroundColor: colors[index % colors.length]
+                  backgroundColor: getConsistentColor(item.name)
                 }}
               >
                 <span className="text-white text-[10px] font-medium">{item.value}</span>
