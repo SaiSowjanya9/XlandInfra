@@ -166,42 +166,27 @@ const GroupedBarChart = ({ data }) => {
   });
 
   return (
-    <div className="h-44 overflow-x-auto">
-      {/* Legend */}
-      <div className="flex flex-wrap gap-2 mb-2 justify-center">
-        {categories.map((cat, idx) => (
-          <div key={cat} className="flex items-center gap-1">
-            <div 
-              className="w-2.5 h-2.5 rounded-sm" 
-              style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }}
-            />
-            <span className="text-[9px] text-gray-600 truncate max-w-16" title={cat}>
-              {cat.length > 10 ? cat.substring(0, 10) + '...' : cat}
-            </span>
-          </div>
-        ))}
-      </div>
-      
-      {/* Chart */}
-      <div className="flex items-end justify-center gap-4 h-24">
-        {propertyTypes.map((propType, ptIdx) => (
+    <div className="h-48 flex">
+      {/* Chart - Left side */}
+      <div className="flex-1 flex items-end justify-center gap-6 h-36">
+        {propertyTypes.map((propType) => (
           <div key={propType} className="flex flex-col items-center">
             {/* Bars group */}
-            <div className="flex items-end gap-0.5">
+            <div className="flex items-end gap-1">
               {categories.map((cat, catIdx) => {
                 const value = groupedData[propType]?.[cat] || 0;
                 const heightPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;
                 return (
                   <div key={cat} className="flex flex-col items-center">
                     {value > 0 && (
-                      <span className="text-[8px] font-medium text-gray-600 mb-0.5">{value}</span>
+                      <span className="text-[9px] font-semibold text-gray-700 mb-1">{value}</span>
                     )}
                     <div 
-                      className="w-4 rounded-t-sm transition-all duration-500"
+                      className="w-6 rounded-t-md transition-all duration-500"
                       style={{ 
-                        height: value > 0 ? `${Math.max(heightPercent, 8)}%` : '0px',
+                        height: value > 0 ? `${Math.max(heightPercent, 10)}%` : '0px',
                         backgroundColor: CATEGORY_COLORS[catIdx % CATEGORY_COLORS.length],
-                        minHeight: value > 0 ? '8px' : '0px'
+                        minHeight: value > 0 ? '16px' : '0px'
                       }}
                       title={`${propType} - ${cat}: ${value}`}
                     />
@@ -210,14 +195,26 @@ const GroupedBarChart = ({ data }) => {
               })}
             </div>
             {/* Property type label */}
-            <span className="text-[9px] text-gray-500 mt-1 text-center truncate w-16" title={propType}>
+            <span className="text-[10px] text-gray-600 font-medium mt-2 text-center truncate w-20" title={propType}>
               {propType}
             </span>
           </div>
         ))}
       </div>
-      <div className="text-center text-[9px] text-gray-400 mt-1">
-        Property Types ({propertyTypes.length}) × Categories ({categories.length})
+      
+      {/* Legend - Right side */}
+      <div className="w-24 flex flex-col justify-center gap-1.5 pl-3 border-l border-gray-100">
+        {categories.map((cat, idx) => (
+          <div key={cat} className="flex items-center gap-1.5">
+            <div 
+              className="w-3 h-3 rounded-sm flex-shrink-0" 
+              style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }}
+            />
+            <span className="text-[9px] text-gray-600 truncate" title={cat}>
+              {cat.length > 8 ? cat.substring(0, 8) + '...' : cat}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
