@@ -821,9 +821,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
         })}
       </div>
 
-      {/* Middle Row - 3 Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Estimates by Estimate Type (Donut) - Position 1 */}
+      {/* Row 1: Estimates by Estimate Type | Estimate Status */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 1. Estimates by Estimate Type (Donut) */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Estimates by Estimate Type</h3>
@@ -865,7 +865,88 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
         </div>
 
-        {/* Estimates by Property Type (Horizontal Bar) - Position 2 */}
+        {/* 2. Estimate Status (Donut) */}
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Estimate Status</h3>
+            <select
+              value={filter2}
+              onChange={(e) => setFilter2(e.target.value)}
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
+            >
+              <option value="all">All Time</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
+            </select>
+          </div>
+          
+          <div className="flex items-center">
+            <div className="w-1/2 flex items-center justify-center">
+              <DonutChart data={statusDataAll} centerValue={block2Data.length} size={130} strokeWidth={18} />
+            </div>
+            <div className="w-1/2 space-y-1.5 pl-3">
+              {statusDataAll.map((item, index) => (
+                <div key={index} className="flex items-center gap-1.5 text-xs">
+                  <div 
+                    className="w-2 h-2 rounded-full flex-shrink-0" 
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
+                  <span className="text-gray-800 whitespace-nowrap">
+                    {item.value} ({block2Data.length ? ((item.value / block2Data.length) * 100).toFixed(1) : 0}%)
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2: Property-Based Status | Estimates by Property Type (Property-Based) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 3. Property-Based Status (Donut) */}
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Property-Based Status</h3>
+            <select
+              value={filter6}
+              onChange={(e) => setFilter6(e.target.value)}
+              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
+            >
+              <option value="all">All Time</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="half">Last 6 Months</option>
+              <option value="year">This Year</option>
+            </select>
+          </div>
+          
+          <div className="flex items-center">
+            <div className="w-1/2 flex items-center justify-center">
+              <DonutChart data={propertyBasedStatusDataAll} centerValue={block6Data.length} size={130} strokeWidth={18} />
+            </div>
+            <div className="w-1/2 space-y-1.5 pl-3">
+              {propertyBasedStatusDataAll.map((item, index) => (
+                <div key={index} className="flex items-center gap-1.5 text-xs">
+                  <div 
+                    className="w-2 h-2 rounded-full flex-shrink-0" 
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
+                  <span className="text-gray-800 whitespace-nowrap">
+                    {item.value} ({block6Data.length ? ((item.value / block6Data.length) * 100).toFixed(1) : 0}%)
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Estimates by Property Type (Property-Based) - Horizontal Bar */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Estimates by Property Type (Property-Based)</h3>
@@ -919,56 +1000,17 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             </div>
           )}
         </div>
-
-        {/* Property-Based Status (Donut) - Position 3 */}
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Property-Based Status</h3>
-            <select
-              value={filter6}
-              onChange={(e) => setFilter6(e.target.value)}
-              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
-            >
-              <option value="all">All Time</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="quarter">This Quarter</option>
-              <option value="half">Last 6 Months</option>
-              <option value="year">This Year</option>
-            </select>
-          </div>
-          
-          <div className="flex items-center">
-            <div className="w-1/2 flex items-center justify-center">
-              <DonutChart data={propertyBasedStatusDataAll} centerValue={block6Data.length} size={130} strokeWidth={18} />
-            </div>
-            <div className="w-1/2 space-y-1.5 pl-3">
-              {propertyBasedStatusDataAll.map((item, index) => (
-                <div key={index} className="flex items-center gap-1.5 text-xs">
-                  <div 
-                    className="w-2 h-2 rounded-full flex-shrink-0" 
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
-                  <span className="text-gray-800 whitespace-nowrap">
-                    {item.value} ({block6Data.length ? ((item.value / block6Data.length) * 100).toFixed(1) : 0}%)
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* Direct Estimates Row - 3 Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Estimate Status (Donut) - Position 1 */}
+      {/* Row 3: Direct Estimate Status | Estimates by Property Type (Direct) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 5. Direct Estimate Status (Donut) */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Estimate Status</h3>
+            <h3 className="text-sm font-semibold text-gray-800">Direct Estimate Status</h3>
             <select
-              value={filter2}
-              onChange={(e) => setFilter2(e.target.value)}
+              value={filter5}
+              onChange={(e) => setFilter5(e.target.value)}
               className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
             >
               <option value="all">All Time</option>
@@ -982,10 +1024,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           
           <div className="flex items-center">
             <div className="w-1/2 flex items-center justify-center">
-              <DonutChart data={statusDataAll} centerValue={block2Data.length} size={130} strokeWidth={18} />
+              <DonutChart data={directStatusDataAll} centerValue={block5Data.length} size={130} strokeWidth={18} />
             </div>
             <div className="w-1/2 space-y-1.5 pl-3">
-              {statusDataAll.map((item, index) => (
+              {directStatusDataAll.map((item, index) => (
                 <div key={index} className="flex items-center gap-1.5 text-xs">
                   <div 
                     className="w-2 h-2 rounded-full flex-shrink-0" 
@@ -993,7 +1035,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   />
                   <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
                   <span className="text-gray-800 whitespace-nowrap">
-                    {item.value} ({block2Data.length ? ((item.value / block2Data.length) * 100).toFixed(1) : 0}%)
+                    {item.value} ({block5Data.length ? ((item.value / block5Data.length) * 100).toFixed(1) : 0}%)
                   </span>
                 </div>
               ))}
@@ -1001,7 +1043,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
         </div>
 
-        {/* Estimates by Property Type - Direct - Position 2 */}
+        {/* 6. Estimates by Property Type (Direct) - Horizontal Bar */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Estimates by Property Type (Direct)</h3>
@@ -1055,50 +1097,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             </div>
           )}
         </div>
-
-        {/* Direct Estimate Status (Donut) - Position 3 */}
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Direct Estimate Status</h3>
-            <select
-              value={filter5}
-              onChange={(e) => setFilter5(e.target.value)}
-              className="text-xs border border-white/30 rounded-xl px-3 py-1.5 outline-none bg-white/70 backdrop-blur-md cursor-pointer shadow-sm hover:bg-white/90 transition-all focus:ring-2 focus:ring-blue-400/30"
-            >
-              <option value="all">All Time</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="quarter">This Quarter</option>
-              <option value="half">Last 6 Months</option>
-              <option value="year">This Year</option>
-            </select>
-          </div>
-          
-          <div className="flex items-center">
-            <div className="w-1/2 flex items-center justify-center">
-              <DonutChart data={directStatusDataAll} centerValue={block5Data.length} size={130} strokeWidth={18} />
-            </div>
-            <div className="w-1/2 space-y-1.5 pl-3">
-              {directStatusDataAll.map((item, index) => (
-                <div key={index} className="flex items-center gap-1.5 text-xs">
-                  <div 
-                    className="w-2 h-2 rounded-full flex-shrink-0" 
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
-                  <span className="text-gray-800 whitespace-nowrap">
-                    {item.value} ({block5Data.length ? ((item.value / block5Data.length) * 100).toFixed(1) : 0}%)
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* Row 3: Work Order Estimates */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Work Order Estimate Status (Donut) */}
+      {/* Row 4: Work Order Estimate Status | Work Order Estimates by Category */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 7. Work Order Estimate Status (Donut) */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Work Order Estimate Status</h3>
@@ -1137,10 +1140,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
         </div>
 
-        {/* Work Order Estimates by Category (Bar) */}
+        {/* 8. Work Order Estimates by Category (Bar) */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Work Order by Category</h3>
+            <h3 className="text-sm font-semibold text-gray-800">Work Order Estimates by Category</h3>
             <select
               value={filter8}
               onChange={(e) => setFilter8(e.target.value)}
