@@ -137,6 +137,47 @@ const HorizontalBarChart = ({ data }) => {
   );
 };
 
+// Vertical bar chart component for categories
+const VerticalBarChart = ({ data }) => {
+  if (data.length === 0) {
+    return (
+      <div className="h-36 flex flex-col items-center justify-center text-gray-400">
+        <div className="text-3xl font-bold text-gray-300 mb-1">0</div>
+        <div className="text-xs">No data</div>
+      </div>
+    );
+  }
+
+  const maxValue = Math.max(...data.map(d => d.value));
+
+  return (
+    <div className="h-40">
+      <div className="flex items-end justify-center gap-3 h-28">
+        {data.map((item, index) => {
+          const heightPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+          return (
+            <div key={index} className="flex flex-col items-center gap-1">
+              <span className="text-[10px] font-medium text-gray-700">{item.value}</span>
+              <div 
+                className="w-10 rounded-t-md transition-all duration-500 flex items-end justify-center"
+                style={{ 
+                  height: `${Math.max(heightPercent, 10)}%`,
+                  backgroundColor: getConsistentColor(item.name),
+                  minHeight: '12px'
+                }}
+              />
+              <span className="text-[9px] text-gray-500 text-center w-14 truncate" title={item.name}>
+                {item.name.length > 8 ? item.name.substring(0, 8) + '...' : item.name}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="text-center text-[10px] text-gray-400 mt-2">Categories ({data.length})</div>
+    </div>
+  );
+};
+
 const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   // Individual filters for each block
   const [filter1, setFilter1] = useState('all'); // Property-Based Property Type
@@ -365,7 +406,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
             <h3 className="text-sm font-semibold text-gray-800">Work Order Estimates by Category</h3>
             <FilterSelect value={filter8} onChange={setFilter8} />
           </div>
-          <HorizontalBarChart data={workOrderCategoryData} />
+          <VerticalBarChart data={workOrderCategoryData} />
         </div>
       </div>
     </div>

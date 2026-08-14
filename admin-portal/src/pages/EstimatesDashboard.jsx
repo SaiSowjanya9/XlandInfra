@@ -1140,7 +1140,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
         </div>
 
-        {/* 8. Work Order Estimates by Category (Bar) */}
+        {/* 8. Work Order Estimates by Category (Vertical Bar) */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Work Order Estimates by Category</h3>
@@ -1159,32 +1159,30 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
           
           {workOrderCategoryData.length > 0 ? (
-            <div className="space-y-2">
-              {workOrderCategoryData.map((item, index) => {
-                const maxValue = Math.max(...workOrderCategoryData.map(d => d.value));
-                const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-                return (
-                  <div key={index} className="flex items-center gap-2">
-                    <div className="w-20 text-xs text-gray-600 truncate">{item.name}</div>
-                    <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+            <div className="h-40">
+              <div className="flex items-end justify-center gap-3 h-28">
+                {workOrderCategoryData.map((item, index) => {
+                  const maxValue = Math.max(...workOrderCategoryData.map(d => d.value));
+                  const heightPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+                  return (
+                    <div key={index} className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] font-medium text-gray-700">{item.value}</span>
                       <div 
-                        className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
+                        className="w-10 rounded-t-md transition-all duration-500"
                         style={{ 
-                          width: `${Math.max(widthPercent, 15)}%`,
-                          backgroundColor: getConsistentColor(item.name)
+                          height: `${Math.max(heightPercent, 10)}%`,
+                          backgroundColor: getConsistentColor(item.name),
+                          minHeight: '12px'
                         }}
-                      >
-                        <span className="text-white text-[10px] font-medium">{item.value}</span>
-                      </div>
+                      />
+                      <span className="text-[9px] text-gray-500 text-center w-14 truncate" title={item.name}>
+                        {item.name.length > 8 ? item.name.substring(0, 8) + '...' : item.name}
+                      </span>
                     </div>
-                  </div>
-                );
-              })}
-              <div className="flex justify-between text-[10px] text-gray-400 mt-1 px-1">
-                <span>0</span>
-                <span>Number of Estimates</span>
-                <span>{Math.max(...workOrderCategoryData.map(d => d.value))}</span>
+                  );
+                })}
               </div>
+              <div className="text-center text-[10px] text-gray-400 mt-2">Categories ({workOrderCategoryData.length})</div>
             </div>
           ) : (
             <div className="h-36 flex flex-col items-center justify-center text-gray-400">
