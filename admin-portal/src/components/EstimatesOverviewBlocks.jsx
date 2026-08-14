@@ -265,9 +265,9 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
 
   return (
     <div className="space-y-4">
-      {/* Row 1: 3 Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Block 1: Estimates by Estimate Type */}
+      {/* Row 1: Estimates by Estimate Type | Estimate Status */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 1. Estimates by Estimate Type */}
         <div className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Estimates by Estimate Type</h3>
@@ -280,32 +280,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
           />
         </div>
 
-        {/* Block 2: Estimates by Property Type (Property-Based) */}
-        <div className="bg-white rounded-xl p-4 border border-gray-100">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Estimates by Property Type (Property-Based)</h3>
-            <FilterSelect value={filter1} onChange={setFilter1} />
-          </div>
-          <HorizontalBarChart data={propertyTypeData} />
-        </div>
-
-        {/* Block 3: Property-Based Status */}
-        <div className="bg-white rounded-xl p-4 border border-gray-100">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Property-Based Status</h3>
-            <FilterSelect value={filter6} onChange={setFilter6} />
-          </div>
-          <DonutChartWithLegend 
-            data={propertyStatusData} 
-            dataAll={propertyStatusDataAll}
-            total={block3Filtered.length}
-          />
-        </div>
-      </div>
-
-      {/* Row 2: 3 Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Block 4: Estimate Status */}
+        {/* 2. Estimate Status */}
         <div className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Estimate Status</h3>
@@ -317,17 +292,36 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
             total={block4Filtered.length}
           />
         </div>
+      </div>
 
-        {/* Block 5: Estimates by Property Type (Direct) */}
+      {/* Row 2: Property-Based Status | Estimates by Property Type (Property-Based) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 3. Property-Based Status */}
         <div className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Estimates by Property Type (Direct)</h3>
-            <FilterSelect value={filter4} onChange={setFilter4} />
+            <h3 className="text-sm font-semibold text-gray-800">Property-Based Status</h3>
+            <FilterSelect value={filter6} onChange={setFilter6} />
           </div>
-          <HorizontalBarChart data={directPropertyTypeData} />
+          <DonutChartWithLegend 
+            data={propertyStatusData} 
+            dataAll={propertyStatusDataAll}
+            total={block3Filtered.length}
+          />
         </div>
 
-        {/* Block 6: Direct Estimate Status */}
+        {/* 4. Estimates by Property Type (Property-Based) */}
+        <div className="bg-white rounded-xl p-4 border border-gray-100">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Estimates by Property Type (Property-Based)</h3>
+            <FilterSelect value={filter1} onChange={setFilter1} />
+          </div>
+          <HorizontalBarChart data={propertyTypeData} />
+        </div>
+      </div>
+
+      {/* Row 3: Direct Estimate Status | Estimates by Property Type (Direct) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 5. Direct Estimate Status */}
         <div className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Direct Estimate Status</h3>
@@ -339,11 +333,20 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
             total={block6Filtered.length}
           />
         </div>
+
+        {/* 6. Estimates by Property Type (Direct) */}
+        <div className="bg-white rounded-xl p-4 border border-gray-100">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Estimates by Property Type (Direct)</h3>
+            <FilterSelect value={filter4} onChange={setFilter4} />
+          </div>
+          <HorizontalBarChart data={directPropertyTypeData} />
+        </div>
       </div>
 
-      {/* Row 3: Work Order Estimates */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Block 7: Work Order Estimate Overview */}
+      {/* Row 4: Work Order Estimate Status | Work Order Estimates by Category */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 7. Work Order Estimate Status */}
         <div className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Work Order Estimate Status</h3>
@@ -356,7 +359,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
           />
         </div>
 
-        {/* Block 8: Work Order Estimates by Category */}
+        {/* 8. Work Order Estimates by Category */}
         <div className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Work Order Estimates by Category</h3>
