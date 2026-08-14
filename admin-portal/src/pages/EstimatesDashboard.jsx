@@ -433,17 +433,18 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   // Only non-zero for chart display
   const statusData = statusDataAll.filter(item => item.value > 0);
 
-  // Block 3: Estimate Type (uses filter3)
+  // Block 3: Estimate Type (uses filter3) - includes all types
   const block3Data = applyPeriodFilter(mainFilteredEstimates, filter3);
   const block3Direct = block3Data.filter(e => e.estimate_type === 'direct' || e.estimateType === 'direct').length;
   const block3PropertyBased = block3Data.filter(e => 
     e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
     e.estimateType === 'property_based' || e.estimateType === 'property-based'
   ).length;
-  // Note: Work Order estimates are shown in their own row, not in this chart
+  const block3WorkOrder = block3Data.filter(e => e.estimate_type === 'work_order' || e.estimateType === 'work_order').length;
   const typeDataAll = [
     { name: 'Direct Estimates', value: block3Direct, color: ESTIMATE_TYPE_COLORS['Direct Estimates'] },
-    { name: 'Property-Based', value: block3PropertyBased, color: ESTIMATE_TYPE_COLORS['Property-Based'] }
+    { name: 'Property-Based', value: block3PropertyBased, color: ESTIMATE_TYPE_COLORS['Property-Based'] },
+    { name: 'Work Order', value: block3WorkOrder, color: ESTIMATE_TYPE_COLORS['Work Order'] }
   ];
   const typeData = typeDataAll.filter(item => item.value > 0);
 
@@ -549,19 +550,28 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const propertyBasedOnly = block1Data;
   const directOnly = block4Data;
 
-  // Calculate trend data for line chart (uses main date filtered data)
+  // Calculate trend data for line chart (uses trendPeriod filter)
   const getTrendData = () => {
+    const trendFilteredData = applyPeriodFilter(mainFilteredEstimates, trendPeriod);
     const monthlyData = {};
     const now = new Date();
     
-    // Initialize last 6 months
-    for (let i = 5; i >= 0; i--) {
+    // Determine how many months to show based on filter
+    let monthsToShow = 6;
+    if (trendPeriod === 'week') monthsToShow = 1;
+    else if (trendPeriod === 'month') monthsToShow = 1;
+    else if (trendPeriod === 'quarter') monthsToShow = 3;
+    else if (trendPeriod === 'half') monthsToShow = 6;
+    else if (trendPeriod === 'year') monthsToShow = 12;
+    
+    // Initialize months
+    for (let i = monthsToShow - 1; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = date.toLocaleString('default', { month: 'short' }) + ' ' + date.getFullYear();
       monthlyData[key] = { name: key, direct: 0, property: 0, workOrder: 0, sortDate: date };
     }
     
-    mainFilteredEstimates.forEach(est => {
+    trendFilteredData.forEach(est => {
       const date = new Date(est.created_at || est.createdAt);
       const key = date.toLocaleString('default', { month: 'short' }) + ' ' + date.getFullYear();
       
