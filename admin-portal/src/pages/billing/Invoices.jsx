@@ -1350,12 +1350,19 @@ const InvoiceDetailPanel = ({
                 </div>
                 <p className="text-gray-800 text-sm font-semibold uppercase tracking-wide">Property Details</p>
               </div>
-              <div className="px-4 pb-4 space-y-2 text-sm">
-                <p className="text-gray-600">Property ID: <span className="text-gray-800">{invoice.propertyCode || '-'}</span></p>
-                <p className="text-gray-600">Name: <span className="text-gray-800">{invoice.propertyName || '-'}</span></p>
-                <p className="text-gray-600">Type: <span className="text-gray-800">{invoice.propertyType || '-'}</span></p>
-                <p className="text-gray-600">Zone: <span className="text-gray-800">{invoice.zone || '-'}</span></p>
-                <p className="text-gray-600">City: <span className="text-gray-800">{invoice.city || '-'}</span></p>
+              <div className="px-4 pb-4 text-sm">
+                <div className="grid grid-cols-[90px_1fr] gap-y-2">
+                  <span className="text-gray-500">Property ID:</span>
+                  <span className="text-gray-800">{invoice.propertyCode || '-'}</span>
+                  <span className="text-gray-500">Name:</span>
+                  <span className="text-gray-800">{invoice.propertyName || '-'}</span>
+                  <span className="text-gray-500">Type:</span>
+                  <span className="text-gray-800">{invoice.propertyType || '-'}</span>
+                  <span className="text-gray-500">Zone:</span>
+                  <span className="text-gray-800">{invoice.zone || '-'}</span>
+                  <span className="text-gray-500">City:</span>
+                  <span className="text-gray-800">{invoice.city || '-'}</span>
+                </div>
               </div>
             </div>
             {/* Customer Details */}
@@ -1366,12 +1373,23 @@ const InvoiceDetailPanel = ({
                 </div>
                 <p className="text-gray-800 text-sm font-semibold uppercase tracking-wide">Customer Details</p>
               </div>
-              <div className="px-4 pb-4 space-y-2 text-sm">
-                <p className="text-gray-600">Name: <span className="text-gray-800">{invoice.customerName || '-'}</span></p>
-                <p className="text-gray-600">Phone: <span className="text-gray-800">{invoice.customerPhone || '-'}</span></p>
-                <p className="text-gray-600 truncate">Email: <span className="text-gray-800">{invoice.customerEmail || '-'}</span></p>
-                <p className="text-gray-600">City: <span className="text-gray-800">{invoice.city || '-'}</span></p>
-                {invoice.sourceWorkOrderId && <p className="text-gray-600">Work Order: <span className="text-gray-800">{invoice.sourceWorkOrderId}</span></p>}
+              <div className="px-4 pb-4 text-sm">
+                <div className="grid grid-cols-[80px_1fr] gap-y-2">
+                  <span className="text-gray-500">Name:</span>
+                  <span className="text-gray-800">{invoice.customerName || '-'}</span>
+                  <span className="text-gray-500">Phone:</span>
+                  <span className="text-gray-800">{invoice.customerPhone || '-'}</span>
+                  <span className="text-gray-500">Email:</span>
+                  <span className="text-gray-800 truncate">{invoice.customerEmail || '-'}</span>
+                  <span className="text-gray-500">City:</span>
+                  <span className="text-gray-800">{invoice.city || '-'}</span>
+                  {invoice.sourceWorkOrderId && (
+                    <>
+                      <span className="text-gray-500">Work Order:</span>
+                      <span className="text-gray-800">{invoice.sourceWorkOrderId}</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1492,47 +1510,45 @@ const InvoiceDetailPanel = ({
             <div className="w-72 bg-white rounded-xl shadow-sm overflow-hidden">
               {/* Header with icon and decorative lines */}
               <div className="flex items-center justify-center gap-2 py-3">
-                <div className="w-12 h-[1px] bg-[#c9a227]"></div>
+                <div className="w-10 h-[1px] bg-[#c9a227]"></div>
                 <div className="flex items-center gap-2">
                   <Receipt className="w-4 h-4 text-[#c9a227]" />
                   <p className="text-gray-800 text-sm font-semibold uppercase tracking-wide">Price Summary</p>
                 </div>
-                <div className="w-12 h-[1px] bg-[#c9a227]"></div>
+                <div className="w-10 h-[1px] bg-[#c9a227]"></div>
               </div>
-              <div className="px-4 pb-4 space-y-2.5 text-sm border-t border-gray-100 pt-3">
-                <div className="flex justify-between">
+              <div className="px-5 pb-4 text-sm border-t border-gray-100 pt-3">
+                <div className="grid grid-cols-[1fr_auto] gap-y-2.5 gap-x-4">
                   <span className="text-gray-500">Subtotal:</span>
-                  <span className="text-gray-700">Rs. {Math.round(invoice.subtotal || 0).toLocaleString('en-IN')}</span>
-                </div>
-                {invoice.discountAmount > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-green-600">Discount:</span>
-                    <span className="text-green-600">-Rs. {Math.round(invoice.discountAmount).toLocaleString('en-IN')}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
+                  <span className="text-gray-700 text-right">Rs. {Math.round(invoice.subtotal || 0).toLocaleString('en-IN')}</span>
+                  
+                  {invoice.discountAmount > 0 && (
+                    <>
+                      <span className="text-green-600">Discount:</span>
+                      <span className="text-green-600 text-right">-Rs. {Math.round(invoice.discountAmount).toLocaleString('en-IN')}</span>
+                    </>
+                  )}
+                  
                   <span className="text-gray-500">GST ({invoice.taxPercentage || 18}.00%):</span>
-                  <span className="text-gray-700">Rs. {Math.round(invoice.taxAmount || 0).toLocaleString('en-IN')}</span>
+                  <span className="text-gray-700 text-right">Rs. {Math.round(invoice.taxAmount || 0).toLocaleString('en-IN')}</span>
                 </div>
+                
                 <div className="border-t border-gray-200 pt-3 mt-3">
-                  <div className="flex justify-between">
+                  <div className="grid grid-cols-[1fr_auto] gap-x-4">
                     <span className="text-[#c9a227] font-bold">Total:</span>
-                    <span className="text-[#c9a227] font-bold text-lg">Rs. {Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}</span>
+                    <span className="text-[#c9a227] font-bold text-lg text-right">Rs. {Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}</span>
                   </div>
                 </div>
+                
                 {invoice.amountPaid > 0 && (
-                  <>
-                    <div className="border-t border-dashed border-gray-200 pt-3 mt-2">
-                      <div className="flex justify-between">
-                        <span className="text-green-600">Amount Paid:</span>
-                        <span className="text-green-600 font-semibold">Rs. {Math.round(invoice.amountPaid).toLocaleString('en-IN')}</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between">
+                  <div className="border-t border-dashed border-gray-200 pt-3 mt-3">
+                    <div className="grid grid-cols-[1fr_auto] gap-y-2 gap-x-4">
+                      <span className="text-green-600">Amount Paid:</span>
+                      <span className="text-green-600 font-semibold text-right">Rs. {Math.round(invoice.amountPaid).toLocaleString('en-IN')}</span>
                       <span className="text-red-600 font-semibold">Balance Due:</span>
-                      <span className="text-red-600 font-bold">Rs. {Math.round(invoice.balanceAmount || 0).toLocaleString('en-IN')}</span>
+                      <span className="text-red-600 font-bold text-right">Rs. {Math.round(invoice.balanceAmount || 0).toLocaleString('en-IN')}</span>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
