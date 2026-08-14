@@ -15,5 +15,8 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  build: {
+    chunkSizeWarningLimit: 1000 // Increase limit to 1MB to suppress warnings
   }
 })
