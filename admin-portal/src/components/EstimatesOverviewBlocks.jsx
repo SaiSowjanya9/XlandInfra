@@ -203,15 +203,15 @@ const GroupedBarChart = ({ data }) => {
       </div>
       
       {/* Legend - Right side */}
-      <div className="w-24 flex flex-col justify-center gap-1.5 pl-3 border-l border-gray-100">
+      <div className="w-36 flex flex-col justify-center gap-1.5 pl-3 border-l border-gray-100">
         {categories.map((cat, idx) => (
           <div key={cat} className="flex items-center gap-1.5">
             <div 
               className="w-3 h-3 rounded-sm flex-shrink-0" 
               style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }}
             />
-            <span className="text-[9px] text-gray-600 truncate" title={cat}>
-              {cat.length > 8 ? cat.substring(0, 8) + '...' : cat}
+            <span className="text-[9px] text-gray-600 leading-tight" title={cat}>
+              {cat}
             </span>
           </div>
         ))}
