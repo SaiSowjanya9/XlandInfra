@@ -501,18 +501,37 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   ];
   const workOrderStatusData = workOrderStatusDataAll.filter(item => item.value > 0);
 
-  // Block 8: Work Order Estimates by Category (uses filter8)
+  // Block 8: Work Order Estimates by Category grouped by Property Type
   const block8Data = applyPeriodFilter(mainFilteredEstimates, filter8).filter(e => 
     e.estimate_type === 'work_order' || e.estimateType === 'work_order'
   );
-  const workOrderCategoryCount = {};
+  
+  // Group by property type, then by category
+  const workOrderByPropertyAndCategory = {};
+  const allCategories = new Set();
+  
   block8Data.forEach(est => {
+    const propType = normalizePropertyType(est.property_type || est.propertyType);
     const category = est.work_order_category || est.workOrderCategory || 'Other';
-    workOrderCategoryCount[category] = (workOrderCategoryCount[category] || 0) + 1;
+    
+    allCategories.add(category);
+    
+    if (!workOrderByPropertyAndCategory[propType]) {
+      workOrderByPropertyAndCategory[propType] = {};
+    }
+    workOrderByPropertyAndCategory[propType][category] = 
+      (workOrderByPropertyAndCategory[propType][category] || 0) + 1;
   });
-  const workOrderCategoryData = Object.entries(workOrderCategoryCount)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value);
+  
+  // Convert to array format for chart
+  const woPropertyTypes = Object.keys(workOrderByPropertyAndCategory).sort();
+  const woCategories = Array.from(allCategories).sort();
+  
+  // Category colors for grouped chart
+  const CATEGORY_COLORS = [
+    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', 
+    '#06B6D4', '#EC4899', '#84CC16', '#F97316', '#6366F1'
+  ];
 
   // Block 9: Work Order Overview (uses filter9)
   const block9Data = applyPeriodFilter(mainFilteredEstimates, filter9).filter(e => 
@@ -1140,10 +1159,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
         </div>
 
-        {/* 8. Work Order Estimates by Category (Vertical Bar) */}
+        {/* 8. Work Orders: Category by Property Type (Grouped Bar) */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Work Order Estimates by Category</h3>
+            <h3 className="text-sm font-semibold text-gray-800">Work Orders: Category by Property Type</h3>
             <select
               value={filter8}
               onChange={(e) => setFilter8(e.target.value)}
@@ -1158,31 +1177,71 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             </select>
           </div>
           
-          {workOrderCategoryData.length > 0 ? (
-            <div className="h-40">
-              <div className="flex items-end justify-center gap-3 h-28">
-                {workOrderCategoryData.map((item, index) => {
-                  const maxValue = Math.max(...workOrderCategoryData.map(d => d.value));
-                  const heightPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+          {woPropertyTypes.length > 0 ? (
+            <div className="h-44 overflow-x-auto">
+              {/* Legend */}
+              <div className="flex flex-wrap gap-2 mb-2 justify-center">
+                {woCategories.map((cat, idx) => (
+                  <div key={cat} className="flex items-center gap-1">
+                    <div 
+                      className="w-2.5 h-2.5 rounded-sm" 
+                      style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }}
+                    />
+                    <span className="text-[9px] text-gray-600 truncate max-w-16" title={cat}>
+                      {cat.length > 10 ? cat.substring(0, 10) + '...' : cat}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Chart */}
+              <div className="flex items-end justify-center gap-4 h-24">
+                {woPropertyTypes.map((propType) => {
+                  // Find max value for scaling
+                  let maxValue = 0;
+                  woPropertyTypes.forEach(pt => {
+                    woCategories.forEach(cat => {
+                      const val = workOrderByPropertyAndCategory[pt]?.[cat] || 0;
+                      if (val > maxValue) maxValue = val;
+                    });
+                  });
+                  
                   return (
-                    <div key={index} className="flex flex-col items-center gap-1">
-                      <span className="text-[10px] font-medium text-gray-700">{item.value}</span>
-                      <div 
-                        className="w-10 rounded-t-md transition-all duration-500"
-                        style={{ 
-                          height: `${Math.max(heightPercent, 10)}%`,
-                          backgroundColor: getConsistentColor(item.name),
-                          minHeight: '12px'
-                        }}
-                      />
-                      <span className="text-[9px] text-gray-500 text-center w-14 truncate" title={item.name}>
-                        {item.name.length > 8 ? item.name.substring(0, 8) + '...' : item.name}
+                    <div key={propType} className="flex flex-col items-center">
+                      {/* Bars group */}
+                      <div className="flex items-end gap-0.5">
+                        {woCategories.map((cat, catIdx) => {
+                          const value = workOrderByPropertyAndCategory[propType]?.[cat] || 0;
+                          const heightPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;
+                          return (
+                            <div key={cat} className="flex flex-col items-center">
+                              {value > 0 && (
+                                <span className="text-[8px] font-medium text-gray-600 mb-0.5">{value}</span>
+                              )}
+                              <div 
+                                className="w-4 rounded-t-sm transition-all duration-500"
+                                style={{ 
+                                  height: value > 0 ? `${Math.max(heightPercent, 8)}%` : '0px',
+                                  backgroundColor: CATEGORY_COLORS[catIdx % CATEGORY_COLORS.length],
+                                  minHeight: value > 0 ? '8px' : '0px'
+                                }}
+                                title={`${propType} - ${cat}: ${value}`}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {/* Property type label */}
+                      <span className="text-[9px] text-gray-500 mt-1 text-center truncate w-16" title={propType}>
+                        {propType}
                       </span>
                     </div>
                   );
                 })}
               </div>
-              <div className="text-center text-[10px] text-gray-400 mt-2">Categories ({workOrderCategoryData.length})</div>
+              <div className="text-center text-[9px] text-gray-400 mt-1">
+                Property Types ({woPropertyTypes.length}) × Categories ({woCategories.length})
+              </div>
             </div>
           ) : (
             <div className="h-36 flex flex-col items-center justify-center text-gray-400">

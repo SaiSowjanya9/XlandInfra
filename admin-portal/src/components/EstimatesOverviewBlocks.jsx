@@ -137,43 +137,88 @@ const HorizontalBarChart = ({ data }) => {
   );
 };
 
-// Vertical bar chart component for categories
-const VerticalBarChart = ({ data }) => {
-  if (data.length === 0) {
+// Category colors for grouped chart
+const CATEGORY_COLORS = [
+  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', 
+  '#06B6D4', '#EC4899', '#84CC16', '#F97316', '#6366F1'
+];
+
+// Grouped bar chart - Categories by Property Type
+const GroupedBarChart = ({ data }) => {
+  const { propertyTypes, categories, data: groupedData } = data;
+  
+  if (propertyTypes.length === 0) {
     return (
       <div className="h-36 flex flex-col items-center justify-center text-gray-400">
         <div className="text-3xl font-bold text-gray-300 mb-1">0</div>
-        <div className="text-xs">No data</div>
+        <div className="text-xs">No work order estimates</div>
       </div>
     );
   }
 
-  const maxValue = Math.max(...data.map(d => d.value));
+  // Find max value for scaling
+  let maxValue = 0;
+  propertyTypes.forEach(pt => {
+    categories.forEach(cat => {
+      const val = groupedData[pt]?.[cat] || 0;
+      if (val > maxValue) maxValue = val;
+    });
+  });
 
   return (
-    <div className="h-40">
-      <div className="flex items-end justify-center gap-3 h-28">
-        {data.map((item, index) => {
-          const heightPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-          return (
-            <div key={index} className="flex flex-col items-center gap-1">
-              <span className="text-[10px] font-medium text-gray-700">{item.value}</span>
-              <div 
-                className="w-10 rounded-t-md transition-all duration-500 flex items-end justify-center"
-                style={{ 
-                  height: `${Math.max(heightPercent, 10)}%`,
-                  backgroundColor: getConsistentColor(item.name),
-                  minHeight: '12px'
-                }}
-              />
-              <span className="text-[9px] text-gray-500 text-center w-14 truncate" title={item.name}>
-                {item.name.length > 8 ? item.name.substring(0, 8) + '...' : item.name}
-              </span>
-            </div>
-          );
-        })}
+    <div className="h-44 overflow-x-auto">
+      {/* Legend */}
+      <div className="flex flex-wrap gap-2 mb-2 justify-center">
+        {categories.map((cat, idx) => (
+          <div key={cat} className="flex items-center gap-1">
+            <div 
+              className="w-2.5 h-2.5 rounded-sm" 
+              style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }}
+            />
+            <span className="text-[9px] text-gray-600 truncate max-w-16" title={cat}>
+              {cat.length > 10 ? cat.substring(0, 10) + '...' : cat}
+            </span>
+          </div>
+        ))}
       </div>
-      <div className="text-center text-[10px] text-gray-400 mt-2">Categories ({data.length})</div>
+      
+      {/* Chart */}
+      <div className="flex items-end justify-center gap-4 h-24">
+        {propertyTypes.map((propType, ptIdx) => (
+          <div key={propType} className="flex flex-col items-center">
+            {/* Bars group */}
+            <div className="flex items-end gap-0.5">
+              {categories.map((cat, catIdx) => {
+                const value = groupedData[propType]?.[cat] || 0;
+                const heightPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;
+                return (
+                  <div key={cat} className="flex flex-col items-center">
+                    {value > 0 && (
+                      <span className="text-[8px] font-medium text-gray-600 mb-0.5">{value}</span>
+                    )}
+                    <div 
+                      className="w-4 rounded-t-sm transition-all duration-500"
+                      style={{ 
+                        height: value > 0 ? `${Math.max(heightPercent, 8)}%` : '0px',
+                        backgroundColor: CATEGORY_COLORS[catIdx % CATEGORY_COLORS.length],
+                        minHeight: value > 0 ? '8px' : '0px'
+                      }}
+                      title={`${propType} - ${cat}: ${value}`}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            {/* Property type label */}
+            <span className="text-[9px] text-gray-500 mt-1 text-center truncate w-16" title={propType}>
+              {propType}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="text-center text-[9px] text-gray-400 mt-1">
+        Property Types ({propertyTypes.length}) × Categories ({categories.length})
+      </div>
     </div>
   );
 };
@@ -279,18 +324,37 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   ];
   const workOrderOverviewData = workOrderOverviewDataAll.filter(item => item.value > 0);
 
-  // Block 8: Work Order Estimates by Category
+  // Block 8: Work Order Estimates by Category grouped by Property Type
   const block8Filtered = applyPeriodFilter(estimates, filter8).filter(e => 
     e.estimate_type === 'work_order' || e.estimateType === 'work_order'
   );
-  const workOrderCategoryCount = {};
+  
+  // Group by property type, then by category
+  const workOrderByPropertyAndCategory = {};
+  const allCategories = new Set();
+  
   block8Filtered.forEach(est => {
+    const propType = normalizePropertyType(est.property_type || est.propertyType);
     const category = est.work_order_category || est.workOrderCategory || 'Other';
-    workOrderCategoryCount[category] = (workOrderCategoryCount[category] || 0) + 1;
+    
+    allCategories.add(category);
+    
+    if (!workOrderByPropertyAndCategory[propType]) {
+      workOrderByPropertyAndCategory[propType] = {};
+    }
+    workOrderByPropertyAndCategory[propType][category] = 
+      (workOrderByPropertyAndCategory[propType][category] || 0) + 1;
   });
-  const workOrderCategoryData = Object.entries(workOrderCategoryCount)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value);
+  
+  // Convert to array format for chart
+  const propertyTypes = Object.keys(workOrderByPropertyAndCategory).sort();
+  const categories = Array.from(allCategories).sort();
+  
+  const groupedWorkOrderData = {
+    propertyTypes,
+    categories,
+    data: workOrderByPropertyAndCategory
+  };
 
   // Block 9: Work Order Estimate Status
   const block9Filtered = applyPeriodFilter(estimates, filter7).filter(e => 
@@ -400,13 +464,13 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
           />
         </div>
 
-        {/* 8. Work Order Estimates by Category */}
+        {/* 8. Work Order Estimates by Category (Grouped by Property Type) */}
         <div className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Work Order Estimates by Category</h3>
+            <h3 className="text-sm font-semibold text-gray-800">Work Orders: Category by Property Type</h3>
             <FilterSelect value={filter8} onChange={setFilter8} />
           </div>
-          <VerticalBarChart data={workOrderCategoryData} />
+          <GroupedBarChart data={groupedWorkOrderData} />
         </div>
       </div>
     </div>
