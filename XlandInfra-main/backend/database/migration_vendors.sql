@@ -1,0 +1,62 @@
+-- Migration: Create vendors table
+-- Run this on the production database
+
+CREATE TABLE IF NOT EXISTS vendors (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  vendor_id VARCHAR(50) UNIQUE NOT NULL,
+  username VARCHAR(100) UNIQUE,
+  email VARCHAR(255),
+  password_hash VARCHAR(255),
+  company_name VARCHAR(255),
+  contact_person VARCHAR(200),
+  phone VARCHAR(20),
+  alternate_phone VARCHAR(20),
+  address TEXT,
+  city VARCHAR(100),
+  state VARCHAR(100),
+  zip_code VARCHAR(20),
+  zone_id INT,
+  zone_name VARCHAR(100),
+  area VARCHAR(100),
+  service_type VARCHAR(100),
+  vendor_type VARCHAR(100),
+  service_categories JSON,
+  service_verified BOOLEAN DEFAULT FALSE,
+  gst_number VARCHAR(50),
+  pan_number VARCHAR(20),
+  license_number VARCHAR(100),
+  owner_name VARCHAR(200),
+  owner_mobile VARCHAR(20),
+  owner_email VARCHAR(255),
+  owner_aadhar VARCHAR(20),
+  manager_name VARCHAR(200),
+  manager_mobile VARCHAR(20),
+  manager_email VARCHAR(255),
+  poc_name VARCHAR(200),
+  poc_mobile VARCHAR(20),
+  poc_email VARCHAR(255),
+  rate_per_visit DECIMAL(10,2),
+  coverage_per_day INT,
+  status ENUM('active', 'inactive', 'pending') DEFAULT 'active',
+  is_active BOOLEAN DEFAULT TRUE,
+  is_verified BOOLEAN DEFAULT FALSE,
+  rating DECIMAL(3,2) DEFAULT 0.00,
+  total_jobs_completed INT DEFAULT 0,
+  last_login TIMESTAMP NULL,
+  franchise_partner_id INT,
+  supervisor_id INT,
+  created_by INT,
+  created_by_name VARCHAR(200),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_vendor_id (vendor_id),
+  INDEX idx_zone_id (zone_id),
+  INDEX idx_franchise_partner (franchise_partner_id),
+  INDEX idx_supervisor (supervisor_id),
+  INDEX idx_status (status)
+);
+
+-- Add foreign keys if referenced tables exist
+-- ALTER TABLE vendors ADD FOREIGN KEY (zone_id) REFERENCES zones(id) ON DELETE SET NULL;
+-- ALTER TABLE vendors ADD FOREIGN KEY (franchise_partner_id) REFERENCES franchise_partners(id) ON DELETE SET NULL;
+-- ALTER TABLE vendors ADD FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
