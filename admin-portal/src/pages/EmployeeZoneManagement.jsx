@@ -391,14 +391,46 @@ const EmployeeZoneManagement = () => {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Employee Zone Management</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Assign and manage zones for employees • {employees.length} employees
-            {selectedFp?.id === 'all' ? ' (All FPs)' : ` for ${selectedFp?.companyName || ''}`}
-          </p>
+      {/* Header with Stats Cards */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-6">
+          <div className="shrink-0">
+            <h1 className="text-2xl font-semibold text-gray-900">Employee Zone Management</h1>
+            <p className="text-gray-500 text-sm mt-1">
+              Assign and manage zones for employees • {employees.length} employees
+              {selectedFp?.id === 'all' ? ' (All FPs)' : ` for ${selectedFp?.companyName || ''}`}
+            </p>
+          </div>
+          {/* Stats Cards - Inline */}
+          <div className="flex items-center gap-3">
+            <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center">
+                <Users className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Total Employees</p>
+                <p className="text-xl font-bold text-gray-900">{employees.length}</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Zones Assigned</p>
+                <p className="text-xl font-bold text-emerald-600">{assignedCount}</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
+                <XCircle className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Pending Assignment</p>
+                <p className="text-xl font-bold text-amber-600">{unassignedCount}</p>
+              </div>
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           {/* FP Switcher */}
@@ -451,37 +483,6 @@ const EmployeeZoneManagement = () => {
           >
             <RefreshCw className="w-5 h-5 text-gray-600" />
           </button>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="flex flex-wrap gap-3">
-        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center">
-            <Users className="w-5 h-5 text-indigo-600" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500">Total Employees</p>
-            <p className="text-xl font-bold text-gray-900">{employees.length}</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center gap-3">
-          <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500">Zones Assigned</p>
-            <p className="text-xl font-bold text-emerald-600">{assignedCount}</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center gap-3">
-          <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
-            <XCircle className="w-5 h-5 text-amber-600" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500">Pending Assignment</p>
-            <p className="text-xl font-bold text-amber-600">{unassignedCount}</p>
-          </div>
         </div>
       </div>
 
