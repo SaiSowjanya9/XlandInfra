@@ -1,3 +1,4 @@
+// WorkOrdersDashboard - Updated with Category Trend Chart
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
