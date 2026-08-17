@@ -1,3 +1,4 @@
+// WorkOrdersDashboard - Updated with Category Trend Chart
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -70,8 +71,11 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
   const [statusChartFilter, setStatusChartFilter] = useState('all');
   const [priorityChartFilter, setPriorityChartFilter] = useState('all');
   const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
-  const [trendPeriod, setTrendPeriod] = useState('monthly');
+  const [trendPeriod, setTrendPeriod] = useState('all');
+  const [trendGranularity, setTrendGranularity] = useState('monthly');
   const [completionTimeFilter, setCompletionTimeFilter] = useState('all');
+  const [categoryTrendFilter, setCategoryTrendFilter] = useState('all');
+  const [categoryTrendGranularity, setCategoryTrendGranularity] = useState('monthly');
   const token = getAuthToken();
   const apiPath = getApiPath(portalType);
   const datePickerRef = useRef(null);
@@ -317,35 +321,189 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
     return 'Other';
   };
 
-  // Trend data
+  // Trend data with granularity support
   const getTrendData = () => {
+    const filtered = applyPeriodFilter(dateFilteredWorkOrders, trendPeriod);
     const now = new Date();
-    const months = [];
-    const monthCount = trendPeriod === 'monthly' ? 6 : 12;
+    const timePoints = [];
     
-    for (let i = monthCount - 1; i >= 0; i--) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push({
-        month: date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-        startDate: date,
-        endDate: new Date(date.getFullYear(), date.getMonth() + 1, 0)
-      });
+    if (trendGranularity === 'daily') {
+      // Show last 14 days
+      let dayCount = 14;
+      if (trendPeriod === 'week') dayCount = 7;
+      else if (trendPeriod === 'month') dayCount = 30;
+      else if (trendPeriod === 'quarter') dayCount = 14;
+      
+      for (let i = dayCount - 1; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(now.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        const endDate = new Date(date);
+        endDate.setHours(23, 59, 59, 999);
+        timePoints.push({
+          label: date.toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
+          startDate: date,
+          endDate: endDate
+        });
+      }
+    } else if (trendGranularity === 'weekly') {
+      // Show last 8 weeks
+      let weekCount = 8;
+      if (trendPeriod === 'week') weekCount = 1;
+      else if (trendPeriod === 'month') weekCount = 4;
+      else if (trendPeriod === 'quarter') weekCount = 12;
+      
+      for (let i = weekCount - 1; i >= 0; i--) {
+        const endDate = new Date(now);
+        endDate.setDate(now.getDate() - (i * 7));
+        const startDate = new Date(endDate);
+        startDate.setDate(endDate.getDate() - 6);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+        timePoints.push({
+          label: `Week ${weekCount - i}`,
+          startDate: startDate,
+          endDate: endDate
+        });
+      }
+    } else {
+      // Monthly (default)
+      let monthCount = 6;
+      if (trendPeriod === 'week') monthCount = 1;
+      else if (trendPeriod === 'month') monthCount = 1;
+      else if (trendPeriod === 'quarter') monthCount = 3;
+      else if (trendPeriod === 'sixmonths') monthCount = 6;
+      else if (trendPeriod === 'year') monthCount = 12;
+      
+      for (let i = monthCount - 1; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        timePoints.push({
+          label: date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+          startDate: date,
+          endDate: new Date(date.getFullYear(), date.getMonth() + 1, 0)
+        });
+      }
     }
 
-    return months.map(({ month, startDate: mStart, endDate: mEnd }) => {
-      const monthWOs = dateFilteredWorkOrders.filter(wo => {
+    return timePoints.map(({ label, startDate: tStart, endDate: tEnd }) => {
+      const periodWOs = filtered.filter(wo => {
         const woDate = new Date(wo.created_at || wo.createdAt);
-        return woDate >= mStart && woDate <= mEnd;
+        return woDate >= tStart && woDate <= tEnd;
       });
 
       return {
-        name: month,
-        Created: monthWOs.length,
-        Completed: monthWOs.filter(wo => wo.status === 'completed').length,
-        Cancelled: monthWOs.filter(wo => wo.status === 'cancelled').length
+        name: label,
+        Created: periodWOs.length,
+        Completed: periodWOs.filter(wo => wo.status === 'completed').length,
+        Cancelled: periodWOs.filter(wo => wo.status === 'cancelled').length
       };
     });
   };
+
+  // Property Type trend data with granularity support (using property categories like GC, Apartment, Villa, etc.)
+  const getCategoryTrendData = () => {
+    const filtered = applyPeriodFilter(dateFilteredWorkOrders, categoryTrendFilter);
+    
+    // Get all unique property types (using the same normalization as property type chart)
+    const categorySet = new Set();
+    filtered.forEach(wo => {
+      const propType = normalizePropertyType(wo.property_type || wo.propertyType);
+      categorySet.add(propType);
+    });
+    const categories = Array.from(categorySet).filter(c => c !== 'Other').slice(0, 6); // Limit to top 6, exclude Other
+    
+    const now = new Date();
+    const timePoints = [];
+    
+    if (categoryTrendGranularity === 'daily') {
+      // Show last 14 days
+      let dayCount = 14;
+      if (categoryTrendFilter === 'week') dayCount = 7;
+      else if (categoryTrendFilter === 'month') dayCount = 30;
+      else if (categoryTrendFilter === 'quarter') dayCount = 14;
+      
+      for (let i = dayCount - 1; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(now.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        const endDate = new Date(date);
+        endDate.setHours(23, 59, 59, 999);
+        timePoints.push({
+          label: date.toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
+          startDate: date,
+          endDate: endDate
+        });
+      }
+    } else if (categoryTrendGranularity === 'weekly') {
+      // Show last 8 weeks
+      let weekCount = 8;
+      if (categoryTrendFilter === 'week') weekCount = 1;
+      else if (categoryTrendFilter === 'month') weekCount = 4;
+      else if (categoryTrendFilter === 'quarter') weekCount = 12;
+      
+      for (let i = weekCount - 1; i >= 0; i--) {
+        const endDate = new Date(now);
+        endDate.setDate(now.getDate() - (i * 7));
+        const startDate = new Date(endDate);
+        startDate.setDate(endDate.getDate() - 6);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+        timePoints.push({
+          label: `Week ${weekCount - i}`,
+          startDate: startDate,
+          endDate: endDate
+        });
+      }
+    } else {
+      // Monthly (default)
+      let monthCount = 6;
+      if (categoryTrendFilter === 'week') monthCount = 1;
+      else if (categoryTrendFilter === 'month') monthCount = 1;
+      else if (categoryTrendFilter === 'quarter') monthCount = 3;
+      else if (categoryTrendFilter === 'sixmonths') monthCount = 6;
+      else if (categoryTrendFilter === 'year') monthCount = 12;
+      
+      for (let i = monthCount - 1; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        timePoints.push({
+          label: date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+          startDate: date,
+          endDate: new Date(date.getFullYear(), date.getMonth() + 1, 0)
+        });
+      }
+    }
+
+    // Build data structure
+    const trendData = timePoints.map(({ label, startDate: tStart, endDate: tEnd }) => {
+      const periodWOs = filtered.filter(wo => {
+        const woDate = new Date(wo.created_at || wo.createdAt);
+        return woDate >= tStart && woDate <= tEnd;
+      });
+
+      const dataPoint = { name: label };
+      categories.forEach(cat => {
+        dataPoint[cat] = periodWOs.filter(wo => {
+          const woPropType = normalizePropertyType(wo.property_type || wo.propertyType);
+          return woPropType === cat;
+        }).length;
+      });
+      return dataPoint;
+    });
+    
+    return { data: trendData, categories };
+  };
+
+  // Category colors for trend chart
+  const categoryColors = [
+    '#3B82F6', // blue
+    '#10B981', // green
+    '#F59E0B', // amber
+    '#8B5CF6', // purple
+    '#EF4444', // red
+    '#06B6D4', // cyan
+    '#EC4899', // pink
+    '#84CC16'  // lime
+  ];
 
   // Average completion time data
   const getCompletionTimeData = () => {
@@ -467,6 +625,19 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       <option value="quarter">This Quarter</option>
       <option value="sixmonths">Last 6 Months</option>
       <option value="year">This Year</option>
+    </select>
+  );
+
+  // Granularity filter dropdown
+  const GranularityDropdown = ({ value, onChange, className = '' }) => (
+    <select 
+      value={value} 
+      onChange={(e) => onChange(e.target.value)}
+      className={`text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
+    >
+      <option value="daily">Daily</option>
+      <option value="weekly">Weekly</option>
+      <option value="monthly">Monthly</option>
     </select>
   );
 
@@ -811,20 +982,69 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
       </div>
 
+      {/* Category Trend Chart */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-sm font-semibold text-gray-900">Work Orders by Property Type Trend</h3>
+          <div className="flex items-center gap-2">
+            <GranularityDropdown value={categoryTrendGranularity} onChange={setCategoryTrendGranularity} />
+            <PeriodDropdown value={categoryTrendFilter} onChange={setCategoryTrendFilter} />
+          </div>
+        </div>
+        {(() => {
+          const categoryTrend = getCategoryTrendData();
+          return (
+            <>
+              <div className="flex flex-wrap items-center gap-4 mb-4">
+                {categoryTrend.categories.map((cat, index) => (
+                  <div key={cat} className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: categoryColors[index % categoryColors.length] }}></div>
+                    <span className="text-xs text-gray-600">{cat}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={categoryTrend.data}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#9CA3AF" />
+                    <YAxis tick={{ fontSize: 11 }} stroke="#9CA3AF" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'white', 
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+                      }}
+                    />
+                    {categoryTrend.categories.map((cat, index) => (
+                      <Line 
+                        key={cat}
+                        type="monotone" 
+                        dataKey={cat} 
+                        stroke={categoryColors[index % categoryColors.length]} 
+                        strokeWidth={2} 
+                        dot={{ fill: categoryColors[index % categoryColors.length], strokeWidth: 0, r: 4 }} 
+                      />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </>
+          );
+        })()}
+      </div>
+
       {/* Charts Row 2 */}
       <div className="grid grid-cols-2 gap-6">
         {/* Work Orders Trend */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders Trend</h3>
-            <select 
-              value={trendPeriod} 
-              onChange={(e) => setTrendPeriod(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="monthly">Monthly</option>
-              <option value="yearly">Yearly</option>
-            </select>
+            <div className="flex items-center gap-2">
+              <GranularityDropdown value={trendGranularity} onChange={setTrendGranularity} />
+              <PeriodDropdown value={trendPeriod} onChange={setTrendPeriod} />
+            </div>
           </div>
           <div className="flex items-center gap-4 mb-4">
             <div className="flex items-center gap-2">
