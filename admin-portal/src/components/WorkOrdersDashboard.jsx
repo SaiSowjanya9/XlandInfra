@@ -400,15 +400,15 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
     });
   };
 
-  // Property Type trend data with granularity support (using property categories like GC, Apartment, Villa, etc.)
+  // Service Category trend data (Plumbing, Electrical, HVAC, etc.)
   const getCategoryTrendData = () => {
     const filtered = applyPeriodFilter(dateFilteredWorkOrders, categoryTrendFilter);
     
-    // Get all unique property types (using the same normalization as property type chart)
+    // Get all unique service categories (Plumbing, Electrical, etc.)
     const categorySet = new Set();
     filtered.forEach(wo => {
-      const propType = normalizePropertyType(wo.property_type || wo.propertyType);
-      categorySet.add(propType);
+      const category = wo.category || wo.service_category || wo.serviceCategory || 'Other';
+      categorySet.add(category);
     });
     const categories = Array.from(categorySet).filter(c => c !== 'Other').slice(0, 6); // Limit to top 6, exclude Other
     
@@ -483,8 +483,8 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       const dataPoint = { name: label };
       categories.forEach(cat => {
         dataPoint[cat] = periodWOs.filter(wo => {
-          const woPropType = normalizePropertyType(wo.property_type || wo.propertyType);
-          return woPropType === cat;
+          const woCategory = wo.category || wo.service_category || wo.serviceCategory || 'Other';
+          return woCategory === cat;
         }).length;
       });
       return dataPoint;
@@ -985,7 +985,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       {/* Category Trend Chart */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-sm font-semibold text-gray-900">Work Orders by Property Type Trend</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Work Orders by Category Trend</h3>
           <div className="flex items-center gap-2">
             <GranularityDropdown value={categoryTrendGranularity} onChange={setCategoryTrendGranularity} />
             <PeriodDropdown value={categoryTrendFilter} onChange={setCategoryTrendFilter} />
@@ -1041,10 +1041,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders Trend</h3>
-            <div className="flex items-center gap-2">
-              <GranularityDropdown value={trendGranularity} onChange={setTrendGranularity} />
-              <PeriodDropdown value={trendPeriod} onChange={setTrendPeriod} />
-            </div>
+            <PeriodDropdown value={trendPeriod} onChange={setTrendPeriod} />
           </div>
           <div className="flex items-center gap-4 mb-4">
             <div className="flex items-center gap-2">
