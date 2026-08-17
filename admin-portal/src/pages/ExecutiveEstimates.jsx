@@ -996,9 +996,9 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Estimate Type</h2>
                   <div className="grid grid-cols-2 gap-4">
-                    <button type="button" onClick={() => setEstimateForm({ ...estimateForm, estimateType: 'property_based' })} className="p-6 border-2 border-gray-200 rounded-xl hover:border-amber-500 hover:bg-amber-50 transition-all group">
-                      <Building2 className="w-10 h-10 text-gray-400 group-hover:text-amber-500 mx-auto mb-3" />
-                      <p className="font-semibold text-gray-800 group-hover:text-amber-600">Property-Based Estimate</p>
+                    <button type="button" onClick={() => setEstimateForm({ ...estimateForm, estimateType: 'property_based' })} className="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group">
+                      <Building2 className="w-10 h-10 text-gray-400 group-hover:text-blue-500 mx-auto mb-3" />
+                      <p className="font-semibold text-gray-800 group-hover:text-blue-600">Property-Based Estimate</p>
                       <p className="text-sm text-gray-500 mt-1">Enter Property ID to auto-fill details</p>
                     </button>
                     <button type="button" onClick={() => setEstimateForm({ ...estimateForm, estimateType: 'direct' })} className="p-6 border-2 border-gray-200 rounded-xl hover:border-amber-500 hover:bg-amber-50 transition-all group">
