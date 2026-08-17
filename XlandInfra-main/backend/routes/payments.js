@@ -1,0 +1,2292 @@
+/**
+ * Payments API Routes
+ * Handles invoices, manual payments, and payment history
+ * RBAC: Super Admin, Operations Manager, Franchise Partner, Manager can record payments
+ *       Supervisors and Executives have view-only access
+ */
+
+const express = require('express');
+const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
+const { pool } = require('../config/database');
+const { authenticate } = require('../middleware/auth');
+const { ROLES } = require('../config/roles');
+
+// Payment Security Middleware
+const {
+  paymentCreationLimiter,
+  validatePaymentAmountMiddleware,
+  fraudDetectionMiddleware,
+  logSecurityEvent
+} = require('../middleware/paymentSecurity');
+const {
+  validatePaymentAmount,
+  getClientIP,
+  hashIP
+} = require('../utils/paymentSecurity');
+const { generateInvoicePDF } = require('../services/pdfService');
+
+// Configure multer for payment proof uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/payments/'),
+  filename: (req, file, cb) => cb(null, `payment-${Date.now()}-${uuidv4()}${path.extname(file.originalname)}`)
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    cb(null, allowed.includes(file.mimetype));
+  }
+});
+
+// Roles that can record/edit payments
+const PAYMENT_EDIT_ROLES = [
+  ROLES.ADMIN,
+  ROLES.OPERATIONS_MANAGER,
+  ROLES.FRANCHISE_PARTNER,
+  ROLES.MANAGER
+];
+
+// Roles that can only view payments
+const PAYMENT_VIEW_ROLES = [
+  ...PAYMENT_EDIT_ROLES,
+  ROLES.SUPERVISOR,
+  ROLES.EXECUTIVE
+];
+
+// Middleware to check if user can edit payments
+const canEditPayments = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Authentication required' });
+  }
+  if (!PAYMENT_EDIT_ROLES.includes(req.user.role)) {
+    return res.status(403).json({ success: false, message: 'Access denied. You cannot record or edit payments.' });
+  }
+  next();
+};
+
+// Middleware to check if user can view payments
+const canViewPayments = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Authentication required' });
+  }
+  if (!PAYMENT_VIEW_ROLES.includes(req.user.role)) {
+    return res.status(403).json({ success: false, message: 'Access denied. You cannot view payments.' });
+  }
+  next();
+};
+
+// Get FP scope for queries
+const getFPScope = (req) => {
+  // If user is FP or Manager under FP, scope to their FP
+  if (req.user.franchisePartnerId) {
+    return req.user.franchisePartnerId;
+  }
+  if (req.user.fpId) {
+    return req.user.fpId;
+  }
+  return null;
+};
+
+// Generate unique invoice ID (Format: INV-00001)
+const generateInvoiceId = async (fpId = null) => {
+  const prefix = 'INV';
+  
+  try {
+    // Get the max invoice number across all invoices (global sequence)
+    const [existing] = await pool.execute(
+      `SELECT MAX(CAST(SUBSTRING(invoice_id, 5) AS UNSIGNED)) as max_num 
+       FROM invoices 
+       WHERE invoice_id LIKE 'INV-%' AND invoice_id REGEXP '^INV-[0-9]+$'`
+    );
+    
+    let nextNumber = 1;
+    if (existing.length > 0 && existing[0].max_num) {
+      nextNumber = existing[0].max_num + 1;
+    }
+    
+    // Format: INV-00001
+    return `${prefix}-${String(nextNumber).padStart(5, '0')}`;
+  } catch (error) {
+    console.error('Error generating invoice ID:', error);
+    // Fallback: get count + 1
+    const [countResult] = await pool.execute('SELECT COUNT(*) as cnt FROM invoices');
+    const nextNumber = (countResult[0]?.cnt || 0) + 1;
+    return `${prefix}-${String(nextNumber).padStart(5, '0')}`;
+  }
+};
+
+// Generate unique payment ID
+const generatePaymentId = async (fpId = null) => {
+  const year = new Date().getFullYear();
+  const prefix = 'PAY';
+  
+  try {
+    const [existing] = await pool.execute(
+      'SELECT current_number FROM payment_sequence WHERE franchise_partner_id <=> ? AND year = ?',
+      [fpId, year]
+    );
+    
+    let nextNumber;
+    if (existing.length > 0) {
+      nextNumber = existing[0].current_number + 1;
+      await pool.execute(
+        'UPDATE payment_sequence SET current_number = ? WHERE franchise_partner_id <=> ? AND year = ?',
+        [nextNumber, fpId, year]
+      );
+    } else {
+      nextNumber = 1;
+      await pool.execute(
+        'INSERT INTO payment_sequence (franchise_partner_id, year, current_number, prefix) VALUES (?, ?, ?, ?)',
+        [fpId, year, nextNumber, prefix]
+      );
+    }
+    
+    return `${prefix}-${year}-${String(nextNumber).padStart(5, '0')}`;
+  } catch (error) {
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `${prefix}-${timestamp}-${random}`;
+  }
+};
+
+// Generate unique receipt ID (format: RCP-00001)
+const generateReceiptId = async (fpId = null) => {
+  const prefix = 'RCP';
+  
+  try {
+    // Get max receipt number across all receipts (global sequence)
+    const [existing] = await pool.execute(
+      'SELECT MAX(current_number) as max_number FROM receipt_sequence WHERE franchise_partner_id <=> ?',
+      [fpId]
+    );
+    
+    let nextNumber;
+    if (existing.length > 0 && existing[0].max_number) {
+      nextNumber = existing[0].max_number + 1;
+      await pool.execute(
+        'UPDATE receipt_sequence SET current_number = ? WHERE franchise_partner_id <=> ?',
+        [nextNumber, fpId]
+      );
+    } else {
+      // Check if sequence record exists
+      const [seqExists] = await pool.execute(
+        'SELECT id FROM receipt_sequence WHERE franchise_partner_id <=> ?',
+        [fpId]
+      );
+      
+      nextNumber = 1;
+      if (seqExists.length > 0) {
+        await pool.execute(
+          'UPDATE receipt_sequence SET current_number = ? WHERE franchise_partner_id <=> ?',
+          [nextNumber, fpId]
+        );
+      } else {
+        await pool.execute(
+          'INSERT INTO receipt_sequence (franchise_partner_id, year, current_number, prefix) VALUES (?, ?, ?, ?)',
+          [fpId, new Date().getFullYear(), nextNumber, prefix]
+        );
+      }
+    }
+    
+    // Format: RCP-00001
+    return `${prefix}-${String(nextNumber).padStart(5, '0')}`;
+  } catch (error) {
+    console.error('Error generating receipt ID:', error);
+    const timestamp = Date.now().toString(36).toUpperCase();
+    return `${prefix}-${timestamp}`;
+  }
+};
+
+// ============================================
+// PROPERTY LOOKUP BY CODE
+// ============================================
+
+// Get property details by property code (for auto-fill in invoice creation)
+router.get('/properties/by-code/:code', authenticate, canViewPayments, async (req, res) => {
+  try {
+    const { code } = req.params;
+    const fpId = getFPScope(req);
+    
+    // Try onboarded_properties first
+    let query = `
+      SELECT op.id, op.property_id, op.community_name as name,
+             op.contact_person as customer_name,
+             op.contact_email as customer_email,
+             op.contact_phone as customer_phone,
+             op.property_type, op.zone, op.division
+      FROM onboarded_properties op
+      WHERE op.property_id = ?
+    `;
+    const params = [code];
+    
+    if (fpId) {
+      query += ' AND op.franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    
+    let [properties] = await pool.execute(query, params);
+    
+    // If not found, try properties table
+    if (properties.length === 0) {
+      let query2 = `
+        SELECT p.id, p.property_id, p.name,
+               p.contact_person as customer_name,
+               p.contact_email as customer_email,
+               p.contact_phone as customer_phone,
+               p.property_type, p.zone_id as zone
+        FROM properties p
+        WHERE p.property_id = ?
+      `;
+      const params2 = [code];
+      
+      if (fpId) {
+        query2 += ' AND p.franchise_partner_id = ?';
+        params2.push(fpId);
+      }
+      
+      [properties] = await pool.execute(query2, params2);
+    }
+    
+    // Also check customer_accounts for customer info
+    if (properties.length > 0) {
+      const propId = properties[0].id;
+      const [customers] = await pool.execute(
+        `SELECT name, email, phone FROM customer_accounts WHERE property_id = ? LIMIT 1`,
+        [propId]
+      );
+      
+      if (customers.length > 0) {
+        properties[0].customer_name = customers[0].name || properties[0].customer_name;
+        properties[0].customer_email = customers[0].email || properties[0].customer_email;
+        properties[0].customer_phone = customers[0].phone || properties[0].customer_phone;
+      }
+    }
+    
+    if (properties.length === 0) {
+      return res.json({ success: false, message: 'Property not found' });
+    }
+    
+    res.json({ success: true, data: properties[0] });
+  } catch (error) {
+    console.error('Error fetching property by code:', error);
+    res.status(500).json({ success: false, message: 'Error fetching property' });
+  }
+});
+
+// Get approved estimates by property code (for invoice creation)
+router.get('/estimates/by-property/:code', authenticate, canViewPayments, async (req, res) => {
+  try {
+    const { code } = req.params;
+    const { status } = req.query;
+    const fpId = getFPScope(req);
+    
+    // Search in fp_estimates table
+    let query = `
+      SELECT fe.id, fe.estimate_id, fe.property_id, fe.property_name, fe.property_code,
+             fe.customer_name, fe.customer_email, fe.customer_phone,
+             fe.service_type, fe.subtotal, fe.discount, fe.tax, fe.total,
+             fe.line_items, fe.status, fe.created_at
+      FROM fp_estimates fe
+      WHERE (fe.property_code = ? OR fe.property_id = ?)
+    `;
+    const params = [code, code];
+    
+    if (status) {
+      query += ' AND fe.status = ?';
+      params.push(status);
+    }
+    
+    if (fpId) {
+      query += ' AND fe.franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    
+    // Exclude estimates that already have invoices (check both id and estimate_id string)
+    query += ` AND fe.id NOT IN (
+      SELECT COALESCE(estimate_id, 0) FROM invoices WHERE estimate_id IS NOT NULL
+    ) AND fe.estimate_id NOT IN (
+      SELECT COALESCE(source_estimate_id, '') FROM invoices WHERE source_estimate_id IS NOT NULL
+    )`;
+    
+    query += ' ORDER BY fe.created_at DESC';
+    
+    const [estimates] = await pool.execute(query, params);
+    
+    // Also check regular estimates table
+    let query2 = `
+      SELECT e.id, e.estimate_id, e.property_id, p.name as property_name, p.property_id as property_code,
+             e.customer_name, e.customer_email, e.customer_phone,
+             e.service_type, e.subtotal, e.discount_amount as discount, e.tax_amount as tax, e.total,
+             e.line_items, e.status, e.created_at
+      FROM estimates e
+      LEFT JOIN properties p ON e.property_id = p.id
+      WHERE (p.property_id = ? OR e.property_id = ?)
+    `;
+    const params2 = [code, code];
+    
+    if (status) {
+      query2 += ' AND e.status = ?';
+      params2.push(status);
+    }
+    
+    if (fpId) {
+      query2 += ' AND e.franchise_partner_id = ?';
+      params2.push(fpId);
+    }
+    
+    query2 += ` AND e.id NOT IN (
+      SELECT COALESCE(estimate_id, 0) FROM invoices WHERE estimate_id IS NOT NULL
+    )`;
+    
+    query2 += ' ORDER BY e.created_at DESC';
+    
+    const [regularEstimates] = await pool.execute(query2, params2);
+    
+    // Combine and return
+    const allEstimates = [...estimates, ...regularEstimates];
+    
+    res.json({ success: true, data: allEstimates });
+  } catch (error) {
+    console.error('Error fetching estimates by property:', error);
+    res.status(500).json({ success: false, message: 'Error fetching estimates' });
+  }
+});
+
+// Get approved estimate by estimate ID (for invoice creation)
+router.get('/estimates/by-id/:estimateId', authenticate, canViewPayments, async (req, res) => {
+  try {
+    const { estimateId } = req.params;
+    const { status } = req.query;
+    const fpId = getFPScope(req);
+    
+    console.log(`🔍 Searching estimate by ID: ${estimateId}, status: ${status}, fpId: ${fpId}`);
+    
+    // First, check if estimate exists at all (without filters)
+    const [existCheck] = await pool.execute(
+      'SELECT id, estimate_id, status FROM fp_estimates WHERE estimate_id = ?',
+      [estimateId]
+    );
+    console.log(`📋 Estimate existence check:`, existCheck.length > 0 ? existCheck[0] : 'NOT FOUND');
+    
+    // Check if invoice already exists for this estimate
+    const [invoiceCheck] = await pool.execute(
+      'SELECT id, invoice_id, source_estimate_id FROM invoices WHERE source_estimate_id = ?',
+      [estimateId]
+    );
+    console.log(`🧾 Invoice check for estimate:`, invoiceCheck.length > 0 ? invoiceCheck[0] : 'NO INVOICE');
+    
+    // Search in fp_estimates table first
+    let query = `
+      SELECT fe.id, fe.estimate_id, fe.property_id, fe.property_name, fe.property_code,
+             fe.client_name as customer_name, fe.client_email as customer_email, fe.client_phone as customer_phone,
+             fe.subtotal, fe.discount_amount as discount, fe.gst_amount as tax, fe.total_amount as total,
+             fe.package_services, fe.addons_data, fe.status, fe.created_at,
+             fe.package_name, fe.package_price, fe.billing_duration
+      FROM fp_estimates fe
+      WHERE fe.estimate_id = ?
+    `;
+    const params = [estimateId];
+    
+    if (status) {
+      query += ' AND LOWER(fe.status) = LOWER(?)';
+      params.push(status);
+    }
+    
+    if (fpId) {
+      query += ' AND fe.franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    
+    // Exclude estimates that already have invoices
+    query += ` AND fe.estimate_id NOT IN (
+      SELECT COALESCE(source_estimate_id, '') FROM invoices WHERE source_estimate_id IS NOT NULL
+    )`;
+    
+    console.log(`📝 Query params:`, params);
+    const [estimates] = await pool.execute(query, params);
+    console.log(`📊 Query result:`, estimates.length, 'estimates found');
+    
+    if (estimates.length > 0) {
+      return res.json({ success: true, data: estimates[0] });
+    }
+    
+    // Also check regular estimates table
+    let query2 = `
+      SELECT e.id, e.estimate_id, e.property_id, p.name as property_name, p.property_id as property_code,
+             e.customer_name, e.customer_email, e.customer_phone,
+             e.service_type, e.subtotal, e.discount_amount as discount, e.tax_amount as tax, e.total,
+             e.line_items, e.status, e.created_at
+      FROM estimates e
+      LEFT JOIN properties p ON e.property_id = p.id
+      WHERE e.estimate_id = ?
+    `;
+    const params2 = [estimateId];
+    
+    if (status) {
+      query2 += ' AND e.status = ?';
+      params2.push(status);
+    }
+    
+    if (fpId) {
+      query2 += ' AND e.franchise_partner_id = ?';
+      params2.push(fpId);
+    }
+    
+    query2 += ` AND e.estimate_id NOT IN (
+      SELECT COALESCE(source_estimate_id, '') FROM invoices WHERE source_estimate_id IS NOT NULL
+    )`;
+    
+    const [regularEstimates] = await pool.execute(query2, params2);
+    
+    if (regularEstimates.length > 0) {
+      return res.json({ success: true, data: regularEstimates[0] });
+    }
+    
+    res.json({ success: false, message: 'No approved estimate found with this ID, or an invoice has already been generated for this estimate.' });
+  } catch (error) {
+    console.error('Error fetching estimate by ID:', error);
+    res.status(500).json({ success: false, message: 'Error fetching estimate' });
+  }
+});
+
+// ============================================
+// PAYMENT DASHBOARD
+// ============================================
+
+router.get('/dashboard', authenticate, canViewPayments, async (req, res) => {
+  try {
+    const fpId = getFPScope(req);
+    const fpCondition = fpId ? 'AND i.franchise_partner_id = ?' : '';
+    const fpParams = fpId ? [fpId] : [];
+
+    // Get payment statistics
+    const [stats] = await pool.execute(`
+      SELECT
+        COALESCE(SUM(i.total_amount), 0) as total_invoice_amount,
+        COALESCE(SUM(i.amount_paid), 0) as total_collected,
+        COALESCE(SUM(i.balance_amount), 0) as pending_amount,
+        COALESCE(SUM(CASE WHEN i.status = 'overdue' THEN i.balance_amount ELSE 0 END), 0) as overdue_amount,
+        COUNT(CASE WHEN i.payment_status = 'paid' THEN 1 END) as paid_invoices,
+        COUNT(CASE WHEN i.payment_status = 'partially_paid' THEN 1 END) as partially_paid_invoices,
+        COUNT(CASE WHEN i.status = 'overdue' THEN 1 END) as overdue_invoices,
+        COUNT(*) as total_invoices
+      FROM invoices i
+      WHERE 1=1 ${fpCondition}
+    `, fpParams);
+
+    // Get today's collections
+    const today = new Date().toISOString().split('T')[0];
+    const [todayStats] = await pool.execute(`
+      SELECT COALESCE(SUM(p.amount), 0) as today_collections
+      FROM payments p
+      LEFT JOIN invoices i ON p.invoice_id = i.id
+      WHERE DATE(p.payment_date) = ? AND p.status = 'completed' ${fpId ? 'AND p.franchise_partner_id = ?' : ''}
+    `, fpId ? [today, fpId] : [today]);
+
+    // Get recent payments
+    const [recentPayments] = await pool.execute(`
+      SELECT 
+        p.payment_id, p.amount, p.payment_method, p.payment_date, p.status,
+        i.invoice_id, p.customer_name
+      FROM payments p
+      LEFT JOIN invoices i ON p.invoice_id = i.id
+      WHERE 1=1 ${fpId ? 'AND p.franchise_partner_id = ?' : ''}
+      ORDER BY p.created_at DESC
+      LIMIT 5
+    `, fpId ? [fpId] : []);
+
+    res.json({
+      success: true,
+      data: {
+        totalInvoiceAmount: parseFloat(stats[0].total_invoice_amount) || 0,
+        totalCollected: parseFloat(stats[0].total_collected) || 0,
+        pendingAmount: parseFloat(stats[0].pending_amount) || 0,
+        overdueAmount: parseFloat(stats[0].overdue_amount) || 0,
+        paidInvoices: parseInt(stats[0].paid_invoices) || 0,
+        partiallyPaidInvoices: parseInt(stats[0].partially_paid_invoices) || 0,
+        overdueInvoices: parseInt(stats[0].overdue_invoices) || 0,
+        totalInvoices: parseInt(stats[0].total_invoices) || 0,
+        todayCollections: parseFloat(todayStats[0].today_collections) || 0,
+        recentPayments: recentPayments.map(p => ({
+          paymentId: p.payment_id,
+          invoiceId: p.invoice_id,
+          customerName: p.customer_name,
+          amount: parseFloat(p.amount),
+          paymentMethod: p.payment_method,
+          paymentDate: p.payment_date,
+          status: p.status
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching payment dashboard:', error);
+    res.status(500).json({ success: false, message: 'Error fetching dashboard', error: error.message });
+  }
+});
+
+// ============================================
+// INVOICES
+// ============================================
+
+// Get all invoices
+router.get('/invoices', authenticate, canViewPayments, async (req, res) => {
+  try {
+    const fpId = getFPScope(req);
+    const { status, paymentStatus, search, propertyId, customerId, archived, invoiceType } = req.query;
+    
+    let query = `
+      SELECT i.*, 
+             COALESCE(p.community_name, p2.community_name, fe.property_name) as property_name, 
+             COALESCE(p.property_id, p2.property_id, fe.property_code, i.property_code) as property_code,
+             c.name as client_name
+      FROM invoices i
+      LEFT JOIN onboarded_properties p ON i.property_id = p.id
+      LEFT JOIN onboarded_properties p2 ON i.property_code = p2.property_id
+      LEFT JOIN fp_estimates fe ON i.source_estimate_id = fe.estimate_id
+      LEFT JOIN clients c ON i.customer_id = c.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (fpId) {
+      query += ' AND i.franchise_partner_id = ?';
+      params.push(fpId);
+    }
+
+    // Filter by archived status
+    if (archived === 'true') {
+      query += ' AND i.archived = 1';
+    } else if (archived === 'false') {
+      query += ' AND (i.archived = 0 OR i.archived IS NULL)';
+    }
+
+    // Filter by invoice type
+    if (invoiceType && invoiceType !== 'all') {
+      query += ' AND i.invoice_type = ?';
+      params.push(invoiceType);
+    }
+
+    if (status) {
+      query += ' AND i.status = ?';
+      params.push(status);
+    }
+
+    if (paymentStatus) {
+      query += ' AND i.payment_status = ?';
+      params.push(paymentStatus);
+    }
+
+    if (propertyId) {
+      query += ' AND i.property_id = ?';
+      params.push(propertyId);
+    }
+
+    if (customerId) {
+      query += ' AND i.customer_id = ?';
+      params.push(customerId);
+    }
+
+    if (search) {
+      query += ' AND (i.invoice_id LIKE ? OR i.customer_name LIKE ? OR i.customer_email LIKE ?)';
+      const searchPattern = `%${search}%`;
+      params.push(searchPattern, searchPattern, searchPattern);
+    }
+
+    query += ' ORDER BY i.created_at DESC';
+
+    const [invoices] = await pool.execute(query, params);
+
+    res.json({
+      success: true,
+      data: invoices.map(i => ({
+        id: i.id,
+        invoiceId: i.invoice_id,
+        invoiceType: i.invoice_type || 'manual',
+        propertyId: i.property_id,
+        propertyName: i.property_name || i.customer_name,
+        propertyCode: i.property_code,
+        estimateId: i.estimate_id,
+        sourceEstimateId: i.source_estimate_id,
+        sourceWorkOrderId: i.source_work_order_id,
+        customerId: i.customer_id,
+        customerName: i.customer_name || i.client_name,
+        customerEmail: i.customer_email,
+        customerPhone: i.customer_phone,
+        invoiceDate: i.invoice_date,
+        dueDate: i.due_date,
+        subtotal: parseFloat(i.subtotal),
+        discountPercentage: parseFloat(i.discount_percentage),
+        discountAmount: parseFloat(i.discount_amount),
+        taxPercentage: parseFloat(i.tax_percentage),
+        taxAmount: parseFloat(i.tax_amount),
+        totalAmount: parseFloat(i.total_amount),
+        amountPaid: parseFloat(i.amount_paid),
+        balanceAmount: parseFloat(i.balance_amount),
+        status: i.status,
+        paymentStatus: i.payment_status,
+        paymentLink: i.payment_link,
+        paymentLinkStatus: i.payment_link_status,
+        paymentLinkCreatedAt: i.payment_link_created_at,
+        paymentLinkExpiresAt: i.payment_link_expires_at,
+        lineItems: i.line_items,
+        notes: i.notes,
+        autoGenerated: i.auto_generated,
+        createdAt: i.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching invoices:', error);
+    res.status(500).json({ success: false, message: 'Error fetching invoices', error: error.message });
+  }
+});
+
+// Get single invoice
+router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+
+    let query = `
+      SELECT i.*, 
+             COALESCE(p.community_name, p2.community_name) as property_name, 
+             COALESCE(p.property_id, p2.property_id, i.property_code) as property_code,
+             c.name as client_name
+      FROM invoices i
+      LEFT JOIN onboarded_properties p ON i.property_id = p.id
+      LEFT JOIN onboarded_properties p2 ON i.property_code = p2.property_id
+      LEFT JOIN clients c ON i.customer_id = c.id
+      WHERE i.id = ?
+    `;
+    const params = [id];
+
+    if (fpId) {
+      query += ' AND i.franchise_partner_id = ?';
+      params.push(fpId);
+    }
+
+    const [invoices] = await pool.execute(query, params);
+
+    if (invoices.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    // Get payments for this invoice
+    const [payments] = await pool.execute(
+      'SELECT * FROM payments WHERE invoice_id = ? ORDER BY payment_date DESC',
+      [id]
+    );
+
+    const i = invoices[0];
+    res.json({
+      success: true,
+      data: {
+        id: i.id,
+        invoiceId: i.invoice_id,
+        invoiceType: i.invoice_type,
+        propertyId: i.property_id,
+        propertyName: i.property_name,
+        propertyCode: i.property_code,
+        estimateId: i.estimate_id,
+        sourceEstimateId: i.source_estimate_id,
+        sourceWorkOrderId: i.source_work_order_id,
+        customerId: i.customer_id,
+        customerName: i.customer_name || i.client_name,
+        customerEmail: i.customer_email,
+        customerPhone: i.customer_phone,
+        invoiceDate: i.invoice_date,
+        dueDate: i.due_date,
+        lineItems: i.line_items ? (typeof i.line_items === 'string' ? JSON.parse(i.line_items) : i.line_items) : [],
+        subtotal: parseFloat(i.subtotal),
+        discountPercentage: parseFloat(i.discount_percentage),
+        discountAmount: parseFloat(i.discount_amount),
+        taxPercentage: parseFloat(i.tax_percentage),
+        taxAmount: parseFloat(i.tax_amount),
+        totalAmount: parseFloat(i.total_amount),
+        amountPaid: parseFloat(i.amount_paid),
+        balanceAmount: parseFloat(i.balance_amount),
+        status: i.status,
+        paymentStatus: i.payment_status,
+        paymentLink: i.payment_link,
+        paymentLinkStatus: i.payment_link_status,
+        paymentLinkCreatedAt: i.payment_link_created_at,
+        paymentLinkExpiresAt: i.payment_link_expires_at,
+        paymentLinkSentAt: i.payment_link_sent_at,
+        razorpayPaymentLinkId: i.razorpay_payment_link_id,
+        notes: i.notes,
+        termsAndConditions: i.terms_and_conditions,
+        workOrderId: i.work_order_id,
+        createdAt: i.created_at,
+        payments: payments.map(p => ({
+          id: p.id,
+          paymentId: p.payment_id,
+          amount: parseFloat(p.amount),
+          paymentMethod: p.payment_method,
+          paymentType: p.payment_type,
+          transactionReference: p.transaction_reference,
+          paymentDate: p.payment_date,
+          status: p.status,
+          receivedBy: p.received_by_name,
+          remarks: p.remarks,
+          createdAt: p.created_at
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching invoice:', error);
+    res.status(500).json({ success: false, message: 'Error fetching invoice', error: error.message });
+  }
+});
+
+// Download invoice as PDF (HTML response for now - client will print to PDF)
+router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+
+    let query = `
+      SELECT i.*, 
+             COALESCE(p.community_name, p2.community_name) as property_name, 
+             COALESCE(p.property_id, p2.property_id, i.property_code) as property_code,
+             COALESCE(p.property_type, p2.property_type) as property_type,
+             COALESCE(p.zone, p2.zone) as zone, 
+             COALESCE(p.city, p2.city) as city,
+             COALESCE(p.contact_person, p2.contact_person) as contact_person, 
+             COALESCE(p.contact_phone, p2.contact_phone) as contact_phone, 
+             COALESCE(p.contact_email, p2.contact_email) as contact_email
+      FROM invoices i
+      LEFT JOIN onboarded_properties p ON i.property_id = p.id
+      LEFT JOIN onboarded_properties p2 ON i.property_code = p2.property_id
+      WHERE i.id = ?
+    `;
+    const params = [id];
+    if (fpId) {
+      query += ' AND i.franchise_partner_id = ?';
+      params.push(fpId);
+    }
+
+    const [invoices] = await pool.execute(query, params);
+    if (invoices.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    const invoice = invoices[0];
+    
+    // Generate PDF using pdfService
+    const pdfData = {
+      invoiceId: invoice.invoice_id,
+      estimateId: invoice.source_estimate_id,
+      invoiceType: invoice.invoice_type,
+      customerName: invoice.customer_name,
+      customerEmail: invoice.customer_email,
+      customerPhone: invoice.customer_phone,
+      propertyName: invoice.property_name,
+      propertyCode: invoice.property_code,
+      propertyType: invoice.property_type,
+      zone: invoice.zone,
+      city: invoice.city,
+      invoiceDate: invoice.invoice_date,
+      dueDate: invoice.due_date,
+      billingDuration: invoice.billing_duration,
+      lineItems: invoice.line_items,
+      subtotal: invoice.subtotal,
+      discountAmount: invoice.discount_amount,
+      discountPercentage: invoice.discount_percentage,
+      taxAmount: invoice.tax_amount,
+      taxPercentage: invoice.tax_percentage,
+      totalAmount: invoice.total_amount,
+      balanceAmount: invoice.balance_amount,
+      workOrderId: invoice.work_order_id
+    };
+    
+    const pdfBuffer = await generateInvoicePDF(pdfData);
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Invoice_${invoice.invoice_id}.pdf`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Error generating invoice PDF:', error);
+    res.status(500).json({ success: false, message: 'Error generating invoice PDF', error: error.message });
+  }
+});
+
+// Create invoice
+router.post('/invoices', authenticate, canEditPayments, paymentCreationLimiter, async (req, res) => {
+  try {
+    const fpId = getFPScope(req);
+    const {
+      propertyId, estimateId, customerId, customerName, customerEmail, customerPhone,
+      invoiceDate, dueDate, lineItems, subtotal, discountPercentage, taxPercentage,
+      notes, termsAndConditions, workOrderId
+    } = req.body;
+
+    // Validate subtotal amount for security
+    const subtotalValidation = validatePaymentAmount(subtotal, { minAmount: 0, allowZero: true });
+    if (!subtotalValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid subtotal: ' + subtotalValidation.error
+      });
+    }
+
+    // Calculate amounts
+    const sub = subtotalValidation.sanitizedAmount;
+    const discPct = parseFloat(discountPercentage) || 0;
+    const taxPct = parseFloat(taxPercentage) || 18;
+    const discountAmount = sub * (discPct / 100);
+    const taxableAmount = sub - discountAmount;
+    const taxAmount = taxableAmount * (taxPct / 100);
+    const totalAmount = taxableAmount + taxAmount;
+
+    const invoiceId = await generateInvoiceId(fpId);
+
+    const [result] = await pool.execute(`
+      INSERT INTO invoices (
+        invoice_id, property_id, estimate_id, customer_id, franchise_partner_id,
+        customer_name, customer_email, customer_phone,
+        invoice_date, due_date, line_items,
+        subtotal, discount_percentage, discount_amount, tax_percentage, tax_amount, total_amount,
+        balance_amount, notes, terms_and_conditions, work_order_id,
+        created_by, created_by_role
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      invoiceId, propertyId || null, estimateId || null, customerId || null, fpId,
+      customerName, customerEmail || null, customerPhone || null,
+      invoiceDate, dueDate, lineItems ? JSON.stringify(lineItems) : null,
+      sub, discPct, discountAmount, taxPct, taxAmount, totalAmount,
+      totalAmount, notes || null, termsAndConditions || null, workOrderId || null,
+      req.user.id, req.user.role
+    ]);
+
+    res.status(201).json({
+      success: true,
+      message: 'Invoice created successfully',
+      data: { id: result.insertId, invoiceId }
+    });
+  } catch (error) {
+    console.error('Error creating invoice:', error);
+    res.status(500).json({ success: false, message: 'Error creating invoice', error: error.message });
+  }
+});
+
+// Create invoice from approved estimate
+router.post('/invoices/create-from-estimate', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const fpId = getFPScope(req);
+    const { estimateId, customerDetails, discountPercent, gstPercent, dueDate, notes } = req.body;
+
+    if (!estimateId) {
+      return res.status(400).json({ success: false, message: 'Estimate ID is required' });
+    }
+
+    // Fetch estimate details
+    let estimate = null;
+    
+    // Try fp_estimates first
+    const [fpEstimates] = await pool.execute(`
+      SELECT fe.*, 
+             fe.client_name as customerName, fe.client_email as customerEmail, fe.client_phone as customerPhone,
+             fe.property_name as propertyName, fe.property_code as propertyCode,
+             fe.total_amount as total, fe.subtotal
+      FROM fp_estimates fe
+      WHERE fe.estimate_id = ? AND LOWER(fe.status) = 'approved'
+    `, [estimateId]);
+
+    if (fpEstimates.length > 0) {
+      estimate = fpEstimates[0];
+    } else {
+      // Try regular estimates
+      const [regularEstimates] = await pool.execute(`
+        SELECT e.*, 
+               e.customer_name as customerName, e.customer_email as customerEmail, e.customer_phone as customerPhone,
+               p.name as propertyName, p.property_id as propertyCode,
+               e.total, e.subtotal
+        FROM estimates e
+        LEFT JOIN properties p ON e.property_id = p.id
+        WHERE e.estimate_id = ? AND LOWER(e.status) = 'approved'
+      `, [estimateId]);
+      
+      if (regularEstimates.length > 0) {
+        estimate = regularEstimates[0];
+      }
+    }
+
+    if (!estimate) {
+      return res.status(404).json({ success: false, message: 'Approved estimate not found' });
+    }
+
+    // Check if invoice already exists
+    const [existingInvoice] = await pool.execute(
+      'SELECT id, invoice_id FROM invoices WHERE source_estimate_id = ?',
+      [estimateId]
+    );
+    
+    if (existingInvoice.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invoice ${existingInvoice[0].invoice_id} already exists for this estimate` 
+      });
+    }
+
+    // Calculate amounts
+    const subtotal = parseFloat(estimate.total) || parseFloat(estimate.subtotal) || 0;
+    const discPct = parseFloat(discountPercent) || 0;
+    const taxPct = parseFloat(gstPercent) || 18;
+    const discountAmount = subtotal * (discPct / 100);
+    const taxableAmount = subtotal - discountAmount;
+    const taxAmount = taxableAmount * (taxPct / 100);
+    const totalAmount = taxableAmount + taxAmount;
+
+    // Parse line items from estimate
+    let lineItems = [];
+    try {
+      if (estimate.package_services) {
+        const services = typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services;
+        if (Array.isArray(services)) {
+          lineItems = services.map(s => ({
+            description: s.name || s.serviceName || s.description || 'Service',
+            quantity: 1,
+            unitPrice: 0,
+            totalPrice: 0,
+            type: 'service'
+          }));
+        }
+      }
+    } catch (e) { /* ignore parse errors */ }
+
+    // Generate invoice ID
+    const invoiceId = await generateInvoiceId(fpId);
+    const invoiceDate = new Date();
+    const dueDateValue = dueDate || new Date(invoiceDate.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    // Use customer details from request or estimate
+    const finalCustomerName = customerDetails?.name || estimate.customerName;
+    const finalCustomerEmail = customerDetails?.email || estimate.customerEmail;
+    const finalCustomerPhone = customerDetails?.phone || estimate.customerPhone;
+
+    const [result] = await pool.execute(`
+      INSERT INTO invoices (
+        invoice_id, invoice_type, property_id, property_code, estimate_id, source_estimate_id,
+        customer_id, franchise_partner_id, customer_name, customer_email, customer_phone,
+        invoice_date, due_date, line_items, 
+        subtotal, discount_percentage, discount_amount, 
+        tax_percentage, tax_amount, total_amount, 
+        amount_paid, balance_amount, status, payment_status,
+        created_by, created_by_role, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      invoiceId,
+      'estimate',
+      estimate.property_id || null,
+      estimate.propertyCode || estimate.property_code || null,
+      estimate.id,
+      estimateId,
+      estimate.customer_id || null,
+      fpId || estimate.franchise_partner_id,
+      finalCustomerName,
+      finalCustomerEmail,
+      finalCustomerPhone,
+      invoiceDate.toISOString().split('T')[0],
+      dueDateValue,
+      JSON.stringify(lineItems),
+      subtotal,
+      discPct,
+      discountAmount,
+      taxPct,
+      taxAmount,
+      totalAmount,
+      0,
+      totalAmount,
+      'draft',
+      'pending',
+      req.user.id,
+      req.user.role,
+      notes || `Created from Estimate ${estimateId}`
+    ]);
+
+    res.status(201).json({
+      success: true,
+      message: 'Invoice created successfully from estimate',
+      data: { 
+        id: result.insertId, 
+        invoiceId,
+        totalAmount,
+        customerEmail: finalCustomerEmail
+      }
+    });
+  } catch (error) {
+    console.error('Error creating invoice from estimate:', error);
+    res.status(500).json({ success: false, message: 'Error creating invoice', error: error.message });
+  }
+});
+
+// Create generic invoice (for walk-in customers or ad-hoc services)
+router.post('/invoices/create-generic', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const fpId = getFPScope(req);
+    const { customerDetails, lineItems, discountPercent, gstPercent, dueDate, notes, sendEmail } = req.body;
+
+    // Validate required fields
+    if (!customerDetails?.name || !customerDetails?.email) {
+      return res.status(400).json({ success: false, message: 'Customer name and email are required' });
+    }
+
+    if (!lineItems || !Array.isArray(lineItems) || lineItems.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one line item is required' });
+    }
+
+    // Filter valid line items
+    const validItems = lineItems.filter(item => item.description && item.totalPrice > 0);
+    if (validItems.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one valid line item is required' });
+    }
+
+    // Calculate amounts
+    const subtotal = validItems.reduce((sum, item) => sum + (parseFloat(item.totalPrice) || 0), 0);
+    const discPct = parseFloat(discountPercent) || 0;
+    const taxPct = parseFloat(gstPercent) || 18;
+    const discountAmount = subtotal * (discPct / 100);
+    const taxableAmount = subtotal - discountAmount;
+    const taxAmount = taxableAmount * (taxPct / 100);
+    const totalAmount = taxableAmount + taxAmount;
+
+    // Generate invoice ID
+    const invoiceId = await generateInvoiceId(fpId);
+    const invoiceDate = new Date();
+    const dueDateValue = dueDate || new Date(invoiceDate.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    // Format line items for storage
+    const formattedLineItems = validItems.map(item => ({
+      description: item.description,
+      quantity: parseFloat(item.quantity) || 1,
+      unitPrice: parseFloat(item.unitPrice) || 0,
+      totalPrice: parseFloat(item.totalPrice) || 0,
+      type: 'service'
+    }));
+
+    const [result] = await pool.execute(`
+      INSERT INTO invoices (
+        invoice_id, invoice_type, franchise_partner_id,
+        customer_name, customer_email, customer_phone, customer_address,
+        invoice_date, due_date, line_items, 
+        subtotal, discount_percentage, discount_amount, 
+        tax_percentage, tax_amount, total_amount, 
+        amount_paid, balance_amount, status, payment_status,
+        created_by, created_by_role, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      invoiceId,
+      'generic',
+      fpId,
+      customerDetails.name,
+      customerDetails.email,
+      customerDetails.phone || null,
+      customerDetails.address || null,
+      invoiceDate.toISOString().split('T')[0],
+      dueDateValue,
+      JSON.stringify(formattedLineItems),
+      subtotal,
+      discPct,
+      discountAmount,
+      taxPct,
+      taxAmount,
+      totalAmount,
+      0,
+      totalAmount,
+      'sent', // Generic invoices are marked as sent since we email them
+      'pending',
+      req.user.id,
+      req.user.role,
+      notes || 'Generic invoice'
+    ]);
+
+    const insertedId = result.insertId;
+
+    // Send email automatically if requested
+    if (sendEmail && customerDetails.email) {
+      try {
+        const { sendEmail: sendEmailService } = require('../services/emailService');
+        
+        // Format amounts for email
+        const formatAmount = (amt) => `₹${(parseFloat(amt) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+        const formatDate = (d) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+        // Generate line items HTML
+        const lineItemsHtml = formattedLineItems.map(item => `
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.description}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatAmount(item.unitPrice)}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatAmount(item.totalPrice)}</td>
+          </tr>
+        `).join('');
+
+        await sendEmailService({
+          to: customerDetails.email,
+          subject: `Invoice ${invoiceId} from XLand Infra`,
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #fff; padding: 30px; border: 1px solid #e5e7eb; }
+                .footer { background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none; }
+                table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+                th { background: #f1f5f9; padding: 10px; text-align: left; font-size: 12px; text-transform: uppercase; color: #64748b; }
+                .total-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+                .grand-total { font-size: 18px; font-weight: bold; color: #10b981; border-top: 2px solid #10b981; padding-top: 12px; margin-top: 12px; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1 style="margin: 0; font-size: 28px;">Invoice</h1>
+                  <p style="margin: 10px 0 0; opacity: 0.9;">${invoiceId}</p>
+                </div>
+                
+                <div class="content">
+                  <p>Dear <strong>${customerDetails.name}</strong>,</p>
+                  <p>Please find below the details of your invoice from XLand Infra.</p>
+                  
+                  <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                    <table style="width: 100%; margin-bottom: 15px;">
+                      <tr>
+                        <td><strong>Invoice Date:</strong></td>
+                        <td style="text-align: right;">${formatDate(invoiceDate)}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Due Date:</strong></td>
+                        <td style="text-align: right;">${formatDate(dueDateValue)}</td>
+                      </tr>
+                    </table>
+
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Description</th>
+                          <th style="text-align: center;">Qty</th>
+                          <th style="text-align: right;">Unit Price</th>
+                          <th style="text-align: right;">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${lineItemsHtml}
+                      </tbody>
+                    </table>
+
+                    <div style="margin-top: 20px;">
+                      <div class="total-row">
+                        <span>Subtotal:</span>
+                        <span>${formatAmount(subtotal)}</span>
+                      </div>
+                      ${discountAmount > 0 ? `
+                      <div class="total-row">
+                        <span>Discount (${discPct}%):</span>
+                        <span style="color: #dc2626;">-${formatAmount(discountAmount)}</span>
+                      </div>
+                      ` : ''}
+                      <div class="total-row">
+                        <span>GST (${taxPct}%):</span>
+                        <span>${formatAmount(taxAmount)}</span>
+                      </div>
+                      <div class="total-row grand-total">
+                        <span>Total Amount:</span>
+                        <span>${formatAmount(totalAmount)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  ${notes ? `
+                  <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                    <strong>Notes:</strong><br/>
+                    ${notes}
+                  </div>
+                  ` : ''}
+
+                  <p style="margin-top: 20px; color: #6b7280; font-size: 14px;">
+                    A payment link will be sent to you shortly. If you have any questions, please contact us.
+                  </p>
+                </div>
+                
+                <div class="footer">
+                  <p style="margin: 0; color: #6b7280; font-size: 14px;">Thank you for your business!</p>
+                  <p style="margin: 5px 0 0; color: #9ca3af; font-size: 12px;">XLand Infra - Property Management Services</p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `
+        });
+
+        // Update invoice to mark email as sent
+        await pool.execute(
+          'UPDATE invoices SET email_sent_at = NOW(), sent_at = NOW() WHERE id = ?',
+          [insertedId]
+        );
+
+        console.log(`📧 Generic invoice ${invoiceId} sent to ${customerDetails.email}`);
+      } catch (emailError) {
+        console.error('Failed to send invoice email:', emailError);
+        // Don't fail the request, just log the error
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: sendEmail ? `Invoice created and sent to ${customerDetails.email}` : 'Invoice created successfully',
+      data: { 
+        id: insertedId, 
+        invoiceId,
+        totalAmount,
+        customerEmail: customerDetails.email,
+        emailSent: sendEmail
+      }
+    });
+  } catch (error) {
+    console.error('Error creating generic invoice:', error);
+    res.status(500).json({ success: false, message: 'Error creating invoice', error: error.message });
+  }
+});
+
+// Update invoice
+router.put('/invoices/:id', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+    const {
+      customerName, customerEmail, customerPhone,
+      invoiceDate, dueDate, lineItems, subtotal, discountPercentage, taxPercentage,
+      notes, termsAndConditions, status
+    } = req.body;
+
+    // Verify invoice exists and user has access
+    let checkQuery = 'SELECT * FROM invoices WHERE id = ?';
+    const checkParams = [id];
+    if (fpId) {
+      checkQuery += ' AND franchise_partner_id = ?';
+      checkParams.push(fpId);
+    }
+    const [existing] = await pool.execute(checkQuery, checkParams);
+
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    const invoice = existing[0];
+
+    // Calculate amounts
+    const sub = parseFloat(subtotal) || parseFloat(invoice.subtotal);
+    const discPct = discountPercentage !== undefined ? parseFloat(discountPercentage) : parseFloat(invoice.discount_percentage);
+    const taxPct = taxPercentage !== undefined ? parseFloat(taxPercentage) : parseFloat(invoice.tax_percentage);
+    const discountAmount = sub * (discPct / 100);
+    const taxableAmount = sub - discountAmount;
+    const taxAmount = taxableAmount * (taxPct / 100);
+    const totalAmount = taxableAmount + taxAmount;
+    const balanceAmount = totalAmount - parseFloat(invoice.amount_paid);
+
+    // Determine payment status based on amounts
+    let paymentStatus = invoice.payment_status;
+    if (balanceAmount <= 0) {
+      paymentStatus = 'paid';
+    } else if (parseFloat(invoice.amount_paid) > 0) {
+      paymentStatus = 'partially_paid';
+    } else {
+      paymentStatus = 'pending';
+    }
+
+    await pool.execute(`
+      UPDATE invoices SET
+        customer_name = COALESCE(?, customer_name),
+        customer_email = COALESCE(?, customer_email),
+        customer_phone = COALESCE(?, customer_phone),
+        invoice_date = COALESCE(?, invoice_date),
+        due_date = COALESCE(?, due_date),
+        line_items = COALESCE(?, line_items),
+        subtotal = ?,
+        discount_percentage = ?,
+        discount_amount = ?,
+        tax_percentage = ?,
+        tax_amount = ?,
+        total_amount = ?,
+        balance_amount = ?,
+        payment_status = ?,
+        notes = COALESCE(?, notes),
+        terms_and_conditions = COALESCE(?, terms_and_conditions),
+        status = COALESCE(?, status),
+        updated_at = NOW()
+      WHERE id = ?
+    `, [
+      customerName, customerEmail, customerPhone,
+      invoiceDate, dueDate, lineItems ? JSON.stringify(lineItems) : null,
+      sub, discPct, discountAmount, taxPct, taxAmount, totalAmount, balanceAmount, paymentStatus,
+      notes, termsAndConditions, status,
+      id
+    ]);
+
+    res.json({ success: true, message: 'Invoice updated successfully' });
+  } catch (error) {
+    console.error('Error updating invoice:', error);
+    res.status(500).json({ success: false, message: 'Error updating invoice', error: error.message });
+  }
+});
+
+// Archive invoice (soft delete)
+router.put('/invoices/:id/archive', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+    
+    // Ensure archived column exists
+    try {
+      await pool.execute(`ALTER TABLE invoices ADD COLUMN archived TINYINT(1) DEFAULT 0`);
+      await pool.execute(`ALTER TABLE invoices ADD COLUMN archived_at TIMESTAMP NULL`);
+    } catch (e) { /* Column might already exist */ }
+    
+    let query = 'UPDATE invoices SET archived = 1, archived_at = NOW() WHERE id = ?';
+    const params = [id];
+    
+    if (fpId) {
+      query = 'UPDATE invoices SET archived = 1, archived_at = NOW() WHERE id = ? AND franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    
+    await pool.execute(query, params);
+    res.json({ success: true, message: 'Invoice archived successfully' });
+  } catch (error) {
+    console.error('Error archiving invoice:', error);
+    res.status(500).json({ success: false, message: 'Error archiving invoice', error: error.message });
+  }
+});
+
+// Restore archived invoice
+router.put('/invoices/:id/restore', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+    
+    let query = 'UPDATE invoices SET archived = 0, archived_at = NULL WHERE id = ?';
+    const params = [id];
+    
+    if (fpId) {
+      query = 'UPDATE invoices SET archived = 0, archived_at = NULL WHERE id = ? AND franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    
+    await pool.execute(query, params);
+    res.json({ success: true, message: 'Invoice restored successfully' });
+  } catch (error) {
+    console.error('Error restoring invoice:', error);
+    res.status(500).json({ success: false, message: 'Error restoring invoice', error: error.message });
+  }
+});
+
+// Delete invoice permanently
+router.delete('/invoices/:id', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+    
+    let query = 'DELETE FROM invoices WHERE id = ?';
+    const params = [id];
+    
+    if (fpId) {
+      query = 'DELETE FROM invoices WHERE id = ? AND franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    
+    await pool.execute(query, params);
+    res.json({ success: true, message: 'Invoice deleted permanently' });
+  } catch (error) {
+    console.error('Error deleting invoice:', error);
+    res.status(500).json({ success: false, message: 'Error deleting invoice', error: error.message });
+  }
+});
+
+// Delete all archived invoices
+router.delete('/invoices/archived/delete-all', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const fpId = getFPScope(req);
+    
+    let query = 'DELETE FROM invoices WHERE archived = 1';
+    const params = [];
+    
+    if (fpId) {
+      query += ' AND franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    
+    const [result] = await pool.execute(query, params);
+    res.json({ success: true, message: 'All archived invoices deleted', deletedCount: result.affectedRows });
+  } catch (error) {
+    console.error('Error deleting archived invoices:', error);
+    res.status(500).json({ success: false, message: 'Error deleting archived invoices', error: error.message });
+  }
+});
+
+// Send invoice (mark as sent, send email to customer)
+router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+
+    // Get invoice with all details
+    let query = `
+      SELECT i.*, 
+             COALESCE(p.community_name, p2.community_name) as property_name, 
+             COALESCE(p.property_id, p2.property_id, i.property_code) as property_code,
+             COALESCE(p.zone, p2.zone) as zone, 
+             COALESCE(p.division, p2.division) as division
+      FROM invoices i
+      LEFT JOIN onboarded_properties p ON i.property_id = p.id
+      LEFT JOIN onboarded_properties p2 ON i.property_code = p2.property_id
+      WHERE i.id = ?
+    `;
+    const params = [id];
+    if (fpId) {
+      query += ' AND i.franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    const [invoices] = await pool.execute(query, params);
+
+    if (invoices.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    const invoice = invoices[0];
+    
+    if (!invoice.customer_email) {
+      return res.status(400).json({ success: false, message: 'Customer email not found. Please update the invoice with customer email.' });
+    }
+    
+    // Generate payment link
+    const paymentLink = `${process.env.FRONTEND_URL || 'https://xlandinfra.com'}/pay/${invoice.invoice_id}`;
+
+    // Update invoice status
+    await pool.execute(`
+      UPDATE invoices SET 
+        status = 'sent',
+        payment_link = ?,
+        payment_link_created_at = NOW(),
+        sent_at = NOW(),
+        sent_by = ?,
+        email_sent_at = NOW()
+      WHERE id = ?
+    `, [paymentLink, req.user.id, id]);
+
+    // Parse line items for email
+    let lineItemsHtml = '';
+    let lineItems = [];
+    try {
+      lineItems = invoice.line_items ? (typeof invoice.line_items === 'string' ? JSON.parse(invoice.line_items) : invoice.line_items) : [];
+      if (lineItems.length > 0) {
+        lineItemsHtml = lineItems.map(item => `
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.description || item.name || 'Service'}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity || 1}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₹${(item.unit_price || item.unitPrice || 0).toLocaleString('en-IN')}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₹${(item.total_price || item.totalPrice || 0).toLocaleString('en-IN')}</td>
+          </tr>
+        `).join('');
+      }
+    } catch (e) {
+      console.log('Error parsing line items:', e);
+    }
+
+    // Format amounts
+    const formatAmount = (amt) => `₹${(parseFloat(amt) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+    const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+
+    // Send email to customer
+    const { sendEmail } = require('../services/emailService');
+    await sendEmail({
+      to: invoice.customer_email,
+      subject: `Invoice ${invoice.invoice_id} from XLand Infra`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #fff; padding: 30px; border: 1px solid #e5e7eb; }
+            .footer { background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none; }
+            .invoice-box { background: #f8fafc; border-radius: 8px; padding: 20px; margin: 20px 0; }
+            .amount-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+            .total-row { font-size: 18px; font-weight: bold; color: #2563eb; border-top: 2px solid #2563eb; padding-top: 12px; margin-top: 12px; }
+            .pay-btn { display: inline-block; background: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+            table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+            th { background: #f1f5f9; padding: 10px; text-align: left; font-size: 12px; text-transform: uppercase; color: #64748b; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0; font-size: 28px;">Invoice</h1>
+              <p style="margin: 10px 0 0; opacity: 0.9;">${invoice.invoice_id}</p>
+            </div>
+            
+            <div class="content">
+              <p>Dear <strong>${invoice.customer_name || 'Customer'}</strong>,</p>
+              <p>Please find below the details of your invoice from XLand Infra.</p>
+              
+              <div class="invoice-box">
+                <table style="width: 100%; margin-bottom: 15px;">
+                  <tr>
+                    <td><strong>Invoice Date:</strong></td>
+                    <td style="text-align: right;">${formatDate(invoice.invoice_date)}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Due Date:</strong></td>
+                    <td style="text-align: right;">${formatDate(invoice.due_date)}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Property:</strong></td>
+                    <td style="text-align: right;">${invoice.property_name || invoice.property_code || '-'}</td>
+                  </tr>
+                </table>
+
+                ${lineItems.length > 0 ? `
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Description</th>
+                      <th style="text-align: center;">Qty</th>
+                      <th style="text-align: right;">Unit Price</th>
+                      <th style="text-align: right;">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${lineItemsHtml}
+                  </tbody>
+                </table>
+                ` : ''}
+
+                <div style="margin-top: 20px;">
+                  <div class="amount-row">
+                    <span>Subtotal:</span>
+                    <span>${formatAmount(invoice.subtotal)}</span>
+                  </div>
+                  ${invoice.discount_amount > 0 ? `
+                  <div class="amount-row">
+                    <span>Discount:</span>
+                    <span style="color: #dc2626;">-${formatAmount(invoice.discount_amount)}</span>
+                  </div>
+                  ` : ''}
+                  <div class="amount-row">
+                    <span>GST (${invoice.tax_percent || 18}%):</span>
+                    <span>${formatAmount(invoice.tax_amount)}</span>
+                  </div>
+                  <div class="amount-row total-row">
+                    <span>Total Amount:</span>
+                    <span>${formatAmount(invoice.total_amount)}</span>
+                  </div>
+                  ${invoice.amount_paid > 0 ? `
+                  <div class="amount-row">
+                    <span>Amount Paid:</span>
+                    <span style="color: #16a34a;">${formatAmount(invoice.amount_paid)}</span>
+                  </div>
+                  <div class="amount-row" style="font-weight: bold;">
+                    <span>Balance Due:</span>
+                    <span style="color: #dc2626;">${formatAmount(invoice.balance_amount)}</span>
+                  </div>
+                  ` : ''}
+                </div>
+              </div>
+
+              <div style="text-align: center;">
+                <a href="${paymentLink}" class="pay-btn">Pay Now</a>
+                <p style="color: #6b7280; font-size: 14px;">Or copy this link: ${paymentLink}</p>
+              </div>
+
+              ${invoice.notes ? `
+              <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                <strong>Notes:</strong><br/>
+                ${invoice.notes}
+              </div>
+              ` : ''}
+            </div>
+            
+            <div class="footer">
+              <p style="margin: 0; color: #6b7280; font-size: 14px;">Thank you for your business!</p>
+              <p style="margin: 5px 0 0; color: #9ca3af; font-size: 12px;">XLand Infra - Property Management Services</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    });
+
+    console.log(`📧 Invoice ${invoice.invoice_id} sent to ${invoice.customer_email}`);
+
+    res.json({
+      success: true,
+      message: `Invoice sent successfully to ${invoice.customer_email}`,
+      data: { paymentLink, emailSentTo: invoice.customer_email }
+    });
+  } catch (error) {
+    console.error('Error sending invoice:', error);
+    res.status(500).json({ success: false, message: 'Error sending invoice', error: error.message });
+  }
+});
+
+// ============================================
+// PAYMENTS (Manual Payment Recording)
+// ============================================
+
+// Get all payments
+router.get('/payments', authenticate, canViewPayments, async (req, res) => {
+  try {
+    const fpId = getFPScope(req);
+    const { invoiceId, status, paymentMethod, startDate, endDate, search } = req.query;
+
+    let query = `
+      SELECT p.*, 
+             i.invoice_id as invoice_code, i.estimate_id as invoice_estimate_id,
+             i.total_amount as invoice_amount, i.balance_amount as invoice_balance,
+             i.customer_name as invoice_customer_name, i.customer_email as invoice_customer_email,
+             prop.community_name as property_name, prop.property_id as property_code
+      FROM payments p
+      LEFT JOIN invoices i ON p.invoice_id = i.id
+      LEFT JOIN onboarded_properties prop ON p.property_id = prop.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (fpId) {
+      query += ' AND p.franchise_partner_id = ?';
+      params.push(fpId);
+    }
+
+    if (invoiceId) {
+      query += ' AND p.invoice_id = ?';
+      params.push(invoiceId);
+    }
+
+    if (status) {
+      query += ' AND p.status = ?';
+      params.push(status);
+    }
+
+    if (paymentMethod) {
+      query += ' AND p.payment_method = ?';
+      params.push(paymentMethod);
+    }
+
+    if (startDate) {
+      query += ' AND p.payment_date >= ?';
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      query += ' AND p.payment_date <= ?';
+      params.push(endDate);
+    }
+
+    if (search) {
+      query += ' AND (p.payment_id LIKE ? OR p.customer_name LIKE ? OR p.transaction_reference LIKE ?)';
+      const searchPattern = `%${search}%`;
+      params.push(searchPattern, searchPattern, searchPattern);
+    }
+
+    query += ' ORDER BY p.payment_date DESC, p.created_at DESC';
+
+    const [payments] = await pool.execute(query, params);
+
+    res.json({
+      success: true,
+      data: payments.map(p => ({
+        id: p.id,
+        paymentId: p.payment_id || `PYMT-${String(p.id).padStart(4, '0')}`,
+        invoiceId: p.invoice_code || p.invoice_id,
+        invoiceCode: p.invoice_code,
+        propertyId: p.property_id,
+        propertyName: p.property_name,
+        propertyCode: p.property_code,
+        estimateId: p.estimate_id || p.invoice_estimate_id,
+        customerId: p.customer_id,
+        customerName: p.customer_name || p.invoice_customer_name,
+        customerEmail: p.customer_email || p.invoice_customer_email,
+        amount: parseFloat(p.amount),
+        invoiceAmount: parseFloat(p.invoice_amount) || 0,
+        balanceAmount: parseFloat(p.invoice_balance) || 0,
+        paymentMethod: p.payment_method,
+        paymentType: p.payment_type,
+        transactionReference: p.transaction_reference,
+        bankName: p.bank_name,
+        paymentDate: p.payment_date,
+        proofUrl: p.payment_proof_url,
+        proofFilename: p.proof_filename,
+        status: p.status,
+        recordedBy: p.received_by_name,
+        receivedByRole: p.received_by_role,
+        remarks: p.remarks,
+        createdAt: p.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching payments:', error);
+    res.status(500).json({ success: false, message: 'Error fetching payments', error: error.message });
+  }
+});
+
+// Record manual payment
+router.post('/payments', authenticate, canEditPayments, upload.single('paymentProof'), async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const fpId = getFPScope(req);
+    const {
+      invoiceId, propertyId, estimateId, customerId, customerName,
+      amount, paymentMethod, transactionReference, paymentDate, remarks,
+      receivedBy, paymentStatus
+    } = req.body;
+
+    // Validate required fields
+    if (!invoiceId || !amount || !paymentMethod || !paymentDate) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Invoice ID, amount, payment method, and payment date are required'
+      });
+    }
+
+    // Transaction reference is optional but recommended for non-cash payments
+    // Removed the requirement to make it more flexible
+
+    // Get invoice details
+    const [invoices] = await connection.execute(
+      'SELECT * FROM invoices WHERE id = ?',
+      [invoiceId]
+    );
+
+    if (invoices.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    const invoice = invoices[0];
+    const paymentAmount = parseFloat(amount);
+
+    // Generate payment ID and receipt ID
+    const paymentId = await generatePaymentId(fpId);
+    const receiptId = await generateReceiptId(fpId);
+
+    // Get payment proof URL if uploaded
+    const paymentProofUrl = req.file ? `/uploads/payments/${req.file.filename}` : null;
+
+    // Determine received by name - use provided value or default to current user
+    const receivedByName = receivedBy || `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.username;
+
+    // Insert payment record with full linkage
+    const [result] = await connection.execute(`
+      INSERT INTO payments (
+        payment_id, receipt_id, invoice_id, invoice_number, property_id, property_code,
+        estimate_id, estimate_number, customer_id, franchise_partner_id,
+        customer_name, amount, payment_method, payment_type,
+        transaction_reference, payment_date, payment_proof_url,
+        status, received_by, received_by_name, received_by_role, remarks
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      paymentId,
+      receiptId,
+      invoiceId,
+      invoice.invoice_id, // Store invoice number string
+      propertyId || invoice.property_id,
+      invoice.property_code || null, // Store property code string
+      estimateId || invoice.estimate_id,
+      invoice.source_estimate_id || null, // Store estimate number string
+      customerId || invoice.customer_id,
+      fpId || invoice.franchise_partner_id,
+      customerName || invoice.customer_name,
+      paymentAmount,
+      paymentMethod,
+      'manual',
+      transactionReference || null,
+      paymentDate,
+      paymentProofUrl,
+      'completed',
+      req.user.id,
+      receivedByName,
+      req.user.role,
+      remarks || null
+    ]);
+
+    // Update invoice amounts
+    const newAmountPaid = parseFloat(invoice.amount_paid) + paymentAmount;
+    const newBalance = parseFloat(invoice.total_amount) - newAmountPaid;
+
+    // Determine new payment status
+    let newPaymentStatus = 'pending';
+    let newStatus = invoice.status;
+    if (newBalance <= 0) {
+      newPaymentStatus = 'paid';
+      newStatus = 'paid';
+    } else if (newAmountPaid > 0) {
+      newPaymentStatus = 'partially_paid';
+    }
+
+    await connection.execute(`
+      UPDATE invoices SET
+        amount_paid = ?,
+        balance_amount = ?,
+        payment_status = ?,
+        status = ?
+      WHERE id = ?
+    `, [newAmountPaid, Math.max(0, newBalance), newPaymentStatus, newStatus, invoiceId]);
+
+    // If invoice is fully paid and linked to a work order, auto-close the work order
+    if (newPaymentStatus === 'paid' && invoice.work_order_id) {
+      console.log(`[Payment] Invoice ${invoiceId} fully paid, auto-closing linked work order ${invoice.work_order_id}`);
+      
+      // Update work order status to 'closed'
+      await connection.execute(`
+        UPDATE work_orders SET
+          status = 'closed',
+          admin_notes = CONCAT(IFNULL(admin_notes, ''), '\nPayment verified and closed on ', DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s')),
+          updated_at = NOW()
+        WHERE id = ? AND status = 'completed'
+      `, [invoice.work_order_id]);
+      
+      // Log the status change in work order history
+      try {
+        await connection.execute(`
+          INSERT INTO work_order_status_history (work_order_id, to_status, changed_by, changed_by_role, notes)
+          VALUES (?, 'closed', ?, ?, 'Auto-closed after invoice payment verified')
+        `, [invoice.work_order_id, req.user.id, req.user.role]);
+      } catch (historyErr) {
+        // Ignore if history table doesn't exist
+        console.log('[Payment] Work order status history logging skipped:', historyErr.message);
+      }
+    }
+
+    // Record in payment history
+    await connection.execute(`
+      INSERT INTO payment_history (
+        payment_id, invoice_id, action, new_status, amount,
+        description, performed_by, performed_by_name, performed_by_role
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      result.insertId,
+      invoiceId,
+      'created',
+      'completed',
+      paymentAmount,
+      `Manual payment recorded via ${paymentMethod}${transactionReference ? ` (Ref: ${transactionReference})` : ''}`,
+      req.user.id,
+      `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim(),
+      req.user.role
+    ]);
+
+    await connection.commit();
+
+    res.status(201).json({
+      success: true,
+      message: 'Payment recorded successfully',
+      data: {
+        id: result.insertId,
+        paymentId,
+        newBalance: Math.max(0, newBalance),
+        paymentStatus: newPaymentStatus
+      }
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error recording payment:', error);
+    res.status(500).json({ success: false, message: 'Error recording payment', error: error.message });
+  } finally {
+    connection.release();
+  }
+});
+
+// Alias for record payment (frontend uses /record)
+router.post('/record', authenticate, canEditPayments, paymentCreationLimiter, upload.single('paymentProof'), async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const fpId = getFPScope(req);
+    const {
+      invoiceId, amount, paymentMethod, transactionReference, paymentDate, 
+      bankName, remarks
+    } = req.body;
+
+    if (!invoiceId || !amount || !paymentMethod || !paymentDate) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Invoice ID, amount, payment method, and payment date are required'
+      });
+    }
+
+    // Validate payment amount for security
+    const amountValidation = validatePaymentAmount(amount);
+    if (!amountValidation.valid) {
+      await connection.rollback();
+      // Log suspicious amount attempt
+      try {
+        await pool.execute(`
+          INSERT INTO payment_security_logs (event_type, severity, ip_hash, user_id, user_role, request_path, details)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, ['INVALID_PAYMENT_AMOUNT', 'WARNING', hashIP(getClientIP(req)), req.user?.id, req.user?.role, '/api/payments/record', JSON.stringify({ attemptedAmount: amount, error: amountValidation.error })]);
+      } catch (logErr) {
+        console.error('Failed to log security event:', logErr.message);
+      }
+      return res.status(400).json({
+        success: false,
+        message: amountValidation.error
+      });
+    }
+
+    const [invoices] = await connection.execute('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
+    if (invoices.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    const invoice = invoices[0];
+    const paymentAmount = parseFloat(amount);
+
+    // Generate payment ID
+    const [maxPayment] = await connection.execute('SELECT MAX(id) as maxId FROM payments');
+    const nextId = (maxPayment[0]?.maxId || 0) + 1;
+    const paymentId = `PYMT-${String(nextId).padStart(4, '0')}`;
+
+    // Ensure bank_name column exists
+    try {
+      await connection.execute('ALTER TABLE payments ADD COLUMN bank_name VARCHAR(255)');
+    } catch (e) { /* Column might exist */ }
+
+    const paymentProofUrl = req.file ? `/uploads/payments/${req.file.filename}` : null;
+    const receivedByName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.username;
+
+    const [result] = await connection.execute(`
+      INSERT INTO payments (
+        payment_id, invoice_id, invoice_number, property_id, property_code,
+        estimate_id, customer_id, franchise_partner_id,
+        customer_name, amount, payment_method, payment_type,
+        transaction_reference, bank_name, payment_date, payment_proof_url,
+        status, received_by, received_by_name, received_by_role, remarks
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      paymentId,
+      invoiceId,
+      invoice.invoice_id,
+      invoice.property_id,
+      invoice.property_code,
+      invoice.source_estimate_id,
+      invoice.customer_id,
+      fpId || invoice.franchise_partner_id,
+      invoice.customer_name,
+      paymentAmount,
+      paymentMethod,
+      'manual',
+      transactionReference || null,
+      bankName || null,
+      paymentDate,
+      paymentProofUrl,
+      'paid',
+      req.user.id,
+      receivedByName,
+      req.user.role,
+      remarks || null
+    ]);
+
+    // Update invoice
+    const newAmountPaid = parseFloat(invoice.amount_paid || 0) + paymentAmount;
+    const newBalance = parseFloat(invoice.total_amount) - newAmountPaid;
+    const newStatus = newBalance <= 0 ? 'paid' : 'partially_paid';
+
+    await connection.execute(`
+      UPDATE invoices SET amount_paid = ?, balance_amount = ?, payment_status = ?, status = ? WHERE id = ?
+    `, [newAmountPaid, Math.max(0, newBalance), newStatus, newStatus, invoiceId]);
+
+    await connection.commit();
+
+    res.status(201).json({
+      success: true,
+      message: 'Payment recorded successfully',
+      data: { id: result.insertId, paymentId, newBalance: Math.max(0, newBalance) }
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error recording payment:', error);
+    res.status(500).json({ success: false, message: 'Error recording payment', error: error.message });
+  } finally {
+    connection.release();
+  }
+});
+
+// Archive payment (soft delete)
+router.put('/payments/:id/archive', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+    
+    // Ensure archived column exists
+    try {
+      await pool.execute('ALTER TABLE payments ADD COLUMN archived TINYINT(1) DEFAULT 0');
+      await pool.execute('ALTER TABLE payments ADD COLUMN archived_at TIMESTAMP NULL');
+    } catch (e) { /* Column might exist */ }
+    
+    let query = 'UPDATE payments SET archived = 1, archived_at = NOW() WHERE id = ?';
+    const params = [id];
+    
+    if (fpId) {
+      query = 'UPDATE payments SET archived = 1, archived_at = NOW() WHERE id = ? AND franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    
+    await pool.execute(query, params);
+    res.json({ success: true, message: 'Payment archived successfully' });
+  } catch (error) {
+    console.error('Error archiving payment:', error);
+    res.status(500).json({ success: false, message: 'Error archiving payment', error: error.message });
+  }
+});
+
+// Update payment
+router.put('/payments/:id', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+    const { amount, transactionReference, remarks, bankName, status } = req.body;
+    
+    let query = `UPDATE payments SET 
+      amount = COALESCE(?, amount),
+      transaction_reference = COALESCE(?, transaction_reference),
+      remarks = COALESCE(?, remarks),
+      bank_name = COALESCE(?, bank_name),
+      status = COALESCE(?, status),
+      updated_at = NOW()
+      WHERE id = ?`;
+    const params = [amount, transactionReference, remarks, bankName, status, id];
+    
+    if (fpId) {
+      query = `UPDATE payments SET 
+        amount = COALESCE(?, amount),
+        transaction_reference = COALESCE(?, transaction_reference),
+        remarks = COALESCE(?, remarks),
+        bank_name = COALESCE(?, bank_name),
+        status = COALESCE(?, status),
+        updated_at = NOW()
+        WHERE id = ? AND franchise_partner_id = ?`;
+      params.push(fpId);
+    }
+    
+    await pool.execute(query, params);
+    res.json({ success: true, message: 'Payment updated successfully' });
+  } catch (error) {
+    console.error('Error updating payment:', error);
+    res.status(500).json({ success: false, message: 'Error updating payment', error: error.message });
+  }
+});
+
+// Get payment history
+router.get('/history', authenticate, canViewPayments, async (req, res) => {
+  try {
+    const fpId = getFPScope(req);
+    const { invoiceId, paymentId, startDate, endDate } = req.query;
+
+    let query = `
+      SELECT ph.*, p.payment_id as payment_code, i.invoice_id as invoice_code
+      FROM payment_history ph
+      LEFT JOIN payments p ON ph.payment_id = p.id
+      LEFT JOIN invoices i ON ph.invoice_id = i.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (fpId) {
+      query += ' AND (p.franchise_partner_id = ? OR i.franchise_partner_id = ?)';
+      params.push(fpId, fpId);
+    }
+
+    if (invoiceId) {
+      query += ' AND ph.invoice_id = ?';
+      params.push(invoiceId);
+    }
+
+    if (paymentId) {
+      query += ' AND ph.payment_id = ?';
+      params.push(paymentId);
+    }
+
+    if (startDate) {
+      query += ' AND DATE(ph.created_at) >= ?';
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      query += ' AND DATE(ph.created_at) <= ?';
+      params.push(endDate);
+    }
+
+    query += ' ORDER BY ph.created_at DESC';
+
+    const [history] = await pool.execute(query, params);
+
+    res.json({
+      success: true,
+      data: history.map(h => ({
+        id: h.id,
+        paymentId: h.payment_id,
+        paymentCode: h.payment_code,
+        invoiceId: h.invoice_id,
+        invoiceCode: h.invoice_code,
+        action: h.action,
+        oldStatus: h.old_status,
+        newStatus: h.new_status,
+        amount: h.amount ? parseFloat(h.amount) : null,
+        description: h.description,
+        performedBy: h.performed_by_name,
+        performedByRole: h.performed_by_role,
+        createdAt: h.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching payment history:', error);
+    res.status(500).json({ success: false, message: 'Error fetching payment history', error: error.message });
+  }
+});
+
+// ============================================
+// QR CODE MANAGEMENT (Static UPI QR)
+// ============================================
+
+// Get QR codes for FP
+router.get('/qr-codes', authenticate, canViewPayments, async (req, res) => {
+  try {
+    const fpId = getFPScope(req);
+
+    let query = 'SELECT * FROM payment_qr_codes WHERE 1=1';
+    const params = [];
+
+    if (fpId) {
+      query += ' AND franchise_partner_id = ?';
+      params.push(fpId);
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    const [qrCodes] = await pool.execute(query, params);
+
+    res.json({
+      success: true,
+      data: qrCodes.map(qr => ({
+        id: qr.id,
+        upiId: qr.upi_id,
+        accountName: qr.account_name,
+        bankName: qr.bank_name,
+        qrCodeUrl: qr.qr_code_url,
+        isActive: qr.is_active,
+        createdAt: qr.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching QR codes:', error);
+    res.status(500).json({ success: false, message: 'Error fetching QR codes', error: error.message });
+  }
+});
+
+// Add QR code
+router.post('/qr-codes', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const fpId = getFPScope(req);
+    const { upiId, accountName, bankName, qrCodeUrl } = req.body;
+
+    if (!upiId || !accountName) {
+      return res.status(400).json({
+        success: false,
+        message: 'UPI ID and Account Name are required'
+      });
+    }
+
+    const [result] = await pool.execute(`
+      INSERT INTO payment_qr_codes (
+        franchise_partner_id, upi_id, account_name, bank_name, qr_code_url, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `, [fpId, upiId, accountName, bankName || null, qrCodeUrl || null, req.user.id]);
+
+    res.status(201).json({
+      success: true,
+      message: 'QR code added successfully',
+      data: { id: result.insertId }
+    });
+  } catch (error) {
+    console.error('Error adding QR code:', error);
+    res.status(500).json({ success: false, message: 'Error adding QR code', error: error.message });
+  }
+});
+
+// Update QR code
+router.put('/qr-codes/:id', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+    const { upiId, accountName, bankName, qrCodeUrl, isActive } = req.body;
+
+    let query = 'SELECT * FROM payment_qr_codes WHERE id = ?';
+    const params = [id];
+    if (fpId) {
+      query += ' AND franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    const [existing] = await pool.execute(query, params);
+
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'QR code not found' });
+    }
+
+    await pool.execute(`
+      UPDATE payment_qr_codes SET
+        upi_id = COALESCE(?, upi_id),
+        account_name = COALESCE(?, account_name),
+        bank_name = COALESCE(?, bank_name),
+        qr_code_url = COALESCE(?, qr_code_url),
+        is_active = COALESCE(?, is_active)
+      WHERE id = ?
+    `, [upiId, accountName, bankName, qrCodeUrl, isActive, id]);
+
+    res.json({ success: true, message: 'QR code updated successfully' });
+  } catch (error) {
+    console.error('Error updating QR code:', error);
+    res.status(500).json({ success: false, message: 'Error updating QR code', error: error.message });
+  }
+});
+
+// Delete QR code
+router.delete('/qr-codes/:id', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+
+    let query = 'SELECT * FROM payment_qr_codes WHERE id = ?';
+    const params = [id];
+    if (fpId) {
+      query += ' AND franchise_partner_id = ?';
+      params.push(fpId);
+    }
+    const [existing] = await pool.execute(query, params);
+
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'QR code not found' });
+    }
+
+    await pool.execute('DELETE FROM payment_qr_codes WHERE id = ?', [id]);
+
+    res.json({ success: true, message: 'QR code deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting QR code:', error);
+    res.status(500).json({ success: false, message: 'Error deleting QR code', error: error.message });
+  }
+});
+
+module.exports = router;

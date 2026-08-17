@@ -1,0 +1,13 @@
+# robots.txt for XLAND INFRA
+User-agent: *
+Allow: /
+Allow: /services/
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://xlandinfra.com/sitemap.xml
+
+# Crawl-delay for bots
+Crawl-delay: 1
