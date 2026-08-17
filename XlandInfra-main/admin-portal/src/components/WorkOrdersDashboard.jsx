@@ -399,17 +399,17 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
     });
   };
 
-  // Category trend data with granularity support
+  // Property Type trend data with granularity support (using property categories like GC, Apartment, Villa, etc.)
   const getCategoryTrendData = () => {
     const filtered = applyPeriodFilter(dateFilteredWorkOrders, categoryTrendFilter);
     
-    // Get all unique categories
+    // Get all unique property types (using the same normalization as property type chart)
     const categorySet = new Set();
     filtered.forEach(wo => {
-      const category = wo.category || wo.service_category || wo.serviceCategory || 'Other';
-      categorySet.add(category);
+      const propType = normalizePropertyType(wo.property_type || wo.propertyType);
+      categorySet.add(propType);
     });
-    const categories = Array.from(categorySet).slice(0, 6); // Limit to top 6 categories
+    const categories = Array.from(categorySet).filter(c => c !== 'Other').slice(0, 6); // Limit to top 6, exclude Other
     
     const now = new Date();
     const timePoints = [];
@@ -482,8 +482,8 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       const dataPoint = { name: label };
       categories.forEach(cat => {
         dataPoint[cat] = periodWOs.filter(wo => {
-          const woCategory = wo.category || wo.service_category || wo.serviceCategory || 'Other';
-          return woCategory === cat;
+          const woPropType = normalizePropertyType(wo.property_type || wo.propertyType);
+          return woPropType === cat;
         }).length;
       });
       return dataPoint;
@@ -984,7 +984,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       {/* Category Trend Chart */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-sm font-semibold text-gray-900">Work Orders by Category</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Work Orders by Property Type Trend</h3>
           <div className="flex items-center gap-2">
             <GranularityDropdown value={categoryTrendGranularity} onChange={setCategoryTrendGranularity} />
             <PeriodDropdown value={categoryTrendFilter} onChange={setCategoryTrendFilter} />

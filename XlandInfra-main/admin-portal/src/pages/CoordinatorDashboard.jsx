@@ -126,15 +126,15 @@ const CoordinatorDashboard = ({ user }) => {
   return (
     <div className="space-y-6">
       {/* Header with Stats Cards */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="min-w-fit">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-6">
+          <div className="shrink-0">
             <h1 className="text-2xl font-bold text-gray-900">
               Welcome, {user?.firstName || user?.name?.split(' ')[0] || 'Coordinator'}!
             </h1>
             <p className="text-gray-500 mt-1">Here's what's happening with your coordinated areas today.</p>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex items-center gap-3">
             <button onClick={() => navigate('/coordinator/properties')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group text-left">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
