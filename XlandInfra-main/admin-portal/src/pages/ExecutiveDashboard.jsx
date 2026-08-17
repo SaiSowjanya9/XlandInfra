@@ -124,9 +124,9 @@ const ExecutiveDashboard = ({ user }) => {
   return (
     <div className="space-y-6">
       {/* Header with Stats Cards */}
-      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-          <div>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="min-w-fit">
             <h1 className="text-2xl font-bold text-gray-900">
               Welcome, {user?.firstName || user?.name?.split(' ')[0] || 'Executive'}!
             </h1>
