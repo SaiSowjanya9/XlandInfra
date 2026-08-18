@@ -407,10 +407,12 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
     // Get all unique service categories (Plumbing, Electrical, etc.)
     const categorySet = new Set();
     filtered.forEach(wo => {
-      const category = wo.category || wo.service_category || wo.serviceCategory || 'Other';
-      categorySet.add(category);
+      const category = wo.category_name || wo.category || wo.service_category || wo.serviceCategory || 'Other';
+      if (category && category !== 'Other') {
+        categorySet.add(category);
+      }
     });
-    const categories = Array.from(categorySet).filter(c => c !== 'Other').slice(0, 6); // Limit to top 6, exclude Other
+    const categories = Array.from(categorySet).slice(0, 6); // Limit to top 6
     
     const now = new Date();
     const timePoints = [];
@@ -483,7 +485,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       const dataPoint = { name: label };
       categories.forEach(cat => {
         dataPoint[cat] = periodWOs.filter(wo => {
-          const woCategory = wo.category || wo.service_category || wo.serviceCategory || 'Other';
+          const woCategory = wo.category_name || wo.category || wo.service_category || wo.serviceCategory || 'Other';
           return woCategory === cat;
         }).length;
       });
