@@ -45,12 +45,14 @@ const applyPeriodFilter = (data, period) => {
 const CustomTooltip = ({ active, payload }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-gray-900 px-3 py-2 shadow-xl rounded-lg border border-gray-700 z-50">
-        <p className="font-semibold text-white text-sm mb-1">{payload[0]?.name}</p>
+      <div className="bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200">
+        <p className="font-semibold text-gray-900 text-sm mb-2">{payload[0]?.name}</p>
         {payload.map((entry, index) => (
-          <p key={index} className="text-sm" style={{ color: entry.color }}>
-            {entry.name}: <span className="font-bold">{entry.value}</span>
-          </p>
+          <div key={index} className="flex items-center gap-2 text-sm">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
+            <span className="text-gray-600">{entry.name}:</span>
+            <span className="font-bold text-gray-900">{entry.value}</span>
+          </div>
         ))}
       </div>
     );

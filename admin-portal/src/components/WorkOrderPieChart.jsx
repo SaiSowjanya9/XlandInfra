@@ -27,12 +27,14 @@ const CustomTooltip = ({ active, payload }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-white dark:bg-slate-800 px-4 py-3 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700">
-        <p className="text-sm font-semibold text-gray-900 dark:text-white">{data.name}</p>
-        <p className="text-lg font-bold" style={{ color: data.fill }}>
-          {data.value} <span className="text-xs text-gray-500 font-normal">orders</span>
-        </p>
-        <p className="text-xs text-gray-500">
+      <div className="bg-white px-4 py-3 rounded-lg shadow-lg border border-gray-200">
+        <p className="text-sm font-semibold text-gray-900 mb-1">{data.name}</p>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: data.fill }}></div>
+          <span className="text-gray-600">Count:</span>
+          <span className="font-bold text-gray-900">{data.value} orders</span>
+        </div>
+        <p className="text-xs text-gray-500 mt-1">
           {data.percentage}% of total
         </p>
       </div>
