@@ -581,8 +581,8 @@ const FPDashboard = ({ user }) => {
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={propertyTypeData} layout="vertical" margin={{ left: 20, right: 20 }}>
-                <XAxis type="number" tick={{ fontSize: 11 }} stroke="#9CA3AF" />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} stroke="#9CA3AF" width={100} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: '#6B7280' }} stroke="#9CA3AF" />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 12, fill: '#374151', fontWeight: 500 }} stroke="#9CA3AF" width={100} />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'white', 
