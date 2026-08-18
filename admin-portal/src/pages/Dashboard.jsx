@@ -185,7 +185,7 @@ const Dashboard = () => {
 
   const markAsRead = async (notificationId) => {
     try {
-      await fetch(`/api/admin/notifications/${notificationId}/read`, { method: 'PUT' });
+      await fetch(`${API_BASE}/api/admin/notifications/${notificationId}/read`, { method: 'PUT' });
       setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {

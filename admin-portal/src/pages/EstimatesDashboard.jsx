@@ -134,8 +134,13 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     }
   }, [token, apiPath]);
 
+  // Initial load and auto-refresh every 30 seconds
   useEffect(() => {
     fetchEstimates();
+    const interval = setInterval(() => {
+      fetchEstimates(false);
+    }, 30000);
+    return () => clearInterval(interval);
   }, [fetchEstimates]);
 
   // Filter estimates by MAIN date range (controls entire dashboard)
@@ -254,63 +259,43 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
 
   const funnelEstimates = getFunnelEstimates();
 
+  // Helper function to normalize estimate type
+  const getEstimateType = (e) => {
+    const type = (e.estimate_type || e.estimateType || '').toString().trim().toLowerCase().replace(/[_\s-]/g, '');
+    if (type.includes('property') || type === 'propertybased') return 'property';
+    if (type.includes('work') || type === 'workorder') return 'workorder';
+    if (type === 'direct') return 'direct';
+    return type || 'unknown';
+  };
+
+  // Helper function to normalize status
+  const getStatus = (e) => (e.status || '').toString().trim().toLowerCase();
+
   // Calculate stats for STAT CARDS (use main date range filtered data)
   const totalEstimates = mainFilteredEstimates.length;
-  const directEstimates = mainFilteredEstimates.filter(e => 
-    e.estimate_type === 'direct' || e.estimateType === 'direct'
-  ).length;
-  const propertyBasedEstimates = mainFilteredEstimates.filter(e => 
-    e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
-    e.estimateType === 'property_based' || e.estimateType === 'property-based'
-  ).length;
-  const workOrderEstimates = mainFilteredEstimates.filter(e => 
-    e.estimate_type === 'work_order' || e.estimateType === 'work_order'
-  ).length;
+  const directEstimates = mainFilteredEstimates.filter(e => getEstimateType(e) === 'direct').length;
+  const propertyBasedEstimates = mainFilteredEstimates.filter(e => getEstimateType(e) === 'property').length;
+  const workOrderEstimates = mainFilteredEstimates.filter(e => getEstimateType(e) === 'workorder').length;
   
-  const draftEstimates = mainFilteredEstimates.filter(e => 
-    (e.status || '').toLowerCase() === 'draft'
-  ).length;
-  const sentEstimates = mainFilteredEstimates.filter(e => 
-    (e.status || '').toLowerCase() === 'sent'
-  ).length;
-  const approvedEstimates = mainFilteredEstimates.filter(e => 
-    (e.status || '').toLowerCase() === 'approved'
-  ).length;
-  const rejectedEstimates = mainFilteredEstimates.filter(e => 
-    (e.status || '').toLowerCase() === 'rejected'
-  ).length;
+  const draftEstimates = mainFilteredEstimates.filter(e => getStatus(e) === 'draft').length;
+  const sentEstimates = mainFilteredEstimates.filter(e => getStatus(e) === 'sent').length;
+  const approvedEstimates = mainFilteredEstimates.filter(e => getStatus(e) === 'approved').length;
+  const rejectedEstimates = mainFilteredEstimates.filter(e => getStatus(e) === 'rejected').length;
 
   // Calculate stats for CHARTS (use filtered estimates)
   const filteredTotal = filteredEstimates.length;
-  const filteredDirect = filteredEstimates.filter(e => 
-    e.estimate_type === 'direct' || e.estimateType === 'direct'
-  ).length;
-  const filteredPropertyBased = filteredEstimates.filter(e => 
-    e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
-    e.estimateType === 'property_based' || e.estimateType === 'property-based'
-  ).length;
+  const filteredDirect = filteredEstimates.filter(e => getEstimateType(e) === 'direct').length;
+  const filteredPropertyBased = filteredEstimates.filter(e => getEstimateType(e) === 'property').length;
   
-  const filteredDraft = filteredEstimates.filter(e => 
-    (e.status || '').toLowerCase() === 'draft'
-  ).length;
-  const filteredSent = filteredEstimates.filter(e => 
-    (e.status || '').toLowerCase() === 'sent'
-  ).length;
-  const filteredApproved = filteredEstimates.filter(e => 
-    (e.status || '').toLowerCase() === 'approved'
-  ).length;
-  const filteredRejected = filteredEstimates.filter(e => 
-    (e.status || '').toLowerCase() === 'rejected'
-  ).length;
+  const filteredDraft = filteredEstimates.filter(e => getStatus(e) === 'draft').length;
+  const filteredSent = filteredEstimates.filter(e => getStatus(e) === 'sent').length;
+  const filteredApproved = filteredEstimates.filter(e => getStatus(e) === 'approved').length;
+  const filteredRejected = filteredEstimates.filter(e => getStatus(e) === 'rejected').length;
 
   // Funnel stats (uses funnel filter)
   const funnelTotal = funnelEstimates.length;
-  const funnelSent = funnelEstimates.filter(e => 
-    ['sent', 'approved', 'rejected'].includes((e.status || '').toLowerCase())
-  ).length;
-  const funnelApproved = funnelEstimates.filter(e => 
-    (e.status || '').toLowerCase() === 'approved'
-  ).length;
+  const funnelSent = funnelEstimates.filter(e => ['sent', 'approved', 'rejected'].includes(getStatus(e))).length;
+  const funnelApproved = funnelEstimates.filter(e => getStatus(e) === 'approved').length;
   // Calculate invoices created (approved estimates) and paid (we'll assume some percentage)
   const funnelInvoicesCreated = funnelApproved;
   const funnelPaid = Math.floor(funnelApproved * 0.85); // Assuming 85% of approved are paid
@@ -404,10 +389,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   // ============================================
 
   // Block 1: Property-Based Property Type (uses filter1)
-  const block1Data = applyPeriodFilter(mainFilteredEstimates, filter1).filter(e => 
-    e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
-    e.estimateType === 'property_based' || e.estimateType === 'property-based'
-  );
+  const block1Data = applyPeriodFilter(mainFilteredEstimates, filter1).filter(e => getEstimateType(e) === 'property');
   const propertyTypeCount = {};
   block1Data.forEach(est => {
     const propType = normalizePropertyType(est.property_type || est.propertyType);
@@ -419,10 +401,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
 
   // Block 2: Status Overview (uses filter2)
   const block2Data = applyPeriodFilter(mainFilteredEstimates, filter2);
-  const block2Draft = block2Data.filter(e => (e.status || '').toLowerCase() === 'draft').length;
-  const block2Sent = block2Data.filter(e => (e.status || '').toLowerCase() === 'sent').length;
-  const block2Approved = block2Data.filter(e => (e.status || '').toLowerCase() === 'approved').length;
-  const block2Rejected = block2Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length;
+  const block2Draft = block2Data.filter(e => getStatus(e) === 'draft').length;
+  const block2Sent = block2Data.filter(e => getStatus(e) === 'sent').length;
+  const block2Approved = block2Data.filter(e => getStatus(e) === 'approved').length;
+  const block2Rejected = block2Data.filter(e => getStatus(e) === 'rejected').length;
   // All statuses for legend display - using shared color constants
   const statusDataAll = [
     { name: 'Draft', value: block2Draft, color: STATUS_COLORS.Draft },
@@ -437,12 +419,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
 
   // Block 3: Estimate Type (uses filter3) - includes all types
   const block3Data = applyPeriodFilter(mainFilteredEstimates, filter3);
-  const block3Direct = block3Data.filter(e => e.estimate_type === 'direct' || e.estimateType === 'direct').length;
-  const block3PropertyBased = block3Data.filter(e => 
-    e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
-    e.estimateType === 'property_based' || e.estimateType === 'property-based'
-  ).length;
-  const block3WorkOrder = block3Data.filter(e => e.estimate_type === 'work_order' || e.estimateType === 'work_order').length;
+  const block3Direct = block3Data.filter(e => getEstimateType(e) === 'direct').length;
+  const block3PropertyBased = block3Data.filter(e => getEstimateType(e) === 'property').length;
+  const block3WorkOrder = block3Data.filter(e => getEstimateType(e) === 'workorder').length;
   const typeDataAll = [
     { name: 'Direct Estimates', value: block3Direct, color: ESTIMATE_TYPE_COLORS['Direct Estimates'] },
     { name: 'Property-Based', value: block3PropertyBased, color: ESTIMATE_TYPE_COLORS['Property-Based'] },
@@ -451,9 +430,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const typeData = typeDataAll.filter(item => item.value > 0);
 
   // Block 4: Direct Property Type (uses filter4)
-  const block4Data = applyPeriodFilter(mainFilteredEstimates, filter4).filter(e => 
-    e.estimate_type === 'direct' || e.estimateType === 'direct'
-  );
+  const block4Data = applyPeriodFilter(mainFilteredEstimates, filter4).filter(e => getEstimateType(e) === 'direct');
   const directPropertyTypeCount = {};
   block4Data.forEach(est => {
     const propType = normalizePropertyType(est.property_type || est.propertyType);
@@ -464,16 +441,13 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     .sort((a, b) => b.value - a.value);
 
   // Block 5: Direct Status (uses filter5)
-  const block5Data = applyPeriodFilter(mainFilteredEstimates, filter5).filter(e => {
-    const type = (e.estimate_type || e.estimateType || '').toLowerCase();
-    return type === 'direct';
-  });
+  const block5Data = applyPeriodFilter(mainFilteredEstimates, filter5).filter(e => getEstimateType(e) === 'direct');
   // All statuses for legend display - using shared color constants
   const directStatusDataAll = [
-    { name: 'Draft', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
-    { name: 'Sent', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
-    { name: 'Approved', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
-    { name: 'Rejected', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
+    { name: 'Draft', value: block5Data.filter(e => getStatus(e) === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block5Data.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block5Data.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block5Data.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
   // Calculate total from breakdown
   const directStatusTotal = directStatusDataAll.reduce((sum, item) => sum + item.value, 0);
@@ -481,16 +455,13 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const directStatusData = directStatusDataAll.filter(item => item.value > 0);
 
   // Block 6: Property-Based Status (uses filter6)
-  const block6Data = applyPeriodFilter(mainFilteredEstimates, filter6).filter(e => {
-    const type = (e.estimate_type || e.estimateType || '').toLowerCase().replace(/[_\s-]/g, '');
-    return type === 'propertybased' || type === 'property';
-  });
+  const block6Data = applyPeriodFilter(mainFilteredEstimates, filter6).filter(e => getEstimateType(e) === 'property');
   // All statuses for legend display - using shared color constants
   const propertyBasedStatusDataAll = [
-    { name: 'Draft', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
-    { name: 'Sent', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
-    { name: 'Approved', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
-    { name: 'Rejected', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
+    { name: 'Draft', value: block6Data.filter(e => getStatus(e) === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block6Data.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block6Data.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block6Data.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
   // Calculate total from breakdown
   const propertyBasedStatusTotal = propertyBasedStatusDataAll.reduce((sum, item) => sum + item.value, 0);
@@ -498,24 +469,19 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const propertyBasedStatusData = propertyBasedStatusDataAll.filter(item => item.value > 0);
 
   // Block 7: Work Order Estimate Status (uses filter7)
-  const block7Data = applyPeriodFilter(mainFilteredEstimates, filter7).filter(e => {
-    const type = (e.estimate_type || e.estimateType || '').toLowerCase().replace(/[_\s-]/g, '');
-    return type === 'workorder';
-  });
+  const block7Data = applyPeriodFilter(mainFilteredEstimates, filter7).filter(e => getEstimateType(e) === 'workorder');
   const workOrderStatusDataAll = [
-    { name: 'Draft', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
-    { name: 'Sent', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
-    { name: 'Approved', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
-    { name: 'Rejected', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
+    { name: 'Draft', value: block7Data.filter(e => getStatus(e) === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block7Data.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block7Data.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block7Data.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
   // Calculate total from breakdown to ensure accuracy
   const workOrderStatusTotal = workOrderStatusDataAll.reduce((sum, item) => sum + item.value, 0);
   const workOrderStatusData = workOrderStatusDataAll.filter(item => item.value > 0);
 
   // Block 8: Work Order Estimates by Category grouped by Property Type
-  const block8Data = applyPeriodFilter(mainFilteredEstimates, filter8).filter(e => 
-    e.estimate_type === 'work_order' || e.estimateType === 'work_order'
-  );
+  const block8Data = applyPeriodFilter(mainFilteredEstimates, filter8).filter(e => getEstimateType(e) === 'workorder');
   
   // Group by property type, then by category
   const workOrderByPropertyAndCategory = {};

@@ -300,16 +300,25 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
 
+  // Helper function to normalize estimate type
+  const getEstimateType = (e) => {
+    const type = (e.estimate_type || e.estimateType || '').toString().trim().toLowerCase().replace(/[_\s-]/g, '');
+    if (type.includes('property') || type === 'propertybased') return 'property';
+    if (type.includes('work') || type === 'workorder') return 'workorder';
+    if (type === 'direct') return 'direct';
+    return type || 'unknown';
+  };
+
+  // Helper function to normalize status
+  const getStatus = (e) => (e.status || '').toString().trim().toLowerCase();
+
   // Block 3: Property-Based Status
-  const block3Filtered = applyPeriodFilter(estimates, filter6).filter(e => {
-    const type = (e.estimate_type || e.estimateType || '').toLowerCase().replace(/[_\s-]/g, '');
-    return type === 'propertybased' || type === 'property';
-  });
+  const block3Filtered = applyPeriodFilter(estimates, filter6).filter(e => getEstimateType(e) === 'property');
   const propertyStatusDataAll = [
-    { name: 'Draft', value: block3Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
-    { name: 'Sent', value: block3Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
-    { name: 'Approved', value: block3Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
-    { name: 'Rejected', value: block3Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
+    { name: 'Draft', value: block3Filtered.filter(e => getStatus(e) === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block3Filtered.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block3Filtered.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block3Filtered.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
   const propertyStatusTotal = propertyStatusDataAll.reduce((sum, item) => sum + item.value, 0);
   const propertyStatusData = propertyStatusDataAll.filter(item => item.value > 0);
@@ -317,10 +326,10 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   // Block 4: Estimate Status (All)
   const block4Filtered = applyPeriodFilter(estimates, filter2);
   const statusDataAll = [
-    { name: 'Draft', value: block4Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
-    { name: 'Sent', value: block4Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
-    { name: 'Approved', value: block4Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
-    { name: 'Rejected', value: block4Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
+    { name: 'Draft', value: block4Filtered.filter(e => getStatus(e) === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block4Filtered.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block4Filtered.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block4Filtered.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
   const statusTotal = statusDataAll.reduce((sum, item) => sum + item.value, 0);
   const statusData = statusDataAll.filter(item => item.value > 0);
@@ -339,29 +348,23 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
     .sort((a, b) => b.value - a.value);
 
   // Block 6: Direct Estimate Status
-  const block6Filtered = applyPeriodFilter(estimates, filter5).filter(e => {
-    const type = (e.estimate_type || e.estimateType || '').toLowerCase();
-    return type === 'direct';
-  });
+  const block6Filtered = applyPeriodFilter(estimates, filter5).filter(e => getEstimateType(e) === 'direct');
   const directStatusDataAll = [
-    { name: 'Draft', value: block6Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
-    { name: 'Sent', value: block6Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
-    { name: 'Approved', value: block6Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
-    { name: 'Rejected', value: block6Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
+    { name: 'Draft', value: block6Filtered.filter(e => getStatus(e) === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block6Filtered.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block6Filtered.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block6Filtered.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
   const directStatusTotal = directStatusDataAll.reduce((sum, item) => sum + item.value, 0);
   const directStatusData = directStatusDataAll.filter(item => item.value > 0);
 
   // Block 7: Work Order Estimate Overview (count by status)
-  const block7Filtered = applyPeriodFilter(estimates, filter9).filter(e => {
-    const type = (e.estimate_type || e.estimateType || '').toLowerCase().replace(/[_\s-]/g, '');
-    return type === 'workorder';
-  });
+  const block7Filtered = applyPeriodFilter(estimates, filter9).filter(e => getEstimateType(e) === 'workorder');
   const workOrderOverviewDataAll = [
-    { name: 'Draft', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
-    { name: 'Sent', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
-    { name: 'Approved', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
-    { name: 'Rejected', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
+    { name: 'Draft', value: block7Filtered.filter(e => getStatus(e) === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block7Filtered.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block7Filtered.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block7Filtered.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
   // Calculate total from breakdown to ensure accuracy
   const workOrderOverviewTotal = workOrderOverviewDataAll.reduce((sum, item) => sum + item.value, 0);
