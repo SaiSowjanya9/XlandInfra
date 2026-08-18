@@ -29,13 +29,16 @@ const CHART_COLORS = [COLORS.gold, COLORS.info, COLORS.success, COLORS.purple, C
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-gray-900/95 backdrop-blur-xl border border-amber-500/20 rounded-lg px-4 py-3 shadow-xl">
-        <p className="text-gray-400 text-xs mb-1">{label}</p>
+      <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 shadow-lg">
+        <p className="text-gray-900 font-semibold text-sm mb-2">{label}</p>
         {payload.map((entry, index) => (
-          <p key={index} className="text-white font-semibold text-sm">
-            <span style={{ color: entry.color }}>{entry.name}: </span>
-            {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
-          </p>
+          <div key={index} className="flex items-center gap-2 text-sm">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
+            <span className="text-gray-600">{entry.name}:</span>
+            <span className="font-bold text-gray-900">
+              {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
+            </span>
+          </div>
         ))}
       </div>
     );
