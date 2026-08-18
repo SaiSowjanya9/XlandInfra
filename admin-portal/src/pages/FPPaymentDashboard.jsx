@@ -47,8 +47,13 @@ const FPPaymentDashboard = ({ user }) => {
     }
   };
 
+  // Initial load and auto-refresh every 30 seconds
   useEffect(() => {
     fetchDashboard();
+    const interval = setInterval(() => {
+      fetchDashboard();
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const formatCurrency = (amount) => {

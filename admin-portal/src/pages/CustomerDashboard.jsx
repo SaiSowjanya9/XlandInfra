@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const CustomerDashboard = ({ user }) => {
   const navigate = useNavigate();
@@ -41,7 +41,7 @@ const CustomerDashboard = ({ user }) => {
     if (isInitialLoad) setLoading(true);
     try {
       const token = safeStorage.getItem('customer_token') || getAuthToken();
-      const response = await fetch(`${API_BASE}/customers/dashboard`, {
+      const response = await fetch(`${API_BASE}/api/customers/dashboard`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
