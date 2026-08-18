@@ -410,10 +410,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     { name: 'Draft', value: block2Draft, color: STATUS_COLORS.Draft },
     { name: 'Sent', value: block2Sent, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block2Approved, color: STATUS_COLORS.Approved },
-    { name: 'Rejected', value: block2Rejected, color: STATUS_COLORS.Rejected }
+    { name: 'Rejected', value: block2Rejected, color: STATUS_COLORS.Rejected },
+    { name: 'Converted', value: block2Data.filter(e => getStatus(e) === 'converted').length, color: '#8B5CF6' }
   ];
-  // Calculate total from breakdown
-  const statusTotal = statusDataAll.reduce((sum, item) => sum + item.value, 0);
+  // Use actual filtered count as total to ensure accuracy
+  const statusTotal = block2Data.length;
   // Only non-zero for chart display
   const statusData = statusDataAll.filter(item => item.value > 0);
 
@@ -447,10 +448,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     { name: 'Draft', value: block5Data.filter(e => getStatus(e) === 'draft').length, color: STATUS_COLORS.Draft },
     { name: 'Sent', value: block5Data.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block5Data.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
-    { name: 'Rejected', value: block5Data.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected }
+    { name: 'Rejected', value: block5Data.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected },
+    { name: 'Converted', value: block5Data.filter(e => getStatus(e) === 'converted').length, color: '#8B5CF6' }
   ];
-  // Calculate total from breakdown
-  const directStatusTotal = directStatusDataAll.reduce((sum, item) => sum + item.value, 0);
+  // Use actual filtered count as total to ensure accuracy
+  const directStatusTotal = block5Data.length;
   // Only non-zero for chart display
   const directStatusData = directStatusDataAll.filter(item => item.value > 0);
 
@@ -461,10 +463,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     { name: 'Draft', value: block6Data.filter(e => getStatus(e) === 'draft').length, color: STATUS_COLORS.Draft },
     { name: 'Sent', value: block6Data.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block6Data.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
-    { name: 'Rejected', value: block6Data.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected }
+    { name: 'Rejected', value: block6Data.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected },
+    { name: 'Converted', value: block6Data.filter(e => getStatus(e) === 'converted').length, color: '#8B5CF6' }
   ];
-  // Calculate total from breakdown
-  const propertyBasedStatusTotal = propertyBasedStatusDataAll.reduce((sum, item) => sum + item.value, 0);
+  // Use actual filtered count as total to ensure accuracy
+  const propertyBasedStatusTotal = block6Data.length;
   // Only non-zero for chart display
   const propertyBasedStatusData = propertyBasedStatusDataAll.filter(item => item.value > 0);
 
@@ -474,10 +477,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     { name: 'Draft', value: block7Data.filter(e => getStatus(e) === 'draft').length, color: STATUS_COLORS.Draft },
     { name: 'Sent', value: block7Data.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block7Data.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
-    { name: 'Rejected', value: block7Data.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected }
+    { name: 'Rejected', value: block7Data.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected },
+    { name: 'Converted', value: block7Data.filter(e => getStatus(e) === 'converted').length, color: '#8B5CF6' }
   ];
-  // Calculate total from breakdown to ensure accuracy
-  const workOrderStatusTotal = workOrderStatusDataAll.reduce((sum, item) => sum + item.value, 0);
+  // Use actual filtered count as total to ensure accuracy
+  const workOrderStatusTotal = block7Data.length;
   const workOrderStatusData = workOrderStatusDataAll.filter(item => item.value > 0);
 
   // Block 8: Work Order Estimates by Category grouped by Property Type
