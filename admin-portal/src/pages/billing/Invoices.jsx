@@ -86,12 +86,19 @@ const PAYMENT_LINK_STATUS_CONFIG = {
   cancelled: { label: 'Link Cancelled', color: 'text-gray-500', icon: 'x' }
 };
 
-// Helper to decode HTML entities
+// Helper to decode HTML entities (handle multiple levels of encoding)
 const decodeHtmlEntities = (str) => {
   if (!str) return str;
+  // Decode multiple times to handle double/triple encoding
+  let decoded = String(str);
   const txt = document.createElement('textarea');
-  txt.innerHTML = str;
-  return txt.value;
+  for (let i = 0; i < 3; i++) {
+    txt.innerHTML = decoded;
+    const newDecoded = txt.value;
+    if (newDecoded === decoded) break;
+    decoded = newDecoded;
+  }
+  return decoded;
 };
 
 const INVOICE_TYPE_CONFIG = {
