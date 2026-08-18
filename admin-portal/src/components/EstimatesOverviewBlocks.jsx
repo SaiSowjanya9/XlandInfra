@@ -354,10 +354,13 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   );
   const workOrderOverviewDataAll = [
     { name: 'Draft', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Pending', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'pending').length, color: '#F59E0B' },
     { name: 'Sent', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
+  // Calculate total from breakdown to ensure accuracy
+  const workOrderOverviewTotal = workOrderOverviewDataAll.reduce((sum, item) => sum + item.value, 0);
   const workOrderOverviewData = workOrderOverviewDataAll.filter(item => item.value > 0);
 
   // Block 8: Work Order Estimates by Category grouped by Property Type
@@ -496,7 +499,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
           <DonutChartWithLegend 
             data={workOrderOverviewData} 
             dataAll={workOrderOverviewDataAll}
-            total={block7Filtered.length}
+            total={workOrderOverviewTotal}
           />
         </div>
 

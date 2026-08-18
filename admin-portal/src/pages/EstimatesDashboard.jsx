@@ -496,10 +496,13 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   );
   const workOrderStatusDataAll = [
     { name: 'Draft', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Pending', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'pending').length, color: '#F59E0B' },
     { name: 'Sent', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
+  // Calculate total from breakdown to ensure accuracy
+  const workOrderStatusTotal = workOrderStatusDataAll.reduce((sum, item) => sum + item.value, 0);
   const workOrderStatusData = workOrderStatusDataAll.filter(item => item.value > 0);
 
   // Block 8: Work Order Estimates by Category grouped by Property Type
@@ -1184,7 +1187,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           
           <div className="flex items-center">
             <div className="w-1/2 flex items-center justify-center">
-              <DonutChart data={workOrderStatusDataAll} centerValue={block7Data.length} size={130} strokeWidth={18} />
+              <DonutChart data={workOrderStatusDataAll} centerValue={workOrderStatusTotal} size={130} strokeWidth={18} />
             </div>
             <div className="w-1/2 space-y-1.5 pl-3">
               {workOrderStatusDataAll.map((item, index) => (
@@ -1195,7 +1198,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   />
                   <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
                   <span className="text-gray-800 whitespace-nowrap">
-                    {item.value} ({block7Data.length ? ((item.value / block7Data.length) * 100).toFixed(1) : 0}%)
+                    {item.value} ({workOrderStatusTotal ? ((item.value / workOrderStatusTotal) * 100).toFixed(1) : 0}%)
                   </span>
                 </div>
               ))}
