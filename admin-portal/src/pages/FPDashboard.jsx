@@ -620,10 +620,10 @@ const FPDashboard = ({ user }) => {
                 <div key={index} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                    <span className="text-xs text-gray-500">{item.name}</span>
+                    <span className="text-sm font-medium text-gray-700">{item.name}</span>
                   </div>
                   <p className="text-xl font-bold text-gray-900">{item.value}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-500">
                     {totalPropertiesCount ? ((item.value / totalPropertiesCount) * 100).toFixed(1) : 0}% of total
                   </p>
                 </div>
