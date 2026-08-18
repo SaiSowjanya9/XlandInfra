@@ -13,12 +13,19 @@ import { exportEstimateToPDF } from '../utils/pdfExport';
 
 const ITEMS_PER_PAGE = 10;
 
-// Decode HTML entities (e.g., &amp; -> &)
+// Decode HTML entities (e.g., &amp;amp; -> &)
 const decodeHtml = (html) => {
   if (!html || typeof html !== 'string') return html;
+  // Decode multiple times to handle double/triple encoding
+  let decoded = html;
   const txt = document.createElement('textarea');
-  txt.innerHTML = html;
-  return txt.value;
+  for (let i = 0; i < 3; i++) {
+    txt.innerHTML = decoded;
+    const newDecoded = txt.value;
+    if (newDecoded === decoded) break;
+    decoded = newDecoded;
+  }
+  return decoded;
 };
 
 const PROPERTY_TYPE_OPTIONS = [
@@ -2008,7 +2015,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                                 <p className="font-medium text-gray-800 text-sm">{decodeHtml(svc.name || svc.service)}</p>
                               </div>
                               <div className="col-span-4 overflow-hidden">
-                                <p className={`text-xs text-gray-500 break-all whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</p>
+                                <p className={`text-xs text-gray-500 break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</p>
                               </div>
                               <div className="col-span-2 text-center">
                                 <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
@@ -2060,7 +2067,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                               <p className="font-medium text-gray-800 text-sm">{addonName}</p>
                             </div>
                             <div className="col-span-4">
-                              <p className="text-xs text-gray-500 break-all whitespace-normal">{addonDescription || '-'}</p>
+                              <p className="text-xs text-gray-500 break-words whitespace-normal">{addonDescription || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>

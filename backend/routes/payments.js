@@ -698,57 +698,78 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
     // If we have a source estimate, try to enrich line items with full descriptions
     if (i.source_estimate_id) {
       try {
+        // Fetch estimate with AMC package services (like the estimate view does)
         const [estimates] = await pool.execute(
-          `SELECT package_services, addons_data FROM fp_estimates WHERE estimate_id = ?`,
+          `SELECT fe.package_services, fe.addons_data, fe.package_id, fe.package_name,
+                  COALESCE(fe.package_services, fpamc_id.services, fpamc_name.services) as enrichedServices
+           FROM fp_estimates fe
+           LEFT JOIN fp_amc_packages fpamc_id ON fe.package_id = fpamc_id.id
+           LEFT JOIN fp_amc_packages fpamc_name ON fe.package_name = fpamc_name.package_name AND fe.franchise_partner_id = fpamc_name.franchise_partner_id
+           WHERE fe.estimate_id = ?`,
           [i.source_estimate_id]
         );
         
         if (estimates.length > 0) {
           const estimate = estimates[0];
           
-          // Parse original services from estimate
-          if (estimate.package_services) {
-            const originalServices = typeof estimate.package_services === 'string' 
-              ? JSON.parse(estimate.package_services) 
-              : estimate.package_services;
+          // Use enrichedServices which falls back to AMC package services
+          const rawServices = estimate.enrichedServices || estimate.package_services;
+          
+          if (rawServices) {
+            const originalServices = typeof rawServices === 'string' 
+              ? JSON.parse(rawServices) 
+              : rawServices;
             
             if (Array.isArray(originalServices)) {
-              // Enrich line items with full descriptions from original estimate
-              lineItems = lineItems.map((item, idx) => {
-                const original = originalServices[idx];
-                if (original) {
-                  const serviceName = original.name || original.serviceName || item.name || item.description?.split(' - ')[0] || 'Service';
-                  const serviceDesc = original.description || original.service_description || '';
-                  return {
-                    ...item,
-                    name: serviceName,
-                    description: serviceDesc ? `${serviceName} - ${serviceDesc}` : serviceName,
-                    details: serviceDesc,
-                    frequency: original.frequency || original.frequencyType || item.frequency || 'Other',
-                    visits: original.visits || original.frequencyCount || item.visits || item.quantity || 1,
-                    totalPrice: parseFloat(original.totalPrice || original.price || item.totalPrice || 0)
-                  };
-                }
-                return item;
+              // Build enriched line items from original services with FULL descriptions
+              lineItems = originalServices.map((s, idx) => {
+                const existingItem = lineItems[idx] || {};
+                const serviceName = s.name || s.serviceName || existingItem.name || 'Service';
+                const serviceDesc = s.description || s.service_description || '';
+                
+                return {
+                  ...existingItem,
+                  name: serviceName,
+                  description: serviceDesc ? `${serviceName} - ${serviceDesc}` : serviceName,
+                  details: serviceDesc,
+                  frequency: s.frequency || s.frequencyType || s.frequency_type || existingItem.frequency || 'Other',
+                  visits: s.visits || s.frequencyCount || s.frequency_count || existingItem.visits || 1,
+                  totalPrice: parseFloat(s.totalPrice || s.total_price || s.price || existingItem.totalPrice || 0),
+                  type: s.type || existingItem.type || 'service'
+                };
               });
-              
-              // Add any services from estimate not in line items
-              if (originalServices.length > lineItems.length) {
-                for (let idx = lineItems.length; idx < originalServices.length; idx++) {
-                  const s = originalServices[idx];
-                  const serviceName = s.name || s.serviceName || 'Service';
-                  const serviceDesc = s.description || s.service_description || '';
+            }
+          }
+          
+          // Also enrich addons if present
+          if (estimate.addons_data) {
+            const addons = typeof estimate.addons_data === 'string' 
+              ? JSON.parse(estimate.addons_data) 
+              : estimate.addons_data;
+            
+            if (Array.isArray(addons)) {
+              addons.forEach(addon => {
+                const addonName = addon.name || addon.serviceName || addon.service_name || 'Add-on';
+                const addonDesc = addon.description || addon.service_description || '';
+                
+                // Check if addon already exists in lineItems
+                const exists = lineItems.some(item => 
+                  item.name?.toLowerCase() === addonName.toLowerCase() || 
+                  item.description?.toLowerCase().includes(addonName.toLowerCase())
+                );
+                
+                if (!exists) {
                   lineItems.push({
-                    name: serviceName,
-                    description: serviceDesc ? `${serviceName} - ${serviceDesc}` : serviceName,
-                    details: serviceDesc,
-                    frequency: s.frequency || s.frequencyType || 'Other',
-                    visits: s.visits || s.frequencyCount || 1,
-                    totalPrice: parseFloat(s.totalPrice || s.price || 0),
-                    type: 'service'
+                    name: addonName,
+                    description: addonDesc ? `${addonName} - ${addonDesc}` : addonName,
+                    details: addonDesc,
+                    frequency: addon.frequency || addon.frequencyType || 'Other',
+                    visits: addon.visits || addon.frequencyCount || 1,
+                    totalPrice: parseFloat(addon.totalPrice || addon.price || 0),
+                    type: 'addon'
                   });
                 }
-              }
+              });
             }
           }
         }
