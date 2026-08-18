@@ -301,16 +301,17 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
     .sort((a, b) => b.value - a.value);
 
   // Block 3: Property-Based Status
-  const block3Filtered = applyPeriodFilter(estimates, filter6).filter(e => 
-    e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
-    e.estimateType === 'property_based' || e.estimateType === 'property-based'
-  );
+  const block3Filtered = applyPeriodFilter(estimates, filter6).filter(e => {
+    const type = (e.estimate_type || e.estimateType || '').toLowerCase().replace(/[_\s-]/g, '');
+    return type === 'propertybased' || type === 'property';
+  });
   const propertyStatusDataAll = [
     { name: 'Draft', value: block3Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
     { name: 'Sent', value: block3Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block3Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block3Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
+  const propertyStatusTotal = propertyStatusDataAll.reduce((sum, item) => sum + item.value, 0);
   const propertyStatusData = propertyStatusDataAll.filter(item => item.value > 0);
 
   // Block 4: Estimate Status (All)
@@ -321,6 +322,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
     { name: 'Approved', value: block4Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block4Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
+  const statusTotal = statusDataAll.reduce((sum, item) => sum + item.value, 0);
   const statusData = statusDataAll.filter(item => item.value > 0);
 
   // Block 5: Estimates by Property Type (Direct)
@@ -337,24 +339,26 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
     .sort((a, b) => b.value - a.value);
 
   // Block 6: Direct Estimate Status
-  const block6Filtered = applyPeriodFilter(estimates, filter5).filter(e => 
-    e.estimate_type === 'direct' || e.estimateType === 'direct'
-  );
+  const block6Filtered = applyPeriodFilter(estimates, filter5).filter(e => {
+    const type = (e.estimate_type || e.estimateType || '').toLowerCase();
+    return type === 'direct';
+  });
   const directStatusDataAll = [
     { name: 'Draft', value: block6Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
     { name: 'Sent', value: block6Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block6Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block6Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
+  const directStatusTotal = directStatusDataAll.reduce((sum, item) => sum + item.value, 0);
   const directStatusData = directStatusDataAll.filter(item => item.value > 0);
 
   // Block 7: Work Order Estimate Overview (count by status)
-  const block7Filtered = applyPeriodFilter(estimates, filter9).filter(e => 
-    e.estimate_type === 'work_order' || e.estimateType === 'work_order'
-  );
+  const block7Filtered = applyPeriodFilter(estimates, filter9).filter(e => {
+    const type = (e.estimate_type || e.estimateType || '').toLowerCase().replace(/[_\s-]/g, '');
+    return type === 'workorder';
+  });
   const workOrderOverviewDataAll = [
     { name: 'Draft', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
-    { name: 'Pending', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'pending').length, color: '#F59E0B' },
     { name: 'Sent', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block7Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
@@ -433,7 +437,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
           <DonutChartWithLegend 
             data={statusData} 
             dataAll={statusDataAll}
-            total={block4Filtered.length}
+            total={statusTotal}
           />
         </div>
       </div>
@@ -449,7 +453,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
           <DonutChartWithLegend 
             data={propertyStatusData} 
             dataAll={propertyStatusDataAll}
-            total={block3Filtered.length}
+            total={propertyStatusTotal}
           />
         </div>
 
@@ -474,7 +478,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
           <DonutChartWithLegend 
             data={directStatusData} 
             dataAll={directStatusDataAll}
-            total={block6Filtered.length}
+            total={directStatusTotal}
           />
         </div>
 

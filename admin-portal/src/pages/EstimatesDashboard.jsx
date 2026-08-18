@@ -430,6 +430,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     { name: 'Approved', value: block2Approved, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block2Rejected, color: STATUS_COLORS.Rejected }
   ];
+  // Calculate total from breakdown
+  const statusTotal = statusDataAll.reduce((sum, item) => sum + item.value, 0);
   // Only non-zero for chart display
   const statusData = statusDataAll.filter(item => item.value > 0);
 
@@ -462,9 +464,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     .sort((a, b) => b.value - a.value);
 
   // Block 5: Direct Status (uses filter5)
-  const block5Data = applyPeriodFilter(mainFilteredEstimates, filter5).filter(e => 
-    e.estimate_type === 'direct' || e.estimateType === 'direct'
-  );
+  const block5Data = applyPeriodFilter(mainFilteredEstimates, filter5).filter(e => {
+    const type = (e.estimate_type || e.estimateType || '').toLowerCase();
+    return type === 'direct';
+  });
   // All statuses for legend display - using shared color constants
   const directStatusDataAll = [
     { name: 'Draft', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
@@ -472,14 +475,16 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     { name: 'Approved', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block5Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
+  // Calculate total from breakdown
+  const directStatusTotal = directStatusDataAll.reduce((sum, item) => sum + item.value, 0);
   // Only non-zero for chart display
   const directStatusData = directStatusDataAll.filter(item => item.value > 0);
 
   // Block 6: Property-Based Status (uses filter6)
-  const block6Data = applyPeriodFilter(mainFilteredEstimates, filter6).filter(e => 
-    e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
-    e.estimateType === 'property_based' || e.estimateType === 'property-based'
-  );
+  const block6Data = applyPeriodFilter(mainFilteredEstimates, filter6).filter(e => {
+    const type = (e.estimate_type || e.estimateType || '').toLowerCase().replace(/[_\s-]/g, '');
+    return type === 'propertybased' || type === 'property';
+  });
   // All statuses for legend display - using shared color constants
   const propertyBasedStatusDataAll = [
     { name: 'Draft', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
@@ -487,16 +492,18 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     { name: 'Approved', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block6Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
   ];
+  // Calculate total from breakdown
+  const propertyBasedStatusTotal = propertyBasedStatusDataAll.reduce((sum, item) => sum + item.value, 0);
   // Only non-zero for chart display
   const propertyBasedStatusData = propertyBasedStatusDataAll.filter(item => item.value > 0);
 
   // Block 7: Work Order Estimate Status (uses filter7)
-  const block7Data = applyPeriodFilter(mainFilteredEstimates, filter7).filter(e => 
-    e.estimate_type === 'work_order' || e.estimateType === 'work_order'
-  );
+  const block7Data = applyPeriodFilter(mainFilteredEstimates, filter7).filter(e => {
+    const type = (e.estimate_type || e.estimateType || '').toLowerCase().replace(/[_\s-]/g, '');
+    return type === 'workorder';
+  });
   const workOrderStatusDataAll = [
     { name: 'Draft', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
-    { name: 'Pending', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'pending').length, color: '#F59E0B' },
     { name: 'Sent', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block7Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
@@ -919,7 +926,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           
           <div className="flex items-center">
             <div className="w-1/2 flex items-center justify-center">
-              <DonutChart data={statusDataAll} centerValue={block2Data.length} size={130} strokeWidth={18} />
+              <DonutChart data={statusDataAll} centerValue={statusTotal} size={130} strokeWidth={18} />
             </div>
             <div className="w-1/2 space-y-1.5 pl-3">
               {statusDataAll.map((item, index) => (
@@ -930,7 +937,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   />
                   <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
                   <span className="text-gray-800 whitespace-nowrap">
-                    {item.value} ({block2Data.length ? ((item.value / block2Data.length) * 100).toFixed(1) : 0}%)
+                    {item.value} ({statusTotal ? ((item.value / statusTotal) * 100).toFixed(1) : 0}%)
                   </span>
                 </div>
               ))}
@@ -961,7 +968,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           
           <div className="flex items-center">
             <div className="w-1/2 flex items-center justify-center">
-              <DonutChart data={propertyBasedStatusDataAll} centerValue={block6Data.length} size={130} strokeWidth={18} />
+              <DonutChart data={propertyBasedStatusDataAll} centerValue={propertyBasedStatusTotal} size={130} strokeWidth={18} />
             </div>
             <div className="w-1/2 space-y-1.5 pl-3">
               {propertyBasedStatusDataAll.map((item, index) => (
@@ -972,7 +979,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   />
                   <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
                   <span className="text-gray-800 whitespace-nowrap">
-                    {item.value} ({block6Data.length ? ((item.value / block6Data.length) * 100).toFixed(1) : 0}%)
+                    {item.value} ({propertyBasedStatusTotal ? ((item.value / propertyBasedStatusTotal) * 100).toFixed(1) : 0}%)
                   </span>
                 </div>
               ))}
@@ -1074,7 +1081,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           
           <div className="flex items-center">
             <div className="w-1/2 flex items-center justify-center">
-              <DonutChart data={directStatusDataAll} centerValue={block5Data.length} size={130} strokeWidth={18} />
+              <DonutChart data={directStatusDataAll} centerValue={directStatusTotal} size={130} strokeWidth={18} />
             </div>
             <div className="w-1/2 space-y-1.5 pl-3">
               {directStatusDataAll.map((item, index) => (
@@ -1085,7 +1092,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   />
                   <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
                   <span className="text-gray-800 whitespace-nowrap">
-                    {item.value} ({block5Data.length ? ((item.value / block5Data.length) * 100).toFixed(1) : 0}%)
+                    {item.value} ({directStatusTotal ? ((item.value / directStatusTotal) * 100).toFixed(1) : 0}%)
                   </span>
                 </div>
               ))}
