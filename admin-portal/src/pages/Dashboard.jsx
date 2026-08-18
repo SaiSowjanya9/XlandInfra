@@ -230,14 +230,19 @@ const Dashboard = () => {
   // Check if we have real data
   const hasData = stats !== null;
 
+  // Helper function to normalize status
+  const getWOStatus = (wo) => (wo.status || '').toString().trim().toLowerCase().replace(/[_\s-]/g, '');
+
   // Work Orders by Status data - computed from workOrders array directly
-  const pendingWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'pending').length;
-  const assignedWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'assigned').length;
-  const inProgressWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'in_progress' || (wo.status || '').toLowerCase() === 'in progress').length;
-  const completedWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'completed').length;
-  const closedWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'closed').length;
-  const cancelledWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'cancelled').length;
-  const pieTotal = pendingWO + assignedWO + inProgressWO + completedWO + closedWO + cancelledWO;
+  const pendingWO = workOrders.filter(wo => getWOStatus(wo) === 'pending').length;
+  const assignedWO = workOrders.filter(wo => getWOStatus(wo) === 'assigned').length;
+  const inProgressWO = workOrders.filter(wo => getWOStatus(wo) === 'inprogress').length;
+  const completedWO = workOrders.filter(wo => getWOStatus(wo) === 'completed').length;
+  const closedWO = workOrders.filter(wo => getWOStatus(wo) === 'closed').length;
+  const cancelledWO = workOrders.filter(wo => getWOStatus(wo) === 'cancelled').length;
+  
+  // Use actual count as total
+  const totalWorkOrders = workOrders.length;
   
   const woStatusData = [
     { name: 'Pending', value: pendingWO, color: '#F59E0B' },
@@ -247,8 +252,6 @@ const Dashboard = () => {
     { name: 'Closed', value: closedWO, color: '#6B7280' },
     { name: 'Cancelled', value: cancelledWO, color: '#EF4444' },
   ];
-
-  const totalWorkOrders = workOrders.length;
 
   // Work Orders by Priority data
   const lowPriorityWO = workOrders.filter(wo => (wo.priority || '').toLowerCase() === 'low').length;

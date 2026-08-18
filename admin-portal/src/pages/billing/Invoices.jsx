@@ -1473,34 +1473,36 @@ const InvoiceDetailPanel = ({
             });
 
             return services.length > 0 ? (
-              <div className="bg-white rounded-xl overflow-hidden shadow-sm">
+              <div className="bg-white rounded-xl overflow-hidden shadow-sm border-2 border-[#c9a227]/30">
                 {/* Header with icon */}
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
-                  <FileText className="w-4 h-4 text-[#c9a227]" />
-                  <p className="text-gray-800 text-sm font-semibold uppercase tracking-wide">Services Included</p>
+                <div className="flex items-center gap-2 px-4 py-3 bg-[#c9a227]">
+                  <FileText className="w-4 h-4 text-white" />
+                  <p className="text-white text-sm font-semibold uppercase tracking-wide">Services Included</p>
                 </div>
-                <table className="w-full text-sm">
-                  <thead className="bg-[#c9a227] text-white">
-                    <tr>
-                      <th className="px-4 py-2.5 text-left text-xs font-medium w-10">#</th>
-                      <th className="px-4 py-2.5 text-left text-xs font-medium">Service</th>
-                      <th className="px-4 py-2.5 text-left text-xs font-medium">Description</th>
-                      <th className="px-4 py-2.5 text-center text-xs font-medium w-24">Frequency</th>
-                      <th className="px-4 py-2.5 text-center text-xs font-medium w-16">Visits</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {services.map((item, idx) => (
-                      <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
-                        <td className="px-4 py-3 text-gray-800 font-medium">{item.name}</td>
-                        <td className="px-4 py-3 text-gray-500">{item.description || '-'}</td>
-                        <td className="px-4 py-3 text-center text-gray-600">{item.frequency}</td>
-                        <td className="px-4 py-3 text-center text-gray-600">{item.visits}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="divide-y divide-[#c9a227]/20">
+                  {services.map((item, idx) => (
+                    <div key={idx} className={`px-4 py-3 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#c9a227]/5'}`}>
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-800">{item.name}</p>
+                          {item.description && (
+                            <p className="text-xs text-gray-500 mt-1 leading-relaxed whitespace-normal break-words">{item.description}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 flex-shrink-0 text-sm">
+                          <div className="text-center w-20">
+                            <p className="text-[10px] text-gray-400 uppercase">Frequency</p>
+                            <p className="text-gray-600">{item.frequency}</p>
+                          </div>
+                          <div className="text-center w-12">
+                            <p className="text-[10px] text-gray-400 uppercase">Visits</p>
+                            <p className="text-gray-600">{item.visits}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : null;
           })()}

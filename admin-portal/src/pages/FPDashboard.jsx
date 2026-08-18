@@ -217,13 +217,18 @@ const FPDashboard = ({ user }) => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [fetchDashboardData]);
 
+  // Helper function to normalize status
+  const getWOStatus = (wo) => (wo.status || '').toString().trim().toLowerCase().replace(/[_\s-]/g, '');
+
   // Work Orders by Status data - computed from workOrders array directly
-  const pendingWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'pending').length;
-  const assignedWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'assigned').length;
-  const inProgressWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'in_progress' || (wo.status || '').toLowerCase() === 'in progress').length;
-  const completedWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'completed').length;
-  const closedWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'closed').length;
-  const cancelledWO = workOrders.filter(wo => (wo.status || '').toLowerCase() === 'cancelled').length;
+  const pendingWO = workOrders.filter(wo => getWOStatus(wo) === 'pending').length;
+  const assignedWO = workOrders.filter(wo => getWOStatus(wo) === 'assigned').length;
+  const inProgressWO = workOrders.filter(wo => getWOStatus(wo) === 'inprogress').length;
+  const completedWO = workOrders.filter(wo => getWOStatus(wo) === 'completed').length;
+  const closedWO = workOrders.filter(wo => getWOStatus(wo) === 'closed').length;
+  const cancelledWO = workOrders.filter(wo => getWOStatus(wo) === 'cancelled').length;
+  
+  // Use actual count as total
   const totalWorkOrders = workOrders.length;
   
   // Work Order Status data for chart

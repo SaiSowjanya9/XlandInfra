@@ -1065,31 +1065,45 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
 
             {/* Content - Scrollable with flex-1 to take available space */}
             <div className="overflow-y-auto flex-1 p-6 bg-gray-50">
-              {/* FROM & BILL TO - Side by Side */}
-              <div className="grid grid-cols-2 gap-6 mb-6">
+              {/* FROM & BILL TO - Side by Side with Gold Theme */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
                 {/* FROM: Company Details */}
-                <div className="bg-gray-900 rounded-lg p-4">
-                  <p className="text-amber-400 text-xs font-semibold uppercase tracking-wider mb-2">From</p>
-                  <h3 className="text-white font-bold text-base mb-1">XLAND INFRA PVT LTD</h3>
-                  <p className="text-gray-400 text-sm leading-relaxed">
-                    Property Management Services<br />
-                    D.No. 7-333/A/1, Nri Hospital Road<br />
-                    Mangalagiri, Guntur - 522503<br />
-                    <span className="text-amber-400">Phone:</span> +91 8500 010 111<br />
-                    <span className="text-amber-400">Email:</span> info@xlandinfra.com
-                  </p>
+                <div className="bg-white rounded-xl border-2 border-[#c9a227]/30 overflow-hidden shadow-sm">
+                  <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#c9a227] to-[#d4b445]">
+                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">X</span>
+                    </div>
+                    <p className="text-white text-xs font-semibold uppercase tracking-wider">From</p>
+                  </div>
+                  <div className="px-4 py-3">
+                    <h3 className="text-gray-900 font-bold text-sm mb-2">XLAND INFRA PVT LTD</h3>
+                    <div className="text-xs text-gray-600 space-y-1">
+                      <p>Property Management Services</p>
+                      <p>D.No. 7-333/A/1, Nri Hospital Road</p>
+                      <p>Mangalagiri, Guntur - 522503</p>
+                      <p><span className="text-[#c9a227] font-medium">Phone:</span> +91 8500 010 111</p>
+                      <p><span className="text-[#c9a227] font-medium">Email:</span> info@xlandinfra.com</p>
+                    </div>
+                  </div>
                 </div>
                 {/* BILL TO: Customer Details */}
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                  <p className="text-blue-700 text-xs font-semibold uppercase tracking-wider mb-2">Bill To</p>
-                  <h3 className="text-gray-900 font-bold text-base mb-1">{selectedInvoice.customerName || 'Customer'}</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">
-                    {selectedInvoice.propertyName && <><strong>Property:</strong> {selectedInvoice.propertyName}<br /></>}
-                    {selectedInvoice.propertyCode && <><strong>Property ID:</strong> {selectedInvoice.propertyCode}<br /></>}
-                    <strong>Phone:</strong> {selectedInvoice.customerPhone || '-'}<br />
-                    <strong>Email:</strong> {selectedInvoice.customerEmail || '-'}
-                    {selectedInvoice.sourceWorkOrderId && <><br /><strong>Work Order:</strong> {selectedInvoice.sourceWorkOrderId}</>}
-                  </p>
+                <div className="bg-white rounded-xl border-2 border-[#c9a227]/30 overflow-hidden shadow-sm">
+                  <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#c9a227] to-[#d4b445]">
+                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                      <span className="text-white text-xs">👤</span>
+                    </div>
+                    <p className="text-white text-xs font-semibold uppercase tracking-wider">Bill To</p>
+                  </div>
+                  <div className="px-4 py-3">
+                    <h3 className="text-gray-900 font-bold text-sm mb-2">{selectedInvoice.customerName || 'Customer'}</h3>
+                    <div className="text-xs text-gray-600 space-y-1">
+                      {selectedInvoice.propertyName && <p><span className="text-[#c9a227] font-medium">Property:</span> {selectedInvoice.propertyName}</p>}
+                      {selectedInvoice.propertyCode && <p><span className="text-[#c9a227] font-medium">Property ID:</span> {selectedInvoice.propertyCode}</p>}
+                      <p><span className="text-[#c9a227] font-medium">Phone:</span> {selectedInvoice.customerPhone || '-'}</p>
+                      <p><span className="text-[#c9a227] font-medium">Email:</span> {selectedInvoice.customerEmail || '-'}</p>
+                      {selectedInvoice.sourceWorkOrderId && <p><span className="text-[#c9a227] font-medium">Work Order:</span> {selectedInvoice.sourceWorkOrderId}</p>}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1154,29 +1168,34 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                               <FileText className="w-4 h-4" /> AMC Services
                             </h3>
                           </div>
-                          <table className="w-full">
-                            <thead className="bg-[#c9a227]/10">
-                              <tr>
-                                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase">Service</th>
-                                <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-700 uppercase w-24">Frequency</th>
-                                <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-700 uppercase w-16">Visits</th>
-                                <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-700 uppercase w-24">Amount</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {services.map((item, idx) => (
-                                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-[#c9a227]/5'}>
-                                  <td className="px-4 py-3 border-b border-[#c9a227]/20">
+                          <div className="divide-y divide-[#c9a227]/20">
+                            {services.map((item, idx) => (
+                              <div key={idx} className={`px-4 py-3 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#c9a227]/5'}`}>
+                                <div className="flex justify-between items-start gap-4">
+                                  <div className="flex-1 min-w-0">
                                     <p className="text-sm font-semibold text-gray-800">{item.name}</p>
-                                    {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
-                                  </td>
-                                  <td className="px-4 py-3 text-center text-sm text-gray-600 border-b border-[#c9a227]/20">{item.frequency}</td>
-                                  <td className="px-4 py-3 text-center text-sm text-gray-600 border-b border-[#c9a227]/20">{item.visits}</td>
-                                  <td className="px-4 py-3 text-right text-sm font-semibold text-[#c9a227] border-b border-[#c9a227]/20">{formatCurrency(item.price)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                                    {item.description && (
+                                      <p className="text-xs text-gray-500 mt-1 leading-relaxed whitespace-normal break-words">{item.description}</p>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-4 flex-shrink-0 text-sm">
+                                    <div className="text-center w-20">
+                                      <p className="text-[10px] text-gray-400 uppercase">Frequency</p>
+                                      <p className="text-gray-600">{item.frequency}</p>
+                                    </div>
+                                    <div className="text-center w-12">
+                                      <p className="text-[10px] text-gray-400 uppercase">Visits</p>
+                                      <p className="text-gray-600">{item.visits}</p>
+                                    </div>
+                                    <div className="text-right w-20">
+                                      <p className="text-[10px] text-gray-400 uppercase">Amount</p>
+                                      <p className="font-semibold text-[#c9a227]">{formatCurrency(item.price)}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1190,29 +1209,34 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                               <Plus className="w-4 h-4" /> Add-on Services
                             </h3>
                           </div>
-                          <table className="w-full">
-                            <thead className="bg-[#d4b445]/10">
-                              <tr>
-                                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase">Add-on</th>
-                                <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-700 uppercase w-24">Frequency</th>
-                                <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-700 uppercase w-16">Visits</th>
-                                <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-700 uppercase w-24">Amount</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {addons.map((item, idx) => (
-                                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-[#d4b445]/5'}>
-                                  <td className="px-4 py-3 border-b border-[#d4b445]/20">
+                          <div className="divide-y divide-[#d4b445]/20">
+                            {addons.map((item, idx) => (
+                              <div key={idx} className={`px-4 py-3 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#d4b445]/5'}`}>
+                                <div className="flex justify-between items-start gap-4">
+                                  <div className="flex-1 min-w-0">
                                     <p className="text-sm font-semibold text-gray-800">{item.name}</p>
-                                    {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
-                                  </td>
-                                  <td className="px-4 py-3 text-center text-sm text-gray-600 border-b border-[#d4b445]/20">{item.frequency}</td>
-                                  <td className="px-4 py-3 text-center text-sm text-gray-600 border-b border-[#d4b445]/20">{item.visits}</td>
-                                  <td className="px-4 py-3 text-right text-sm font-semibold text-[#c9a227] border-b border-[#d4b445]/20">{formatCurrency(item.price)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                                    {item.description && (
+                                      <p className="text-xs text-gray-500 mt-1 leading-relaxed whitespace-normal break-words">{item.description}</p>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-4 flex-shrink-0 text-sm">
+                                    <div className="text-center w-20">
+                                      <p className="text-[10px] text-gray-400 uppercase">Frequency</p>
+                                      <p className="text-gray-600">{item.frequency}</p>
+                                    </div>
+                                    <div className="text-center w-12">
+                                      <p className="text-[10px] text-gray-400 uppercase">Visits</p>
+                                      <p className="text-gray-600">{item.visits}</p>
+                                    </div>
+                                    <div className="text-right w-20">
+                                      <p className="text-[10px] text-gray-400 uppercase">Amount</p>
+                                      <p className="font-semibold text-[#c9a227]">{formatCurrency(item.price)}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     )}
