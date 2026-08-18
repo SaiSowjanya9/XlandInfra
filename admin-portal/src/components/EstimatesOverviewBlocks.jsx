@@ -96,8 +96,10 @@ const DonutChartWithLegend = ({ data, dataAll, total, title }) => (
   </div>
 );
 
-// Horizontal bar chart component
+// Horizontal bar chart component with tooltip
 const HorizontalBarChart = ({ data }) => {
+  const [hoveredIndex, setHoveredIndex] = useState(null);
+
   if (data.length === 0) {
     return (
       <div className="h-36 flex flex-col items-center justify-center text-gray-400">
@@ -113,19 +115,36 @@ const HorizontalBarChart = ({ data }) => {
     <div className="space-y-2">
       {data.map((item, index) => {
         const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+        const barColor = getConsistentColor(item.name);
         return (
-          <div key={index} className="flex items-center gap-2">
+          <div 
+            key={index} 
+            className="flex items-center gap-2 relative group cursor-pointer"
+            onMouseEnter={() => setHoveredIndex(index)}
+            onMouseLeave={() => setHoveredIndex(null)}
+          >
             <div className="w-20 text-xs text-gray-600 truncate">{item.name}</div>
-            <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+            <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden relative">
               <div 
                 className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
                 style={{ 
                   width: `${Math.max(widthPercent, 15)}%`,
-                  backgroundColor: getConsistentColor(item.name)
+                  backgroundColor: barColor
                 }}
               >
                 <span className="text-white text-[10px] font-medium">{item.value}</span>
               </div>
+              {/* Tooltip */}
+              {hoveredIndex === index && (
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap">
+                  <p className="font-semibold text-gray-900 text-sm mb-1">{item.name}</p>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: barColor }}></div>
+                    <span className="text-gray-600">Count:</span>
+                    <span className="font-bold text-gray-900">{item.value} estimates</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -148,6 +167,7 @@ const CATEGORY_COLORS = [
 // Grouped bar chart - Categories by Property Type
 const GroupedBarChart = ({ data }) => {
   const { propertyTypes, categories, data: groupedData } = data;
+  const [hoveredBar, setHoveredBar] = useState(null);
   
   if (propertyTypes.length === 0) {
     return (
@@ -178,20 +198,37 @@ const GroupedBarChart = ({ data }) => {
               {categories.map((cat, catIdx) => {
                 const value = groupedData[propType]?.[cat] || 0;
                 const heightPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;
+                const barColor = CATEGORY_COLORS[catIdx % CATEGORY_COLORS.length];
+                const barKey = `${propType}-${cat}`;
                 return (
-                  <div key={cat} className="flex flex-col items-center">
+                  <div 
+                    key={cat} 
+                    className="flex flex-col items-center relative"
+                    onMouseEnter={() => setHoveredBar(barKey)}
+                    onMouseLeave={() => setHoveredBar(null)}
+                  >
                     {value > 0 && (
                       <span className="text-[9px] font-semibold text-gray-700 mb-1">{value}</span>
                     )}
                     <div 
-                      className="w-6 rounded-t-md transition-all duration-500"
+                      className="w-6 rounded-t-md transition-all duration-500 cursor-pointer"
                       style={{ 
                         height: value > 0 ? `${Math.max(heightPercent, 10)}%` : '0px',
-                        backgroundColor: CATEGORY_COLORS[catIdx % CATEGORY_COLORS.length],
+                        backgroundColor: barColor,
                         minHeight: value > 0 ? '16px' : '0px'
                       }}
-                      title={`${propType} - ${cat}: ${value}`}
                     />
+                    {/* Tooltip */}
+                    {hoveredBar === barKey && value > 0 && (
+                      <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap">
+                        <p className="font-semibold text-gray-900 text-sm mb-1">{propType}</p>
+                        <div className="flex items-center gap-2 text-sm">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: barColor }}></div>
+                          <span className="text-gray-600">{cat}:</span>
+                          <span className="font-bold text-gray-900">{value}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
