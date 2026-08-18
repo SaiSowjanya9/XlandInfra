@@ -719,9 +719,10 @@ const Dashboard = () => {
                     });
                     
                     const maxValue = Math.max(...mergedData.map(d => d.value), 1);
+                    const total = mergedData.reduce((sum, d) => sum + d.value, 0);
                     
                     return mergedData.slice(0, 5).map((item, index) => (
-                      <div key={index} className="space-y-1">
+                      <div key={index} className="space-y-1 group relative cursor-pointer">
                         <div className="flex justify-between items-center gap-2 text-xs">
                           <span className="text-gray-600 truncate flex-1 min-w-0">{item.name}</span>
                           <span className="font-medium text-gray-900 flex-shrink-0">{item.value}</span>
@@ -736,6 +737,16 @@ const Dashboard = () => {
                               }}
                             ></div>
                           )}
+                        </div>
+                        {/* Tooltip */}
+                        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                          <p className="font-semibold text-gray-900 text-sm mb-1">{item.name}</p>
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                            <span className="text-gray-600">Count:</span>
+                            <span className="font-bold text-gray-900">{item.value} work orders</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">{total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}% of total</p>
                         </div>
                       </div>
                     ));

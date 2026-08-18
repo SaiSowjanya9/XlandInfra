@@ -958,23 +958,37 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
           <div className="space-y-3">
             {propertyTypeData.length > 0 ? (
-              propertyTypeData.slice(0, 5).map((item, index) => (
-                <div key={index} className="space-y-1">
-                  <div className="flex justify-between items-center gap-2 text-xs">
-                    <span className="text-gray-600 truncate flex-1 min-w-0">{item.name}</span>
-                    <span className="font-medium text-gray-900 flex-shrink-0">{item.value}</span>
+              (() => {
+                const total = propertyTypeData.reduce((sum, d) => sum + d.value, 0);
+                const maxValue = propertyTypeData[0]?.value || 1;
+                return propertyTypeData.slice(0, 5).map((item, index) => (
+                  <div key={index} className="space-y-1 group relative cursor-pointer">
+                    <div className="flex justify-between items-center gap-2 text-xs">
+                      <span className="text-gray-600 truncate flex-1 min-w-0">{item.name}</span>
+                      <span className="font-medium text-gray-900 flex-shrink-0">{item.value}</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full rounded-full transition-all"
+                        style={{ 
+                          width: `${Math.max(5, (item.value / maxValue) * 100)}%`,
+                          backgroundColor: item.color
+                        }}
+                      ></div>
+                    </div>
+                    {/* Tooltip */}
+                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                      <p className="font-semibold text-gray-900 text-sm mb-1">{item.name}</p>
+                      <div className="flex items-center gap-2 text-sm">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                        <span className="text-gray-600">Count:</span>
+                        <span className="font-bold text-gray-900">{item.value} work orders</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">{total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}% of total</p>
+                    </div>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full rounded-full transition-all"
-                      style={{ 
-                        width: `${Math.max(5, (item.value / (propertyTypeData[0]?.value || 1)) * 100)}%`,
-                        backgroundColor: item.color
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              ))
+                ));
+              })()
             ) : (
               <div className="text-center text-gray-500 py-8">
                 <p className="text-xs">No data available</p>
@@ -1097,7 +1111,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
               <div className="text-xs font-medium text-gray-700 mb-3">By Priority (Days)</div>
               <div className="space-y-3">
                 {completionData.byPriority.map((item, index) => (
-                  <div key={index} className="space-y-1">
+                  <div key={index} className="space-y-1 group relative cursor-pointer">
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-600">{item.name}</span>
                       <span className="font-medium text-gray-900">{item.days} Days</span>
@@ -1110,6 +1124,15 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                           backgroundColor: item.color
                         }}
                       ></div>
+                    </div>
+                    {/* Tooltip */}
+                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                      <p className="font-semibold text-gray-900 text-sm mb-1">{item.name} Priority</p>
+                      <div className="flex items-center gap-2 text-sm">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                        <span className="text-gray-600">Avg Completion:</span>
+                        <span className="font-bold text-gray-900">{item.days} days</span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1135,6 +1158,24 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200">
+                              <p className="font-semibold text-gray-900 text-sm mb-1">{data.name}</p>
+                              <div className="flex items-center gap-2 text-sm">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: data.color }}></div>
+                                <span className="text-gray-600">Count:</span>
+                                <span className="font-bold text-gray-900">{data.value}</span>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
                     <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
                       <tspan x="50%" dy="-2" className="text-lg font-bold fill-gray-900">{slaData.percentage}%</tspan>
                       <tspan x="50%" dy="14" className="text-[9px] fill-gray-500">Met</tspan>

@@ -996,34 +996,50 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
           
           {propertyTypeData.length > 0 ? (
-            <div className="space-y-3">
-              {propertyTypeData.map((item, index) => {
-                const maxValue = Math.max(...propertyTypeData.map(d => d.value));
-                const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-                
-                return (
-                  <div key={index} className="flex items-center gap-3">
-                    <div className="w-28 text-sm text-gray-600 truncate">{item.name}</div>
-                    <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
-                      <div 
-                        className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
-                        style={{ 
-                          width: `${Math.max(widthPercent, 15)}%`,
-                          backgroundColor: getConsistentColor(item.name)
-                        }}
-                      >
-                        <span className="text-white text-xs font-medium">{item.value}</span>
+            (() => {
+              const maxValue = Math.max(...propertyTypeData.map(d => d.value));
+              const total = propertyTypeData.reduce((sum, d) => sum + d.value, 0);
+              return (
+                <div className="space-y-3">
+                  {propertyTypeData.map((item, index) => {
+                    const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+                    const barColor = getConsistentColor(item.name);
+                    
+                    return (
+                      <div key={index} className="flex items-center gap-3 group relative cursor-pointer">
+                        <div className="w-28 text-sm text-gray-600 truncate">{item.name}</div>
+                        <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden relative">
+                          <div 
+                            className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
+                            style={{ 
+                              width: `${Math.max(widthPercent, 15)}%`,
+                              backgroundColor: barColor
+                            }}
+                          >
+                            <span className="text-white text-xs font-medium">{item.value}</span>
+                          </div>
+                          {/* Tooltip */}
+                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                            <p className="font-semibold text-gray-900 text-sm mb-1">{item.name}</p>
+                            <div className="flex items-center gap-2 text-sm">
+                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: barColor }}></div>
+                              <span className="text-gray-600">Count:</span>
+                              <span className="font-bold text-gray-900">{item.value} estimates</span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">{total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}% of total</p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    );
+                  })}
+                  <div className="flex justify-center gap-1 text-xs text-gray-400 mt-2">
+                    <span>0</span>
+                    <span className="flex-1 text-center">Number of Estimates</span>
+                    <span>{maxValue}</span>
                   </div>
-                );
-              })}
-              <div className="flex justify-center gap-1 text-xs text-gray-400 mt-2">
-                <span>0</span>
-                <span className="flex-1 text-center">Number of Estimates</span>
-                <span>{Math.max(...propertyTypeData.map(d => d.value))}</span>
-              </div>
-            </div>
+                </div>
+              );
+            })()
           ) : (
             <div className="h-48 flex flex-col items-center justify-center text-gray-400">
               <div className="text-4xl font-bold text-gray-300 mb-2">0</div>
@@ -1093,34 +1109,50 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
           
           {directPropertyTypeData.length > 0 ? (
-            <div className="space-y-3">
-              {directPropertyTypeData.map((item, index) => {
-                const maxValue = Math.max(...directPropertyTypeData.map(d => d.value));
-                const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-                
-                return (
-                  <div key={index} className="flex items-center gap-3">
-                    <div className="w-28 text-sm text-gray-600 truncate">{item.name}</div>
-                    <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
-                      <div 
-                        className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
-                        style={{ 
-                          width: `${Math.max(widthPercent, 15)}%`,
-                          backgroundColor: getConsistentColor(item.name)
-                        }}
-                      >
-                        <span className="text-white text-xs font-medium">{item.value}</span>
+            (() => {
+              const maxValue = Math.max(...directPropertyTypeData.map(d => d.value));
+              const total = directPropertyTypeData.reduce((sum, d) => sum + d.value, 0);
+              return (
+                <div className="space-y-3">
+                  {directPropertyTypeData.map((item, index) => {
+                    const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+                    const barColor = getConsistentColor(item.name);
+                    
+                    return (
+                      <div key={index} className="flex items-center gap-3 group relative cursor-pointer">
+                        <div className="w-28 text-sm text-gray-600 truncate">{item.name}</div>
+                        <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden relative">
+                          <div 
+                            className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
+                            style={{ 
+                              width: `${Math.max(widthPercent, 15)}%`,
+                              backgroundColor: barColor
+                            }}
+                          >
+                            <span className="text-white text-xs font-medium">{item.value}</span>
+                          </div>
+                          {/* Tooltip */}
+                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                            <p className="font-semibold text-gray-900 text-sm mb-1">{item.name}</p>
+                            <div className="flex items-center gap-2 text-sm">
+                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: barColor }}></div>
+                              <span className="text-gray-600">Count:</span>
+                              <span className="font-bold text-gray-900">{item.value} estimates</span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">{total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}% of total</p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    );
+                  })}
+                  <div className="flex justify-center gap-1 text-xs text-gray-400 mt-2">
+                    <span>0</span>
+                    <span className="flex-1 text-center">Number of Estimates</span>
+                    <span>{maxValue}</span>
                   </div>
-                );
-              })}
-              <div className="flex justify-center gap-1 text-xs text-gray-400 mt-2">
-                <span>0</span>
-                <span className="flex-1 text-center">Number of Estimates</span>
-                <span>{Math.max(...directPropertyTypeData.map(d => d.value))}</span>
-              </div>
-            </div>
+                </div>
+              );
+            })()
           ) : (
             <div className="h-48 flex flex-col items-center justify-center text-gray-400">
               <div className="text-4xl font-bold text-gray-300 mb-2">0</div>
@@ -1190,68 +1222,81 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
           
           {woPropertyTypes.length > 0 ? (
-            <div className="h-48 flex">
-              {/* Chart - Left side */}
-              <div className="flex-1 flex items-end justify-center gap-6 h-36">
-                {woPropertyTypes.map((propType) => {
-                  // Find max value for scaling
-                  let maxValue = 0;
-                  woPropertyTypes.forEach(pt => {
-                    woCategories.forEach(cat => {
-                      const val = workOrderByPropertyAndCategory[pt]?.[cat] || 0;
-                      if (val > maxValue) maxValue = val;
-                    });
-                  });
-                  
-                  return (
-                    <div key={propType} className="flex flex-col items-center">
-                      {/* Bars group */}
-                      <div className="flex items-end gap-1">
-                        {woCategories.map((cat, catIdx) => {
-                          const value = workOrderByPropertyAndCategory[propType]?.[cat] || 0;
-                          const heightPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;
-                          return (
-                            <div key={cat} className="flex flex-col items-center">
-                              {value > 0 && (
-                                <span className="text-[9px] font-semibold text-gray-700 mb-1">{value}</span>
-                              )}
-                              <div 
-                                className="w-6 rounded-t-md transition-all duration-500"
-                                style={{ 
-                                  height: value > 0 ? `${Math.max(heightPercent, 10)}%` : '0px',
-                                  backgroundColor: CATEGORY_COLORS[catIdx % CATEGORY_COLORS.length],
-                                  minHeight: value > 0 ? '16px' : '0px'
-                                }}
-                                title={`${propType} - ${cat}: ${value}`}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                      {/* Property type label */}
-                      <span className="text-[10px] text-gray-600 font-medium mt-2 text-center truncate w-20" title={propType}>
-                        {propType}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+            (() => {
+              // Find max value for scaling
+              let maxValue = 0;
+              woPropertyTypes.forEach(pt => {
+                woCategories.forEach(cat => {
+                  const val = workOrderByPropertyAndCategory[pt]?.[cat] || 0;
+                  if (val > maxValue) maxValue = val;
+                });
+              });
               
-              {/* Legend - Right side */}
-              <div className="w-36 flex flex-col justify-center gap-1.5 pl-3 border-l border-gray-100">
-                {woCategories.map((cat, idx) => (
-                  <div key={cat} className="flex items-center gap-1.5">
-                    <div 
-                      className="w-3 h-3 rounded-sm flex-shrink-0" 
-                      style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }}
-                    />
-                    <span className="text-[9px] text-gray-600 leading-tight" title={cat}>
-                      {cat}
-                    </span>
+              return (
+                <div className="h-48 flex">
+                  {/* Chart - Left side */}
+                  <div className="flex-1 flex items-end justify-center gap-6 h-36">
+                    {woPropertyTypes.map((propType) => (
+                      <div key={propType} className="flex flex-col items-center">
+                        {/* Bars group */}
+                        <div className="flex items-end gap-1">
+                          {woCategories.map((cat, catIdx) => {
+                            const value = workOrderByPropertyAndCategory[propType]?.[cat] || 0;
+                            const heightPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;
+                            const barColor = CATEGORY_COLORS[catIdx % CATEGORY_COLORS.length];
+                            return (
+                              <div key={cat} className="flex flex-col items-center relative group cursor-pointer">
+                                {value > 0 && (
+                                  <span className="text-[9px] font-semibold text-gray-700 mb-1">{value}</span>
+                                )}
+                                <div 
+                                  className="w-6 rounded-t-md transition-all duration-500"
+                                  style={{ 
+                                    height: value > 0 ? `${Math.max(heightPercent, 10)}%` : '0px',
+                                    backgroundColor: barColor,
+                                    minHeight: value > 0 ? '16px' : '0px'
+                                  }}
+                                />
+                                {/* Tooltip */}
+                                {value > 0 && (
+                                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                                    <p className="font-semibold text-gray-900 text-sm mb-1">{propType}</p>
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: barColor }}></div>
+                                      <span className="text-gray-600">{cat}:</span>
+                                      <span className="font-bold text-gray-900">{value}</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {/* Property type label */}
+                        <span className="text-[10px] text-gray-600 font-medium mt-2 text-center truncate w-20" title={propType}>
+                          {propType}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+              
+                  {/* Legend - Right side */}
+                  <div className="w-36 flex flex-col justify-center gap-1.5 pl-3 border-l border-gray-100">
+                    {woCategories.map((cat, idx) => (
+                      <div key={cat} className="flex items-center gap-1.5">
+                        <div 
+                          className="w-3 h-3 rounded-sm flex-shrink-0" 
+                          style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }}
+                        />
+                        <span className="text-[9px] text-gray-600 leading-tight" title={cat}>
+                          {cat}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()
           ) : (
             <div className="h-36 flex flex-col items-center justify-center text-gray-400">
               <div className="text-3xl font-bold text-gray-300 mb-1">0</div>
