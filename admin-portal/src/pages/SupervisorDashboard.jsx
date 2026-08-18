@@ -90,8 +90,9 @@ const SupervisorDashboard = ({ user }) => {
     { name: 'Cancelled', value: cancelledWO, color: '#EF4444' },
   ].filter(item => item.value > 0);
 
-  const totalWorkOrders = pieTotal || stats?.totalWorkOrders || 0;
-  const totalForPercentage = pieTotal || 1;
+  // Use actual API total as primary source
+  const totalWorkOrders = stats?.totalWorkOrders || pieTotal || 0;
+  const totalForPercentage = totalWorkOrders || 1;
 
   // Stacked bar chart data - Property types with Direct vs Property-based breakdown
   const est = stats?.estimatesByPropertyType || {};

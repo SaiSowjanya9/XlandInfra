@@ -110,11 +110,13 @@ const HorizontalBarChart = ({ data }) => {
   }
 
   const maxValue = Math.max(...data.map(d => d.value));
+  const total = data.reduce((sum, item) => sum + item.value, 0);
 
   return (
     <div className="space-y-2">
       {data.map((item, index) => {
         const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+        const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0;
         const barColor = getConsistentColor(item.name);
         return (
           <div 
@@ -124,7 +126,7 @@ const HorizontalBarChart = ({ data }) => {
             onMouseLeave={() => setHoveredIndex(null)}
           >
             <div className="w-20 text-xs text-gray-600 truncate">{item.name}</div>
-            <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden relative">
+            <div className="flex-1 bg-gray-100 rounded-full h-5 relative">
               <div 
                 className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
                 style={{ 
@@ -134,18 +136,24 @@ const HorizontalBarChart = ({ data }) => {
               >
                 <span className="text-white text-[10px] font-medium">{item.value}</span>
               </div>
-              {/* Tooltip */}
-              {hoveredIndex === index && (
-                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap">
+            </div>
+            {/* Tooltip - positioned outside the bar container */}
+            {hoveredIndex === index && (
+              <div 
+                className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50"
+                style={{ pointerEvents: 'none' }}
+              >
+                <div className="bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 whitespace-nowrap">
                   <p className="font-semibold text-gray-900 text-sm mb-1">{item.name}</p>
                   <div className="flex items-center gap-2 text-sm">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: barColor }}></div>
                     <span className="text-gray-600">Count:</span>
-                    <span className="font-bold text-gray-900">{item.value} estimates</span>
+                    <span className="font-bold text-gray-900">{item.value}</span>
+                    <span className="text-gray-500">({percentage}%)</span>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         );
       })}
@@ -410,15 +418,15 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   };
 
   // Block 9: Work Order Estimate Status
-  const block9Filtered = applyPeriodFilter(estimates, filter7).filter(e => 
-    e.estimate_type === 'work_order' || e.estimateType === 'work_order'
-  );
+  const block9Filtered = applyPeriodFilter(estimates, filter7).filter(e => getEstimateType(e) === 'workorder');
   const workOrderStatusDataAll = [
-    { name: 'Draft', value: block9Filtered.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
-    { name: 'Sent', value: block9Filtered.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
-    { name: 'Approved', value: block9Filtered.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
-    { name: 'Rejected', value: block9Filtered.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
+    { name: 'Draft', value: block9Filtered.filter(e => getStatus(e) === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block9Filtered.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block9Filtered.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block9Filtered.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected },
+    { name: 'Converted', value: block9Filtered.filter(e => getStatus(e) === 'converted').length, color: '#8B5CF6' }
   ];
+  const workOrderStatusTotal = block9Filtered.length;
   const workOrderStatusData = workOrderStatusDataAll.filter(item => item.value > 0);
 
   return (

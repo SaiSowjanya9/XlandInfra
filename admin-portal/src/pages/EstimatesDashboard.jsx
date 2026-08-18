@@ -515,15 +515,15 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   ];
 
   // Block 9: Work Order Overview (uses filter9)
-  const block9Data = applyPeriodFilter(mainFilteredEstimates, filter9).filter(e => 
-    e.estimate_type === 'work_order' || e.estimateType === 'work_order'
-  );
+  const block9Data = applyPeriodFilter(mainFilteredEstimates, filter9).filter(e => getEstimateType(e) === 'workorder');
   const workOrderOverviewDataAll = [
-    { name: 'Draft', value: block9Data.filter(e => (e.status || '').toLowerCase() === 'draft').length, color: STATUS_COLORS.Draft },
-    { name: 'Sent', value: block9Data.filter(e => (e.status || '').toLowerCase() === 'sent').length, color: STATUS_COLORS.Sent },
-    { name: 'Approved', value: block9Data.filter(e => (e.status || '').toLowerCase() === 'approved').length, color: STATUS_COLORS.Approved },
-    { name: 'Rejected', value: block9Data.filter(e => (e.status || '').toLowerCase() === 'rejected').length, color: STATUS_COLORS.Rejected }
+    { name: 'Draft', value: block9Data.filter(e => getStatus(e) === 'draft').length, color: STATUS_COLORS.Draft },
+    { name: 'Sent', value: block9Data.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
+    { name: 'Approved', value: block9Data.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', value: block9Data.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected },
+    { name: 'Converted', value: block9Data.filter(e => getStatus(e) === 'converted').length, color: '#8B5CF6' }
   ];
+  const workOrderOverviewTotal = block9Data.length;
   const workOrderOverviewData = workOrderOverviewDataAll.filter(item => item.value > 0);
 
   // Legacy variables for compatibility
@@ -988,7 +988,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                     return (
                       <div key={index} className="flex items-center gap-3 group relative cursor-pointer">
                         <div className="w-28 text-sm text-gray-600 truncate">{item.name}</div>
-                        <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden relative">
+                        <div className="flex-1 bg-gray-100 rounded-full h-6 relative">
                           <div 
                             className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
                             style={{ 
@@ -998,15 +998,17 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                           >
                             <span className="text-white text-xs font-medium">{item.value}</span>
                           </div>
-                          {/* Tooltip */}
-                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                        </div>
+                        {/* Tooltip - positioned outside the bar container */}
+                        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all pointer-events-none">
+                          <div className="bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 whitespace-nowrap">
                             <p className="font-semibold text-gray-900 text-sm mb-1">{item.name}</p>
                             <div className="flex items-center gap-2 text-sm">
                               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: barColor }}></div>
                               <span className="text-gray-600">Count:</span>
-                              <span className="font-bold text-gray-900">{item.value} estimates</span>
+                              <span className="font-bold text-gray-900">{item.value}</span>
+                              <span className="text-gray-500">({total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)</span>
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">{total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}% of total</p>
                           </div>
                         </div>
                       </div>
@@ -1101,7 +1103,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                     return (
                       <div key={index} className="flex items-center gap-3 group relative cursor-pointer">
                         <div className="w-28 text-sm text-gray-600 truncate">{item.name}</div>
-                        <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden relative">
+                        <div className="flex-1 bg-gray-100 rounded-full h-6 relative">
                           <div 
                             className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
                             style={{ 
@@ -1111,15 +1113,17 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                           >
                             <span className="text-white text-xs font-medium">{item.value}</span>
                           </div>
-                          {/* Tooltip */}
-                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                        </div>
+                        {/* Tooltip - positioned outside the bar container */}
+                        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all pointer-events-none">
+                          <div className="bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 whitespace-nowrap">
                             <p className="font-semibold text-gray-900 text-sm mb-1">{item.name}</p>
                             <div className="flex items-center gap-2 text-sm">
                               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: barColor }}></div>
                               <span className="text-gray-600">Count:</span>
-                              <span className="font-bold text-gray-900">{item.value} estimates</span>
+                              <span className="font-bold text-gray-900">{item.value}</span>
+                              <span className="text-gray-500">({total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)</span>
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">{total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}% of total</p>
                           </div>
                         </div>
                       </div>

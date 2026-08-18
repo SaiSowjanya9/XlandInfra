@@ -542,6 +542,9 @@ router.get('/invoices', authenticate, canViewPayments, async (req, res) => {
       SELECT i.*, 
              COALESCE(p.community_name, p2.community_name, fe.property_name) as property_name, 
              COALESCE(p.property_id, p2.property_id, fe.property_code, i.property_code) as property_code,
+             COALESCE(p.property_type, p2.property_type, fe.property_type) as property_type,
+             COALESCE(p.zone, p2.zone, fe.zone) as zone,
+             COALESCE(p.city, p2.city, fe.city) as city,
              c.name as client_name
       FROM invoices i
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
@@ -609,6 +612,9 @@ router.get('/invoices', authenticate, canViewPayments, async (req, res) => {
         propertyId: i.property_id,
         propertyName: i.property_name || i.customer_name,
         propertyCode: i.property_code,
+        propertyType: i.property_type,
+        zone: i.zone,
+        city: i.city,
         estimateId: i.estimate_id,
         sourceEstimateId: i.source_estimate_id,
         sourceWorkOrderId: i.source_work_order_id,
@@ -652,12 +658,16 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
 
     let query = `
       SELECT i.*, 
-             COALESCE(p.community_name, p2.community_name) as property_name, 
-             COALESCE(p.property_id, p2.property_id, i.property_code) as property_code,
+             COALESCE(p.community_name, p2.community_name, fe.property_name) as property_name, 
+             COALESCE(p.property_id, p2.property_id, i.property_code, fe.property_code) as property_code,
+             COALESCE(p.property_type, p2.property_type, fe.property_type) as property_type,
+             COALESCE(p.zone, p2.zone, fe.zone) as zone,
+             COALESCE(p.city, p2.city, fe.city) as city,
              c.name as client_name
       FROM invoices i
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
       LEFT JOIN onboarded_properties p2 ON i.property_code = p2.property_id
+      LEFT JOIN fp_estimates fe ON i.source_estimate_id = fe.estimate_id
       LEFT JOIN clients c ON i.customer_id = c.id
       WHERE i.id = ?
     `;
@@ -681,6 +691,72 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
     );
 
     const i = invoices[0];
+    
+    // Parse existing line items
+    let lineItems = i.line_items ? (typeof i.line_items === 'string' ? JSON.parse(i.line_items) : i.line_items) : [];
+    
+    // If we have a source estimate, try to enrich line items with full descriptions
+    if (i.source_estimate_id) {
+      try {
+        const [estimates] = await pool.execute(
+          `SELECT package_services, addons_data FROM fp_estimates WHERE estimate_id = ?`,
+          [i.source_estimate_id]
+        );
+        
+        if (estimates.length > 0) {
+          const estimate = estimates[0];
+          
+          // Parse original services from estimate
+          if (estimate.package_services) {
+            const originalServices = typeof estimate.package_services === 'string' 
+              ? JSON.parse(estimate.package_services) 
+              : estimate.package_services;
+            
+            if (Array.isArray(originalServices)) {
+              // Enrich line items with full descriptions from original estimate
+              lineItems = lineItems.map((item, idx) => {
+                const original = originalServices[idx];
+                if (original) {
+                  const serviceName = original.name || original.serviceName || item.name || item.description?.split(' - ')[0] || 'Service';
+                  const serviceDesc = original.description || original.service_description || '';
+                  return {
+                    ...item,
+                    name: serviceName,
+                    description: serviceDesc ? `${serviceName} - ${serviceDesc}` : serviceName,
+                    details: serviceDesc,
+                    frequency: original.frequency || original.frequencyType || item.frequency || 'Other',
+                    visits: original.visits || original.frequencyCount || item.visits || item.quantity || 1,
+                    totalPrice: parseFloat(original.totalPrice || original.price || item.totalPrice || 0)
+                  };
+                }
+                return item;
+              });
+              
+              // Add any services from estimate not in line items
+              if (originalServices.length > lineItems.length) {
+                for (let idx = lineItems.length; idx < originalServices.length; idx++) {
+                  const s = originalServices[idx];
+                  const serviceName = s.name || s.serviceName || 'Service';
+                  const serviceDesc = s.description || s.service_description || '';
+                  lineItems.push({
+                    name: serviceName,
+                    description: serviceDesc ? `${serviceName} - ${serviceDesc}` : serviceName,
+                    details: serviceDesc,
+                    frequency: s.frequency || s.frequencyType || 'Other',
+                    visits: s.visits || s.frequencyCount || 1,
+                    totalPrice: parseFloat(s.totalPrice || s.price || 0),
+                    type: 'service'
+                  });
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error enriching line items from estimate:', e);
+      }
+    }
+    
     res.json({
       success: true,
       data: {
@@ -690,6 +766,9 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
         propertyId: i.property_id,
         propertyName: i.property_name,
         propertyCode: i.property_code,
+        propertyType: i.property_type,
+        zone: i.zone,
+        city: i.city,
         estimateId: i.estimate_id,
         sourceEstimateId: i.source_estimate_id,
         sourceWorkOrderId: i.source_work_order_id,
@@ -699,7 +778,7 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
         customerPhone: i.customer_phone,
         invoiceDate: i.invoice_date,
         dueDate: i.due_date,
-        lineItems: i.line_items ? (typeof i.line_items === 'string' ? JSON.parse(i.line_items) : i.line_items) : [],
+        lineItems: lineItems,
         subtotal: parseFloat(i.subtotal),
         discountPercentage: parseFloat(i.discount_percentage),
         discountAmount: parseFloat(i.discount_amount),
@@ -940,22 +1019,59 @@ router.post('/invoices/create-from-estimate', authenticate, canEditPayments, asy
     const taxAmount = taxableAmount * (taxPct / 100);
     const totalAmount = taxableAmount + taxAmount;
 
-    // Parse line items from estimate
+    // Parse line items from estimate - capture full service details
     let lineItems = [];
     try {
       if (estimate.package_services) {
         const services = typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services;
         if (Array.isArray(services)) {
-          lineItems = services.map(s => ({
-            description: s.name || s.serviceName || s.description || 'Service',
-            quantity: 1,
-            unitPrice: 0,
-            totalPrice: 0,
-            type: 'service'
-          }));
+          lineItems = services.map(s => {
+            // Build full description: name + description if both exist
+            const serviceName = s.name || s.serviceName || 'Service';
+            const serviceDesc = s.description || s.service_description || '';
+            const fullDescription = serviceDesc ? `${serviceName} - ${serviceDesc}` : serviceName;
+            
+            return {
+              description: fullDescription,
+              name: serviceName,
+              details: serviceDesc,
+              quantity: s.quantity || s.visits || s.frequencyCount || s.frequency_count || 1,
+              frequency: s.frequency || s.frequencyType || s.frequency_type || 'Other',
+              visits: s.visits || s.frequencyCount || s.frequency_count || 1,
+              unitPrice: parseFloat(s.price || s.unitPrice || s.unit_price || 0),
+              totalPrice: parseFloat(s.totalPrice || s.total_price || s.price || 0),
+              type: 'service'
+            };
+          });
         }
       }
-    } catch (e) { /* ignore parse errors */ }
+      
+      // Also include addons if present
+      if (estimate.addons_data) {
+        const addons = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
+        if (Array.isArray(addons)) {
+          addons.forEach(addon => {
+            const addonName = addon.name || addon.serviceName || addon.service_name || 'Add-on';
+            const addonDesc = addon.description || addon.service_description || '';
+            const fullDescription = addonDesc ? `${addonName} - ${addonDesc}` : addonName;
+            
+            lineItems.push({
+              description: fullDescription,
+              name: addonName,
+              details: addonDesc,
+              quantity: addon.quantity || addon.visits || 1,
+              frequency: addon.frequency || addon.frequencyType || 'Other',
+              visits: addon.visits || addon.frequencyCount || 1,
+              unitPrice: parseFloat(addon.price || addon.unitPrice || 0),
+              totalPrice: parseFloat(addon.totalPrice || addon.price || 0),
+              type: 'addon'
+            });
+          });
+        }
+      }
+    } catch (e) { 
+      console.error('Error parsing estimate services:', e);
+    }
 
     // Generate invoice ID
     const invoiceId = await generateInvoiceId(fpId);
