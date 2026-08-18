@@ -31,6 +31,8 @@ const ManagerDashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [estimates, setEstimates] = useState([]);
+  const [properties, setProperties] = useState([]);
+  const [propertyChartFilter, setPropertyChartFilter] = useState('all');
   const lastFetchRef = useRef(0);
 
   const fetchDashboardData = useCallback(async (isInitialLoad = false) => {
@@ -42,11 +44,12 @@ const ManagerDashboard = ({ user }) => {
     setError(null);
     try {
       const token = getAuthToken();
-      const [dashRes, estRes] = await Promise.all([
+      const [dashRes, estRes, propRes] = await Promise.all([
         fetch(`${API_BASE}/api/manager/dashboard`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE}/api/manager/estimates`, { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`${API_BASE}/api/manager/estimates`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/manager/properties`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
-      const [dashResult, estResult] = await Promise.all([dashRes.json(), estRes.json()]);
+      const [dashResult, estResult, propResult] = await Promise.all([dashRes.json(), estRes.json(), propRes.json()]);
       if (dashResult.success) {
         setStats(dashResult.data.stats);
       } else {
@@ -54,6 +57,9 @@ const ManagerDashboard = ({ user }) => {
       }
       if (estResult.success && Array.isArray(estResult.data)) {
         setEstimates(estResult.data);
+      }
+      if (propResult.success && Array.isArray(propResult.data)) {
+        setProperties(propResult.data);
       }
     } catch (err) {
       console.error('Dashboard fetch error:', err);
@@ -126,6 +132,45 @@ const ManagerDashboard = ({ user }) => {
     { name: 'Approved', direct: estStatus.direct_approved || 0, property: estStatus.prop_approved || 0, color: '#10B981' },
     { name: 'Rejected', direct: estStatus.direct_rejected || 0, property: estStatus.prop_rejected || 0, color: '#EF4444' },
   ];
+
+  // Properties by Type data with time filter
+  const getFilteredProperties = () => {
+    if (propertyChartFilter === 'all') return properties;
+    const now = new Date();
+    let startDate = new Date();
+    switch (propertyChartFilter) {
+      case 'week': startDate.setDate(now.getDate() - 7); break;
+      case 'month': startDate.setMonth(now.getMonth() - 1); break;
+      case 'quarter': startDate.setMonth(now.getMonth() - 3); break;
+      case 'sixmonths': startDate.setMonth(now.getMonth() - 6); break;
+      case 'year': startDate.setFullYear(now.getFullYear() - 1); break;
+      default: return properties;
+    }
+    return properties.filter(p => new Date(p.created_at || p.createdAt) >= startDate);
+  };
+
+  const filteredProperties = getFilteredProperties();
+  const normalizePropertyType = (type) => {
+    if (!type) return 'Other';
+    const t = type.toLowerCase().trim();
+    if (t.includes('gated') || t === 'gc') return 'Gated Community';
+    if (t.includes('apartment') || t === 'apt') return 'Apartment';
+    if (t.includes('villa')) return 'Villa';
+    if (t.includes('flat')) return 'Flat';
+    if (t.includes('plot')) return 'Plot';
+    return type;
+  };
+
+  const propertyTypeData = (() => {
+    const typeCounts = {};
+    filteredProperties.forEach(p => {
+      const type = normalizePropertyType(p.property_type || p.propertyType || p.type);
+      typeCounts[type] = (typeCounts[type] || 0) + 1;
+    });
+    const colors = { 'Gated Community': '#3B82F6', 'Apartment': '#8B5CF6', 'Villa': '#10B981', 'Flat': '#F59E0B', 'Plot': '#EF4444', 'Other': '#6B7280' };
+    return Object.entries(typeCounts).map(([name, value]) => ({ name, value, color: colors[name] || '#6B7280' })).sort((a, b) => b.value - a.value);
+  })();
+  const totalPropertiesCount = filteredProperties.length;
 
   if (loading) {
     return (
@@ -204,6 +249,68 @@ const ManagerDashboard = ({ user }) => {
           <p className="text-red-700">{error}</p>
         </div>
       )}
+
+      {/* Properties Overview Chart */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Properties Overview</h2>
+            <p className="text-sm text-gray-500 mt-1">Distribution by property type</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <select value={propertyChartFilter} onChange={(e) => setPropertyChartFilter(e.target.value)} className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none">
+              <option value="all">All Time</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="sixmonths">Last 6 Months</option>
+              <option value="year">This Year</option>
+            </select>
+            <button onClick={() => navigate('/manager/properties')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+              View All <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={propertyTypeData} layout="vertical" margin={{ left: 20, right: 20 }}>
+                <XAxis type="number" tick={{ fontSize: 11, fill: '#6B7280' }} stroke="#9CA3AF" />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 12, fill: '#374151', fontWeight: 500 }} stroke="#9CA3AF" width={100} />
+                <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} formatter={(value) => [`${value} properties`, 'Count']} />
+                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                  {propertyTypeData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.color} />))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="space-y-4">
+            <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm text-blue-600 font-medium">Total Properties</p>
+                  <p className="text-3xl font-bold text-blue-700">{totalPropertiesCount}</p>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {propertyTypeData.slice(0, 4).map((item, index) => (
+                <div key={index} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                    <span className="text-sm font-medium text-gray-700">{item.name}</span>
+                  </div>
+                  <p className="text-xl font-bold text-gray-900">{item.value}</p>
+                  <p className="text-xs text-gray-500">{totalPropertiesCount ? ((item.value / totalPropertiesCount) * 100).toFixed(1) : 0}% of total</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Combined Estimates + Work Orders Overview Box */}
       <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-6">
