@@ -237,9 +237,9 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
 
   const stats = getStats();
 
-  // Status chart data (uses global date filter only)
+  // Status chart data
   const getStatusChartData = () => {
-    const filtered = dateFilteredWorkOrders;
+    const filtered = applyPeriodFilter(dateFilteredWorkOrders, statusChartFilter);
     const statusCounts = {
       pending: 0,
       assigned: 0,
@@ -266,9 +266,9 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
     ];
   };
 
-  // Priority chart data (uses global date filter only)
+  // Priority chart data
   const getPriorityChartData = () => {
-    const filtered = dateFilteredWorkOrders;
+    const filtered = applyPeriodFilter(dateFilteredWorkOrders, priorityChartFilter);
     const priorityCounts = { low: 0, medium: 0, high: 0 };
     
     filtered.forEach(wo => {
@@ -285,9 +285,9 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
     ];
   };
 
-  // Property type chart data (uses global date filter only)
+  // Property type chart data
   const getPropertyTypeData = () => {
-    const filtered = dateFilteredWorkOrders;
+    const filtered = applyPeriodFilter(dateFilteredWorkOrders, propertyTypeFilter);
     const typeCounts = {};
     
     filtered.forEach(wo => {
@@ -644,7 +644,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
   const trendData = getTrendData();
   const completionData = getCompletionTimeData();
   const slaData = getSLACompliance();
-  const totalFiltered = dateFilteredWorkOrders.length;
+  const totalFiltered = applyPeriodFilter(dateFilteredWorkOrders, statusChartFilter).length;
 
   return (
     <div className="space-y-6">
@@ -890,8 +890,9 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
         {/* Work Orders by Status */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
-          <div className="mb-4">
+          <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders by Status</h3>
+            <PeriodDropdown value={statusChartFilter} onChange={setStatusChartFilter} />
           </div>
           <div className="flex items-center gap-4">
             <div className="w-28 h-28 lg:w-36 lg:h-36 flex-shrink-0">
@@ -911,11 +912,12 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* Work Orders by Priority */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
-          <div className="mb-4">
+          <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders by Priority</h3>
+            <PeriodDropdown value={priorityChartFilter} onChange={setPriorityChartFilter} />
           </div>
           {(() => {
-            const priorityTotal = dateFilteredWorkOrders.length;
+            const priorityTotal = applyPeriodFilter(dateFilteredWorkOrders, priorityChartFilter).length;
             return (
               <div className="flex items-center gap-4">
                 <div className="w-28 h-28 lg:w-36 lg:h-36 flex-shrink-0">
@@ -937,8 +939,9 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* Work Orders by Property Type */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
-          <div className="mb-4">
+          <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders by Property Type</h3>
+            <PeriodDropdown value={propertyTypeFilter} onChange={setPropertyTypeFilter} />
           </div>
           <div className="space-y-3">
             {propertyTypeData.length > 0 ? (

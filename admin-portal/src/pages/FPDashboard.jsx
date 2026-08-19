@@ -40,6 +40,9 @@ const FPDashboard = ({ user }) => {
   const [workOrders, setWorkOrders] = useState([]);
   const [properties, setProperties] = useState([]);
   const [propertyChartFilter, setPropertyChartFilter] = useState('all');
+  const [woStatusFilter, setWoStatusFilter] = useState('all');
+  const [woPriorityFilter, setWoPriorityFilter] = useState('all');
+  const [woPropertyTypeFilter, setWoPropertyTypeFilter] = useState('all');
   const lastFetchRef = useRef(0);
 
   // Notification states
@@ -220,16 +223,56 @@ const FPDashboard = ({ user }) => {
   // Helper function to normalize status
   const getWOStatus = (wo) => (wo.status || '').toString().trim().toLowerCase().replace(/[_\s-]/g, '');
 
-  // Work Orders by Status data - computed from workOrders array directly
-  const pendingWO = workOrders.filter(wo => getWOStatus(wo) === 'pending').length;
-  const assignedWO = workOrders.filter(wo => getWOStatus(wo) === 'assigned').length;
-  const inProgressWO = workOrders.filter(wo => getWOStatus(wo) === 'inprogress').length;
-  const completedWO = workOrders.filter(wo => getWOStatus(wo) === 'completed').length;
-  const closedWO = workOrders.filter(wo => getWOStatus(wo) === 'closed').length;
-  const cancelledWO = workOrders.filter(wo => getWOStatus(wo) === 'cancelled').length;
+  // Period filter helper
+  const applyPeriodFilter = (data, period) => {
+    if (period === 'all') return data;
+    const now = new Date();
+    const startDate = new Date();
+    switch (period) {
+      case 'week': startDate.setDate(now.getDate() - 7); break;
+      case 'month': startDate.setMonth(now.getMonth() - 1); break;
+      case 'quarter': startDate.setMonth(now.getMonth() - 3); break;
+      case 'sixmonths': startDate.setMonth(now.getMonth() - 6); break;
+      case 'year': startDate.setFullYear(now.getFullYear() - 1); break;
+      default: return data;
+    }
+    return data.filter(item => {
+      const date = new Date(item.created_at || item.createdAt);
+      return date >= startDate && date <= now;
+    });
+  };
+
+  // Period dropdown component
+  const PeriodDropdown = ({ value, onChange }) => (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+    >
+      <option value="all">All Time</option>
+      <option value="week">This Week</option>
+      <option value="month">This Month</option>
+      <option value="quarter">This Quarter</option>
+      <option value="sixmonths">Last 6 Months</option>
+      <option value="year">This Year</option>
+    </select>
+  );
+
+  // Filtered work orders for each chart
+  const statusFilteredWO = applyPeriodFilter(workOrders, woStatusFilter);
+  const priorityFilteredWO = applyPeriodFilter(workOrders, woPriorityFilter);
+  const propertyTypeFilteredWO = applyPeriodFilter(workOrders, woPropertyTypeFilter);
+
+  // Work Orders by Status data - computed from filtered workOrders
+  const pendingWO = statusFilteredWO.filter(wo => getWOStatus(wo) === 'pending').length;
+  const assignedWO = statusFilteredWO.filter(wo => getWOStatus(wo) === 'assigned').length;
+  const inProgressWO = statusFilteredWO.filter(wo => getWOStatus(wo) === 'inprogress').length;
+  const completedWO = statusFilteredWO.filter(wo => getWOStatus(wo) === 'completed').length;
+  const closedWO = statusFilteredWO.filter(wo => getWOStatus(wo) === 'closed').length;
+  const cancelledWO = statusFilteredWO.filter(wo => getWOStatus(wo) === 'cancelled').length;
   
-  // Use actual count as total
-  const totalWorkOrders = workOrders.length;
+  // Use filtered count as total for status chart
+  const totalWorkOrders = statusFilteredWO.length;
   
   // Work Order Status data for chart
   const woStatusData = [
@@ -251,11 +294,11 @@ const FPDashboard = ({ user }) => {
     cancelled: cancelledWO
   };
 
-  // Work Orders by Priority data
-  const lowPriorityWO = workOrders.filter(wo => (wo.priority || '').toLowerCase() === 'low').length;
-  const mediumPriorityWO = workOrders.filter(wo => (wo.priority || '').toLowerCase() === 'medium').length;
-  const highPriorityWO = workOrders.filter(wo => (wo.priority || '').toLowerCase() === 'high').length;
-  const priorityTotal = lowPriorityWO + mediumPriorityWO + highPriorityWO;
+  // Work Orders by Priority data (using priority filtered data)
+  const lowPriorityWO = priorityFilteredWO.filter(wo => (wo.priority || '').toLowerCase() === 'low').length;
+  const mediumPriorityWO = priorityFilteredWO.filter(wo => (wo.priority || '').toLowerCase() === 'medium').length;
+  const highPriorityWO = priorityFilteredWO.filter(wo => (wo.priority || '').toLowerCase() === 'high').length;
+  const priorityTotal = priorityFilteredWO.length;
   
   const priorityData = [
     { name: 'Low', value: lowPriorityWO, color: '#10B981' },
@@ -263,9 +306,9 @@ const FPDashboard = ({ user }) => {
     { name: 'High', value: highPriorityWO, color: '#EF4444' },
   ];
 
-  // Work Orders by Property Type data
+  // Work Orders by Property Type data (using property type filtered data)
   const propertyTypeColors = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444'];
-  const propertyTypeCounts = workOrders.reduce((acc, wo) => {
+  const propertyTypeCounts = propertyTypeFilteredWO.reduce((acc, wo) => {
     const type = wo.property_type || wo.propertyType || 'Other';
     acc[type] = (acc[type] || 0) + 1;
     return acc;
@@ -667,7 +710,10 @@ const FPDashboard = ({ user }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
             {/* Work Orders by Status */}
             <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Status</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-semibold text-gray-900">Work Orders by Status</h3>
+                <PeriodDropdown value={woStatusFilter} onChange={setWoStatusFilter} />
+              </div>
               <div className="flex items-center gap-4">
                 <div className="w-28 h-28 lg:w-36 lg:h-36 flex-shrink-0">
                   <DonutChart
@@ -689,7 +735,10 @@ const FPDashboard = ({ user }) => {
 
             {/* Work Orders by Priority */}
             <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Priority</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-semibold text-gray-900">Work Orders by Priority</h3>
+                <PeriodDropdown value={woPriorityFilter} onChange={setWoPriorityFilter} />
+              </div>
               <div className="flex items-center gap-4">
                 <div className="w-28 h-28 lg:w-36 lg:h-36 flex-shrink-0">
                   <DonutChart
@@ -711,7 +760,10 @@ const FPDashboard = ({ user }) => {
 
             {/* Work Orders by Property Type */}
             <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Work Orders by Property Type</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-semibold text-gray-900">Work Orders by Property Type</h3>
+                <PeriodDropdown value={woPropertyTypeFilter} onChange={setWoPropertyTypeFilter} />
+              </div>
               <div className="space-y-3">
                 {(() => {
                   // Default property types to always show
