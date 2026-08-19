@@ -573,16 +573,13 @@ const generateInvoicePDF = async (invoice) => {
 
       const pageHeight = 780;
 
-      // ===== SERVICES INCLUDED TABLE - Gold header (Image 2 style) =====
+      // ===== SERVICES INCLUDED TABLE - Gold header =====
       if (!isWorkOrderInvoice && items.length > 0) {
-        // Section header with filled gold icon
-        doc.roundedRect(margin, y, 12, 12, 2).fill(gold);
-        doc.rect(margin + 4, y + 4, 4, 4).fill(white);
-        
-        doc.fontSize(10).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES INCLUDED', margin + 18, y + 3);
-        doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 75, y + 6).lineTo(pageWidth - margin, y + 6).stroke();
+        // Section header
+        doc.fontSize(10).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES INCLUDED', margin, y + 3);
+        doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 68, y + 6).lineTo(pageWidth - margin, y + 6).stroke();
         doc.font('Helvetica');
-        y += 18;
+        y += 16;
         
         // Table header - Gold background
         doc.rect(margin, y, contentWidth, 24).fill(gold);
@@ -623,7 +620,7 @@ const generateInvoicePDF = async (invoice) => {
         y += 20;
       }
 
-      // ===== PRICE SUMMARY - Right aligned with filled gold icon (Image 2) =====
+      // ===== PRICE SUMMARY - Right aligned =====
       if (y + 110 > pageHeight) {
         doc.addPage();
         y = 50;
@@ -632,14 +629,11 @@ const generateInvoicePDF = async (invoice) => {
       const summaryWidth = 180;
       const summaryX = pageWidth - margin - summaryWidth;
       
-      // Section header with filled gold icon
-      doc.roundedRect(summaryX, y, 10, 10, 2).fill(gold);
-      doc.rect(summaryX + 3, y + 3, 4, 4).fill(white);
-      
-      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX + 14, y + 2);
-      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 62, y + 5).lineTo(pageWidth - margin, y + 5).stroke();
+      // Section header
+      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX, y + 2);
+      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 55, y + 5).lineTo(pageWidth - margin, y + 5).stroke();
       doc.font('Helvetica');
-      y += 15;
+      y += 14;
       
       // Summary box with border
       const summaryHeight = safeDiscount > 0 ? 80 : 65;
