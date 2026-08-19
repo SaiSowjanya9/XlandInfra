@@ -426,38 +426,46 @@ const generateInvoicePDF = async (invoice) => {
       const safeTotal = safeNum(totalAmount);
       const safeTaxPercent = safeNum(taxPercentage) || 18;
 
-      // Colors
+      // Colors matching Image 1 & Image 3
       const black = '#1a1a1a';
-      const gold = '#d4a84b';
+      const gold = '#c9a227';
+      const darkGold = '#b8860b';
       const navy = '#1e3a5f';
       const lightGray = '#f5f5f5';
       const white = '#ffffff';
 
-      // ===== PREMIUM HEADER - Black with Logo and Centered Text =====
+      // ===== HEADER - Black with elegant flowing gold wave (Image 1 style) =====
       // Black header background
-      doc.rect(0, 0, pageWidth, 75).fill(black);
+      doc.rect(0, 0, pageWidth, 70).fill(black);
+      
+      // Draw elegant flowing gold wave at bottom
+      doc.rect(0, 62, pageWidth, 12).fill(gold);
+      // Create wave effect with overlapping black ellipses
+      doc.ellipse(pageWidth * 0.15, 66, 60, 12).fill(black);
+      doc.ellipse(pageWidth * 0.5, 64, 80, 15).fill(black);
+      doc.ellipse(pageWidth * 0.85, 66, 60, 12).fill(black);
       
       // Logo on left
       try {
-        doc.image(LOGO_PATH, margin + 15, 12, { width: 50, height: 50 });
+        doc.image(LOGO_PATH, margin + 15, 10, { width: 45, height: 45 });
       } catch (logoErr) {
-        doc.rect(margin + 15, 12, 50, 50).fill(gold);
+        doc.rect(margin + 15, 10, 45, 45).fill(gold);
       }
       
       // Company name - "XLAND INFRA" in gold
-      doc.fontSize(22).fillColor(gold).text('XLAND INFRA', margin + 75, 20);
+      doc.fontSize(22).fillColor(gold).text('XLAND INFRA', margin + 70, 18);
       
       // "PVT LTD" with decorative lines on both sides
       const pvtLtdText = 'PVT LTD';
       doc.fontSize(9).fillColor(gold);
       const pvtLtdWidth = doc.widthOfString(pvtLtdText);
-      const pvtLtdX = margin + 75;
+      const pvtLtdX = margin + 70;
       const mainTextWidth = doc.fontSize(22).widthOfString('XLAND INFRA');
       const pvtLtdCenterX = pvtLtdX + (mainTextWidth / 2);
       const actualPvtX = pvtLtdCenterX - (pvtLtdWidth / 2);
       
       // Draw the decorative lines
-      const lineY = 48;
+      const lineY = 46;
       const lineLength = 30;
       const lineGap = 8;
       doc.strokeColor(gold).lineWidth(0.8);
@@ -465,7 +473,7 @@ const generateInvoicePDF = async (invoice) => {
       doc.moveTo(actualPvtX + pvtLtdWidth + lineGap, lineY).lineTo(actualPvtX + pvtLtdWidth + lineGap + lineLength, lineY).stroke();
       
       // Draw PVT LTD text
-      doc.fontSize(9).fillColor(gold).text(pvtLtdText, actualPvtX, 43);
+      doc.fontSize(9).fillColor(gold).text(pvtLtdText, actualPvtX, 41);
 
       let y = 90;
 
@@ -490,49 +498,60 @@ const generateInvoicePDF = async (invoice) => {
       doc.font('Helvetica');
       y += 45;
 
-      // ===== TOTAL AMOUNT DUE BANNER =====
-      // Gradient effect with two rectangles
-      doc.rect(margin, y, contentWidth / 2, 45).fill('#2d4a5f');
-      doc.rect(margin + contentWidth / 2, y, contentWidth / 2, 45).fill(navy);
+      // ===== TOTAL AMOUNT DUE BANNER - Gold rounded (Image 3 style) =====
+      doc.roundedRect(margin, y, contentWidth, 40, 6).fill(gold);
       
-      doc.fontSize(10).fillColor(gold).text('TOTAL AMOUNT DUE', margin + 15, y + 10);
-      doc.fontSize(20).fillColor(white).font('Helvetica-Bold').text(`₹${safeTotal.toLocaleString('en-IN')}`, margin + 15, y + 24);
+      doc.fontSize(9).fillColor(white).text('TOTAL AMOUNT DUE', pageWidth / 2 - 40, y + 8);
+      doc.fontSize(22).fillColor(white).font('Helvetica-Bold').text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, pageWidth / 2 - 50, y + 20);
       doc.font('Helvetica');
-      y += 55;
+      y += 52;
 
-      // ===== PROPERTY & CUSTOMER DETAILS (SIDE BY SIDE) =====
+      // ===== PROPERTY & CUSTOMER DETAILS - Outlined gold borders (Image 3 style) =====
       const cardWidth = (contentWidth - 15) / 2;
       const cardHeight = 85;
       
-      // Property Details Card
-      doc.rect(margin, y, cardWidth, cardHeight).lineWidth(1).stroke('#e0e0e0');
-      doc.rect(margin, y, cardWidth, 20).fill(lightGray);
-      doc.fontSize(9).fillColor(navy).font('Helvetica-Bold').text('PROPERTY DETAILS', margin + 10, y + 6);
+      // Property Details Card - outlined border
+      doc.roundedRect(margin, y, cardWidth, cardHeight, 4).lineWidth(1).strokeColor(gold).stroke();
+      
+      // Property icon - outlined square
+      doc.roundedRect(margin + 10, y + 8, 18, 18, 2).lineWidth(1.5).strokeColor(gold).stroke();
+      // Building icon inside
+      doc.rect(margin + 14, y + 14, 3, 8).fill(gold);
+      doc.rect(margin + 18, y + 16, 3, 6).fill(gold);
+      doc.rect(margin + 22, y + 14, 3, 8).fill(gold);
+      
+      doc.fontSize(9).fillColor('#333333').font('Helvetica-Bold').text('PROPERTY DETAILS', margin + 32, y + 13);
       doc.font('Helvetica');
       
-      let py = y + 26;
-      doc.fontSize(8).fillColor('#666666');
-      doc.text(`Property ID: ${propertyCode || '-'}`, margin + 10, py); py += 12;
-      doc.text(`Name: ${decodeHtml(propertyName) || '-'}`, margin + 10, py); py += 12;
-      doc.text(`Type: ${propertyType || '-'}`, margin + 10, py); py += 12;
-      doc.text(`Zone: ${zone || '-'}`, margin + 10, py); py += 12;
+      let py = y + 32;
+      doc.fontSize(8).fillColor('#333333');
+      doc.text(`Property ID: ${propertyCode || '-'}`, margin + 10, py); py += 11;
+      doc.text(`Name: ${decodeHtml(propertyName) || '-'}`, margin + 10, py); py += 11;
+      doc.text(`Type: ${propertyType || '-'}`, margin + 10, py); py += 11;
+      doc.text(`Zone: ${zone || '-'}`, margin + 10, py); py += 11;
       doc.text(`City: ${city || '-'}`, margin + 10, py);
 
-      // Customer Details Card
+      // Customer Details Card - outlined border
       const custX = margin + cardWidth + 15;
-      doc.rect(custX, y, cardWidth, cardHeight).lineWidth(1).stroke('#e0e0e0');
-      doc.rect(custX, y, cardWidth, 20).fill(lightGray);
-      doc.fontSize(9).fillColor(navy).font('Helvetica-Bold').text('CUSTOMER DETAILS', custX + 10, y + 6);
+      doc.roundedRect(custX, y, cardWidth, cardHeight, 4).lineWidth(1).strokeColor(gold).stroke();
+      
+      // Customer icon - outlined square
+      doc.roundedRect(custX + 10, y + 8, 18, 18, 2).lineWidth(1.5).strokeColor(gold).stroke();
+      // Person icon inside
+      doc.circle(custX + 19, y + 14, 4).fill(gold);
+      doc.roundedRect(custX + 12, y + 19, 14, 5, 2).fill(gold);
+      
+      doc.fontSize(9).fillColor('#333333').font('Helvetica-Bold').text('CUSTOMER DETAILS', custX + 32, y + 13);
       doc.font('Helvetica');
       
-      let cy = y + 26;
-      doc.fontSize(8).fillColor('#666666');
-      doc.text(`Name: ${decodeHtml(customerName) || '-'}`, custX + 10, cy); cy += 12;
-      doc.text(`Phone: ${customerPhone || '-'}`, custX + 10, cy); cy += 12;
-      doc.text(`Email: ${customerEmail || '-'}`, custX + 10, cy, { width: cardWidth - 20 }); cy += 12;
+      let cy = y + 32;
+      doc.fontSize(8).fillColor('#333333');
+      doc.text(`Name: ${decodeHtml(customerName) || '-'}`, custX + 10, cy); cy += 11;
+      doc.text(`Phone: ${customerPhone || '-'}`, custX + 10, cy); cy += 11;
+      doc.text(`Email: ${customerEmail || '-'}`, custX + 10, cy, { width: cardWidth - 20 }); cy += 11;
       doc.text(`City: ${city || '-'}`, custX + 10, cy);
       if (workOrderId) {
-        cy += 12;
+        cy += 11;
         doc.text(`Work Order: ${workOrderId}`, custX + 10, cy);
       }
 

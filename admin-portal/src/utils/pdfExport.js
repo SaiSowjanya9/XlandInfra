@@ -129,33 +129,55 @@ const generatePDF = (data, type, filename) => {
     const borderLight = [229, 231, 235];     // Gray-200
     const gold = [180, 144, 52];             // Professional gold
 
-    // ===== HEADER - Black with decorative PVT LTD =====
-    const headerHeight = 45;
+    // ===== HEADER - Black with elegant flowing gold wave (Image 1 style) =====
+    const headerHeight = 48;
     
     // Black header background
     doc.setFillColor(26, 26, 26); // #1a1a1a
     doc.rect(0, 0, pageWidth, headerHeight, 'F');
     
+    // Draw elegant flowing gold wave at bottom of header
+    doc.setFillColor(184, 134, 11); // Dark gold #b8860b
+    // Create wave effect using bezier curves
+    const waveY = headerHeight - 6;
+    doc.setDrawColor(201, 162, 39); // Gold
+    doc.setLineWidth(4);
+    
+    // Draw flowing wave pattern
+    for (let x = 0; x < pageWidth; x += 40) {
+      doc.setFillColor(201, 162, 39);
+      // Simple wave approximation using small arcs
+    }
+    
+    // Gold wave band at bottom
+    doc.setFillColor(201, 162, 39); // #c9a227
+    doc.rect(0, headerHeight - 8, pageWidth, 8, 'F');
+    
+    // Add subtle curve overlay for wave effect
+    doc.setFillColor(26, 26, 26); // Black overlay for wave
+    doc.ellipse(pageWidth * 0.25, headerHeight - 4, 50, 6, 'F');
+    doc.ellipse(pageWidth * 0.75, headerHeight - 4, 50, 6, 'F');
+    
     // Logo on left
-    const logoSize = 32;
+    const logoSize = 30;
     try {
-      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin, 6, logoSize, logoSize);
+      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin, 8, logoSize, logoSize);
     } catch (e) {
       doc.setFillColor(...gold);
-      doc.roundedRect(margin, 6, 32, 32, 3, 3, 'F');
+      doc.roundedRect(margin, 8, 30, 30, 3, 3, 'F');
     }
     
     // Company name - "XLAND INFRA" in gold
     const textX = margin + logoSize + 8;
     doc.setTextColor(...gold);
-    doc.setFontSize(16);
+    doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', textX, 20);
+    doc.text('XLAND INFRA', textX, 22);
     
     // "PVT LTD" with decorative lines on both sides
-    const pvtLtdY = 30;
+    const pvtLtdY = 32;
     const pvtLtdText = 'PVT LTD';
-    doc.setFontSize(7);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     const pvtLtdWidth = doc.getTextWidth(pvtLtdText);
     const lineLength = 18;
@@ -174,7 +196,7 @@ const generatePDF = (data, type, filename) => {
     doc.line(textX + lineLength + lineGap + pvtLtdWidth + lineGap, pvtLtdY - 2, 
              textX + lineLength + lineGap + pvtLtdWidth + lineGap + lineLength, pvtLtdY - 2);
 
-    y = headerHeight + 6;
+    y = headerHeight + 8;
 
     // ===== DOCUMENT INFO ROW - Gray background =====
     doc.setFillColor(248, 250, 252); // gray-50
@@ -1040,28 +1062,31 @@ export const exportInvoiceToPDF = (invoice) => {
     const margin = 15;
     let y = 0;
 
-    // Colors matching Image 2
+    // Colors matching Image 1 & Image 3
     const gold = [201, 162, 39];       // #c9a227
-    const darkGold = [180, 144, 52];   // darker gold
+    const darkGold = [184, 134, 11];   // #b8860b
     const black = [26, 26, 26];        // #1a1a1a
     const darkText = [31, 41, 55];
     const grayText = [107, 114, 128];
     const lightGray = [249, 250, 251];
 
-    // ===== HEADER - Black with curved gold stripe =====
+    // ===== HEADER - Black with elegant flowing gold wave (Image 1 style) =====
     const headerHeight = 50;
     
     // Black header background
     doc.setFillColor(...black);
-    doc.rect(0, 0, pageWidth, headerHeight - 8, 'F');
+    doc.rect(0, 0, pageWidth, headerHeight, 'F');
     
-    // Gold curved stripe at bottom of header
+    // Draw elegant flowing gold wave at bottom
+    // Gold wave band
     doc.setFillColor(...gold);
-    // Draw a curved shape using bezier-like effect with small rectangles
-    for (let i = 0; i < pageWidth; i++) {
-      const curveHeight = 4 + Math.sin((i / pageWidth) * Math.PI) * 3;
-      doc.rect(i, headerHeight - 10, 1, curveHeight, 'F');
-    }
+    doc.rect(0, headerHeight - 10, pageWidth, 10, 'F');
+    
+    // Create wave effect with overlapping black ellipses
+    doc.setFillColor(...black);
+    doc.ellipse(pageWidth * 0.2, headerHeight - 6, 45, 8, 'F');
+    doc.ellipse(pageWidth * 0.5, headerHeight - 4, 50, 10, 'F');
+    doc.ellipse(pageWidth * 0.8, headerHeight - 6, 45, 8, 'F');
     
     // Logo
     const logoSize = 28;
@@ -1147,21 +1172,25 @@ export const exportInvoiceToPDF = (invoice) => {
     
     y += bannerHeight + 10;
 
-    // ===== PROPERTY & CUSTOMER DETAILS - Side by side with gold borders =====
+    // ===== PROPERTY & CUSTOMER DETAILS - Outlined gold borders (Image 3 style) =====
     const cardGap = 8;
     const cardWidth = (pageWidth - margin * 2 - cardGap) / 2;
     const cardHeight = 52;
     
-    // Property Details Card
+    // Property Details Card - outlined border
     doc.setDrawColor(...gold);
-    doc.setLineWidth(0.5);
+    doc.setLineWidth(0.8);
     doc.roundedRect(margin, y, cardWidth, cardHeight, 3, 3, 'S');
     
-    // Property icon placeholder (gold circle)
-    doc.setFillColor(255, 251, 235); // light gold bg
-    doc.roundedRect(margin + 8, y + 6, 12, 12, 2, 2, 'F');
+    // Property icon - outlined square (Image 3 style)
+    doc.setDrawColor(...gold);
+    doc.setLineWidth(1);
+    doc.roundedRect(margin + 8, y + 6, 12, 12, 2, 2, 'S');
+    // Building icon inside (simple representation)
     doc.setFillColor(...gold);
-    doc.roundedRect(margin + 10, y + 8, 8, 8, 1, 1, 'F');
+    doc.rect(margin + 11, y + 10, 2, 6, 'F');
+    doc.rect(margin + 14, y + 12, 2, 4, 'F');
+    doc.rect(margin + 17, y + 10, 2, 6, 'F');
     
     doc.setTextColor(...darkText);
     doc.setFontSize(10);
@@ -1171,42 +1200,31 @@ export const exportInvoiceToPDF = (invoice) => {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     let py = y + 24;
-    doc.setTextColor(...grayText);
-    doc.text('Property ID:', margin + 8, py);
     doc.setTextColor(...darkText);
-    doc.text(String(invoice.propertyCode || '-'), margin + 32, py);
+    doc.text('Property ID: ' + String(invoice.propertyCode || '-'), margin + 8, py);
     py += 6;
-    doc.setTextColor(...grayText);
-    doc.text('Name:', margin + 8, py);
-    doc.setTextColor(...darkText);
-    doc.text(String(invoice.propertyName || '-').substring(0, 20), margin + 22, py);
+    doc.text('Name: ' + String(invoice.propertyName || '-').substring(0, 22), margin + 8, py);
     py += 6;
-    doc.setTextColor(...grayText);
-    doc.text('Type:', margin + 8, py);
-    doc.setTextColor(...darkText);
-    doc.text(String(invoice.propertyType || '-'), margin + 20, py);
+    doc.text('Type: ' + String(invoice.propertyType || '-'), margin + 8, py);
     py += 6;
-    doc.setTextColor(...grayText);
-    doc.text('Zone:', margin + 8, py);
-    doc.setTextColor(...darkText);
-    doc.text(String(invoice.zone || '-'), margin + 20, py);
+    doc.text('Zone: ' + String(invoice.zone || '-'), margin + 8, py);
     py += 6;
-    doc.setTextColor(...grayText);
-    doc.text('City:', margin + 8, py);
-    doc.setTextColor(...darkText);
-    doc.text(String(invoice.city || '-'), margin + 18, py);
+    doc.text('City: ' + String(invoice.city || '-'), margin + 8, py);
     
-    // Customer Details Card
+    // Customer Details Card - outlined border
     const custCardX = margin + cardWidth + cardGap;
     doc.setDrawColor(...gold);
+    doc.setLineWidth(0.8);
     doc.roundedRect(custCardX, y, cardWidth, cardHeight, 3, 3, 'S');
     
-    // Customer icon placeholder
-    doc.setFillColor(255, 251, 235);
-    doc.roundedRect(custCardX + 8, y + 6, 12, 12, 2, 2, 'F');
+    // Customer icon - outlined square (Image 3 style)
+    doc.setDrawColor(...gold);
+    doc.setLineWidth(1);
+    doc.roundedRect(custCardX + 8, y + 6, 12, 12, 2, 2, 'S');
+    // Person icon inside (simple representation)
     doc.setFillColor(...gold);
-    doc.circle(custCardX + 14, y + 10, 3, 'F');
-    doc.roundedRect(custCardX + 10, y + 13, 8, 4, 1, 1, 'F');
+    doc.circle(custCardX + 14, y + 10, 2.5, 'F');
+    doc.roundedRect(custCardX + 10.5, y + 13, 7, 3, 1, 1, 'F');
     
     doc.setTextColor(...darkText);
     doc.setFontSize(10);
@@ -1216,26 +1234,15 @@ export const exportInvoiceToPDF = (invoice) => {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     let cy = y + 24;
-    doc.setTextColor(...grayText);
-    doc.text('Name:', custCardX + 8, cy);
     doc.setTextColor(...darkText);
-    doc.text(String(invoice.customerName || '-'), custCardX + 22, cy);
+    doc.text('Name: ' + String(invoice.customerName || '-'), custCardX + 8, cy);
     cy += 6;
-    doc.setTextColor(...grayText);
-    doc.text('Phone:', custCardX + 8, cy);
-    doc.setTextColor(...darkText);
-    doc.text(String(invoice.customerPhone || '-'), custCardX + 24, cy);
+    doc.text('Phone: ' + String(invoice.customerPhone || '-'), custCardX + 8, cy);
     cy += 6;
-    doc.setTextColor(...grayText);
-    doc.text('Email:', custCardX + 8, cy);
-    doc.setTextColor(...darkText);
     const email = String(invoice.customerEmail || '-');
-    doc.text(email.length > 25 ? email.substring(0, 25) + '...' : email, custCardX + 22, cy);
+    doc.text('Email: ' + (email.length > 22 ? email.substring(0, 22) + '...' : email), custCardX + 8, cy);
     cy += 6;
-    doc.setTextColor(...grayText);
-    doc.text('City:', custCardX + 8, cy);
-    doc.setTextColor(...darkText);
-    doc.text(String(invoice.city || '-'), custCardX + 18, cy);
+    doc.text('City: ' + String(invoice.city || '-'), custCardX + 8, cy);
     
     y += cardHeight + 12;
 
