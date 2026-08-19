@@ -1068,48 +1068,52 @@ export const exportInvoiceToPDF = (invoice) => {
     const itemCount = lineItems.length;
     const isCompact = itemCount > 4;
 
-    // ===== HEADER - Compact =====
-    const headerHeight = 42;
+    // ===== HEADER - Image 2 Style (Black with smooth gold wave) =====
+    const headerHeight = 32;
     
-    // Black header background
+    // Black header background with rounded top corners
     doc.setFillColor(...headerBlack);
-    doc.rect(0, 0, pageWidth, headerHeight, 'F');
+    doc.roundedRect(0, 0, pageWidth, headerHeight + 8, 6, 6, 'F');
+    doc.rect(0, 10, pageWidth, headerHeight, 'F'); // Cover bottom corners
     
-    // Gold wave at bottom of header
+    // Smooth gold wave at bottom - single elegant curve
     doc.setFillColor(...gold);
-    doc.rect(0, headerHeight - 8, pageWidth, 8, 'F');
+    // Draw wave using bezier-like curve simulation
+    doc.rect(0, headerHeight, pageWidth, 6, 'F');
+    // Create wave dip in center
     doc.setFillColor(...headerBlack);
-    doc.ellipse(pageWidth * 0.15, headerHeight - 5, 35, 7, 'F');
-    doc.ellipse(pageWidth * 0.5, headerHeight - 4, 45, 8, 'F');
-    doc.ellipse(pageWidth * 0.85, headerHeight - 5, 35, 7, 'F');
+    doc.ellipse(pageWidth * 0.5, headerHeight + 1, pageWidth * 0.45, 4, 'F');
+    // Add lighter gold highlight at edges
     doc.setFillColor(...lightGold);
-    doc.ellipse(pageWidth * 0.15, headerHeight - 2, 25, 4, 'F');
-    doc.ellipse(pageWidth * 0.5, headerHeight - 1, 32, 4, 'F');
-    doc.ellipse(pageWidth * 0.85, headerHeight - 2, 25, 4, 'F');
+    doc.ellipse(pageWidth * 0.12, headerHeight + 4, 25, 2.5, 'F');
+    doc.ellipse(pageWidth * 0.88, headerHeight + 4, 25, 2.5, 'F');
     
     // Logo
-    const logoSize = 24;
+    const logoSize = 22;
     try {
-      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 5, 8, logoSize, logoSize);
+      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 8, 5, logoSize, logoSize);
     } catch (e) {
       doc.setFillColor(...gold);
-      doc.roundedRect(margin + 5, 8, logoSize, logoSize, 2, 2, 'F');
+      doc.roundedRect(margin + 8, 5, logoSize, logoSize, 2, 2, 'F');
     }
     
-    // Company name
+    // Company name - "XLAND INFRA"
     doc.setTextColor(...gold);
-    doc.setFontSize(16);
+    doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', margin + logoSize + 12, 18);
+    doc.text('XLAND INFRA', margin + logoSize + 16, 15);
+    
+    // "PVT LTD" with decorative lines
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
+    const pvtX = margin + logoSize + 28;
     doc.setDrawColor(...gold);
     doc.setLineWidth(0.4);
-    doc.line(margin + logoSize + 12, 25, margin + logoSize + 28, 25);
-    doc.text('PVT LTD', margin + logoSize + 30, 26);
-    doc.line(margin + logoSize + 48, 25, margin + logoSize + 64, 25);
+    doc.line(pvtX - 15, 22, pvtX - 3, 22);
+    doc.text('PVT LTD', pvtX, 23);
+    doc.line(pvtX + 17, 22, pvtX + 29, 22);
 
-    y = headerHeight + 8;
+    y = headerHeight + 12;
 
     // ===== ID / DATE / DUE ROW (Compact) =====
     doc.setFontSize(8);
