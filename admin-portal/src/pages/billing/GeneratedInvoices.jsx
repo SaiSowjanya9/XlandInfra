@@ -1353,17 +1353,17 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
             {/* Footer Actions - Always visible with gold theme */}
             <div className="px-6 py-4 border-t border-gray-200 bg-white flex items-center justify-end gap-3 flex-shrink-0">
               <button
-                onClick={() => { setShowDetailPanel(false); setSelectedInvoice(null); }}
+                onClick={(e) => { e.stopPropagation(); setShowDetailPanel(false); setSelectedInvoice(null); }}
                 className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Close
               </button>
               {selectedInvoice.balanceAmount > 0 && (
                 <button
-                  onClick={() => { /* TODO: Record payment */ }}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-[#c9a227] text-white rounded-lg font-medium hover:bg-[#b8941f] transition-colors shadow-sm"
+                  onClick={(e) => { e.stopPropagation(); /* TODO: Record payment functionality */ }}
+                  className="px-5 py-2.5 bg-[#c9a227] text-white rounded-lg font-medium hover:bg-[#b8941f] transition-colors shadow-sm"
                 >
-                  <Receipt className="w-4 h-4" /> Record Payment
+                  Record Payment
                 </button>
               )}
             </div>
