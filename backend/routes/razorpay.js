@@ -264,9 +264,9 @@ router.post('/send-payment-link', authenticate, canManagePayments, paymentLinkLi
       WHERE id = ?
     `, [tokenHash, invoiceId]);
 
-    // Build custom payment page URL with unique token
+    // Build custom payment page URL with unique token (invoice ID hidden in token)
     const frontendUrl = process.env.FRONTEND_URL || 'https://admin.xlandinfra.com';
-    const customPaymentUrl = `${frontendUrl}/pay/${invoice.invoice_id}?token=${encodeURIComponent(tokenData.token)}`;
+    const customPaymentUrl = `${frontendUrl}/pay?token=${encodeURIComponent(tokenData.token)}`;
 
     // Get email template
     const [templates] = await pool.execute(`
@@ -1199,22 +1199,34 @@ router.post('/verify-qr-token', async (req, res) => {
 
 // ============================================
 // PUBLIC: GET INVOICE DETAILS FOR PAYMENT PAGE
-// No auth required - accessed via token in email link
+// Token-only URL - invoice ID extracted from token
 // ============================================
-router.get('/public/invoice/:invoiceId', async (req, res) => {
+router.get('/public/pay', async (req, res) => {
   try {
-    const { invoiceId } = req.params;
     const { token } = req.query;
 
-    if (!invoiceId || !token) {
+    if (!token) {
       return res.status(400).json({
         success: false,
-        message: 'Invoice ID and token are required'
+        message: 'Payment token is required'
       });
     }
 
-    // Verify token hash
-    const crypto = require('crypto');
+    // Verify and decode the token
+    const { verifyPaymentToken } = require('../utils/paymentSecurity');
+    const verification = verifyPaymentToken(token);
+
+    if (!verification.valid) {
+      return res.status(400).json({
+        success: false,
+        message: verification.error || 'Invalid or expired payment link'
+      });
+    }
+
+    // Extract invoice ID from token payload
+    const invoiceId = verification.data.invoiceId;
+
+    // Verify token hash matches database
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
     // Get invoice with token verification

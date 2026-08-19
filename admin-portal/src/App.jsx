@@ -319,8 +319,8 @@ function App() {
             {/* Phase 2 Documentation - Public */}
             <Route path="/phase2-docs" element={<Phase2Documentation />} />
             
-            {/* Public Payment Page - Accessed via email link */}
-            <Route path="/pay/:invoiceId" element={<PublicPayment />} />
+            {/* Public Payment Page - Accessed via email link (token contains invoice ID) */}
+            <Route path="/pay" element={<PublicPayment />} />
             
             {/* Payment Success Page - Razorpay callback */}
             <Route path="/payment/success" element={<PaymentSuccess />} />

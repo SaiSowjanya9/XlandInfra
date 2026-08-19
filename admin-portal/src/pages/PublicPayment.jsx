@@ -1,20 +1,103 @@
-import { useState, useEffect } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   CreditCard, 
   Building2, 
   Banknote, 
-  QrCode, 
   CheckCircle, 
   ArrowLeft,
   Shield,
   AlertCircle,
   Loader2,
   Copy,
-  Check
+  Check,
+  RefreshCw
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+
+// Simple Math CAPTCHA Component
+const MathCaptcha = ({ onVerify }) => {
+  const [num1, setNum1] = useState(0);
+  const [num2, setNum2] = useState(0);
+  const [userAnswer, setUserAnswer] = useState('');
+  const [error, setError] = useState('');
+
+  const generateCaptcha = useCallback(() => {
+    const n1 = Math.floor(Math.random() * 10) + 1;
+    const n2 = Math.floor(Math.random() * 10) + 1;
+    setNum1(n1);
+    setNum2(n2);
+    setUserAnswer('');
+    setError('');
+  }, []);
+
+  useEffect(() => {
+    generateCaptcha();
+  }, [generateCaptcha]);
+
+  const handleVerify = () => {
+    const correctAnswer = num1 + num2;
+    if (parseInt(userAnswer) === correctAnswer) {
+      onVerify(true);
+    } else {
+      setError('Incorrect answer. Please try again.');
+      generateCaptcha();
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full">
+      <div className="text-center mb-6">
+        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Shield className="w-8 h-8 text-blue-600" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900">Security Verification</h2>
+        <p className="text-gray-500 text-sm mt-1">Please solve this to continue</p>
+      </div>
+
+      <div className="bg-gray-50 rounded-xl p-6 mb-4">
+        <div className="flex items-center justify-center gap-3 text-2xl font-bold text-gray-800">
+          <span className="bg-white px-4 py-2 rounded-lg shadow-sm">{num1}</span>
+          <span className="text-blue-600">+</span>
+          <span className="bg-white px-4 py-2 rounded-lg shadow-sm">{num2}</span>
+          <span className="text-gray-400">=</span>
+          <span className="text-blue-600">?</span>
+        </div>
+      </div>
+
+      <div className="flex gap-2 mb-4">
+        <input
+          type="number"
+          value={userAnswer}
+          onChange={(e) => setUserAnswer(e.target.value)}
+          placeholder="Your answer"
+          className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-center text-lg font-semibold focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          onKeyPress={(e) => e.key === 'Enter' && handleVerify()}
+        />
+        <button
+          onClick={generateCaptcha}
+          className="px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+          title="New question"
+        >
+          <RefreshCw className="w-5 h-5 text-gray-500" />
+        </button>
+      </div>
+
+      {error && (
+        <p className="text-red-500 text-sm text-center mb-4">{error}</p>
+      )}
+
+      <button
+        onClick={handleVerify}
+        disabled={!userAnswer}
+        className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Verify & Continue
+      </button>
+    </div>
+  );
+};
 
 // Payment method icons
 const UPIIcon = () => (
@@ -35,7 +118,7 @@ const CashIcon = () => (
   </div>
 );
 
-const CheckIcon = () => (
+const ChequeIcon = () => (
   <div className="w-14 h-14 bg-purple-50 rounded-xl flex items-center justify-center border border-purple-200">
     <svg className="w-7 h-7 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -44,7 +127,6 @@ const CheckIcon = () => (
 );
 
 const PublicPayment = () => {
-  const { invoiceId } = useParams();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
   
@@ -54,6 +136,7 @@ const PublicPayment = () => {
   const [selectedMethod, setSelectedMethod] = useState('razorpay');
   const [processing, setProcessing] = useState(false);
   const [copied, setCopied] = useState(null);
+  const [captchaVerified, setCaptchaVerified] = useState(false);
 
   // Bank details for bank transfer
   const bankDetails = {
@@ -71,13 +154,21 @@ const PublicPayment = () => {
   };
 
   useEffect(() => {
-    fetchInvoiceDetails();
-  }, [invoiceId, token]);
+    if (captchaVerified && token) {
+      fetchInvoiceDetails();
+    } else if (!token) {
+      setLoading(false);
+      setError('Invalid payment link');
+    } else {
+      setLoading(false);
+    }
+  }, [captchaVerified, token]);
 
   const fetchInvoiceDetails = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/api/razorpay/public/invoice/${invoiceId}?token=${token}`);
+      // Token contains invoice ID - backend extracts it
+      const response = await fetch(`${API_BASE}/api/razorpay/public/pay?token=${encodeURIComponent(token)}`);
       const result = await response.json();
       
       if (result.success) {
@@ -93,6 +184,13 @@ const PublicPayment = () => {
       setError('Failed to load invoice details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCaptchaVerified = (verified) => {
+    setCaptchaVerified(verified);
+    if (verified) {
+      setLoading(true);
     }
   };
 
@@ -155,6 +253,15 @@ const PublicPayment = () => {
       minimumFractionDigits: 0 
     }).format(amount || 0);
   };
+
+  // Show CAPTCHA first (before loading invoice)
+  if (!captchaVerified && !error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
+        <MathCaptcha onVerify={handleCaptchaVerified} />
+      </div>
+    );
+  }
 
   if (loading) {
     return (
