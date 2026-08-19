@@ -1471,11 +1471,14 @@ const InvoiceDetailPanel = ({
             const services = filteredItems.map(item => {
               const fullDesc = decodeHtml(String(item.description || item.name || 'Service'));
               const parts = fullDesc.split(' - ');
+              // Use item.details as fallback for full description (backend stores it separately)
+              const descFromDetails = decodeHtml(item.details || '');
               return {
-                name: parts[0] || 'Service',
-                description: parts.slice(1).join(' - ') || '',
+                name: parts[0] || item.name || 'Service',
+                description: descFromDetails || parts.slice(1).join(' - ') || '',
                 frequency: getFrequency(item),
-                visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
+                visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1,
+                price: item.price || item.amount || item.unitPrice || item.unit_price || 0
               };
             });
 
@@ -1484,26 +1487,30 @@ const InvoiceDetailPanel = ({
                 {/* Header with icon */}
                 <div className="flex items-center gap-2 px-4 py-3 bg-[#c9a227]">
                   <FileText className="w-4 h-4 text-white" />
-                  <p className="text-white text-sm font-semibold uppercase tracking-wide">Services Included</p>
+                  <p className="text-white text-sm font-semibold uppercase tracking-wide">AMC Services</p>
                 </div>
                 <div className="divide-y divide-[#c9a227]/20">
                   {services.map((item, idx) => (
                     <div key={idx} className={`px-4 py-3 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#c9a227]/5'}`}>
-                      <div className="flex justify-between items-start gap-4">
-                        <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="flex-1 min-w-0 max-w-[55%]">
                           <p className="text-sm font-semibold text-gray-800">{item.name}</p>
                           {item.description && (
-                            <p className="text-xs text-gray-500 mt-1 leading-relaxed whitespace-normal break-words">{item.description}</p>
+                            <p className="text-xs text-gray-500 mt-1 leading-relaxed break-words">{item.description}</p>
                           )}
                         </div>
-                        <div className="flex items-center gap-4 flex-shrink-0 text-sm">
-                          <div className="text-center w-20">
+                        <div className="flex items-center gap-3 flex-shrink-0 text-sm">
+                          <div className="text-center w-[70px]">
                             <p className="text-[10px] text-gray-400 uppercase">Frequency</p>
-                            <p className="text-gray-600">{item.frequency}</p>
+                            <p className="text-gray-600 text-xs">{item.frequency}</p>
                           </div>
-                          <div className="text-center w-12">
+                          <div className="text-center w-10">
                             <p className="text-[10px] text-gray-400 uppercase">Visits</p>
-                            <p className="text-gray-600">{item.visits}</p>
+                            <p className="text-gray-600 text-xs">{item.visits}</p>
+                          </div>
+                          <div className="text-right w-[70px]">
+                            <p className="text-[10px] text-gray-400 uppercase">Amount</p>
+                            <p className="font-semibold text-[#c9a227] text-xs">{formatCurrency(item.price || 0)}</p>
                           </div>
                         </div>
                       </div>

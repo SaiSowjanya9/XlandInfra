@@ -340,18 +340,25 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     console.log(`💰 Invoice amounts: Subtotal=${subtotalValue}, Discount=${discountValue}%, Total=${amounts.totalAmount}`);
     
     // Prepare line items JSON - include all services and addons
-    const lineItems = items.map(item => ({
-      description: item.description || item.package_name || item.category_name || item.name || 'Service',
-      quantity: item.quantity || 1,
-      unitPrice: parseFloat(item.unit_price) || parseFloat(item.price) || 0,
-      totalPrice: parseFloat(item.total_price) || (parseFloat(item.unit_price || item.price || 0) * (item.quantity || 1)),
-      type: item.type || 'service',
-      frequency: item.frequency || null,
-      visits: item.visits || null,
-      billingDuration: item.billingDuration || null,
-      packageId: item.package_id,
-      categoryId: item.category_id
-    }));
+    const lineItems = items.map(item => {
+      const name = item.name || 'Service';
+      const details = item.details || item.service_description || '';
+      const desc = item.description || item.package_name || item.category_name || name;
+      return {
+        name: name,
+        description: desc,
+        details: details, // Store full description separately
+        quantity: item.quantity || 1,
+        unitPrice: parseFloat(item.unit_price) || parseFloat(item.price) || 0,
+        totalPrice: parseFloat(item.total_price) || (parseFloat(item.unit_price || item.price || 0) * (item.quantity || 1)),
+        type: item.type || 'service',
+        frequency: item.frequency || null,
+        visits: item.visits || null,
+        billingDuration: item.billingDuration || null,
+        packageId: item.package_id,
+        categoryId: item.category_id
+      };
+    });
     
     console.log(`📋 Line items for invoice: ${JSON.stringify(lineItems)}`);
     
@@ -787,12 +794,19 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
     let lineItems = [];
     try {
       lineItems = invoice.line_items ? (typeof invoice.line_items === 'string' ? JSON.parse(invoice.line_items) : invoice.line_items) : [];
-      // Decode HTML entities in descriptions
-      lineItems = lineItems.map(item => ({
-        ...item,
-        description: decodeHtmlEntities(item.description),
-        name: decodeHtmlEntities(item.name)
-      }));
+      // Decode HTML entities in descriptions and use details as fallback
+      lineItems = lineItems.map(item => {
+        const name = decodeHtmlEntities(item.name || '');
+        const details = decodeHtmlEntities(item.details || '');
+        const desc = decodeHtmlEntities(item.description || '');
+        // Build full description: if details exist, use "name - details", otherwise use description
+        const fullDescription = details ? `${name} - ${details}` : (desc || name || 'Service');
+        return {
+          ...item,
+          description: fullDescription,
+          name: name
+        };
+      });
     } catch (e) { lineItems = []; }
     
     // Generate line items HTML
@@ -800,7 +814,7 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
       <tr style="border-bottom: 1px solid #e2e8f0;">
         <td style="padding: 12px; color: #4a5568;">${idx + 1}</td>
         <td style="padding: 12px; color: #2d3748;">${item.description || item.name || 'Service'}</td>
-        <td style="padding: 12px; text-align: center; color: #4a5568;">${item.quantity || 1}</td>
+        <td style="padding: 12px; text-align: center; color: #4a5568;">${item.quantity || item.visits || 1}</td>
         <td style="padding: 12px; text-align: right; color: #4a5568;">${formatCurrency(item.unitPrice || item.unit_price || 0)}</td>
         <td style="padding: 12px; text-align: right; color: #2d3748; font-weight: 600;">${formatCurrency(item.totalPrice || item.total_price || 0)}</td>
       </tr>
@@ -842,7 +856,6 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                           </table>
                         </td>
                         <td width="50%" style="vertical-align: middle; text-align: right;">
-                          <span style="display: inline-block; background: #d4a853; color: #1a1a1a; padding: 8px 20px; border-radius: 4px; font-size: 18px; font-weight: bold; letter-spacing: 2px;">INVOICE</span>
                         </td>
                       </tr>
                     </table>
@@ -950,10 +963,12 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                           <th style="padding: 10px 12px; text-align: right; color: #166534; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #bbf7d0; width: 90px;">Amount</th>
                         </tr>
                         ${lineItems.filter(i => i.type === 'service' || !i.type).map((item, idx) => {
+                          // Use item.details as fallback for full description
+                          const details = item.details || '';
                           const fullDesc = item.description || item.name || 'Service';
                           const parts = fullDesc.split(' - ');
                           const serviceName = parts[0] || 'Service';
-                          const serviceDesc = parts.slice(1).join(' - ') || '';
+                          const serviceDesc = details || parts.slice(1).join(' - ') || '';
                           const freq = item.frequency || item.frequencyType || item.frequency_type || item.billingDuration || '-';
                           const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
                           const visits = item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1;

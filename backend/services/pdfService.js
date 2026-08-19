@@ -239,7 +239,8 @@ const generateEstimatePDF = async (estimate) => {
         y += 20;
 
         svcList.forEach((s, idx) => {
-          const svcDesc = decodeHtml(s.description) || '-';
+          // Use s.details as fallback for full description (backend stores it separately)
+          const svcDesc = decodeHtml(s.details || s.description || s.service_description) || '-';
           // Calculate row height based on description length (approx 40 chars per line)
           const descLines = Math.ceil(svcDesc.length / 40);
           const rowHeight = Math.max(22, descLines * 11);
@@ -308,7 +309,8 @@ const generateEstimatePDF = async (estimate) => {
         y += 20;
 
         addonList.forEach((a, idx) => {
-          const addonDesc = decodeHtml(a.description) || '-';
+          // Use a.details as fallback for full description (backend stores it separately)
+          const addonDesc = decodeHtml(a.details || a.description || a.service_description) || '-';
           // Calculate row height based on description length (approx 40 chars per line)
           const descLines = Math.ceil(addonDesc.length / 40);
           const rowHeight = Math.max(22, descLines * 11);
@@ -561,10 +563,12 @@ const generateInvoicePDF = async (invoice) => {
         y += 22;
 
         items.forEach((item, idx) => {
+          // Use item.details as fallback for full description
+          const details = decodeHtml(item.details || '');
           const fullDesc = decodeHtml(item.description || item.name || 'Service');
           const parts = fullDesc.split(' - ');
           const serviceName = parts[0] || 'Service';
-          const serviceDesc = parts.slice(1).join(' - ') || '-';
+          const serviceDesc = details || parts.slice(1).join(' - ') || '-';
           const freq = item.frequency || item.frequencyType || item.billingDuration || '-';
           const visits = item.visits || item.frequencyCount || item.quantity || 1;
           

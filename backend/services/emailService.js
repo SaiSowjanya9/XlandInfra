@@ -2232,10 +2232,12 @@ const sendInvoiceEmail = async (invoice) => {
 
   // Generate line items HTML with Service, Description, Frequency, Visits format
   const itemsHtml = items.map((item, idx) => {
+    // Use item.details as fallback for full description
+    const details = decodeHtml(item.details || '');
     const fullDesc = decodeHtml(item.description || item.name || 'Service');
     const parts = fullDesc.split(' - ');
     const serviceName = parts[0] || 'Service';
-    const serviceDesc = parts.slice(1).join(' - ') || '-';
+    const serviceDesc = details || parts.slice(1).join(' - ') || '-';
     const freq = item.frequency || item.frequencyType || item.frequency_type || item.billingDuration || '-';
     const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
     const visits = item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1;
