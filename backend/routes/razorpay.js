@@ -1198,6 +1198,55 @@ router.post('/verify-qr-token', async (req, res) => {
 });
 
 // ============================================
+// VERIFY GOOGLE reCAPTCHA TOKEN
+// ============================================
+const RECAPTCHA_SECRET_KEY = '6LdawI4tAAAAAOODjacvVt2ACAcWQyt8uNFDY2jj';
+
+router.post('/verify-recaptcha', async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'reCAPTCHA token is required'
+      });
+    }
+
+    // Verify with Google
+    const verifyUrl = `https://www.google.com/recaptcha/api/siteverify`;
+    const response = await fetch(verifyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `secret=${RECAPTCHA_SECRET_KEY}&response=${token}`
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'reCAPTCHA verified successfully'
+      });
+    } else {
+      console.error('reCAPTCHA verification failed:', result['error-codes']);
+      res.status(400).json({
+        success: false,
+        message: 'reCAPTCHA verification failed',
+        errors: result['error-codes']
+      });
+    }
+
+  } catch (error) {
+    console.error('Error verifying reCAPTCHA:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify reCAPTCHA'
+    });
+  }
+});
+
+// ============================================
 // PUBLIC: GET INVOICE DETAILS FOR PAYMENT PAGE
 // Token-only URL - invoice ID extracted from token
 // ============================================
