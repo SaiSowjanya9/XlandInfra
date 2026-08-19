@@ -387,7 +387,7 @@ const generateEstimatePDF = async (estimate) => {
   });
 };
 
-// Generate invoice PDF and return as buffer - Premium Design
+// Generate invoice PDF and return as buffer - Compact Single Page Design (Image 2)
 const generateInvoicePDF = async (invoice) => {
   return new Promise((resolve, reject) => {
     try {
@@ -408,6 +408,7 @@ const generateInvoicePDF = async (invoice) => {
       
       const isWorkOrderInvoice = invoiceType === 'work_order';
       const pageWidth = 595;
+      const pageHeight = 842;
       const margin = 40;
       const contentWidth = pageWidth - (margin * 2);
 
@@ -421,171 +422,156 @@ const generateInvoicePDF = async (invoice) => {
       const safeTotal = safeNum(totalAmount);
       const safeTaxPercent = safeNum(taxPercentage) || 18;
 
-      // Colors per design spec
+      // Colors per design spec (Image 2)
       const headerBlack = '#151515';
-      const gold = '#D39A1A';
-      const darkGold = '#B77A00';
+      const gold = '#C9A227';
       const lightGold = '#E8C66A';
-      const totalGold = '#C58A0A';
       const primaryText = '#171717';
       const secondaryText = '#555555';
       const borderGray = '#E5E5E5';
       const cardBg = '#FBF7EE';
       const white = '#ffffff';
 
-      // ===== HEADER - Black #151515 with gold wave =====
-      // Black header background
-      doc.rect(0, 0, pageWidth, 75).fill(headerBlack);
-      
-      // Gold wave at bottom
-      doc.rect(0, 65, pageWidth, 12).fill(gold);
-      // Create wave effect with overlapping black curves
-      doc.ellipse(pageWidth * 0.15, 69, 60, 12).fill(headerBlack);
-      doc.ellipse(pageWidth * 0.5, 67, 80, 15).fill(headerBlack);
-      doc.ellipse(pageWidth * 0.85, 69, 60, 12).fill(headerBlack);
-      // Light gold highlight
-      doc.ellipse(pageWidth * 0.15, 73, 45, 6).fill(lightGold);
-      doc.ellipse(pageWidth * 0.5, 72, 55, 7).fill(lightGold);
-      doc.ellipse(pageWidth * 0.85, 73, 45, 6).fill(lightGold);
-      
-      // Logo on left
-      try {
-        doc.image(LOGO_PATH, margin + 15, 12, { width: 48, height: 48 });
-      } catch (logoErr) {
-        doc.rect(margin + 15, 12, 48, 48).fill(gold);
-      }
-      
-      // Company name - "XLAND INFRA" in gold
-      doc.fontSize(24).fillColor(gold).text('XLAND INFRA', margin + 75, 20);
-      
-      // "PVT LTD" with decorative lines on both sides
-      const pvtLtdText = 'PVT LTD';
-      doc.fontSize(9).fillColor(gold);
-      const pvtLtdWidth = doc.widthOfString(pvtLtdText);
-      const pvtLtdX = margin + 75;
-      const mainTextWidth = doc.fontSize(24).widthOfString('XLAND INFRA');
-      const pvtLtdCenterX = pvtLtdX + (mainTextWidth / 2);
-      const actualPvtX = pvtLtdCenterX - (pvtLtdWidth / 2);
-      
-      // Draw the decorative lines
-      const lineY = 50;
-      const lineLength = 30;
-      const lineGap = 8;
-      doc.strokeColor(gold).lineWidth(0.8);
-      doc.moveTo(actualPvtX - lineGap - lineLength, lineY).lineTo(actualPvtX - lineGap, lineY).stroke();
-      doc.moveTo(actualPvtX + pvtLtdWidth + lineGap, lineY).lineTo(actualPvtX + pvtLtdWidth + lineGap + lineLength, lineY).stroke();
-      
-      // Draw PVT LTD text
-      doc.fontSize(9).fillColor(gold).text(pvtLtdText, actualPvtX, 45);
-
-      let y = 95;
-
-      // ===== INVOICE ID & DATES ROW =====
-      doc.fontSize(9).fillColor('#666666').text('ID:', margin, y);
-      doc.fontSize(14).fillColor(primaryText).font('Helvetica-Bold').text(invoiceId || 'N/A', margin + 18, y - 1);
-      
-      if (estimateId) {
-        doc.fontSize(9).fillColor(gold).font('Helvetica').text(`Estimate: ${estimateId}`, margin, y + 16);
-      }
-      
-      // Right side dates (Image 2 style)
-      const dateX = pageWidth - margin - 130;
-      doc.fontSize(10).fillColor(secondaryText).font('Helvetica').text('Date:', dateX, y);
-      const invDateStr = invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-      doc.fontSize(13).fillColor(primaryText).font('Helvetica-Bold').text(invDateStr, dateX + 40, y - 1);
-      
-      doc.fontSize(10).fillColor(secondaryText).font('Helvetica').text('Due:', dateX, y + 20);
-      const dueDateStr = dueDate ? new Date(dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-      doc.fontSize(13).fillColor(primaryText).font('Helvetica-Bold').text(dueDateStr, dateX + 40, y + 19);
-      
-      doc.font('Helvetica');
-      y += 48;
-
-      // ===== TOTAL AMOUNT DUE BANNER - #D39A1A rounded =====
-      doc.roundedRect(margin, y, contentWidth, 45, 8).fill(gold);
-      
-      doc.fontSize(11).fillColor(white).text('TOTAL AMOUNT DUE', pageWidth / 2 - 45, y + 10);
-      doc.fontSize(28).fillColor(white).font('Helvetica-Bold').text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, pageWidth / 2 - 55, y + 24);
-      doc.font('Helvetica');
-      y += 58;
-
-      // ===== PROPERTY & CUSTOMER DETAILS - Cream bg, filled gold icons (Image 2) =====
-      const cardWidth = (contentWidth - 15) / 2;
-      const cardHeight = 95;
-      
-      // Property Details Card - cream background
-      doc.roundedRect(margin, y, cardWidth, cardHeight, 6).fill(cardBg);
-      
-      // Property icon - FILLED gold square with white icon
-      doc.roundedRect(margin + 12, y + 10, 18, 18, 3).fill(gold);
-      // Building icon inside (white)
-      doc.rect(margin + 17, y + 16, 3, 8).fill(white);
-      doc.rect(margin + 21, y + 18, 3, 6).fill(white);
-      doc.rect(margin + 25, y + 16, 3, 8).fill(white);
-      
-      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PROPERTY DETAILS', margin + 36, y + 17);
-      doc.font('Helvetica');
-      
-      let py = y + 36;
-      doc.fontSize(8).fillColor(secondaryText);
-      doc.text(`Property ID: ${propertyCode || '-'}`, margin + 12, py); py += 11;
-      doc.text(`Name: ${decodeHtml(propertyName) || '-'}`, margin + 12, py); py += 11;
-      doc.text(`Type: ${propertyType || '-'}`, margin + 12, py); py += 11;
-      doc.text(`Zone: ${zone || '-'}`, margin + 12, py); py += 11;
-      doc.text(`City: ${city || '-'}`, margin + 12, py);
-
-      // Customer Details Card - cream background
-      const custX = margin + cardWidth + 15;
-      doc.roundedRect(custX, y, cardWidth, cardHeight, 6).fill(cardBg);
-      
-      // Customer icon - FILLED gold square with white icon
-      doc.roundedRect(custX + 12, y + 10, 18, 18, 3).fill(gold);
-      // Person icon inside (white)
-      doc.circle(custX + 21, y + 16, 4).fill(white);
-      doc.roundedRect(custX + 15, y + 22, 12, 4, 2).fill(white);
-      
-      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('CUSTOMER DETAILS', custX + 36, y + 17);
-      doc.font('Helvetica');
-      
-      let cy = y + 36;
-      doc.fontSize(8).fillColor(secondaryText);
-      doc.text(`Name: ${decodeHtml(customerName) || '-'}`, custX + 12, cy); cy += 11;
-      doc.text(`Phone: ${customerPhone || '-'}`, custX + 12, cy); cy += 11;
-      doc.text(`Email: ${customerEmail || '-'}`, custX + 12, cy, { width: cardWidth - 24 }); cy += 11;
-      doc.text(`City: ${city || '-'}`, custX + 12, cy);
-      if (workOrderId) {
-        cy += 11;
-        doc.text(`Work Order: ${workOrderId}`, custX + 12, cy);
-      }
-
-      y += cardHeight + 15;
-
-      // Parse line items
+      // Parse line items first to calculate dynamic sizing
       let items = [];
       try {
         items = typeof lineItems === 'string' ? JSON.parse(lineItems) : (lineItems || []);
       } catch (e) { items = []; }
+      
+      // Calculate if we need compact mode (many items)
+      const itemCount = items.length;
+      const isCompact = itemCount > 4;
 
-      const pageHeight = 780;
+      // ===== HEADER - Black with gold wave (Image 2) =====
+      const headerHeight = 70;
+      doc.rect(0, 0, pageWidth, headerHeight).fill(headerBlack);
+      
+      // Gold wave at bottom of header
+      doc.rect(0, headerHeight - 10, pageWidth, 12).fill(gold);
+      doc.ellipse(pageWidth * 0.15, headerHeight - 6, 50, 10).fill(headerBlack);
+      doc.ellipse(pageWidth * 0.5, headerHeight - 8, 70, 12).fill(headerBlack);
+      doc.ellipse(pageWidth * 0.85, headerHeight - 6, 50, 10).fill(headerBlack);
+      doc.ellipse(pageWidth * 0.15, headerHeight - 3, 35, 5).fill(lightGold);
+      doc.ellipse(pageWidth * 0.5, headerHeight - 4, 45, 6).fill(lightGold);
+      doc.ellipse(pageWidth * 0.85, headerHeight - 3, 35, 5).fill(lightGold);
+      
+      // Logo
+      try {
+        doc.image(LOGO_PATH, margin + 10, 10, { width: 45, height: 45 });
+      } catch (logoErr) {
+        doc.roundedRect(margin + 10, 10, 45, 45, 4).fill(gold);
+      }
+      
+      // Company name
+      doc.fontSize(22).fillColor(gold).text('XLAND INFRA', margin + 65, 18);
+      doc.fontSize(8).fillColor(gold);
+      const pvtX = margin + 95;
+      doc.strokeColor(gold).lineWidth(0.6);
+      doc.moveTo(pvtX - 25, 42).lineTo(pvtX - 5, 42).stroke();
+      doc.moveTo(pvtX + 35, 42).lineTo(pvtX + 55, 42).stroke();
+      doc.text('PVT LTD', pvtX, 38);
 
-      // ===== SERVICES INCLUDED TABLE - Gold header =====
+      let y = headerHeight + 15;
+
+      // ===== ID / DATE / DUE ROW (Image 2) =====
+      doc.fontSize(9).fillColor(secondaryText).text('ID:', margin, y);
+      doc.fontSize(13).fillColor(primaryText).font('Helvetica-Bold').text(invoiceId || 'N/A', margin + 16, y - 1);
+      
+      if (estimateId) {
+        doc.fontSize(8).fillColor(gold).font('Helvetica').text(`Estimate: ${estimateId}`, margin, y + 14);
+      }
+      
+      const dateX = pageWidth - margin - 110;
+      doc.fontSize(9).fillColor(secondaryText).font('Helvetica').text('Date:', dateX, y);
+      const invDateStr = invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+      doc.fontSize(11).fillColor(primaryText).font('Helvetica-Bold').text(invDateStr, dateX + 32, y - 1);
+      
+      doc.fontSize(9).fillColor(secondaryText).font('Helvetica').text('Due:', dateX, y + 16);
+      const dueDateStr = dueDate ? new Date(dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+      doc.fontSize(11).fillColor(primaryText).font('Helvetica-Bold').text(dueDateStr, dateX + 32, y + 15);
+      
+      doc.font('Helvetica');
+      y += 38;
+
+      // ===== TOTAL AMOUNT DUE BANNER =====
+      const bannerHeight = 38;
+      doc.roundedRect(margin, y, contentWidth, bannerHeight, 6).fill(gold);
+      doc.fontSize(10).fillColor(white).text('TOTAL AMOUNT DUE', pageWidth / 2 - 42, y + 8);
+      doc.fontSize(22).fillColor(white).font('Helvetica-Bold').text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, pageWidth / 2 - 45, y + 20);
+      doc.font('Helvetica');
+      y += bannerHeight + 12;
+
+      // ===== PROPERTY & CUSTOMER DETAILS (Image 2 - cream bg, filled gold icons) =====
+      const cardWidth = (contentWidth - 12) / 2;
+      const cardHeight = isCompact ? 75 : 85;
+      
+      // Property Details Card
+      doc.roundedRect(margin, y, cardWidth, cardHeight, 5).fill(cardBg);
+      
+      // Filled gold icon with white building
+      doc.roundedRect(margin + 10, y + 10, 16, 16, 3).fill(gold);
+      doc.rect(margin + 14, y + 15, 2, 7).fill(white);
+      doc.rect(margin + 17, y + 17, 2, 5).fill(white);
+      doc.rect(margin + 20, y + 15, 2, 7).fill(white);
+      
+      doc.fontSize(8).fillColor(primaryText).font('Helvetica-Bold').text('PROPERTY DETAILS', margin + 30, y + 15);
+      doc.font('Helvetica');
+      
+      let py = y + 32;
+      const lineH = isCompact ? 9 : 10;
+      doc.fontSize(7).fillColor(secondaryText);
+      doc.text(`Property ID: ${propertyCode || '-'}`, margin + 10, py); py += lineH;
+      doc.text(`Name: ${decodeHtml(propertyName) || '-'}`, margin + 10, py); py += lineH;
+      doc.text(`Type: ${propertyType || '-'}`, margin + 10, py); py += lineH;
+      doc.text(`Zone: ${zone || '-'}`, margin + 10, py); py += lineH;
+      doc.text(`City: ${city || '-'}`, margin + 10, py);
+
+      // Customer Details Card
+      const custX = margin + cardWidth + 12;
+      doc.roundedRect(custX, y, cardWidth, cardHeight, 5).fill(cardBg);
+      
+      // Filled gold icon with white person
+      doc.roundedRect(custX + 10, y + 10, 16, 16, 3).fill(gold);
+      doc.circle(custX + 18, y + 15, 3).fill(white);
+      doc.roundedRect(custX + 13, y + 20, 10, 3, 1).fill(white);
+      
+      doc.fontSize(8).fillColor(primaryText).font('Helvetica-Bold').text('CUSTOMER DETAILS', custX + 30, y + 15);
+      doc.font('Helvetica');
+      
+      let cy = y + 32;
+      doc.fontSize(7).fillColor(secondaryText);
+      doc.text(`Name: ${decodeHtml(customerName) || '-'}`, custX + 10, cy); cy += lineH;
+      doc.text(`Phone: ${customerPhone || '-'}`, custX + 10, cy); cy += lineH;
+      const emailStr = customerEmail || '-';
+      doc.text(`Email: ${emailStr.length > 28 ? emailStr.substring(0, 28) + '...' : emailStr}`, custX + 10, cy); cy += lineH;
+      doc.text(`City: ${city || '-'}`, custX + 10, cy);
+
+      y += cardHeight + 12;
+
+      // ===== SERVICES INCLUDED TABLE =====
       if (!isWorkOrderInvoice && items.length > 0) {
-        // Section header
-        doc.fontSize(10).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES INCLUDED', margin, y + 3);
-        doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 68, y + 6).lineTo(pageWidth - margin, y + 6).stroke();
+        // Section header with filled gold icon
+        doc.roundedRect(margin, y, 14, 14, 2).fill(gold);
+        doc.rect(margin + 4, y + 4, 6, 6).fill(white);
+        
+        doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES INCLUDED', margin + 20, y + 3);
+        doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 85, y + 7).lineTo(pageWidth - margin, y + 7).stroke();
         doc.font('Helvetica');
-        y += 16;
+        y += 18;
         
         // Table header - Gold background
-        doc.rect(margin, y, contentWidth, 24).fill(gold);
-        doc.fontSize(9).fillColor(white);
-        doc.text('#', margin + 10, y + 8);
-        doc.text('Service', margin + 40, y + 8);
-        doc.text('Description', margin + 150, y + 8);
-        doc.text('Frequency', margin + 330, y + 8);
-        doc.text('Visits', margin + 430, y + 8);
-        y += 24;
+        const tableHeaderH = 20;
+        doc.rect(margin, y, contentWidth, tableHeaderH).fill(gold);
+        doc.fontSize(8).fillColor(white);
+        doc.text('#', margin + 8, y + 6);
+        doc.text('Service', margin + 35, y + 6);
+        doc.text('Description', margin + 140, y + 6);
+        doc.text('Frequency', margin + 320, y + 6);
+        doc.text('Visits', margin + 420, y + 6);
+        y += tableHeaderH;
 
+        // Table rows - compact
+        const rowH = isCompact ? 16 : 18;
         items.forEach((item, idx) => {
           const details = decodeHtml(item.details || '');
           const fullDesc = decodeHtml(item.description || item.name || 'Service');
@@ -595,82 +581,72 @@ const generateInvoicePDF = async (invoice) => {
           const freq = item.frequency || item.frequencyType || item.billingDuration || '-';
           const visits = item.visits || item.frequencyCount || item.quantity || 1;
           
-          const rowHeight = 22;
-          
-          if (y + rowHeight > pageHeight) {
-            doc.addPage();
-            y = 50;
-          }
-          
-          doc.rect(margin, y, contentWidth, rowHeight).lineWidth(0.3).stroke(borderGray);
-          doc.fontSize(9).fillColor(primaryText);
-          doc.text(`${idx + 1}`, margin + 12, y + 7);
-          doc.fillColor(primaryText).text(serviceName.substring(0, 28), margin + 40, y + 7);
-          doc.fillColor(secondaryText).text(serviceDesc.substring(0, 45), margin + 150, y + 7);
-          doc.text(freq, margin + 330, y + 7);
-          doc.text(`${visits}`, margin + 435, y + 7);
-          y += rowHeight;
+          doc.rect(margin, y, contentWidth, rowH).lineWidth(0.3).stroke(borderGray);
+          doc.fontSize(7).fillColor(primaryText);
+          doc.text(`${idx + 1}`, margin + 10, y + 5);
+          doc.text(serviceName.substring(0, 25), margin + 35, y + 5);
+          doc.fillColor(secondaryText).text(serviceDesc.substring(0, 40), margin + 140, y + 5);
+          doc.text(freq.substring(0, 12), margin + 320, y + 5);
+          doc.text(`${visits}`, margin + 428, y + 5);
+          y += rowH;
         });
 
-        y += 20;
+        y += 15;
       }
 
-      // ===== PRICE SUMMARY - Right aligned =====
-      if (y + 110 > pageHeight) {
-        doc.addPage();
-        y = 50;
-      }
-
-      const summaryWidth = 180;
+      // ===== PRICE SUMMARY - Right aligned with shield icon =====
+      const summaryWidth = 170;
       const summaryX = pageWidth - margin - summaryWidth;
       
-      // Section header
-      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX, y + 2);
-      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 55, y + 5).lineTo(pageWidth - margin, y + 5).stroke();
-      doc.font('Helvetica');
-      y += 14;
+      // Shield icon (filled gold)
+      doc.roundedRect(summaryX, y, 14, 14, 2).fill(gold);
+      doc.moveTo(summaryX + 7, y + 3).lineTo(summaryX + 11, y + 5).lineTo(summaryX + 11, y + 9).lineTo(summaryX + 7, y + 12).lineTo(summaryX + 3, y + 9).lineTo(summaryX + 3, y + 5).closePath().fill(white);
       
-      // Summary box with border
-      const summaryHeight = safeDiscount > 0 ? 80 : 65;
+      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX + 20, y + 2);
+      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 75, y + 6).lineTo(pageWidth - margin, y + 6).stroke();
+      doc.font('Helvetica');
+      y += 16;
+      
+      // Summary box
+      const summaryHeight = safeDiscount > 0 ? 70 : 58;
       doc.roundedRect(summaryX, y, summaryWidth, summaryHeight, 4).lineWidth(0.5).stroke(borderGray);
       
-      let sy = y + 14;
-      doc.fontSize(9).fillColor(secondaryText);
-      doc.text('Subtotal:', summaryX + 14, sy);
-      doc.fillColor(primaryText).text(`Rs. ${safeSubtotal.toLocaleString('en-IN')}`, summaryX + summaryWidth - 14, sy, { align: 'right', width: summaryWidth - 80 });
-      sy += 14;
+      let sy = y + 12;
+      doc.fontSize(8).fillColor(secondaryText);
+      doc.text('Subtotal:', summaryX + 12, sy);
+      doc.fillColor(primaryText).text(`Rs. ${safeSubtotal.toLocaleString('en-IN')}`, summaryX + 100, sy);
+      sy += 12;
       
       if (safeDiscount > 0) {
-        doc.fillColor('#059669').text(`Discount:`, summaryX + 14, sy);
-        doc.text(`-Rs. ${safeDiscount.toLocaleString('en-IN')}`, summaryX + summaryWidth - 14, sy, { align: 'right', width: summaryWidth - 80 });
-        sy += 14;
+        doc.fillColor('#059669').text(`Discount:`, summaryX + 12, sy);
+        doc.text(`-Rs. ${safeDiscount.toLocaleString('en-IN')}`, summaryX + 100, sy);
+        sy += 12;
       }
       
-      doc.fillColor(secondaryText).text(`GST (${safeTaxPercent}%):`, summaryX + 14, sy);
-      doc.fillColor(primaryText).text(`Rs. ${safeTax.toLocaleString('en-IN')}`, summaryX + summaryWidth - 14, sy, { align: 'right', width: summaryWidth - 80 });
-      sy += 14;
+      doc.fillColor(secondaryText).text(`GST (${safeTaxPercent}.00%):`, summaryX + 12, sy);
+      doc.fillColor(primaryText).text(`Rs. ${safeTax.toLocaleString('en-IN')}`, summaryX + 100, sy);
+      sy += 12;
       
-      // Divider line
-      doc.strokeColor(borderGray).lineWidth(0.5).moveTo(summaryX + 10, sy).lineTo(summaryX + summaryWidth - 10, sy).stroke();
+      doc.strokeColor(borderGray).lineWidth(0.5).moveTo(summaryX + 8, sy).lineTo(summaryX + summaryWidth - 8, sy).stroke();
       sy += 10;
       
-      // Total in gold
-      doc.fontSize(10).fillColor(gold).font('Helvetica-Bold').text('Total:', summaryX + 14, sy);
-      doc.text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, summaryX + summaryWidth - 14, sy, { align: 'right', width: summaryWidth - 60 });
+      doc.fontSize(9).fillColor(gold).font('Helvetica-Bold').text('Total:', summaryX + 12, sy);
+      doc.text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, summaryX + 100, sy);
       doc.font('Helvetica');
 
-      y = y + summaryHeight + 15;
+      y = y + summaryHeight + 20;
 
-      // ===== FOOTER - Gray separator (Image 2) =====
-      doc.strokeColor(borderGray).lineWidth(0.5).moveTo(margin, y).lineTo(pageWidth - margin, y).stroke();
-      y += 10;
+      // ===== FOOTER =====
+      // Ensure footer is at bottom of page
+      const footerY = Math.max(y, pageHeight - 50);
+      doc.strokeColor(borderGray).lineWidth(0.5).moveTo(margin, footerY).lineTo(pageWidth - margin, footerY).stroke();
       
-      // Heart icon placeholder
-      doc.circle(margin + 8, y + 2, 4).lineWidth(0.5).stroke(borderGray);
+      // Heart icon (outlined)
+      doc.circle(margin + 8, footerY + 12, 5).lineWidth(0.5).stroke(borderGray);
       
-      doc.fontSize(9).fillColor(secondaryText).text(
+      doc.fontSize(8).fillColor(secondaryText).text(
         'We appreciate your trust in our services.',
-        margin + 18, y + 3
+        margin + 18, footerY + 9
       );
 
       doc.end();

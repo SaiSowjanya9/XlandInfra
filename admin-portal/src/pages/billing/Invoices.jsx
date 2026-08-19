@@ -111,7 +111,7 @@ const INVOICE_TYPE_CONFIG = {
 
 // Tab configuration for invoice types
 const INVOICE_TABS = [
-  { id: 'generated', label: 'Estimate Invoices', filter: 'estimate', icon: FileText },
+  { id: 'generated', label: 'AMC Invoices', filter: 'estimate', icon: FileText },
   { id: 'work_order', label: 'Work Order Invoices', filter: 'work_order', icon: Receipt },
   { id: 'generic', label: 'Generic Invoices', filter: 'generic', icon: Receipt },
   { id: 'archived', label: 'Archived', filter: 'archived', icon: Archive }

@@ -34,7 +34,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // Tab configuration
 const TABS = [
-  { id: 'generated', label: 'Generated Invoices', icon: FileText, description: 'Auto-generated from approved estimates' },
+  { id: 'generated', label: 'Generated Invoices', icon: FileText, description: 'Auto-generated from approved AMC estimates' },
   { id: 'work_order', label: 'Work Order Invoices', icon: Briefcase, description: 'Invoices from work order submissions' }
 ];
 
