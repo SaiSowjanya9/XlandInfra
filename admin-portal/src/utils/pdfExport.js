@@ -1062,52 +1062,61 @@ export const exportInvoiceToPDF = (invoice) => {
     const margin = 15;
     let y = 0;
 
-    // Colors matching Image 1 & Image 3
-    const gold = [201, 162, 39];       // #c9a227
-    const darkGold = [184, 134, 11];   // #b8860b
-    const black = [26, 26, 26];        // #1a1a1a
-    const darkText = [31, 41, 55];
-    const grayText = [107, 114, 128];
-    const lightGray = [249, 250, 251];
+    // Colors per design spec
+    const headerBlack = [21, 21, 21];     // #151515
+    const gold = [211, 154, 26];          // #D39A1A
+    const darkGold = [183, 122, 0];       // #B77A00
+    const lightGold = [232, 198, 106];    // #E8C66A
+    const totalGold = [197, 138, 10];     // #C58A0A
+    const primaryText = [23, 23, 23];     // #171717
+    const secondaryText = [85, 85, 85];   // #555555
+    const borderGray = [229, 229, 229];   // #E5E5E5
+    const cardBg = [251, 247, 238];       // #FBF7EE
+    const white = [255, 255, 255];
 
-    // ===== HEADER - Black with elegant flowing gold wave (Image 1 style) =====
-    const headerHeight = 50;
+    // ===== HEADER - Black #151515 with gold wave =====
+    const headerHeight = 55;
     
     // Black header background
-    doc.setFillColor(...black);
+    doc.setFillColor(...headerBlack);
     doc.rect(0, 0, pageWidth, headerHeight, 'F');
     
-    // Draw elegant flowing gold wave at bottom
-    // Gold wave band
+    // Gold wave at bottom of header
     doc.setFillColor(...gold);
-    doc.rect(0, headerHeight - 10, pageWidth, 10, 'F');
+    doc.rect(0, headerHeight - 12, pageWidth, 12, 'F');
     
-    // Create wave effect with overlapping black ellipses
-    doc.setFillColor(...black);
-    doc.ellipse(pageWidth * 0.2, headerHeight - 6, 45, 8, 'F');
-    doc.ellipse(pageWidth * 0.5, headerHeight - 4, 50, 10, 'F');
-    doc.ellipse(pageWidth * 0.8, headerHeight - 6, 45, 8, 'F');
+    // Create wave effect with overlapping black curves
+    doc.setFillColor(...headerBlack);
+    doc.ellipse(pageWidth * 0.15, headerHeight - 8, 50, 10, 'F');
+    doc.ellipse(pageWidth * 0.5, headerHeight - 6, 60, 12, 'F');
+    doc.ellipse(pageWidth * 0.85, headerHeight - 8, 50, 10, 'F');
+    
+    // Light gold highlight layer
+    doc.setFillColor(...lightGold);
+    doc.ellipse(pageWidth * 0.15, headerHeight - 4, 40, 5, 'F');
+    doc.ellipse(pageWidth * 0.5, headerHeight - 3, 45, 6, 'F');
+    doc.ellipse(pageWidth * 0.85, headerHeight - 4, 40, 5, 'F');
     
     // Logo
-    const logoSize = 28;
+    const logoSize = 30;
     try {
-      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 5, 8, logoSize, logoSize);
+      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 5, 10, logoSize, logoSize);
     } catch (e) {
       doc.setFillColor(...gold);
-      doc.roundedRect(margin + 5, 8, logoSize, logoSize, 3, 3, 'F');
+      doc.roundedRect(margin + 5, 10, logoSize, logoSize, 3, 3, 'F');
     }
     
     // Company name
     const textX = margin + logoSize + 15;
     doc.setTextColor(...gold);
-    doc.setFontSize(18);
+    doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', textX, 20);
+    doc.text('XLAND INFRA', textX, 22);
     
     // PVT LTD with decorative lines
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    const pvtLtdY = 28;
+    const pvtLtdY = 32;
     const pvtText = 'PVT LTD';
     const pvtWidth = doc.getTextWidth(pvtText);
     const lineLen = 20;
@@ -1119,130 +1128,122 @@ export const exportInvoiceToPDF = (invoice) => {
     doc.text(pvtText, textX + lineLen + lineGap, pvtLtdY + 1);
     doc.line(textX + lineLen + lineGap + pvtWidth + lineGap, pvtLtdY, textX + lineLen + lineGap + pvtWidth + lineGap + lineLen, pvtLtdY);
 
-    y = headerHeight + 8;
+    y = headerHeight + 10;
 
     // ===== ID / DATE / DUE ROW =====
     doc.setFontSize(9);
-    doc.setTextColor(...grayText);
+    doc.setTextColor(...secondaryText);
     doc.text('ID:', margin, y);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(...darkText);
-    doc.text(String(invoice.invoiceId || 'N/A'), margin + 8, y);
+    doc.setFontSize(14);
+    doc.setTextColor(...primaryText);
+    doc.text(String(invoice.invoiceId || 'N/A'), margin + 10, y);
     
     if (invoice.sourceEstimateId) {
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...grayText);
-      doc.text('Estimate: ' + invoice.sourceEstimateId, margin, y + 6);
+      doc.setTextColor(...secondaryText);
+      doc.text('Estimate: ' + invoice.sourceEstimateId, margin, y + 7);
     }
     
     // Date and Due on right
-    const rightCol = pageWidth - margin - 50;
-    doc.setFontSize(9);
+    const rightCol = pageWidth - margin - 55;
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...grayText);
+    doc.setTextColor(...secondaryText);
     doc.text('Date:', rightCol, y - 4);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...darkText);
-    doc.text(formatDate(invoice.invoiceDate), rightCol + 15, y - 4);
+    doc.setTextColor(...primaryText);
+    doc.text(formatDate(invoice.invoiceDate), rightCol + 18, y - 4);
     
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...grayText);
-    doc.text('Due:', rightCol, y + 4);
+    doc.setTextColor(...secondaryText);
+    doc.text('Due:', rightCol, y + 5);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...darkText);
-    doc.text(formatDate(invoice.dueDate), rightCol + 15, y + 4);
+    doc.setTextColor(...primaryText);
+    doc.text(formatDate(invoice.dueDate), rightCol + 18, y + 5);
     
-    y += 18;
+    y += 20;
 
-    // ===== TOTAL AMOUNT DUE BANNER - Gold rounded =====
-    const bannerHeight = 28;
+    // ===== TOTAL AMOUNT DUE BANNER - #D39A1A rounded =====
+    const bannerHeight = 32;
     doc.setFillColor(...gold);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, bannerHeight, 4, 4, 'F');
+    doc.roundedRect(margin, y, pageWidth - margin * 2, bannerHeight, 5, 5, 'F');
     
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
+    doc.setTextColor(...white);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text('TOTAL AMOUNT DUE', pageWidth / 2, y + 8, { align: 'center' });
+    doc.text('TOTAL AMOUNT DUE', pageWidth / 2, y + 10, { align: 'center' });
     
-    doc.setFontSize(20);
+    doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
-    doc.text('Rs. ' + Math.round(invoice.totalAmount || 0).toLocaleString('en-IN'), pageWidth / 2, y + 20, { align: 'center' });
+    doc.text('Rs. ' + Math.round(invoice.totalAmount || 0).toLocaleString('en-IN'), pageWidth / 2, y + 24, { align: 'center' });
     
-    y += bannerHeight + 10;
+    y += bannerHeight + 12;
 
-    // ===== PROPERTY & CUSTOMER DETAILS - Outlined gold borders (Image 3 style) =====
-    const cardGap = 8;
+    // ===== PROPERTY & CUSTOMER DETAILS - White bg, outlined gold icons (Image 2) =====
+    const cardGap = 10;
     const cardWidth = (pageWidth - margin * 2 - cardGap) / 2;
     const cardHeight = 52;
     
-    // Property Details Card - outlined border
-    doc.setDrawColor(...gold);
-    doc.setLineWidth(0.8);
-    doc.roundedRect(margin, y, cardWidth, cardHeight, 3, 3, 'S');
-    
-    // Property icon - outlined square (Image 3 style)
+    // Property Details Card - white bg, no border
+    // Property icon - outlined gold square with gold icon
     doc.setDrawColor(...gold);
     doc.setLineWidth(1);
-    doc.roundedRect(margin + 8, y + 6, 12, 12, 2, 2, 'S');
-    // Building icon inside (simple representation)
+    doc.roundedRect(margin, y + 4, 14, 14, 2, 2, 'S');
+    // Building icon inside (gold)
     doc.setFillColor(...gold);
-    doc.rect(margin + 11, y + 10, 2, 6, 'F');
-    doc.rect(margin + 14, y + 12, 2, 4, 'F');
-    doc.rect(margin + 17, y + 10, 2, 6, 'F');
+    doc.rect(margin + 3, y + 8, 2, 7, 'F');
+    doc.rect(margin + 6, y + 10, 2, 5, 'F');
+    doc.rect(margin + 9, y + 8, 2, 7, 'F');
     
-    doc.setTextColor(...darkText);
+    doc.setTextColor(...primaryText);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('PROPERTY DETAILS', margin + 24, y + 14);
+    doc.text('PROPERTY DETAILS', margin + 18, y + 13);
     
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     let py = y + 24;
-    doc.setTextColor(...darkText);
-    doc.text('Property ID: ' + String(invoice.propertyCode || '-'), margin + 8, py);
+    doc.setTextColor(...secondaryText);
+    doc.text('Property ID: ' + String(invoice.propertyCode || '-'), margin + 2, py);
     py += 6;
-    doc.text('Name: ' + String(invoice.propertyName || '-').substring(0, 22), margin + 8, py);
+    doc.text('Name: ' + String(invoice.propertyName || '-').substring(0, 24), margin + 2, py);
     py += 6;
-    doc.text('Type: ' + String(invoice.propertyType || '-'), margin + 8, py);
+    doc.text('Type: ' + String(invoice.propertyType || '-'), margin + 2, py);
     py += 6;
-    doc.text('Zone: ' + String(invoice.zone || '-'), margin + 8, py);
+    doc.text('Zone: ' + String(invoice.zone || '-'), margin + 2, py);
     py += 6;
-    doc.text('City: ' + String(invoice.city || '-'), margin + 8, py);
+    doc.text('City: ' + String(invoice.city || '-'), margin + 2, py);
     
-    // Customer Details Card - outlined border
+    // Customer Details Card - white bg, no border
     const custCardX = margin + cardWidth + cardGap;
-    doc.setDrawColor(...gold);
-    doc.setLineWidth(0.8);
-    doc.roundedRect(custCardX, y, cardWidth, cardHeight, 3, 3, 'S');
-    
-    // Customer icon - outlined square (Image 3 style)
+    // Customer icon - outlined gold square with gold icon
     doc.setDrawColor(...gold);
     doc.setLineWidth(1);
-    doc.roundedRect(custCardX + 8, y + 6, 12, 12, 2, 2, 'S');
-    // Person icon inside (simple representation)
+    doc.roundedRect(custCardX, y + 4, 14, 14, 2, 2, 'S');
+    // Person icon inside (gold)
     doc.setFillColor(...gold);
-    doc.circle(custCardX + 14, y + 10, 2.5, 'F');
-    doc.roundedRect(custCardX + 10.5, y + 13, 7, 3, 1, 1, 'F');
+    doc.circle(custCardX + 7, y + 10, 3, 'F');
+    doc.roundedRect(custCardX + 2, y + 14, 10, 3, 1, 1, 'F');
     
-    doc.setTextColor(...darkText);
+    doc.setTextColor(...primaryText);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('CUSTOMER DETAILS', custCardX + 24, y + 14);
+    doc.text('CUSTOMER DETAILS', custCardX + 18, y + 13);
     
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     let cy = y + 24;
-    doc.setTextColor(...darkText);
-    doc.text('Name: ' + String(invoice.customerName || '-'), custCardX + 8, cy);
+    doc.setTextColor(...secondaryText);
+    doc.text('Name: ' + String(invoice.customerName || '-'), custCardX + 2, cy);
     cy += 6;
-    doc.text('Phone: ' + String(invoice.customerPhone || '-'), custCardX + 8, cy);
+    doc.text('Phone: ' + String(invoice.customerPhone || '-'), custCardX + 2, cy);
     cy += 6;
     const email = String(invoice.customerEmail || '-');
-    doc.text('Email: ' + (email.length > 22 ? email.substring(0, 22) + '...' : email), custCardX + 8, cy);
+    doc.text('Email: ' + (email.length > 24 ? email.substring(0, 24) + '...' : email), custCardX + 2, cy);
     cy += 6;
-    doc.text('City: ' + String(invoice.city || '-'), custCardX + 8, cy);
+    doc.text('City: ' + String(invoice.city || '-'), custCardX + 2, cy);
     
     y += cardHeight + 12;
 
@@ -1274,23 +1275,24 @@ export const exportInvoiceToPDF = (invoice) => {
     const isWorkOrderInvoice = invoice.invoiceType === 'work_order' || invoice.invoice_type === 'work_order';
 
     if (!isWorkOrderInvoice && services.length > 0) {
-      // Section header with icon and line
-      doc.setFillColor(255, 251, 235);
-      doc.roundedRect(margin, y - 2, 10, 10, 2, 2, 'F');
+      // Section header with outlined gold icon (Image 2)
+      doc.setDrawColor(...gold);
+      doc.setLineWidth(1);
+      doc.roundedRect(margin, y, 10, 10, 2, 2, 'S');
       doc.setFillColor(...gold);
-      doc.roundedRect(margin + 2, y, 6, 6, 1, 1, 'F');
+      doc.rect(margin + 3, y + 3, 4, 4, 'F');
       
-      doc.setTextColor(...darkText);
+      doc.setTextColor(...primaryText);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('SERVICES INCLUDED', margin + 14, y + 5);
+      doc.text('SERVICES INCLUDED', margin + 14, y + 7);
       
-      // Decorative line after text
+      // Decorative gold line after text
       doc.setDrawColor(...gold);
-      doc.setLineWidth(0.3);
-      doc.line(margin + 55, y + 3, pageWidth - margin, y + 3);
+      doc.setLineWidth(0.5);
+      doc.line(margin + 55, y + 5, pageWidth - margin, y + 5);
       
-      y += 12;
+      y += 14;
 
       // Services table with gold header
       autoTable(doc, {
@@ -1303,71 +1305,74 @@ export const exportInvoiceToPDF = (invoice) => {
           String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1).toLowerCase(),
           String(item.visits)
         ]),
-        theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 4, valign: 'middle', lineColor: [201, 162, 39], lineWidth: 0.2 },
-        headStyles: { fillColor: gold, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
-        bodyStyles: { textColor: darkText },
-        alternateRowStyles: { fillColor: [255, 251, 235] },
+        theme: 'plain',
+        styles: { fontSize: 8, cellPadding: 5, valign: 'middle' },
+        headStyles: { fillColor: gold, textColor: white, fontStyle: 'bold', fontSize: 9 },
+        bodyStyles: { textColor: primaryText },
+        alternateRowStyles: { fillColor: [255, 255, 255] },
         columnStyles: { 
-          0: { cellWidth: 12, halign: 'center' }, 
-          1: { cellWidth: 35 }, 
+          0: { cellWidth: 14, halign: 'center' }, 
+          1: { cellWidth: 40 }, 
           2: { cellWidth: 'auto' }, 
-          3: { cellWidth: 28, halign: 'center' }, 
-          4: { cellWidth: 18, halign: 'center' } 
+          3: { cellWidth: 32, halign: 'center' }, 
+          4: { cellWidth: 20, halign: 'center' } 
         },
-        margin: { left: margin, right: margin }
+        margin: { left: margin, right: margin },
+        tableLineColor: borderGray,
+        tableLineWidth: 0.1
       });
-      y = doc.lastAutoTable.finalY + 12;
+      y = doc.lastAutoTable.finalY + 15;
     }
 
-    // ===== PRICE SUMMARY - Gold themed, centered =====
-    // Section header
-    doc.setFillColor(255, 251, 235);
-    doc.roundedRect(pageWidth / 2 - 45, y - 2, 10, 10, 2, 2, 'F');
-    doc.setFillColor(...gold);
-    doc.roundedRect(pageWidth / 2 - 43, y, 6, 6, 1, 1, 'F');
+    // ===== PRICE SUMMARY - Right aligned with outlined icon (Image 2) =====
+    const summaryWidth = 110;
+    const summaryX = pageWidth - margin - summaryWidth;
     
-    doc.setTextColor(...darkText);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('PRICE SUMMARY', pageWidth / 2, y + 5, { align: 'center' });
-    
-    // Decorative lines on both sides
+    // Section header with outlined gold icon
     doc.setDrawColor(...gold);
-    doc.setLineWidth(0.3);
-    doc.line(margin + 20, y + 3, pageWidth / 2 - 50, y + 3);
-    doc.line(pageWidth / 2 + 35, y + 3, pageWidth - margin - 20, y + 3);
+    doc.setLineWidth(1);
+    doc.roundedRect(summaryX, y, 8, 8, 2, 2, 'S');
+    doc.setFillColor(...gold);
+    doc.rect(summaryX + 2.5, y + 2.5, 3, 3, 'F');
     
-    y += 14;
-
-    // Price summary box
-    const summaryWidth = 100;
-    const summaryX = (pageWidth - summaryWidth) / 2;
+    doc.setTextColor(...primaryText);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PRICE SUMMARY', summaryX + 12, y + 6);
+    
+    // Decorative gold line after text
     doc.setDrawColor(...gold);
     doc.setLineWidth(0.5);
-    doc.roundedRect(summaryX, y, summaryWidth, 40, 3, 3, 'S');
+    doc.line(summaryX + 48, y + 4, pageWidth - margin, y + 4);
     
-    let sy = y + 10;
-    const labelX = summaryX + 8;
-    const valueX = summaryX + summaryWidth - 8;
+    y += 12;
+
+    // Price summary box
+    doc.setDrawColor(...borderGray);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(summaryX, y, summaryWidth, 45, 4, 4, 'S');
+    
+    let sy = y + 12;
+    const labelX = summaryX + 10;
+    const valueX = summaryX + summaryWidth - 10;
     
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...grayText);
+    doc.setTextColor(...secondaryText);
     doc.text('Subtotal:', labelX, sy);
-    doc.setTextColor(...darkText);
+    doc.setTextColor(...primaryText);
     doc.text('Rs. ' + Math.round(invoice.subtotal || 0).toLocaleString('en-IN'), valueX, sy, { align: 'right' });
-    sy += 8;
+    sy += 9;
     
-    doc.setTextColor(...grayText);
+    doc.setTextColor(...secondaryText);
     doc.text('GST (' + (invoice.taxPercentage || 18).toFixed(2) + '%):', labelX, sy);
-    doc.setTextColor(...darkText);
+    doc.setTextColor(...primaryText);
     doc.text('Rs. ' + Math.round(invoice.taxAmount || 0).toLocaleString('en-IN'), valueX, sy, { align: 'right' });
-    sy += 10;
+    sy += 11;
     
     // Total line
-    doc.setDrawColor(229, 231, 235);
-    doc.line(summaryX + 6, sy - 4, summaryX + summaryWidth - 6, sy - 4);
+    doc.setDrawColor(...borderGray);
+    doc.line(summaryX + 8, sy - 4, summaryX + summaryWidth - 8, sy - 4);
     
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
@@ -1375,18 +1380,23 @@ export const exportInvoiceToPDF = (invoice) => {
     doc.text('Total:', labelX, sy + 2);
     doc.text('Rs. ' + Math.round(invoice.totalAmount || 0).toLocaleString('en-IN'), valueX, sy + 2, { align: 'right' });
     
-    y += 52;
+    y += 55;
 
-    // ===== FOOTER - "We appreciate your trust" =====
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'italic');
-    doc.setTextColor(...grayText);
+    // ===== FOOTER - Gray separator and message (Image 2) =====
+    doc.setDrawColor(...borderGray);
+    doc.setLineWidth(0.5);
+    doc.line(margin, y, pageWidth - margin, y);
+    
+    y += 8;
     
     // Heart icon placeholder
-    doc.setDrawColor(...grayText);
-    doc.circle(pageWidth / 2 - 55, y + 1, 3, 'S');
+    doc.setDrawColor(...borderGray);
+    doc.circle(margin + 8, y + 2, 4, 'S');
     
-    doc.text('We appreciate your trust in our services.', pageWidth / 2, y + 2, { align: 'center' });
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...secondaryText);
+    doc.text('We appreciate your trust in our services.', margin + 18, y + 3);
 
     // Save
     savePDFCrossPlatform(doc, `Invoice-${invoice.invoiceId || 'INV'}.pdf`);

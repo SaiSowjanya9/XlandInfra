@@ -1032,18 +1032,18 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
             className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* ===== HEADER - Black with elegant flowing gold wave (Image 1 style) ===== */}
+            {/* ===== HEADER - Black #151515 with gold wave separator ===== */}
             <div className="flex-shrink-0 relative">
-              <div className="bg-[#1a1a1a] px-6 py-4 pb-8">
+              <div className="bg-[#151515] px-6 py-5 pb-10">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-12 object-contain" />
                     <div>
-                      <h1 className="text-[#c9a227] text-xl font-bold tracking-wide">XLAND INFRA</h1>
+                      <h1 className="text-[#D39A1A] text-xl font-bold tracking-wide">XLAND INFRA</h1>
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-[1px] bg-[#c9a227]"></div>
-                        <span className="text-[#c9a227] text-[10px] tracking-[0.2em]">PVT LTD</span>
-                        <div className="w-8 h-[1px] bg-[#c9a227]"></div>
+                        <div className="w-8 h-[1px] bg-[#D39A1A]"></div>
+                        <span className="text-[#D39A1A] text-[10px] tracking-[0.2em]">PVT LTD</span>
+                        <div className="w-8 h-[1px] bg-[#D39A1A]"></div>
                       </div>
                     </div>
                   </div>
@@ -1052,15 +1052,21 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                   </button>
                 </div>
               </div>
-              {/* Elegant flowing gold wave */}
-              <svg className="absolute bottom-0 left-0 w-full" height="20" viewBox="0 0 400 20" preserveAspectRatio="none">
-                <path d="M0,20 L0,10 Q50,0 100,10 T200,10 T300,10 T400,10 L400,20 Z" fill="#1a1a1a"/>
-                <path d="M0,20 L0,12 Q50,2 100,12 T200,12 T300,12 T400,12 L400,20 Z" fill="url(#goldGradient2)"/>
+              {/* Gold wave separator */}
+              <svg className="absolute bottom-0 left-0 w-full" height="30" viewBox="0 0 400 30" preserveAspectRatio="none">
+                <path d="M0,30 L0,15 Q100,0 200,15 T400,15 L400,30 Z" fill="#151515"/>
+                <path d="M0,30 L0,18 Q100,5 200,18 T400,18 L400,30 Z" fill="url(#goldWave2)"/>
+                <path d="M0,30 L0,22 Q100,12 200,22 T400,22 L400,30 Z" fill="url(#goldWaveLight2)"/>
                 <defs>
-                  <linearGradient id="goldGradient2" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#b8860b"/>
-                    <stop offset="50%" stopColor="#c9a227"/>
-                    <stop offset="100%" stopColor="#b8860b"/>
+                  <linearGradient id="goldWave2" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#B77A00"/>
+                    <stop offset="50%" stopColor="#D39A1A"/>
+                    <stop offset="100%" stopColor="#B77A00"/>
+                  </linearGradient>
+                  <linearGradient id="goldWaveLight2" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#D39A1A"/>
+                    <stop offset="50%" stopColor="#E8C66A"/>
+                    <stop offset="100%" stopColor="#D39A1A"/>
                   </linearGradient>
                 </defs>
               </svg>
@@ -1092,43 +1098,43 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
             {/* Content - Scrollable with flex-1 */}
             <div className="overflow-y-auto flex-1 p-6 bg-white space-y-5">
               
-              {/* ===== TOTAL AMOUNT DUE BANNER - Gold (Image 3 style) ===== */}
-              <div className="bg-[#c9a227] rounded-xl p-5 text-center shadow-md">
-                <p className="text-white/90 text-xs uppercase tracking-wider mb-1">Total Amount Due</p>
-                <p className="text-white text-3xl font-bold">Rs. {Math.round(selectedInvoice.totalAmount || 0).toLocaleString('en-IN')}</p>
+              {/* ===== TOTAL AMOUNT DUE BANNER - #D39A1A rounded ===== */}
+              <div className="bg-[#D39A1A] rounded-lg p-5 text-center">
+                <p className="text-white/90 text-sm uppercase tracking-wider mb-1">Total Amount Due</p>
+                <p className="text-white text-4xl font-bold">Rs. {Math.round(selectedInvoice.totalAmount || 0).toLocaleString('en-IN')}</p>
               </div>
 
-              {/* ===== PROPERTY & CUSTOMER DETAILS - Outlined gold icons (Image 3 style) ===== */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* ===== PROPERTY & CUSTOMER DETAILS - White bg, outlined gold icons (Image 2) ===== */}
+              <div className="grid grid-cols-2 gap-6">
                 {/* Property Details */}
-                <div className="bg-white rounded-xl border border-[#c9a227]/40 overflow-hidden">
-                  <div className="flex items-center gap-3 px-4 py-3">
+                <div className="bg-white">
+                  <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 rounded-lg border-2 border-[#c9a227] flex items-center justify-center">
                       <Building2 className="w-5 h-5 text-[#c9a227]" />
                     </div>
-                    <p className="text-gray-800 text-sm font-bold uppercase tracking-wide">Property Details</p>
+                    <p className="text-gray-900 text-sm font-bold uppercase">Property Details</p>
                   </div>
-                  <div className="px-4 pb-4 text-sm space-y-1">
-                    <p className="text-gray-700">Property ID: {selectedInvoice.propertyCode || '-'}</p>
-                    <p className="text-gray-700">Name: {selectedInvoice.propertyName || '-'}</p>
-                    <p className="text-gray-700">Type: {selectedInvoice.propertyType || '-'}</p>
-                    <p className="text-gray-700">Zone: {selectedInvoice.zone || '-'}</p>
-                    <p className="text-gray-700">City: {selectedInvoice.city || '-'}</p>
+                  <div className="text-sm space-y-1 pl-1">
+                    <p className="text-gray-600">Property ID: {selectedInvoice.propertyCode || '-'}</p>
+                    <p className="text-gray-600">Name: {selectedInvoice.propertyName || '-'}</p>
+                    <p className="text-gray-600">Type: {selectedInvoice.propertyType || '-'}</p>
+                    <p className="text-gray-600">Zone: {selectedInvoice.zone || '-'}</p>
+                    <p className="text-gray-600">City: {selectedInvoice.city || '-'}</p>
                   </div>
                 </div>
                 {/* Customer Details */}
-                <div className="bg-white rounded-xl border border-[#c9a227]/40 overflow-hidden">
-                  <div className="flex items-center gap-3 px-4 py-3">
+                <div className="bg-white">
+                  <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 rounded-lg border-2 border-[#c9a227] flex items-center justify-center">
                       <User className="w-5 h-5 text-[#c9a227]" />
                     </div>
-                    <p className="text-gray-800 text-sm font-bold uppercase tracking-wide">Customer Details</p>
+                    <p className="text-gray-900 text-sm font-bold uppercase">Customer Details</p>
                   </div>
-                  <div className="px-4 pb-4 text-sm space-y-1">
-                    <p className="text-gray-700">Name: {selectedInvoice.customerName || '-'}</p>
-                    <p className="text-gray-700">Phone: {selectedInvoice.customerPhone || '-'}</p>
-                    <p className="text-gray-700 break-all">Email: {selectedInvoice.customerEmail || '-'}</p>
-                    <p className="text-gray-700">City: {selectedInvoice.city || '-'}</p>
+                  <div className="text-sm space-y-1 pl-1">
+                    <p className="text-gray-600">Name: {selectedInvoice.customerName || '-'}</p>
+                    <p className="text-gray-600">Phone: {selectedInvoice.customerPhone || '-'}</p>
+                    <p className="text-gray-600 break-all">Email: {selectedInvoice.customerEmail || '-'}</p>
+                    <p className="text-gray-600">City: {selectedInvoice.city || '-'}</p>
                   </div>
                 </div>
               </div>
@@ -1162,24 +1168,24 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
 
                 return services.length > 0 ? (
                   <div>
-                    {/* Section Header with outlined icon (Image 3) */}
+                    {/* Section Header - outlined icon (Image 2) */}
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-8 h-8 rounded border-2 border-[#c9a227] flex items-center justify-center">
                         <FileText className="w-4 h-4 text-[#c9a227]" />
                       </div>
-                      <span className="text-sm font-bold text-gray-800 uppercase tracking-wide">Services Included</span>
+                      <span className="text-sm font-bold text-gray-900 uppercase">Services Included</span>
                       <div className="flex-1 h-[1px] bg-[#c9a227]"></div>
                     </div>
                     
                     {/* Services Table */}
                     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                       {/* Table Header - Gold */}
-                      <div className="grid grid-cols-12 gap-2 px-4 py-2.5 bg-[#c9a227]">
-                        <div className="col-span-1 text-xs font-semibold text-white text-center">#</div>
-                        <div className="col-span-2 text-xs font-semibold text-white">Service</div>
-                        <div className="col-span-5 text-xs font-semibold text-white text-center">Description</div>
-                        <div className="col-span-2 text-xs font-semibold text-white text-center">Frequency</div>
-                        <div className="col-span-2 text-xs font-semibold text-white text-right">Visits</div>
+                      <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-[#c9a227]">
+                        <div className="col-span-1 text-sm font-semibold text-white text-center">#</div>
+                        <div className="col-span-2 text-sm font-semibold text-white">Service</div>
+                        <div className="col-span-5 text-sm font-semibold text-white text-center">Description</div>
+                        <div className="col-span-2 text-sm font-semibold text-white text-center">Frequency</div>
+                        <div className="col-span-2 text-sm font-semibold text-white text-right">Visits</div>
                       </div>
                       {/* Table Body */}
                       <div className="divide-y divide-gray-100">
@@ -1190,10 +1196,10 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                               <p className="text-sm font-medium text-gray-800">{item.name}</p>
                             </div>
                             <div className="col-span-5 text-center">
-                              <p className="text-xs text-gray-600">{item.description || '-'}</p>
+                              <p className="text-sm text-gray-600">{item.description || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
-                              <p className="text-sm text-gray-700">{item.frequency}</p>
+                              <p className="text-sm text-gray-600">{item.frequency}</p>
                             </div>
                             <div className="col-span-2 text-right">
                               <p className="text-sm font-medium text-gray-800">{item.visits}</p>
@@ -1248,61 +1254,62 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                 );
               })()}
 
-              {/* ===== PRICE SUMMARY - Image 3 style ===== */}
-              <div>
-                {/* Section Header centered with outlined icon */}
-                <div className="flex items-center justify-center gap-3 mb-3">
-                  <div className="w-16 h-[1px] bg-[#c9a227]"></div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded border-2 border-[#c9a227] flex items-center justify-center">
-                      <Receipt className="w-4 h-4 text-[#c9a227]" />
+              {/* ===== PRICE SUMMARY - Right aligned with outlined icon (Image 2) ===== */}
+              <div className="flex justify-end">
+                <div className="w-72">
+                  {/* Section Header - outlined icon */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 rounded border-2 border-[#c9a227] flex items-center justify-center">
+                      <Receipt className="w-3 h-3 text-[#c9a227]" />
                     </div>
-                    <span className="text-sm font-bold text-gray-800 uppercase tracking-wide">Price Summary</span>
+                    <span className="text-sm font-bold text-gray-900 uppercase">Price Summary</span>
+                    <div className="flex-1 h-[1px] bg-[#c9a227]"></div>
                   </div>
-                  <div className="w-16 h-[1px] bg-[#c9a227]"></div>
-                </div>
-                
-                {/* Summary Box - Centered with border */}
-                <div className="max-w-sm mx-auto bg-white rounded-lg border border-gray-200 overflow-hidden">
-                  <div className="px-6 py-4 space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Subtotal:</span>
-                      <span className="text-gray-800">Rs. {Math.round(selectedInvoice.subtotal || 0).toLocaleString('en-IN')}</span>
-                    </div>
-                    
-                    {selectedInvoice.discountAmount > 0 && (
+                  
+                  {/* Summary Box */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-4">
+                    <div className="space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Discount ({selectedInvoice.discountPercentage || 0}%):</span>
-                        <span className="text-green-600">-Rs. {Math.round(selectedInvoice.discountAmount).toLocaleString('en-IN')}</span>
+                        <span className="text-gray-600">Subtotal:</span>
+                        <span className="text-gray-800">Rs. {Math.round(selectedInvoice.subtotal || 0).toLocaleString('en-IN')}</span>
                       </div>
-                    )}
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">GST ({(selectedInvoice.taxPercentage || 18).toFixed(2)}%):</span>
-                      <span className="text-gray-800">Rs. {Math.round(selectedInvoice.taxAmount || 0).toLocaleString('en-IN')}</span>
-                    </div>
-                    
-                    <div className="border-t border-gray-200 pt-3 mt-2">
+                      
+                      {selectedInvoice.discountAmount > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Discount ({selectedInvoice.discountPercentage || 0}%):</span>
+                          <span className="text-green-600">-Rs. {Math.round(selectedInvoice.discountAmount).toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      
                       <div className="flex justify-between items-center">
-                        <span className="text-[#c9a227] font-bold">Total:</span>
-                        <span className="text-[#c9a227] font-bold text-lg">Rs. {Math.round(selectedInvoice.totalAmount || 0).toLocaleString('en-IN')}</span>
+                        <span className="text-gray-600">GST ({(selectedInvoice.taxPercentage || 18).toFixed(2)}%):</span>
+                        <span className="text-gray-800">Rs. {Math.round(selectedInvoice.taxAmount || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                      
+                      <div className="border-t border-gray-200 pt-3 mt-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[#c9a227] font-bold">Total:</span>
+                          <span className="text-[#c9a227] font-bold text-xl">Rs. {Math.round(selectedInvoice.totalAmount || 0).toLocaleString('en-IN')}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Footer Message */}
-              <div className="flex items-center gap-2 pt-6 border-t border-gray-100 mt-4 text-gray-400">
-                <div className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center">
-                  <span className="text-[8px]">♡</span>
+              {/* Footer separator and message (Image 2) */}
+              <div className="border-t border-gray-200 pt-4 mt-6">
+                <div className="flex items-center gap-2 text-gray-500">
+                  <div className="w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center">
+                    <span className="text-gray-400 text-[10px]">♡</span>
+                  </div>
+                  <p className="text-sm">We appreciate your trust in our services.</p>
                 </div>
-                <p className="text-xs">We appreciate your trust in our services.</p>
               </div>
             </div>
 
-            {/* Footer Actions - Always visible with gold theme */}
-            <div className="px-6 py-4 border-t border-gray-200 bg-white flex items-center justify-end gap-3 flex-shrink-0">
+            {/* Footer Actions - Always visible */}
+            <div className="px-6 py-3 border-t border-gray-200 bg-white flex items-center justify-end gap-3 flex-shrink-0">
               <button
                 onClick={(e) => { e.stopPropagation(); setShowDetailPanel(false); setSelectedInvoice(null); }}
                 className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
