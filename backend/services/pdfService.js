@@ -514,47 +514,53 @@ const generateInvoicePDF = async (invoice) => {
       doc.font('Helvetica');
       y += 58;
 
-      // ===== PROPERTY & CUSTOMER DETAILS - White bg, outlined gold icons (Image 2) =====
+      // ===== PROPERTY & CUSTOMER DETAILS - Boxed with border (Image 2) =====
       const cardWidth = (contentWidth - 15) / 2;
-      const cardHeight = 85;
+      const cardHeight = 95;
       
-      // Property Details - outlined gold icon
-      doc.roundedRect(margin, y + 5, 18, 18, 3).lineWidth(1.5).strokeColor(gold).stroke();
+      // Property Details Card - with border box
+      doc.roundedRect(margin, y, cardWidth, cardHeight, 6).lineWidth(0.5).strokeColor(borderGray).stroke();
+      
+      // Property icon - outlined gold square
+      doc.roundedRect(margin + 12, y + 10, 18, 18, 3).lineWidth(1.5).strokeColor(gold).stroke();
       // Building icon inside (gold)
-      doc.rect(margin + 5, y + 11, 3, 8).fill(gold);
-      doc.rect(margin + 9, y + 13, 3, 6).fill(gold);
-      doc.rect(margin + 13, y + 11, 3, 8).fill(gold);
+      doc.rect(margin + 17, y + 16, 3, 8).fill(gold);
+      doc.rect(margin + 21, y + 18, 3, 6).fill(gold);
+      doc.rect(margin + 25, y + 16, 3, 8).fill(gold);
       
-      doc.fontSize(10).fillColor(primaryText).font('Helvetica-Bold').text('PROPERTY DETAILS', margin + 24, y + 12);
+      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PROPERTY DETAILS', margin + 36, y + 17);
       doc.font('Helvetica');
       
-      let py = y + 30;
+      let py = y + 36;
       doc.fontSize(8).fillColor(secondaryText);
-      doc.text(`Property ID: ${propertyCode || '-'}`, margin + 4, py); py += 11;
-      doc.text(`Name: ${decodeHtml(propertyName) || '-'}`, margin + 4, py); py += 11;
-      doc.text(`Type: ${propertyType || '-'}`, margin + 4, py); py += 11;
-      doc.text(`Zone: ${zone || '-'}`, margin + 4, py); py += 11;
-      doc.text(`City: ${city || '-'}`, margin + 4, py);
+      doc.text(`Property ID: ${propertyCode || '-'}`, margin + 12, py); py += 11;
+      doc.text(`Name: ${decodeHtml(propertyName) || '-'}`, margin + 12, py); py += 11;
+      doc.text(`Type: ${propertyType || '-'}`, margin + 12, py); py += 11;
+      doc.text(`Zone: ${zone || '-'}`, margin + 12, py); py += 11;
+      doc.text(`City: ${city || '-'}`, margin + 12, py);
 
-      // Customer Details - outlined gold icon
+      // Customer Details Card - with border box
       const custX = margin + cardWidth + 15;
-      doc.roundedRect(custX, y + 5, 18, 18, 3).lineWidth(1.5).strokeColor(gold).stroke();
-      // Person icon inside (gold)
-      doc.circle(custX + 9, y + 11, 4).fill(gold);
-      doc.roundedRect(custX + 3, y + 17, 12, 4, 2).fill(gold);
+      doc.roundedRect(custX, y, cardWidth, cardHeight, 6).lineWidth(0.5).strokeColor(borderGray).stroke();
       
-      doc.fontSize(10).fillColor(primaryText).font('Helvetica-Bold').text('CUSTOMER DETAILS', custX + 24, y + 12);
+      // Customer icon - outlined gold square
+      doc.roundedRect(custX + 12, y + 10, 18, 18, 3).lineWidth(1.5).strokeColor(gold).stroke();
+      // Person icon inside (gold)
+      doc.circle(custX + 21, y + 16, 4).fill(gold);
+      doc.roundedRect(custX + 15, y + 22, 12, 4, 2).fill(gold);
+      
+      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('CUSTOMER DETAILS', custX + 36, y + 17);
       doc.font('Helvetica');
       
-      let cy = y + 30;
+      let cy = y + 36;
       doc.fontSize(8).fillColor(secondaryText);
-      doc.text(`Name: ${decodeHtml(customerName) || '-'}`, custX + 4, cy); cy += 11;
-      doc.text(`Phone: ${customerPhone || '-'}`, custX + 4, cy); cy += 11;
-      doc.text(`Email: ${customerEmail || '-'}`, custX + 4, cy, { width: cardWidth - 20 }); cy += 11;
-      doc.text(`City: ${city || '-'}`, custX + 4, cy);
+      doc.text(`Name: ${decodeHtml(customerName) || '-'}`, custX + 12, cy); cy += 11;
+      doc.text(`Phone: ${customerPhone || '-'}`, custX + 12, cy); cy += 11;
+      doc.text(`Email: ${customerEmail || '-'}`, custX + 12, cy, { width: cardWidth - 24 }); cy += 11;
+      doc.text(`City: ${city || '-'}`, custX + 12, cy);
       if (workOrderId) {
         cy += 11;
-        doc.text(`Work Order: ${workOrderId}`, custX + 4, cy);
+        doc.text(`Work Order: ${workOrderId}`, custX + 12, cy);
       }
 
       y += cardHeight + 15;

@@ -1181,69 +1181,77 @@ export const exportInvoiceToPDF = (invoice) => {
     
     y += bannerHeight + 12;
 
-    // ===== PROPERTY & CUSTOMER DETAILS - White bg, outlined gold icons (Image 2) =====
-    const cardGap = 10;
+    // ===== PROPERTY & CUSTOMER DETAILS - Boxed with border (Image 2) =====
+    const cardGap = 8;
     const cardWidth = (pageWidth - margin * 2 - cardGap) / 2;
-    const cardHeight = 52;
+    const cardHeight = 58;
     
-    // Property Details Card - white bg, no border
+    // Property Details Card - with border box
+    doc.setDrawColor(...borderGray);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(margin, y, cardWidth, cardHeight, 4, 4, 'S');
+    
     // Property icon - outlined gold square with gold icon
     doc.setDrawColor(...gold);
-    doc.setLineWidth(1);
-    doc.roundedRect(margin, y + 4, 14, 14, 2, 2, 'S');
+    doc.setLineWidth(1.2);
+    doc.roundedRect(margin + 10, y + 8, 14, 14, 2, 2, 'S');
     // Building icon inside (gold)
     doc.setFillColor(...gold);
-    doc.rect(margin + 3, y + 8, 2, 7, 'F');
-    doc.rect(margin + 6, y + 10, 2, 5, 'F');
-    doc.rect(margin + 9, y + 8, 2, 7, 'F');
+    doc.rect(margin + 13, y + 12, 2, 7, 'F');
+    doc.rect(margin + 16, y + 14, 2, 5, 'F');
+    doc.rect(margin + 19, y + 12, 2, 7, 'F');
     
     doc.setTextColor(...primaryText);
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('PROPERTY DETAILS', margin + 18, y + 13);
+    doc.text('PROPERTY DETAILS', margin + 28, y + 17);
     
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    let py = y + 24;
+    let py = y + 28;
     doc.setTextColor(...secondaryText);
-    doc.text('Property ID: ' + String(invoice.propertyCode || '-'), margin + 2, py);
+    doc.text('Property ID: ' + String(invoice.propertyCode || '-'), margin + 10, py);
     py += 6;
-    doc.text('Name: ' + String(invoice.propertyName || '-').substring(0, 24), margin + 2, py);
+    doc.text('Name: ' + String(invoice.propertyName || '-').substring(0, 22), margin + 10, py);
     py += 6;
-    doc.text('Type: ' + String(invoice.propertyType || '-'), margin + 2, py);
+    doc.text('Type: ' + String(invoice.propertyType || '-'), margin + 10, py);
     py += 6;
-    doc.text('Zone: ' + String(invoice.zone || '-'), margin + 2, py);
+    doc.text('Zone: ' + String(invoice.zone || '-'), margin + 10, py);
     py += 6;
-    doc.text('City: ' + String(invoice.city || '-'), margin + 2, py);
+    doc.text('City: ' + String(invoice.city || '-'), margin + 10, py);
     
-    // Customer Details Card - white bg, no border
+    // Customer Details Card - with border box
     const custCardX = margin + cardWidth + cardGap;
+    doc.setDrawColor(...borderGray);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(custCardX, y, cardWidth, cardHeight, 4, 4, 'S');
+    
     // Customer icon - outlined gold square with gold icon
     doc.setDrawColor(...gold);
-    doc.setLineWidth(1);
-    doc.roundedRect(custCardX, y + 4, 14, 14, 2, 2, 'S');
+    doc.setLineWidth(1.2);
+    doc.roundedRect(custCardX + 10, y + 8, 14, 14, 2, 2, 'S');
     // Person icon inside (gold)
     doc.setFillColor(...gold);
-    doc.circle(custCardX + 7, y + 10, 3, 'F');
-    doc.roundedRect(custCardX + 2, y + 14, 10, 3, 1, 1, 'F');
+    doc.circle(custCardX + 17, y + 13, 3, 'F');
+    doc.roundedRect(custCardX + 12, y + 17, 10, 3, 1, 1, 'F');
     
     doc.setTextColor(...primaryText);
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('CUSTOMER DETAILS', custCardX + 18, y + 13);
+    doc.text('CUSTOMER DETAILS', custCardX + 28, y + 17);
     
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    let cy = y + 24;
+    let cy = y + 28;
     doc.setTextColor(...secondaryText);
-    doc.text('Name: ' + String(invoice.customerName || '-'), custCardX + 2, cy);
+    doc.text('Name: ' + String(invoice.customerName || '-'), custCardX + 10, cy);
     cy += 6;
-    doc.text('Phone: ' + String(invoice.customerPhone || '-'), custCardX + 2, cy);
+    doc.text('Phone: ' + String(invoice.customerPhone || '-'), custCardX + 10, cy);
     cy += 6;
     const email = String(invoice.customerEmail || '-');
-    doc.text('Email: ' + (email.length > 24 ? email.substring(0, 24) + '...' : email), custCardX + 2, cy);
+    doc.text('Email: ' + (email.length > 22 ? email.substring(0, 22) + '...' : email), custCardX + 10, cy);
     cy += 6;
-    doc.text('City: ' + String(invoice.city || '-'), custCardX + 2, cy);
+    doc.text('City: ' + String(invoice.city || '-'), custCardX + 10, cy);
     
     y += cardHeight + 12;
 
