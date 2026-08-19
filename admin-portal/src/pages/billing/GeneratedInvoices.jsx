@@ -1025,121 +1025,220 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
         />
       </div>
 
-      {/* Professional Invoice Detail Modal */}
+      {/* Professional Invoice Detail Modal - Matching Image 2 design */}
       {showDetailPanel && selectedInvoice && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setShowDetailPanel(false); setSelectedInvoice(null); }}>
           <div 
             className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header - Black with decorative PVT LTD (flex-shrink-0 prevents shrinking) */}
-            <div className="bg-[#1a1a1a] px-6 py-4 flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-12 object-contain" />
-                  <div>
-                    <h1 className="text-[#c9a227] text-xl font-bold tracking-wide">XLAND INFRA</h1>
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-[1px] bg-[#c9a227]"></div>
-                      <span className="text-[#c9a227] text-[10px] tracking-[0.2em]">PVT LTD</span>
-                      <div className="w-8 h-[1px] bg-[#c9a227]"></div>
+            {/* ===== HEADER - Black with curved gold stripe ===== */}
+            <div className="flex-shrink-0">
+              <div className="bg-[#1a1a1a] px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-12 object-contain" />
+                    <div>
+                      <h1 className="text-[#c9a227] text-xl font-bold tracking-wide">XLAND INFRA</h1>
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-[1px] bg-[#c9a227]"></div>
+                        <span className="text-[#c9a227] text-[10px] tracking-[0.2em]">PVT LTD</span>
+                        <div className="w-8 h-[1px] bg-[#c9a227]"></div>
+                      </div>
                     </div>
                   </div>
+                  <button onClick={(e) => { e.stopPropagation(); setShowDetailPanel(false); setSelectedInvoice(null); }} className="p-1.5 hover:bg-white/10 rounded transition-colors">
+                    <X className="w-5 h-5 text-gray-400" />
+                  </button>
                 </div>
-                <button onClick={() => { setShowDetailPanel(false); setSelectedInvoice(null); }} className="p-1.5 hover:bg-white/10 rounded transition-colors">
-                  <X className="w-5 h-5 text-gray-400" />
-                </button>
               </div>
+              {/* Gold curved stripe */}
+              <div className="h-3 bg-gradient-to-r from-[#c9a227] via-[#d4b445] to-[#c9a227]" style={{borderRadius: '0 0 50% 50% / 0 0 100% 100%'}}></div>
             </div>
 
-            {/* Invoice Meta Row - Matching Invoices tab */}
-            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex-shrink-0">
-              <div className="flex items-center justify-between">
-                {/* Invoice No */}
+            {/* ===== ID / DATE / DUE ROW ===== */}
+            <div className="px-6 py-4 flex-shrink-0 bg-white">
+              <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice No.</p>
+                  <p className="text-xs text-gray-500">ID:</p>
                   <p className="text-lg font-bold text-gray-900">{selectedInvoice.invoiceId}</p>
-                  {selectedInvoice.sourceEstimateId && <p className="text-xs text-gray-400">Ref: {selectedInvoice.sourceEstimateId}</p>}
+                  {selectedInvoice.sourceEstimateId && (
+                    <p className="text-xs text-gray-400">Estimate: {selectedInvoice.sourceEstimateId}</p>
+                  )}
                 </div>
-                {/* Invoice Date */}
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice Date</p>
-                  <p className="text-base font-semibold text-gray-900">{formatDate(selectedInvoice.invoiceDate)}</p>
-                </div>
-                {/* Due Date - Red color */}
-                <div>
-                  <p className="text-xs text-red-500 uppercase tracking-wide font-medium">Due Date</p>
-                  <p className="text-base font-semibold text-gray-900">{formatDate(selectedInvoice.dueDate)}</p>
-                </div>
-                {/* Status Badge */}
-                <div>
-                  <span className={`px-4 py-1.5 rounded-full text-sm font-semibold uppercase tracking-wide ${
-                    selectedInvoice.paymentStatus === 'paid' || selectedInvoice.status === 'paid' ? 'bg-green-100 text-green-700' : 
-                    selectedInvoice.paymentStatus === 'partially_paid' || selectedInvoice.status === 'partial' ? 'bg-amber-100 text-amber-700' : 
-                    selectedInvoice.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-red-100 text-red-600'
-                  }`}>
-                    {selectedInvoice.paymentStatus === 'paid' || selectedInvoice.status === 'paid' ? 'PAID' : 
-                     selectedInvoice.paymentStatus === 'partially_paid' || selectedInvoice.status === 'partial' ? 'PARTIAL' : 
-                     selectedInvoice.status === 'overdue' ? 'OVERDUE' : 'UNPAID'}
-                  </span>
+                <div className="text-right">
+                  <div className="flex items-center gap-2 justify-end">
+                    <span className="text-xs text-gray-500">Date:</span>
+                    <span className="text-sm font-semibold text-gray-900">{formatDate(selectedInvoice.invoiceDate)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 justify-end mt-1">
+                    <span className="text-xs text-gray-500">Due:</span>
+                    <span className="text-sm font-semibold text-gray-900">{formatDate(selectedInvoice.dueDate)}</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Content - Scrollable with flex-1 to take available space */}
-            <div className="overflow-y-auto flex-1 p-6 bg-gray-50">
-              {/* FROM & BILL TO - Side by Side with Gold Theme */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                {/* FROM: Company Details */}
+            {/* Content - Scrollable with flex-1 */}
+            <div className="overflow-y-auto flex-1 p-6 bg-white space-y-5">
+              
+              {/* ===== TOTAL AMOUNT DUE BANNER - Gold rounded ===== */}
+              <div className="bg-gradient-to-r from-[#c9a227] to-[#d4b445] rounded-xl p-5 text-center shadow-md">
+                <p className="text-white/90 text-xs uppercase tracking-wider mb-1">Total Amount Due</p>
+                <p className="text-white text-3xl font-bold">Rs. {Math.round(selectedInvoice.totalAmount || 0).toLocaleString('en-IN')}</p>
+              </div>
+
+              {/* ===== PROPERTY & CUSTOMER DETAILS - Side by Side with gold border ===== */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Property Details */}
                 <div className="bg-white rounded-xl border-2 border-[#c9a227]/30 overflow-hidden shadow-sm">
-                  <div className="px-4 py-2.5 bg-gradient-to-r from-[#c9a227] to-[#d4b445]">
-                    <p className="text-white text-xs font-semibold uppercase tracking-wider">From</p>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="w-10 h-10 rounded-lg bg-[#fffbeb] flex items-center justify-center border border-[#c9a227]/20">
+                      <Building2 className="w-5 h-5 text-[#c9a227]" />
+                    </div>
+                    <p className="text-gray-800 text-sm font-bold uppercase tracking-wide">Property Details</p>
                   </div>
-                  <div className="px-4 py-3">
-                    <h3 className="text-gray-900 font-bold text-sm mb-2">XLAND INFRA PVT LTD</h3>
-                    <div className="text-xs text-gray-600 space-y-1">
-                      <p>Property Management Services</p>
-                      <p>D.No. 7-333/A/1, Nri Hospital Road</p>
-                      <p>Mangalagiri, Guntur - 522503</p>
-                      <p><span className="text-[#c9a227] font-medium">Phone:</span> +91 8500 010 111</p>
-                      <p><span className="text-[#c9a227] font-medium">Email:</span> info@xlandinfra.com</p>
+                  <div className="px-4 pb-4 text-sm space-y-1.5">
+                    <div className="flex">
+                      <span className="text-gray-500 w-24">Property ID:</span>
+                      <span className="text-gray-800">{selectedInvoice.propertyCode || '-'}</span>
+                    </div>
+                    <div className="flex">
+                      <span className="text-gray-500 w-24">Name:</span>
+                      <span className="text-gray-800">{selectedInvoice.propertyName || '-'}</span>
+                    </div>
+                    <div className="flex">
+                      <span className="text-gray-500 w-24">Type:</span>
+                      <span className="text-gray-800">{selectedInvoice.propertyType || '-'}</span>
+                    </div>
+                    <div className="flex">
+                      <span className="text-gray-500 w-24">Zone:</span>
+                      <span className="text-gray-800">{selectedInvoice.zone || '-'}</span>
+                    </div>
+                    <div className="flex">
+                      <span className="text-gray-500 w-24">City:</span>
+                      <span className="text-gray-800">{selectedInvoice.city || '-'}</span>
                     </div>
                   </div>
                 </div>
-                {/* BILL TO: Customer Details */}
+                {/* Customer Details */}
                 <div className="bg-white rounded-xl border-2 border-[#c9a227]/30 overflow-hidden shadow-sm">
-                  <div className="px-4 py-2.5 bg-gradient-to-r from-[#c9a227] to-[#d4b445]">
-                    <p className="text-white text-xs font-semibold uppercase tracking-wider">Bill To</p>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="w-10 h-10 rounded-lg bg-[#fffbeb] flex items-center justify-center border border-[#c9a227]/20">
+                      <User className="w-5 h-5 text-[#c9a227]" />
+                    </div>
+                    <p className="text-gray-800 text-sm font-bold uppercase tracking-wide">Customer Details</p>
                   </div>
-                  <div className="px-4 py-3">
-                    <h3 className="text-gray-900 font-bold text-sm mb-2">{selectedInvoice.customerName || 'Customer'}</h3>
-                    <div className="text-xs text-gray-600 space-y-1">
-                      {selectedInvoice.propertyName && <p><span className="text-[#c9a227] font-medium">Property:</span> {selectedInvoice.propertyName}</p>}
-                      {selectedInvoice.propertyCode && <p><span className="text-[#c9a227] font-medium">Property ID:</span> {selectedInvoice.propertyCode}</p>}
-                      <p><span className="text-[#c9a227] font-medium">Phone:</span> {selectedInvoice.customerPhone || '-'}</p>
-                      <p><span className="text-[#c9a227] font-medium">Email:</span> {selectedInvoice.customerEmail || '-'}</p>
-                      {selectedInvoice.sourceWorkOrderId && <p><span className="text-[#c9a227] font-medium">Work Order:</span> {selectedInvoice.sourceWorkOrderId}</p>}
+                  <div className="px-4 pb-4 text-sm space-y-1.5">
+                    <div className="flex">
+                      <span className="text-gray-500 w-20">Name:</span>
+                      <span className="text-gray-800">{selectedInvoice.customerName || '-'}</span>
+                    </div>
+                    <div className="flex">
+                      <span className="text-gray-500 w-20">Phone:</span>
+                      <span className="text-gray-800">{selectedInvoice.customerPhone || '-'}</span>
+                    </div>
+                    <div className="flex">
+                      <span className="text-gray-500 w-20">Email:</span>
+                      <span className="text-gray-800 break-all">{selectedInvoice.customerEmail || '-'}</span>
+                    </div>
+                    <div className="flex">
+                      <span className="text-gray-500 w-20">City:</span>
+                      <span className="text-gray-800">{selectedInvoice.city || '-'}</span>
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* ===== SERVICES INCLUDED - with icon and decorative line ===== */}
+              {selectedInvoice.invoiceType !== 'work_order' && (() => {
+                const rawItems = selectedInvoice.lineItems ? (typeof selectedInvoice.lineItems === 'string' ? JSON.parse(selectedInvoice.lineItems) : selectedInvoice.lineItems) : [];
+                
+                const allItems = rawItems.filter(item => {
+                  const desc = String(item.description || item.name || '').toLowerCase();
+                  return !desc.includes('amc package') && !desc.includes('amc services');
+                });
+
+                const getFrequency = (item) => {
+                  const freq = item.frequency || item.frequencyType || item.frequency_type || item.billingDuration || '';
+                  if (!freq || freq === '-') return '-';
+                  return String(freq).charAt(0).toUpperCase() + String(freq).slice(1).toLowerCase();
+                };
+
+                const services = allItems.map(item => {
+                  const fullDesc = decodeHtmlEntities(String(item.description || item.name || 'Service'));
+                  const parts = fullDesc.split(' - ');
+                  const descFromDetails = decodeHtmlEntities(item.details || '');
+                  return {
+                    name: decodeHtmlEntities(parts[0] || item.name || 'Service'),
+                    description: descFromDetails || decodeHtmlEntities(parts.slice(1).join(' - ') || ''),
+                    frequency: getFrequency(item),
+                    visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
+                  };
+                });
+
+                return services.length > 0 ? (
+                  <div>
+                    {/* Section Header with icon and decorative line */}
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 rounded-lg bg-[#fffbeb] flex items-center justify-center border border-[#c9a227]/20">
+                        <FileText className="w-4 h-4 text-[#c9a227]" />
+                      </div>
+                      <span className="text-sm font-bold text-gray-800 uppercase tracking-wide">Services Included</span>
+                      <div className="flex-1 h-[1px] bg-[#c9a227]/30"></div>
+                    </div>
+                    
+                    {/* Services Table */}
+                    <div className="bg-white rounded-lg border border-[#c9a227]/30 overflow-hidden shadow-sm">
+                      {/* Table Header - Gold */}
+                      <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-[#c9a227]">
+                        <div className="col-span-1 text-xs font-semibold text-white text-center">#</div>
+                        <div className="col-span-2 text-xs font-semibold text-white">Service</div>
+                        <div className="col-span-5 text-xs font-semibold text-white text-center">Description</div>
+                        <div className="col-span-2 text-xs font-semibold text-white text-center">Frequency</div>
+                        <div className="col-span-2 text-xs font-semibold text-white text-right">Visits</div>
+                      </div>
+                      {/* Table Body */}
+                      <div className="divide-y divide-[#c9a227]/10">
+                        {services.map((item, idx) => (
+                          <div key={idx} className={`grid grid-cols-12 gap-2 px-4 py-3 items-center ${idx % 2 === 1 ? 'bg-[#fffbeb]' : 'bg-white'}`}>
+                            <div className="col-span-1 text-center text-sm text-gray-700">{idx + 1}</div>
+                            <div className="col-span-2">
+                              <p className="text-sm font-medium text-gray-800">{item.name}</p>
+                            </div>
+                            <div className="col-span-5 text-center">
+                              <p className="text-xs text-gray-600">{item.description || '-'}</p>
+                            </div>
+                            <div className="col-span-2 text-center">
+                              <p className="text-sm text-gray-700">{item.frequency}</p>
+                            </div>
+                            <div className="col-span-2 text-right">
+                              <p className="text-sm font-medium text-gray-800">{item.visits}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
 
               {/* Work Order Details - Only show for work order invoices */}
               {selectedInvoice.invoiceType === 'work_order' && (() => {
-                // Parse line items to get work order details
                 const rawItems = selectedInvoice.lineItems ? (typeof selectedInvoice.lineItems === 'string' ? JSON.parse(selectedInvoice.lineItems) : selectedInvoice.lineItems) : [];
                 const workOrderItem = rawItems[0] || {};
                 const category = workOrderItem.category || workOrderItem.serviceCategory || selectedInvoice.category || '-';
                 const subcategory = workOrderItem.subcategory || workOrderItem.serviceSubcategory || selectedInvoice.subcategory || '-';
                 
                 return (
-                  <div className="mb-6">
-                    <h3 className="text-orange-600 font-semibold text-sm mb-3 flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                      Work Order Details
-                    </h3>
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center border border-orange-200">
+                        <Briefcase className="w-4 h-4 text-orange-600" />
+                      </div>
+                      <span className="text-sm font-bold text-gray-800 uppercase tracking-wide">Work Order Details</span>
+                      <div className="flex-1 h-[1px] bg-orange-200"></div>
+                    </div>
                     <div className="bg-orange-50 rounded-lg p-4 border border-orange-100">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -1166,187 +1265,56 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                 );
               })()}
 
-              {/* Amount Due Highlight - Gold Theme */}
-              <div className="bg-gradient-to-r from-[#c9a227] to-[#d4b445] rounded-lg p-5 mb-6 text-center shadow-md">
-                <p className="text-white/90 text-xs uppercase tracking-wider mb-1">Total Amount Due</p>
-                <p className="text-white text-3xl font-bold">{formatCurrency(selectedInvoice.totalAmount)}</p>
+              {/* ===== PRICE SUMMARY - Centered with icon and decorative lines ===== */}
+              <div>
+                {/* Section Header centered */}
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <div className="w-16 h-[1px] bg-[#c9a227]/30"></div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-[#fffbeb] flex items-center justify-center border border-[#c9a227]/20">
+                      <Receipt className="w-4 h-4 text-[#c9a227]" />
+                    </div>
+                    <span className="text-sm font-bold text-gray-800 uppercase tracking-wide">Price Summary</span>
+                  </div>
+                  <div className="w-16 h-[1px] bg-[#c9a227]/30"></div>
+                </div>
+                
+                {/* Summary Box - Centered */}
+                <div className="max-w-sm mx-auto bg-white rounded-xl border-2 border-[#c9a227]/30 overflow-hidden shadow-sm">
+                  <div className="px-6 py-5 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Subtotal:</span>
+                      <span className="text-gray-800 font-medium">Rs. {Math.round(selectedInvoice.subtotal || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                    
+                    {selectedInvoice.discountAmount > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-green-600">Discount ({selectedInvoice.discountPercentage || 0}%):</span>
+                        <span className="text-green-600 font-medium">-Rs. {Math.round(selectedInvoice.discountAmount).toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">GST ({(selectedInvoice.taxPercentage || 18).toFixed(2)}%):</span>
+                      <span className="text-gray-800 font-medium">Rs. {Math.round(selectedInvoice.taxAmount || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                    
+                    <div className="border-t border-gray-200 pt-3 mt-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#c9a227] font-bold text-lg">Total:</span>
+                        <span className="text-[#c9a227] font-bold text-xl">Rs. {Math.round(selectedInvoice.totalAmount || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Services & Add-ons - Only show for NON-work order invoices */}
-              {selectedInvoice.invoiceType !== 'work_order' && (() => {
-                const rawItems = selectedInvoice.lineItems ? (typeof selectedInvoice.lineItems === 'string' ? JSON.parse(selectedInvoice.lineItems) : selectedInvoice.lineItems) : [];
-                
-                const allItems = rawItems.filter(item => {
-                  const desc = String(item.description || item.name || '').toLowerCase();
-                  return !desc.includes('amc package') && !desc.includes('amc services');
-                });
-
-                const isAddon = (item) => {
-                  const typeStr = String(item.type || '').toLowerCase();
-                  return typeStr === 'addon' || typeStr === 'add-on' || typeStr === 'add_on';
-                };
-
-                const getFrequency = (item) => {
-                  const freq = item.frequency || item.frequencyType || item.frequency_type || item.billingDuration || '';
-                  if (!freq || freq === '-') return '-';
-                  return String(freq).charAt(0).toUpperCase() + String(freq).slice(1).toLowerCase();
-                };
-
-                const services = allItems.filter(item => !isAddon(item)).map(item => {
-                  const fullDesc = decodeHtmlEntities(String(item.description || item.name || 'Service'));
-                  const parts = fullDesc.split(' - ');
-                  // Use item.details as fallback for full description (backend stores it separately)
-                  const descFromDetails = decodeHtmlEntities(item.details || '');
-                  return {
-                    name: decodeHtmlEntities(parts[0] || item.name || 'Service'),
-                    description: descFromDetails || decodeHtmlEntities(parts.slice(1).join(' - ') || ''),
-                    frequency: getFrequency(item),
-                    visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1,
-                    price: item.totalPrice || item.total_price || item.unitPrice || item.unit_price || item.price || 0
-                  };
-                });
-
-                const addons = allItems.filter(item => isAddon(item)).map(item => {
-                  const fullDesc = decodeHtmlEntities(String(item.description || item.name || 'Add-on'));
-                  const parts = fullDesc.split(' - ');
-                  // Use item.details as fallback for full description (backend stores it separately)
-                  const descFromDetails = decodeHtmlEntities(item.details || '');
-                  return {
-                    name: decodeHtmlEntities(parts[0] || item.name || 'Add-on'),
-                    description: descFromDetails || decodeHtmlEntities(parts.slice(1).join(' - ') || ''),
-                    frequency: getFrequency(item),
-                    visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1,
-                    price: item.totalPrice || item.total_price || item.unitPrice || item.unit_price || item.price || 0
-                  };
-                });
-
-                return (
-                  <>
-                    {/* AMC Services - Table Layout with Gold Theme */}
-                    {services.length > 0 && (
-                      <div className="mb-6">
-                        <div className="bg-white rounded-lg border border-[#c9a227]/30 overflow-hidden shadow-sm">
-                          {/* Table Header */}
-                          <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-[#c9a227]/10 border-b border-[#c9a227]/20">
-                            <div className="col-span-1 text-xs font-semibold text-[#c9a227] text-center">#</div>
-                            <div className="col-span-2 text-xs font-semibold text-[#c9a227]">Service</div>
-                            <div className="col-span-5 text-xs font-semibold text-[#c9a227] text-center">Description</div>
-                            <div className="col-span-2 text-xs font-semibold text-[#c9a227] text-center">Frequency</div>
-                            <div className="col-span-2 text-xs font-semibold text-[#c9a227] text-right">Visits</div>
-                          </div>
-                          {/* Table Body */}
-                          <div className="divide-y divide-[#c9a227]/10">
-                            {services.map((item, idx) => (
-                              <div key={idx} className={`grid grid-cols-12 gap-2 px-4 py-4 items-center ${idx % 2 === 0 ? 'bg-white' : 'bg-[#c9a227]/5'}`}>
-                                <div className="col-span-1 flex justify-center">
-                                  <span className="w-6 h-6 bg-[#c9a227] text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
-                                </div>
-                                <div className="col-span-2">
-                                  <p className="text-sm font-semibold text-gray-800">{item.name}</p>
-                                </div>
-                                <div className="col-span-5 text-center">
-                                  <p className="text-xs text-gray-600 leading-relaxed">{item.description || '-'}</p>
-                                </div>
-                                <div className="col-span-2 text-center">
-                                  <p className="text-sm text-[#c9a227] font-medium">{item.frequency}</p>
-                                </div>
-                                <div className="col-span-2 text-right">
-                                  <p className="text-sm font-semibold text-gray-800">{item.visits}</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Add-ons - Table Layout */}
-                    {addons.length > 0 && (
-                      <div className="mb-6">
-                        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-                          {/* Table Header */}
-                          <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-amber-50 border-b border-gray-200">
-                            <div className="col-span-1 text-xs font-semibold text-amber-700 text-center">#</div>
-                            <div className="col-span-2 text-xs font-semibold text-amber-700">Add-on</div>
-                            <div className="col-span-5 text-xs font-semibold text-amber-700 text-center">Description</div>
-                            <div className="col-span-2 text-xs font-semibold text-amber-700 text-center">Frequency</div>
-                            <div className="col-span-2 text-xs font-semibold text-amber-700 text-right">Visits</div>
-                          </div>
-                          {/* Table Body */}
-                          <div className="divide-y divide-gray-100">
-                            {addons.map((item, idx) => (
-                              <div key={idx} className={`grid grid-cols-12 gap-2 px-4 py-4 items-center ${idx % 2 === 0 ? 'bg-white' : 'bg-amber-50/30'}`}>
-                                <div className="col-span-1 flex justify-center">
-                                  <span className="w-6 h-6 bg-amber-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
-                                </div>
-                                <div className="col-span-2">
-                                  <p className="text-sm font-semibold text-gray-800">{item.name}</p>
-                                </div>
-                                <div className="col-span-5 text-center">
-                                  <p className="text-xs text-gray-600 leading-relaxed">{item.description || '-'}</p>
-                                </div>
-                                <div className="col-span-2 text-center">
-                                  <p className="text-sm text-amber-600 font-medium">{item.frequency}</p>
-                                </div>
-                                <div className="col-span-2 text-right">
-                                  <p className="text-sm font-semibold text-gray-800">{item.visits}</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-
-              {/* Price Summary - White with Gold Accents */}
-              <div className="bg-white rounded-lg border-2 border-[#c9a227]/30 overflow-hidden mb-6 shadow-sm">
-                <div className="px-4 py-3 border-b border-[#c9a227]/20 flex items-center justify-center gap-2">
-                  <div className="w-10 h-[1px] bg-[#c9a227]"></div>
-                  <div className="flex items-center gap-2">
-                    <Receipt className="w-4 h-4 text-[#c9a227]" />
-                    <h3 className="text-gray-800 text-sm font-semibold uppercase tracking-wide">Price Summary</h3>
-                  </div>
-                  <div className="w-10 h-[1px] bg-[#c9a227]"></div>
+              {/* Footer Message */}
+              <div className="flex items-center justify-center gap-2 pt-4 text-gray-400">
+                <div className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center">
+                  <span className="text-[8px]">♡</span>
                 </div>
-                <div className="p-4 space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Subtotal</span>
-                    <span className="text-gray-700">{formatCurrency(selectedInvoice.subtotal)}</span>
-                  </div>
-                  {selectedInvoice.discountAmount > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-green-600">Discount ({selectedInvoice.discountPercentage || 0}%)</span>
-                      <span className="text-green-600">-{formatCurrency(selectedInvoice.discountAmount)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">GST ({selectedInvoice.taxPercentage || 18}%)</span>
-                    <span className="text-gray-700">{formatCurrency(selectedInvoice.taxAmount)}</span>
-                  </div>
-                  <div className="border-t border-gray-200 pt-3 mt-3">
-                    <div className="flex justify-between">
-                      <span className="text-[#c9a227] font-bold">Grand Total</span>
-                      <span className="text-[#c9a227] text-xl font-bold">{formatCurrency(selectedInvoice.totalAmount)}</span>
-                    </div>
-                  </div>
-                  {(selectedInvoice.amountPaid || 0) > 0 && (
-                    <>
-                      <div className="border-t border-dashed border-gray-200 pt-3 mt-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-green-600">Amount Paid</span>
-                          <span className="text-green-600 font-semibold">{formatCurrency(selectedInvoice.amountPaid)}</span>
-                        </div>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-red-600 font-semibold">Balance Due</span>
-                        <span className="text-red-600 text-lg font-bold">{formatCurrency(selectedInvoice.balanceAmount)}</span>
-                      </div>
-                    </>
-                  )}
-                </div>
+                <p className="text-xs italic">We appreciate your trust in our services.</p>
               </div>
             </div>
 
