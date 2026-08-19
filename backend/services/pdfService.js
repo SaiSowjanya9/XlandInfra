@@ -517,7 +517,6 @@ const generateInvoicePDF = async (invoice) => {
       // ===== PROPERTY & CUSTOMER DETAILS - Cream bg, filled gold icons (Image 2) =====
       const cardWidth = (contentWidth - 15) / 2;
       const cardHeight = 95;
-      const cardBg = '#FBF7EE';
       
       // Property Details Card - cream background
       doc.roundedRect(margin, y, cardWidth, cardHeight, 6).fill(cardBg);
