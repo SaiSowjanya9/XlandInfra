@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   CreditCard, 
@@ -15,35 +15,86 @@ import {
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+const RECAPTCHA_SITE_KEY = '6LdawI4tAAAAAOTX1dcJvQNM8mF8F_v8pSG7bm-x';
 
-// Simple Math CAPTCHA Component
-const MathCaptcha = ({ onVerify }) => {
-  const [num1, setNum1] = useState(0);
-  const [num2, setNum2] = useState(0);
-  const [userAnswer, setUserAnswer] = useState('');
+// Google reCAPTCHA v2 Component
+const ReCaptcha = ({ onVerify }) => {
+  const recaptchaRef = useRef(null);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState('');
 
-  const generateCaptcha = useCallback(() => {
-    const n1 = Math.floor(Math.random() * 10) + 1;
-    const n2 = Math.floor(Math.random() * 10) + 1;
-    setNum1(n1);
-    setNum2(n2);
-    setUserAnswer('');
-    setError('');
+  useEffect(() => {
+    // Load reCAPTCHA script
+    if (!window.grecaptcha) {
+      const script = document.createElement('script');
+      script.src = 'https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit';
+      script.async = true;
+      script.defer = true;
+      
+      window.onRecaptchaLoad = () => {
+        setIsLoaded(true);
+      };
+      
+      document.head.appendChild(script);
+    } else {
+      setIsLoaded(true);
+    }
+
+    return () => {
+      delete window.onRecaptchaLoad;
+    };
   }, []);
 
   useEffect(() => {
-    generateCaptcha();
-  }, [generateCaptcha]);
-
-  const handleVerify = () => {
-    const correctAnswer = num1 + num2;
-    if (parseInt(userAnswer) === correctAnswer) {
-      onVerify(true);
-    } else {
-      setError('Incorrect answer. Please try again.');
-      generateCaptcha();
+    if (isLoaded && recaptchaRef.current && window.grecaptcha?.render) {
+      try {
+        window.grecaptcha.render(recaptchaRef.current, {
+          sitekey: RECAPTCHA_SITE_KEY,
+          callback: handleCaptchaSuccess,
+          'expired-callback': handleCaptchaExpired,
+          'error-callback': handleCaptchaError,
+          theme: 'light',
+          size: 'normal'
+        });
+      } catch (e) {
+        // Already rendered
+      }
     }
+  }, [isLoaded]);
+
+  const handleCaptchaSuccess = async (token) => {
+    try {
+      // Verify token with backend
+      const response = await fetch(`${API_BASE}/api/razorpay/verify-recaptcha`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        onVerify(true, token);
+      } else {
+        setError('Verification failed. Please try again.');
+        if (window.grecaptcha) {
+          window.grecaptcha.reset();
+        }
+      }
+    } catch (err) {
+      setError('Verification failed. Please try again.');
+      if (window.grecaptcha) {
+        window.grecaptcha.reset();
+      }
+    }
+  };
+
+  const handleCaptchaExpired = () => {
+    setError('Verification expired. Please try again.');
+  };
+
+  const handleCaptchaError = () => {
+    setError('Verification error. Please refresh and try again.');
   };
 
   return (
@@ -53,48 +104,30 @@ const MathCaptcha = ({ onVerify }) => {
           <Shield className="w-8 h-8 text-blue-600" />
         </div>
         <h2 className="text-xl font-bold text-gray-900">Security Verification</h2>
-        <p className="text-gray-500 text-sm mt-1">Please solve this to continue</p>
+        <p className="text-gray-500 text-sm mt-1">Please verify you're human to continue</p>
       </div>
 
-      <div className="bg-gray-50 rounded-xl p-6 mb-4">
-        <div className="flex items-center justify-center gap-3 text-2xl font-bold text-gray-800">
-          <span className="bg-white px-4 py-2 rounded-lg shadow-sm">{num1}</span>
-          <span className="text-blue-600">+</span>
-          <span className="bg-white px-4 py-2 rounded-lg shadow-sm">{num2}</span>
-          <span className="text-gray-400">=</span>
-          <span className="text-blue-600">?</span>
-        </div>
-      </div>
-
-      <div className="flex gap-2 mb-4">
-        <input
-          type="number"
-          value={userAnswer}
-          onChange={(e) => setUserAnswer(e.target.value)}
-          placeholder="Your answer"
-          className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-center text-lg font-semibold focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          onKeyPress={(e) => e.key === 'Enter' && handleVerify()}
-        />
-        <button
-          onClick={generateCaptcha}
-          className="px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
-          title="New question"
-        >
-          <RefreshCw className="w-5 h-5 text-gray-500" />
-        </button>
+      <div className="flex justify-center mb-4">
+        {!isLoaded ? (
+          <div className="flex items-center gap-2 text-gray-500">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>Loading verification...</span>
+          </div>
+        ) : (
+          <div ref={recaptchaRef}></div>
+        )}
       </div>
 
       {error && (
-        <p className="text-red-500 text-sm text-center mb-4">{error}</p>
+        <p className="text-red-500 text-sm text-center">{error}</p>
       )}
 
-      <button
-        onClick={handleVerify}
-        disabled={!userAnswer}
-        className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Verify & Continue
-      </button>
+      <p className="text-xs text-gray-400 text-center mt-4">
+        Protected by reCAPTCHA. 
+        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline ml-1">Privacy</a>
+        <span className="mx-1">·</span>
+        <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Terms</a>
+      </p>
     </div>
   );
 };
@@ -258,7 +291,7 @@ const PublicPayment = () => {
   if (!captchaVerified && !error) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
-        <MathCaptcha onVerify={handleCaptchaVerified} />
+        <ReCaptcha onVerify={handleCaptchaVerified} />
       </div>
     );
   }
