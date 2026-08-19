@@ -1068,52 +1068,43 @@ export const exportInvoiceToPDF = (invoice) => {
     const itemCount = lineItems.length;
     const isCompact = itemCount > 4;
 
-    // ===== HEADER - Image 2 Style (Black with smooth gold wave) =====
-    const headerHeight = 32;
+    // ===== HEADER - Simple black with gold wave (Image 2) =====
+    const headerHeight = 28;
     
-    // Black header background with rounded top corners
+    // Simple black header
     doc.setFillColor(...headerBlack);
-    doc.roundedRect(0, 0, pageWidth, headerHeight + 8, 6, 6, 'F');
-    doc.rect(0, 10, pageWidth, headerHeight, 'F'); // Cover bottom corners
+    doc.rect(0, 0, pageWidth, headerHeight, 'F');
     
-    // Smooth gold wave at bottom - single elegant curve
+    // Gold wave - simple curve at bottom
     doc.setFillColor(...gold);
-    // Draw wave using bezier-like curve simulation
-    doc.rect(0, headerHeight, pageWidth, 6, 'F');
-    // Create wave dip in center
-    doc.setFillColor(...headerBlack);
-    doc.ellipse(pageWidth * 0.5, headerHeight + 1, pageWidth * 0.45, 4, 'F');
-    // Add lighter gold highlight at edges
-    doc.setFillColor(...lightGold);
-    doc.ellipse(pageWidth * 0.12, headerHeight + 4, 25, 2.5, 'F');
-    doc.ellipse(pageWidth * 0.88, headerHeight + 4, 25, 2.5, 'F');
+    doc.rect(0, headerHeight, pageWidth, 5, 'F');
     
     // Logo
-    const logoSize = 22;
+    const logoSize = 18;
     try {
-      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 8, 5, logoSize, logoSize);
+      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 5, 5, logoSize, logoSize);
     } catch (e) {
       doc.setFillColor(...gold);
-      doc.roundedRect(margin + 8, 5, logoSize, logoSize, 2, 2, 'F');
+      doc.roundedRect(margin + 5, 5, logoSize, logoSize, 2, 2, 'F');
     }
     
-    // Company name - "XLAND INFRA"
+    // Company name
     doc.setTextColor(...gold);
-    doc.setFontSize(18);
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', margin + logoSize + 16, 15);
+    doc.text('XLAND INFRA', margin + logoSize + 12, 13);
     
-    // "PVT LTD" with decorative lines
-    doc.setFontSize(7);
+    // PVT LTD with lines
+    doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
-    const pvtX = margin + logoSize + 28;
+    const pvtX = margin + logoSize + 24;
     doc.setDrawColor(...gold);
-    doc.setLineWidth(0.4);
-    doc.line(pvtX - 15, 22, pvtX - 3, 22);
-    doc.text('PVT LTD', pvtX, 23);
-    doc.line(pvtX + 17, 22, pvtX + 29, 22);
+    doc.setLineWidth(0.3);
+    doc.line(pvtX - 10, 20, pvtX - 2, 20);
+    doc.text('PVT LTD', pvtX, 21);
+    doc.line(pvtX + 14, 20, pvtX + 22, 20);
 
-    y = headerHeight + 12;
+    y = headerHeight + 10;
 
     // ===== ID / DATE / DUE ROW (Compact) =====
     doc.setFontSize(8);
@@ -1131,25 +1122,26 @@ export const exportInvoiceToPDF = (invoice) => {
       doc.text('Estimate: ' + invoice.sourceEstimateId, margin, y + 6);
     }
     
-    // Date and Due on right
-    const rightCol = pageWidth - margin - 50;
+    // Date and Due on right - aligned to right edge
+    const dateLabel = pageWidth - margin - 65;
+    const dateValue = pageWidth - margin - 40;
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...secondaryText);
-    doc.text('Date:', rightCol, y - 2);
+    doc.text('Date:', dateLabel, y - 2);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(...primaryText);
-    doc.text(formatDate(invoice.invoiceDate), rightCol + 16, y - 2);
+    doc.text(formatDate(invoice.invoiceDate), dateValue, y - 2);
     
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...secondaryText);
-    doc.text('Due:', rightCol, y + 6);
+    doc.text('Due:', dateLabel, y + 6);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(...primaryText);
-    doc.text(formatDate(invoice.dueDate), rightCol + 16, y + 6);
+    doc.text(formatDate(invoice.dueDate), dateValue, y + 6);
     
     y += 16;
 
