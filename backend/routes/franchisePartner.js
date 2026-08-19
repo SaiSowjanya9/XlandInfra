@@ -4449,6 +4449,12 @@ router.post('/estimates', requireFPScope, async (req, res) => {
     } catch (e) { /* Column exists */ }
 
     // Stringify package_services for storage
+    console.log('[Estimate Create] package_services received:', JSON.stringify(package_services));
+    if (package_services && Array.isArray(package_services)) {
+      package_services.forEach((s, i) => {
+        console.log(`[Estimate Create] Service ${i+1}: name="${s.name}", description="${s.description?.substring(0, 100) || '(empty)'}"`);
+      });
+    }
     const packageServicesJson = package_services ? JSON.stringify(package_services) : null;
     // Stringify work_order_services for storage
     const workOrderServicesJson = work_order_services ? JSON.stringify(work_order_services) : null;
@@ -5086,6 +5092,12 @@ router.post('/amc-packages', requireFPScope, async (req, res) => {
     const packageCode = `FP${req.fpId}-AMC-${Date.now()}`;
 
     // Check if table has required columns, use appropriate insert
+    console.log('[AMC Create] services received:', JSON.stringify(services));
+    if (services && Array.isArray(services)) {
+      services.forEach((s, i) => {
+        console.log(`[AMC Create] Service ${i+1}: name="${s.name}", description="${s.description?.substring(0, 100) || '(empty)'}"`);
+      });
+    }
     const [result] = await pool.execute(
       `INSERT INTO fp_amc_packages (
         franchise_partner_id, package_code, name, description, 
