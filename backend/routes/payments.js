@@ -718,33 +718,53 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
           const estimate = estimates[0];
           
           console.log('[Invoice Enrichment] Found estimate:', estimate.package_id, estimate.package_name);
-          console.log('[Invoice Enrichment] AMC services from ID:', estimate.amcPackageServices ? 'YES' : 'NO');
-          console.log('[Invoice Enrichment] AMC services from Name:', estimate.amcPackageServicesByName ? 'YES' : 'NO');
+          console.log('[Invoice Enrichment] AMC services from ID:', estimate.amcPackageServices ? 'YES (length: ' + (estimate.amcPackageServices?.length || 'N/A') + ')' : 'NO');
+          console.log('[Invoice Enrichment] AMC services from Name:', estimate.amcPackageServicesByName ? 'YES (length: ' + (estimate.amcPackageServicesByName?.length || 'N/A') + ')' : 'NO');
           
           // Parse the AMC package services (these have the full descriptions)
           let amcServices = [];
           const amcServicesRaw = estimate.amcPackageServices || estimate.amcPackageServicesByName;
+          console.log('[Invoice Enrichment] Raw AMC services type:', typeof amcServicesRaw);
           if (amcServicesRaw) {
             try {
               const parsed = typeof amcServicesRaw === 'string' ? JSON.parse(amcServicesRaw) : amcServicesRaw;
-              console.log('[Invoice Enrichment] Parsed AMC services structure:', Object.keys(parsed || {}));
+              console.log('[Invoice Enrichment] Parsed AMC services structure:', JSON.stringify(Object.keys(parsed || {})));
+              console.log('[Invoice Enrichment] Has serviceRows:', !!parsed?.serviceRows, 'Has services:', !!parsed?.services, 'IsArray:', Array.isArray(parsed));
               amcServices = parsed?.serviceRows || parsed?.services || (Array.isArray(parsed) ? parsed : []);
               console.log('[Invoice Enrichment] Extracted services count:', amcServices.length);
               if (amcServices.length > 0) {
-                console.log('[Invoice Enrichment] First service structure:', JSON.stringify(amcServices[0]));
+                console.log('[Invoice Enrichment] First service FULL structure:', JSON.stringify(amcServices[0]));
+                console.log('[Invoice Enrichment] First service description:', amcServices[0]?.description || '(empty)');
               }
             } catch (e) { console.log('Error parsing AMC services:', e); }
+          } else {
+            console.log('[Invoice Enrichment] No AMC services raw data found!');
           }
           
           // Parse estimate's package_services
           let estimateServices = [];
+          console.log('[Invoice Enrichment] Estimate package_services:', estimate.package_services ? 'EXISTS' : 'MISSING');
           if (estimate.package_services) {
             try {
-              estimateServices = typeof estimate.package_services === 'string' 
+              const rawEstServices = typeof estimate.package_services === 'string' 
                 ? JSON.parse(estimate.package_services) 
                 : estimate.package_services;
-              if (!Array.isArray(estimateServices)) estimateServices = [];
-            } catch (e) { estimateServices = []; }
+              // Handle both array format and object with serviceRows
+              if (Array.isArray(rawEstServices)) {
+                estimateServices = rawEstServices;
+              } else if (rawEstServices?.serviceRows) {
+                estimateServices = rawEstServices.serviceRows;
+              } else if (rawEstServices?.services) {
+                estimateServices = rawEstServices.services;
+              }
+              console.log('[Invoice Enrichment] Estimate services count:', estimateServices.length);
+              if (estimateServices.length > 0) {
+                console.log('[Invoice Enrichment] First estimate service:', JSON.stringify(estimateServices[0]));
+              }
+            } catch (e) { 
+              console.log('[Invoice Enrichment] Error parsing estimate services:', e.message);
+              estimateServices = []; 
+            }
           }
           
           // Build enriched line items - ALWAYS use AMC package descriptions as primary source
