@@ -125,7 +125,7 @@ const generateEstimatePDF = async (estimate) => {
       // Package Price Bar (NO package name - per requirement)
       if (packagePrice) {
         doc.rect(50, y, 500, 25).fill(lightGray).stroke('#e0e0e0');
-        doc.fontSize(10).fillColor(navy).text(`Package Price: Rs. ${Math.round(Number(packagePrice)).toLocaleString()}`, 60, y + 8);
+        doc.fontSize(10).fillColor(navy).text(`Package Price: ₹${Math.round(Number(packagePrice)).toLocaleString()}`, 60, y + 8);
         doc.fontSize(10).fillColor(navy).text('Billing: Yearly', 400, y + 8);
         y += 35;
       }
@@ -354,21 +354,21 @@ const generateEstimatePDF = async (estimate) => {
       doc.rect(50, y, 500, 80).fill(lightGray).stroke('#e0e0e0');
       
       doc.fontSize(9).fillColor('#666666');
-      doc.text('Subtotal:', 60, y + 10, { continued: false });
-      doc.fillColor('#333333').text(`Rs. ${safeSubtotal.toLocaleString()}`, 450, y + 10, { continued: false });
+      doc.text('Subtotal', 60, y + 10, { continued: false });
+      doc.fillColor('#333333').text(`₹${safeSubtotal.toLocaleString()}`, 450, y + 10, { continued: false });
       
       if (safeDiscount > 0 || safeDiscountAmount > 0) {
-        doc.fillColor('#666666').text(`Discount (${safeDiscount}%):`, 60, y + 25, { continued: false });
-        doc.fillColor('#333333').text(`-Rs. ${safeDiscountAmount.toLocaleString()}`, 450, y + 25, { continued: false });
+        doc.fillColor('#666666').text(`Discount (${safeDiscount}%)`, 60, y + 25, { continued: false });
+        doc.fillColor('#333333').text(`-₹${safeDiscountAmount.toLocaleString()}`, 450, y + 25, { continued: false });
       }
       
-      doc.fillColor('#666666').text(`GST (${safeGstPercent}%):`, 60, y + 40, { continued: false });
-      doc.fillColor('#333333').text(`Rs. ${safeTax.toLocaleString()}`, 450, y + 40, { continued: false });
+      doc.fillColor('#666666').text(`GST (${safeGstPercent}%)`, 60, y + 40, { continued: false });
+      doc.fillColor('#333333').text(`₹${safeTax.toLocaleString()}`, 450, y + 40, { continued: false });
       
       // Total line
       doc.rect(60, y + 55, 480, 1).fill('#e0e0e0');
-      doc.fontSize(12).fillColor(navy).text('TOTAL:', 60, y + 62, { continued: false });
-      doc.font('Helvetica-Bold').fontSize(12).fillColor('#000000').text(`Rs. ${safeTotal.toLocaleString()}`, 450, y + 62, { continued: false });
+      doc.fontSize(12).fillColor(gold).text('Grand Total', 60, y + 62, { continued: false });
+      doc.font('Helvetica-Bold').fontSize(12).fillColor(gold).text(`₹${safeTotal.toLocaleString()}`, 450, y + 62, { continued: false });
       doc.font('Helvetica');
       y += 90;
 
@@ -496,7 +496,7 @@ const generateInvoicePDF = async (invoice) => {
       doc.rect(margin + contentWidth / 2, y, contentWidth / 2, 45).fill(navy);
       
       doc.fontSize(10).fillColor(gold).text('TOTAL AMOUNT DUE', margin + 15, y + 10);
-      doc.fontSize(20).fillColor(white).font('Helvetica-Bold').text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, margin + 15, y + 24);
+      doc.fontSize(20).fillColor(white).font('Helvetica-Bold').text(`₹${safeTotal.toLocaleString('en-IN')}`, margin + 15, y + 24);
       doc.font('Helvetica');
       y += 55;
 
@@ -611,18 +611,18 @@ const generateInvoicePDF = async (invoice) => {
       
       let sy = y + 12;
       doc.fontSize(9).fillColor('#666666');
-      doc.text('Subtotal:', summaryX + 12, sy);
-      doc.fillColor('#333333').text(`Rs. ${safeSubtotal.toLocaleString('en-IN')}`, summaryX + 130, sy);
+      doc.text('Subtotal', summaryX + 12, sy);
+      doc.fillColor('#333333').text(`₹${safeSubtotal.toLocaleString('en-IN')}`, summaryX + 130, sy);
       sy += 16;
       
       if (safeDiscount > 0) {
-        doc.fillColor('#059669').text(`Discount:`, summaryX + 12, sy);
-        doc.text(`-Rs. ${safeDiscount.toLocaleString('en-IN')}`, summaryX + 130, sy);
+        doc.fillColor('#059669').text(`Discount`, summaryX + 12, sy);
+        doc.text(`-₹${safeDiscount.toLocaleString('en-IN')}`, summaryX + 130, sy);
         sy += 16;
       }
       
-      doc.fillColor('#666666').text(`GST (${safeTaxPercent}%):`, summaryX + 12, sy);
-      doc.fillColor('#333333').text(`Rs. ${safeTax.toLocaleString('en-IN')}`, summaryX + 130, sy);
+      doc.fillColor('#666666').text(`GST (${safeTaxPercent}%)`, summaryX + 12, sy);
+      doc.fillColor('#333333').text(`₹${safeTax.toLocaleString('en-IN')}`, summaryX + 130, sy);
       sy += 16;
       
       // Divider line
@@ -630,8 +630,8 @@ const generateInvoicePDF = async (invoice) => {
       sy += 10;
       
       // Total in gold
-      doc.fontSize(11).fillColor(gold).font('Helvetica-Bold').text('Total:', summaryX + 12, sy);
-      doc.text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, summaryX + 120, sy);
+      doc.fontSize(11).fillColor(gold).font('Helvetica-Bold').text('Grand Total', summaryX + 12, sy);
+      doc.text(`₹${safeTotal.toLocaleString('en-IN')}`, summaryX + 120, sy);
       doc.font('Helvetica');
 
       // ===== FOOTER =====

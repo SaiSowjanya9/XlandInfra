@@ -420,25 +420,25 @@ const CreateInvoiceForm = ({ onSuccess, onCancel, token }) => {
             />
           </div>
 
-          {/* Totals */}
-          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+          {/* Totals - Gold Theme */}
+          <div className="bg-[#fffbeb] border border-[#fde68a] rounded-lg p-4 space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Subtotal (from Estimate):</span>
+              <span className="text-gray-600">Subtotal (from Estimate)</span>
               <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
             </div>
             {discountPercent > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Discount ({discountPercent}%):</span>
-                <span className="font-medium text-red-600">-{formatCurrency(totals.discountAmount)}</span>
+                <span className="text-green-600">Discount ({discountPercent}%)</span>
+                <span className="font-medium text-green-600">-{formatCurrency(totals.discountAmount)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">GST ({gstPercent}%):</span>
+              <span className="text-gray-600">GST ({gstPercent}%)</span>
               <span className="font-medium">{formatCurrency(totals.gstAmount)}</span>
             </div>
-            <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-2">
-              <span>Total Amount:</span>
-              <span className="text-blue-600">{formatCurrency(totals.total)}</span>
+            <div className="flex justify-between text-lg font-semibold border-t border-[#c9a227]/30 pt-2">
+              <span className="text-[#c9a227]">Grand Total</span>
+              <span className="text-[#c9a227]">{formatCurrency(totals.total)}</span>
             </div>
           </div>
 
