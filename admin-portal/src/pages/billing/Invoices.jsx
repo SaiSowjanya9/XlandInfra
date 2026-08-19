@@ -1287,11 +1287,11 @@ const InvoiceDetailPanel = ({
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div 
-        className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden"
+        className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ===== HEADER - Black with decorative PVT LTD ===== */}
-        <div className="bg-[#1a1a1a] px-6 py-4">
+        <div className="bg-[#1a1a1a] px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-12 object-contain" />
@@ -1310,31 +1310,45 @@ const InvoiceDetailPanel = ({
           </div>
         </div>
 
-        {/* ===== INVOICE ID & DATES ROW ===== */}
-        <div className="px-6 py-4 flex items-start justify-between border-b border-gray-100">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-500 text-sm">ID:</span>
-              <span className="text-lg font-bold text-gray-900">{invoice.invoiceId}</span>
+        {/* ===== INVOICE ID, DATES & STATUS ROW ===== */}
+        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            {/* Invoice No */}
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice No.</p>
+              <p className="text-lg font-bold text-gray-900">{invoice.invoiceId}</p>
+              {invoice.sourceEstimateId && (
+                <p className="text-xs text-gray-400">Ref: {invoice.sourceEstimateId}</p>
+              )}
             </div>
-            {invoice.sourceEstimateId && (
-              <p className="text-xs text-gray-400 mt-1">Estimate: {invoice.sourceEstimateId}</p>
-            )}
-          </div>
-          <div className="text-right space-y-1">
-            <div className="flex items-center justify-end gap-2">
-              <span className="text-gray-500 text-sm">Date:</span>
-              <span className="text-sm font-semibold text-gray-900">{formatDate(invoice.invoiceDate)}</span>
+            {/* Invoice Date */}
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice Date</p>
+              <p className="text-base font-semibold text-gray-900">{formatDate(invoice.invoiceDate)}</p>
             </div>
-            <div className="flex items-center justify-end gap-2">
-              <span className="text-gray-500 text-sm">Due:</span>
-              <span className="text-sm font-semibold text-gray-900">{formatDate(invoice.dueDate)}</span>
+            {/* Due Date - Red color */}
+            <div>
+              <p className="text-xs text-red-500 uppercase tracking-wide font-medium">Due Date</p>
+              <p className="text-base font-semibold text-gray-900">{formatDate(invoice.dueDate)}</p>
+            </div>
+            {/* Status Badge */}
+            <div>
+              <span className={`px-4 py-1.5 rounded-full text-sm font-semibold uppercase tracking-wide ${
+                invoice.status === 'paid' ? 'bg-green-100 text-green-700' :
+                invoice.status === 'partial' ? 'bg-amber-100 text-amber-700' :
+                invoice.status === 'overdue' ? 'bg-red-100 text-red-700' :
+                'bg-red-100 text-red-600'
+              }`}>
+                {invoice.status === 'paid' ? 'PAID' :
+                 invoice.status === 'partial' ? 'PARTIAL' :
+                 invoice.status === 'overdue' ? 'OVERDUE' : 'UNPAID'}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="overflow-y-auto max-h-[calc(90vh-180px)] p-6 space-y-5 bg-gray-50">
+        {/* Content - Scrollable with flex-1 */}
+        <div className="overflow-y-auto flex-1 p-6 space-y-5 bg-gray-50">
           
           {/* ===== TOTAL AMOUNT DUE BANNER - Gold ===== */}
           <div className="bg-gradient-to-r from-[#c9a227] to-[#d4b445] rounded-xl p-5 text-center shadow-md">
@@ -1637,8 +1651,8 @@ const InvoiceDetailPanel = ({
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="px-6 py-3 border-t border-gray-200 bg-white flex items-center justify-end gap-3">
+        {/* Footer Actions - Always visible */}
+        <div className="px-6 py-3 border-t border-gray-200 bg-white flex items-center justify-end gap-3 flex-shrink-0">
           <button
             onClick={onClose}
             className="px-5 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"

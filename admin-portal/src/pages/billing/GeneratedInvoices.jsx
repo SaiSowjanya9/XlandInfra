@@ -1032,7 +1032,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
             className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header - Black with decorative PVT LTD */}
+            {/* Header - Black with decorative PVT LTD (flex-shrink-0 prevents shrinking) */}
             <div className="bg-[#1a1a1a] px-6 py-4 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1052,28 +1052,35 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
               </div>
             </div>
 
-            {/* Invoice Meta Row */}
-            <div className="bg-gray-100 px-6 py-4 border-b border-gray-200 flex-shrink-0">
-              <div className="grid grid-cols-4 gap-4">
+            {/* Invoice Meta Row - Matching Invoices tab */}
+            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex-shrink-0">
+              <div className="flex items-center justify-between">
+                {/* Invoice No */}
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice No.</p>
-                  <p className="text-base font-bold text-gray-900">{selectedInvoice.invoiceId}</p>
-                  {selectedInvoice.sourceEstimateId && <p className="text-xs text-gray-500">Ref: {selectedInvoice.sourceEstimateId}</p>}
+                  <p className="text-lg font-bold text-gray-900">{selectedInvoice.invoiceId}</p>
+                  {selectedInvoice.sourceEstimateId && <p className="text-xs text-gray-400">Ref: {selectedInvoice.sourceEstimateId}</p>}
                 </div>
+                {/* Invoice Date */}
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice Date</p>
-                  <p className="text-sm font-semibold text-gray-900">{formatDate(selectedInvoice.invoiceDate)}</p>
+                  <p className="text-base font-semibold text-gray-900">{formatDate(selectedInvoice.invoiceDate)}</p>
                 </div>
+                {/* Due Date - Red color */}
                 <div>
-                  <p className="text-xs text-red-500 uppercase tracking-wide">Due Date</p>
-                  <p className="text-sm font-semibold text-gray-900">{formatDate(selectedInvoice.dueDate)}</p>
+                  <p className="text-xs text-red-500 uppercase tracking-wide font-medium">Due Date</p>
+                  <p className="text-base font-semibold text-gray-900">{formatDate(selectedInvoice.dueDate)}</p>
                 </div>
-                <div className="text-right">
-                  <span className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full ${
-                    selectedInvoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 
-                    selectedInvoice.paymentStatus === 'partially_paid' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                {/* Status Badge */}
+                <div>
+                  <span className={`px-4 py-1.5 rounded-full text-sm font-semibold uppercase tracking-wide ${
+                    selectedInvoice.paymentStatus === 'paid' || selectedInvoice.status === 'paid' ? 'bg-green-100 text-green-700' : 
+                    selectedInvoice.paymentStatus === 'partially_paid' || selectedInvoice.status === 'partial' ? 'bg-amber-100 text-amber-700' : 
+                    selectedInvoice.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-red-100 text-red-600'
                   }`}>
-                    {selectedInvoice.paymentStatus === 'paid' ? '✓ PAID' : selectedInvoice.paymentStatus === 'partially_paid' ? 'PARTIAL' : 'UNPAID'}
+                    {selectedInvoice.paymentStatus === 'paid' || selectedInvoice.status === 'paid' ? 'PAID' : 
+                     selectedInvoice.paymentStatus === 'partially_paid' || selectedInvoice.status === 'partial' ? 'PARTIAL' : 
+                     selectedInvoice.status === 'overdue' ? 'OVERDUE' : 'UNPAID'}
                   </span>
                 </div>
               </div>
