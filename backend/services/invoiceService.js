@@ -809,7 +809,7 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
       });
     } catch (e) { lineItems = []; }
     
-    // Generate line items HTML - Table format: # | Service | Description | Frequency | Visits (no Amount)
+    // Generate line items HTML - Table format: # | Service | Description | Frequency | Visits (Gold Theme)
     const lineItemsHtml = lineItems.map((item, idx) => {
       const name = item.name || 'Service';
       const details = item.details || '';
@@ -817,12 +817,12 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
       const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
       const visits = item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1;
       return `
-      <tr style="border-bottom: 1px solid #e2e8f0;">
-        <td style="padding: 12px; text-align: center; color: #6366f1; font-weight: 600;">${idx + 1}</td>
-        <td style="padding: 12px; color: #2d3748; font-weight: 600;">${name}</td>
+      <tr style="border-bottom: 1px solid #fde68a; background: ${idx % 2 === 0 ? '#ffffff' : '#fffbeb'};">
+        <td style="padding: 12px; text-align: center; color: #d97706; font-weight: 600;">${idx + 1}</td>
+        <td style="padding: 12px; color: #78350f; font-weight: 600;">${name}</td>
         <td style="padding: 12px; text-align: center; color: #4a5568; font-size: 12px;">${details || '-'}</td>
-        <td style="padding: 12px; text-align: center; color: #6366f1; font-weight: 500;">${freqDisplay}</td>
-        <td style="padding: 12px; text-align: right; color: #2d3748; font-weight: 600;">${visits}</td>
+        <td style="padding: 12px; text-align: center; color: #d97706; font-weight: 500;">${freqDisplay}</td>
+        <td style="padding: 12px; text-align: right; color: #78350f; font-weight: 600;">${visits}</td>
       </tr>
     `;
     }).join('');
@@ -954,18 +954,18 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                   </td>
                 </tr>
                 
-                <!-- AMC Services Section - Table: # | Service | Description | Frequency | Visits -->
+                <!-- AMC Services Section - Table: # | Service | Description | Frequency | Visits (Gold Theme) -->
                 ${lineItems.filter(i => i.type === 'service' || !i.type).length > 0 ? `
                 <tr>
                   <td style="padding: 0 30px 20px;">
-                    <div style="background: #eef2ff; border-radius: 8px; border: 1px solid #c7d2fe; overflow: hidden;">
+                    <div style="background: #fffbeb; border-radius: 8px; border: 1px solid #fde68a; overflow: hidden;">
                       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                        <tr style="background: #e0e7ff;">
-                          <th style="padding: 10px 12px; text-align: center; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #c7d2fe; width: 40px;">#</th>
-                          <th style="padding: 10px 12px; text-align: left; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #c7d2fe; width: 120px;">Service</th>
-                          <th style="padding: 10px 12px; text-align: center; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #c7d2fe;">Description</th>
-                          <th style="padding: 10px 12px; text-align: center; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #c7d2fe; width: 80px;">Frequency</th>
-                          <th style="padding: 10px 12px; text-align: right; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #c7d2fe; width: 50px;">Visits</th>
+                        <tr style="background: #fef3c7;">
+                          <th style="padding: 10px 12px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #fde68a; width: 40px;">#</th>
+                          <th style="padding: 10px 12px; text-align: left; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #fde68a; width: 120px;">Service</th>
+                          <th style="padding: 10px 12px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #fde68a;">Description</th>
+                          <th style="padding: 10px 12px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #fde68a; width: 80px;">Frequency</th>
+                          <th style="padding: 10px 12px; text-align: right; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #fde68a; width: 50px;">Visits</th>
                         </tr>
                         ${lineItems.filter(i => i.type === 'service' || !i.type).map((item, idx) => {
                           const details = item.details || '';
@@ -977,16 +977,16 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                           const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
                           const visits = item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1;
                           return `
-                        <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#eef2ff'};">
+                        <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#fffbeb'};">
                           <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center; vertical-align: middle;">
-                            <span style="display: inline-block; width: 24px; height: 24px; background: #6366f1; color: #ffffff; border-radius: 50%; font-size: 12px; font-weight: 600; line-height: 24px; text-align: center;">${idx + 1}</span>
+                            <span style="display: inline-block; width: 24px; height: 24px; background: #d97706; color: #ffffff; border-radius: 50%; font-size: 12px; font-weight: 600; line-height: 24px; text-align: center;">${idx + 1}</span>
                           </td>
                           <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; vertical-align: middle;">
-                            <strong style="color: #1e1b4b; font-size: 13px;">${serviceName}</strong>
+                            <strong style="color: #78350f; font-size: 13px;">${serviceName}</strong>
                           </td>
                           <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563; font-size: 11px; vertical-align: middle; line-height: 1.4;">${serviceDesc}</td>
-                          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #6366f1; font-size: 12px; font-weight: 500; vertical-align: middle;">${freqDisplay}</td>
-                          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #1e1b4b; font-size: 13px; font-weight: 600; vertical-align: middle;">${visits}</td>
+                          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #d97706; font-size: 12px; font-weight: 500; vertical-align: middle;">${freqDisplay}</td>
+                          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #78350f; font-size: 13px; font-weight: 600; vertical-align: middle;">${visits}</td>
                         </tr>`;
                         }).join('')}
                       </table>

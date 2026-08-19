@@ -737,19 +737,41 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
           // Build enriched line items - match by service name and get full description from AMC package
           if (estimateServices.length > 0 || amcServices.length > 0) {
             const servicesToUse = estimateServices.length > 0 ? estimateServices : amcServices;
+            console.log('[Invoice Enrichment] servicesToUse count:', servicesToUse.length);
+            console.log('[Invoice Enrichment] amcServices count:', amcServices.length);
+            
             lineItems = servicesToUse.map((s, idx) => {
               const existingItem = lineItems[idx] || {};
               const serviceName = s.name || s.serviceName || s.service || existingItem.name || 'Service';
               
               // Try to find full description from AMC package by matching service name
               let fullDescription = s.description || s.service_description || '';
+              
+              // Log current description state
+              console.log(`[Invoice Enrichment] Service ${idx + 1}: "${serviceName}" - current desc: "${fullDescription?.substring(0, 50)}..."`);
+              
               if (amcServices.length > 0) {
-                const matchingAmcService = amcServices.find(ams => 
-                  (ams.name || ams.service || '').toLowerCase() === serviceName.toLowerCase() ||
-                  (ams.service || ams.name || '').toLowerCase() === serviceName.toLowerCase()
-                );
+                // Try exact match first
+                let matchingAmcService = amcServices.find(ams => {
+                  const amcName = (ams.name || ams.service || '').toLowerCase().trim();
+                  const searchName = serviceName.toLowerCase().trim();
+                  return amcName === searchName;
+                });
+                
+                // If no exact match, try partial/fuzzy match
+                if (!matchingAmcService) {
+                  matchingAmcService = amcServices.find(ams => {
+                    const amcName = (ams.name || ams.service || '').toLowerCase().trim();
+                    const searchName = serviceName.toLowerCase().trim();
+                    return amcName.includes(searchName) || searchName.includes(amcName);
+                  });
+                }
+                
                 if (matchingAmcService && matchingAmcService.description) {
+                  console.log(`[Invoice Enrichment] Found matching AMC service: "${matchingAmcService.service || matchingAmcService.name}" with description: "${matchingAmcService.description?.substring(0, 50)}..."`);
                   fullDescription = matchingAmcService.description;
+                } else {
+                  console.log(`[Invoice Enrichment] No matching AMC service found for: "${serviceName}"`);
                 }
               }
               
@@ -1296,7 +1318,7 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
         const formatAmount = (amt) => `₹${(parseFloat(amt) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
         const formatDate = (d) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-        // Generate line items HTML - Table: # | Service | Description | Frequency | Visits (no Amount)
+        // Generate line items HTML - Table: # | Service | Description | Frequency | Visits (Gold Theme)
         const lineItemsHtml = formattedLineItems.map((item, idx) => {
           const name = item.name || item.description || 'Service';
           const details = item.details || '';
@@ -1304,14 +1326,14 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
           const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
           const visits = item.visits || item.quantity || 1;
           return `
-          <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#f5f3ff'};">
+          <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#fffbeb'};">
             <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; vertical-align: middle;">
-              <span style="display: inline-block; width: 22px; height: 22px; background: #6366f1; color: #ffffff; border-radius: 50%; font-size: 11px; font-weight: 600; line-height: 22px; text-align: center;">${idx + 1}</span>
+              <span style="display: inline-block; width: 22px; height: 22px; background: #d97706; color: #ffffff; border-radius: 50%; font-size: 11px; font-weight: 600; line-height: 22px; text-align: center;">${idx + 1}</span>
             </td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #1e1b4b;">${name}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #78350f;">${name}</td>
             <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563; font-size: 12px;">${details || '-'}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #6366f1; font-weight: 500;">${freqDisplay}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #1e1b4b;">${visits}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #d97706; font-weight: 500;">${freqDisplay}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #78350f;">${visits}</td>
           </tr>
         `;
         }).join('');
@@ -1360,12 +1382,12 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
 
                     <table style="width: 100%; border-collapse: collapse;">
                       <thead>
-                        <tr style="background: #e0e7ff;">
-                          <th style="padding: 10px; text-align: center; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 40px;">#</th>
-                          <th style="padding: 10px; text-align: left; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 100px;">Service</th>
-                          <th style="padding: 10px; text-align: center; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase;">Description</th>
-                          <th style="padding: 10px; text-align: center; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 80px;">Frequency</th>
-                          <th style="padding: 10px; text-align: right; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 50px;">Visits</th>
+                        <tr style="background: #fef3c7;">
+                          <th style="padding: 10px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 40px;">#</th>
+                          <th style="padding: 10px; text-align: left; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 100px;">Service</th>
+                          <th style="padding: 10px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase;">Description</th>
+                          <th style="padding: 10px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 80px;">Frequency</th>
+                          <th style="padding: 10px; text-align: right; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 50px;">Visits</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1685,14 +1707,14 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
           const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
           const visits = item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1;
           return `
-          <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#f5f3ff'};">
+          <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#fffbeb'};">
             <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; vertical-align: middle;">
-              <span style="display: inline-block; width: 22px; height: 22px; background: #6366f1; color: #ffffff; border-radius: 50%; font-size: 11px; font-weight: 600; line-height: 22px; text-align: center;">${idx + 1}</span>
+              <span style="display: inline-block; width: 22px; height: 22px; background: #d97706; color: #ffffff; border-radius: 50%; font-size: 11px; font-weight: 600; line-height: 22px; text-align: center;">${idx + 1}</span>
             </td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #1e1b4b;">${name}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #78350f;">${name}</td>
             <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563; font-size: 12px;">${details || '-'}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #6366f1; font-weight: 500;">${freqDisplay}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #1e1b4b;">${visits}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #d97706; font-weight: 500;">${freqDisplay}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #78350f;">${visits}</td>
           </tr>
         `;
         }).join('');
@@ -1758,12 +1780,12 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
                 ${lineItems.length > 0 ? `
                 <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
                   <thead>
-                    <tr style="background: #e0e7ff;">
-                      <th style="padding: 10px; text-align: center; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 40px;">#</th>
-                      <th style="padding: 10px; text-align: left; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 100px;">Service</th>
-                      <th style="padding: 10px; text-align: center; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase;">Description</th>
-                      <th style="padding: 10px; text-align: center; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 80px;">Frequency</th>
-                      <th style="padding: 10px; text-align: right; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 50px;">Visits</th>
+                    <tr style="background: #fef3c7;">
+                      <th style="padding: 10px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 40px;">#</th>
+                      <th style="padding: 10px; text-align: left; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 100px;">Service</th>
+                      <th style="padding: 10px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase;">Description</th>
+                      <th style="padding: 10px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 80px;">Frequency</th>
+                      <th style="padding: 10px; text-align: right; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 50px;">Visits</th>
                     </tr>
                   </thead>
                   <tbody>
