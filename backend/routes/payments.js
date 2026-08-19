@@ -1296,15 +1296,25 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
         const formatAmount = (amt) => `₹${(parseFloat(amt) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
         const formatDate = (d) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-        // Generate line items HTML
-        const lineItemsHtml = formattedLineItems.map(item => `
-          <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.description}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatAmount(item.unitPrice)}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatAmount(item.totalPrice)}</td>
+        // Generate line items HTML - Table: # | Service | Description | Frequency | Visits (no Amount)
+        const lineItemsHtml = formattedLineItems.map((item, idx) => {
+          const name = item.name || item.description || 'Service';
+          const details = item.details || '';
+          const freq = item.frequency || item.frequencyType || '-';
+          const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
+          const visits = item.visits || item.quantity || 1;
+          return `
+          <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#f5f3ff'};">
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; vertical-align: middle;">
+              <span style="display: inline-block; width: 22px; height: 22px; background: #6366f1; color: #ffffff; border-radius: 50%; font-size: 11px; font-weight: 600; line-height: 22px; text-align: center;">${idx + 1}</span>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #1e1b4b;">${name}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563; font-size: 12px;">${details || '-'}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #6366f1; font-weight: 500;">${freqDisplay}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #1e1b4b;">${visits}</td>
           </tr>
-        `).join('');
+        `;
+        }).join('');
 
         await sendEmailService({
           to: customerDetails.email,
@@ -1348,13 +1358,14 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
                       </tr>
                     </table>
 
-                    <table>
+                    <table style="width: 100%; border-collapse: collapse;">
                       <thead>
-                        <tr>
-                          <th>Description</th>
-                          <th style="text-align: center;">Qty</th>
-                          <th style="text-align: right;">Unit Price</th>
-                          <th style="text-align: right;">Total</th>
+                        <tr style="background: #e0e7ff;">
+                          <th style="padding: 10px; text-align: center; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 40px;">#</th>
+                          <th style="padding: 10px; text-align: left; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 100px;">Service</th>
+                          <th style="padding: 10px; text-align: center; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase;">Description</th>
+                          <th style="padding: 10px; text-align: center; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 80px;">Frequency</th>
+                          <th style="padding: 10px; text-align: right; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 50px;">Visits</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1661,24 +1672,27 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
       WHERE id = ?
     `, [paymentLink, req.user.id, id]);
 
-    // Parse line items for email
+    // Parse line items for email - Table: # | Service | Description | Frequency | Visits (no Amount)
     let lineItemsHtml = '';
     let lineItems = [];
     try {
       lineItems = invoice.line_items ? (typeof invoice.line_items === 'string' ? JSON.parse(invoice.line_items) : invoice.line_items) : [];
       if (lineItems.length > 0) {
-        lineItemsHtml = lineItems.map(item => {
-          // Build full description using details as fallback
+        lineItemsHtml = lineItems.map((item, idx) => {
           const name = item.name || 'Service';
           const details = item.details || '';
-          const desc = item.description || '';
-          const fullDescription = details ? `${name} - ${details}` : (desc || name);
+          const freq = item.frequency || item.frequencyType || item.frequency_type || '-';
+          const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
+          const visits = item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1;
           return `
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #eee;">${fullDescription}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity || item.visits || 1}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₹${(item.unit_price || item.unitPrice || 0).toLocaleString('en-IN')}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₹${(item.total_price || item.totalPrice || 0).toLocaleString('en-IN')}</td>
+          <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#f5f3ff'};">
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; vertical-align: middle;">
+              <span style="display: inline-block; width: 22px; height: 22px; background: #6366f1; color: #ffffff; border-radius: 50%; font-size: 11px; font-weight: 600; line-height: 22px; text-align: center;">${idx + 1}</span>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #1e1b4b;">${name}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563; font-size: 12px;">${details || '-'}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #6366f1; font-weight: 500;">${freqDisplay}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #1e1b4b;">${visits}</td>
           </tr>
         `;
         }).join('');
@@ -1742,13 +1756,14 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
                 </table>
 
                 ${lineItems.length > 0 ? `
-                <table>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
                   <thead>
-                    <tr>
-                      <th>Description</th>
-                      <th style="text-align: center;">Qty</th>
-                      <th style="text-align: right;">Unit Price</th>
-                      <th style="text-align: right;">Total</th>
+                    <tr style="background: #e0e7ff;">
+                      <th style="padding: 10px; text-align: center; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 40px;">#</th>
+                      <th style="padding: 10px; text-align: left; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 100px;">Service</th>
+                      <th style="padding: 10px; text-align: center; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase;">Description</th>
+                      <th style="padding: 10px; text-align: center; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 80px;">Frequency</th>
+                      <th style="padding: 10px; text-align: right; color: #4338ca; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 50px;">Visits</th>
                     </tr>
                   </thead>
                   <tbody>
