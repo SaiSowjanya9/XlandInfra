@@ -246,6 +246,28 @@ router.post('/send-payment-link', authenticate, canManagePayments, paymentLinkLi
       return res.status(400).json({ success: false, message: 'No email address provided' });
     }
 
+    // Generate unique payment token for this invoice
+    const tokenData = generatePaymentToken({
+      invoiceId: invoice.invoice_id,
+      amount: invoice.balance_amount,
+      customerId: invoice.customer_id,
+      propertyId: invoice.property_id
+    });
+    
+    // Store token hash in database for validation
+    const tokenHash = crypto.createHash('sha256').update(tokenData.token).digest('hex');
+    
+    // Update invoice with token hash (token expiry is encoded in the token itself)
+    await pool.execute(`
+      UPDATE invoices SET 
+        payment_token_hash = ?
+      WHERE id = ?
+    `, [tokenHash, invoiceId]);
+
+    // Build custom payment page URL with unique token
+    const frontendUrl = process.env.FRONTEND_URL || 'https://admin.xlandinfra.com';
+    const customPaymentUrl = `${frontendUrl}/pay/${invoice.invoice_id}?token=${encodeURIComponent(tokenData.token)}`;
+
     // Get email template
     const [templates] = await pool.execute(`
       SELECT * FROM payment_email_templates 
@@ -273,7 +295,7 @@ router.post('/send-payment-link', authenticate, canManagePayments, paymentLinkLi
         .replace(/\{\{payment_link\}\}/g, invoice.payment_link)
         .replace(/\{\{property_name\}\}/g, invoice.property_name || 'N/A');
     } else {
-      // Default email body
+      // Default email body with custom payment page link
       emailBody = `
 Dear ${invoice.customer_name || 'Customer'},
 
@@ -284,14 +306,16 @@ Property: ${invoice.property_name || 'N/A'}
 Amount Due: ₹${invoice.balance_amount.toLocaleString('en-IN')}
 Due Date: ${new Date(invoice.due_date).toLocaleDateString('en-IN')}
 
-Click the link below to make a secure payment:
-${invoice.payment_link}
+Click the link below to choose your preferred payment method:
+${customPaymentUrl}
 
 Payment Options Available:
-• UPI (GPay, PhonePe, Paytm, etc.)
-• Credit Card / Debit Card
+• UPI (GPay, PhonePe, Paytm, BHIM)
+• Debit Card / Credit Card
 • Net Banking
-• Digital Wallets
+• Bank Transfer (NEFT/IMPS/RTGS)
+• Cash at Office
+• Cheque
 
 ${customMessage ? `\nMessage: ${customMessage}\n` : ''}
 
@@ -299,6 +323,8 @@ Thank you for your business!
 
 Best regards,
 XLAND INFRA PVT LTD
+
+Note: This payment link is unique and expires in 7 days. Do not share this link with others.
       `.trim();
     }
 
@@ -1167,6 +1193,265 @@ router.post('/verify-qr-token', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to verify token'
+    });
+  }
+});
+
+// ============================================
+// PUBLIC: GET INVOICE DETAILS FOR PAYMENT PAGE
+// No auth required - accessed via token in email link
+// ============================================
+router.get('/public/invoice/:invoiceId', async (req, res) => {
+  try {
+    const { invoiceId } = req.params;
+    const { token } = req.query;
+
+    if (!invoiceId || !token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invoice ID and token are required'
+      });
+    }
+
+    // Verify token hash
+    const crypto = require('crypto');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Get invoice with token verification
+    const [invoices] = await pool.execute(`
+      SELECT 
+        i.id,
+        i.invoice_id,
+        i.property_id,
+        i.property_code,
+        i.property_name,
+        i.customer_name,
+        i.customer_email,
+        i.customer_phone,
+        i.invoice_date,
+        i.due_date,
+        i.subtotal,
+        i.discount_amount,
+        i.tax_amount,
+        i.total_amount,
+        i.balance_amount,
+        i.status,
+        i.payment_link,
+        i.payment_link_status
+      FROM invoices i
+      WHERE i.invoice_id = ? AND i.payment_token_hash = ?
+    `, [invoiceId, tokenHash]);
+
+    if (invoices.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invoice not found or payment link has expired'
+      });
+    }
+
+    const invoice = invoices[0];
+
+    // Check invoice status
+    if (invoice.status === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'This invoice has been cancelled'
+      });
+    }
+
+    // Return invoice data (frontend will handle "paid" status display)
+    res.json({
+      success: true,
+      data: {
+        invoiceId: invoice.invoice_id,
+        propertyCode: invoice.property_code,
+        propertyName: invoice.property_name,
+        customerName: invoice.customer_name,
+        customerEmail: invoice.customer_email,
+        customerPhone: invoice.customer_phone,
+        invoiceDate: invoice.invoice_date,
+        dueDate: invoice.due_date,
+        subtotal: parseFloat(invoice.subtotal) || 0,
+        discountAmount: parseFloat(invoice.discount_amount) || 0,
+        taxAmount: parseFloat(invoice.tax_amount) || 0,
+        totalAmount: parseFloat(invoice.total_amount) || 0,
+        balanceAmount: parseFloat(invoice.balance_amount) || parseFloat(invoice.total_amount) || 0,
+        status: invoice.status, // 'sent', 'partially_paid', 'paid', etc.
+        paymentLink: invoice.payment_link,
+        paymentLinkStatus: invoice.payment_link_status
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching public invoice:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to load invoice details'
+    });
+  }
+});
+
+// ============================================
+// PUBLIC: RECORD PAYMENT INTENT (for non-Razorpay methods)
+// ============================================
+router.post('/public/record-payment-intent', async (req, res) => {
+  try {
+    const { invoiceId, token, paymentMethod } = req.body;
+
+    if (!invoiceId || !token || !paymentMethod) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invoice ID, token, and payment method are required'
+      });
+    }
+
+    // Verify token
+    const crypto = require('crypto');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const [invoices] = await pool.execute(
+      'SELECT id, invoice_id FROM invoices WHERE invoice_id = ? AND payment_token_hash = ?',
+      [invoiceId, tokenHash]
+    );
+
+    if (invoices.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invoice not found or token invalid'
+      });
+    }
+
+    // Log the payment intent
+    console.log(`[Payment Intent] Invoice: ${invoiceId}, Method: ${paymentMethod}, Time: ${new Date().toISOString()}`);
+
+    // You could also create a record in a payment_intents table here
+
+    res.json({
+      success: true,
+      message: `Payment method ${paymentMethod} selected. Please complete the payment and our team will verify it.`,
+      data: {
+        invoiceId,
+        paymentMethod,
+        instructions: paymentMethod === 'bank' 
+          ? 'Please transfer to our bank account and share the transaction reference.'
+          : paymentMethod === 'upi'
+          ? 'Please pay via UPI and share the transaction ID.'
+          : paymentMethod === 'cash'
+          ? 'Please visit our office to make the cash payment.'
+          : 'Please submit the cheque at our office.'
+      }
+    });
+
+  } catch (error) {
+    console.error('Error recording payment intent:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to record payment intent'
+    });
+  }
+});
+
+// ============================================
+// PUBLIC: GET PAYMENT DETAILS BY RAZORPAY PAYMENT ID
+// Used on success page to show receipt
+// ============================================
+router.get('/payment-details/:paymentId', async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+
+    if (!paymentId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment ID is required'
+      });
+    }
+
+    // Find payment in our records
+    const [payments] = await pool.execute(`
+      SELECT 
+        ph.id,
+        ph.invoice_id,
+        ph.amount,
+        ph.payment_method,
+        ph.transaction_id,
+        ph.razorpay_payment_id,
+        ph.status,
+        ph.created_at,
+        i.invoice_id as invoice_number,
+        i.property_name,
+        i.customer_name,
+        i.customer_email,
+        i.total_amount
+      FROM payment_history ph
+      LEFT JOIN invoices i ON ph.invoice_id = i.id
+      WHERE ph.razorpay_payment_id = ? OR ph.transaction_id = ?
+      LIMIT 1
+    `, [paymentId, paymentId]);
+
+    if (payments.length === 0) {
+      // Try to fetch from Razorpay directly if we have API keys
+      if (razorpay) {
+        try {
+          const razorpayPayment = await razorpay.payments.fetch(paymentId);
+          
+          // Find invoice by payment link reference
+          const [invoices] = await pool.execute(`
+            SELECT * FROM invoices 
+            WHERE razorpay_payment_link_id = ?
+            LIMIT 1
+          `, [razorpayPayment.notes?.payment_link_id || '']);
+
+          const invoice = invoices[0] || {};
+
+          return res.json({
+            success: true,
+            data: {
+              paymentId: razorpayPayment.id,
+              amount: razorpayPayment.amount / 100,
+              status: razorpayPayment.status,
+              method: razorpayPayment.method,
+              invoiceId: invoice.invoice_id || razorpayPayment.notes?.invoice_id,
+              propertyName: invoice.property_name,
+              customerName: invoice.customer_name,
+              customerEmail: invoice.customer_email,
+              totalAmount: invoice.total_amount,
+              paidAt: new Date(razorpayPayment.created_at * 1000)
+            }
+          });
+        } catch (razorpayErr) {
+          console.error('Error fetching from Razorpay:', razorpayErr.message);
+        }
+      }
+
+      return res.status(404).json({
+        success: false,
+        message: 'Payment record not found'
+      });
+    }
+
+    const payment = payments[0];
+
+    res.json({
+      success: true,
+      data: {
+        paymentId: payment.razorpay_payment_id || payment.transaction_id,
+        amount: parseFloat(payment.amount) || 0,
+        status: payment.status,
+        method: payment.payment_method,
+        invoiceId: payment.invoice_number,
+        propertyName: payment.property_name,
+        customerName: payment.customer_name,
+        customerEmail: payment.customer_email,
+        totalAmount: parseFloat(payment.total_amount) || 0,
+        paidAt: payment.created_at
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching payment details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch payment details'
     });
   }
 });

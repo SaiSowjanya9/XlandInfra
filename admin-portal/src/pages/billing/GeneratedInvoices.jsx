@@ -26,6 +26,9 @@ import {
   IndianRupee,
   Briefcase,
   Trash2,
+  CreditCard,
+  Link as LinkIcon,
+  Copy,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import * as XLSX from 'xlsx';
@@ -1140,6 +1143,53 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                   </div>
                 </div>
               </div>
+
+              {/* ===== PAYMENT LINK SECTION ===== */}
+              {selectedInvoice.paymentLink && (
+                <div className="p-4 bg-gradient-to-r from-[#c9a227]/10 to-amber-50 rounded-xl border border-[#c9a227]/30 shadow-sm mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <LinkIcon className="w-4 h-4 text-[#c9a227]" />
+                      <p className="text-sm font-semibold text-gray-900">Online Payment</p>
+                    </div>
+                    <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${
+                      selectedInvoice.paymentLinkStatus === 'paid' ? 'bg-green-100 text-green-700' :
+                      selectedInvoice.paymentLinkStatus === 'sent' ? 'bg-amber-100 text-amber-700' :
+                      selectedInvoice.paymentLinkStatus === 'created' ? 'bg-blue-100 text-blue-700' :
+                      selectedInvoice.paymentLinkStatus === 'expired' ? 'bg-red-100 text-red-700' :
+                      'bg-gray-100 text-gray-600'
+                    }`}>
+                      {selectedInvoice.paymentLinkStatus === 'paid' ? 'Paid' :
+                       selectedInvoice.paymentLinkStatus === 'sent' ? 'Link Sent' :
+                       selectedInvoice.paymentLinkStatus === 'created' ? 'Created' :
+                       selectedInvoice.paymentLinkStatus === 'expired' ? 'Expired' :
+                       selectedInvoice.paymentLinkStatus || 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {selectedInvoice.paymentLinkStatus !== 'paid' && selectedInvoice.paymentLinkStatus !== 'expired' && (
+                      <a
+                        href={selectedInvoice.paymentLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-[#c9a227] text-white text-sm font-semibold rounded-lg hover:bg-[#b08a1f] transition-colors"
+                      >
+                        <CreditCard className="w-4 h-4" />
+                        Pay Now
+                      </a>
+                    )}
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(selectedInvoice.paymentLink); }}
+                      className="px-3 py-2 border border-[#c9a227] text-[#c9a227] text-sm font-medium rounded-lg hover:bg-amber-50 transition-colors flex items-center gap-1"
+                      title="Copy Link"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      Copy
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-2 truncate">{selectedInvoice.paymentLink}</p>
+                </div>
+              )}
 
               {/* ===== SERVICES INCLUDED - Image 3 style ===== */}
               {selectedInvoice.invoiceType !== 'work_order' && (() => {

@@ -86,6 +86,8 @@ import QRManagement from './pages/QRManagement';
 import EstimateAction from './pages/EstimateAction';
 import ResetPassword from './pages/ResetPassword';
 import Phase2Documentation from './pages/Phase2Documentation';
+import PublicPayment from './pages/PublicPayment';
+import PaymentSuccess from './pages/PaymentSuccess';
 import EstimatesDashboard from './pages/EstimatesDashboard';
 import WorkOrdersDashboard from './components/WorkOrdersDashboard';
 import BillingPlaceholder from './pages/billing/BillingPlaceholder';
@@ -316,6 +318,12 @@ function App() {
             
             {/* Phase 2 Documentation - Public */}
             <Route path="/phase2-docs" element={<Phase2Documentation />} />
+            
+            {/* Public Payment Page - Accessed via email link */}
+            <Route path="/pay/:invoiceId" element={<PublicPayment />} />
+            
+            {/* Payment Success Page - Razorpay callback */}
+            <Route path="/payment/success" element={<PaymentSuccess />} />
             
             {/* Employee Portal Login - routes to correct portal based on user's role/FP association */}
             <Route path="/employee/login" element={

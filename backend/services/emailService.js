@@ -2280,12 +2280,14 @@ const sendInvoiceEmail = async (invoice) => {
     </tr>`;
   }).join('');
 
-  // Payment link section (if provided)
+  // Payment link section (if provided) - Gold themed
   const paymentSection = paymentLink ? `
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${paymentLink}" style="display: inline-block; background: #059669; color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
+    <div style="text-align: center; margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 1px solid #c9a227;">
+      <p style="color: #92400e; font-size: 14px; margin: 0 0 12px 0;">Click below to pay securely online</p>
+      <a href="${paymentLink}" style="display: inline-block; background: linear-gradient(135deg, #c9a227 0%, #b08a1f 100%); color: #ffffff; text-decoration: none; padding: 14px 50px; border-radius: 8px; font-size: 16px; font-weight: 700; box-shadow: 0 4px 6px rgba(201, 162, 39, 0.3);">
         💳 Pay Now
       </a>
+      <p style="color: #78716c; font-size: 11px; margin: 12px 0 0 0;">Secure payment powered by Razorpay</p>
     </div>
   ` : '';
 
