@@ -448,49 +448,41 @@ const generatePDF = (data, type, filename) => {
       y += cardHeight + 8;
     }
 
-    // ===== WORK ORDER DETAILS (only for work order estimates) =====
+    // ===== WORK ORDER DETAILS (only for work order estimates) - Compact 4-column layout =====
     if (data.isWorkOrderEstimate && data.workOrderId) {
-      // Use same blue card style as Property & Customer Details for consistency
-      const woBoxHeight = 32; // Increased height for better spacing
-      doc.setFillColor(239, 246, 255); // cardBgBlue - same as other cards
-      doc.setDrawColor(229, 231, 235); // borderLight - same as other cards
+      const woBoxHeight = 22;
+      doc.setFillColor(239, 246, 255);
+      doc.setDrawColor(229, 231, 235);
       doc.roundedRect(margin, y, pageWidth - margin * 2, woBoxHeight, 2, 2, 'FD');
       
       doc.setTextColor(...navy);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('Work Order Details', margin + 6, y + 6);
+      doc.text('Work Order Details', margin + 6, y + 5);
       
-      let wy = y + 13;
-      doc.setFontSize(8);
+      // 4-column layout on single row
+      const col1 = margin + 6;
+      const col2 = margin + 55;
+      const col3 = margin + 105;
+      const col4 = margin + 150;
+      const wy = y + 13;
       
-      // Row 1: Work Order ID & Category (using same layout as Property/Customer cards)
-      const leftCol = margin + 6;
-      const midCol = margin + 95;
-      
+      doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
-      doc.text('Work Order ID', leftCol, wy);
-      doc.text('Category', midCol, wy);
-      wy += 5;
+      doc.text('Work Order ID', col1, wy);
+      doc.text('Category', col2, wy);
+      doc.text('Subcategory', col3, wy);
+      doc.text('Priority', col4, wy);
+      
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
-      doc.text(String(data.workOrderId || '-'), leftCol, wy);
-      doc.text(String(data.workOrderCategory || '-'), midCol, wy);
-      wy += 7;
+      doc.text(String(data.workOrderId || '-').substring(0, 18), col1, wy + 5);
+      doc.text(String(data.workOrderCategory || '-').substring(0, 15), col2, wy + 5);
+      doc.text(String(data.workOrderSubcategory || '-').substring(0, 15), col3, wy + 5);
+      doc.text(String(data.workOrderPriority || '-').toUpperCase(), col4, wy + 5);
       
-      // Row 2: Subcategory & Priority
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...lightText);
-      doc.text('Subcategory', leftCol, wy);
-      doc.text('Priority', midCol, wy);
-      wy += 5;
-      doc.setTextColor(...darkText);
-      doc.setFont('helvetica', 'bold');
-      doc.text(String(data.workOrderSubcategory || '-'), leftCol, wy);
-      doc.text(String(data.workOrderPriority || '-').toUpperCase(), midCol, wy);
-      
-      y += woBoxHeight + 10; // Add proper spacing after the box
+      y += woBoxHeight + 8;
     }
 
     // ===== AMC PACKAGE DESCRIPTION =====

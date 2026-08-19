@@ -163,33 +163,28 @@ const generateEstimatePDF = async (estimate) => {
 
       y += 115;
 
-      // Work Order Details (only for work order estimates) - same style as Property & Customer cards
+      // Work Order Details (only for work order estimates) - Compact 4-column layout
       if (isWorkOrderEstimate && workOrderId) {
-        doc.rect(50, y, 500, 60).fill('#e8f4fc').stroke('#cce7f7'); // Same blue as other cards
-        doc.fontSize(10).fillColor(navy).text('Work Order Details', 60, y + 10);
-        doc.fontSize(8).fillColor('#666666');
-        let wy = y + 28;
+        doc.rect(50, y, 500, 40).fill('#e8f4fc').stroke('#cce7f7');
+        doc.fontSize(10).fillColor(navy).text('Work Order Details', 60, y + 8);
         
-        // Row 1: Work Order ID & Category
-        doc.text('Work Order ID:', 60, wy);
-        doc.fillColor('#333333').text(workOrderId, 130, wy);
-        if (workOrderCategory) { 
-          doc.fillColor('#666666').text('Category:', 280, wy); 
-          doc.fillColor('#333333').text(workOrderCategory, 330, wy);
-        }
-        wy += 14;
+        // 4-column layout on single row
+        const col1 = 60, col2 = 175, col3 = 300, col4 = 430;
+        const wy = y + 22;
         
-        // Row 2: Subcategory & Priority
-        doc.fillColor('#666666');
-        if (workOrderSubcategory) { 
-          doc.text('Subcategory:', 60, wy); 
-          doc.fillColor('#333333').text(workOrderSubcategory, 130, wy);
-        }
-        if (workOrderPriority) { 
-          doc.fillColor('#666666').text('Priority:', 280, wy); 
-          doc.fillColor('#333333').text(workOrderPriority.toUpperCase(), 330, wy);
-        }
-        y += 70;
+        doc.fontSize(7).fillColor('#666666');
+        doc.text('Work Order ID', col1, wy);
+        doc.text('Category', col2, wy);
+        doc.text('Subcategory', col3, wy);
+        doc.text('Priority', col4, wy);
+        
+        doc.fontSize(8).fillColor('#333333');
+        doc.text(String(workOrderId || '-').substring(0, 20), col1, wy + 9);
+        doc.text(String(workOrderCategory || '-').substring(0, 18), col2, wy + 9);
+        doc.text(String(workOrderSubcategory || '-').substring(0, 18), col3, wy + 9);
+        doc.text(String(workOrderPriority || '-').toUpperCase(), col4, wy + 9);
+        
+        y += 48;
       }
 
       // Package Description - dynamic height based on content
