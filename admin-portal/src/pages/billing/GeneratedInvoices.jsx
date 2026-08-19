@@ -1069,10 +1069,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
               <div className="grid grid-cols-2 gap-4 mb-6">
                 {/* FROM: Company Details */}
                 <div className="bg-white rounded-xl border-2 border-[#c9a227]/30 overflow-hidden shadow-sm">
-                  <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#c9a227] to-[#d4b445]">
-                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">X</span>
-                    </div>
+                  <div className="px-4 py-2.5 bg-gradient-to-r from-[#c9a227] to-[#d4b445]">
                     <p className="text-white text-xs font-semibold uppercase tracking-wider">From</p>
                   </div>
                   <div className="px-4 py-3">
@@ -1088,10 +1085,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                 </div>
                 {/* BILL TO: Customer Details */}
                 <div className="bg-white rounded-xl border-2 border-[#c9a227]/30 overflow-hidden shadow-sm">
-                  <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#c9a227] to-[#d4b445]">
-                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                      <span className="text-white text-xs">👤</span>
-                    </div>
+                  <div className="px-4 py-2.5 bg-gradient-to-r from-[#c9a227] to-[#d4b445]">
                     <p className="text-white text-xs font-semibold uppercase tracking-wider">Bill To</p>
                   </div>
                   <div className="px-4 py-3">
