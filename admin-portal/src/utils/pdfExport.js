@@ -8,27 +8,41 @@ const isDev = import.meta.env.DEV;
 const debug = (...args) => isDev && console.log(...args);
 
 // Decode HTML entities (e.g., &amp; -> &, &#x2F; -> /)
+// Runs multiple times to handle multiple levels of encoding (e.g., &amp;amp;amp; -> &)
 const decodeHtml = (html) => {
   if (!html || typeof html !== 'string') return html || '';
-  // Use a more comprehensive decoding for Node/browser environments
-  const entities = {
-    '&amp;': '&',
-    '&lt;': '<',
-    '&gt;': '>',
-    '&quot;': '"',
-    '&#39;': "'",
-    '&#x27;': "'",
-    '&#x2F;': '/',
-    '&nbsp;': ' ',
-    '&#x26;': '&'
+  
+  const decodeOnce = (str) => {
+    const entities = {
+      '&amp;': '&',
+      '&lt;': '<',
+      '&gt;': '>',
+      '&quot;': '"',
+      '&#39;': "'",
+      '&#x27;': "'",
+      '&#x2F;': '/',
+      '&nbsp;': ' ',
+      '&#x26;': '&'
+    };
+    let decoded = str;
+    for (const [entity, char] of Object.entries(entities)) {
+      decoded = decoded.replace(new RegExp(entity, 'gi'), char);
+    }
+    // Handle numeric entities
+    decoded = decoded.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
+    decoded = decoded.replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    return decoded;
   };
+  
+  // Decode multiple times to handle nested encoding (max 5 iterations)
   let decoded = html;
-  for (const [entity, char] of Object.entries(entities)) {
-    decoded = decoded.replace(new RegExp(entity, 'gi'), char);
+  let prev = '';
+  let iterations = 0;
+  while (decoded !== prev && iterations < 5) {
+    prev = decoded;
+    decoded = decodeOnce(decoded);
+    iterations++;
   }
-  // Handle numeric entities
-  decoded = decoded.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
-  decoded = decoded.replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
   return decoded;
 };
 
@@ -115,54 +129,50 @@ const generatePDF = (data, type, filename) => {
     const borderLight = [229, 231, 235];     // Gray-200
     const gold = [180, 144, 52];             // Professional gold
 
-    // ===== HEADER with Dark Background =====
-    const headerHeight = 24;
-    doc.setFillColor(20, 20, 20); // Near black
+    // ===== HEADER - Black with decorative PVT LTD =====
+    const headerHeight = 45;
+    
+    // Black header background
+    doc.setFillColor(26, 26, 26); // #1a1a1a
     doc.rect(0, 0, pageWidth, headerHeight, 'F');
     
-    // Logo Icon (symbol only - left side)
-    const logoSize = 18;
+    // Logo on left
+    const logoSize = 32;
     try {
-      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin, 3, logoSize, logoSize);
+      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin, 6, logoSize, logoSize);
     } catch (e) {
-      // Fallback to gold square
       doc.setFillColor(...gold);
-      doc.roundedRect(margin, 4, 16, 16, 2, 2, 'F');
+      doc.roundedRect(margin, 6, 32, 32, 3, 3, 'F');
     }
     
-    // Company Name text beside logo (vertically centered with logo)
-    const textX = margin + logoSize + 4;
+    // Company name - "XLAND INFRA" in gold
+    const textX = margin + logoSize + 8;
     doc.setTextColor(...gold);
-    doc.setFontSize(11);
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', textX, 12);
-    const mainTextWidth = doc.getTextWidth('XLAND INFRA');
-    doc.setFontSize(5);
-    doc.setFont('helvetica', 'normal');
+    doc.text('XLAND INFRA', textX, 20);
+    
+    // "PVT LTD" with decorative lines on both sides
+    const pvtLtdY = 30;
     const pvtLtdText = 'PVT LTD';
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
     const pvtLtdWidth = doc.getTextWidth(pvtLtdText);
-    const pvtLtdX = textX + (mainTextWidth - pvtLtdWidth) / 2;
-    doc.text(pvtLtdText, pvtLtdX, 17);
-    // Draw equal-length lines on both sides
-    const lineY = 16;
-    const lineGap = 1.5;
+    const lineLength = 18;
+    const lineGap = 4;
+    
+    // Left decorative line
     doc.setDrawColor(...gold);
-    doc.setLineWidth(0.2);
-    doc.line(textX, lineY, pvtLtdX - lineGap, lineY); // Left line
-    doc.line(pvtLtdX + pvtLtdWidth + lineGap, lineY, textX + mainTextWidth, lineY); // Right line
-
-    // Document Badge (right side)
-    const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
-    const badgeWidth = 38;
-    const badgeHeight = 10;
-    const badgeX = pageWidth - margin - badgeWidth;
-    const badgeY = 7;
-    doc.setFillColor(...gold);
-    doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 1.5, 1.5, 'F');
-    doc.setTextColor(20, 20, 20);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.text(docType, badgeX + badgeWidth/2, badgeY + badgeHeight/2 + 1, { align: 'center' });
+    doc.setLineWidth(0.5);
+    doc.line(textX, pvtLtdY - 2, textX + lineLength, pvtLtdY - 2);
+    
+    // PVT LTD text
+    doc.setTextColor(...gold);
+    doc.text(pvtLtdText, textX + lineLength + lineGap, pvtLtdY);
+    
+    // Right decorative line
+    doc.line(textX + lineLength + lineGap + pvtLtdWidth + lineGap, pvtLtdY - 2, 
+             textX + lineLength + lineGap + pvtLtdWidth + lineGap + lineLength, pvtLtdY - 2);
 
     y = headerHeight + 8;
 
@@ -1027,37 +1037,50 @@ export const exportInvoiceToPDF = (invoice) => {
     const green = [34, 197, 94];
     const red = [239, 68, 68];
 
-    // Header
-    const headerHeight = 24;
-    doc.setFillColor(20, 20, 20);
+    // Header - Black with decorative PVT LTD (no gold stripe)
+    const headerHeight = 45;
+    
+    // Black header background
+    doc.setFillColor(26, 26, 26); // #1a1a1a
     doc.rect(0, 0, pageWidth, headerHeight, 'F');
     
-    const logoSize = 18;
+    // Logo on left
+    const logoSize = 32;
     try {
-      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin, 3, logoSize, logoSize);
+      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin, 6, logoSize, logoSize);
     } catch (e) {
       doc.setFillColor(...gold);
-      doc.roundedRect(margin, 4, 16, 16, 2, 2, 'F');
+      doc.roundedRect(margin, 6, 32, 32, 3, 3, 'F');
     }
     
-    const textX = margin + logoSize + 4;
+    // Company name - "XLAND INFRA" in gold
+    const textX = margin + logoSize + 8;
     doc.setTextColor(...gold);
-    doc.setFontSize(11);
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', textX, 12);
-    doc.setFontSize(5);
+    doc.text('XLAND INFRA', textX, 20);
+    
+    // "PVT LTD" with decorative lines on both sides
+    const pvtLtdY = 30;
+    const pvtLtdText = 'PVT LTD';
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
-    doc.text('PVT LTD', textX + 8, 17);
-
-    // INVOICE Badge
-    const badgeWidth = 38;
-    const badgeX = pageWidth - margin - badgeWidth;
-    doc.setFillColor(...gold);
-    doc.roundedRect(badgeX, 7, badgeWidth, 10, 1.5, 1.5, 'F');
-    doc.setTextColor(20, 20, 20);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.text('INVOICE', badgeX + badgeWidth/2, 13.5, { align: 'center' });
+    const pvtLtdWidth = doc.getTextWidth(pvtLtdText);
+    const lineLength = 18;
+    const lineGap = 4;
+    
+    // Left decorative line
+    doc.setDrawColor(...gold);
+    doc.setLineWidth(0.5);
+    doc.line(textX, pvtLtdY - 2, textX + lineLength, pvtLtdY - 2);
+    
+    // PVT LTD text
+    doc.setTextColor(...gold);
+    doc.text(pvtLtdText, textX + lineLength + lineGap, pvtLtdY);
+    
+    // Right decorative line
+    doc.line(textX + lineLength + lineGap + pvtLtdWidth + lineGap, pvtLtdY - 2, 
+             textX + lineLength + lineGap + pvtLtdWidth + lineGap + lineLength, pvtLtdY - 2);
 
     y = headerHeight + 8;
 
@@ -1168,11 +1191,15 @@ export const exportInvoiceToPDF = (invoice) => {
     const services = allItems
       .filter(item => !isAddon(item))
       .map(item => {
-        const fullDesc = String(item.description || item.name || 'Service');
+        // Use 'details' field first (full description from backend enrichment)
+        // Then fallback to parsing description
+        const itemName = decodeHtml(item.name || '');
+        const itemDetails = decodeHtml(item.details || '');
+        const fullDesc = decodeHtml(String(item.description || item.name || 'Service'));
         const parts = fullDesc.split(' - ');
         return {
-          name: parts[0] || 'Service',
-          description: parts.slice(1).join(' - ') || '-',
+          name: itemName || parts[0] || 'Service',
+          description: itemDetails || parts.slice(1).join(' - ') || '-',
           frequency: item.frequency || item.frequencyType || item.frequency_type || '-',
           visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
         };
@@ -1182,11 +1209,14 @@ export const exportInvoiceToPDF = (invoice) => {
     const addons = allItems
       .filter(item => isAddon(item))
       .map(item => {
-        const fullDesc = String(item.description || item.name || 'Add-on');
+        // Use 'details' field first (full description from backend enrichment)
+        const itemName = decodeHtml(item.name || '');
+        const itemDetails = decodeHtml(item.details || '');
+        const fullDesc = decodeHtml(String(item.description || item.name || 'Add-on'));
         const parts = fullDesc.split(' - ');
         return {
-          name: parts[0] || 'Add-on',
-          description: parts.slice(1).join(' - ') || '-',
+          name: itemName || parts[0] || 'Add-on',
+          description: itemDetails || parts.slice(1).join(' - ') || '-',
           frequency: item.frequency || item.frequencyType || item.frequency_type || '-',
           visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
         };
@@ -1208,8 +1238,8 @@ export const exportInvoiceToPDF = (invoice) => {
         head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
         body: services.map((item, idx) => [
           String(idx + 1),
-          String(item.name).substring(0, 40),
-          String(item.description) || '-',
+          decodeHtml(String(item.name)).substring(0, 40),
+          decodeHtml(String(item.description)) || '-',
           String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1),
           String(item.visits)
         ]),
@@ -1241,8 +1271,8 @@ export const exportInvoiceToPDF = (invoice) => {
         head: [['#', 'Add-on Service', 'Description', 'Frequency', 'Visits']],
         body: addons.map((item, idx) => [
           String(idx + 1),
-          String(item.name).substring(0, 40),
-          String(item.description) || '-',
+          decodeHtml(String(item.name)).substring(0, 40),
+          decodeHtml(String(item.description)) || '-',
           String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1),
           String(item.visits)
         ]),
