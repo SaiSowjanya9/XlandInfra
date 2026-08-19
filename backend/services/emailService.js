@@ -994,18 +994,31 @@ const sendEstimateEmail = async (estimate, actionToken) => {
     `;
   }
 
-  // Build Work Order section HTML (only for work order estimates) - same blue style as Property Details
+  // Build Work Order section HTML (only for work order estimates) - Compact 4-column layout
   let workOrderHtml = '';
   if (isWorkOrderEstimate && workOrderId) {
     workOrderHtml = `
-      <div style="background: #eff6ff; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
-        <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Work Order Details</h3>
+      <div style="background: #eff6ff; border-radius: 8px; padding: 12px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+        <h3 style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Work Order Details</h3>
         <table style="width: 100%;">
-          <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Work Order ID:</td><td style="padding: 6px 0; padding-left: 15px; color: #1e40af; font-weight: 600;">${workOrderId}</td></tr>
-          ${workOrderCategory ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Category:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937; font-weight: 500;">${workOrderCategory}</td></tr>` : ''}
-          ${workOrderSubcategory ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Subcategory:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${workOrderSubcategory}</td></tr>` : ''}
-          ${workOrderPriority ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Priority:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937; font-weight: 500;">${workOrderPriority.toUpperCase()}</td></tr>` : ''}
-          ${workOrderDescription ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Description:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${workOrderDescription}</td></tr>` : ''}
+          <tr>
+            <td style="width: 25%; vertical-align: top;">
+              <p style="margin: 0; color: #6b7280; font-size: 11px;">Work Order ID</p>
+              <p style="margin: 2px 0 0 0; color: #1e40af; font-size: 13px; font-weight: 600;">${workOrderId}</p>
+            </td>
+            <td style="width: 25%; vertical-align: top;">
+              <p style="margin: 0; color: #6b7280; font-size: 11px;">Category</p>
+              <p style="margin: 2px 0 0 0; color: #1f2937; font-size: 13px; font-weight: 500;">${workOrderCategory || '-'}</p>
+            </td>
+            <td style="width: 25%; vertical-align: top;">
+              <p style="margin: 0; color: #6b7280; font-size: 11px;">Subcategory</p>
+              <p style="margin: 2px 0 0 0; color: #1f2937; font-size: 13px;">${workOrderSubcategory || '-'}</p>
+            </td>
+            <td style="width: 25%; vertical-align: top;">
+              <p style="margin: 0; color: #6b7280; font-size: 11px;">Priority</p>
+              <p style="margin: 2px 0 0 0; color: #1f2937; font-size: 13px; font-weight: 500;">${workOrderPriority ? workOrderPriority.toUpperCase() : '-'}</p>
+            </td>
+          </tr>
         </table>
       </div>
     `;
