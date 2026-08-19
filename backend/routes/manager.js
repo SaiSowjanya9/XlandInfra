@@ -178,23 +178,28 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
     // Get employee ID and creator email for zone lookup
     const employeeId = await getEmployeeIdForZoneLookup(req, 'manager');
     const creatorEmail = getCreatorIdentifier(req);
-    const assignedZones = await getAssignedZones(employeeId, creatorEmail);
+    const rawZones = await getAssignedZones(employeeId, creatorEmail);
     
-    console.log('[Manager Dashboard] managerId:', managerId, 'fpId:', franchisePartnerId, 'assignedZones:', assignedZones);
+    // Check if employee has unrestricted access (__ALL__ marker)
+    const hasUnrestrictedAccess = rawZones.includes('__ALL__');
+    const assignedZones = hasUnrestrictedAccess ? [] : rawZones;
+    const hasZones = assignedZones.length > 0 && !hasUnrestrictedAccess;
+    
+    console.log('[Manager Dashboard] managerId:', managerId, 'fpId:', franchisePartnerId, 'assignedZones:', assignedZones, 'unrestricted:', hasUnrestrictedAccess);
 
-    // Build zone filter clause for properties
+    // Build zone filter clause for properties (skip if unrestricted)
     let zoneClause = '';
     let zoneParams = [];
-    if (assignedZones.length > 0) {
+    if (hasZones) {
       const placeholders = assignedZones.map(() => '?').join(',');
       zoneClause = ` AND (p.zone_id IN (${placeholders}) OR p.zone_id IN (SELECT name FROM zones WHERE id IN (${placeholders})))`;
       zoneParams = [...assignedZones, ...assignedZones];
     }
 
-    // Build zone filter for onboarded properties
+    // Build zone filter for onboarded properties (skip if unrestricted)
     let onbZoneClause = '';
     let onbZoneParams = [];
-    if (assignedZones.length > 0) {
+    if (hasZones) {
       const placeholders = assignedZones.map(() => '?').join(',');
       onbZoneClause = ` AND (op.zone IN (${placeholders}) OR op.zone IN (SELECT name FROM zones WHERE id IN (${placeholders})))`;
       onbZoneParams = [...assignedZones, ...assignedZones];
@@ -239,7 +244,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
       ),
       
       // Vendors count - Zone-filtered via property association
-      assignedZones.length > 0 ? safeCount(
+      hasZones ? safeCount(
         `SELECT COUNT(DISTINCT ov.id) as count FROM onboarded_vendors ov
          LEFT JOIN property_vendor_assignments pva ON ov.id = pva.vendor_id
          LEFT JOIN properties p ON pva.property_id = p.id
@@ -253,7 +258,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
       ),
       
       // Customers count - Zone-filtered via property
-      assignedZones.length > 0 ? safeCount(
+      hasZones ? safeCount(
         `SELECT COUNT(DISTINCT c.id) as count FROM clients c
          LEFT JOIN properties p ON c.property_id = p.id
          LEFT JOIN onboarded_properties op ON c.property_id = op.id
@@ -289,7 +294,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
           WHERE wo.franchise_partner_id = ?`;
         let woParams = [franchisePartnerId];
         
-        if (assignedZones.length > 0) {
+        if (hasZones) {
           woQuery += ` AND (p.zone_id IN (${assignedZones.map(() => '?').join(',')}) OR op.zone IN (${assignedZones.map(() => '?').join(',')}))`;
           woParams = [...woParams, ...assignedZones, ...assignedZones];
         }
@@ -321,7 +326,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
            AND (fe.is_archived = 0 OR fe.is_archived IS NULL) AND fe.status NOT IN ('archived', 'rejected', 'deleted')
            AND fe.estimate_type = 'direct'`;
         let estParams = [franchisePartnerId];
-        if (assignedZones.length > 0) {
+        if (hasZones) {
           estQuery += ` AND (fe.zone IN (${assignedZones.map(() => '?').join(',')}) OR p.zone_id IN (${assignedZones.map(() => '?').join(',')}) OR op.zone IN (${assignedZones.map(() => '?').join(',')}))`;
           estParams = [...estParams, ...assignedZones, ...assignedZones, ...assignedZones];
         }
@@ -337,7 +342,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
            AND (fe.is_archived = 0 OR fe.is_archived IS NULL) AND fe.status NOT IN ('archived', 'rejected', 'deleted')
            AND (fe.estimate_type = 'property_based' OR fe.estimate_type = 'property-based')`;
         let estParams = [franchisePartnerId];
-        if (assignedZones.length > 0) {
+        if (hasZones) {
           estQuery += ` AND (fe.zone IN (${assignedZones.map(() => '?').join(',')}) OR p.zone_id IN (${assignedZones.map(() => '?').join(',')}) OR op.zone IN (${assignedZones.map(() => '?').join(',')}))`;
           estParams = [...estParams, ...assignedZones, ...assignedZones, ...assignedZones];
         }
@@ -363,7 +368,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
         LEFT JOIN onboarded_properties op ON fe.property_id = op.id
         WHERE fe.franchise_partner_id = ? AND (fe.is_archived = 0 OR fe.is_archived IS NULL) AND fe.status NOT IN ('archived', 'rejected', 'deleted')`;
         let estParams = [franchisePartnerId];
-        if (assignedZones.length > 0) {
+        if (hasZones) {
           estQuery += ` AND (fe.zone IN (${assignedZones.map(() => '?').join(',')}) OR p.zone_id IN (${assignedZones.map(() => '?').join(',')}) OR op.zone IN (${assignedZones.map(() => '?').join(',')}))`;
           estParams = [...estParams, ...assignedZones, ...assignedZones, ...assignedZones];
         }
@@ -395,7 +400,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
         LEFT JOIN onboarded_properties op ON fe.property_id = op.id
         WHERE fe.franchise_partner_id = ? AND (fe.is_archived = 0 OR fe.is_archived IS NULL)`;
         let estParams = [franchisePartnerId];
-        if (assignedZones.length > 0) {
+        if (hasZones) {
           estQuery += ` AND (fe.zone IN (${assignedZones.map(() => '?').join(',')}) OR p.zone_id IN (${assignedZones.map(() => '?').join(',')}) OR op.zone IN (${assignedZones.map(() => '?').join(',')}))`;
           estParams = [...estParams, ...assignedZones, ...assignedZones, ...assignedZones];
         }
@@ -431,7 +436,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
          LEFT JOIN users pma ON wo.created_by = pma.id OR wo.created_by = pma.email
          WHERE wo.franchise_partner_id = ?`;
         let woParams = [franchisePartnerId];
-        if (assignedZones.length > 0) {
+        if (hasZones) {
           woQuery += ` AND (p.zone_id IN (${assignedZones.map(() => '?').join(',')}) OR op.zone IN (${assignedZones.map(() => '?').join(',')}))`;
           woParams = [...woParams, ...assignedZones, ...assignedZones];
         }
@@ -448,7 +453,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
 
     // Get zone names for display
     let zoneNames = [];
-    if (assignedZones.length > 0) {
+    if (hasZones) {
       try {
         const [zones] = await pool.execute(
           `SELECT id, name FROM zones WHERE id IN (${assignedZones.map(() => '?').join(',')})`,
@@ -486,7 +491,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
         },
         recentWorkOrders,
         assignedZones: zoneNames,
-        isZoneFiltered: assignedZones.length > 0
+        isZoneFiltered: hasZones
       }
     });
   } catch (error) {
