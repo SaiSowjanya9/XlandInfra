@@ -1622,14 +1622,21 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
     try {
       lineItems = invoice.line_items ? (typeof invoice.line_items === 'string' ? JSON.parse(invoice.line_items) : invoice.line_items) : [];
       if (lineItems.length > 0) {
-        lineItemsHtml = lineItems.map(item => `
+        lineItemsHtml = lineItems.map(item => {
+          // Build full description using details as fallback
+          const name = item.name || 'Service';
+          const details = item.details || '';
+          const desc = item.description || '';
+          const fullDescription = details ? `${name} - ${details}` : (desc || name);
+          return `
           <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.description || item.name || 'Service'}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity || 1}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">${fullDescription}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity || item.visits || 1}</td>
             <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₹${(item.unit_price || item.unitPrice || 0).toLocaleString('en-IN')}</td>
             <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₹${(item.total_price || item.totalPrice || 0).toLocaleString('en-IN')}</td>
           </tr>
-        `).join('');
+        `;
+        }).join('');
       }
     } catch (e) {
       console.log('Error parsing line items:', e);

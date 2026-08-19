@@ -1028,7 +1028,6 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                   </div>
                 </div>
                 <div className="text-right flex items-center gap-3">
-                  <span className="inline-block bg-amber-500 text-gray-900 px-4 py-2 rounded font-bold tracking-wider">INVOICE</span>
                   <button onClick={() => { setShowDetailPanel(false); setSelectedInvoice(null); }} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
                     <X className="w-5 h-5 text-gray-400" />
                   </button>
@@ -1130,9 +1129,11 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                 const services = allItems.filter(item => !isAddon(item)).map(item => {
                   const fullDesc = decodeHtmlEntities(String(item.description || item.name || 'Service'));
                   const parts = fullDesc.split(' - ');
+                  // Use item.details as fallback for full description (backend stores it separately)
+                  const descFromDetails = decodeHtmlEntities(item.details || '');
                   return {
-                    name: decodeHtmlEntities(parts[0] || 'Service'),
-                    description: decodeHtmlEntities(parts.slice(1).join(' - ') || ''),
+                    name: decodeHtmlEntities(parts[0] || item.name || 'Service'),
+                    description: descFromDetails || decodeHtmlEntities(parts.slice(1).join(' - ') || ''),
                     frequency: getFrequency(item),
                     visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1,
                     price: item.totalPrice || item.total_price || item.unitPrice || item.unit_price || item.price || 0
@@ -1142,9 +1143,11 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                 const addons = allItems.filter(item => isAddon(item)).map(item => {
                   const fullDesc = decodeHtmlEntities(String(item.description || item.name || 'Add-on'));
                   const parts = fullDesc.split(' - ');
+                  // Use item.details as fallback for full description (backend stores it separately)
+                  const descFromDetails = decodeHtmlEntities(item.details || '');
                   return {
-                    name: decodeHtmlEntities(parts[0] || 'Add-on'),
-                    description: decodeHtmlEntities(parts.slice(1).join(' - ') || ''),
+                    name: decodeHtmlEntities(parts[0] || item.name || 'Add-on'),
+                    description: descFromDetails || decodeHtmlEntities(parts.slice(1).join(' - ') || ''),
                     frequency: getFrequency(item),
                     visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1,
                     price: item.totalPrice || item.total_price || item.unitPrice || item.unit_price || item.price || 0
@@ -1165,25 +1168,25 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                           <div className="divide-y divide-[#c9a227]/20">
                             {services.map((item, idx) => (
                               <div key={idx} className={`px-4 py-3 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#c9a227]/5'}`}>
-                                <div className="flex justify-between items-start gap-4">
-                                  <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start gap-3">
+                                  <div className="flex-1 min-w-0 max-w-[55%]">
                                     <p className="text-sm font-semibold text-gray-800">{item.name}</p>
                                     {item.description && (
-                                      <p className="text-xs text-gray-500 mt-1 leading-relaxed whitespace-normal break-words">{item.description}</p>
+                                      <p className="text-xs text-gray-500 mt-1 leading-relaxed break-words">{item.description}</p>
                                     )}
                                   </div>
-                                  <div className="flex items-center gap-4 flex-shrink-0 text-sm">
-                                    <div className="text-center w-20">
+                                  <div className="flex items-center gap-3 flex-shrink-0 text-sm">
+                                    <div className="text-center w-[70px]">
                                       <p className="text-[10px] text-gray-400 uppercase">Frequency</p>
-                                      <p className="text-gray-600">{item.frequency}</p>
+                                      <p className="text-gray-600 text-xs">{item.frequency}</p>
                                     </div>
-                                    <div className="text-center w-12">
+                                    <div className="text-center w-10">
                                       <p className="text-[10px] text-gray-400 uppercase">Visits</p>
-                                      <p className="text-gray-600">{item.visits}</p>
+                                      <p className="text-gray-600 text-xs">{item.visits}</p>
                                     </div>
-                                    <div className="text-right w-20">
+                                    <div className="text-right w-[70px]">
                                       <p className="text-[10px] text-gray-400 uppercase">Amount</p>
-                                      <p className="font-semibold text-[#c9a227]">{formatCurrency(item.price)}</p>
+                                      <p className="font-semibold text-[#c9a227] text-xs">{formatCurrency(item.price)}</p>
                                     </div>
                                   </div>
                                 </div>
@@ -1206,25 +1209,25 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                           <div className="divide-y divide-[#d4b445]/20">
                             {addons.map((item, idx) => (
                               <div key={idx} className={`px-4 py-3 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#d4b445]/5'}`}>
-                                <div className="flex justify-between items-start gap-4">
-                                  <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start gap-3">
+                                  <div className="flex-1 min-w-0 max-w-[55%]">
                                     <p className="text-sm font-semibold text-gray-800">{item.name}</p>
                                     {item.description && (
-                                      <p className="text-xs text-gray-500 mt-1 leading-relaxed whitespace-normal break-words">{item.description}</p>
+                                      <p className="text-xs text-gray-500 mt-1 leading-relaxed break-words">{item.description}</p>
                                     )}
                                   </div>
-                                  <div className="flex items-center gap-4 flex-shrink-0 text-sm">
-                                    <div className="text-center w-20">
+                                  <div className="flex items-center gap-3 flex-shrink-0 text-sm">
+                                    <div className="text-center w-[70px]">
                                       <p className="text-[10px] text-gray-400 uppercase">Frequency</p>
-                                      <p className="text-gray-600">{item.frequency}</p>
+                                      <p className="text-gray-600 text-xs">{item.frequency}</p>
                                     </div>
-                                    <div className="text-center w-12">
+                                    <div className="text-center w-10">
                                       <p className="text-[10px] text-gray-400 uppercase">Visits</p>
-                                      <p className="text-gray-600">{item.visits}</p>
+                                      <p className="text-gray-600 text-xs">{item.visits}</p>
                                     </div>
-                                    <div className="text-right w-20">
+                                    <div className="text-right w-[70px]">
                                       <p className="text-[10px] text-gray-400 uppercase">Amount</p>
-                                      <p className="font-semibold text-[#c9a227]">{formatCurrency(item.price)}</p>
+                                      <p className="font-semibold text-[#c9a227] text-xs">{formatCurrency(item.price)}</p>
                                     </div>
                                   </div>
                                 </div>
