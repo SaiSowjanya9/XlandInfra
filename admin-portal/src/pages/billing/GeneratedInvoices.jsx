@@ -920,8 +920,23 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
     }
   };
 
-  const handleView = (invoice) => {
-    setSelectedInvoice(invoice);
+  const handleView = async (invoice) => {
+    // Fetch full invoice details with enriched descriptions
+    try {
+      const response = await fetch(`${API_BASE}/api/payments/invoices/${invoice.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success && result.data) {
+        setSelectedInvoice(result.data);
+      } else {
+        // Fallback to list data
+        setSelectedInvoice(invoice);
+      }
+    } catch (err) {
+      console.error('Error fetching invoice details:', err);
+      setSelectedInvoice(invoice);
+    }
     setShowDetailPanel(true);
   };
 
@@ -1156,24 +1171,24 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
 
                 return (
                   <>
-                    {/* AMC Services - Table Layout */}
+                    {/* AMC Services - Table Layout with Gold Theme */}
                     {services.length > 0 && (
                       <div className="mb-6">
-                        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+                        <div className="bg-white rounded-lg border border-[#c9a227]/30 overflow-hidden shadow-sm">
                           {/* Table Header */}
-                          <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-indigo-50 border-b border-gray-200">
-                            <div className="col-span-1 text-xs font-semibold text-indigo-600 text-center">#</div>
-                            <div className="col-span-2 text-xs font-semibold text-indigo-600">Service</div>
-                            <div className="col-span-5 text-xs font-semibold text-indigo-600 text-center">Description</div>
-                            <div className="col-span-2 text-xs font-semibold text-indigo-600 text-center">Frequency</div>
-                            <div className="col-span-2 text-xs font-semibold text-indigo-600 text-right">Visits</div>
+                          <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-[#c9a227]/10 border-b border-[#c9a227]/20">
+                            <div className="col-span-1 text-xs font-semibold text-[#c9a227] text-center">#</div>
+                            <div className="col-span-2 text-xs font-semibold text-[#c9a227]">Service</div>
+                            <div className="col-span-5 text-xs font-semibold text-[#c9a227] text-center">Description</div>
+                            <div className="col-span-2 text-xs font-semibold text-[#c9a227] text-center">Frequency</div>
+                            <div className="col-span-2 text-xs font-semibold text-[#c9a227] text-right">Visits</div>
                           </div>
                           {/* Table Body */}
-                          <div className="divide-y divide-gray-100">
+                          <div className="divide-y divide-[#c9a227]/10">
                             {services.map((item, idx) => (
-                              <div key={idx} className={`grid grid-cols-12 gap-2 px-4 py-4 items-center ${idx % 2 === 0 ? 'bg-white' : 'bg-indigo-50/30'}`}>
+                              <div key={idx} className={`grid grid-cols-12 gap-2 px-4 py-4 items-center ${idx % 2 === 0 ? 'bg-white' : 'bg-[#c9a227]/5'}`}>
                                 <div className="col-span-1 flex justify-center">
-                                  <span className="w-6 h-6 bg-indigo-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
+                                  <span className="w-6 h-6 bg-[#c9a227] text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                                 </div>
                                 <div className="col-span-2">
                                   <p className="text-sm font-semibold text-gray-800">{item.name}</p>
@@ -1182,7 +1197,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                                   <p className="text-xs text-gray-600 leading-relaxed">{item.description || '-'}</p>
                                 </div>
                                 <div className="col-span-2 text-center">
-                                  <p className="text-sm text-indigo-600 font-medium">{item.frequency}</p>
+                                  <p className="text-sm text-[#c9a227] font-medium">{item.frequency}</p>
                                 </div>
                                 <div className="col-span-2 text-right">
                                   <p className="text-sm font-semibold text-gray-800">{item.visits}</p>
