@@ -1,0 +1,36 @@
+# robots.txt for admin.xlandinfra.com
+# Block all web crawlers from indexing admin portal
+
+User-agent: *
+Disallow: /
+
+# Block specific crawlers explicitly
+User-agent: Googlebot
+Disallow: /
+
+User-agent: Bingbot
+Disallow: /
+
+User-agent: Yahoo! Slurp
+Disallow: /
+
+User-agent: DuckDuckBot
+Disallow: /
+
+User-agent: Baiduspider
+Disallow: /
+
+User-agent: YandexBot
+Disallow: /
+
+User-agent: facebookexternalhit
+Disallow: /
+
+User-agent: Twitterbot
+Disallow: /
+
+User-agent: LinkedInBot
+Disallow: /
+
+# No sitemap for admin portal
+# Sitemap: none
