@@ -1112,29 +1112,31 @@ const sendEstimateEmail = async (estimate, actionToken) => {
               </table>
             </div>
             
-            <!-- Price Summary -->
-            <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb;">
-              <h3 style="margin: 0 0 15px 0; color: #374151; font-size: 14px; font-weight: 600;">Price Summary</h3>
+            <!-- Price Summary - Gold Theme -->
+            <div style="background: #fffbeb; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #fde68a;">
+              <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+                <div style="height: 1px; width: 40px; background: #c9a227;"></div>
+                <span style="margin: 0 10px; color: #c9a227; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">💰 Price Summary</span>
+                <div style="height: 1px; width: 40px; background: #c9a227;"></div>
+              </div>
               <table style="width: 100%;">
                 <tr>
-                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Subtotal:</td>
-                  <td style="padding: 8px 0; text-align: right; color: #1f2937; font-weight: 500;">₹ ${Math.round(Number(subtotal || 0)).toLocaleString()}</td>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Subtotal</td>
+                  <td style="padding: 8px 0; text-align: right; color: #1f2937; font-weight: 500;">₹${Math.round(Number(subtotal || 0)).toLocaleString()}</td>
                 </tr>
                 ${discount > 0 ? `<tr>
-                  <td style="padding: 8px 0; color: #059669; font-size: 14px;">Discount (${Math.round(discount)}%):</td>
-                  <td style="padding: 8px 0; text-align: right; color: #059669; font-weight: 500;">- ₹ ${Math.round(Number(estimate.discountAmount || 0)).toLocaleString()}</td>
+                  <td style="padding: 8px 0; color: #059669; font-size: 14px;">Discount (${Math.round(discount)}%)</td>
+                  <td style="padding: 8px 0; text-align: right; color: #059669; font-weight: 500;">-₹${Math.round(Number(estimate.discountAmount || 0)).toLocaleString()}</td>
                 </tr>` : ''}
                 <tr>
-                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">GST (${Math.round(estimate.gstPercent || 0)}%):</td>
-                  <td style="padding: 8px 0; text-align: right; color: #1f2937; font-weight: 500;">₹ ${Math.round(Number(tax || 0)).toLocaleString()}</td>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">GST (${Math.round(estimate.gstPercent || 0)}%)</td>
+                  <td style="padding: 8px 0; text-align: right; color: #1f2937; font-weight: 500;">₹${Math.round(Number(tax || 0)).toLocaleString()}</td>
+                </tr>
+                <tr style="border-top: 1px solid #e5e7eb;">
+                  <td style="padding: 12px 0 0 0; color: #c9a227; font-size: 16px; font-weight: 700;">Grand Total</td>
+                  <td style="padding: 12px 0 0 0; text-align: right; color: #c9a227; font-size: 18px; font-weight: 700;">₹${Math.round(Number(total || 0)).toLocaleString()}</td>
                 </tr>
               </table>
-            </div>
-            
-            <!-- Total Amount -->
-            <div style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); border-radius: 8px; padding: 20px; margin-bottom: 25px; text-align: center;">
-              <p style="color: #e0e7ff; margin: 0 0 5px 0; font-size: 14px;">Total Estimate Amount</p>
-              <p style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">₹ ${Math.round(Number(total || 0)).toLocaleString()}</p>
             </div>
             
             <!-- PDF Notice -->
@@ -1233,8 +1235,8 @@ const sendEstimateActionNotification = async (estimate, action, customerName) =>
                 <td style="padding: 8px 0; color: #1f2937; text-align: right;">${propertyName || 'N/A'}</td>
               </tr>
               <tr>
-                <td style="padding: 8px 0; color: #6b7280;">Total Amount:</td>
-                <td style="padding: 8px 0; color: #1e40af; font-weight: 700; font-size: 18px; text-align: right;">₹${Math.round(Number(total || 0)).toLocaleString()}</td>
+                <td style="padding: 8px 0; color: #c9a227; font-weight: 600;">Grand Total</td>
+                <td style="padding: 8px 0; color: #c9a227; font-weight: 700; font-size: 18px; text-align: right;">₹${Math.round(Number(total || 0)).toLocaleString()}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #6b7280;">Action Date:</td>
@@ -2390,28 +2392,31 @@ const sendInvoiceEmail = async (invoice) => {
             </div>
             ` : ''}
             
-            <!-- Price Summary -->
-            <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+            <!-- Price Summary - Gold Theme -->
+            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+              <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+                <div style="height: 1px; width: 40px; background: #c9a227;"></div>
+                <span style="margin: 0 10px; color: #c9a227; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">💰 Price Summary</span>
+                <div style="height: 1px; width: 40px; background: #c9a227;"></div>
+              </div>
               <table style="width: 100%;">
                 <tr>
-                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Subtotal:</td>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Subtotal</td>
                   <td style="padding: 8px 0; text-align: right; color: #1f2937;">${formatCurrency(subtotal)}</td>
                 </tr>
                 ${discountAmount > 0 ? `<tr>
-                  <td style="padding: 8px 0; color: #059669; font-size: 14px;">Discount:</td>
+                  <td style="padding: 8px 0; color: #059669; font-size: 14px;">Discount</td>
                   <td style="padding: 8px 0; text-align: right; color: #059669;">-${formatCurrency(discountAmount)}</td>
                 </tr>` : ''}
                 <tr>
-                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">GST (18%):</td>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">GST (18%)</td>
                   <td style="padding: 8px 0; text-align: right; color: #1f2937;">${formatCurrency(taxAmount)}</td>
                 </tr>
+                <tr style="border-top: 1px solid #e5e7eb;">
+                  <td style="padding: 12px 0 0 0; color: #c9a227; font-size: 16px; font-weight: 700;">Grand Total</td>
+                  <td style="padding: 12px 0 0 0; text-align: right; color: #c9a227; font-size: 18px; font-weight: 700;">${formatCurrency(balanceAmount || totalAmount)}</td>
+                </tr>
               </table>
-            </div>
-            
-            <!-- Total Amount -->
-            <div style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); border-radius: 8px; padding: 20px; margin-bottom: 20px; text-align: center;">
-              <p style="color: #e0e7ff; margin: 0 0 5px 0; font-size: 14px;">Total Amount Due</p>
-              <p style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 700;">${formatCurrency(balanceAmount || totalAmount)}</p>
             </div>
             
             ${paymentSection}

@@ -1532,34 +1532,34 @@ const InvoiceDetailPanel = ({
               </div>
               <div className="px-5 pb-4 text-sm border-t border-gray-100 pt-3">
                 <div className="grid grid-cols-[1fr_auto] gap-y-2.5 gap-x-4">
-                  <span className="text-gray-500">Subtotal:</span>
-                  <span className="text-gray-700 text-right">Rs. {Math.round(invoice.subtotal || 0).toLocaleString('en-IN')}</span>
+                  <span className="text-gray-500">Subtotal</span>
+                  <span className="text-gray-700 text-right">₹{Math.round(invoice.subtotal || 0).toLocaleString('en-IN')}</span>
                   
                   {invoice.discountAmount > 0 && (
                     <>
-                      <span className="text-green-600">Discount:</span>
-                      <span className="text-green-600 text-right">-Rs. {Math.round(invoice.discountAmount).toLocaleString('en-IN')}</span>
+                      <span className="text-green-600">Discount</span>
+                      <span className="text-green-600 text-right">-₹{Math.round(invoice.discountAmount).toLocaleString('en-IN')}</span>
                     </>
                   )}
                   
-                  <span className="text-gray-500">GST ({invoice.taxPercentage || 18}.00%):</span>
-                  <span className="text-gray-700 text-right">Rs. {Math.round(invoice.taxAmount || 0).toLocaleString('en-IN')}</span>
+                  <span className="text-gray-500">GST ({invoice.taxPercentage || 18}%)</span>
+                  <span className="text-gray-700 text-right">₹{Math.round(invoice.taxAmount || 0).toLocaleString('en-IN')}</span>
                 </div>
                 
                 <div className="border-t border-gray-200 pt-3 mt-3">
                   <div className="grid grid-cols-[1fr_auto] gap-x-4">
-                    <span className="text-[#c9a227] font-bold">Total:</span>
-                    <span className="text-[#c9a227] font-bold text-lg text-right">Rs. {Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}</span>
+                    <span className="text-[#c9a227] font-bold">Grand Total</span>
+                    <span className="text-[#c9a227] font-bold text-lg text-right">₹{Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}</span>
                   </div>
                 </div>
                 
                 {invoice.amountPaid > 0 && (
                   <div className="border-t border-dashed border-gray-200 pt-3 mt-3">
                     <div className="grid grid-cols-[1fr_auto] gap-y-2 gap-x-4">
-                      <span className="text-green-600">Amount Paid:</span>
-                      <span className="text-green-600 font-semibold text-right">Rs. {Math.round(invoice.amountPaid).toLocaleString('en-IN')}</span>
-                      <span className="text-red-600 font-semibold">Balance Due:</span>
-                      <span className="text-red-600 font-bold text-right">Rs. {Math.round(invoice.balanceAmount || 0).toLocaleString('en-IN')}</span>
+                      <span className="text-green-600">Amount Paid</span>
+                      <span className="text-green-600 font-semibold text-right">₹{Math.round(invoice.amountPaid).toLocaleString('en-IN')}</span>
+                      <span className="text-red-600 font-semibold">Balance Due</span>
+                      <span className="text-red-600 font-bold text-right">₹{Math.round(invoice.balanceAmount || 0).toLocaleString('en-IN')}</span>
                     </div>
                   </div>
                 )}
@@ -1581,7 +1581,7 @@ const InvoiceDetailPanel = ({
                       <p className="text-sm font-medium text-gray-900">{formatDate(payment.paymentDate)}</p>
                       <p className="text-xs text-gray-500">{payment.paymentMethod}</p>
                     </div>
-                    <span className="text-sm font-semibold text-green-600">Rs. {Math.round(payment.amount).toLocaleString('en-IN')}</span>
+                    <span className="text-sm font-semibold text-green-600">₹{Math.round(payment.amount).toLocaleString('en-IN')}</span>
                   </div>
                 ))}
               </div>

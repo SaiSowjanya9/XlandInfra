@@ -1100,7 +1100,7 @@ export const exportInvoiceToPDF = (invoice) => {
     doc.setTextColor(...navy);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('Total Amount: ' + formatCurrency(invoice.totalAmount || 0), margin + 6, y + 8);
+    doc.text('Grand Total: ' + formatCurrency(invoice.totalAmount || 0), margin + 6, y + 8);
     y += 16;
 
     // Property & Customer Cards

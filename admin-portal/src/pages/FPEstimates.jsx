@@ -2123,10 +2123,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 {/* Price Summary */}
                 {workOrderAmount && parseFloat(workOrderAmount) > 0 && (
                   <div className="mt-4 pt-4 border-t border-gray-200">
-                    <div className="flex justify-between text-sm mb-1"><span className="text-gray-500">Subtotal:</span><span>₹{parseFloat(workOrderAmount || 0).toLocaleString('en-IN')}</span></div>
-                    {parseFloat(workOrderDiscount || 0) > 0 && <div className="flex justify-between text-sm mb-1 text-red-600"><span>Discount ({workOrderDiscount}%):</span><span>-₹{(parseFloat(workOrderAmount || 0) * parseFloat(workOrderDiscount || 0) / 100).toLocaleString('en-IN')}</span></div>}
-                    {parseFloat(workOrderGst || 0) > 0 && <div className="flex justify-between text-sm mb-1 text-blue-600"><span>GST ({workOrderGst}%):</span><span>+₹{((parseFloat(workOrderAmount || 0) - (parseFloat(workOrderAmount || 0) * parseFloat(workOrderDiscount || 0) / 100)) * parseFloat(workOrderGst || 0) / 100).toLocaleString('en-IN')}</span></div>}
-                    <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-gray-300"><span>Total:</span><span className="text-orange-600">₹{(() => { const amt = parseFloat(workOrderAmount || 0); const disc = amt * parseFloat(workOrderDiscount || 0) / 100; const afterDisc = amt - disc; const gst = afterDisc * parseFloat(workOrderGst || 0) / 100; return (afterDisc + gst).toLocaleString('en-IN'); })()}</span></div>
+                    <div className="flex justify-between text-sm mb-1"><span className="text-gray-500">Subtotal</span><span>₹{parseFloat(workOrderAmount || 0).toLocaleString('en-IN')}</span></div>
+                    {parseFloat(workOrderDiscount || 0) > 0 && <div className="flex justify-between text-sm mb-1 text-green-600"><span>Discount ({workOrderDiscount}%)</span><span>-₹{(parseFloat(workOrderAmount || 0) * parseFloat(workOrderDiscount || 0) / 100).toLocaleString('en-IN')}</span></div>}
+                    {parseFloat(workOrderGst || 0) > 0 && <div className="flex justify-between text-sm mb-1 text-gray-600"><span>GST ({workOrderGst}%)</span><span>+₹{((parseFloat(workOrderAmount || 0) - (parseFloat(workOrderAmount || 0) * parseFloat(workOrderDiscount || 0) / 100)) * parseFloat(workOrderGst || 0) / 100).toLocaleString('en-IN')}</span></div>}
+                    <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-[#c9a227]/30"><span className="text-[#c9a227]">Grand Total</span><span className="text-[#c9a227]">₹{(() => { const amt = parseFloat(workOrderAmount || 0); const disc = amt * parseFloat(workOrderDiscount || 0) / 100; const afterDisc = amt - disc; const gst = afterDisc * parseFloat(workOrderGst || 0) / 100; return (afterDisc + gst).toLocaleString('en-IN'); })()}</span></div>
                   </div>
                 )}
               </div>

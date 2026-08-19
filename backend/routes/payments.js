@@ -734,46 +734,40 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
             } catch (e) { estimateServices = []; }
           }
           
-          // Build enriched line items - match by service name and get full description from AMC package
-          if (estimateServices.length > 0 || amcServices.length > 0) {
-            const servicesToUse = estimateServices.length > 0 ? estimateServices : amcServices;
-            console.log('[Invoice Enrichment] servicesToUse count:', servicesToUse.length);
-            console.log('[Invoice Enrichment] amcServices count:', amcServices.length);
+          // Build enriched line items - ALWAYS use AMC package descriptions as primary source
+          // The AMC package has full descriptions; estimate/invoice may have truncated versions
+          if (amcServices.length > 0) {
+            console.log('[Invoice Enrichment] Using AMC package services as primary source, count:', amcServices.length);
             
-            lineItems = servicesToUse.map((s, idx) => {
+            // Use AMC services as primary, matching by index or name
+            lineItems = amcServices.map((ams, idx) => {
+              const existingItem = lineItems[idx] || {};
+              const estimateService = estimateServices[idx] || {};
+              
+              const serviceName = ams.service || ams.name || estimateService.name || existingItem.name || 'Service';
+              const fullDescription = ams.description || estimateService.description || '';
+              
+              console.log(`[Invoice Enrichment] Service ${idx + 1}: "${serviceName}" - AMC desc: "${fullDescription?.substring(0, 80)}..."`);
+              
+              return {
+                ...existingItem,
+                name: serviceName,
+                description: fullDescription ? `${serviceName} - ${fullDescription}` : serviceName,
+                details: fullDescription,
+                frequency: ams.frequency_type || ams.frequencyType || estimateService.frequencyType || existingItem.frequency || 'Other',
+                visits: ams.frequency_count || ams.frequencyCount || estimateService.frequencyCount || existingItem.visits || 1,
+                totalPrice: parseFloat(estimateService.totalPrice || existingItem.totalPrice || ams.price || 0),
+                type: 'service'
+              };
+            });
+          } else if (estimateServices.length > 0) {
+            // Fallback: Use estimate services if no AMC package found
+            console.log('[Invoice Enrichment] No AMC package found, using estimate services, count:', estimateServices.length);
+            
+            lineItems = estimateServices.map((s, idx) => {
               const existingItem = lineItems[idx] || {};
               const serviceName = s.name || s.serviceName || s.service || existingItem.name || 'Service';
-              
-              // Try to find full description from AMC package by matching service name
-              let fullDescription = s.description || s.service_description || '';
-              
-              // Log current description state
-              console.log(`[Invoice Enrichment] Service ${idx + 1}: "${serviceName}" - current desc: "${fullDescription?.substring(0, 50)}..."`);
-              
-              if (amcServices.length > 0) {
-                // Try exact match first
-                let matchingAmcService = amcServices.find(ams => {
-                  const amcName = (ams.name || ams.service || '').toLowerCase().trim();
-                  const searchName = serviceName.toLowerCase().trim();
-                  return amcName === searchName;
-                });
-                
-                // If no exact match, try partial/fuzzy match
-                if (!matchingAmcService) {
-                  matchingAmcService = amcServices.find(ams => {
-                    const amcName = (ams.name || ams.service || '').toLowerCase().trim();
-                    const searchName = serviceName.toLowerCase().trim();
-                    return amcName.includes(searchName) || searchName.includes(amcName);
-                  });
-                }
-                
-                if (matchingAmcService && matchingAmcService.description) {
-                  console.log(`[Invoice Enrichment] Found matching AMC service: "${matchingAmcService.service || matchingAmcService.name}" with description: "${matchingAmcService.description?.substring(0, 50)}..."`);
-                  fullDescription = matchingAmcService.description;
-                } else {
-                  console.log(`[Invoice Enrichment] No matching AMC service found for: "${serviceName}"`);
-                }
-              }
+              const fullDescription = s.description || s.service_description || '';
               
               return {
                 ...existingItem,
@@ -1397,21 +1391,21 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
 
                     <div style="margin-top: 20px;">
                       <div class="total-row">
-                        <span>Subtotal:</span>
+                        <span>Subtotal</span>
                         <span>${formatAmount(subtotal)}</span>
                       </div>
                       ${discountAmount > 0 ? `
                       <div class="total-row">
-                        <span>Discount (${discPct}%):</span>
+                        <span>Discount (${discPct}%)</span>
                         <span style="color: #dc2626;">-${formatAmount(discountAmount)}</span>
                       </div>
                       ` : ''}
                       <div class="total-row">
-                        <span>GST (${taxPct}%):</span>
+                        <span>GST (${taxPct}%)</span>
                         <span>${formatAmount(taxAmount)}</span>
                       </div>
                       <div class="total-row grand-total">
-                        <span>Total Amount:</span>
+                        <span>Grand Total</span>
                         <span>${formatAmount(totalAmount)}</span>
                       </div>
                     </div>
@@ -1796,30 +1790,30 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
 
                 <div style="margin-top: 20px;">
                   <div class="amount-row">
-                    <span>Subtotal:</span>
+                    <span>Subtotal</span>
                     <span>${formatAmount(invoice.subtotal)}</span>
                   </div>
                   ${invoice.discount_amount > 0 ? `
                   <div class="amount-row">
-                    <span>Discount:</span>
+                    <span>Discount</span>
                     <span style="color: #dc2626;">-${formatAmount(invoice.discount_amount)}</span>
                   </div>
                   ` : ''}
                   <div class="amount-row">
-                    <span>GST (${invoice.tax_percent || 18}%):</span>
+                    <span>GST (${invoice.tax_percent || 18}%)</span>
                     <span>${formatAmount(invoice.tax_amount)}</span>
                   </div>
                   <div class="amount-row total-row">
-                    <span>Total Amount:</span>
+                    <span>Grand Total</span>
                     <span>${formatAmount(invoice.total_amount)}</span>
                   </div>
                   ${invoice.amount_paid > 0 ? `
                   <div class="amount-row">
-                    <span>Amount Paid:</span>
+                    <span>Amount Paid</span>
                     <span style="color: #16a34a;">${formatAmount(invoice.amount_paid)}</span>
                   </div>
                   <div class="amount-row" style="font-weight: bold;">
-                    <span>Balance Due:</span>
+                    <span>Balance Due</span>
                     <span style="color: #dc2626;">${formatAmount(invoice.balance_amount)}</span>
                   </div>
                   ` : ''}
