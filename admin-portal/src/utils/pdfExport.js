@@ -1018,7 +1018,7 @@ export const exportPackageToPDF = (pkg) => {
   }
 };
 
-// Export Invoice to PDF (matching Estimate format)
+// Export Invoice to PDF - Matching Image 2 design exactly
 export const exportInvoiceToPDF = (invoice) => {
   try {
     if (!invoice) {
@@ -1036,373 +1036,350 @@ export const exportInvoiceToPDF = (invoice) => {
 
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
-    let y = 12;
+    let y = 0;
 
-    // Colors
-    const navy = [30, 41, 59];
+    // Colors matching Image 2
+    const gold = [201, 162, 39];       // #c9a227
+    const darkGold = [180, 144, 52];   // darker gold
+    const black = [26, 26, 26];        // #1a1a1a
     const darkText = [31, 41, 55];
-    const mediumText = [75, 85, 99];
-    const lightText = [107, 114, 128];
-    const cardBgBlue = [239, 246, 255];
-    const borderLight = [229, 231, 235];
-    const gold = [180, 144, 52];
-    const green = [34, 197, 94];
-    const red = [239, 68, 68];
+    const grayText = [107, 114, 128];
+    const lightGray = [249, 250, 251];
 
-    // Header - Black with decorative PVT LTD (no gold stripe)
-    const headerHeight = 45;
+    // ===== HEADER - Black with curved gold stripe =====
+    const headerHeight = 50;
     
     // Black header background
-    doc.setFillColor(26, 26, 26); // #1a1a1a
-    doc.rect(0, 0, pageWidth, headerHeight, 'F');
+    doc.setFillColor(...black);
+    doc.rect(0, 0, pageWidth, headerHeight - 8, 'F');
     
-    // Logo on left
-    const logoSize = 32;
-    try {
-      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin, 6, logoSize, logoSize);
-    } catch (e) {
-      doc.setFillColor(...gold);
-      doc.roundedRect(margin, 6, 32, 32, 3, 3, 'F');
+    // Gold curved stripe at bottom of header
+    doc.setFillColor(...gold);
+    // Draw a curved shape using bezier-like effect with small rectangles
+    for (let i = 0; i < pageWidth; i++) {
+      const curveHeight = 4 + Math.sin((i / pageWidth) * Math.PI) * 3;
+      doc.rect(i, headerHeight - 10, 1, curveHeight, 'F');
     }
     
-    // Company name - "XLAND INFRA" in gold
-    const textX = margin + logoSize + 8;
+    // Logo
+    const logoSize = 28;
+    try {
+      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 5, 8, logoSize, logoSize);
+    } catch (e) {
+      doc.setFillColor(...gold);
+      doc.roundedRect(margin + 5, 8, logoSize, logoSize, 3, 3, 'F');
+    }
+    
+    // Company name
+    const textX = margin + logoSize + 15;
     doc.setTextColor(...gold);
-    doc.setFontSize(16);
+    doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.text('XLAND INFRA', textX, 20);
     
-    // "PVT LTD" with decorative lines on both sides
-    const pvtLtdY = 30;
-    const pvtLtdText = 'PVT LTD';
-    doc.setFontSize(7);
+    // PVT LTD with decorative lines
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    const pvtLtdWidth = doc.getTextWidth(pvtLtdText);
-    const lineLength = 18;
+    const pvtLtdY = 28;
+    const pvtText = 'PVT LTD';
+    const pvtWidth = doc.getTextWidth(pvtText);
+    const lineLen = 20;
     const lineGap = 4;
     
-    // Left decorative line
     doc.setDrawColor(...gold);
     doc.setLineWidth(0.5);
-    doc.line(textX, pvtLtdY - 2, textX + lineLength, pvtLtdY - 2);
-    
-    // PVT LTD text
-    doc.setTextColor(...gold);
-    doc.text(pvtLtdText, textX + lineLength + lineGap, pvtLtdY);
-    
-    // Right decorative line
-    doc.line(textX + lineLength + lineGap + pvtLtdWidth + lineGap, pvtLtdY - 2, 
-             textX + lineLength + lineGap + pvtLtdWidth + lineGap + lineLength, pvtLtdY - 2);
+    doc.line(textX, pvtLtdY, textX + lineLen, pvtLtdY);
+    doc.text(pvtText, textX + lineLen + lineGap, pvtLtdY + 1);
+    doc.line(textX + lineLen + lineGap + pvtWidth + lineGap, pvtLtdY, textX + lineLen + lineGap + pvtWidth + lineGap + lineLen, pvtLtdY);
 
-    y = headerHeight + 6;
+    y = headerHeight + 8;
 
-    // Invoice Meta Row - Gray background bar
-    doc.setFillColor(248, 250, 252); // gray-50
-    doc.rect(0, y, pageWidth, 28, 'F');
-    doc.setDrawColor(229, 231, 235); // gray-200
-    doc.line(0, y + 28, pageWidth, y + 28);
-    
-    const metaY = y + 8;
-    const colWidth = (pageWidth - margin * 2) / 4;
-    
-    // Column 1: Invoice No
-    doc.setFontSize(7);
-    doc.setTextColor(107, 114, 128); // gray-500
-    doc.text('INVOICE NO.', margin, metaY);
-    doc.setFontSize(11);
+    // ===== ID / DATE / DUE ROW =====
+    doc.setFontSize(9);
+    doc.setTextColor(...grayText);
+    doc.text('ID:', margin, y);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(17, 24, 39); // gray-900
-    doc.text(String(invoice.invoiceId || 'N/A'), margin, metaY + 6);
+    doc.setFontSize(12);
+    doc.setTextColor(...darkText);
+    doc.text(String(invoice.invoiceId || 'N/A'), margin + 8, y);
+    
     if (invoice.sourceEstimateId) {
-      doc.setFontSize(6);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(156, 163, 175); // gray-400
-      doc.text('Ref: ' + invoice.sourceEstimateId, margin, metaY + 12);
+      doc.setTextColor(...grayText);
+      doc.text('Estimate: ' + invoice.sourceEstimateId, margin, y + 6);
     }
     
-    // Column 2: Invoice Date
-    const col2X = margin + colWidth;
-    doc.setFontSize(7);
-    doc.setTextColor(107, 114, 128);
-    doc.text('INVOICE DATE', col2X, metaY);
+    // Date and Due on right
+    const rightCol = pageWidth - margin - 50;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...grayText);
+    doc.text('Date:', rightCol, y - 4);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...darkText);
+    doc.text(formatDate(invoice.invoiceDate), rightCol + 15, y - 4);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...grayText);
+    doc.text('Due:', rightCol, y + 4);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...darkText);
+    doc.text(formatDate(invoice.dueDate), rightCol + 15, y + 4);
+    
+    y += 18;
+
+    // ===== TOTAL AMOUNT DUE BANNER - Gold rounded =====
+    const bannerHeight = 28;
+    doc.setFillColor(...gold);
+    doc.roundedRect(margin, y, pageWidth - margin * 2, bannerHeight, 4, 4, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('TOTAL AMOUNT DUE', pageWidth / 2, y + 8, { align: 'center' });
+    
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Rs. ' + Math.round(invoice.totalAmount || 0).toLocaleString('en-IN'), pageWidth / 2, y + 20, { align: 'center' });
+    
+    y += bannerHeight + 10;
+
+    // ===== PROPERTY & CUSTOMER DETAILS - Side by side with gold borders =====
+    const cardGap = 8;
+    const cardWidth = (pageWidth - margin * 2 - cardGap) / 2;
+    const cardHeight = 52;
+    
+    // Property Details Card
+    doc.setDrawColor(...gold);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(margin, y, cardWidth, cardHeight, 3, 3, 'S');
+    
+    // Property icon placeholder (gold circle)
+    doc.setFillColor(255, 251, 235); // light gold bg
+    doc.roundedRect(margin + 8, y + 6, 12, 12, 2, 2, 'F');
+    doc.setFillColor(...gold);
+    doc.roundedRect(margin + 10, y + 8, 8, 8, 1, 1, 'F');
+    
+    doc.setTextColor(...darkText);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(17, 24, 39);
-    doc.text(formatDate(invoice.invoiceDate), col2X, metaY + 6);
+    doc.text('PROPERTY DETAILS', margin + 24, y + 14);
     
-    // Column 3: Due Date (RED)
-    const col3X = margin + colWidth * 2;
-    doc.setFontSize(7);
-    doc.setTextColor(239, 68, 68); // red-500
-    doc.setFont('helvetica', 'bold');
-    doc.text('DUE DATE', col3X, metaY);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    let py = y + 24;
+    doc.setTextColor(...grayText);
+    doc.text('Property ID:', margin + 8, py);
+    doc.setTextColor(...darkText);
+    doc.text(String(invoice.propertyCode || '-'), margin + 32, py);
+    py += 6;
+    doc.setTextColor(...grayText);
+    doc.text('Name:', margin + 8, py);
+    doc.setTextColor(...darkText);
+    doc.text(String(invoice.propertyName || '-').substring(0, 20), margin + 22, py);
+    py += 6;
+    doc.setTextColor(...grayText);
+    doc.text('Type:', margin + 8, py);
+    doc.setTextColor(...darkText);
+    doc.text(String(invoice.propertyType || '-'), margin + 20, py);
+    py += 6;
+    doc.setTextColor(...grayText);
+    doc.text('Zone:', margin + 8, py);
+    doc.setTextColor(...darkText);
+    doc.text(String(invoice.zone || '-'), margin + 20, py);
+    py += 6;
+    doc.setTextColor(...grayText);
+    doc.text('City:', margin + 8, py);
+    doc.setTextColor(...darkText);
+    doc.text(String(invoice.city || '-'), margin + 18, py);
+    
+    // Customer Details Card
+    const custCardX = margin + cardWidth + cardGap;
+    doc.setDrawColor(...gold);
+    doc.roundedRect(custCardX, y, cardWidth, cardHeight, 3, 3, 'S');
+    
+    // Customer icon placeholder
+    doc.setFillColor(255, 251, 235);
+    doc.roundedRect(custCardX + 8, y + 6, 12, 12, 2, 2, 'F');
+    doc.setFillColor(...gold);
+    doc.circle(custCardX + 14, y + 10, 3, 'F');
+    doc.roundedRect(custCardX + 10, y + 13, 8, 4, 1, 1, 'F');
+    
+    doc.setTextColor(...darkText);
     doc.setFontSize(10);
-    doc.setTextColor(17, 24, 39);
-    doc.text(formatDate(invoice.dueDate), col3X, metaY + 6);
-    
-    // Column 4: Status Badge
-    const col4X = margin + colWidth * 3;
-    const status = invoice.status || 'unpaid';
-    const statusText = status === 'paid' ? 'PAID' : status === 'partial' ? 'PARTIAL' : status === 'overdue' ? 'OVERDUE' : 'UNPAID';
-    const statusColors = {
-      paid: { bg: [220, 252, 231], text: [21, 128, 61] },      // green
-      partial: { bg: [254, 243, 199], text: [180, 83, 9] },    // amber
-      overdue: { bg: [254, 226, 226], text: [185, 28, 28] },   // red
-      unpaid: { bg: [254, 226, 226], text: [220, 38, 38] }     // red
-    };
-    const statusStyle = statusColors[status] || statusColors.unpaid;
-    
-    const badgeWidth = 40;
-    const badgeHeight = 10;
-    doc.setFillColor(...statusStyle.bg);
-    doc.roundedRect(col4X, metaY - 2, badgeWidth, badgeHeight, 3, 3, 'F');
-    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...statusStyle.text);
-    doc.text(statusText, col4X + badgeWidth/2, metaY + 4, { align: 'center' });
+    doc.text('CUSTOMER DETAILS', custCardX + 24, y + 14);
     
-    y += 34;
-
-    // Amount Bar
-    doc.setFillColor(...cardBgBlue);
-    doc.setDrawColor(...borderLight);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, 12, 2, 2, 'FD');
-    doc.setTextColor(...navy);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Grand Total: ' + formatCurrency(invoice.totalAmount || 0), margin + 6, y + 8);
-    y += 16;
-
-    // Property & Customer Cards
-    const gap = 6;
-    const cardWidth = (pageWidth - margin * 2 - gap) / 2;
-    const cardHeight = 38;
-    
-    doc.setFillColor(...cardBgBlue);
-    doc.setDrawColor(...borderLight);
-    doc.roundedRect(margin, y, cardWidth, cardHeight, 2, 2, 'FD');
-    doc.setTextColor(...navy);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Property Details', margin + 6, y + 6);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...lightText);
-    doc.text('Property ID:', margin + 6, y + 14);
+    let cy = y + 24;
+    doc.setTextColor(...grayText);
+    doc.text('Name:', custCardX + 8, cy);
     doc.setTextColor(...darkText);
-    doc.text(String(invoice.propertyCode || '-'), margin + 30, y + 14);
-    doc.setTextColor(...lightText);
-    doc.text('Name:', margin + 6, y + 22);
+    doc.text(String(invoice.customerName || '-'), custCardX + 22, cy);
+    cy += 6;
+    doc.setTextColor(...grayText);
+    doc.text('Phone:', custCardX + 8, cy);
     doc.setTextColor(...darkText);
-    const propName = String(invoice.propertyName || '-');
-    doc.text(propName.length > 20 ? propName.substring(0, 20) + '...' : propName, margin + 20, y + 22);
-    
-    const custX = margin + cardWidth + gap;
-    doc.setFillColor(...cardBgBlue);
-    doc.roundedRect(custX, y, cardWidth, cardHeight, 2, 2, 'FD');
-    doc.setTextColor(...navy);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Customer Details', custX + 6, y + 6);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...lightText);
-    doc.text('Name:', custX + 6, y + 14);
-    doc.setTextColor(...darkText);
-    doc.text(String(invoice.customerName || '-'), custX + 20, y + 14);
-    doc.setTextColor(...lightText);
-    doc.text('Phone:', custX + 6, y + 22);
-    doc.setTextColor(...darkText);
-    doc.text(String(invoice.customerPhone || '-'), custX + 20, y + 22);
-    doc.setTextColor(...lightText);
-    doc.text('Email:', custX + 6, y + 30);
+    doc.text(String(invoice.customerPhone || '-'), custCardX + 24, cy);
+    cy += 6;
+    doc.setTextColor(...grayText);
+    doc.text('Email:', custCardX + 8, cy);
     doc.setTextColor(...darkText);
     const email = String(invoice.customerEmail || '-');
-    doc.text(email.length > 22 ? email.substring(0, 22) + '...' : email, custX + 18, y + 30);
+    doc.text(email.length > 25 ? email.substring(0, 25) + '...' : email, custCardX + 22, cy);
+    cy += 6;
+    doc.setTextColor(...grayText);
+    doc.text('City:', custCardX + 8, cy);
+    doc.setTextColor(...darkText);
+    doc.text(String(invoice.city || '-'), custCardX + 18, cy);
     
-    y += cardHeight + 8;
+    y += cardHeight + 12;
 
-    // Separate services and add-ons
+    // ===== SERVICES INCLUDED - Gold themed table =====
+    // Parse services
     const allItems = lineItems.filter(item => {
       const desc = String(item.description || item.name || '').toLowerCase();
       return !desc.includes('amc package:') && !desc.includes('amc services');
     });
 
-    // Helper to check if item is an addon
     const isAddon = (item) => {
       const typeStr = String(item.type || '').toLowerCase();
       return typeStr === 'addon' || typeStr === 'add-on' || typeStr === 'add_on';
     };
 
-    // Services (type = 'service' or items not marked as addon)
-    const services = allItems
-      .filter(item => !isAddon(item))
-      .map(item => {
-        // Use 'details' field first (full description from backend enrichment)
-        // Then fallback to parsing description
-        const itemName = decodeHtml(item.name || '');
-        const itemDetails = decodeHtml(item.details || '');
-        const fullDesc = decodeHtml(String(item.description || item.name || 'Service'));
-        const parts = fullDesc.split(' - ');
-        return {
-          name: itemName || parts[0] || 'Service',
-          description: itemDetails || parts.slice(1).join(' - ') || '-',
-          frequency: item.frequency || item.frequencyType || item.frequency_type || '-',
-          visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
-        };
-      });
+    const services = allItems.filter(item => !isAddon(item)).map(item => {
+      const itemName = decodeHtml(item.name || '');
+      const itemDetails = decodeHtml(item.details || '');
+      const fullDesc = decodeHtml(String(item.description || item.name || 'Service'));
+      const parts = fullDesc.split(' - ');
+      return {
+        name: itemName || parts[0] || 'Service',
+        description: itemDetails || parts.slice(1).join(' - ') || '-',
+        frequency: item.frequency || item.frequencyType || item.frequency_type || '-',
+        visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
+      };
+    });
 
-    // Add-ons (type contains 'addon')
-    const addons = allItems
-      .filter(item => isAddon(item))
-      .map(item => {
-        // Use 'details' field first (full description from backend enrichment)
-        const itemName = decodeHtml(item.name || '');
-        const itemDetails = decodeHtml(item.details || '');
-        const fullDesc = decodeHtml(String(item.description || item.name || 'Add-on'));
-        const parts = fullDesc.split(' - ');
-        return {
-          name: itemName || parts[0] || 'Add-on',
-          description: itemDetails || parts.slice(1).join(' - ') || '-',
-          frequency: item.frequency || item.frequencyType || item.frequency_type || '-',
-          visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
-        };
-      });
-
-    // Check if this is a work order invoice (skip services for work order invoices)
     const isWorkOrderInvoice = invoice.invoiceType === 'work_order' || invoice.invoice_type === 'work_order';
-    
-    // Services Included Table (Skip for Work Order Invoices)
+
     if (!isWorkOrderInvoice && services.length > 0) {
-      doc.setTextColor(...navy);
+      // Section header with icon and line
+      doc.setFillColor(255, 251, 235);
+      doc.roundedRect(margin, y - 2, 10, 10, 2, 2, 'F');
+      doc.setFillColor(...gold);
+      doc.roundedRect(margin + 2, y, 6, 6, 1, 1, 'F');
+      
+      doc.setTextColor(...darkText);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('SERVICES INCLUDED', margin, y);
-      y += 4;
+      doc.text('SERVICES INCLUDED', margin + 14, y + 5);
+      
+      // Decorative line after text
+      doc.setDrawColor(...gold);
+      doc.setLineWidth(0.3);
+      doc.line(margin + 55, y + 3, pageWidth - margin, y + 3);
+      
+      y += 12;
 
+      // Services table with gold header
       autoTable(doc, {
         startY: y,
         head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
         body: services.map((item, idx) => [
           String(idx + 1),
-          decodeHtml(String(item.name)).substring(0, 40),
-          decodeHtml(String(item.description)) || '-',
-          String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1),
+          decodeHtml(String(item.name)).substring(0, 30),
+          decodeHtml(String(item.description)).substring(0, 50) || '-',
+          String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1).toLowerCase(),
           String(item.visits)
         ]),
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 3, valign: 'middle' },
-        headStyles: { fillColor: navy, textColor: [255,255,255], fontStyle: 'bold', fontSize: 7 },
+        styles: { fontSize: 8, cellPadding: 4, valign: 'middle', lineColor: [201, 162, 39], lineWidth: 0.2 },
+        headStyles: { fillColor: gold, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+        bodyStyles: { textColor: darkText },
+        alternateRowStyles: { fillColor: [255, 251, 235] },
         columnStyles: { 
-          0: { cellWidth: 10, halign: 'center' }, 
+          0: { cellWidth: 12, halign: 'center' }, 
           1: { cellWidth: 35 }, 
-          2: { cellWidth: 'auto', halign: 'center' }, 
-          3: { cellWidth: 25, halign: 'center' }, 
+          2: { cellWidth: 'auto' }, 
+          3: { cellWidth: 28, halign: 'center' }, 
           4: { cellWidth: 18, halign: 'center' } 
         },
         margin: { left: margin, right: margin }
       });
-      y = doc.lastAutoTable.finalY + 8;
+      y = doc.lastAutoTable.finalY + 12;
     }
 
-    // Add-ons Table (Skip for Work Order Invoices)
-    if (!isWorkOrderInvoice && addons.length > 0) {
-      doc.setTextColor(...navy);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('ADD-ONS', margin, y);
-      y += 4;
-
-      autoTable(doc, {
-        startY: y,
-        head: [['#', 'Add-on Service', 'Description', 'Frequency', 'Visits']],
-        body: addons.map((item, idx) => [
-          String(idx + 1),
-          decodeHtml(String(item.name)).substring(0, 40),
-          decodeHtml(String(item.description)) || '-',
-          String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1),
-          String(item.visits)
-        ]),
-        theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 3, valign: 'middle' },
-        headStyles: { fillColor: navy, textColor: [255,255,255], fontStyle: 'bold', fontSize: 7 },
-        columnStyles: { 
-          0: { cellWidth: 10, halign: 'center' }, 
-          1: { cellWidth: 35 }, 
-          2: { cellWidth: 'auto', halign: 'center' }, 
-          3: { cellWidth: 25, halign: 'center' }, 
-          4: { cellWidth: 18, halign: 'center' } 
-        },
-        margin: { left: margin, right: margin }
-      });
-      y = doc.lastAutoTable.finalY + 8;
-    }
-
-    // If no services or add-ons
-    if (services.length === 0 && addons.length === 0) {
-      doc.setFontSize(8);
-      doc.setTextColor(...mediumText);
-      doc.text('No services included', margin, y + 6);
-      y += 14;
-    }
-
-    // Price Summary
-    doc.setTextColor(...navy);
+    // ===== PRICE SUMMARY - Gold themed, centered =====
+    // Section header
+    doc.setFillColor(255, 251, 235);
+    doc.roundedRect(pageWidth / 2 - 45, y - 2, 10, 10, 2, 2, 'F');
+    doc.setFillColor(...gold);
+    doc.roundedRect(pageWidth / 2 - 43, y, 6, 6, 1, 1, 'F');
+    
+    doc.setTextColor(...darkText);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('PRICE SUMMARY', margin, y);
-    y += 4;
+    doc.text('PRICE SUMMARY', pageWidth / 2, y + 5, { align: 'center' });
+    
+    // Decorative lines on both sides
+    doc.setDrawColor(...gold);
+    doc.setLineWidth(0.3);
+    doc.line(margin + 20, y + 3, pageWidth / 2 - 50, y + 3);
+    doc.line(pageWidth / 2 + 35, y + 3, pageWidth - margin - 20, y + 3);
+    
+    y += 14;
 
-    const summaryX = pageWidth - margin - 80;
-    const valueX = pageWidth - margin - 6;
-    doc.setFillColor(249, 250, 251);
-    doc.roundedRect(summaryX - 6, y, 86, 44, 2, 2, 'FD');
-    y += 8;
-
-    doc.setFontSize(8);
+    // Price summary box
+    const summaryWidth = 100;
+    const summaryX = (pageWidth - summaryWidth) / 2;
+    doc.setDrawColor(...gold);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(summaryX, y, summaryWidth, 40, 3, 3, 'S');
+    
+    let sy = y + 10;
+    const labelX = summaryX + 8;
+    const valueX = summaryX + summaryWidth - 8;
+    
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...mediumText);
-    doc.text('Subtotal:', summaryX, y);
+    doc.setTextColor(...grayText);
+    doc.text('Subtotal:', labelX, sy);
     doc.setTextColor(...darkText);
-    doc.text(formatCurrency(invoice.subtotal || 0), valueX, y, { align: 'right' });
-    y += 7;
-
-    if (invoice.discountAmount > 0) {
-      doc.setTextColor(...mediumText);
-      doc.text('Discount:', summaryX, y);
-      doc.setTextColor(...red);
-      doc.text('-' + formatCurrency(invoice.discountAmount), valueX, y, { align: 'right' });
-      y += 7;
-    }
-
-    doc.setTextColor(...mediumText);
-    doc.text('GST (' + (invoice.taxPercentage || 18) + '%):', summaryX, y);
+    doc.text('Rs. ' + Math.round(invoice.subtotal || 0).toLocaleString('en-IN'), valueX, sy, { align: 'right' });
+    sy += 8;
+    
+    doc.setTextColor(...grayText);
+    doc.text('GST (' + (invoice.taxPercentage || 18).toFixed(2) + '%):', labelX, sy);
     doc.setTextColor(...darkText);
-    doc.text(formatCurrency(invoice.taxAmount || 0), valueX, y, { align: 'right' });
-    y += 8;
-
+    doc.text('Rs. ' + Math.round(invoice.taxAmount || 0).toLocaleString('en-IN'), valueX, sy, { align: 'right' });
+    sy += 10;
+    
+    // Total line
+    doc.setDrawColor(229, 231, 235);
+    doc.line(summaryX + 6, sy - 4, summaryX + summaryWidth - 6, sy - 4);
+    
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.setTextColor(...navy);
-    doc.text('TOTAL:', summaryX, y);
-    doc.text(formatCurrency(invoice.totalAmount || 0), valueX, y, { align: 'right' });
-    y += 8;
+    doc.setTextColor(...gold);
+    doc.text('Total:', labelX, sy + 2);
+    doc.text('Rs. ' + Math.round(invoice.totalAmount || 0).toLocaleString('en-IN'), valueX, sy + 2, { align: 'right' });
+    
+    y += 52;
 
+    // ===== FOOTER - "We appreciate your trust" =====
     doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...mediumText);
-    doc.text('Amount Paid:', summaryX, y);
-    doc.setTextColor(...green);
-    doc.text(formatCurrency(invoice.amountPaid || 0), valueX, y, { align: 'right' });
-    y += 6;
-
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...navy);
-    doc.text('Balance Due:', summaryX, y);
-    const balance = invoice.balanceAmount || invoice.totalAmount || 0;
-    doc.setTextColor(balance > 0 ? red[0] : green[0], balance > 0 ? red[1] : green[1], balance > 0 ? red[2] : green[2]);
-    doc.text(formatCurrency(balance), valueX, y, { align: 'right' });
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(...grayText);
+    
+    // Heart icon placeholder
+    doc.setDrawColor(...grayText);
+    doc.circle(pageWidth / 2 - 55, y + 1, 3, 'S');
+    
+    doc.text('We appreciate your trust in our services.', pageWidth / 2, y + 2, { align: 'center' });
 
     // Save
     savePDFCrossPlatform(doc, `Invoice-${invoice.invoiceId || 'INV'}.pdf`);

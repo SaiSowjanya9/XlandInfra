@@ -1266,7 +1266,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
   );
 };
 
-// Invoice Detail Modal (Lightbox) - Professional Invoice View
+// Invoice Detail Modal (Lightbox) - Professional Invoice View matching Image 2
 const InvoiceDetailPanel = ({ 
   invoice, 
   onClose, 
@@ -1279,132 +1279,126 @@ const InvoiceDetailPanel = ({
 }) => {
   // Parse line items
   const lineItems = invoice.lineItems ? (typeof invoice.lineItems === 'string' ? JSON.parse(invoice.lineItems) : invoice.lineItems) : [];
-  
-  // Gold/amber color from the design
-  const gold = '#c9a227';
-  const darkGold = '#b8941f';
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div 
-        className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+        className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ===== HEADER - Black with decorative PVT LTD ===== */}
-        <div className="bg-[#1a1a1a] px-6 py-4 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-12 object-contain" />
-              <div>
-                <h1 className="text-[#c9a227] text-xl font-bold tracking-wide">XLAND INFRA</h1>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-[1px] bg-[#c9a227]"></div>
-                  <span className="text-[#c9a227] text-[10px] tracking-[0.2em]">PVT LTD</span>
-                  <div className="w-8 h-[1px] bg-[#c9a227]"></div>
+        {/* ===== HEADER - Black with curved gold stripe ===== */}
+        <div className="flex-shrink-0">
+          <div className="bg-[#1a1a1a] px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-12 object-contain" />
+                <div>
+                  <h1 className="text-[#c9a227] text-xl font-bold tracking-wide">XLAND INFRA</h1>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-[1px] bg-[#c9a227]"></div>
+                    <span className="text-[#c9a227] text-[10px] tracking-[0.2em]">PVT LTD</span>
+                    <div className="w-8 h-[1px] bg-[#c9a227]"></div>
+                  </div>
                 </div>
               </div>
+              <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="p-1.5 hover:bg-white/10 rounded transition-colors">
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
             </div>
-            <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded transition-colors">
-              <X className="w-5 h-5 text-gray-400" />
-            </button>
           </div>
+          {/* Gold curved stripe */}
+          <div className="h-3 bg-gradient-to-r from-[#c9a227] via-[#d4b445] to-[#c9a227]" style={{borderRadius: '0 0 50% 50% / 0 0 100% 100%'}}></div>
         </div>
 
-        {/* ===== INVOICE ID, DATES & STATUS ROW ===== */}
-        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            {/* Invoice No */}
+        {/* ===== ID / DATE / DUE ROW ===== */}
+        <div className="px-6 py-4 flex-shrink-0 bg-white">
+          <div className="flex justify-between items-start">
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice No.</p>
+              <p className="text-xs text-gray-500">ID:</p>
               <p className="text-lg font-bold text-gray-900">{invoice.invoiceId}</p>
               {invoice.sourceEstimateId && (
-                <p className="text-xs text-gray-400">Ref: {invoice.sourceEstimateId}</p>
+                <p className="text-xs text-gray-400">Estimate: {invoice.sourceEstimateId}</p>
               )}
             </div>
-            {/* Invoice Date */}
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice Date</p>
-              <p className="text-base font-semibold text-gray-900">{formatDate(invoice.invoiceDate)}</p>
-            </div>
-            {/* Due Date - Red color */}
-            <div>
-              <p className="text-xs text-red-500 uppercase tracking-wide font-medium">Due Date</p>
-              <p className="text-base font-semibold text-gray-900">{formatDate(invoice.dueDate)}</p>
-            </div>
-            {/* Status Badge */}
-            <div>
-              <span className={`px-4 py-1.5 rounded-full text-sm font-semibold uppercase tracking-wide ${
-                invoice.status === 'paid' ? 'bg-green-100 text-green-700' :
-                invoice.status === 'partial' ? 'bg-amber-100 text-amber-700' :
-                invoice.status === 'overdue' ? 'bg-red-100 text-red-700' :
-                'bg-red-100 text-red-600'
-              }`}>
-                {invoice.status === 'paid' ? 'PAID' :
-                 invoice.status === 'partial' ? 'PARTIAL' :
-                 invoice.status === 'overdue' ? 'OVERDUE' : 'UNPAID'}
-              </span>
+            <div className="text-right">
+              <div className="flex items-center gap-2 justify-end">
+                <span className="text-xs text-gray-500">Date:</span>
+                <span className="text-sm font-semibold text-gray-900">{formatDate(invoice.invoiceDate)}</span>
+              </div>
+              <div className="flex items-center gap-2 justify-end mt-1">
+                <span className="text-xs text-gray-500">Due:</span>
+                <span className="text-sm font-semibold text-gray-900">{formatDate(invoice.dueDate)}</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Content - Scrollable with flex-1 */}
-        <div className="overflow-y-auto flex-1 p-6 space-y-5 bg-gray-50">
+        <div className="overflow-y-auto flex-1 p-6 space-y-5 bg-white">
           
-          {/* ===== TOTAL AMOUNT DUE BANNER - Gold ===== */}
+          {/* ===== TOTAL AMOUNT DUE BANNER - Gold rounded ===== */}
           <div className="bg-gradient-to-r from-[#c9a227] to-[#d4b445] rounded-xl p-5 text-center shadow-md">
             <p className="text-white/90 text-xs uppercase tracking-wider mb-1">Total Amount Due</p>
-            <p className="text-white text-3xl font-bold">{formatCurrency(invoice.totalAmount)}</p>
+            <p className="text-white text-3xl font-bold">Rs. {Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}</p>
           </div>
 
           {/* ===== PROPERTY & CUSTOMER DETAILS - Side by Side with gold border ===== */}
           <div className="grid grid-cols-2 gap-4">
             {/* Property Details */}
             <div className="bg-white rounded-xl border-2 border-[#c9a227]/30 overflow-hidden shadow-sm">
-              <div className="flex items-center gap-2 px-4 py-3">
-                <div className="w-8 h-8 rounded-lg bg-[#c9a227]/10 flex items-center justify-center">
-                  <Building2 className="w-4 h-4 text-[#c9a227]" />
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className="w-10 h-10 rounded-lg bg-[#fffbeb] flex items-center justify-center border border-[#c9a227]/20">
+                  <Building2 className="w-5 h-5 text-[#c9a227]" />
                 </div>
-                <p className="text-gray-800 text-sm font-semibold uppercase tracking-wide">Property Details</p>
+                <p className="text-gray-800 text-sm font-bold uppercase tracking-wide">Property Details</p>
               </div>
-              <div className="px-4 pb-4 text-sm">
-                <div className="grid grid-cols-[90px_1fr] gap-y-2">
-                  <span className="text-gray-500">Property ID:</span>
+              <div className="px-4 pb-4 text-sm space-y-1.5">
+                <div className="flex">
+                  <span className="text-gray-500 w-24">Property ID:</span>
                   <span className="text-gray-800">{invoice.propertyCode || '-'}</span>
-                  <span className="text-gray-500">Name:</span>
+                </div>
+                <div className="flex">
+                  <span className="text-gray-500 w-24">Name:</span>
                   <span className="text-gray-800">{invoice.propertyName || '-'}</span>
-                  <span className="text-gray-500">Type:</span>
+                </div>
+                <div className="flex">
+                  <span className="text-gray-500 w-24">Type:</span>
                   <span className="text-gray-800">{invoice.propertyType || '-'}</span>
-                  <span className="text-gray-500">Zone:</span>
+                </div>
+                <div className="flex">
+                  <span className="text-gray-500 w-24">Zone:</span>
                   <span className="text-gray-800">{invoice.zone || '-'}</span>
-                  <span className="text-gray-500">City:</span>
+                </div>
+                <div className="flex">
+                  <span className="text-gray-500 w-24">City:</span>
                   <span className="text-gray-800">{invoice.city || '-'}</span>
                 </div>
               </div>
             </div>
             {/* Customer Details */}
             <div className="bg-white rounded-xl border-2 border-[#c9a227]/30 overflow-hidden shadow-sm">
-              <div className="flex items-center gap-2 px-4 py-3">
-                <div className="w-8 h-8 rounded-lg bg-[#c9a227]/10 flex items-center justify-center">
-                  <User className="w-4 h-4 text-[#c9a227]" />
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className="w-10 h-10 rounded-lg bg-[#fffbeb] flex items-center justify-center border border-[#c9a227]/20">
+                  <User className="w-5 h-5 text-[#c9a227]" />
                 </div>
-                <p className="text-gray-800 text-sm font-semibold uppercase tracking-wide">Customer Details</p>
+                <p className="text-gray-800 text-sm font-bold uppercase tracking-wide">Customer Details</p>
               </div>
-              <div className="px-4 pb-4 text-sm">
-                <div className="grid grid-cols-[80px_1fr] gap-y-2">
-                  <span className="text-gray-500">Name:</span>
+              <div className="px-4 pb-4 text-sm space-y-1.5">
+                <div className="flex">
+                  <span className="text-gray-500 w-20">Name:</span>
                   <span className="text-gray-800">{invoice.customerName || '-'}</span>
-                  <span className="text-gray-500">Phone:</span>
+                </div>
+                <div className="flex">
+                  <span className="text-gray-500 w-20">Phone:</span>
                   <span className="text-gray-800">{invoice.customerPhone || '-'}</span>
-                  <span className="text-gray-500">Email:</span>
+                </div>
+                <div className="flex">
+                  <span className="text-gray-500 w-20">Email:</span>
                   <span className="text-gray-800 break-all">{invoice.customerEmail || '-'}</span>
-                  <span className="text-gray-500">City:</span>
+                </div>
+                <div className="flex">
+                  <span className="text-gray-500 w-20">City:</span>
                   <span className="text-gray-800">{invoice.city || '-'}</span>
-                  {invoice.sourceWorkOrderId && (
-                    <>
-                      <span className="text-gray-500">Work Order:</span>
-                      <span className="text-gray-800">{invoice.sourceWorkOrderId}</span>
-                    </>
-                  )}
                 </div>
               </div>
             </div>
@@ -1488,7 +1482,7 @@ const InvoiceDetailPanel = ({
             );
           })()}
 
-          {/* Services - with gold header (Matches PDF layout) */}
+          {/* ===== SERVICES INCLUDED - with icon and decorative line ===== */}
           {lineItems.length > 0 && (() => {
             // Decode HTML entities
             const decodeHtml = (str) => {
@@ -1521,103 +1515,102 @@ const InvoiceDetailPanel = ({
             const services = filteredItems.map(item => {
               const fullDesc = decodeHtml(String(item.description || item.name || 'Service'));
               const parts = fullDesc.split(' - ');
-              // Use item.details as fallback for full description (backend stores it separately)
               const descFromDetails = decodeHtml(item.details || '');
               return {
                 name: parts[0] || item.name || 'Service',
                 description: descFromDetails || parts.slice(1).join(' - ') || '',
                 frequency: getFrequency(item),
-                visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1,
-                price: item.price || item.amount || item.unitPrice || item.unit_price || 0
+                visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
               };
             });
 
             return services.length > 0 ? (
-              <div className="bg-white rounded-lg border border-[#c9a227]/30 overflow-hidden shadow-sm">
-                {/* Table Header */}
-                <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-[#c9a227]/10 border-b border-[#c9a227]/20">
-                  <div className="col-span-1 text-xs font-semibold text-[#c9a227] text-center">#</div>
-                  <div className="col-span-2 text-xs font-semibold text-[#c9a227]">Service</div>
-                  <div className="col-span-5 text-xs font-semibold text-[#c9a227] text-center">Description</div>
-                  <div className="col-span-2 text-xs font-semibold text-[#c9a227] text-center">Frequency</div>
-                  <div className="col-span-2 text-xs font-semibold text-[#c9a227] text-right">Visits</div>
+              <div>
+                {/* Section Header with icon and decorative line */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#fffbeb] flex items-center justify-center border border-[#c9a227]/20">
+                    <FileText className="w-4 h-4 text-[#c9a227]" />
+                  </div>
+                  <span className="text-sm font-bold text-gray-800 uppercase tracking-wide">Services Included</span>
+                  <div className="flex-1 h-[1px] bg-[#c9a227]/30"></div>
                 </div>
-                {/* Table Body */}
-                <div className="divide-y divide-[#c9a227]/10">
-                  {services.map((item, idx) => (
-                    <div key={idx} className={`grid grid-cols-12 gap-2 px-4 py-4 items-center ${idx % 2 === 0 ? 'bg-white' : 'bg-[#c9a227]/5'}`}>
-                      <div className="col-span-1 flex justify-center">
-                        <span className="w-6 h-6 bg-[#c9a227] text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
+                
+                {/* Services Table */}
+                <div className="bg-white rounded-lg border border-[#c9a227]/30 overflow-hidden shadow-sm">
+                  {/* Table Header - Gold */}
+                  <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-[#c9a227]">
+                    <div className="col-span-1 text-xs font-semibold text-white text-center">#</div>
+                    <div className="col-span-2 text-xs font-semibold text-white">Service</div>
+                    <div className="col-span-5 text-xs font-semibold text-white text-center">Description</div>
+                    <div className="col-span-2 text-xs font-semibold text-white text-center">Frequency</div>
+                    <div className="col-span-2 text-xs font-semibold text-white text-right">Visits</div>
+                  </div>
+                  {/* Table Body */}
+                  <div className="divide-y divide-[#c9a227]/10">
+                    {services.map((item, idx) => (
+                      <div key={idx} className={`grid grid-cols-12 gap-2 px-4 py-3 items-center ${idx % 2 === 1 ? 'bg-[#fffbeb]' : 'bg-white'}`}>
+                        <div className="col-span-1 text-center text-sm text-gray-700">{idx + 1}</div>
+                        <div className="col-span-2">
+                          <p className="text-sm font-medium text-gray-800">{item.name}</p>
+                        </div>
+                        <div className="col-span-5 text-center">
+                          <p className="text-xs text-gray-600">{item.description || '-'}</p>
+                        </div>
+                        <div className="col-span-2 text-center">
+                          <p className="text-sm text-gray-700">{item.frequency}</p>
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <p className="text-sm font-medium text-gray-800">{item.visits}</p>
+                        </div>
                       </div>
-                      <div className="col-span-2">
-                        <p className="text-sm font-semibold text-gray-800">{item.name}</p>
-                      </div>
-                      <div className="col-span-5 text-center">
-                        <p className="text-xs text-gray-600 leading-relaxed">{item.description || '-'}</p>
-                      </div>
-                      <div className="col-span-2 text-center">
-                        <p className="text-sm text-[#c9a227] font-medium">{item.frequency}</p>
-                      </div>
-                      <div className="col-span-2 text-right">
-                        <p className="text-sm font-semibold text-gray-800">{item.visits}</p>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             ) : null;
           })()}
 
-          {/* ===== PRICE SUMMARY - Full width gold theme ===== */}
-          <div className="bg-white rounded-xl border border-[#c9a227]/30 overflow-hidden shadow-sm">
-            {/* Header with icon and decorative lines */}
-            <div className="flex items-center justify-center gap-3 py-4 bg-[#fffbeb]">
-              <div className="w-12 h-[1px] bg-[#c9a227]"></div>
+          {/* ===== PRICE SUMMARY - Centered with icon and decorative lines ===== */}
+          <div>
+            {/* Section Header centered */}
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <div className="w-16 h-[1px] bg-[#c9a227]/30"></div>
               <div className="flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-[#c9a227]" />
-                <p className="text-gray-800 text-sm font-semibold uppercase tracking-wide">Price Summary</p>
+                <div className="w-8 h-8 rounded-lg bg-[#fffbeb] flex items-center justify-center border border-[#c9a227]/20">
+                  <Receipt className="w-4 h-4 text-[#c9a227]" />
+                </div>
+                <span className="text-sm font-bold text-gray-800 uppercase tracking-wide">Price Summary</span>
               </div>
-              <div className="w-12 h-[1px] bg-[#c9a227]"></div>
+              <div className="w-16 h-[1px] bg-[#c9a227]/30"></div>
             </div>
-            <div className="px-6 py-5">
-              <div className="space-y-3">
+            
+            {/* Summary Box - Centered */}
+            <div className="max-w-sm mx-auto bg-white rounded-xl border-2 border-[#c9a227]/30 overflow-hidden shadow-sm">
+              <div className="px-6 py-5 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="text-gray-800 font-medium">₹{Math.round(invoice.subtotal || 0).toLocaleString('en-IN')}</span>
+                  <span className="text-gray-600">Subtotal:</span>
+                  <span className="text-gray-800 font-medium">Rs. {Math.round(invoice.subtotal || 0).toLocaleString('en-IN')}</span>
                 </div>
                 
                 {invoice.discountAmount > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-green-600">Discount ({invoice.discountPercentage || 0}%)</span>
-                    <span className="text-green-600 font-medium">-₹{Math.round(invoice.discountAmount).toLocaleString('en-IN')}</span>
+                    <span className="text-green-600">Discount ({invoice.discountPercentage || 0}%):</span>
+                    <span className="text-green-600 font-medium">-Rs. {Math.round(invoice.discountAmount).toLocaleString('en-IN')}</span>
                   </div>
                 )}
                 
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">GST ({invoice.taxPercentage || 18}%)</span>
-                  <span className="text-gray-800 font-medium">₹{Math.round(invoice.taxAmount || 0).toLocaleString('en-IN')}</span>
+                  <span className="text-gray-600">GST ({(invoice.taxPercentage || 18).toFixed(2)}%):</span>
+                  <span className="text-gray-800 font-medium">Rs. {Math.round(invoice.taxAmount || 0).toLocaleString('en-IN')}</span>
                 </div>
-              </div>
-              
-              <div className="border-t border-gray-200 pt-4 mt-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-[#c9a227] font-bold text-lg">Grand Total</span>
-                  <span className="text-[#c9a227] font-bold text-xl">₹{Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-              
-              {invoice.amountPaid > 0 && (
-                <div className="border-t border-dashed border-gray-200 pt-4 mt-4 space-y-2">
+                
+                <div className="border-t border-gray-200 pt-3 mt-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-green-600">Amount Paid</span>
-                    <span className="text-green-600 font-semibold">₹{Math.round(invoice.amountPaid).toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-red-600 font-semibold">Balance Due</span>
-                    <span className="text-red-600 font-bold text-lg">₹{Math.round(invoice.balanceAmount || 0).toLocaleString('en-IN')}</span>
+                    <span className="text-[#c9a227] font-bold text-lg">Total:</span>
+                    <span className="text-[#c9a227] font-bold text-xl">Rs. {Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}</span>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           </div>
 
