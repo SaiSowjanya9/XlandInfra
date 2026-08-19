@@ -426,46 +426,54 @@ const generateInvoicePDF = async (invoice) => {
       const safeTotal = safeNum(totalAmount);
       const safeTaxPercent = safeNum(taxPercentage) || 18;
 
-      // Colors matching Image 1 & Image 3
-      const black = '#1a1a1a';
-      const gold = '#c9a227';
-      const darkGold = '#b8860b';
-      const navy = '#1e3a5f';
-      const lightGray = '#f5f5f5';
+      // Colors per design spec
+      const headerBlack = '#151515';
+      const gold = '#D39A1A';
+      const darkGold = '#B77A00';
+      const lightGold = '#E8C66A';
+      const totalGold = '#C58A0A';
+      const primaryText = '#171717';
+      const secondaryText = '#555555';
+      const borderGray = '#E5E5E5';
+      const cardBg = '#FBF7EE';
       const white = '#ffffff';
 
-      // ===== HEADER - Black with elegant flowing gold wave (Image 1 style) =====
+      // ===== HEADER - Black #151515 with gold wave =====
       // Black header background
-      doc.rect(0, 0, pageWidth, 70).fill(black);
+      doc.rect(0, 0, pageWidth, 75).fill(headerBlack);
       
-      // Draw elegant flowing gold wave at bottom
-      doc.rect(0, 62, pageWidth, 12).fill(gold);
-      // Create wave effect with overlapping black ellipses
-      doc.ellipse(pageWidth * 0.15, 66, 60, 12).fill(black);
-      doc.ellipse(pageWidth * 0.5, 64, 80, 15).fill(black);
-      doc.ellipse(pageWidth * 0.85, 66, 60, 12).fill(black);
+      // Gold wave at bottom
+      doc.rect(0, 65, pageWidth, 12).fill(gold);
+      // Create wave effect with overlapping black curves
+      doc.ellipse(pageWidth * 0.15, 69, 60, 12).fill(headerBlack);
+      doc.ellipse(pageWidth * 0.5, 67, 80, 15).fill(headerBlack);
+      doc.ellipse(pageWidth * 0.85, 69, 60, 12).fill(headerBlack);
+      // Light gold highlight
+      doc.ellipse(pageWidth * 0.15, 73, 45, 6).fill(lightGold);
+      doc.ellipse(pageWidth * 0.5, 72, 55, 7).fill(lightGold);
+      doc.ellipse(pageWidth * 0.85, 73, 45, 6).fill(lightGold);
       
       // Logo on left
       try {
-        doc.image(LOGO_PATH, margin + 15, 10, { width: 45, height: 45 });
+        doc.image(LOGO_PATH, margin + 15, 12, { width: 48, height: 48 });
       } catch (logoErr) {
-        doc.rect(margin + 15, 10, 45, 45).fill(gold);
+        doc.rect(margin + 15, 12, 48, 48).fill(gold);
       }
       
       // Company name - "XLAND INFRA" in gold
-      doc.fontSize(22).fillColor(gold).text('XLAND INFRA', margin + 70, 18);
+      doc.fontSize(24).fillColor(gold).text('XLAND INFRA', margin + 75, 20);
       
       // "PVT LTD" with decorative lines on both sides
       const pvtLtdText = 'PVT LTD';
       doc.fontSize(9).fillColor(gold);
       const pvtLtdWidth = doc.widthOfString(pvtLtdText);
-      const pvtLtdX = margin + 70;
-      const mainTextWidth = doc.fontSize(22).widthOfString('XLAND INFRA');
+      const pvtLtdX = margin + 75;
+      const mainTextWidth = doc.fontSize(24).widthOfString('XLAND INFRA');
       const pvtLtdCenterX = pvtLtdX + (mainTextWidth / 2);
       const actualPvtX = pvtLtdCenterX - (pvtLtdWidth / 2);
       
       // Draw the decorative lines
-      const lineY = 46;
+      const lineY = 50;
       const lineLength = 30;
       const lineGap = 8;
       doc.strokeColor(gold).lineWidth(0.8);
@@ -473,9 +481,9 @@ const generateInvoicePDF = async (invoice) => {
       doc.moveTo(actualPvtX + pvtLtdWidth + lineGap, lineY).lineTo(actualPvtX + pvtLtdWidth + lineGap + lineLength, lineY).stroke();
       
       // Draw PVT LTD text
-      doc.fontSize(9).fillColor(gold).text(pvtLtdText, actualPvtX, 41);
+      doc.fontSize(9).fillColor(gold).text(pvtLtdText, actualPvtX, 45);
 
-      let y = 90;
+      let y = 95;
 
       // ===== INVOICE ID & DATES ROW =====
       doc.fontSize(9).fillColor('#666666').text('ID:', margin, y);
@@ -486,73 +494,67 @@ const generateInvoicePDF = async (invoice) => {
       }
       
       // Right side dates
-      const dateX = pageWidth - margin - 120;
-      doc.fontSize(9).fillColor('#666666').font('Helvetica').text('Date:', dateX, y);
+      const dateX = pageWidth - margin - 125;
+      doc.fontSize(10).fillColor(secondaryText).font('Helvetica').text('Date:', dateX, y);
       const invDateStr = invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-      doc.fontSize(11).fillColor(black).font('Helvetica-Bold').text(invDateStr, dateX + 35, y - 1);
+      doc.fontSize(12).fillColor(primaryText).font('Helvetica-Bold').text(invDateStr, dateX + 38, y - 1);
       
-      doc.fontSize(9).fillColor('#666666').font('Helvetica').text('Due:', dateX, y + 16);
+      doc.fontSize(10).fillColor(secondaryText).font('Helvetica').text('Due:', dateX, y + 18);
       const dueDateStr = dueDate ? new Date(dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-      doc.fontSize(11).fillColor(black).font('Helvetica-Bold').text(dueDateStr, dateX + 35, y + 15);
+      doc.fontSize(12).fillColor(primaryText).font('Helvetica-Bold').text(dueDateStr, dateX + 38, y + 17);
       
       doc.font('Helvetica');
-      y += 45;
+      y += 48;
 
-      // ===== TOTAL AMOUNT DUE BANNER - Gold rounded (Image 3 style) =====
-      doc.roundedRect(margin, y, contentWidth, 40, 6).fill(gold);
+      // ===== TOTAL AMOUNT DUE BANNER - #D39A1A rounded =====
+      doc.roundedRect(margin, y, contentWidth, 45, 8).fill(gold);
       
-      doc.fontSize(9).fillColor(white).text('TOTAL AMOUNT DUE', pageWidth / 2 - 40, y + 8);
-      doc.fontSize(22).fillColor(white).font('Helvetica-Bold').text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, pageWidth / 2 - 50, y + 20);
+      doc.fontSize(11).fillColor(white).text('TOTAL AMOUNT DUE', pageWidth / 2 - 45, y + 10);
+      doc.fontSize(28).fillColor(white).font('Helvetica-Bold').text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, pageWidth / 2 - 55, y + 24);
       doc.font('Helvetica');
-      y += 52;
+      y += 58;
 
-      // ===== PROPERTY & CUSTOMER DETAILS - Outlined gold borders (Image 3 style) =====
+      // ===== PROPERTY & CUSTOMER DETAILS - White bg, outlined gold icons (Image 2) =====
       const cardWidth = (contentWidth - 15) / 2;
       const cardHeight = 85;
       
-      // Property Details Card - outlined border
-      doc.roundedRect(margin, y, cardWidth, cardHeight, 4).lineWidth(1).strokeColor(gold).stroke();
+      // Property Details - outlined gold icon
+      doc.roundedRect(margin, y + 5, 18, 18, 3).lineWidth(1.5).strokeColor(gold).stroke();
+      // Building icon inside (gold)
+      doc.rect(margin + 5, y + 11, 3, 8).fill(gold);
+      doc.rect(margin + 9, y + 13, 3, 6).fill(gold);
+      doc.rect(margin + 13, y + 11, 3, 8).fill(gold);
       
-      // Property icon - outlined square
-      doc.roundedRect(margin + 10, y + 8, 18, 18, 2).lineWidth(1.5).strokeColor(gold).stroke();
-      // Building icon inside
-      doc.rect(margin + 14, y + 14, 3, 8).fill(gold);
-      doc.rect(margin + 18, y + 16, 3, 6).fill(gold);
-      doc.rect(margin + 22, y + 14, 3, 8).fill(gold);
-      
-      doc.fontSize(9).fillColor('#333333').font('Helvetica-Bold').text('PROPERTY DETAILS', margin + 32, y + 13);
+      doc.fontSize(10).fillColor(primaryText).font('Helvetica-Bold').text('PROPERTY DETAILS', margin + 24, y + 12);
       doc.font('Helvetica');
       
-      let py = y + 32;
-      doc.fontSize(8).fillColor('#333333');
-      doc.text(`Property ID: ${propertyCode || '-'}`, margin + 10, py); py += 11;
-      doc.text(`Name: ${decodeHtml(propertyName) || '-'}`, margin + 10, py); py += 11;
-      doc.text(`Type: ${propertyType || '-'}`, margin + 10, py); py += 11;
-      doc.text(`Zone: ${zone || '-'}`, margin + 10, py); py += 11;
-      doc.text(`City: ${city || '-'}`, margin + 10, py);
+      let py = y + 30;
+      doc.fontSize(8).fillColor(secondaryText);
+      doc.text(`Property ID: ${propertyCode || '-'}`, margin + 4, py); py += 11;
+      doc.text(`Name: ${decodeHtml(propertyName) || '-'}`, margin + 4, py); py += 11;
+      doc.text(`Type: ${propertyType || '-'}`, margin + 4, py); py += 11;
+      doc.text(`Zone: ${zone || '-'}`, margin + 4, py); py += 11;
+      doc.text(`City: ${city || '-'}`, margin + 4, py);
 
-      // Customer Details Card - outlined border
+      // Customer Details - outlined gold icon
       const custX = margin + cardWidth + 15;
-      doc.roundedRect(custX, y, cardWidth, cardHeight, 4).lineWidth(1).strokeColor(gold).stroke();
+      doc.roundedRect(custX, y + 5, 18, 18, 3).lineWidth(1.5).strokeColor(gold).stroke();
+      // Person icon inside (gold)
+      doc.circle(custX + 9, y + 11, 4).fill(gold);
+      doc.roundedRect(custX + 3, y + 17, 12, 4, 2).fill(gold);
       
-      // Customer icon - outlined square
-      doc.roundedRect(custX + 10, y + 8, 18, 18, 2).lineWidth(1.5).strokeColor(gold).stroke();
-      // Person icon inside
-      doc.circle(custX + 19, y + 14, 4).fill(gold);
-      doc.roundedRect(custX + 12, y + 19, 14, 5, 2).fill(gold);
-      
-      doc.fontSize(9).fillColor('#333333').font('Helvetica-Bold').text('CUSTOMER DETAILS', custX + 32, y + 13);
+      doc.fontSize(10).fillColor(primaryText).font('Helvetica-Bold').text('CUSTOMER DETAILS', custX + 24, y + 12);
       doc.font('Helvetica');
       
-      let cy = y + 32;
-      doc.fontSize(8).fillColor('#333333');
-      doc.text(`Name: ${decodeHtml(customerName) || '-'}`, custX + 10, cy); cy += 11;
-      doc.text(`Phone: ${customerPhone || '-'}`, custX + 10, cy); cy += 11;
-      doc.text(`Email: ${customerEmail || '-'}`, custX + 10, cy, { width: cardWidth - 20 }); cy += 11;
-      doc.text(`City: ${city || '-'}`, custX + 10, cy);
+      let cy = y + 30;
+      doc.fontSize(8).fillColor(secondaryText);
+      doc.text(`Name: ${decodeHtml(customerName) || '-'}`, custX + 4, cy); cy += 11;
+      doc.text(`Phone: ${customerPhone || '-'}`, custX + 4, cy); cy += 11;
+      doc.text(`Email: ${customerEmail || '-'}`, custX + 4, cy, { width: cardWidth - 20 }); cy += 11;
+      doc.text(`City: ${city || '-'}`, custX + 4, cy);
       if (workOrderId) {
         cy += 11;
-        doc.text(`Work Order: ${workOrderId}`, custX + 10, cy);
+        doc.text(`Work Order: ${workOrderId}`, custX + 4, cy);
       }
 
       y += cardHeight + 15;
@@ -565,24 +567,28 @@ const generateInvoicePDF = async (invoice) => {
 
       const pageHeight = 780;
 
-      // ===== SERVICES INCLUDED TABLE (Skip for Work Order Invoices) =====
+      // ===== SERVICES INCLUDED TABLE - Gold header (Image 2 style) =====
       if (!isWorkOrderInvoice && items.length > 0) {
-        doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('SERVICES INCLUDED', margin, y);
-        doc.font('Helvetica');
-        y += 15;
+        // Section header with outlined gold icon
+        doc.roundedRect(margin, y, 12, 12, 2).lineWidth(1.5).strokeColor(gold).stroke();
+        doc.rect(margin + 4, y + 4, 4, 4).fill(gold);
         
-        // Table header
-        doc.rect(margin, y, contentWidth, 22).fill(navy);
-        doc.fontSize(8).fillColor(white);
-        doc.text('#', margin + 8, y + 7);
-        doc.text('Service', margin + 35, y + 7);
-        doc.text('Description', margin + 140, y + 7);
-        doc.text('Frequency', margin + 320, y + 7);
-        doc.text('Visits', margin + 420, y + 7);
-        y += 22;
+        doc.fontSize(10).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES INCLUDED', margin + 18, y + 3);
+        doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 75, y + 6).lineTo(pageWidth - margin, y + 6).stroke();
+        doc.font('Helvetica');
+        y += 18;
+        
+        // Table header - Gold background
+        doc.rect(margin, y, contentWidth, 24).fill(gold);
+        doc.fontSize(9).fillColor(white);
+        doc.text('#', margin + 10, y + 8);
+        doc.text('Service', margin + 40, y + 8);
+        doc.text('Description', margin + 150, y + 8);
+        doc.text('Frequency', margin + 330, y + 8);
+        doc.text('Visits', margin + 430, y + 8);
+        y += 24;
 
         items.forEach((item, idx) => {
-          // Use item.details as fallback for full description
           const details = decodeHtml(item.details || '');
           const fullDesc = decodeHtml(item.description || item.name || 'Service');
           const parts = fullDesc.split(' - ');
@@ -591,72 +597,85 @@ const generateInvoicePDF = async (invoice) => {
           const freq = item.frequency || item.frequencyType || item.billingDuration || '-';
           const visits = item.visits || item.frequencyCount || item.quantity || 1;
           
-          const rowHeight = 20;
+          const rowHeight = 22;
           
           if (y + rowHeight > pageHeight) {
             doc.addPage();
             y = 50;
           }
           
-          doc.rect(margin, y, contentWidth, rowHeight).lineWidth(0.5).stroke('#e0e0e0');
-          doc.fontSize(8).fillColor('#333333');
-          doc.text(`${idx + 1}`, margin + 10, y + 6);
-          doc.fillColor(navy).text(serviceName.substring(0, 25), margin + 35, y + 6);
-          doc.fillColor('#666666').text(serviceDesc.substring(0, 40), margin + 140, y + 6);
-          doc.text(freq, margin + 320, y + 6);
-          doc.text(`${visits}`, margin + 430, y + 6);
+          doc.rect(margin, y, contentWidth, rowHeight).lineWidth(0.3).stroke(borderGray);
+          doc.fontSize(9).fillColor(primaryText);
+          doc.text(`${idx + 1}`, margin + 12, y + 7);
+          doc.fillColor(primaryText).text(serviceName.substring(0, 28), margin + 40, y + 7);
+          doc.fillColor(secondaryText).text(serviceDesc.substring(0, 45), margin + 150, y + 7);
+          doc.text(freq, margin + 330, y + 7);
+          doc.text(`${visits}`, margin + 435, y + 7);
           y += rowHeight;
         });
 
         y += 20;
       }
 
-      // ===== PRICE SUMMARY BOX (Right-aligned) =====
+      // ===== PRICE SUMMARY - Right aligned with outlined icon (Image 2) =====
       if (y + 110 > pageHeight) {
         doc.addPage();
         y = 50;
       }
 
-      const summaryWidth = 200;
+      const summaryWidth = 180;
       const summaryX = pageWidth - margin - summaryWidth;
       
-      doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX, y);
+      // Section header with outlined gold icon
+      doc.roundedRect(summaryX, y, 10, 10, 2).lineWidth(1.5).strokeColor(gold).stroke();
+      doc.rect(summaryX + 3, y + 3, 4, 4).fill(gold);
+      
+      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX + 14, y + 2);
+      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 62, y + 5).lineTo(pageWidth - margin, y + 5).stroke();
       doc.font('Helvetica');
       y += 15;
       
       // Summary box with border
-      const summaryHeight = safeDiscount > 0 ? 85 : 70;
-      doc.rect(summaryX, y, summaryWidth, summaryHeight).lineWidth(1).stroke('#e0e0e0');
+      const summaryHeight = safeDiscount > 0 ? 80 : 65;
+      doc.roundedRect(summaryX, y, summaryWidth, summaryHeight, 4).lineWidth(0.5).stroke(borderGray);
       
-      let sy = y + 12;
-      doc.fontSize(9).fillColor('#666666');
-      doc.text('Subtotal', summaryX + 12, sy);
-      doc.fillColor('#333333').text(`₹${safeSubtotal.toLocaleString('en-IN')}`, summaryX + 130, sy);
-      sy += 16;
+      let sy = y + 14;
+      doc.fontSize(9).fillColor(secondaryText);
+      doc.text('Subtotal:', summaryX + 14, sy);
+      doc.fillColor(primaryText).text(`Rs. ${safeSubtotal.toLocaleString('en-IN')}`, summaryX + summaryWidth - 14, sy, { align: 'right', width: summaryWidth - 80 });
+      sy += 14;
       
       if (safeDiscount > 0) {
-        doc.fillColor('#059669').text(`Discount`, summaryX + 12, sy);
-        doc.text(`-₹${safeDiscount.toLocaleString('en-IN')}`, summaryX + 130, sy);
-        sy += 16;
+        doc.fillColor('#059669').text(`Discount:`, summaryX + 14, sy);
+        doc.text(`-Rs. ${safeDiscount.toLocaleString('en-IN')}`, summaryX + summaryWidth - 14, sy, { align: 'right', width: summaryWidth - 80 });
+        sy += 14;
       }
       
-      doc.fillColor('#666666').text(`GST (${safeTaxPercent}%)`, summaryX + 12, sy);
-      doc.fillColor('#333333').text(`₹${safeTax.toLocaleString('en-IN')}`, summaryX + 130, sy);
-      sy += 16;
+      doc.fillColor(secondaryText).text(`GST (${safeTaxPercent}%):`, summaryX + 14, sy);
+      doc.fillColor(primaryText).text(`Rs. ${safeTax.toLocaleString('en-IN')}`, summaryX + summaryWidth - 14, sy, { align: 'right', width: summaryWidth - 80 });
+      sy += 14;
       
       // Divider line
-      doc.strokeColor('#333333').lineWidth(0.5).moveTo(summaryX + 10, sy).lineTo(summaryX + summaryWidth - 10, sy).stroke();
+      doc.strokeColor(borderGray).lineWidth(0.5).moveTo(summaryX + 10, sy).lineTo(summaryX + summaryWidth - 10, sy).stroke();
       sy += 10;
       
       // Total in gold
-      doc.fontSize(11).fillColor(gold).font('Helvetica-Bold').text('Grand Total', summaryX + 12, sy);
-      doc.text(`₹${safeTotal.toLocaleString('en-IN')}`, summaryX + 120, sy);
+      doc.fontSize(10).fillColor(gold).font('Helvetica-Bold').text('Total:', summaryX + 14, sy);
+      doc.text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, summaryX + summaryWidth - 14, sy, { align: 'right', width: summaryWidth - 60 });
       doc.font('Helvetica');
 
-      // ===== FOOTER =====
-      doc.fontSize(9).fillColor('#666666').text(
+      y = y + summaryHeight + 15;
+
+      // ===== FOOTER - Gray separator (Image 2) =====
+      doc.strokeColor(borderGray).lineWidth(0.5).moveTo(margin, y).lineTo(pageWidth - margin, y).stroke();
+      y += 10;
+      
+      // Heart icon placeholder
+      doc.circle(margin + 8, y + 2, 4).lineWidth(0.5).stroke(borderGray);
+      
+      doc.fontSize(9).fillColor(secondaryText).text(
         'We appreciate your trust in our services.',
-        margin, 780, { align: 'left', width: contentWidth, italic: true }
+        margin + 18, y + 3
       );
 
       doc.end();
