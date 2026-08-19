@@ -36,6 +36,20 @@ const PROPERTY_TYPE_OPTIONS = [
   { id: 'PLOT', label: 'Plot' },
 ];
 
+// Format status label for display
+const getStatusLabel = (status) => {
+  const labels = {
+    draft: 'Draft',
+    pending_approval: 'Pending Approval',
+    approved: 'Approved',
+    rejected: 'Rejected',
+    converted: 'Invoice Generated',
+    sent: 'Sent',
+    archived: 'Archived'
+  };
+  return labels[status] || status?.charAt(0).toUpperCase() + status?.slice(1) || 'Draft';
+};
+
 // Format date in IST format (dd/mm/yyyy)
 const formatDateIST = (dateStr) => {
   if (!dateStr) return '-';
@@ -1847,8 +1861,9 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' : 
                     viewEstimate.status === 'sent' ? 'bg-blue-100 text-blue-700' : 
+                    viewEstimate.status === 'converted' ? 'bg-purple-100 text-purple-700' :
                     viewEstimate.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
-                  }`}>{viewEstimate.status || 'draft'}</span>
+                  }`}>{getStatusLabel(viewEstimate.status)}</span>
                 </div>
                 <div><p className="text-xs text-gray-500">Type</p><p className="font-medium text-sm capitalize">{viewEstimate.estimate_type?.replace('_', ' ')}</p></div>
                 <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{formatDateIST(viewEstimate.created_at)}</p></div>
