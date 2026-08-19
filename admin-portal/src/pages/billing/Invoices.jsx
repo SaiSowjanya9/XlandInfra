@@ -1358,17 +1358,17 @@ const InvoiceDetailPanel = ({
             <p className="text-white text-4xl font-bold">Rs. {Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}</p>
           </div>
 
-          {/* ===== PROPERTY & CUSTOMER DETAILS - White bg, outlined gold icons (Image 2) ===== */}
-          <div className="grid grid-cols-2 gap-6">
-            {/* Property Details */}
-            <div className="bg-white">
+          {/* ===== PROPERTY & CUSTOMER DETAILS - Boxed with border (Image 2) ===== */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Property Details - with border box */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-lg border-2 border-[#c9a227] flex items-center justify-center">
                   <Building2 className="w-5 h-5 text-[#c9a227]" />
                 </div>
                 <p className="text-gray-900 text-sm font-bold uppercase">Property Details</p>
               </div>
-              <div className="text-sm space-y-1 pl-1">
+              <div className="text-sm space-y-1.5 pl-1">
                 <p className="text-gray-600">Property ID: {invoice.propertyCode || '-'}</p>
                 <p className="text-gray-600">Name: {invoice.propertyName || '-'}</p>
                 <p className="text-gray-600">Type: {invoice.propertyType || '-'}</p>
@@ -1376,15 +1376,15 @@ const InvoiceDetailPanel = ({
                 <p className="text-gray-600">City: {invoice.city || '-'}</p>
               </div>
             </div>
-            {/* Customer Details */}
-            <div className="bg-white">
+            {/* Customer Details - with border box */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-lg border-2 border-[#c9a227] flex items-center justify-center">
                   <User className="w-5 h-5 text-[#c9a227]" />
                 </div>
                 <p className="text-gray-900 text-sm font-bold uppercase">Customer Details</p>
               </div>
-              <div className="text-sm space-y-1 pl-1">
+              <div className="text-sm space-y-1.5 pl-1">
                 <p className="text-gray-600">Name: {invoice.customerName || '-'}</p>
                 <p className="text-gray-600">Phone: {invoice.customerPhone || '-'}</p>
                 <p className="text-gray-600 break-all">Email: {invoice.customerEmail || '-'}</p>
