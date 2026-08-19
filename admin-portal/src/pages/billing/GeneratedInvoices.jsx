@@ -1156,39 +1156,36 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
 
                 return (
                   <>
-                    {/* AMC Services - Gold Theme */}
+                    {/* AMC Services - Table Layout */}
                     {services.length > 0 && (
                       <div className="mb-6">
-                        <div className="bg-white rounded-lg border-2 border-[#c9a227]/30 overflow-hidden shadow-sm">
-                          <div className="bg-[#c9a227] px-4 py-3">
-                            <h3 className="text-white text-sm font-semibold uppercase tracking-wide flex items-center gap-2">
-                              <FileText className="w-4 h-4" /> AMC Services
-                            </h3>
+                        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+                          {/* Table Header */}
+                          <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-indigo-50 border-b border-gray-200">
+                            <div className="col-span-1 text-xs font-semibold text-indigo-600 text-center">#</div>
+                            <div className="col-span-2 text-xs font-semibold text-indigo-600">Service</div>
+                            <div className="col-span-5 text-xs font-semibold text-indigo-600 text-center">Description</div>
+                            <div className="col-span-2 text-xs font-semibold text-indigo-600 text-center">Frequency</div>
+                            <div className="col-span-2 text-xs font-semibold text-indigo-600 text-right">Visits</div>
                           </div>
-                          <div className="divide-y divide-[#c9a227]/20">
+                          {/* Table Body */}
+                          <div className="divide-y divide-gray-100">
                             {services.map((item, idx) => (
-                              <div key={idx} className={`px-4 py-3 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#c9a227]/5'}`}>
-                                <div className="flex flex-col gap-2">
-                                  <div className="flex justify-between items-start">
-                                    <p className="text-sm font-semibold text-gray-800 flex-1">{item.name}</p>
-                                    <div className="flex items-center gap-3 flex-shrink-0 text-sm">
-                                      <div className="text-center w-[70px]">
-                                        <p className="text-[10px] text-gray-400 uppercase">Frequency</p>
-                                        <p className="text-gray-600 text-xs">{item.frequency}</p>
-                                      </div>
-                                      <div className="text-center w-10">
-                                        <p className="text-[10px] text-gray-400 uppercase">Visits</p>
-                                        <p className="text-gray-600 text-xs">{item.visits}</p>
-                                      </div>
-                                      <div className="text-right w-[70px]">
-                                        <p className="text-[10px] text-gray-400 uppercase">Amount</p>
-                                        <p className="font-semibold text-[#c9a227] text-xs">{formatCurrency(item.price)}</p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  {item.description && (
-                                    <p className="text-xs text-gray-500 leading-relaxed">{item.description}</p>
-                                  )}
+                              <div key={idx} className={`grid grid-cols-12 gap-2 px-4 py-4 items-center ${idx % 2 === 0 ? 'bg-white' : 'bg-indigo-50/30'}`}>
+                                <div className="col-span-1 flex justify-center">
+                                  <span className="w-6 h-6 bg-indigo-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
+                                </div>
+                                <div className="col-span-2">
+                                  <p className="text-sm font-semibold text-gray-800">{item.name}</p>
+                                </div>
+                                <div className="col-span-5 text-center">
+                                  <p className="text-xs text-gray-600 leading-relaxed">{item.description || '-'}</p>
+                                </div>
+                                <div className="col-span-2 text-center">
+                                  <p className="text-sm text-indigo-600 font-medium">{item.frequency}</p>
+                                </div>
+                                <div className="col-span-2 text-right">
+                                  <p className="text-sm font-semibold text-gray-800">{item.visits}</p>
                                 </div>
                               </div>
                             ))}
@@ -1197,39 +1194,36 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                       </div>
                     )}
 
-                    {/* Add-ons - Gold Theme (lighter shade) */}
+                    {/* Add-ons - Table Layout */}
                     {addons.length > 0 && (
                       <div className="mb-6">
-                        <div className="bg-white rounded-lg border-2 border-[#d4b445]/30 overflow-hidden shadow-sm">
-                          <div className="bg-[#d4b445] px-4 py-3">
-                            <h3 className="text-white text-sm font-semibold uppercase tracking-wide flex items-center gap-2">
-                              <Plus className="w-4 h-4" /> Add-on Services
-                            </h3>
+                        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+                          {/* Table Header */}
+                          <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-amber-50 border-b border-gray-200">
+                            <div className="col-span-1 text-xs font-semibold text-amber-700 text-center">#</div>
+                            <div className="col-span-2 text-xs font-semibold text-amber-700">Add-on</div>
+                            <div className="col-span-5 text-xs font-semibold text-amber-700 text-center">Description</div>
+                            <div className="col-span-2 text-xs font-semibold text-amber-700 text-center">Frequency</div>
+                            <div className="col-span-2 text-xs font-semibold text-amber-700 text-right">Visits</div>
                           </div>
-                          <div className="divide-y divide-[#d4b445]/20">
+                          {/* Table Body */}
+                          <div className="divide-y divide-gray-100">
                             {addons.map((item, idx) => (
-                              <div key={idx} className={`px-4 py-3 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#d4b445]/5'}`}>
-                                <div className="flex flex-col gap-2">
-                                  <div className="flex justify-between items-start">
-                                    <p className="text-sm font-semibold text-gray-800 flex-1">{item.name}</p>
-                                    <div className="flex items-center gap-3 flex-shrink-0 text-sm">
-                                      <div className="text-center w-[70px]">
-                                        <p className="text-[10px] text-gray-400 uppercase">Frequency</p>
-                                        <p className="text-gray-600 text-xs">{item.frequency}</p>
-                                      </div>
-                                      <div className="text-center w-10">
-                                        <p className="text-[10px] text-gray-400 uppercase">Visits</p>
-                                        <p className="text-gray-600 text-xs">{item.visits}</p>
-                                      </div>
-                                      <div className="text-right w-[70px]">
-                                        <p className="text-[10px] text-gray-400 uppercase">Amount</p>
-                                        <p className="font-semibold text-[#c9a227] text-xs">{formatCurrency(item.price)}</p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  {item.description && (
-                                    <p className="text-xs text-gray-500 leading-relaxed">{item.description}</p>
-                                  )}
+                              <div key={idx} className={`grid grid-cols-12 gap-2 px-4 py-4 items-center ${idx % 2 === 0 ? 'bg-white' : 'bg-amber-50/30'}`}>
+                                <div className="col-span-1 flex justify-center">
+                                  <span className="w-6 h-6 bg-amber-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
+                                </div>
+                                <div className="col-span-2">
+                                  <p className="text-sm font-semibold text-gray-800">{item.name}</p>
+                                </div>
+                                <div className="col-span-5 text-center">
+                                  <p className="text-xs text-gray-600 leading-relaxed">{item.description || '-'}</p>
+                                </div>
+                                <div className="col-span-2 text-center">
+                                  <p className="text-sm text-amber-600 font-medium">{item.frequency}</p>
+                                </div>
+                                <div className="col-span-2 text-right">
+                                  <p className="text-sm font-semibold text-gray-800">{item.visits}</p>
                                 </div>
                               </div>
                             ))}
