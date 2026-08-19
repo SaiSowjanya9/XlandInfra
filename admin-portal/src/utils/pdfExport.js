@@ -1181,22 +1181,20 @@ export const exportInvoiceToPDF = (invoice) => {
     
     y += bannerHeight + 12;
 
-    // ===== PROPERTY & CUSTOMER DETAILS - Boxed with border (Image 2) =====
+    // ===== PROPERTY & CUSTOMER DETAILS - Cream bg, filled gold icons (Image 2) =====
     const cardGap = 8;
     const cardWidth = (pageWidth - margin * 2 - cardGap) / 2;
     const cardHeight = 58;
     
-    // Property Details Card - with border box
-    doc.setDrawColor(...borderGray);
-    doc.setLineWidth(0.5);
-    doc.roundedRect(margin, y, cardWidth, cardHeight, 4, 4, 'S');
+    // Property Details Card - cream background
+    doc.setFillColor(...cardBg);
+    doc.roundedRect(margin, y, cardWidth, cardHeight, 4, 4, 'F');
     
-    // Property icon - outlined gold square with gold icon
-    doc.setDrawColor(...gold);
-    doc.setLineWidth(1.2);
-    doc.roundedRect(margin + 10, y + 8, 14, 14, 2, 2, 'S');
-    // Building icon inside (gold)
+    // Property icon - FILLED gold square with white icon
     doc.setFillColor(...gold);
+    doc.roundedRect(margin + 10, y + 8, 14, 14, 2, 2, 'F');
+    // Building icon inside (white)
+    doc.setFillColor(...white);
     doc.rect(margin + 13, y + 12, 2, 7, 'F');
     doc.rect(margin + 16, y + 14, 2, 5, 'F');
     doc.rect(margin + 19, y + 12, 2, 7, 'F');
@@ -1220,18 +1218,16 @@ export const exportInvoiceToPDF = (invoice) => {
     py += 6;
     doc.text('City: ' + String(invoice.city || '-'), margin + 10, py);
     
-    // Customer Details Card - with border box
+    // Customer Details Card - cream background
     const custCardX = margin + cardWidth + cardGap;
-    doc.setDrawColor(...borderGray);
-    doc.setLineWidth(0.5);
-    doc.roundedRect(custCardX, y, cardWidth, cardHeight, 4, 4, 'S');
+    doc.setFillColor(...cardBg);
+    doc.roundedRect(custCardX, y, cardWidth, cardHeight, 4, 4, 'F');
     
-    // Customer icon - outlined gold square with gold icon
-    doc.setDrawColor(...gold);
-    doc.setLineWidth(1.2);
-    doc.roundedRect(custCardX + 10, y + 8, 14, 14, 2, 2, 'S');
-    // Person icon inside (gold)
+    // Customer icon - FILLED gold square with white icon
     doc.setFillColor(...gold);
+    doc.roundedRect(custCardX + 10, y + 8, 14, 14, 2, 2, 'F');
+    // Person icon inside (white)
+    doc.setFillColor(...white);
     doc.circle(custCardX + 17, y + 13, 3, 'F');
     doc.roundedRect(custCardX + 12, y + 17, 10, 3, 1, 1, 'F');
     
@@ -1283,11 +1279,10 @@ export const exportInvoiceToPDF = (invoice) => {
     const isWorkOrderInvoice = invoice.invoiceType === 'work_order' || invoice.invoice_type === 'work_order';
 
     if (!isWorkOrderInvoice && services.length > 0) {
-      // Section header with outlined gold icon (Image 2)
-      doc.setDrawColor(...gold);
-      doc.setLineWidth(1);
-      doc.roundedRect(margin, y, 10, 10, 2, 2, 'S');
+      // Section header with filled gold icon (Image 2)
       doc.setFillColor(...gold);
+      doc.roundedRect(margin, y, 10, 10, 2, 2, 'F');
+      doc.setFillColor(...white);
       doc.rect(margin + 3, y + 3, 4, 4, 'F');
       
       doc.setTextColor(...primaryText);
@@ -1332,15 +1327,14 @@ export const exportInvoiceToPDF = (invoice) => {
       y = doc.lastAutoTable.finalY + 15;
     }
 
-    // ===== PRICE SUMMARY - Right aligned with outlined icon (Image 2) =====
+    // ===== PRICE SUMMARY - Right aligned with filled gold icon (Image 2) =====
     const summaryWidth = 110;
     const summaryX = pageWidth - margin - summaryWidth;
     
-    // Section header with outlined gold icon
-    doc.setDrawColor(...gold);
-    doc.setLineWidth(1);
-    doc.roundedRect(summaryX, y, 8, 8, 2, 2, 'S');
+    // Section header with filled gold icon
     doc.setFillColor(...gold);
+    doc.roundedRect(summaryX, y, 8, 8, 2, 2, 'F');
+    doc.setFillColor(...white);
     doc.rect(summaryX + 2.5, y + 2.5, 3, 3, 'F');
     
     doc.setTextColor(...primaryText);

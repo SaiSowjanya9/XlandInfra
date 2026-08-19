@@ -1358,17 +1358,17 @@ const InvoiceDetailPanel = ({
             <p className="text-white text-4xl font-bold">Rs. {Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}</p>
           </div>
 
-          {/* ===== PROPERTY & CUSTOMER DETAILS - Boxed with border (Image 2) ===== */}
+          {/* ===== PROPERTY & CUSTOMER DETAILS - Cream bg, filled gold icons (Image 2) ===== */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Property Details - with border box */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-lg border-2 border-[#c9a227] flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-[#c9a227]" />
+            {/* Property Details - cream background, filled gold icon */}
+            <div className="bg-[#FBF7EE] rounded-xl p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-[#c9a227] flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-white" />
                 </div>
                 <p className="text-gray-900 text-sm font-bold uppercase">Property Details</p>
               </div>
-              <div className="text-sm space-y-1.5 pl-1">
+              <div className="text-sm space-y-1.5">
                 <p className="text-gray-600">Property ID: {invoice.propertyCode || '-'}</p>
                 <p className="text-gray-600">Name: {invoice.propertyName || '-'}</p>
                 <p className="text-gray-600">Type: {invoice.propertyType || '-'}</p>
@@ -1376,15 +1376,15 @@ const InvoiceDetailPanel = ({
                 <p className="text-gray-600">City: {invoice.city || '-'}</p>
               </div>
             </div>
-            {/* Customer Details - with border box */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-lg border-2 border-[#c9a227] flex items-center justify-center">
-                  <User className="w-5 h-5 text-[#c9a227]" />
+            {/* Customer Details - cream background, filled gold icon */}
+            <div className="bg-[#FBF7EE] rounded-xl p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-[#c9a227] flex items-center justify-center">
+                  <User className="w-5 h-5 text-white" />
                 </div>
                 <p className="text-gray-900 text-sm font-bold uppercase">Customer Details</p>
               </div>
-              <div className="text-sm space-y-1.5 pl-1">
+              <div className="text-sm space-y-1.5">
                 <p className="text-gray-600">Name: {invoice.customerName || '-'}</p>
                 <p className="text-gray-600">Phone: {invoice.customerPhone || '-'}</p>
                 <p className="text-gray-600 break-all">Email: {invoice.customerEmail || '-'}</p>
@@ -1515,10 +1515,10 @@ const InvoiceDetailPanel = ({
 
             return services.length > 0 ? (
               <div>
-                {/* Section Header - outlined icon (Image 2) */}
+                {/* Section Header - filled gold icon (Image 2) */}
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 rounded border-2 border-[#c9a227] flex items-center justify-center">
-                    <FileText className="w-4 h-4 text-[#c9a227]" />
+                  <div className="w-8 h-8 rounded-lg bg-[#c9a227] flex items-center justify-center">
+                    <FileText className="w-4 h-4 text-white" />
                   </div>
                   <span className="text-sm font-bold text-gray-900 uppercase">Services Included</span>
                   <div className="flex-1 h-[1px] bg-[#c9a227]"></div>
@@ -1559,13 +1559,13 @@ const InvoiceDetailPanel = ({
             ) : null;
           })()}
 
-          {/* ===== PRICE SUMMARY - Right aligned with outlined icon (Image 2) ===== */}
+          {/* ===== PRICE SUMMARY - Right aligned with filled gold icon (Image 2) ===== */}
           <div className="flex justify-end">
             <div className="w-72">
-              {/* Section Header - outlined icon */}
+              {/* Section Header - filled gold icon */}
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded border-2 border-[#c9a227] flex items-center justify-center">
-                  <Receipt className="w-3 h-3 text-[#c9a227]" />
+                <div className="w-6 h-6 rounded-lg bg-[#c9a227] flex items-center justify-center">
+                  <Receipt className="w-3 h-3 text-white" />
                 </div>
                 <span className="text-sm font-bold text-gray-900 uppercase">Price Summary</span>
                 <div className="flex-1 h-[1px] bg-[#c9a227]"></div>
