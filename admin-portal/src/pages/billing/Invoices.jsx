@@ -1492,27 +1492,27 @@ const InvoiceDetailPanel = ({
                 <div className="divide-y divide-[#c9a227]/20">
                   {services.map((item, idx) => (
                     <div key={idx} className={`px-4 py-3 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#c9a227]/5'}`}>
-                      <div className="flex justify-between items-start gap-3">
-                        <div className="flex-1 min-w-0 max-w-[55%]">
-                          <p className="text-sm font-semibold text-gray-800">{item.name}</p>
-                          {item.description && (
-                            <p className="text-xs text-gray-500 mt-1 leading-relaxed break-words">{item.description}</p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 flex-shrink-0 text-sm">
-                          <div className="text-center w-[70px]">
-                            <p className="text-[10px] text-gray-400 uppercase">Frequency</p>
-                            <p className="text-gray-600 text-xs">{item.frequency}</p>
-                          </div>
-                          <div className="text-center w-10">
-                            <p className="text-[10px] text-gray-400 uppercase">Visits</p>
-                            <p className="text-gray-600 text-xs">{item.visits}</p>
-                          </div>
-                          <div className="text-right w-[70px]">
-                            <p className="text-[10px] text-gray-400 uppercase">Amount</p>
-                            <p className="font-semibold text-[#c9a227] text-xs">{formatCurrency(item.price || 0)}</p>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex justify-between items-start">
+                          <p className="text-sm font-semibold text-gray-800 flex-1">{item.name}</p>
+                          <div className="flex items-center gap-3 flex-shrink-0 text-sm">
+                            <div className="text-center w-[70px]">
+                              <p className="text-[10px] text-gray-400 uppercase">Frequency</p>
+                              <p className="text-gray-600 text-xs">{item.frequency}</p>
+                            </div>
+                            <div className="text-center w-10">
+                              <p className="text-[10px] text-gray-400 uppercase">Visits</p>
+                              <p className="text-gray-600 text-xs">{item.visits}</p>
+                            </div>
+                            <div className="text-right w-[70px]">
+                              <p className="text-[10px] text-gray-400 uppercase">Amount</p>
+                              <p className="font-semibold text-[#c9a227] text-xs">{formatCurrency(item.price || 0)}</p>
+                            </div>
                           </div>
                         </div>
+                        {item.description && (
+                          <p className="text-xs text-gray-500 leading-relaxed">{item.description}</p>
+                        )}
                       </div>
                     </div>
                   ))}
