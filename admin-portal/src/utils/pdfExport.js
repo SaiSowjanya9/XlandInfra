@@ -174,50 +174,63 @@ const generatePDF = (data, type, filename) => {
     doc.line(textX + lineLength + lineGap + pvtLtdWidth + lineGap, pvtLtdY - 2, 
              textX + lineLength + lineGap + pvtLtdWidth + lineGap + lineLength, pvtLtdY - 2);
 
-    y = headerHeight + 8;
+    y = headerHeight + 6;
 
-    // ===== DOCUMENT INFO ROW =====
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...navy);
-    doc.text('ID:', margin, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...darkText);
-    const estId = String(data.estimateId || data.packageId || 'N/A');
-    doc.text(estId.length > 25 ? estId.substring(0, 25) + '...' : estId, margin + 8, y);
+    // ===== DOCUMENT INFO ROW - Gray background =====
+    doc.setFillColor(248, 250, 252); // gray-50
+    doc.rect(0, y, pageWidth, 24, 'F');
+    doc.setDrawColor(229, 231, 235); // gray-200
+    doc.line(0, y + 24, pageWidth, y + 24);
     
-    // Status badge (for estimates)
+    const metaY = y + 8;
+    const colWidth = (pageWidth - margin * 2) / 3;
+    
+    // Column 1: Estimate/Package ID
+    const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
+    doc.setFontSize(7);
+    doc.setTextColor(107, 114, 128); // gray-500
+    doc.text(docType + ' NO.', margin, metaY);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(17, 24, 39); // gray-900
+    const estId = String(data.estimateId || data.packageId || 'N/A');
+    doc.text(estId.length > 20 ? estId.substring(0, 20) + '...' : estId, margin, metaY + 6);
+    
+    // Column 2: Date
+    const col2X = margin + colWidth;
+    doc.setFontSize(7);
+    doc.setTextColor(107, 114, 128);
+    doc.text('DATE', col2X, metaY);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(17, 24, 39);
+    doc.text(formatDate(data.createdAt), col2X, metaY + 6);
+    
+    // Column 3: Status Badge (for estimates)
     if (type === 'estimate' && data.status) {
+      const col3X = margin + colWidth * 2;
       const status = String(data.status).toLowerCase();
-      const statusColors = {
-        'draft': [107, 114, 128],     // gray
-        'sent': [59, 130, 246],       // blue
-        'approved': [34, 197, 94],    // green
-        'rejected': [239, 68, 68],    // red
-        'expired': [249, 115, 22]     // orange
-      };
-      const statusColor = statusColors[status] || [107, 114, 128];
       const statusText = status.charAt(0).toUpperCase() + status.slice(1);
+      const statusColors = {
+        'draft': { bg: [229, 231, 235], text: [75, 85, 99] },      // gray
+        'sent': { bg: [219, 234, 254], text: [29, 78, 216] },       // blue
+        'approved': { bg: [220, 252, 231], text: [21, 128, 61] },   // green
+        'rejected': { bg: [254, 226, 226], text: [185, 28, 28] },   // red
+        'expired': { bg: [255, 237, 213], text: [194, 65, 12] }     // orange
+      };
+      const statusStyle = statusColors[status] || statusColors.draft;
       
-      const statusX = pageWidth / 2 - 10;
+      const badgeWidth = 35;
+      const badgeHeight = 10;
+      doc.setFillColor(...statusStyle.bg);
+      doc.roundedRect(col3X, metaY - 2, badgeWidth, badgeHeight, 3, 3, 'F');
+      doc.setFontSize(7);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...mediumText);
-      doc.text('Status:', statusX, y);
-      doc.setFillColor(...statusColor);
-      doc.roundedRect(statusX + 12, y - 3, 18, 5, 1, 1, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(6);
-      doc.text(statusText, statusX + 12 + 9, y, { align: 'center' });
-      doc.setFontSize(8);
+      doc.setTextColor(...statusStyle.text);
+      doc.text(statusText.toUpperCase(), col3X + badgeWidth/2, metaY + 4, { align: 'center' });
     }
     
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...navy);
-    doc.text('Date:', pageWidth - margin - 38, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...darkText);
-    doc.text(formatDate(data.createdAt), pageWidth - margin - 25, y);
-    y += 8;
+    y += 30;
 
     // ===== PACKAGE PRICE BAR =====
     if (data.packagePrice || data.package_price) {
@@ -1082,39 +1095,74 @@ export const exportInvoiceToPDF = (invoice) => {
     doc.line(textX + lineLength + lineGap + pvtLtdWidth + lineGap, pvtLtdY - 2, 
              textX + lineLength + lineGap + pvtLtdWidth + lineGap + lineLength, pvtLtdY - 2);
 
-    y = headerHeight + 8;
+    y = headerHeight + 6;
 
-    // Invoice ID and Date row
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...navy);
-    doc.text('ID:', margin, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...darkText);
-    doc.text(String(invoice.invoiceId || 'N/A'), margin + 8, y);
+    // Invoice Meta Row - Gray background bar
+    doc.setFillColor(248, 250, 252); // gray-50
+    doc.rect(0, y, pageWidth, 28, 'F');
+    doc.setDrawColor(229, 231, 235); // gray-200
+    doc.line(0, y + 28, pageWidth, y + 28);
     
+    const metaY = y + 8;
+    const colWidth = (pageWidth - margin * 2) / 4;
+    
+    // Column 1: Invoice No
+    doc.setFontSize(7);
+    doc.setTextColor(107, 114, 128); // gray-500
+    doc.text('INVOICE NO.', margin, metaY);
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...navy);
-    doc.text('Date:', pageWidth - margin - 40, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...darkText);
-    doc.text(formatDate(invoice.invoiceDate), pageWidth - margin - 25, y);
-    y += 6;
-
-    // Due Date
+    doc.setTextColor(17, 24, 39); // gray-900
+    doc.text(String(invoice.invoiceId || 'N/A'), margin, metaY + 6);
     if (invoice.sourceEstimateId) {
-      doc.setFontSize(7);
-      doc.setTextColor(...mediumText);
-      doc.text('Estimate: ' + invoice.sourceEstimateId, margin, y);
+      doc.setFontSize(6);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(156, 163, 175); // gray-400
+      doc.text('Ref: ' + invoice.sourceEstimateId, margin, metaY + 12);
     }
-    doc.setFontSize(9);
+    
+    // Column 2: Invoice Date
+    const col2X = margin + colWidth;
+    doc.setFontSize(7);
+    doc.setTextColor(107, 114, 128);
+    doc.text('INVOICE DATE', col2X, metaY);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...navy);
-    doc.text('Due:', pageWidth - margin - 40, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...darkText);
-    doc.text(formatDate(invoice.dueDate), pageWidth - margin - 25, y);
-    y += 8;
+    doc.setTextColor(17, 24, 39);
+    doc.text(formatDate(invoice.invoiceDate), col2X, metaY + 6);
+    
+    // Column 3: Due Date (RED)
+    const col3X = margin + colWidth * 2;
+    doc.setFontSize(7);
+    doc.setTextColor(239, 68, 68); // red-500
+    doc.setFont('helvetica', 'bold');
+    doc.text('DUE DATE', col3X, metaY);
+    doc.setFontSize(10);
+    doc.setTextColor(17, 24, 39);
+    doc.text(formatDate(invoice.dueDate), col3X, metaY + 6);
+    
+    // Column 4: Status Badge
+    const col4X = margin + colWidth * 3;
+    const status = invoice.status || 'unpaid';
+    const statusText = status === 'paid' ? 'PAID' : status === 'partial' ? 'PARTIAL' : status === 'overdue' ? 'OVERDUE' : 'UNPAID';
+    const statusColors = {
+      paid: { bg: [220, 252, 231], text: [21, 128, 61] },      // green
+      partial: { bg: [254, 243, 199], text: [180, 83, 9] },    // amber
+      overdue: { bg: [254, 226, 226], text: [185, 28, 28] },   // red
+      unpaid: { bg: [254, 226, 226], text: [220, 38, 38] }     // red
+    };
+    const statusStyle = statusColors[status] || statusColors.unpaid;
+    
+    const badgeWidth = 40;
+    const badgeHeight = 10;
+    doc.setFillColor(...statusStyle.bg);
+    doc.roundedRect(col4X, metaY - 2, badgeWidth, badgeHeight, 3, 3, 'F');
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...statusStyle.text);
+    doc.text(statusText, col4X + badgeWidth/2, metaY + 4, { align: 'center' });
+    
+    y += 34;
 
     // Amount Bar
     doc.setFillColor(...cardBgBlue);
