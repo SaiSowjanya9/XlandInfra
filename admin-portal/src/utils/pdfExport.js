@@ -1051,23 +1051,25 @@ export const exportInvoiceToPDF = (invoice) => {
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
+    const margin = 12;
     let y = 0;
 
-    // Colors per design spec
-    const headerBlack = [21, 21, 21];     // #151515
-    const gold = [211, 154, 26];          // #D39A1A
-    const darkGold = [183, 122, 0];       // #B77A00
-    const lightGold = [232, 198, 106];    // #E8C66A
-    const totalGold = [197, 138, 10];     // #C58A0A
-    const primaryText = [23, 23, 23];     // #171717
-    const secondaryText = [85, 85, 85];   // #555555
-    const borderGray = [229, 229, 229];   // #E5E5E5
-    const cardBg = [251, 247, 238];       // #FBF7EE
+    // Colors per design spec (Image 2)
+    const headerBlack = [21, 21, 21];
+    const gold = [201, 162, 39];          // #C9A227
+    const lightGold = [232, 198, 106];
+    const primaryText = [23, 23, 23];
+    const secondaryText = [85, 85, 85];
+    const borderGray = [229, 229, 229];
+    const cardBg = [251, 247, 238];
     const white = [255, 255, 255];
 
-    // ===== HEADER - Black #151515 with gold wave =====
-    const headerHeight = 55;
+    // Calculate if compact mode needed
+    const itemCount = lineItems.length;
+    const isCompact = itemCount > 4;
+
+    // ===== HEADER - Compact =====
+    const headerHeight = 42;
     
     // Black header background
     doc.setFillColor(...headerBlack);
@@ -1075,176 +1077,155 @@ export const exportInvoiceToPDF = (invoice) => {
     
     // Gold wave at bottom of header
     doc.setFillColor(...gold);
-    doc.rect(0, headerHeight - 12, pageWidth, 12, 'F');
-    
-    // Create wave effect with overlapping black curves
+    doc.rect(0, headerHeight - 8, pageWidth, 8, 'F');
     doc.setFillColor(...headerBlack);
-    doc.ellipse(pageWidth * 0.15, headerHeight - 8, 50, 10, 'F');
-    doc.ellipse(pageWidth * 0.5, headerHeight - 6, 60, 12, 'F');
-    doc.ellipse(pageWidth * 0.85, headerHeight - 8, 50, 10, 'F');
-    
-    // Light gold highlight layer
+    doc.ellipse(pageWidth * 0.15, headerHeight - 5, 35, 7, 'F');
+    doc.ellipse(pageWidth * 0.5, headerHeight - 4, 45, 8, 'F');
+    doc.ellipse(pageWidth * 0.85, headerHeight - 5, 35, 7, 'F');
     doc.setFillColor(...lightGold);
-    doc.ellipse(pageWidth * 0.15, headerHeight - 4, 40, 5, 'F');
-    doc.ellipse(pageWidth * 0.5, headerHeight - 3, 45, 6, 'F');
-    doc.ellipse(pageWidth * 0.85, headerHeight - 4, 40, 5, 'F');
+    doc.ellipse(pageWidth * 0.15, headerHeight - 2, 25, 4, 'F');
+    doc.ellipse(pageWidth * 0.5, headerHeight - 1, 32, 4, 'F');
+    doc.ellipse(pageWidth * 0.85, headerHeight - 2, 25, 4, 'F');
     
     // Logo
-    const logoSize = 30;
+    const logoSize = 24;
     try {
-      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 5, 10, logoSize, logoSize);
+      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 5, 8, logoSize, logoSize);
     } catch (e) {
       doc.setFillColor(...gold);
-      doc.roundedRect(margin + 5, 10, logoSize, logoSize, 3, 3, 'F');
+      doc.roundedRect(margin + 5, 8, logoSize, logoSize, 2, 2, 'F');
     }
     
     // Company name
-    const textX = margin + logoSize + 15;
     doc.setTextColor(...gold);
-    doc.setFontSize(20);
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', textX, 22);
-    
-    // PVT LTD with decorative lines
-    doc.setFontSize(8);
+    doc.text('XLAND INFRA', margin + logoSize + 12, 18);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
-    const pvtLtdY = 32;
-    const pvtText = 'PVT LTD';
-    const pvtWidth = doc.getTextWidth(pvtText);
-    const lineLen = 20;
-    const lineGap = 4;
-    
     doc.setDrawColor(...gold);
-    doc.setLineWidth(0.5);
-    doc.line(textX, pvtLtdY, textX + lineLen, pvtLtdY);
-    doc.text(pvtText, textX + lineLen + lineGap, pvtLtdY + 1);
-    doc.line(textX + lineLen + lineGap + pvtWidth + lineGap, pvtLtdY, textX + lineLen + lineGap + pvtWidth + lineGap + lineLen, pvtLtdY);
+    doc.setLineWidth(0.4);
+    doc.line(margin + logoSize + 12, 25, margin + logoSize + 28, 25);
+    doc.text('PVT LTD', margin + logoSize + 30, 26);
+    doc.line(margin + logoSize + 48, 25, margin + logoSize + 64, 25);
 
-    y = headerHeight + 10;
+    y = headerHeight + 8;
 
-    // ===== ID / DATE / DUE ROW (Image 2 style) =====
-    doc.setFontSize(10);
+    // ===== ID / DATE / DUE ROW (Compact) =====
+    doc.setFontSize(8);
     doc.setTextColor(...secondaryText);
     doc.text('ID:', margin, y);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
+    doc.setFontSize(12);
     doc.setTextColor(...primaryText);
-    doc.text(String(invoice.invoiceId || 'N/A'), margin + 12, y);
+    doc.text(String(invoice.invoiceId || 'N/A'), margin + 8, y);
     
     if (invoice.sourceEstimateId) {
-      doc.setFontSize(9);
+      doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...gold);
-      doc.text('Estimate: ' + invoice.sourceEstimateId, margin, y + 8);
+      doc.text('Estimate: ' + invoice.sourceEstimateId, margin, y + 6);
     }
     
     // Date and Due on right
-    const rightCol = pageWidth - margin - 60;
-    doc.setFontSize(10);
+    const rightCol = pageWidth - margin - 50;
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...secondaryText);
-    doc.text('Date:', rightCol, y - 3);
+    doc.text('Date:', rightCol, y - 2);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(...primaryText);
-    doc.text(formatDate(invoice.invoiceDate), rightCol + 20, y - 3);
-    
     doc.setFontSize(10);
+    doc.setTextColor(...primaryText);
+    doc.text(formatDate(invoice.invoiceDate), rightCol + 16, y - 2);
+    
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...secondaryText);
-    doc.text('Due:', rightCol, y + 7);
+    doc.text('Due:', rightCol, y + 6);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
+    doc.setFontSize(10);
     doc.setTextColor(...primaryText);
-    doc.text(formatDate(invoice.dueDate), rightCol + 20, y + 7);
+    doc.text(formatDate(invoice.dueDate), rightCol + 16, y + 6);
     
-    y += 22;
+    y += 16;
 
-    // ===== TOTAL AMOUNT DUE BANNER - #D39A1A rounded =====
-    const bannerHeight = 32;
+    // ===== TOTAL AMOUNT DUE BANNER (Compact) =====
+    const bannerHeight = 24;
     doc.setFillColor(...gold);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, bannerHeight, 5, 5, 'F');
+    doc.roundedRect(margin, y, pageWidth - margin * 2, bannerHeight, 4, 4, 'F');
     
     doc.setTextColor(...white);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text('TOTAL AMOUNT DUE', pageWidth / 2, y + 10, { align: 'center' });
-    
-    doc.setFontSize(24);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Rs. ' + Math.round(invoice.totalAmount || 0).toLocaleString('en-IN'), pageWidth / 2, y + 24, { align: 'center' });
-    
-    y += bannerHeight + 12;
-
-    // ===== PROPERTY & CUSTOMER DETAILS - Cream bg, filled gold icons (Image 2) =====
-    const cardGap = 8;
-    const cardWidth = (pageWidth - margin * 2 - cardGap) / 2;
-    const cardHeight = 58;
-    
-    // Property Details Card - cream background
-    doc.setFillColor(...cardBg);
-    doc.roundedRect(margin, y, cardWidth, cardHeight, 4, 4, 'F');
-    
-    // Property icon - FILLED gold square with white icon
-    doc.setFillColor(...gold);
-    doc.roundedRect(margin + 10, y + 8, 14, 14, 2, 2, 'F');
-    // Building icon inside (white)
-    doc.setFillColor(...white);
-    doc.rect(margin + 13, y + 12, 2, 7, 'F');
-    doc.rect(margin + 16, y + 14, 2, 5, 'F');
-    doc.rect(margin + 19, y + 12, 2, 7, 'F');
-    
-    doc.setTextColor(...primaryText);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('PROPERTY DETAILS', margin + 28, y + 17);
-    
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    let py = y + 28;
-    doc.setTextColor(...secondaryText);
-    doc.text('Property ID: ' + String(invoice.propertyCode || '-'), margin + 10, py);
-    py += 6;
-    doc.text('Name: ' + String(invoice.propertyName || '-').substring(0, 22), margin + 10, py);
-    py += 6;
-    doc.text('Type: ' + String(invoice.propertyType || '-'), margin + 10, py);
-    py += 6;
-    doc.text('Zone: ' + String(invoice.zone || '-'), margin + 10, py);
-    py += 6;
-    doc.text('City: ' + String(invoice.city || '-'), margin + 10, py);
+    doc.text('TOTAL AMOUNT DUE', pageWidth / 2, y + 7, { align: 'center' });
     
-    // Customer Details Card - cream background
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Rs. ' + Math.round(invoice.totalAmount || 0).toLocaleString('en-IN'), pageWidth / 2, y + 18, { align: 'center' });
+    
+    y += bannerHeight + 8;
+
+    // ===== PROPERTY & CUSTOMER DETAILS (Compact) =====
+    const cardGap = 6;
+    const cardWidth = (pageWidth - margin * 2 - cardGap) / 2;
+    const cardHeight = isCompact ? 42 : 48;
+    const lineH = isCompact ? 5 : 5.5;
+    
+    // Property Details Card
+    doc.setFillColor(...cardBg);
+    doc.roundedRect(margin, y, cardWidth, cardHeight, 3, 3, 'F');
+    
+    // Filled gold icon
+    doc.setFillColor(...gold);
+    doc.roundedRect(margin + 6, y + 6, 10, 10, 2, 2, 'F');
+    doc.setFillColor(...white);
+    doc.rect(margin + 8, y + 9, 1.5, 5, 'F');
+    doc.rect(margin + 10.5, y + 10, 1.5, 4, 'F');
+    doc.rect(margin + 13, y + 9, 1.5, 5, 'F');
+    
+    doc.setTextColor(...primaryText);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PROPERTY DETAILS', margin + 20, y + 12);
+    
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
+    let py = y + 20;
+    doc.setTextColor(...secondaryText);
+    doc.text('Property ID: ' + String(invoice.propertyCode || '-'), margin + 6, py); py += lineH;
+    doc.text('Name: ' + String(invoice.propertyName || '-').substring(0, 20), margin + 6, py); py += lineH;
+    doc.text('Type: ' + String(invoice.propertyType || '-'), margin + 6, py); py += lineH;
+    doc.text('Zone: ' + String(invoice.zone || '-'), margin + 6, py); py += lineH;
+    doc.text('City: ' + String(invoice.city || '-'), margin + 6, py);
+    
+    // Customer Details Card
     const custCardX = margin + cardWidth + cardGap;
     doc.setFillColor(...cardBg);
-    doc.roundedRect(custCardX, y, cardWidth, cardHeight, 4, 4, 'F');
+    doc.roundedRect(custCardX, y, cardWidth, cardHeight, 3, 3, 'F');
     
-    // Customer icon - FILLED gold square with white icon
+    // Filled gold icon
     doc.setFillColor(...gold);
-    doc.roundedRect(custCardX + 10, y + 8, 14, 14, 2, 2, 'F');
-    // Person icon inside (white)
+    doc.roundedRect(custCardX + 6, y + 6, 10, 10, 2, 2, 'F');
     doc.setFillColor(...white);
-    doc.circle(custCardX + 17, y + 13, 3, 'F');
-    doc.roundedRect(custCardX + 12, y + 17, 10, 3, 1, 1, 'F');
+    doc.circle(custCardX + 11, y + 9, 2, 'F');
+    doc.roundedRect(custCardX + 8, y + 12, 6, 2, 1, 1, 'F');
     
     doc.setTextColor(...primaryText);
-    doc.setFontSize(9);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.text('CUSTOMER DETAILS', custCardX + 28, y + 17);
+    doc.text('CUSTOMER DETAILS', custCardX + 20, y + 12);
     
-    doc.setFontSize(8);
+    doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
-    let cy = y + 28;
+    let cy = y + 20;
     doc.setTextColor(...secondaryText);
-    doc.text('Name: ' + String(invoice.customerName || '-'), custCardX + 10, cy);
-    cy += 6;
-    doc.text('Phone: ' + String(invoice.customerPhone || '-'), custCardX + 10, cy);
-    cy += 6;
+    doc.text('Name: ' + String(invoice.customerName || '-'), custCardX + 6, cy); cy += lineH;
+    doc.text('Phone: ' + String(invoice.customerPhone || '-'), custCardX + 6, cy); cy += lineH;
     const email = String(invoice.customerEmail || '-');
-    doc.text('Email: ' + (email.length > 22 ? email.substring(0, 22) + '...' : email), custCardX + 10, cy);
-    cy += 6;
-    doc.text('City: ' + String(invoice.city || '-'), custCardX + 10, cy);
+    doc.text('Email: ' + (email.length > 25 ? email.substring(0, 25) + '...' : email), custCardX + 6, cy); cy += lineH;
+    doc.text('City: ' + String(invoice.city || '-'), custCardX + 6, cy);
     
-    y += cardHeight + 12;
+    y += cardHeight + 8;
 
     // ===== SERVICES INCLUDED - Gold themed table =====
     // Parse services
@@ -1274,116 +1255,120 @@ export const exportInvoiceToPDF = (invoice) => {
     const isWorkOrderInvoice = invoice.invoiceType === 'work_order' || invoice.invoice_type === 'work_order';
 
     if (!isWorkOrderInvoice && services.length > 0) {
-      // Section header
+      // Section header with filled gold icon
+      doc.setFillColor(...gold);
+      doc.roundedRect(margin, y, 8, 8, 1, 1, 'F');
+      doc.setFillColor(...white);
+      doc.rect(margin + 2.5, y + 2.5, 3, 3, 'F');
+      
       doc.setTextColor(...primaryText);
-      doc.setFontSize(10);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
-      doc.text('SERVICES INCLUDED', margin, y + 5);
-      
-      // Decorative gold line after text
+      doc.text('SERVICES INCLUDED', margin + 12, y + 5);
       doc.setDrawColor(...gold);
-      doc.setLineWidth(0.5);
-      doc.line(margin + 42, y + 3, pageWidth - margin, y + 3);
+      doc.setLineWidth(0.3);
+      doc.line(margin + 48, y + 4, pageWidth - margin, y + 4);
       
-      y += 12;
+      y += 10;
 
-      // Services table with gold header
+      // Services table - COMPACT
+      const rowH = isCompact ? 2 : 2.5;
       autoTable(doc, {
         startY: y,
         head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
         body: services.map((item, idx) => [
           String(idx + 1),
-          decodeHtml(String(item.name)).substring(0, 30),
-          decodeHtml(String(item.description)).substring(0, 50) || '-',
-          String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1).toLowerCase(),
+          decodeHtml(String(item.name)).substring(0, 25),
+          decodeHtml(String(item.description)).substring(0, 40) || '-',
+          String(item.frequency).substring(0, 12),
           String(item.visits)
         ]),
         theme: 'plain',
-        styles: { fontSize: 8, cellPadding: 5, valign: 'middle' },
-        headStyles: { fillColor: gold, textColor: white, fontStyle: 'bold', fontSize: 9 },
+        styles: { fontSize: 6, cellPadding: rowH, valign: 'middle' },
+        headStyles: { fillColor: gold, textColor: white, fontStyle: 'bold', fontSize: 6.5 },
         bodyStyles: { textColor: primaryText },
         alternateRowStyles: { fillColor: [255, 255, 255] },
         columnStyles: { 
-          0: { cellWidth: 14, halign: 'center' }, 
-          1: { cellWidth: 40 }, 
+          0: { cellWidth: 10, halign: 'center' }, 
+          1: { cellWidth: 32 }, 
           2: { cellWidth: 'auto' }, 
-          3: { cellWidth: 32, halign: 'center' }, 
-          4: { cellWidth: 20, halign: 'center' } 
+          3: { cellWidth: 24, halign: 'center' }, 
+          4: { cellWidth: 16, halign: 'center' } 
         },
         margin: { left: margin, right: margin },
         tableLineColor: borderGray,
         tableLineWidth: 0.1
       });
-      y = doc.lastAutoTable.finalY + 15;
+      y = doc.lastAutoTable.finalY + 10;
     }
 
-    // ===== PRICE SUMMARY - Right aligned =====
-    const summaryWidth = 110;
+    // ===== PRICE SUMMARY - Right aligned (Compact) =====
+    const summaryWidth = 90;
     const summaryX = pageWidth - margin - summaryWidth;
     
-    // Section header
-    doc.setTextColor(...primaryText);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('PRICE SUMMARY', summaryX, y + 4);
+    // Section header with shield icon
+    doc.setFillColor(...gold);
+    doc.roundedRect(summaryX, y, 8, 8, 1, 1, 'F');
+    doc.setFillColor(...white);
+    doc.rect(summaryX + 2.5, y + 2.5, 3, 3, 'F');
     
-    // Decorative gold line after text
+    doc.setTextColor(...primaryText);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PRICE SUMMARY', summaryX + 12, y + 5);
     doc.setDrawColor(...gold);
-    doc.setLineWidth(0.5);
-    doc.line(summaryX + 36, y + 2, pageWidth - margin, y + 2);
+    doc.setLineWidth(0.3);
+    doc.line(summaryX + 42, y + 4, pageWidth - margin, y + 4);
     
     y += 10;
 
     // Price summary box
     doc.setDrawColor(...borderGray);
-    doc.setLineWidth(0.5);
-    doc.roundedRect(summaryX, y, summaryWidth, 45, 4, 4, 'S');
+    doc.setLineWidth(0.3);
+    doc.roundedRect(summaryX, y, summaryWidth, 36, 3, 3, 'S');
     
-    let sy = y + 12;
-    const labelX = summaryX + 10;
-    const valueX = summaryX + summaryWidth - 10;
+    let sy = y + 9;
+    const labelX = summaryX + 6;
+    const valueX = summaryX + summaryWidth - 6;
     
-    doc.setFontSize(9);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...secondaryText);
     doc.text('Subtotal:', labelX, sy);
     doc.setTextColor(...primaryText);
     doc.text('Rs. ' + Math.round(invoice.subtotal || 0).toLocaleString('en-IN'), valueX, sy, { align: 'right' });
-    sy += 9;
+    sy += 7;
     
     doc.setTextColor(...secondaryText);
     doc.text('GST (' + (invoice.taxPercentage || 18).toFixed(2) + '%):', labelX, sy);
     doc.setTextColor(...primaryText);
     doc.text('Rs. ' + Math.round(invoice.taxAmount || 0).toLocaleString('en-IN'), valueX, sy, { align: 'right' });
-    sy += 11;
+    sy += 8;
     
-    // Total line
     doc.setDrawColor(...borderGray);
-    doc.line(summaryX + 8, sy - 4, summaryX + summaryWidth - 8, sy - 4);
+    doc.line(summaryX + 4, sy - 3, summaryX + summaryWidth - 4, sy - 3);
     
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
+    doc.setFontSize(8);
     doc.setTextColor(...gold);
     doc.text('Total:', labelX, sy + 2);
     doc.text('Rs. ' + Math.round(invoice.totalAmount || 0).toLocaleString('en-IN'), valueX, sy + 2, { align: 'right' });
     
-    y += 55;
+    y += 42;
 
-    // ===== FOOTER - Gray separator and message (Image 2) =====
+    // ===== FOOTER =====
+    const footerY = Math.max(y, pageHeight - 15);
     doc.setDrawColor(...borderGray);
-    doc.setLineWidth(0.5);
-    doc.line(margin, y, pageWidth - margin, y);
+    doc.setLineWidth(0.3);
+    doc.line(margin, footerY, pageWidth - margin, footerY);
     
-    y += 8;
-    
-    // Heart icon placeholder
     doc.setDrawColor(...borderGray);
-    doc.circle(margin + 8, y + 2, 4, 'S');
+    doc.circle(margin + 5, footerY + 5, 3, 'S');
     
-    doc.setFontSize(9);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...secondaryText);
-    doc.text('We appreciate your trust in our services.', margin + 18, y + 3);
+    doc.text('We appreciate your trust in our services.', margin + 12, footerY + 6);
 
     // Save
     savePDFCrossPlatform(doc, `Invoice-${invoice.invoiceId || 'INV'}.pdf`);

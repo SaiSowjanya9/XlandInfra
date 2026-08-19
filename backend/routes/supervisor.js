@@ -242,7 +242,17 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId || req.fpId;
     
-    console.log('[Supervisor Dashboard] supervisorId:', supervisorId, 'fpId:', franchisePartnerId);
+    // Get employee ID and creator email for zone lookup
+    const employeeId = await getEmployeeIdForZoneLookup(req, 'supervisor');
+    const creatorEmail = getCreatorIdentifier(req);
+    const rawZones = await getAssignedZones(employeeId, creatorEmail);
+    
+    // Check if employee has unrestricted access (__ALL__ marker)
+    const hasUnrestrictedAccess = rawZones.includes('__ALL__');
+    const assignedZones = hasUnrestrictedAccess ? [] : rawZones;
+    const hasZones = assignedZones.length > 0 && !hasUnrestrictedAccess;
+    
+    console.log('[Supervisor Dashboard] supervisorId:', supervisorId, 'fpId:', franchisePartnerId, 'assignedZones:', assignedZones, 'unrestricted:', hasUnrestrictedAccess);
 
     // Helper function to safely get count
     const safeCount = (query, params) => {
@@ -254,75 +264,144 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
         });
     };
 
-    // Count ALL FP properties (active)
-    const propertiesCount = await safeCount(
-      `SELECT COUNT(*) as count FROM properties 
-       WHERE franchise_partner_id = ? AND (status IS NULL OR status NOT IN ('deleted', 'inactive'))`,
-      [franchisePartnerId]
-    );
+    // Build zone filter clauses
+    const zonePlaceholders = hasZones ? assignedZones.map(() => '?').join(',') : '';
 
-    // Count ALL FP onboarded_properties (active)
-    const onboardedPropsCount = await safeCount(
-      `SELECT COUNT(*) as count FROM onboarded_properties 
-       WHERE franchise_partner_id = ? AND status = 'active'`,
-      [franchisePartnerId]
-    );
+    // Count zone-filtered properties (active)
+    let propertiesCount = 0;
+    if (hasZones) {
+      propertiesCount = await safeCount(
+        `SELECT COUNT(*) as count FROM properties p
+         WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status NOT IN ('deleted', 'inactive'))
+         AND (p.zone_id IN (${zonePlaceholders}) OR p.zone_id IN (SELECT name FROM zones WHERE id IN (${zonePlaceholders})))`,
+        [franchisePartnerId, ...assignedZones, ...assignedZones]
+      );
+    } else {
+      propertiesCount = await safeCount(
+        `SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ? AND (status IS NULL OR status NOT IN ('deleted', 'inactive'))`,
+        [franchisePartnerId]
+      );
+    }
 
-    // Vendors - ALL FP vendors (active)
+    // Count zone-filtered onboarded_properties (active)
+    let onboardedPropsCount = 0;
+    if (hasZones) {
+      onboardedPropsCount = await safeCount(
+        `SELECT COUNT(*) as count FROM onboarded_properties op
+         WHERE op.franchise_partner_id = ? AND op.status = 'active'
+         AND (op.zone IN (${zonePlaceholders}) OR op.zone IN (SELECT name FROM zones WHERE id IN (${zonePlaceholders})))`,
+        [franchisePartnerId, ...assignedZones, ...assignedZones]
+      );
+    } else {
+      onboardedPropsCount = await safeCount(
+        `SELECT COUNT(*) as count FROM onboarded_properties WHERE franchise_partner_id = ? AND status = 'active'`,
+        [franchisePartnerId]
+      );
+    }
+
+    // Vendors count
     const vendorsCount = await safeCount(
-      `SELECT COUNT(*) as count FROM onboarded_vendors 
-       WHERE franchise_partner_id = ? AND status = 'active' AND vendor_id NOT LIKE '%SEED%'`,
+      `SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ? AND status = 'active' AND vendor_id NOT LIKE '%SEED%'`,
       [franchisePartnerId]
     );
 
-    // Customers - ALL FP customers
-    const customersCount = await safeCount(
-      `SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?`,
-      [franchisePartnerId]
-    );
+    // Customers - zone-filtered
+    let customersCount = 0;
+    if (hasZones) {
+      customersCount = await safeCount(
+        `SELECT COUNT(DISTINCT c.id) as count FROM clients c
+         LEFT JOIN properties p ON c.property_id = p.id
+         LEFT JOIN onboarded_properties op ON c.property_id = op.id
+         WHERE c.franchise_partner_id = ?
+         AND (p.zone_id IN (${zonePlaceholders}) OR op.zone IN (${zonePlaceholders}))`,
+        [franchisePartnerId, ...assignedZones, ...assignedZones]
+      );
+    } else {
+      customersCount = await safeCount(
+        `SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?`,
+        [franchisePartnerId]
+      );
+    }
 
-    // Employees - ALL FP employees (active)
+    // Employees - ALL FP employees (not zone-filtered)
     const employeesCount = await safeCount(
       `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND is_active = 1`,
       [franchisePartnerId]
     );
 
-    // Work orders - ALL FP work orders with detailed status breakdown
-    const [[workOrderStats]] = await pool.query(
-      `SELECT 
+    // Work orders - zone-filtered with detailed status breakdown
+    let workOrderStats = { total: 0, pending: 0, under_review: 0, assigned: 0, in_progress: 0, completed: 0, cancelled: 0, closed: 0 };
+    try {
+      let woQuery = `SELECT 
         COUNT(*) as total,
-        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-        SUM(CASE WHEN status = 'under_review' THEN 1 ELSE 0 END) as under_review,
-        SUM(CASE WHEN status = 'assigned' THEN 1 ELSE 0 END) as assigned,
-        SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
-        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-        SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled,
-        SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed
-       FROM work_orders WHERE franchise_partner_id = ?`,
-      [franchisePartnerId]
-    );
+        SUM(CASE WHEN wo.status = 'pending' THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN wo.status = 'under_review' THEN 1 ELSE 0 END) as under_review,
+        SUM(CASE WHEN wo.status = 'assigned' THEN 1 ELSE 0 END) as assigned,
+        SUM(CASE WHEN wo.status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
+        SUM(CASE WHEN wo.status = 'completed' THEN 1 ELSE 0 END) as completed,
+        SUM(CASE WHEN wo.status = 'cancelled' THEN 1 ELSE 0 END) as cancelled,
+        SUM(CASE WHEN wo.status = 'closed' THEN 1 ELSE 0 END) as closed
+       FROM work_orders wo
+       LEFT JOIN properties p ON wo.property_id = p.id
+       LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+       WHERE wo.franchise_partner_id = ?`;
+      let woParams = [franchisePartnerId];
+      if (hasZones) {
+        woQuery += ` AND (p.zone_id IN (${zonePlaceholders}) OR op.zone IN (${zonePlaceholders}))`;
+        woParams = [...woParams, ...assignedZones, ...assignedZones];
+      }
+      const [[r]] = await pool.query(woQuery, woParams);
+      workOrderStats = { 
+        total: r.total || 0, pending: r.pending || 0, under_review: r.under_review || 0,
+        assigned: r.assigned || 0, in_progress: r.in_progress || 0, completed: r.completed || 0,
+        cancelled: r.cancelled || 0, closed: r.closed || 0
+      };
+    } catch (e) { console.log('Work order stats error:', e.message); }
 
-    // Direct Estimates - ALL FP (non-archived, active only)
-    const directEstimatesCount = await safeCount(
-      `SELECT COUNT(*) as count FROM fp_estimates 
-       WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
-       AND status NOT IN ('archived', 'rejected', 'deleted')
-       AND estimate_type = 'direct'`,
-      [franchisePartnerId]
-    );
+    // Direct Estimates - zone-filtered
+    let directEstimatesCount = 0;
+    if (hasZones) {
+      directEstimatesCount = await safeCount(
+        `SELECT COUNT(*) as count FROM fp_estimates fe
+         LEFT JOIN properties p ON fe.property_id = p.id
+         LEFT JOIN onboarded_properties op ON fe.property_id = op.id
+         WHERE fe.franchise_partner_id = ? AND (fe.is_archived = 0 OR fe.is_archived IS NULL) 
+         AND fe.status NOT IN ('archived', 'rejected', 'deleted') AND fe.estimate_type = 'direct'
+         AND (fe.zone IN (${zonePlaceholders}) OR p.zone_id IN (${zonePlaceholders}) OR op.zone IN (${zonePlaceholders}))`,
+        [franchisePartnerId, ...assignedZones, ...assignedZones, ...assignedZones]
+      );
+    } else {
+      directEstimatesCount = await safeCount(
+        `SELECT COUNT(*) as count FROM fp_estimates WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
+         AND status NOT IN ('archived', 'rejected', 'deleted') AND estimate_type = 'direct'`,
+        [franchisePartnerId]
+      );
+    }
 
-    // Property-based Estimates - ALL FP (non-archived, active only)
-    const propertyEstimatesCount = await safeCount(
-      `SELECT COUNT(*) as count FROM fp_estimates 
-       WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
-       AND status NOT IN ('archived', 'rejected', 'deleted')
-       AND (estimate_type = 'property_based' OR estimate_type = 'property-based')`,
-      [franchisePartnerId]
-    );
+    // Property-based Estimates - zone-filtered
+    let propertyEstimatesCount = 0;
+    if (hasZones) {
+      propertyEstimatesCount = await safeCount(
+        `SELECT COUNT(*) as count FROM fp_estimates fe
+         LEFT JOIN properties p ON fe.property_id = p.id
+         LEFT JOIN onboarded_properties op ON fe.property_id = op.id
+         WHERE fe.franchise_partner_id = ? AND (fe.is_archived = 0 OR fe.is_archived IS NULL) 
+         AND fe.status NOT IN ('archived', 'rejected', 'deleted') AND (fe.estimate_type = 'property_based' OR fe.estimate_type = 'property-based')
+         AND (fe.zone IN (${zonePlaceholders}) OR p.zone_id IN (${zonePlaceholders}) OR op.zone IN (${zonePlaceholders}))`,
+        [franchisePartnerId, ...assignedZones, ...assignedZones, ...assignedZones]
+      );
+    } else {
+      propertyEstimatesCount = await safeCount(
+        `SELECT COUNT(*) as count FROM fp_estimates WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
+         AND status NOT IN ('archived', 'rejected', 'deleted') AND (estimate_type = 'property_based' OR estimate_type = 'property-based')`,
+        [franchisePartnerId]
+      );
+    }
 
-    // Estimates breakdown - Direct and Property-based by property type (codes: GC, APT, AP, VILLA, VL, FLAT, FL, PLOT, PL)
-    const [[estimatesTypesResult]] = await pool.query(`
-      SELECT 
+    // Estimates breakdown - zone-filtered
+    let estimatesByPropertyType = { direct_gc: 0, direct_apt: 0, direct_villa: 0, direct_flat: 0, direct_plot: 0, direct_other: 0, prop_gc: 0, prop_apt: 0, prop_villa: 0, prop_flat: 0, prop_plot: 0 };
+    try {
+      let estQuery = `SELECT 
         SUM(CASE WHEN estimate_type = 'direct' AND (UPPER(property_type) = 'GC' OR LOWER(property_type) LIKE '%gated%') THEN 1 ELSE 0 END) as direct_gc,
         SUM(CASE WHEN estimate_type = 'direct' AND (UPPER(property_type) IN ('APT', 'AP') OR LOWER(property_type) LIKE '%apartment%') THEN 1 ELSE 0 END) as direct_apt,
         SUM(CASE WHEN estimate_type = 'direct' AND (UPPER(property_type) IN ('VILLA', 'VL') OR LOWER(property_type) LIKE '%villa%') THEN 1 ELSE 0 END) as direct_villa,
@@ -334,17 +413,26 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
         SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (UPPER(property_type) IN ('VILLA', 'VL') OR LOWER(property_type) LIKE '%villa%') THEN 1 ELSE 0 END) as prop_villa,
         SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (UPPER(property_type) IN ('FLAT', 'FL') OR LOWER(property_type) LIKE '%flat%') THEN 1 ELSE 0 END) as prop_flat,
         SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (UPPER(property_type) IN ('PLOT', 'PL') OR LOWER(property_type) LIKE '%plot%') THEN 1 ELSE 0 END) as prop_plot
-      FROM fp_estimates WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) AND status NOT IN ('archived', 'rejected', 'deleted')
-    `, [franchisePartnerId]);
-    
-    const estimatesByPropertyType = {
-      direct_gc: Number(estimatesTypesResult?.direct_gc) || 0, direct_apt: Number(estimatesTypesResult?.direct_apt) || 0, direct_villa: Number(estimatesTypesResult?.direct_villa) || 0, direct_flat: Number(estimatesTypesResult?.direct_flat) || 0, direct_plot: Number(estimatesTypesResult?.direct_plot) || 0, direct_other: Number(estimatesTypesResult?.direct_other) || 0,
-      prop_gc: Number(estimatesTypesResult?.prop_gc) || 0, prop_apt: Number(estimatesTypesResult?.prop_apt) || 0, prop_villa: Number(estimatesTypesResult?.prop_villa) || 0, prop_flat: Number(estimatesTypesResult?.prop_flat) || 0, prop_plot: Number(estimatesTypesResult?.prop_plot) || 0
-    };
+      FROM fp_estimates fe
+      LEFT JOIN properties p ON fe.property_id = p.id
+      LEFT JOIN onboarded_properties op ON fe.property_id = op.id
+      WHERE fe.franchise_partner_id = ? AND (fe.is_archived = 0 OR fe.is_archived IS NULL) AND fe.status NOT IN ('archived', 'rejected', 'deleted')`;
+      let estParams = [franchisePartnerId];
+      if (hasZones) {
+        estQuery += ` AND (fe.zone IN (${zonePlaceholders}) OR p.zone_id IN (${zonePlaceholders}) OR op.zone IN (${zonePlaceholders}))`;
+        estParams = [...estParams, ...assignedZones, ...assignedZones, ...assignedZones];
+      }
+      const [[r]] = await pool.query(estQuery, estParams);
+      estimatesByPropertyType = {
+        direct_gc: Number(r?.direct_gc) || 0, direct_apt: Number(r?.direct_apt) || 0, direct_villa: Number(r?.direct_villa) || 0, direct_flat: Number(r?.direct_flat) || 0, direct_plot: Number(r?.direct_plot) || 0, direct_other: Number(r?.direct_other) || 0,
+        prop_gc: Number(r?.prop_gc) || 0, prop_apt: Number(r?.prop_apt) || 0, prop_villa: Number(r?.prop_villa) || 0, prop_flat: Number(r?.prop_flat) || 0, prop_plot: Number(r?.prop_plot) || 0
+      };
+    } catch (e) { console.log('Estimates by type error:', e.message); }
 
-    // Estimates breakdown by status (Draft, Sent, Approved, Rejected) for Direct and Property-based
-    const [[estimatesStatusResult]] = await pool.query(`
-      SELECT 
+    // Estimates breakdown by status - zone-filtered
+    let estimatesByStatus = { direct_draft: 0, direct_sent: 0, direct_approved: 0, direct_rejected: 0, prop_draft: 0, prop_sent: 0, prop_approved: 0, prop_rejected: 0 };
+    try {
+      let estQuery = `SELECT 
         SUM(CASE WHEN estimate_type = 'direct' AND LOWER(status) = 'draft' THEN 1 ELSE 0 END) as direct_draft,
         SUM(CASE WHEN estimate_type = 'direct' AND LOWER(status) = 'sent' THEN 1 ELSE 0 END) as direct_sent,
         SUM(CASE WHEN estimate_type = 'direct' AND LOWER(status) = 'approved' THEN 1 ELSE 0 END) as direct_approved,
@@ -353,40 +441,54 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
         SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND LOWER(status) = 'sent' THEN 1 ELSE 0 END) as prop_sent,
         SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND LOWER(status) = 'approved' THEN 1 ELSE 0 END) as prop_approved,
         SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND LOWER(status) = 'rejected' THEN 1 ELSE 0 END) as prop_rejected
-      FROM fp_estimates WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL)
-    `, [franchisePartnerId]);
-    
-    const estimatesByStatus = {
-      direct_draft: Number(estimatesStatusResult?.direct_draft) || 0,
-      direct_sent: Number(estimatesStatusResult?.direct_sent) || 0,
-      direct_approved: Number(estimatesStatusResult?.direct_approved) || 0,
-      direct_rejected: Number(estimatesStatusResult?.direct_rejected) || 0,
-      prop_draft: Number(estimatesStatusResult?.prop_draft) || 0,
-      prop_sent: Number(estimatesStatusResult?.prop_sent) || 0,
-      prop_approved: Number(estimatesStatusResult?.prop_approved) || 0,
-      prop_rejected: Number(estimatesStatusResult?.prop_rejected) || 0
-    };
+      FROM fp_estimates fe
+      LEFT JOIN properties p ON fe.property_id = p.id
+      LEFT JOIN onboarded_properties op ON fe.property_id = op.id
+      WHERE fe.franchise_partner_id = ? AND (fe.is_archived = 0 OR fe.is_archived IS NULL)`;
+      let estParams = [franchisePartnerId];
+      if (hasZones) {
+        estQuery += ` AND (fe.zone IN (${zonePlaceholders}) OR p.zone_id IN (${zonePlaceholders}) OR op.zone IN (${zonePlaceholders}))`;
+        estParams = [...estParams, ...assignedZones, ...assignedZones, ...assignedZones];
+      }
+      const [[r]] = await pool.query(estQuery, estParams);
+      estimatesByStatus = {
+        direct_draft: Number(r?.direct_draft) || 0, direct_sent: Number(r?.direct_sent) || 0, direct_approved: Number(r?.direct_approved) || 0, direct_rejected: Number(r?.direct_rejected) || 0,
+        prop_draft: Number(r?.prop_draft) || 0, prop_sent: Number(r?.prop_sent) || 0, prop_approved: Number(r?.prop_approved) || 0, prop_rejected: Number(r?.prop_rejected) || 0
+      };
+    } catch (e) { console.log('Estimates by status error:', e.message); }
 
-    // Get recent work orders - ALL FP work orders
-    const [recentWorkOrders] = await pool.query(
-      `SELECT wo.*, p.name as property_name, COALESCE(c.name, wo.category_name) as category_name,
-              COALESCE(
-                CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
-                CONCAT(pma.first_name, ' ', COALESCE(pma.last_name, '')),
-                CASE WHEN wo.created_by REGEXP '^[0-9]+$' THEN NULL ELSE wo.created_by END,
-                'System'
-              ) as created_by_name,
+    // Get recent work orders - zone-filtered
+    let recentWorkOrders = [];
+    try {
+      let woQuery = `SELECT wo.*, p.name as property_name, COALESCE(c.name, wo.category_name) as category_name,
+              COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(pma.first_name, ' ', COALESCE(pma.last_name, '')),
+                CASE WHEN wo.created_by REGEXP '^[0-9]+$' THEN NULL ELSE wo.created_by END, 'System') as created_by_name,
               COALESCE(fpe.role, pma.role) as created_by_role
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
+       LEFT JOIN onboarded_properties op ON wo.property_id = op.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN fp_employees fpe ON wo.created_by = fpe.id OR wo.created_by = fpe.email
        LEFT JOIN users pma ON wo.created_by = pma.id OR wo.created_by = pma.email
-       WHERE wo.franchise_partner_id = ?
-       ORDER BY wo.created_at DESC
-       LIMIT 10`,
-      [franchisePartnerId]
-    );
+       WHERE wo.franchise_partner_id = ?`;
+      let woParams = [franchisePartnerId];
+      if (hasZones) {
+        woQuery += ` AND (p.zone_id IN (${zonePlaceholders}) OR op.zone IN (${zonePlaceholders}))`;
+        woParams = [...woParams, ...assignedZones, ...assignedZones];
+      }
+      woQuery += ` ORDER BY wo.created_at DESC LIMIT 10`;
+      const [rows] = await pool.query(woQuery, woParams);
+      recentWorkOrders = rows;
+    } catch (e) { console.log('Recent work orders error:', e.message); }
+
+    // Get zone names for display
+    let zoneNames = [];
+    if (hasZones) {
+      try {
+        const [zones] = await pool.query(`SELECT id, name FROM zones WHERE id IN (${zonePlaceholders})`, assignedZones);
+        zoneNames = zones.map(z => z.name);
+      } catch (e) {}
+    }
 
     res.json({
       success: true,
@@ -411,9 +513,12 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
             completed: workOrderStats?.completed || 0,
             cancelled: workOrderStats?.cancelled || 0,
             closed: workOrderStats?.closed || 0
-          }
+          },
+          totalWorkOrders: workOrderStats?.total || 0
         },
-        recentWorkOrders
+        recentWorkOrders,
+        assignedZones: zoneNames,
+        isZoneFiltered: hasZones
       }
     });
   } catch (error) {
