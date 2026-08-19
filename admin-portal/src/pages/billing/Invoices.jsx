@@ -1395,40 +1395,50 @@ const InvoiceDetailPanel = ({
             </div>
           </div>
 
-          {/* Payment Link Status (if exists) */}
+          {/* Payment Link Section (if exists) */}
           {invoice.paymentLink && (
-            <div className="p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
-              <div className="flex items-center justify-between">
+            <div className="p-4 bg-gradient-to-r from-[#c9a227]/10 to-amber-50 rounded-xl border border-[#c9a227]/30 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <LinkIcon className="w-4 h-4 text-[#c9a227]" />
-                  <div>
-                    <p className="text-xs font-medium text-gray-900">Payment Link</p>
-                    <p className="text-[10px] text-gray-500 truncate max-w-[180px]">{invoice.paymentLink}</p>
-                  </div>
+                  <p className="text-sm font-semibold text-gray-900">Online Payment</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${
-                    invoice.paymentLinkStatus === 'paid' ? 'bg-green-100 text-green-700' :
-                    invoice.paymentLinkStatus === 'sent' ? 'bg-amber-100 text-amber-700' :
-                    invoice.paymentLinkStatus === 'created' ? 'bg-blue-100 text-blue-700' :
-                    invoice.paymentLinkStatus === 'expired' ? 'bg-red-100 text-red-700' :
-                    'bg-gray-100 text-gray-600'
-                  }`}>
-                    {invoice.paymentLinkStatus === 'paid' ? 'Online Paid' :
-                     invoice.paymentLinkStatus === 'sent' ? 'Link Sent' :
-                     invoice.paymentLinkStatus === 'created' ? 'Link Created' :
-                     invoice.paymentLinkStatus === 'expired' ? 'Link Expired' :
-                     invoice.paymentLinkStatus || 'N/A'}
-                  </span>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(invoice.paymentLink)}
-                    className="p-1 text-[#c9a227] hover:bg-amber-50 rounded transition-colors"
-                    title="Copy Link"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${
+                  invoice.paymentLinkStatus === 'paid' ? 'bg-green-100 text-green-700' :
+                  invoice.paymentLinkStatus === 'sent' ? 'bg-amber-100 text-amber-700' :
+                  invoice.paymentLinkStatus === 'created' ? 'bg-blue-100 text-blue-700' :
+                  invoice.paymentLinkStatus === 'expired' ? 'bg-red-100 text-red-700' :
+                  'bg-gray-100 text-gray-600'
+                }`}>
+                  {invoice.paymentLinkStatus === 'paid' ? 'Paid' :
+                   invoice.paymentLinkStatus === 'sent' ? 'Link Sent' :
+                   invoice.paymentLinkStatus === 'created' ? 'Created' :
+                   invoice.paymentLinkStatus === 'expired' ? 'Expired' :
+                   invoice.paymentLinkStatus || 'N/A'}
+                </span>
               </div>
+              <div className="flex items-center gap-2">
+                {invoice.paymentLinkStatus !== 'paid' && invoice.paymentLinkStatus !== 'expired' && (
+                  <a
+                    href={invoice.paymentLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-[#c9a227] text-white text-sm font-semibold rounded-lg hover:bg-[#b08a1f] transition-colors"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    Pay Now
+                  </a>
+                )}
+                <button
+                  onClick={() => { navigator.clipboard.writeText(invoice.paymentLink); }}
+                  className="px-3 py-2 border border-[#c9a227] text-[#c9a227] text-sm font-medium rounded-lg hover:bg-amber-50 transition-colors flex items-center gap-1"
+                  title="Copy Link"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  Copy
+                </button>
+              </div>
+              <p className="text-[10px] text-gray-500 mt-2 truncate">{invoice.paymentLink}</p>
             </div>
           )}
 
