@@ -272,15 +272,27 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
             ? (parseFloat(service.price) || parseFloat(service.totalPrice) || parseFloat(estimate.subtotal) || 0)
             : pricePerService;
           
-          items.push({
+          const lineItem = {
             description: `${serviceName}${serviceDesc ? ' - ' + serviceDesc : ''}`,
+            name: serviceName,
+            details: serviceDesc,
             quantity: 1,
             unit_price: Math.round(servicePrice),
             total_price: Math.round(servicePrice),
             type: 'service',
             frequency: frequency,
             visits: visits
-          });
+          };
+          
+          // For work order invoices, include category and subcategory
+          if (isWorkOrderEstimate) {
+            lineItem.category = estimate.work_order_category || service.category || '';
+            lineItem.subcategory = estimate.work_order_subcategory || service.subcategory || '';
+            lineItem.serviceCategory = estimate.work_order_category || '';
+            lineItem.serviceSubcategory = estimate.work_order_subcategory || '';
+          }
+          
+          items.push(lineItem);
         });
       } else if (estimate.package_name && packagePrice > 0) {
         // Fallback: if no service details, show package services as single item
