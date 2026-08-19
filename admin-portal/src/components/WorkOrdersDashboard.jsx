@@ -269,20 +269,29 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
   // Priority chart data
   const getPriorityChartData = () => {
     const filtered = applyPeriodFilter(dateFilteredWorkOrders, priorityChartFilter);
-    const priorityCounts = { low: 0, medium: 0, high: 0 };
+    const priorityCounts = { low: 0, medium: 0, high: 0, unassigned: 0 };
     
     filtered.forEach(wo => {
       const priority = wo.priority?.toLowerCase();
-      if (priorityCounts.hasOwnProperty(priority)) {
+      if (priority === 'low' || priority === 'medium' || priority === 'high') {
         priorityCounts[priority]++;
+      } else {
+        priorityCounts.unassigned++;
       }
     });
 
-    return [
+    const result = [
       { name: 'Low', value: priorityCounts.low, color: '#10B981' },
       { name: 'Medium', value: priorityCounts.medium, color: '#F59E0B' },
       { name: 'High', value: priorityCounts.high, color: '#EF4444' }
     ];
+    
+    // Only add Unassigned if there are any
+    if (priorityCounts.unassigned > 0) {
+      result.push({ name: 'Unassigned', value: priorityCounts.unassigned, color: '#9CA3AF' });
+    }
+    
+    return result;
   };
 
   // Property type chart data
