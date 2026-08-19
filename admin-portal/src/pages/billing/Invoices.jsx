@@ -1290,29 +1290,24 @@ const InvoiceDetailPanel = ({
         className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ===== HEADER - Black with gold diagonal stripe ===== */}
-        <div className="relative">
-          <div className="bg-[#1a1a1a] px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-12 object-contain" />
-                <div>
-                  <h1 className="text-[#c9a227] text-xl font-bold tracking-wide">XLAND INFRA</h1>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-[1px] bg-[#c9a227]"></div>
-                    <span className="text-[#c9a227] text-[10px] tracking-[0.2em]">PVT LTD</span>
-                    <div className="w-8 h-[1px] bg-[#c9a227]"></div>
-                  </div>
+        {/* ===== HEADER - Black with decorative PVT LTD ===== */}
+        <div className="bg-[#1a1a1a] px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-12 object-contain" />
+              <div>
+                <h1 className="text-[#c9a227] text-xl font-bold tracking-wide">XLAND INFRA</h1>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-[1px] bg-[#c9a227]"></div>
+                  <span className="text-[#c9a227] text-[10px] tracking-[0.2em]">PVT LTD</span>
+                  <div className="w-8 h-[1px] bg-[#c9a227]"></div>
                 </div>
               </div>
-              <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded transition-colors">
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
             </div>
+            <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded transition-colors">
+              <X className="w-5 h-5 text-gray-400" />
+            </button>
           </div>
-          {/* Gold diagonal stripe */}
-          <div className="h-3 bg-gradient-to-r from-[#c9a227] via-[#d4b445] to-[#c9a227]" 
-               style={{ clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 60%)' }}></div>
         </div>
 
         {/* ===== INVOICE ID & DATES ROW ===== */}
@@ -1387,7 +1382,7 @@ const InvoiceDetailPanel = ({
                   <span className="text-gray-500">Phone:</span>
                   <span className="text-gray-800">{invoice.customerPhone || '-'}</span>
                   <span className="text-gray-500">Email:</span>
-                  <span className="text-gray-800 truncate">{invoice.customerEmail || '-'}</span>
+                  <span className="text-gray-800 break-all">{invoice.customerEmail || '-'}</span>
                   <span className="text-gray-500">City:</span>
                   <span className="text-gray-800">{invoice.city || '-'}</span>
                   {invoice.sourceWorkOrderId && (
@@ -1559,52 +1554,56 @@ const InvoiceDetailPanel = ({
             ) : null;
           })()}
 
-          {/* ===== PRICE SUMMARY - Gold theme with decorative lines ===== */}
-          <div className="flex justify-end">
-            <div className="w-72 bg-white rounded-xl shadow-sm overflow-hidden">
-              {/* Header with icon and decorative lines */}
-              <div className="flex items-center justify-center gap-2 py-3">
-                <div className="w-10 h-[1px] bg-[#c9a227]"></div>
-                <div className="flex items-center gap-2">
-                  <Receipt className="w-4 h-4 text-[#c9a227]" />
-                  <p className="text-gray-800 text-sm font-semibold uppercase tracking-wide">Price Summary</p>
-                </div>
-                <div className="w-10 h-[1px] bg-[#c9a227]"></div>
+          {/* ===== PRICE SUMMARY - Full width gold theme ===== */}
+          <div className="bg-white rounded-xl border border-[#c9a227]/30 overflow-hidden shadow-sm">
+            {/* Header with icon and decorative lines */}
+            <div className="flex items-center justify-center gap-3 py-4 bg-[#fffbeb]">
+              <div className="w-12 h-[1px] bg-[#c9a227]"></div>
+              <div className="flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-[#c9a227]" />
+                <p className="text-gray-800 text-sm font-semibold uppercase tracking-wide">Price Summary</p>
               </div>
-              <div className="px-5 pb-4 text-sm border-t border-gray-100 pt-3">
-                <div className="grid grid-cols-[1fr_auto] gap-y-2.5 gap-x-4">
-                  <span className="text-gray-500">Subtotal</span>
-                  <span className="text-gray-700 text-right">₹{Math.round(invoice.subtotal || 0).toLocaleString('en-IN')}</span>
-                  
-                  {invoice.discountAmount > 0 && (
-                    <>
-                      <span className="text-green-600">Discount</span>
-                      <span className="text-green-600 text-right">-₹{Math.round(invoice.discountAmount).toLocaleString('en-IN')}</span>
-                    </>
-                  )}
-                  
-                  <span className="text-gray-500">GST ({invoice.taxPercentage || 18}%)</span>
-                  <span className="text-gray-700 text-right">₹{Math.round(invoice.taxAmount || 0).toLocaleString('en-IN')}</span>
+              <div className="w-12 h-[1px] bg-[#c9a227]"></div>
+            </div>
+            <div className="px-6 py-5">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Subtotal</span>
+                  <span className="text-gray-800 font-medium">₹{Math.round(invoice.subtotal || 0).toLocaleString('en-IN')}</span>
                 </div>
                 
-                <div className="border-t border-gray-200 pt-3 mt-3">
-                  <div className="grid grid-cols-[1fr_auto] gap-x-4">
-                    <span className="text-[#c9a227] font-bold">Grand Total</span>
-                    <span className="text-[#c9a227] font-bold text-lg text-right">₹{Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
-                
-                {invoice.amountPaid > 0 && (
-                  <div className="border-t border-dashed border-gray-200 pt-3 mt-3">
-                    <div className="grid grid-cols-[1fr_auto] gap-y-2 gap-x-4">
-                      <span className="text-green-600">Amount Paid</span>
-                      <span className="text-green-600 font-semibold text-right">₹{Math.round(invoice.amountPaid).toLocaleString('en-IN')}</span>
-                      <span className="text-red-600 font-semibold">Balance Due</span>
-                      <span className="text-red-600 font-bold text-right">₹{Math.round(invoice.balanceAmount || 0).toLocaleString('en-IN')}</span>
-                    </div>
+                {invoice.discountAmount > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-green-600">Discount ({invoice.discountPercentage || 0}%)</span>
+                    <span className="text-green-600 font-medium">-₹{Math.round(invoice.discountAmount).toLocaleString('en-IN')}</span>
                   </div>
                 )}
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">GST ({invoice.taxPercentage || 18}%)</span>
+                  <span className="text-gray-800 font-medium">₹{Math.round(invoice.taxAmount || 0).toLocaleString('en-IN')}</span>
+                </div>
               </div>
+              
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-[#c9a227] font-bold text-lg">Grand Total</span>
+                  <span className="text-[#c9a227] font-bold text-xl">₹{Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+              
+              {invoice.amountPaid > 0 && (
+                <div className="border-t border-dashed border-gray-200 pt-4 mt-4 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-green-600">Amount Paid</span>
+                    <span className="text-green-600 font-semibold">₹{Math.round(invoice.amountPaid).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-red-600 font-semibold">Balance Due</span>
+                    <span className="text-red-600 font-bold text-lg">₹{Math.round(invoice.balanceAmount || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

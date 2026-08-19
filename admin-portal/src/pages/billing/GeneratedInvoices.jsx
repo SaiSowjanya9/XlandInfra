@@ -1032,21 +1032,23 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
             className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Professional Header with Company Info */}
-            <div className="bg-gradient-to-r from-gray-900 to-gray-800 px-6 py-5 flex-shrink-0">
+            {/* Header - Black with decorative PVT LTD */}
+            <div className="bg-[#1a1a1a] px-6 py-4 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-auto object-contain" />
+                <div className="flex items-center gap-3">
+                  <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-12 object-contain" />
                   <div>
-                    <h1 className="text-amber-400 text-xl font-bold tracking-wide">XLAND INFRA</h1>
-                    <p className="text-gray-400 text-xs tracking-widest">PVT LTD</p>
+                    <h1 className="text-[#c9a227] text-xl font-bold tracking-wide">XLAND INFRA</h1>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-[1px] bg-[#c9a227]"></div>
+                      <span className="text-[#c9a227] text-[10px] tracking-[0.2em]">PVT LTD</span>
+                      <div className="w-8 h-[1px] bg-[#c9a227]"></div>
+                    </div>
                   </div>
                 </div>
-                <div className="text-right flex items-center gap-3">
-                  <button onClick={() => { setShowDetailPanel(false); setSelectedInvoice(null); }} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
-                    <X className="w-5 h-5 text-gray-400" />
-                  </button>
-                </div>
+                <button onClick={() => { setShowDetailPanel(false); setSelectedInvoice(null); }} className="p-1.5 hover:bg-white/10 rounded transition-colors">
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
               </div>
             </div>
 
