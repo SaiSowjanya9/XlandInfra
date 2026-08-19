@@ -1200,7 +1200,7 @@ router.post('/verify-qr-token', async (req, res) => {
 // ============================================
 // VERIFY GOOGLE reCAPTCHA TOKEN
 // ============================================
-const RECAPTCHA_SECRET_KEY = '6LdawI4tAAAAAOODjacvVt2ACAcWQyt8uNFDY2jj';
+const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || '';
 
 router.post('/verify-recaptcha', async (req, res) => {
   try {
@@ -1210,6 +1210,14 @@ router.post('/verify-recaptcha', async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'reCAPTCHA token is required'
+      });
+    }
+
+    if (!RECAPTCHA_SECRET_KEY) {
+      console.error('RECAPTCHA_SECRET_KEY not configured');
+      return res.status(500).json({
+        success: false,
+        message: 'reCAPTCHA not configured on server'
       });
     }
 

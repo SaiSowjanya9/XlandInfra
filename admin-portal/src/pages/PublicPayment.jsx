@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
-const RECAPTCHA_SITE_KEY = '6LdawI4tAAAAAOTX1dcJvQNM8mF8F_v8pSG7bm-x';
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LdawI4tAAAAAOTX1dcJvQNM8mF8F_v8pSG7bm-x';
 
 // Google reCAPTCHA v2 Component
 const ReCaptcha = ({ onVerify }) => {
