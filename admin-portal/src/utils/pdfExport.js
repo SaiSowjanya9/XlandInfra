@@ -1279,23 +1279,18 @@ export const exportInvoiceToPDF = (invoice) => {
     const isWorkOrderInvoice = invoice.invoiceType === 'work_order' || invoice.invoice_type === 'work_order';
 
     if (!isWorkOrderInvoice && services.length > 0) {
-      // Section header with filled gold icon (Image 2)
-      doc.setFillColor(...gold);
-      doc.roundedRect(margin, y, 10, 10, 2, 2, 'F');
-      doc.setFillColor(...white);
-      doc.rect(margin + 3, y + 3, 4, 4, 'F');
-      
+      // Section header
       doc.setTextColor(...primaryText);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('SERVICES INCLUDED', margin + 14, y + 7);
+      doc.text('SERVICES INCLUDED', margin, y + 5);
       
       // Decorative gold line after text
       doc.setDrawColor(...gold);
       doc.setLineWidth(0.5);
-      doc.line(margin + 55, y + 5, pageWidth - margin, y + 5);
+      doc.line(margin + 42, y + 3, pageWidth - margin, y + 3);
       
-      y += 14;
+      y += 12;
 
       // Services table with gold header
       autoTable(doc, {
@@ -1327,27 +1322,22 @@ export const exportInvoiceToPDF = (invoice) => {
       y = doc.lastAutoTable.finalY + 15;
     }
 
-    // ===== PRICE SUMMARY - Right aligned with filled gold icon (Image 2) =====
+    // ===== PRICE SUMMARY - Right aligned =====
     const summaryWidth = 110;
     const summaryX = pageWidth - margin - summaryWidth;
     
-    // Section header with filled gold icon
-    doc.setFillColor(...gold);
-    doc.roundedRect(summaryX, y, 8, 8, 2, 2, 'F');
-    doc.setFillColor(...white);
-    doc.rect(summaryX + 2.5, y + 2.5, 3, 3, 'F');
-    
+    // Section header
     doc.setTextColor(...primaryText);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('PRICE SUMMARY', summaryX + 12, y + 6);
+    doc.text('PRICE SUMMARY', summaryX, y + 4);
     
     // Decorative gold line after text
     doc.setDrawColor(...gold);
     doc.setLineWidth(0.5);
-    doc.line(summaryX + 48, y + 4, pageWidth - margin, y + 4);
+    doc.line(summaryX + 36, y + 2, pageWidth - margin, y + 2);
     
-    y += 12;
+    y += 10;
 
     // Price summary box
     doc.setDrawColor(...borderGray);

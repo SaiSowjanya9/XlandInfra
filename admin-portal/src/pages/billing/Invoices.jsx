@@ -1515,11 +1515,8 @@ const InvoiceDetailPanel = ({
 
             return services.length > 0 ? (
               <div>
-                {/* Section Header - filled gold icon (Image 2) */}
+                {/* Section Header */}
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 rounded-lg bg-[#c9a227] flex items-center justify-center">
-                    <FileText className="w-4 h-4 text-white" />
-                  </div>
                   <span className="text-sm font-bold text-gray-900 uppercase">Services Included</span>
                   <div className="flex-1 h-[1px] bg-[#c9a227]"></div>
                 </div>
@@ -1562,11 +1559,8 @@ const InvoiceDetailPanel = ({
           {/* ===== PRICE SUMMARY - Right aligned with filled gold icon (Image 2) ===== */}
           <div className="flex justify-end">
             <div className="w-72">
-              {/* Section Header - filled gold icon */}
+              {/* Section Header */}
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-lg bg-[#c9a227] flex items-center justify-center">
-                  <Receipt className="w-3 h-3 text-white" />
-                </div>
                 <span className="text-sm font-bold text-gray-900 uppercase">Price Summary</span>
                 <div className="flex-1 h-[1px] bg-[#c9a227]"></div>
               </div>
