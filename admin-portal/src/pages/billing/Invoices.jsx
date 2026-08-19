@@ -102,9 +102,9 @@ const decodeHtmlEntities = (str) => {
 };
 
 const INVOICE_TYPE_CONFIG = {
-  estimate: { label: 'Estimate', color: 'text-purple-600' },
-  work_order: { label: 'Work Order', color: 'text-blue-600' },
-  amc: { label: 'AMC', color: 'text-teal-600' },
+  estimate: { label: 'AMC', color: 'text-blue-600' },
+  work_order: { label: 'Work Order', color: 'text-orange-600' },
+  amc: { label: 'AMC', color: 'text-blue-600' },
   manual: { label: 'Manual', color: 'text-gray-600' },
   generic: { label: 'Generic', color: 'text-green-600' }
 };
