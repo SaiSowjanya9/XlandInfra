@@ -1130,40 +1130,43 @@ export const exportInvoiceToPDF = (invoice) => {
 
     y = headerHeight + 10;
 
-    // ===== ID / DATE / DUE ROW =====
-    doc.setFontSize(9);
+    // ===== ID / DATE / DUE ROW (Image 2 style) =====
+    doc.setFontSize(10);
     doc.setTextColor(...secondaryText);
     doc.text('ID:', margin, y);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
+    doc.setFontSize(16);
     doc.setTextColor(...primaryText);
-    doc.text(String(invoice.invoiceId || 'N/A'), margin + 10, y);
+    doc.text(String(invoice.invoiceId || 'N/A'), margin + 12, y);
     
     if (invoice.sourceEstimateId) {
-      doc.setFontSize(8);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...secondaryText);
-      doc.text('Estimate: ' + invoice.sourceEstimateId, margin, y + 7);
+      doc.setTextColor(...gold);
+      doc.text('Estimate: ' + invoice.sourceEstimateId, margin, y + 8);
     }
     
     // Date and Due on right
-    const rightCol = pageWidth - margin - 55;
+    const rightCol = pageWidth - margin - 60;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...secondaryText);
-    doc.text('Date:', rightCol, y - 4);
+    doc.text('Date:', rightCol, y - 3);
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
     doc.setTextColor(...primaryText);
-    doc.text(formatDate(invoice.invoiceDate), rightCol + 18, y - 4);
+    doc.text(formatDate(invoice.invoiceDate), rightCol + 20, y - 3);
     
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...secondaryText);
-    doc.text('Due:', rightCol, y + 5);
+    doc.text('Due:', rightCol, y + 7);
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
     doc.setTextColor(...primaryText);
-    doc.text(formatDate(invoice.dueDate), rightCol + 18, y + 5);
+    doc.text(formatDate(invoice.dueDate), rightCol + 20, y + 7);
     
-    y += 20;
+    y += 22;
 
     // ===== TOTAL AMOUNT DUE BANNER - #D39A1A rounded =====
     const bannerHeight = 32;
