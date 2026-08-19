@@ -261,9 +261,12 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
       
       // Add package services with their descriptions (NOT the package name)
       if (Array.isArray(packageServices) && packageServices.length > 0) {
-        packageServices.forEach(service => {
+        console.log(`📦 Processing ${packageServices.length} services for invoice creation`);
+        packageServices.forEach((service, idx) => {
+          console.log(`📦 Service ${idx + 1} raw data:`, JSON.stringify(service));
           const serviceName = decodeHtmlEntities(service.name || service.serviceName || service.service_name || service.service || 'Service');
           const serviceDesc = decodeHtmlEntities(service.description || '');
+          console.log(`📦 Service ${idx + 1}: name="${serviceName}", description="${serviceDesc?.substring(0, 100)}"`);
           const frequency = service.frequencyType || service.frequency_type || service.frequency || '';
           const visits = service.frequencyCount || service.frequency_count || service.visits || 1;
           
