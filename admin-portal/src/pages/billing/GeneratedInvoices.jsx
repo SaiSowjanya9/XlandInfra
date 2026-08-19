@@ -1115,6 +1115,48 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                 </div>
               </div>
 
+              {/* Work Order Details - Only show for work order invoices */}
+              {selectedInvoice.invoiceType === 'work_order' && (() => {
+                // Parse line items to get work order details
+                const rawItems = selectedInvoice.lineItems ? (typeof selectedInvoice.lineItems === 'string' ? JSON.parse(selectedInvoice.lineItems) : selectedInvoice.lineItems) : [];
+                const workOrderItem = rawItems[0] || {};
+                const category = workOrderItem.category || workOrderItem.serviceCategory || selectedInvoice.category || '-';
+                const subcategory = workOrderItem.subcategory || workOrderItem.serviceSubcategory || selectedInvoice.subcategory || '-';
+                
+                return (
+                  <div className="mb-6">
+                    <h3 className="text-orange-600 font-semibold text-sm mb-3 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                      Work Order Details
+                    </h3>
+                    <div className="bg-orange-50 rounded-lg p-4 border border-orange-100">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Work Order ID</p>
+                          <p className="text-sm font-semibold text-orange-600">{selectedInvoice.sourceWorkOrderId || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Category</p>
+                          <p className="text-sm font-semibold text-gray-800">{category}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Subcategory</p>
+                          <p className="text-sm font-semibold text-gray-800">{subcategory}</p>
+                        </div>
+                        {workOrderItem.description && (
+                          <div className="col-span-2">
+                            <p className="text-xs text-gray-500 mb-1">Description</p>
+                            <p className="text-sm text-gray-700">{workOrderItem.description}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Amount Due Highlight - Gold Theme */}
               <div className="bg-gradient-to-r from-[#c9a227] to-[#d4b445] rounded-lg p-5 mb-6 text-center shadow-md">
                 <p className="text-white/90 text-xs uppercase tracking-wider mb-1">Total Amount Due</p>
