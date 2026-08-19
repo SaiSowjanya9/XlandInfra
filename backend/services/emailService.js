@@ -1090,27 +1090,41 @@ const sendEstimateEmail = async (estimate, actionToken) => {
               </table>
             </div>
             
-            <!-- Property Details -->
-            <div style="background: #eff6ff; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
-              <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Property Details</h3>
-              <table style="width: 100%;">
-                <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Property Name:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937; font-weight: 500;">${propertyName || '-'}</td></tr>
-                ${propertyDetailsHtml}
-              </table>
-            </div>
+            <!-- Property & Customer Details - Cream bg, filled gold icons (Image 2 style) -->
+            <table style="width: 100%; margin-bottom: 20px;">
+              <tr>
+                <!-- Property Details -->
+                <td style="width: 48%; vertical-align: top; padding-right: 10px;">
+                  <div style="background: #FBF7EE; border-radius: 12px; padding: 16px;">
+                    <div style="margin-bottom: 12px;">
+                      <div style="width: 36px; height: 36px; background: #c9a227; border-radius: 8px; display: inline-block; text-align: center; line-height: 36px; margin-right: 10px; vertical-align: middle;">
+                        <span style="color: #ffffff; font-size: 16px;">🏢</span>
+                      </div>
+                      <span style="color: #1f2937; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: middle;">Property Details</span>
+                    </div>
+                    <p style="margin: 0 0 6px 0; color: #555555; font-size: 13px;">Name: ${propertyName || '-'}</p>
+                    ${propertyDetailsHtml}
+                  </div>
+                </td>
+                <!-- Customer Details -->
+                <td style="width: 48%; vertical-align: top; padding-left: 10px;">
+                  <div style="background: #FBF7EE; border-radius: 12px; padding: 16px;">
+                    <div style="margin-bottom: 12px;">
+                      <div style="width: 36px; height: 36px; background: #c9a227; border-radius: 8px; display: inline-block; text-align: center; line-height: 36px; margin-right: 10px; vertical-align: middle;">
+                        <span style="color: #ffffff; font-size: 16px;">👤</span>
+                      </div>
+                      <span style="color: #1f2937; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: middle;">Customer Details</span>
+                    </div>
+                    <p style="margin: 0 0 6px 0; color: #555555; font-size: 13px;">Name: ${customerName || '-'}</p>
+                    <p style="margin: 0 0 6px 0; color: #555555; font-size: 13px;">Email: ${customerEmail || '-'}</p>
+                    <p style="margin: 0; color: #555555; font-size: 13px;">Phone: ${customerPhone || '-'}</p>
+                  </div>
+                </td>
+              </tr>
+            </table>
             
             <!-- Work Order Details (only for work order estimates) -->
             ${workOrderHtml}
-            
-            <!-- Customer Details -->
-            <div style="background: #fef3c7; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
-              <h3 style="margin: 0 0 10px 0; color: #92400e; font-size: 14px; font-weight: 600;">Customer Details</h3>
-              <table style="width: 100%;">
-                <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Name:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937; font-weight: 500;">${customerName || '-'}</td></tr>
-                <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Email:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${customerEmail || '-'}</td></tr>
-                <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Phone:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${customerPhone || '-'}</td></tr>
-              </table>
-            </div>
             
             <!-- Price Summary - Gold Theme -->
             <div style="background: #fffbeb; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #fde68a;">
@@ -2347,25 +2361,35 @@ const sendInvoiceEmail = async (invoice) => {
               </table>
             </div>
             
-            <!-- Property Details & Customer Details - Side by Side -->
+            <!-- Property Details & Customer Details - Cream bg, filled gold icons (Image 2 style) -->
             <table style="width: 100%; margin-bottom: 20px;">
               <tr>
                 <!-- Property Details -->
                 <td style="width: 48%; vertical-align: top; padding-right: 10px;">
-                  <div style="background: #eff6ff; border-radius: 8px; padding: 15px; border-left: 4px solid #3b82f6; height: 100%;">
-                    <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Property Details</h3>
-                    <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 13px;"><strong style="color: #1f2937;">Property ID:</strong> ${propertyCode || '-'}</p>
-                    <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 13px;"><strong style="color: #1f2937;">Name:</strong> ${propertyName || '-'}</p>
-                    ${estimateId ? `<p style="margin: 0; color: #6b7280; font-size: 13px;"><strong style="color: #1f2937;">Estimate:</strong> ${estimateId}</p>` : ''}
+                  <div style="background: #FBF7EE; border-radius: 12px; padding: 16px;">
+                    <div style="margin-bottom: 12px;">
+                      <div style="width: 36px; height: 36px; background: #c9a227; border-radius: 8px; display: inline-block; text-align: center; line-height: 36px; margin-right: 10px; vertical-align: middle;">
+                        <span style="color: #ffffff; font-size: 16px;">🏢</span>
+                      </div>
+                      <span style="color: #1f2937; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: middle;">Property Details</span>
+                    </div>
+                    <p style="margin: 0 0 6px 0; color: #555555; font-size: 13px;">Property ID: ${propertyCode || '-'}</p>
+                    <p style="margin: 0 0 6px 0; color: #555555; font-size: 13px;">Name: ${propertyName || '-'}</p>
+                    ${estimateId ? `<p style="margin: 0; color: #555555; font-size: 13px;">Estimate: ${estimateId}</p>` : ''}
                   </div>
                 </td>
                 <!-- Customer Details -->
                 <td style="width: 48%; vertical-align: top; padding-left: 10px;">
-                  <div style="background: #eff6ff; border-radius: 8px; padding: 15px; border-left: 4px solid #3b82f6; height: 100%;">
-                    <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Customer Details</h3>
-                    <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 13px;"><strong style="color: #1f2937;">Name:</strong> ${customerName || '-'}</p>
-                    <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 13px;"><strong style="color: #1f2937;">Phone:</strong> ${customerPhone || '-'}</p>
-                    <p style="margin: 0; color: #6b7280; font-size: 13px;"><strong style="color: #1f2937;">Email:</strong> ${customerEmail || '-'}</p>
+                  <div style="background: #FBF7EE; border-radius: 12px; padding: 16px;">
+                    <div style="margin-bottom: 12px;">
+                      <div style="width: 36px; height: 36px; background: #c9a227; border-radius: 8px; display: inline-block; text-align: center; line-height: 36px; margin-right: 10px; vertical-align: middle;">
+                        <span style="color: #ffffff; font-size: 16px;">👤</span>
+                      </div>
+                      <span style="color: #1f2937; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: middle;">Customer Details</span>
+                    </div>
+                    <p style="margin: 0 0 6px 0; color: #555555; font-size: 13px;">Name: ${customerName || '-'}</p>
+                    <p style="margin: 0 0 6px 0; color: #555555; font-size: 13px;">Phone: ${customerPhone || '-'}</p>
+                    <p style="margin: 0; color: #555555; font-size: 13px;">Email: ${customerEmail || '-'}</p>
                   </div>
                 </td>
               </tr>

@@ -514,19 +514,20 @@ const generateInvoicePDF = async (invoice) => {
       doc.font('Helvetica');
       y += 58;
 
-      // ===== PROPERTY & CUSTOMER DETAILS - Boxed with border (Image 2) =====
+      // ===== PROPERTY & CUSTOMER DETAILS - Cream bg, filled gold icons (Image 2) =====
       const cardWidth = (contentWidth - 15) / 2;
       const cardHeight = 95;
+      const cardBg = '#FBF7EE';
       
-      // Property Details Card - with border box
-      doc.roundedRect(margin, y, cardWidth, cardHeight, 6).lineWidth(0.5).strokeColor(borderGray).stroke();
+      // Property Details Card - cream background
+      doc.roundedRect(margin, y, cardWidth, cardHeight, 6).fill(cardBg);
       
-      // Property icon - outlined gold square
-      doc.roundedRect(margin + 12, y + 10, 18, 18, 3).lineWidth(1.5).strokeColor(gold).stroke();
-      // Building icon inside (gold)
-      doc.rect(margin + 17, y + 16, 3, 8).fill(gold);
-      doc.rect(margin + 21, y + 18, 3, 6).fill(gold);
-      doc.rect(margin + 25, y + 16, 3, 8).fill(gold);
+      // Property icon - FILLED gold square with white icon
+      doc.roundedRect(margin + 12, y + 10, 18, 18, 3).fill(gold);
+      // Building icon inside (white)
+      doc.rect(margin + 17, y + 16, 3, 8).fill(white);
+      doc.rect(margin + 21, y + 18, 3, 6).fill(white);
+      doc.rect(margin + 25, y + 16, 3, 8).fill(white);
       
       doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PROPERTY DETAILS', margin + 36, y + 17);
       doc.font('Helvetica');
@@ -539,15 +540,15 @@ const generateInvoicePDF = async (invoice) => {
       doc.text(`Zone: ${zone || '-'}`, margin + 12, py); py += 11;
       doc.text(`City: ${city || '-'}`, margin + 12, py);
 
-      // Customer Details Card - with border box
+      // Customer Details Card - cream background
       const custX = margin + cardWidth + 15;
-      doc.roundedRect(custX, y, cardWidth, cardHeight, 6).lineWidth(0.5).strokeColor(borderGray).stroke();
+      doc.roundedRect(custX, y, cardWidth, cardHeight, 6).fill(cardBg);
       
-      // Customer icon - outlined gold square
-      doc.roundedRect(custX + 12, y + 10, 18, 18, 3).lineWidth(1.5).strokeColor(gold).stroke();
-      // Person icon inside (gold)
-      doc.circle(custX + 21, y + 16, 4).fill(gold);
-      doc.roundedRect(custX + 15, y + 22, 12, 4, 2).fill(gold);
+      // Customer icon - FILLED gold square with white icon
+      doc.roundedRect(custX + 12, y + 10, 18, 18, 3).fill(gold);
+      // Person icon inside (white)
+      doc.circle(custX + 21, y + 16, 4).fill(white);
+      doc.roundedRect(custX + 15, y + 22, 12, 4, 2).fill(white);
       
       doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('CUSTOMER DETAILS', custX + 36, y + 17);
       doc.font('Helvetica');
@@ -575,9 +576,9 @@ const generateInvoicePDF = async (invoice) => {
 
       // ===== SERVICES INCLUDED TABLE - Gold header (Image 2 style) =====
       if (!isWorkOrderInvoice && items.length > 0) {
-        // Section header with outlined gold icon
-        doc.roundedRect(margin, y, 12, 12, 2).lineWidth(1.5).strokeColor(gold).stroke();
-        doc.rect(margin + 4, y + 4, 4, 4).fill(gold);
+        // Section header with filled gold icon
+        doc.roundedRect(margin, y, 12, 12, 2).fill(gold);
+        doc.rect(margin + 4, y + 4, 4, 4).fill(white);
         
         doc.fontSize(10).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES INCLUDED', margin + 18, y + 3);
         doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 75, y + 6).lineTo(pageWidth - margin, y + 6).stroke();
@@ -623,7 +624,7 @@ const generateInvoicePDF = async (invoice) => {
         y += 20;
       }
 
-      // ===== PRICE SUMMARY - Right aligned with outlined icon (Image 2) =====
+      // ===== PRICE SUMMARY - Right aligned with filled gold icon (Image 2) =====
       if (y + 110 > pageHeight) {
         doc.addPage();
         y = 50;
@@ -632,9 +633,9 @@ const generateInvoicePDF = async (invoice) => {
       const summaryWidth = 180;
       const summaryX = pageWidth - margin - summaryWidth;
       
-      // Section header with outlined gold icon
-      doc.roundedRect(summaryX, y, 10, 10, 2).lineWidth(1.5).strokeColor(gold).stroke();
-      doc.rect(summaryX + 3, y + 3, 4, 4).fill(gold);
+      // Section header with filled gold icon
+      doc.roundedRect(summaryX, y, 10, 10, 2).fill(gold);
+      doc.rect(summaryX + 3, y + 3, 4, 4).fill(white);
       
       doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX + 14, y + 2);
       doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 62, y + 5).lineTo(pageWidth - margin, y + 5).stroke();
