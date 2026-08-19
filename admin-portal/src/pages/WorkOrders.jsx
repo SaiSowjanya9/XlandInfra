@@ -974,6 +974,7 @@ const WorkOrders = ({ admin }) => {
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Resident</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Category</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Priority</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Created</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Created By</th>
                 <th className="px-4 py-3 text-sm font-medium text-gray-600 whitespace-nowrap text-center">Actions</th>
@@ -981,12 +982,12 @@ const WorkOrders = ({ admin }) => {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan="7" className="text-center py-12 text-gray-500">
+                <tr><td colSpan="8" className="text-center py-12 text-gray-500">
                   <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-gray-400" />
                   Loading work orders...
                 </td></tr>
               ) : filteredOrders.length === 0 ? (
-                <tr><td colSpan="7" className="text-center py-12 text-gray-500">
+                <tr><td colSpan="8" className="text-center py-12 text-gray-500">
                   <ClipboardList className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                   <p className="font-medium">No {activeTab} work orders found</p>
                   <p className="text-sm text-gray-400 mt-1">Work orders will appear here when created</p>
@@ -1026,6 +1027,16 @@ const WorkOrders = ({ admin }) => {
                         </select>
                         <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-current opacity-70" />
                       </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                        wo.priority === 'high' || wo.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                        wo.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                        wo.priority === 'low' ? 'bg-green-100 text-green-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        {wo.priority || 'Not Set'}
+                      </span>
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-500 whitespace-nowrap">
                       {new Date(wo.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}

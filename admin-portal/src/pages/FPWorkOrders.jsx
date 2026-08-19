@@ -1506,6 +1506,7 @@ const FPWorkOrders = ({ user }) => {
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Resident</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Category</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Priority</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created By</th>
                       <th className="text-center py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
@@ -1554,6 +1555,16 @@ const FPWorkOrders = ({ user }) => {
                               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
                             </div>
                           )}
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                            wo.priority === 'high' || wo.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                            wo.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                            wo.priority === 'low' ? 'bg-green-100 text-green-700' :
+                            'bg-gray-100 text-gray-600'
+                          }`}>
+                            {wo.priority || 'Not Set'}
+                          </span>
                         </td>
                         <td className="py-4 px-4">
                           <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
