@@ -709,7 +709,7 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
                   fpamc_name.services as amcPackageServicesByName
            FROM fp_estimates fe
            LEFT JOIN fp_amc_packages fpamc_id ON fe.package_id = fpamc_id.id
-           LEFT JOIN fp_amc_packages fpamc_name ON fe.package_name = fpamc_name.package_name AND fe.franchise_partner_id = fpamc_name.franchise_partner_id
+           LEFT JOIN fp_amc_packages fpamc_name ON fe.package_name = fpamc_name.name AND fe.franchise_partner_id = fpamc_name.franchise_partner_id
            WHERE fe.estimate_id = ?`,
           [i.source_estimate_id]
         );
@@ -717,13 +717,22 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
         if (estimates.length > 0) {
           const estimate = estimates[0];
           
+          console.log('[Invoice Enrichment] Found estimate:', estimate.package_id, estimate.package_name);
+          console.log('[Invoice Enrichment] AMC services from ID:', estimate.amcPackageServices ? 'YES' : 'NO');
+          console.log('[Invoice Enrichment] AMC services from Name:', estimate.amcPackageServicesByName ? 'YES' : 'NO');
+          
           // Parse the AMC package services (these have the full descriptions)
           let amcServices = [];
           const amcServicesRaw = estimate.amcPackageServices || estimate.amcPackageServicesByName;
           if (amcServicesRaw) {
             try {
               const parsed = typeof amcServicesRaw === 'string' ? JSON.parse(amcServicesRaw) : amcServicesRaw;
+              console.log('[Invoice Enrichment] Parsed AMC services structure:', Object.keys(parsed || {}));
               amcServices = parsed?.serviceRows || parsed?.services || (Array.isArray(parsed) ? parsed : []);
+              console.log('[Invoice Enrichment] Extracted services count:', amcServices.length);
+              if (amcServices.length > 0) {
+                console.log('[Invoice Enrichment] First service structure:', JSON.stringify(amcServices[0]));
+              }
             } catch (e) { console.log('Error parsing AMC services:', e); }
           }
           
@@ -740,18 +749,30 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
           
           // Build enriched line items - ALWAYS use AMC package descriptions as primary source
           // The AMC package has full descriptions; estimate/invoice may have truncated versions
+          const originalLineItems = [...lineItems]; // Keep original for matching
+          
           if (amcServices.length > 0) {
             console.log('[Invoice Enrichment] Using AMC package services as primary source, count:', amcServices.length);
+            console.log('[Invoice Enrichment] Original line items count:', originalLineItems.length);
             
-            // Use AMC services as primary, matching by index or name
-            lineItems = amcServices.map((ams, idx) => {
-              const existingItem = lineItems[idx] || {};
+            // Build a name lookup map for better matching
+            const amcServiceByName = {};
+            amcServices.forEach(ams => {
+              const name = (ams.service || ams.name || '').toLowerCase().trim();
+              if (name) amcServiceByName[name] = ams;
+            });
+            
+            // Enrich each original line item by matching with AMC services
+            lineItems = originalLineItems.map((existingItem, idx) => {
+              // Try to find matching AMC service by name or index
+              const existingName = (existingItem.name || existingItem.description?.split(' - ')[0] || '').toLowerCase().trim();
+              let ams = amcServiceByName[existingName] || amcServices[idx] || {};
               const estimateService = estimateServices[idx] || {};
               
               const serviceName = ams.service || ams.name || estimateService.name || existingItem.name || 'Service';
-              const fullDescription = ams.description || estimateService.description || '';
+              const fullDescription = ams.description || estimateService.description || existingItem.details || '';
               
-              console.log(`[Invoice Enrichment] Service ${idx + 1}: "${serviceName}" - AMC desc: "${fullDescription?.substring(0, 80)}..."`);
+              console.log(`[Invoice Enrichment] Service ${idx + 1}: "${serviceName}" - Desc: "${fullDescription?.substring(0, 100)}"`);
               
               return {
                 ...existingItem,
@@ -760,18 +781,18 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
                 details: fullDescription,
                 frequency: ams.frequency_type || ams.frequencyType || estimateService.frequencyType || existingItem.frequency || 'Other',
                 visits: ams.frequency_count || ams.frequencyCount || estimateService.frequencyCount || existingItem.visits || 1,
-                totalPrice: parseFloat(estimateService.totalPrice || existingItem.totalPrice || ams.price || 0),
-                type: 'service'
+                totalPrice: parseFloat(existingItem.totalPrice || existingItem.total_price || estimateService.totalPrice || ams.price || 0),
+                type: existingItem.type || 'service'
               };
             });
           } else if (estimateServices.length > 0) {
             // Fallback: Use estimate services if no AMC package found
             console.log('[Invoice Enrichment] No AMC package found, using estimate services, count:', estimateServices.length);
             
-            lineItems = estimateServices.map((s, idx) => {
-              const existingItem = lineItems[idx] || {};
+            lineItems = originalLineItems.map((existingItem, idx) => {
+              const s = estimateServices[idx] || {};
               const serviceName = s.name || s.serviceName || s.service || existingItem.name || 'Service';
-              const fullDescription = s.description || s.service_description || '';
+              const fullDescription = s.description || s.service_description || existingItem.details || '';
               
               return {
                 ...existingItem,
@@ -780,10 +801,12 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
                 details: fullDescription,
                 frequency: s.frequency || s.frequencyType || s.frequency_type || existingItem.frequency || 'Other',
                 visits: s.visits || s.frequencyCount || s.frequency_count || existingItem.visits || 1,
-                totalPrice: parseFloat(s.totalPrice || s.total_price || s.price || existingItem.totalPrice || 0),
-                type: s.type || existingItem.type || 'service'
+                totalPrice: parseFloat(existingItem.totalPrice || existingItem.total_price || s.totalPrice || s.price || 0),
+                type: existingItem.type || s.type || 'service'
               };
             });
+          } else {
+            console.log('[Invoice Enrichment] No AMC services or estimate services found - keeping original line items');
           }
           
           // Also enrich addons if present - fetch full descriptions from fp_addons table
