@@ -1227,24 +1227,24 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                       <span className="text-sm font-bold text-gray-800 uppercase tracking-wide">Work Order Details</span>
                       <div className="flex-1 h-[1px] bg-orange-200"></div>
                     </div>
-                    <div className="bg-orange-50 rounded-lg p-4 border border-orange-100">
-                      <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-orange-50 rounded-lg p-3 border border-orange-100">
+                      <div className="grid grid-cols-4 gap-3">
                         <div>
-                          <p className="text-xs text-gray-500 mb-1">Work Order ID</p>
+                          <p className="text-xs text-gray-500">Work Order ID</p>
                           <p className="text-sm font-semibold text-orange-600">{selectedInvoice.sourceWorkOrderId || '-'}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500 mb-1">Category</p>
+                          <p className="text-xs text-gray-500">Category</p>
                           <p className="text-sm font-semibold text-gray-800">{category}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500 mb-1">Subcategory</p>
+                          <p className="text-xs text-gray-500">Subcategory</p>
                           <p className="text-sm font-semibold text-gray-800">{subcategory}</p>
                         </div>
                         {workOrderItem.description && (
-                          <div className="col-span-2">
-                            <p className="text-xs text-gray-500 mb-1">Description</p>
-                            <p className="text-sm text-gray-700">{workOrderItem.description}</p>
+                          <div>
+                            <p className="text-xs text-gray-500">Description</p>
+                            <p className="text-sm text-gray-700 truncate" title={workOrderItem.description}>{workOrderItem.description}</p>
                           </div>
                         )}
                       </div>
