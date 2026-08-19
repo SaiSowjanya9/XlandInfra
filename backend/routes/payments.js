@@ -664,15 +664,15 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
              COALESCE(p.zone, p2.zone, fe.zone) as zone,
              COALESCE(p.city, p2.city, fe.city) as city,
              c.name as client_name,
-             wo.service_category as work_order_category,
-             wo.service_subcategory as work_order_subcategory,
+             wo.category_name as work_order_category,
+             wo.subcategory_name as work_order_subcategory,
              wo.description as work_order_description
       FROM invoices i
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
       LEFT JOIN onboarded_properties p2 ON i.property_code = p2.property_id
       LEFT JOIN fp_estimates fe ON i.source_estimate_id = fe.estimate_id
       LEFT JOIN clients c ON i.customer_id = c.id
-      LEFT JOIN work_orders wo ON i.source_work_order_id = wo.order_number
+      LEFT JOIN work_orders wo ON i.source_work_order_id = wo.work_order_id
       WHERE i.id = ?
     `;
     const params = [id];
