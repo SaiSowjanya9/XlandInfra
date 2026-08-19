@@ -698,10 +698,11 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
     // If we have a source estimate, try to enrich line items with full descriptions
     if (i.source_estimate_id) {
       try {
-        // Fetch estimate with AMC package services (like the estimate view does)
+        // Fetch estimate with AMC package services AND the original AMC package for full descriptions
         const [estimates] = await pool.execute(
           `SELECT fe.package_services, fe.addons_data, fe.package_id, fe.package_name,
-                  COALESCE(fe.package_services, fpamc_id.services, fpamc_name.services) as enrichedServices
+                  fpamc_id.services as amcPackageServices,
+                  fpamc_name.services as amcPackageServicesByName
            FROM fp_estimates fe
            LEFT JOIN fp_amc_packages fpamc_id ON fe.package_id = fpamc_id.id
            LEFT JOIN fp_amc_packages fpamc_name ON fe.package_name = fpamc_name.package_name AND fe.franchise_partner_id = fpamc_name.franchise_partner_id
@@ -712,45 +713,89 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
         if (estimates.length > 0) {
           const estimate = estimates[0];
           
-          // Use enrichedServices which falls back to AMC package services
-          const rawServices = estimate.enrichedServices || estimate.package_services;
-          
-          if (rawServices) {
-            const originalServices = typeof rawServices === 'string' 
-              ? JSON.parse(rawServices) 
-              : rawServices;
-            
-            if (Array.isArray(originalServices)) {
-              // Build enriched line items from original services with FULL descriptions
-              lineItems = originalServices.map((s, idx) => {
-                const existingItem = lineItems[idx] || {};
-                const serviceName = s.name || s.serviceName || existingItem.name || 'Service';
-                const serviceDesc = s.description || s.service_description || '';
-                
-                return {
-                  ...existingItem,
-                  name: serviceName,
-                  description: serviceDesc ? `${serviceName} - ${serviceDesc}` : serviceName,
-                  details: serviceDesc,
-                  frequency: s.frequency || s.frequencyType || s.frequency_type || existingItem.frequency || 'Other',
-                  visits: s.visits || s.frequencyCount || s.frequency_count || existingItem.visits || 1,
-                  totalPrice: parseFloat(s.totalPrice || s.total_price || s.price || existingItem.totalPrice || 0),
-                  type: s.type || existingItem.type || 'service'
-                };
-              });
-            }
+          // Parse the AMC package services (these have the full descriptions)
+          let amcServices = [];
+          const amcServicesRaw = estimate.amcPackageServices || estimate.amcPackageServicesByName;
+          if (amcServicesRaw) {
+            try {
+              const parsed = typeof amcServicesRaw === 'string' ? JSON.parse(amcServicesRaw) : amcServicesRaw;
+              amcServices = parsed?.serviceRows || parsed?.services || (Array.isArray(parsed) ? parsed : []);
+            } catch (e) { console.log('Error parsing AMC services:', e); }
           }
           
-          // Also enrich addons if present
+          // Parse estimate's package_services
+          let estimateServices = [];
+          if (estimate.package_services) {
+            try {
+              estimateServices = typeof estimate.package_services === 'string' 
+                ? JSON.parse(estimate.package_services) 
+                : estimate.package_services;
+              if (!Array.isArray(estimateServices)) estimateServices = [];
+            } catch (e) { estimateServices = []; }
+          }
+          
+          // Build enriched line items - match by service name and get full description from AMC package
+          if (estimateServices.length > 0 || amcServices.length > 0) {
+            const servicesToUse = estimateServices.length > 0 ? estimateServices : amcServices;
+            lineItems = servicesToUse.map((s, idx) => {
+              const existingItem = lineItems[idx] || {};
+              const serviceName = s.name || s.serviceName || s.service || existingItem.name || 'Service';
+              
+              // Try to find full description from AMC package by matching service name
+              let fullDescription = s.description || s.service_description || '';
+              if (amcServices.length > 0) {
+                const matchingAmcService = amcServices.find(ams => 
+                  (ams.name || ams.service || '').toLowerCase() === serviceName.toLowerCase() ||
+                  (ams.service || ams.name || '').toLowerCase() === serviceName.toLowerCase()
+                );
+                if (matchingAmcService && matchingAmcService.description) {
+                  fullDescription = matchingAmcService.description;
+                }
+              }
+              
+              return {
+                ...existingItem,
+                name: serviceName,
+                description: fullDescription ? `${serviceName} - ${fullDescription}` : serviceName,
+                details: fullDescription,
+                frequency: s.frequency || s.frequencyType || s.frequency_type || existingItem.frequency || 'Other',
+                visits: s.visits || s.frequencyCount || s.frequency_count || existingItem.visits || 1,
+                totalPrice: parseFloat(s.totalPrice || s.total_price || s.price || existingItem.totalPrice || 0),
+                type: s.type || existingItem.type || 'service'
+              };
+            });
+          }
+          
+          // Also enrich addons if present - fetch full descriptions from fp_addons table
           if (estimate.addons_data) {
             const addons = typeof estimate.addons_data === 'string' 
               ? JSON.parse(estimate.addons_data) 
               : estimate.addons_data;
             
             if (Array.isArray(addons)) {
+              // Fetch all FP addons for full descriptions
+              let fpAddons = [];
+              try {
+                const [addonsResult] = await pool.execute(
+                  `SELECT id, service_name, description FROM fp_addons WHERE franchise_partner_id = ?`,
+                  [i.franchise_partner_id]
+                );
+                fpAddons = addonsResult || [];
+              } catch (e) { console.log('Error fetching fp_addons:', e); }
+              
               addons.forEach(addon => {
                 const addonName = addon.name || addon.serviceName || addon.service_name || 'Add-on';
-                const addonDesc = addon.description || addon.service_description || '';
+                let addonDesc = addon.description || addon.service_description || '';
+                
+                // Try to find full description from fp_addons table
+                if (fpAddons.length > 0) {
+                  const matchingAddon = fpAddons.find(fa => 
+                    (fa.service_name || '').toLowerCase() === addonName.toLowerCase()
+                  );
+                  if (matchingAddon && matchingAddon.description) {
+                    addonDesc = matchingAddon.description;
+                  }
+                }
                 
                 // Check if addon already exists in lineItems
                 const exists = lineItems.some(item => 
