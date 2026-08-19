@@ -1326,24 +1326,26 @@ const InvoiceDetailPanel = ({
           </svg>
         </div>
 
-        {/* ===== ID / DATE / DUE ROW ===== */}
-        <div className="px-6 py-4 flex-shrink-0 bg-white">
+        {/* ===== ID / DATE / DUE ROW (Image 2 style) ===== */}
+        <div className="px-6 py-5 flex-shrink-0 bg-white">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-xs text-gray-500">ID:</p>
-              <p className="text-lg font-bold text-gray-900">{invoice.invoiceId}</p>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm text-gray-500">ID:</span>
+                <span className="text-xl font-bold text-gray-900">{invoice.invoiceId}</span>
+              </div>
               {invoice.sourceEstimateId && (
-                <p className="text-xs text-[#c9a227]">Estimate: {invoice.sourceEstimateId}</p>
+                <p className="text-sm text-[#c9a227]">Estimate: {invoice.sourceEstimateId}</p>
               )}
             </div>
             <div className="text-right">
-              <div className="flex items-center gap-2 justify-end">
-                <span className="text-xs text-gray-500">Date:</span>
-                <span className="text-sm font-bold text-gray-900">{formatDate(invoice.invoiceDate)}</span>
+              <div className="flex items-center gap-3 justify-end mb-2">
+                <span className="text-sm text-gray-500">Date:</span>
+                <span className="text-base font-bold text-gray-900">{formatDate(invoice.invoiceDate)}</span>
               </div>
-              <div className="flex items-center gap-2 justify-end mt-1">
-                <span className="text-xs text-gray-500">Due:</span>
-                <span className="text-sm font-bold text-gray-900">{formatDate(invoice.dueDate)}</span>
+              <div className="flex items-center gap-3 justify-end">
+                <span className="text-sm text-gray-500">Due:</span>
+                <span className="text-base font-bold text-gray-900">{formatDate(invoice.dueDate)}</span>
               </div>
             </div>
           </div>

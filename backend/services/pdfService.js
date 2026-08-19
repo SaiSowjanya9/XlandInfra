@@ -487,21 +487,21 @@ const generateInvoicePDF = async (invoice) => {
 
       // ===== INVOICE ID & DATES ROW =====
       doc.fontSize(9).fillColor('#666666').text('ID:', margin, y);
-      doc.fontSize(12).fillColor(black).font('Helvetica-Bold').text(invoiceId || 'N/A', margin + 20, y - 1);
+      doc.fontSize(14).fillColor(primaryText).font('Helvetica-Bold').text(invoiceId || 'N/A', margin + 18, y - 1);
       
       if (estimateId) {
-        doc.fontSize(8).fillColor('#888888').font('Helvetica').text(`Estimate: ${estimateId}`, margin, y + 14);
+        doc.fontSize(9).fillColor(gold).font('Helvetica').text(`Estimate: ${estimateId}`, margin, y + 16);
       }
       
-      // Right side dates
-      const dateX = pageWidth - margin - 125;
+      // Right side dates (Image 2 style)
+      const dateX = pageWidth - margin - 130;
       doc.fontSize(10).fillColor(secondaryText).font('Helvetica').text('Date:', dateX, y);
       const invDateStr = invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-      doc.fontSize(12).fillColor(primaryText).font('Helvetica-Bold').text(invDateStr, dateX + 38, y - 1);
+      doc.fontSize(13).fillColor(primaryText).font('Helvetica-Bold').text(invDateStr, dateX + 40, y - 1);
       
-      doc.fontSize(10).fillColor(secondaryText).font('Helvetica').text('Due:', dateX, y + 18);
+      doc.fontSize(10).fillColor(secondaryText).font('Helvetica').text('Due:', dateX, y + 20);
       const dueDateStr = dueDate ? new Date(dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-      doc.fontSize(12).fillColor(primaryText).font('Helvetica-Bold').text(dueDateStr, dateX + 38, y + 17);
+      doc.fontSize(13).fillColor(primaryText).font('Helvetica-Bold').text(dueDateStr, dateX + 40, y + 19);
       
       doc.font('Helvetica');
       y += 48;
