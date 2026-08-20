@@ -129,63 +129,50 @@ const generatePDF = (data, type, filename) => {
     const borderLight = [229, 231, 235];     // Gray-200
     const gold = [180, 144, 52];             // Professional gold
 
-    // ===== HEADER - Black with elegant flowing gold wave (Image 1 style) =====
-    const headerHeight = 48;
+    // ===== HEADER - Black with elegant flowing gold wave (compact) =====
+    const headerHeight = 36;
     
     // Black header background
     doc.setFillColor(26, 26, 26); // #1a1a1a
     doc.rect(0, 0, pageWidth, headerHeight, 'F');
     
-    // Draw elegant flowing gold wave at bottom of header
-    doc.setFillColor(184, 134, 11); // Dark gold #b8860b
-    // Create wave effect using bezier curves
-    const waveY = headerHeight - 6;
-    doc.setDrawColor(201, 162, 39); // Gold
-    doc.setLineWidth(4);
-    
-    // Draw flowing wave pattern
-    for (let x = 0; x < pageWidth; x += 40) {
-      doc.setFillColor(201, 162, 39);
-      // Simple wave approximation using small arcs
-    }
-    
     // Gold wave band at bottom
     doc.setFillColor(201, 162, 39); // #c9a227
-    doc.rect(0, headerHeight - 8, pageWidth, 8, 'F');
+    doc.rect(0, headerHeight - 6, pageWidth, 6, 'F');
     
     // Add subtle curve overlay for wave effect
     doc.setFillColor(26, 26, 26); // Black overlay for wave
-    doc.ellipse(pageWidth * 0.25, headerHeight - 4, 50, 6, 'F');
-    doc.ellipse(pageWidth * 0.75, headerHeight - 4, 50, 6, 'F');
+    doc.ellipse(pageWidth * 0.25, headerHeight - 3, 50, 4, 'F');
+    doc.ellipse(pageWidth * 0.75, headerHeight - 3, 50, 4, 'F');
     
     // Logo on left
-    const logoSize = 30;
+    const logoSize = 22;
     try {
-      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin, 8, logoSize, logoSize);
+      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin, 6, logoSize, logoSize);
     } catch (e) {
       doc.setFillColor(...gold);
-      doc.roundedRect(margin, 8, 30, 30, 3, 3, 'F');
+      doc.roundedRect(margin, 6, 22, 22, 2, 2, 'F');
     }
     
     // Company name - "XLAND INFRA" in gold
-    const textX = margin + logoSize + 8;
+    const textX = margin + logoSize + 6;
     doc.setTextColor(...gold);
-    doc.setFontSize(18);
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', textX, 22);
+    doc.text('XLAND INFRA', textX, 16);
     
     // "PVT LTD" with decorative lines on both sides
-    const pvtLtdY = 32;
+    const pvtLtdY = 24;
     const pvtLtdText = 'PVT LTD';
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     const pvtLtdWidth = doc.getTextWidth(pvtLtdText);
-    const lineLength = 18;
-    const lineGap = 4;
+    const lineLength = 12;
+    const lineGap = 3;
     
     // Left decorative line
     doc.setDrawColor(...gold);
-    doc.setLineWidth(0.5);
+    doc.setLineWidth(0.4);
     doc.line(textX, pvtLtdY - 2, textX + lineLength, pvtLtdY - 2);
     
     // PVT LTD text
