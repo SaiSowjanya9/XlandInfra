@@ -6,10 +6,12 @@ const LOGO_PATH = path.join(__dirname, '../assets/logo-icon-optimized.png');
 
 /**
  * Decode HTML entities (e.g., &amp; -> &, &#x2F; -> /)
+ * Handles double-encoded entities like &amp;amp; -> &
  */
 const decodeHtml = (html) => {
   if (!html || typeof html !== 'string') return html || '';
   const entities = {
+    '&amp;amp;': '&',  // Double-encoded ampersand
     '&amp;': '&',
     '&lt;': '<',
     '&gt;': '>',
@@ -21,12 +23,21 @@ const decodeHtml = (html) => {
     '&#x26;': '&'
   };
   let decoded = html;
-  for (const [entity, char] of Object.entries(entities)) {
-    decoded = decoded.replace(new RegExp(entity, 'gi'), char);
+  // Run multiple passes to handle double-encoding
+  for (let i = 0; i < 3; i++) {
+    let changed = false;
+    for (const [entity, char] of Object.entries(entities)) {
+      const before = decoded;
+      decoded = decoded.replace(new RegExp(entity, 'gi'), char);
+      if (decoded !== before) changed = true;
+    }
+    // Handle numeric entities
+    const before = decoded;
+    decoded = decoded.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
+    decoded = decoded.replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    if (decoded !== before) changed = true;
+    if (!changed) break;
   }
-  // Handle numeric entities
-  decoded = decoded.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
-  decoded = decoded.replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
   return decoded;
 };
 
