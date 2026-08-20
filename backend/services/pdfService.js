@@ -529,6 +529,9 @@ const generateInvoicePDF = async (invoice) => {
       }
       if (city) { doc.text(`City: ${city}`, 315, cy, { width: cardWidth - 20 }); }
 
+      // Move Y position below the cards
+      y += cardHeight + 15;
+
       // ===== WORK ORDER DETAILS (for work order invoices) - Matching Estimate Layout =====
       if (isWorkOrderInvoice) {
         const woItem = items[0] || {};
