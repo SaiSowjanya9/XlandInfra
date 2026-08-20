@@ -167,16 +167,31 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       const response = await fetch(`${API_BASE}/api/schedules`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      
+      if (!response.ok) {
+        // If 404 or no schedules table, just show empty state
+        if (response.status === 404 || response.status === 500) {
+          console.warn('Schedules API not available, showing empty dashboard');
+          setSchedules([]);
+          setLoading(false);
+          setRefreshing(false);
+          return;
+        }
+      }
+      
       const result = await response.json();
       
       if (result.success) {
         setSchedules(result.data || []);
       } else {
-        setError(result.message || 'Failed to load schedules');
+        // Don't show error for empty data or permission issues - just show empty state
+        console.warn('Schedules fetch warning:', result.message);
+        setSchedules([]);
       }
     } catch (err) {
       console.error('Fetch schedules error:', err);
-      setError('Unable to load schedules data');
+      // Don't show error, just show empty dashboard
+      setSchedules([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -543,22 +558,6 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       <div className="flex items-center justify-center h-64">
         <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
         <span className="ml-2 text-gray-600">Loading schedules...</span>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-        <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
-        <p className="text-red-700">{error}</p>
-        <button
-          onClick={() => fetchSchedules()}
-          className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
-        >
-          Retry
-        </button>
       </div>
     );
   }

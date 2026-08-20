@@ -30,14 +30,18 @@ router.get('/', authenticate, canSeeSchedule, async (req, res) => {
     
     let query = `
       SELECT s.*, 
-             p.name as property_name, p.property_id as property_code,
-             e.estimate_id, e.title as estimate_title,
-             pkg.name as package_name,
+             COALESCE(op.community_name, p.name) as property_name, 
+             COALESCE(op.property_id, p.property_id) as property_code,
+             COALESCE(op.property_type, p.property_type) as property_type,
+             COALESCE(op.zone, p.zone) as zone,
+             COALESCE(op.city, p.city) as city,
+             fe.estimate_id as fp_estimate_id, fe.title as fp_estimate_title,
+             fe.service_category,
              CONCAT(u.first_name, ' ', u.last_name) as created_by_name
       FROM schedules s
+      LEFT JOIN onboarded_properties op ON s.property_id = op.id
       LEFT JOIN properties p ON s.property_id = p.id
-      LEFT JOIN estimates e ON s.estimate_id = e.id
-      LEFT JOIN packages pkg ON s.package_id = pkg.id
+      LEFT JOIN fp_estimates fe ON s.estimate_id = fe.id
       LEFT JOIN users u ON s.created_by = u.id
       WHERE 1=1
     `;
@@ -62,13 +66,16 @@ router.get('/', authenticate, canSeeSchedule, async (req, res) => {
       data: schedules.map(s => ({
         id: s.id,
         scheduleId: s.schedule_id,
-        estimateId: s.estimate_id,
-        estimateTitle: s.estimate_title,
+        estimateId: s.estimate_id || s.fp_estimate_id,
+        estimateTitle: s.fp_estimate_title,
         packageId: s.package_id,
-        packageName: s.package_name,
         propertyId: s.property_id,
         propertyName: s.property_name,
         propertyCode: s.property_code,
+        propertyType: s.property_type,
+        zone: s.zone,
+        city: s.city,
+        serviceCategory: s.service_category,
         title: s.title,
         description: s.description,
         startDate: s.start_date,
@@ -90,6 +97,150 @@ router.get('/', authenticate, canSeeSchedule, async (req, res) => {
   }
 });
 
+// Get dashboard statistics - MUST be before /:id route
+router.get('/dashboard/stats', authenticate, canSeeSchedule, async (req, res) => {
+  try {
+    const { startDate, endDate, zone } = req.query;
+    
+    let dateFilter = '';
+    const params = [];
+    
+    if (startDate) {
+      dateFilter += ' AND s.start_date >= ?';
+      params.push(startDate);
+    }
+    if (endDate) {
+      dateFilter += ' AND s.start_date <= ?';
+      params.push(endDate);
+    }
+
+    // Get all schedules with property info
+    const [schedules] = await pool.execute(
+      `SELECT s.*, 
+              COALESCE(op.community_name, p.name) as property_name, 
+              COALESCE(op.property_id, p.property_id) as property_code,
+              COALESCE(op.property_type, p.property_type) as property_type,
+              COALESCE(op.zone, p.zone) as zone,
+              COALESCE(op.city, p.city) as city,
+              CONCAT(u.first_name, ' ', u.last_name) as created_by_name,
+              fe.title as estimate_title,
+              fe.service_category
+       FROM schedules s
+       LEFT JOIN onboarded_properties op ON s.property_id = op.id
+       LEFT JOIN properties p ON s.property_id = p.id
+       LEFT JOIN users u ON s.created_by = u.id
+       LEFT JOIN fp_estimates fe ON s.estimate_id = fe.id
+       WHERE 1=1 ${dateFilter}
+       ORDER BY s.start_date DESC`,
+      params
+    );
+
+    // Calculate statistics
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const stats = {
+      total: schedules.length,
+      byStatus: {},
+      byPropertyType: {},
+      byServiceCategory: {},
+      todaysSchedules: [],
+      upcomingSchedules: [],
+      unscheduled: []
+    };
+
+    // Status counts
+    const statusCounts = {
+      active: 0,
+      draft: 0,
+      completed: 0,
+      cancelled: 0,
+      paused: 0,
+      rescheduled: 0,
+      in_progress: 0
+    };
+
+    // Property type counts
+    const propertyTypeCounts = {};
+    
+    // Service category counts
+    const serviceCategoryCounts = {};
+
+    schedules.forEach(s => {
+      const status = (s.status || 'draft').toLowerCase();
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+
+      // Property type
+      const propType = s.property_type || 'Other';
+      propertyTypeCounts[propType] = (propertyTypeCounts[propType] || 0) + 1;
+
+      // Service category
+      const category = s.service_category || s.title?.split(' ')[0] || 'General';
+      serviceCategoryCounts[category] = (serviceCategoryCounts[category] || 0) + 1;
+
+      // Today's schedules
+      if (s.start_date) {
+        const sDate = new Date(s.start_date);
+        sDate.setHours(0, 0, 0, 0);
+        
+        if (sDate.getTime() === today.getTime()) {
+          stats.todaysSchedules.push({
+            id: s.id,
+            scheduleId: s.schedule_id,
+            title: s.title,
+            description: s.description,
+            startDate: s.start_date,
+            status: s.status,
+            propertyName: s.property_name,
+            propertyType: s.property_type
+          });
+        }
+
+        // Upcoming (next 7 days)
+        const next7Days = new Date(today);
+        next7Days.setDate(today.getDate() + 7);
+        
+        if (sDate > today && sDate <= next7Days) {
+          stats.upcomingSchedules.push({
+            id: s.id,
+            scheduleId: s.schedule_id,
+            title: s.title,
+            startDate: s.start_date,
+            status: s.status,
+            propertyName: s.property_name
+          });
+        }
+      }
+
+      // Unscheduled (drafts)
+      if (status === 'draft' || !s.start_date) {
+        stats.unscheduled.push({
+          id: s.id,
+          scheduleId: s.schedule_id,
+          title: s.title,
+          status: s.status
+        });
+      }
+    });
+
+    stats.byStatus = statusCounts;
+    stats.byPropertyType = propertyTypeCounts;
+    stats.byServiceCategory = serviceCategoryCounts;
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error fetching schedule stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching schedule statistics',
+      error: error.message
+    });
+  }
+});
+
 // Get single schedule (Admin, Manager, Supervisor can view)
 router.get('/:id', authenticate, canSeeSchedule, async (req, res) => {
   try {
@@ -97,14 +248,15 @@ router.get('/:id', authenticate, canSeeSchedule, async (req, res) => {
 
     const [schedules] = await pool.execute(
       `SELECT s.*, 
-              p.name as property_name, p.property_id as property_code,
-              e.estimate_id, e.title as estimate_title,
-              pkg.name as package_name,
+              COALESCE(op.community_name, p.name) as property_name, 
+              COALESCE(op.property_id, p.property_id) as property_code,
+              COALESCE(op.property_type, p.property_type) as property_type,
+              fe.estimate_id as fp_estimate_id, fe.title as fp_estimate_title,
               CONCAT(u.first_name, ' ', u.last_name) as created_by_name
        FROM schedules s
+       LEFT JOIN onboarded_properties op ON s.property_id = op.id
        LEFT JOIN properties p ON s.property_id = p.id
-       LEFT JOIN estimates e ON s.estimate_id = e.id
-       LEFT JOIN packages pkg ON s.package_id = pkg.id
+       LEFT JOIN fp_estimates fe ON s.estimate_id = fe.id
        LEFT JOIN users u ON s.created_by = u.id
        WHERE s.id = ?`,
       [id]
@@ -123,12 +275,12 @@ router.get('/:id', authenticate, canSeeSchedule, async (req, res) => {
       data: {
         id: s.id,
         scheduleId: s.schedule_id,
-        estimateId: s.estimate_id,
-        estimateTitle: s.estimate_title,
+        estimateId: s.estimate_id || s.fp_estimate_id,
+        estimateTitle: s.fp_estimate_title,
         packageId: s.package_id,
-        packageName: s.package_name,
         propertyId: s.property_id,
         propertyName: s.property_name,
+        propertyType: s.property_type,
         title: s.title,
         description: s.description,
         startDate: s.start_date,
@@ -372,147 +524,6 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting schedule',
-      error: error.message
-    });
-  }
-});
-
-// Get dashboard statistics
-router.get('/dashboard/stats', authenticate, canSeeSchedule, async (req, res) => {
-  try {
-    const { startDate, endDate, zone } = req.query;
-    
-    let dateFilter = '';
-    const params = [];
-    
-    if (startDate) {
-      dateFilter += ' AND s.start_date >= ?';
-      params.push(startDate);
-    }
-    if (endDate) {
-      dateFilter += ' AND s.start_date <= ?';
-      params.push(endDate);
-    }
-
-    // Get all schedules with property info
-    const [schedules] = await pool.execute(
-      `SELECT s.*, 
-              p.name as property_name, 
-              p.property_id as property_code,
-              p.property_type,
-              p.zone,
-              p.city,
-              CONCAT(u.first_name, ' ', u.last_name) as created_by_name,
-              e.title as estimate_title,
-              e.service_category
-       FROM schedules s
-       LEFT JOIN properties p ON s.property_id = p.id
-       LEFT JOIN users u ON s.created_by = u.id
-       LEFT JOIN estimates e ON s.estimate_id = e.id
-       WHERE 1=1 ${dateFilter}
-       ORDER BY s.start_date DESC`,
-      params
-    );
-
-    // Calculate statistics
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const stats = {
-      total: schedules.length,
-      byStatus: {},
-      byPropertyType: {},
-      byServiceCategory: {},
-      todaysSchedules: [],
-      upcomingSchedules: [],
-      unscheduled: []
-    };
-
-    // Status counts
-    const statusCounts = {
-      active: 0,
-      draft: 0,
-      completed: 0,
-      cancelled: 0,
-      paused: 0,
-      rescheduled: 0,
-      in_progress: 0
-    };
-
-    // Property type counts
-    const propertyTypeCounts = {};
-    
-    // Service category counts
-    const serviceCategoryCounts = {};
-
-    schedules.forEach(s => {
-      const status = (s.status || 'draft').toLowerCase();
-      statusCounts[status] = (statusCounts[status] || 0) + 1;
-
-      // Property type
-      const propType = s.property_type || 'Other';
-      propertyTypeCounts[propType] = (propertyTypeCounts[propType] || 0) + 1;
-
-      // Service category
-      const category = s.service_category || s.title?.split(' ')[0] || 'General';
-      serviceCategoryCounts[category] = (serviceCategoryCounts[category] || 0) + 1;
-
-      // Today's schedules
-      const sDate = new Date(s.start_date);
-      sDate.setHours(0, 0, 0, 0);
-      
-      if (sDate.getTime() === today.getTime()) {
-        stats.todaysSchedules.push({
-          id: s.id,
-          scheduleId: s.schedule_id,
-          title: s.title,
-          description: s.description,
-          startDate: s.start_date,
-          status: s.status,
-          propertyName: s.property_name,
-          propertyType: s.property_type
-        });
-      }
-
-      // Upcoming (next 7 days)
-      const next7Days = new Date(today);
-      next7Days.setDate(today.getDate() + 7);
-      
-      if (sDate > today && sDate <= next7Days) {
-        stats.upcomingSchedules.push({
-          id: s.id,
-          scheduleId: s.schedule_id,
-          title: s.title,
-          startDate: s.start_date,
-          status: s.status,
-          propertyName: s.property_name
-        });
-      }
-
-      // Unscheduled (drafts)
-      if (status === 'draft' || !s.start_date) {
-        stats.unscheduled.push({
-          id: s.id,
-          scheduleId: s.schedule_id,
-          title: s.title,
-          status: s.status
-        });
-      }
-    });
-
-    stats.byStatus = statusCounts;
-    stats.byPropertyType = propertyTypeCounts;
-    stats.byServiceCategory = serviceCategoryCounts;
-
-    res.json({
-      success: true,
-      data: stats
-    });
-  } catch (error) {
-    console.error('Error fetching schedule stats:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching schedule statistics',
       error: error.message
     });
   }
