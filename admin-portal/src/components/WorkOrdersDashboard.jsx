@@ -494,10 +494,12 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
 
       const dataPoint = { name: label };
       categories.forEach(cat => {
-        dataPoint[cat] = periodWOs.filter(wo => {
+        const count = periodWOs.filter(wo => {
           const woCategory = wo.category_name || wo.category || wo.service_category || wo.serviceCategory || 'Other';
           return woCategory === cat;
         }).length;
+        // Use null for 0 so lines don't connect across empty months
+        dataPoint[cat] = count > 0 ? count : null;
       });
       return dataPoint;
     });
@@ -1038,11 +1040,12 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                     {categoryTrend.categories.map((cat, index) => (
                       <Line 
                         key={cat}
-                        type="monotone" 
+                        type="linear" 
                         dataKey={cat} 
                         stroke={categoryColors[index % categoryColors.length]} 
                         strokeWidth={2} 
-                        dot={{ fill: categoryColors[index % categoryColors.length], strokeWidth: 0, r: 4 }} 
+                        dot={{ fill: categoryColors[index % categoryColors.length], strokeWidth: 0, r: 5 }}
+                        connectNulls={false}
                       />
                     ))}
                   </LineChart>
