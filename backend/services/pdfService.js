@@ -542,10 +542,8 @@ const generateInvoicePDF = async (invoice) => {
         const subcategory = workOrderSubcategory || woItem.subcategory || woItem.serviceSubcategory || '-';
         const woDescription = decodeHtml(workOrderDescription || woItem.description || woItem.details || '');
         
-        // Section header - decorative line AFTER text with spacing (matching SERVICES INCLUDED & PRICE SUMMARY)
+        // Section header - no decorative line
         doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('WORK ORDER DETAILS', margin, y + 3, { lineBreak: false });
-        // Gold dash AFTER text with 20px gap (WORK ORDER DETAILS ~115px wide)
-        doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 135, y + 7).lineTo(margin + 165, y + 7).stroke();
         doc.font('Helvetica');
         y += 16;
         
@@ -581,10 +579,8 @@ const generateInvoicePDF = async (invoice) => {
 
       // ===== SERVICES INCLUDED TABLE =====
       if (!isWorkOrderInvoice && items.length > 0) {
-        // Section header - line AFTER text with spacing (matching PRICE SUMMARY spacing)
+        // Section header - no decorative line
         doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES INCLUDED', margin, y + 3, { lineBreak: false });
-        // Gold line AFTER text with 20px gap (SERVICES INCLUDED ~90px wide)
-        doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 110, y + 7).lineTo(margin + 140, y + 7).stroke();
         doc.font('Helvetica');
         y += 18;
         
@@ -633,8 +629,6 @@ const generateInvoicePDF = async (invoice) => {
       const summaryX = pageWidth - margin - summaryWidth;
       
       doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX, y + 2, { lineBreak: false });
-      // Gold dash starts AFTER "PRICE SUMMARY" text with proper spacing gap
-      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 100, y + 6).lineTo(summaryX + 130, y + 6).stroke();
       doc.font('Helvetica');
       y += 20;
       
