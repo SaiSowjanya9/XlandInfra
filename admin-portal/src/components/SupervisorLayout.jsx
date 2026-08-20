@@ -24,6 +24,7 @@ import {
   Receipt,
   Wallet,
   History,
+  Calendar,
 } from 'lucide-react';
 
 const SupervisorLayout = ({ admin, onLogout, children }) => {
@@ -77,9 +78,15 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
     { path: '/supervisor/billing/archived', icon: Archive, label: 'Archived' }
   ];
 
+  // Schedules sub-items
+  const schedulesSubItems = [
+    { path: '/supervisor/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
+  ];
+
   const isVendorActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEstimatesActive = estimatesSubItems.some(item => location.pathname === item.path) || location.pathname === '/supervisor/estimates';
   const isBillingPaymentsActive = billingPaymentsSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/supervisor/billing');
+  const isSchedulesActive = schedulesSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/supervisor/schedules');
   
   // Color constants for sidebar
   const colors = {
@@ -100,32 +107,40 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
     if (isVendorActive) setExpandedMenus(prev => ({ ...prev, vendors: true }));
     if (isEstimatesActive) setExpandedMenus(prev => ({ ...prev, estimates: true }));
     if (isBillingPaymentsActive) setExpandedMenus(prev => ({ ...prev, billingPayments: true }));
-  }, [location.pathname, isVendorActive, isEstimatesActive, isBillingPaymentsActive]);
+    if (isSchedulesActive) setExpandedMenus(prev => ({ ...prev, schedules: true }));
+  }, [location.pathname, isVendorActive, isEstimatesActive, isBillingPaymentsActive, isSchedulesActive]);
 
   // Accordion toggle functions - close other sections when opening one
   const toggleVendors = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.vendors;
-      setExpandedMenus({ vendors: opening, estimates: false, billingPayments: false });
+      setExpandedMenus({ vendors: opening, estimates: false, billingPayments: false, schedules: false });
     }
   };
 
   const toggleEstimates = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.estimates;
-      setExpandedMenus({ vendors: false, estimates: opening, billingPayments: false });
+      setExpandedMenus({ vendors: false, estimates: opening, billingPayments: false, schedules: false });
     }
   };
 
   const toggleBillingPayments = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.billingPayments;
-      setExpandedMenus({ vendors: false, estimates: false, billingPayments: opening });
+      setExpandedMenus({ vendors: false, estimates: false, billingPayments: opening, schedules: false });
+    }
+  };
+
+  const toggleSchedules = () => {
+    if (!sidebarCollapsed) {
+      const opening = !expandedMenus.schedules;
+      setExpandedMenus({ vendors: false, estimates: false, billingPayments: false, schedules: opening });
     }
   };
 
   // Check if any dropdown is open
-  const isAnyDropdownOpen = expandedMenus.vendors || expandedMenus.estimates || expandedMenus.billingPayments;
+  const isAnyDropdownOpen = expandedMenus.vendors || expandedMenus.estimates || expandedMenus.billingPayments || expandedMenus.schedules;
 
   const NavLink = ({ item, mobile = false }) => {
     const Icon = item.icon;
@@ -134,7 +149,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
     const handleClick = () => {
       if (mobile) setSidebarOpen(false);
       // Close all dropdowns when clicking on main nav items
-      setExpandedMenus({ vendors: false, estimates: false, billingPayments: false });
+      setExpandedMenus({ vendors: false, estimates: false, billingPayments: false, schedules: false });
     };
     return (
       <Link
@@ -368,6 +383,63 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
               {expandedMenus.billingPayments && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 pl-3">
                   {billingPaymentsSubItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setSidebarOpen(false)}
+                        className="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 font-medium"
+                        style={{
+                          background: isActive ? colors.activeBg : 'transparent',
+                          color: isActive ? colors.activeText : colors.primaryText,
+                        }}
+                        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }}
+                        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                      >
+                        <Icon className="w-4 h-4" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Schedules Section */}
+            <div className="mt-1">
+              <button
+                onClick={toggleSchedules}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{
+                  background: (expandedMenus.schedules || (isSchedulesActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
+                  color: (expandedMenus.schedules || (isSchedulesActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
+                }}
+                onMouseEnter={(e) => { if (!expandedMenus.schedules && !(isSchedulesActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!expandedMenus.schedules && !(isSchedulesActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Schedules' : ''}
+              >
+                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <Calendar className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.schedules || (isSchedulesActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Schedules</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                    expandedMenus.schedules ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        expandedMenus.schedules ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: expandedMenus.schedules ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
+                )}
+              </button>
+              {expandedMenus.schedules && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3">
+                  {schedulesSubItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = location.pathname === item.path;
                     return (

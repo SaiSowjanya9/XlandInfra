@@ -35,6 +35,7 @@ import {
   Receipt,
   Wallet,
   History,
+  Calendar,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useFP } from '../contexts/FPContext';
@@ -125,6 +126,10 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     location.pathname.startsWith('/employee/billing')
   );
 
+  const [schedulesOpen, setSchedulesOpen] = useState(
+    location.pathname.startsWith('/employee/schedules')
+  );
+
   // Estimates sub-items - Create Estimate hidden for Ops Manager
   const allEstimatesSubItems = [
     { path: '/employee/estimates/dashboard', icon: BarChart3, label: 'Dashboard' },
@@ -169,14 +174,20 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     { path: '/employee/billing/archived', icon: Archive, label: 'Archived' }
   ];
 
+  // Schedules sub-items
+  const schedulesSubItems = [
+    { path: '/employee/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
+  ];
+
   const isBillingPaymentsSectionActive = billingPaymentsSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/employee/billing');
+  const isSchedulesSectionActive = schedulesSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/employee/schedules');
   
   // Accordion toggle functions - close other sections when opening one
   const toggleWorkOrders = () => {
     if (!sidebarCollapsed) {
       const opening = !workOrdersOpen;
       setWorkOrdersOpen(opening);
-      if (opening) { setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); }
+      if (opening) { setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); }
     }
   };
 
@@ -184,7 +195,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !vendorOpen;
       setVendorOpen(opening);
-      if (opening) { setWorkOrdersOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); }
     }
   };
 
@@ -192,7 +203,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !employeeOpen;
       setEmployeeOpen(opening);
-      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); }
     }
   };
 
@@ -200,7 +211,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !estimatesOpen;
       setEstimatesOpen(opening);
-      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setBillingPaymentsOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); }
     }
   };
 
@@ -208,7 +219,15 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !billingPaymentsOpen;
       setBillingPaymentsOpen(opening);
-      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setSchedulesOpen(false); }
+    }
+  };
+
+  const toggleSchedules = () => {
+    if (!sidebarCollapsed) {
+      const opening = !schedulesOpen;
+      setSchedulesOpen(opening);
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); }
     }
   };
 
@@ -228,7 +247,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   };
 
   // Check if any dropdown is open
-  const isAnyDropdownOpen = workOrdersOpen || vendorOpen || employeeOpen || estimatesOpen || billingPaymentsOpen;
+  const isAnyDropdownOpen = workOrdersOpen || vendorOpen || employeeOpen || estimatesOpen || billingPaymentsOpen || schedulesOpen;
 
   const NavLink = ({ item, mobile = false, isSubItem = false }) => {
     const Icon = item.icon;
@@ -244,6 +263,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
         setEmployeeOpen(false);
         setEstimatesOpen(false);
         setBillingPaymentsOpen(false);
+        setSchedulesOpen(false);
       }
 
       if (safeStorage.getItem('formDirty') === 'true') {
@@ -520,6 +540,45 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               {billingPaymentsOpen && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 pl-3">
                   {billingPaymentsSubItems.map((item) => (
+                    <NavLink key={item.path} item={item} mobile isSubItem />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Schedules Section */}
+            <div className="mt-1">
+              <button
+                onClick={toggleSchedules}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{
+                  background: (schedulesOpen || (isSchedulesSectionActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
+                  color: (schedulesOpen || (isSchedulesSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
+                }}
+                onMouseEnter={(e) => { if (!schedulesOpen && !(isSchedulesSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!schedulesOpen && !(isSchedulesSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Schedules' : ''}
+              >
+                <div className={`flex items-center flex-1 min-w-0 ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <Calendar className="w-5 h-5 flex-shrink-0" style={{ color: (schedulesOpen || (isSchedulesSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span className="text-sm truncate">Schedules</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className={`flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ml-2 ${
+                    schedulesOpen ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        schedulesOpen ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: schedulesOpen ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
+                )}
+              </button>
+              {schedulesOpen && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3">
+                  {schedulesSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile isSubItem />
                   ))}
                 </div>
