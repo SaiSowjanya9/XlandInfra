@@ -233,7 +233,7 @@ const FPDashboard = ({ user }) => {
       case 'month': startDate.setMonth(now.getMonth() - 1); break;
       case 'quarter': startDate.setMonth(now.getMonth() - 3); break;
       case 'sixmonths': startDate.setMonth(now.getMonth() - 6); break;
-      case 'year': startDate.setFullYear(now.getFullYear() - 1); break;
+      case 'year': startDate.setMonth(0, 1); startDate.setHours(0,0,0,0); break; // Jan 1 of current year
       default: return data;
     }
     return data.filter(item => {
@@ -373,7 +373,7 @@ const FPDashboard = ({ user }) => {
         startDate.setMonth(now.getMonth() - 6);
         break;
       case 'year':
-        startDate.setFullYear(now.getFullYear() - 1);
+        startDate.setMonth(0, 1); startDate.setHours(0,0,0,0); // Jan 1 of current year
         break;
       default:
         return properties;
