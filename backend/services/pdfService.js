@@ -454,53 +454,53 @@ const generateInvoicePDF = async (invoice) => {
       const isCompact = itemCount > 4;
 
       // ===== HEADER - Simple black with gold wave (compact) =====
-      const headerHeight = 38;
+      const headerHeight = 28;
       
       // Simple black header
       doc.rect(0, 0, pageWidth, headerHeight).fill(headerBlack);
       
       // Gold wave - simple bar at bottom
-      doc.rect(0, headerHeight, pageWidth, 6).fill(gold);
+      doc.rect(0, headerHeight, pageWidth, 5).fill(gold);
       
-      // Logo - BIGGER
+      // Logo - compact
       try {
-        doc.image(LOGO_PATH, margin + 12, 4, { width: 32, height: 32 });
+        doc.image(LOGO_PATH, margin + 3, 3, { width: 22, height: 22 });
       } catch (logoErr) {
-        doc.roundedRect(margin + 12, 4, 32, 32, 3).fill(gold);
+        doc.roundedRect(margin + 3, 3, 22, 22, 2).fill(gold);
       }
       
-      // Company name - SMALLER
-      doc.fontSize(11).fillColor(gold).text('XLAND INFRA', margin + 50, 12);
+      // Company name - compact
+      doc.fontSize(11).fillColor(gold).text('XLAND INFRA', margin + 30, 8);
       
-      // PVT LTD with lines - smaller
+      // PVT LTD with lines - compact
       doc.fontSize(5).fillColor(gold);
-      const pvtX = margin + 50;
+      const pvtX = margin + 30;
       doc.strokeColor(gold).lineWidth(0.3);
-      doc.moveTo(pvtX, 26).lineTo(pvtX + 10, 26).stroke();
-      doc.text('PVT LTD', pvtX + 12, 23);
-      doc.moveTo(pvtX + 34, 26).lineTo(pvtX + 44, 26).stroke();
+      doc.moveTo(pvtX, 18).lineTo(pvtX + 8, 18).stroke();
+      doc.text('PVT LTD', pvtX + 10, 15);
+      doc.moveTo(pvtX + 22, 18).lineTo(pvtX + 30, 18).stroke();
 
-      let y = headerHeight + 12;
+      let y = headerHeight + 10;
 
-      // ===== ID / DATE / DUE ROW (Image 2) =====
-      doc.fontSize(9).fillColor(secondaryText).text('ID:', margin, y);
-      doc.fontSize(13).fillColor(primaryText).font('Helvetica-Bold').text(invoiceId || 'N/A', margin + 16, y - 1);
+      // ===== ID / DATE / DUE ROW (Compact) =====
+      doc.fontSize(8).fillColor(secondaryText).text('ID:', margin, y);
+      doc.fontSize(10).fillColor(primaryText).font('Helvetica-Bold').text(invoiceId || 'N/A', margin + 12, y);
       
       if (estimateId) {
-        doc.fontSize(8).fillColor(gold).font('Helvetica').text(`Estimate: ${estimateId}`, margin, y + 14);
+        doc.fontSize(7).fillColor(gold).font('Helvetica').text(`Estimate: ${estimateId}`, margin, y + 10);
       }
       
-      const dateX = pageWidth - margin - 110;
-      doc.fontSize(9).fillColor(secondaryText).font('Helvetica').text('Date:', dateX, y);
+      const dateX = pageWidth - margin - 100;
+      doc.fontSize(8).fillColor(secondaryText).font('Helvetica').text('Date:', dateX, y);
       const invDateStr = invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-      doc.fontSize(11).fillColor(primaryText).font('Helvetica-Bold').text(invDateStr, dateX + 32, y - 1);
+      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text(invDateStr, dateX + 28, y);
       
-      doc.fontSize(9).fillColor(secondaryText).font('Helvetica').text('Due:', dateX, y + 16);
+      doc.fontSize(8).fillColor(secondaryText).font('Helvetica').text('Due:', dateX, y + 12);
       const dueDateStr = dueDate ? new Date(dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-      doc.fontSize(11).fillColor(primaryText).font('Helvetica-Bold').text(dueDateStr, dateX + 32, y + 15);
+      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text(dueDateStr, dateX + 28, y + 12);
       
       doc.font('Helvetica');
-      y += 38;
+      y += 28;
 
       // ===== TOTAL AMOUNT DUE BANNER (Compact & Elegant) =====
       const bannerHeight = 32;

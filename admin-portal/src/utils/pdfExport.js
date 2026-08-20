@@ -1098,39 +1098,39 @@ export const exportInvoiceToPDF = (invoice) => {
     doc.setTextColor(...secondaryText);
     doc.text('ID:', margin, y);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
+    doc.setFontSize(10);
     doc.setTextColor(...primaryText);
-    doc.text(String(invoice.invoiceId || 'N/A'), margin + 8, y);
+    doc.text(String(invoice.invoiceId || 'N/A'), margin + 12, y);
     
     if (invoice.sourceEstimateId) {
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...gold);
-      doc.text('Estimate: ' + invoice.sourceEstimateId, margin, y + 6);
+      doc.text('Estimate: ' + invoice.sourceEstimateId, margin, y + 10);
     }
     
     // Date and Due on right - aligned to right edge
-    const dateLabel = pageWidth - margin - 65;
-    const dateValue = pageWidth - margin - 40;
+    const dateLabel = pageWidth - margin - 60;
+    const dateValue = pageWidth - margin - 32;
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...secondaryText);
-    doc.text('Date:', dateLabel, y - 2);
+    doc.text('Date:', dateLabel, y);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setTextColor(...primaryText);
-    doc.text(formatDate(invoice.invoiceDate), dateValue, y - 2);
+    doc.text(formatDate(invoice.invoiceDate), dateValue, y);
     
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...secondaryText);
-    doc.text('Due:', dateLabel, y + 6);
+    doc.text('Due:', dateLabel, y + 12);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setTextColor(...primaryText);
-    doc.text(formatDate(invoice.dueDate), dateValue, y + 6);
+    doc.text(formatDate(invoice.dueDate), dateValue, y + 12);
     
-    y += 16;
+    y += 28;
 
     // ===== TOTAL AMOUNT DUE BANNER (Compact & Elegant) =====
     const bannerHeight = 18;
