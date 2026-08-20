@@ -26,6 +26,11 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 // Format date in IST format (dd/mm/yyyy)
 const formatDateIST = (dateStr) => {
   if (!dateStr) return '-';
+  // Parse YYYY-MM-DD format directly to avoid timezone issues
+  if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+    const [year, month, day] = dateStr.split('T')[0].split('-');
+    return `${day}/${month}/${year}`;
+  }
   const date = new Date(dateStr);
   if (isNaN(date)) return '-';
   const day = String(date.getDate()).padStart(2, '0');
