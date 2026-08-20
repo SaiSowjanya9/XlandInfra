@@ -1074,21 +1074,21 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
               <div className="flex justify-between items-start">
                 <div>
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className="text-xs text-gray-500">ID:</span>
-                    <span className="text-base font-bold text-gray-900">{selectedInvoice.invoiceId}</span>
+                    <span className="text-[10px] text-gray-500">ID:</span>
+                    <span className="text-sm font-bold text-gray-900">{selectedInvoice.invoiceId}</span>
                   </div>
                   {selectedInvoice.sourceEstimateId && (
-                    <p className="text-xs text-[#c9a227]">Estimate: {selectedInvoice.sourceEstimateId}</p>
+                    <p className="text-[10px] text-[#c9a227]">Estimate: {selectedInvoice.sourceEstimateId}</p>
                   )}
                 </div>
                 <div className="text-right">
-                  <div className="flex items-center gap-2 justify-end mb-1">
-                    <span className="text-xs text-gray-500">Date:</span>
-                    <span className="text-sm font-semibold text-gray-900">{formatDate(selectedInvoice.invoiceDate)}</span>
+                  <div className="flex items-center gap-2 justify-end mb-0.5">
+                    <span className="text-[10px] text-gray-500">Date:</span>
+                    <span className="text-xs font-semibold text-gray-900">{formatDate(selectedInvoice.invoiceDate)}</span>
                   </div>
                   <div className="flex items-center gap-2 justify-end">
-                    <span className="text-xs text-gray-500">Due:</span>
-                    <span className="text-sm font-semibold text-gray-900">{formatDate(selectedInvoice.dueDate)}</span>
+                    <span className="text-[10px] text-gray-500">Due:</span>
+                    <span className="text-xs font-semibold text-gray-900">{formatDate(selectedInvoice.dueDate)}</span>
                   </div>
                 </div>
               </div>
