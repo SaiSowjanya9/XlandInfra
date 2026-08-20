@@ -594,8 +594,8 @@ const generateInvoicePDF = async (invoice) => {
         doc.fontSize(8).fillColor(white);
         doc.text('#', margin + 8, y + 6);
         doc.text('Service', margin + 35, y + 6);
-        doc.text('Description', margin + 140, y + 6);
-        doc.text('Frequency', margin + 320, y + 6);
+        doc.text('Description', margin + 120, y + 6);
+        doc.text('Frequency', margin + 340, y + 6);
         doc.text('Visits', margin + 420, y + 6);
         y += tableHeaderH;
 
@@ -613,9 +613,9 @@ const generateInvoicePDF = async (invoice) => {
           doc.rect(margin, y, contentWidth, rowH).lineWidth(0.3).stroke(borderGray);
           doc.fontSize(7).fillColor(primaryText);
           doc.text(`${idx + 1}`, margin + 10, y + 5);
-          doc.text(serviceName.substring(0, 25), margin + 35, y + 5);
-          doc.fillColor(secondaryText).text(serviceDesc.substring(0, 40), margin + 140, y + 5);
-          doc.text(freq.substring(0, 12), margin + 320, y + 5);
+          doc.text(serviceName.substring(0, 20), margin + 35, y + 5);
+          doc.fillColor(secondaryText).text(serviceDesc.substring(0, 55), margin + 120, y + 5);
+          doc.text(freq.substring(0, 10), margin + 340, y + 5);
           doc.text(`${visits}`, margin + 428, y + 5);
           y += rowH;
         });
