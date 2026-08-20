@@ -326,10 +326,10 @@ const FPDashboard = ({ user }) => {
     </select>
   );
 
-  // Filtered work orders for each chart
-  const statusFilteredWO = applyPeriodFilter(workOrders, woStatusFilter);
-  const priorityFilteredWO = applyPeriodFilter(workOrders, woPriorityFilter);
-  const propertyTypeFilteredWO = applyPeriodFilter(workOrders, woPropertyTypeFilter);
+  // Filtered work orders for each chart (use dateFilteredWorkOrders as base)
+  const statusFilteredWO = applyPeriodFilter(dateFilteredWorkOrders, woStatusFilter);
+  const priorityFilteredWO = applyPeriodFilter(dateFilteredWorkOrders, woPriorityFilter);
+  const propertyTypeFilteredWO = applyPeriodFilter(dateFilteredWorkOrders, woPropertyTypeFilter);
 
   // Work Orders by Status data - computed from filtered workOrders
   const pendingWO = statusFilteredWO.filter(wo => getWOStatus(wo) === 'pending').length;
@@ -907,7 +907,7 @@ const FPDashboard = ({ user }) => {
               View All <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-          <EstimatesOverviewBlocks estimates={estimates} />
+          <EstimatesOverviewBlocks estimates={dateFilteredEstimates} />
         </div>
 
         {/* Divider */}
