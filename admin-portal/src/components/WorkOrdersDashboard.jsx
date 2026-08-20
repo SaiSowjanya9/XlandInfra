@@ -164,6 +164,13 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
 
   useEffect(() => {
     fetchWorkOrders();
+    
+    // Auto-refresh every 30 seconds for real-time updates
+    const refreshInterval = setInterval(() => {
+      fetchWorkOrders(false); // Silent refresh without spinner
+    }, 30000);
+    
+    return () => clearInterval(refreshInterval);
   }, [fetchWorkOrders]);
 
   // Filter work orders by date range first
@@ -498,8 +505,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
           const woCategory = wo.category_name || wo.category || wo.service_category || wo.serviceCategory || 'Other';
           return woCategory === cat;
         }).length;
-        // Use null for 0 so lines don't connect across empty months
-        dataPoint[cat] = count > 0 ? count : null;
+        dataPoint[cat] = count;
       });
       return dataPoint;
     });
@@ -1040,12 +1046,11 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                     {categoryTrend.categories.map((cat, index) => (
                       <Line 
                         key={cat}
-                        type="linear" 
+                        type="monotone" 
                         dataKey={cat} 
                         stroke={categoryColors[index % categoryColors.length]} 
                         strokeWidth={2} 
-                        dot={{ fill: categoryColors[index % categoryColors.length], strokeWidth: 0, r: 5 }}
-                        connectNulls={false}
+                        dot={{ fill: categoryColors[index % categoryColors.length], strokeWidth: 0, r: 4 }}
                       />
                     ))}
                   </LineChart>
