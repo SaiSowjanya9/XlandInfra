@@ -510,23 +510,17 @@ const generateInvoicePDF = async (invoice) => {
       doc.font('Helvetica');
       y += bannerHeight + 12;
 
-      // ===== PROPERTY & CUSTOMER DETAILS (Image 2 - cream bg, filled gold icons) =====
+      // ===== PROPERTY & CUSTOMER DETAILS (cream bg, no icons) =====
       const cardWidth = (contentWidth - 12) / 2;
       const cardHeight = isCompact ? 75 : 85;
       
       // Property Details Card
       doc.roundedRect(margin, y, cardWidth, cardHeight, 5).fill(cardBg);
       
-      // Filled gold icon with white building
-      doc.roundedRect(margin + 10, y + 10, 16, 16, 3).fill(gold);
-      doc.rect(margin + 14, y + 15, 2, 7).fill(white);
-      doc.rect(margin + 17, y + 17, 2, 5).fill(white);
-      doc.rect(margin + 20, y + 15, 2, 7).fill(white);
-      
-      doc.fontSize(8).fillColor(primaryText).font('Helvetica-Bold').text('PROPERTY DETAILS', margin + 30, y + 15);
+      doc.fontSize(8).fillColor(primaryText).font('Helvetica-Bold').text('PROPERTY DETAILS', margin + 10, y + 15);
       doc.font('Helvetica');
       
-      let py = y + 32;
+      let py = y + 28;
       const lineH = isCompact ? 9 : 10;
       doc.fontSize(7).fillColor(secondaryText);
       doc.text(`Property ID: ${propertyCode || '-'}`, margin + 10, py); py += lineH;
@@ -539,15 +533,10 @@ const generateInvoicePDF = async (invoice) => {
       const custX = margin + cardWidth + 12;
       doc.roundedRect(custX, y, cardWidth, cardHeight, 5).fill(cardBg);
       
-      // Filled gold icon with white person
-      doc.roundedRect(custX + 10, y + 10, 16, 16, 3).fill(gold);
-      doc.circle(custX + 18, y + 15, 3).fill(white);
-      doc.roundedRect(custX + 13, y + 20, 10, 3, 1).fill(white);
-      
-      doc.fontSize(8).fillColor(primaryText).font('Helvetica-Bold').text('CUSTOMER DETAILS', custX + 30, y + 15);
+      doc.fontSize(8).fillColor(primaryText).font('Helvetica-Bold').text('CUSTOMER DETAILS', custX + 10, y + 15);
       doc.font('Helvetica');
       
-      let cy = y + 32;
+      let cy = y + 28;
       doc.fontSize(7).fillColor(secondaryText);
       doc.text(`Name: ${decodeHtml(customerName) || '-'}`, custX + 10, cy); cy += lineH;
       doc.text(`Phone: ${customerPhone || '-'}`, custX + 10, cy); cy += lineH;
@@ -559,12 +548,9 @@ const generateInvoicePDF = async (invoice) => {
 
       // ===== SERVICES INCLUDED TABLE =====
       if (!isWorkOrderInvoice && items.length > 0) {
-        // Section header with filled gold icon
-        doc.roundedRect(margin, y, 14, 14, 2).fill(gold);
-        doc.rect(margin + 4, y + 4, 6, 6).fill(white);
-        
-        doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES INCLUDED', margin + 20, y + 3);
-        doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 85, y + 7).lineTo(pageWidth - margin, y + 7).stroke();
+        // Section header - text only
+        doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES INCLUDED', margin, y + 3);
+        doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 70, y + 7).lineTo(pageWidth - margin, y + 7).stroke();
         doc.font('Helvetica');
         y += 18;
         
@@ -603,16 +589,12 @@ const generateInvoicePDF = async (invoice) => {
         y += 15;
       }
 
-      // ===== PRICE SUMMARY - Right aligned with shield icon =====
+      // ===== PRICE SUMMARY - Right aligned (no icon) =====
       const summaryWidth = 170;
       const summaryX = pageWidth - margin - summaryWidth;
       
-      // Shield icon (filled gold)
-      doc.roundedRect(summaryX, y, 14, 14, 2).fill(gold);
-      doc.moveTo(summaryX + 7, y + 3).lineTo(summaryX + 11, y + 5).lineTo(summaryX + 11, y + 9).lineTo(summaryX + 7, y + 12).lineTo(summaryX + 3, y + 9).lineTo(summaryX + 3, y + 5).closePath().fill(white);
-      
-      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX + 20, y + 2);
-      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 75, y + 6).lineTo(pageWidth - margin, y + 6).stroke();
+      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX, y + 2);
+      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 60, y + 6).lineTo(pageWidth - margin, y + 6).stroke();
       doc.font('Helvetica');
       y += 16;
       

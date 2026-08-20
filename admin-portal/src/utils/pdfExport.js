@@ -1158,18 +1158,10 @@ export const exportInvoiceToPDF = (invoice) => {
     doc.setFillColor(...cardBg);
     doc.roundedRect(margin, y, cardWidth, cardHeight, 3, 3, 'F');
     
-    // Filled gold icon
-    doc.setFillColor(...gold);
-    doc.roundedRect(margin + 6, y + 6, 10, 10, 2, 2, 'F');
-    doc.setFillColor(...white);
-    doc.rect(margin + 8, y + 9, 1.5, 5, 'F');
-    doc.rect(margin + 10.5, y + 10, 1.5, 4, 'F');
-    doc.rect(margin + 13, y + 9, 1.5, 5, 'F');
-    
     doc.setTextColor(...primaryText);
     doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.text('PROPERTY DETAILS', margin + 20, y + 12);
+    doc.text('PROPERTY DETAILS', margin + 6, y + 12);
     
     doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
@@ -1186,17 +1178,10 @@ export const exportInvoiceToPDF = (invoice) => {
     doc.setFillColor(...cardBg);
     doc.roundedRect(custCardX, y, cardWidth, cardHeight, 3, 3, 'F');
     
-    // Filled gold icon
-    doc.setFillColor(...gold);
-    doc.roundedRect(custCardX + 6, y + 6, 10, 10, 2, 2, 'F');
-    doc.setFillColor(...white);
-    doc.circle(custCardX + 11, y + 9, 2, 'F');
-    doc.roundedRect(custCardX + 8, y + 12, 6, 2, 1, 1, 'F');
-    
     doc.setTextColor(...primaryText);
     doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.text('CUSTOMER DETAILS', custCardX + 20, y + 12);
+    doc.text('CUSTOMER DETAILS', custCardX + 6, y + 12);
     
     doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
@@ -1238,19 +1223,14 @@ export const exportInvoiceToPDF = (invoice) => {
     const isWorkOrderInvoice = invoice.invoiceType === 'work_order' || invoice.invoice_type === 'work_order';
 
     if (!isWorkOrderInvoice && services.length > 0) {
-      // Section header with filled gold icon
-      doc.setFillColor(...gold);
-      doc.roundedRect(margin, y, 8, 8, 1, 1, 'F');
-      doc.setFillColor(...white);
-      doc.rect(margin + 2.5, y + 2.5, 3, 3, 'F');
-      
+      // Section header - text only
       doc.setTextColor(...primaryText);
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
-      doc.text('SERVICES INCLUDED', margin + 12, y + 5);
+      doc.text('SERVICES INCLUDED', margin, y + 5);
       doc.setDrawColor(...gold);
       doc.setLineWidth(0.3);
-      doc.line(margin + 48, y + 4, pageWidth - margin, y + 4);
+      doc.line(margin + 38, y + 4, pageWidth - margin, y + 4);
       
       y += 10;
 
@@ -1289,19 +1269,14 @@ export const exportInvoiceToPDF = (invoice) => {
     const summaryWidth = 90;
     const summaryX = pageWidth - margin - summaryWidth;
     
-    // Section header with shield icon
-    doc.setFillColor(...gold);
-    doc.roundedRect(summaryX, y, 8, 8, 1, 1, 'F');
-    doc.setFillColor(...white);
-    doc.rect(summaryX + 2.5, y + 2.5, 3, 3, 'F');
-    
+    // Section header - text only
     doc.setTextColor(...primaryText);
     doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.text('PRICE SUMMARY', summaryX + 12, y + 5);
+    doc.text('PRICE SUMMARY', summaryX, y + 5);
     doc.setDrawColor(...gold);
     doc.setLineWidth(0.3);
-    doc.line(summaryX + 42, y + 4, pageWidth - margin, y + 4);
+    doc.line(summaryX + 32, y + 4, pageWidth - margin, y + 4);
     
     y += 10;
 
