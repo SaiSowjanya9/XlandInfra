@@ -430,7 +430,8 @@ const generateInvoicePDF = async (invoice) => {
         workOrderId, workOrderCategory, workOrderSubcategory, workOrderDescription
       } = invoice;
       
-      const isWorkOrderInvoice = invoiceType === 'work_order';
+      // Check if work order invoice - by invoiceType OR presence of workOrderId
+      const isWorkOrderInvoice = invoiceType === 'work_order' || (workOrderId && workOrderId.length > 0);
       const pageWidth = 595;
       const pageHeight = 842;
       const margin = 40;
@@ -489,17 +490,17 @@ const generateInvoicePDF = async (invoice) => {
       doc.font('Helvetica');
       y += 28;
 
-      // ===== TOTAL AMOUNT DUE BANNER (Compact & Elegant) =====
-      const bannerHeight = 32;
-      doc.roundedRect(margin, y, contentWidth, bannerHeight, 5).fill(gold);
-      doc.fontSize(7).fillColor(white).text('TOTAL AMOUNT DUE', pageWidth / 2 - 32, y + 6);
-      doc.fontSize(14).fillColor(white).font('Helvetica-Bold').text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, pageWidth / 2 - 35, y + 16);
+      // ===== TOTAL AMOUNT DUE BANNER (Compact) =====
+      const bannerHeight = 22;
+      doc.roundedRect(margin, y, contentWidth, bannerHeight, 4).fill(gold);
+      doc.fontSize(6).fillColor(white).text('TOTAL AMOUNT DUE', pageWidth / 2 - 28, y + 4);
+      doc.fontSize(11).fillColor(white).font('Helvetica-Bold').text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, pageWidth / 2 - 30, y + 12);
       doc.font('Helvetica');
-      y += bannerHeight + 12;
+      y += bannerHeight + 8;
 
-      // ===== PROPERTY & CUSTOMER DETAILS (cream bg, no icons) =====
-      const cardWidth = (contentWidth - 12) / 2;
-      const cardHeight = isCompact ? 75 : 85;
+      // ===== PROPERTY & CUSTOMER DETAILS (cream bg, compact) =====
+      const cardWidth = (contentWidth - 10) / 2;
+      const cardHeight = 65;
       
       // Property Details Card
       doc.roundedRect(margin, y, cardWidth, cardHeight, 5).fill(cardBg);
@@ -531,7 +532,7 @@ const generateInvoicePDF = async (invoice) => {
       doc.text(`Email: ${emailStr.length > 28 ? emailStr.substring(0, 28) + '...' : emailStr}`, custX + 10, cy); cy += lineH;
       doc.text(`City: ${city || '-'}`, custX + 10, cy);
 
-      y += cardHeight + 12;
+      y += cardHeight + 8;
 
       // ===== WORK ORDER DETAILS (for work order invoices) =====
       if (isWorkOrderInvoice) {
