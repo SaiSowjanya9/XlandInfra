@@ -128,7 +128,7 @@ const ExecutiveDashboard = ({ user }) => {
       case 'month': startDate.setMonth(now.getMonth() - 1); break;
       case 'quarter': startDate.setMonth(now.getMonth() - 3); break;
       case 'sixmonths': startDate.setMonth(now.getMonth() - 6); break;
-      case 'year': startDate.setFullYear(now.getFullYear() - 1); break;
+      case 'year': startDate.setMonth(0, 1); startDate.setHours(0,0,0,0); break; // Jan 1 of current year
       default: return properties;
     }
     return properties.filter(p => new Date(p.created_at || p.createdAt) >= startDate);
