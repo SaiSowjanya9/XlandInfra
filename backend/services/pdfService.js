@@ -541,10 +541,10 @@ const generateInvoicePDF = async (invoice) => {
         const subcategory = workOrderSubcategory || woItem.subcategory || woItem.serviceSubcategory || '-';
         const woDescription = decodeHtml(workOrderDescription || woItem.description || woItem.details || '');
         
-        // Section header - short line after text
+        // Section header - short decorative line after text
         doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('WORK ORDER DETAILS', margin, y + 3, { lineBreak: false });
-        // Short orange line (50px) after heading
-        doc.strokeColor('#F97316').lineWidth(0.5).moveTo(margin + 95, y + 7).lineTo(margin + 145, y + 7).stroke();
+        // Short orange dash (30px) after heading
+        doc.strokeColor('#F97316').lineWidth(0.5).moveTo(margin + 98, y + 7).lineTo(margin + 128, y + 7).stroke();
         doc.font('Helvetica');
         y += 16;
         
@@ -627,8 +627,8 @@ const generateInvoicePDF = async (invoice) => {
       const summaryX = pageWidth - margin - summaryWidth;
       
       doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX, y + 2, { lineBreak: false });
-      // Short gold line (50px) after heading
-      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 68, y + 6).lineTo(summaryX + 118, y + 6).stroke();
+      // Short gold dash (30px) after heading
+      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 70, y + 6).lineTo(summaryX + 100, y + 6).stroke();
       doc.font('Helvetica');
       y += 16;
       
