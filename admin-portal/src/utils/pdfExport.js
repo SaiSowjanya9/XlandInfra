@@ -145,43 +145,43 @@ const generatePDF = (data, type, filename) => {
     doc.ellipse(pageWidth * 0.25, headerHeight - 3, 50, 4, 'F');
     doc.ellipse(pageWidth * 0.75, headerHeight - 3, 50, 4, 'F');
     
-    // Logo on left
-    const logoSize = 22;
+    // Logo on left - BIGGER
+    const logoSize = 26;
     try {
-      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin, 6, logoSize, logoSize);
+      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin, 4, logoSize, logoSize);
     } catch (e) {
       doc.setFillColor(...gold);
-      doc.roundedRect(margin, 6, 22, 22, 2, 2, 'F');
+      doc.roundedRect(margin, 4, 26, 26, 2, 2, 'F');
     }
     
-    // Company name - "XLAND INFRA" in gold
-    const textX = margin + logoSize + 6;
+    // Company name - "XLAND INFRA" in gold - SMALLER
+    const textX = margin + logoSize + 5;
     doc.setTextColor(...gold);
-    doc.setFontSize(14);
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', textX, 16);
+    doc.text('XLAND INFRA', textX, 14);
     
-    // "PVT LTD" with decorative lines on both sides
-    const pvtLtdY = 24;
+    // "PVT LTD" with decorative lines on both sides - positioned below
+    const pvtLtdY = 22;
     const pvtLtdText = 'PVT LTD';
-    doc.setFontSize(7);
+    doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
     const pvtLtdWidth = doc.getTextWidth(pvtLtdText);
-    const lineLength = 12;
-    const lineGap = 3;
+    const lineLength = 10;
+    const lineGap = 2;
     
     // Left decorative line
     doc.setDrawColor(...gold);
-    doc.setLineWidth(0.4);
-    doc.line(textX, pvtLtdY - 2, textX + lineLength, pvtLtdY - 2);
+    doc.setLineWidth(0.3);
+    doc.line(textX, pvtLtdY - 1.5, textX + lineLength, pvtLtdY - 1.5);
     
     // PVT LTD text
     doc.setTextColor(...gold);
     doc.text(pvtLtdText, textX + lineLength + lineGap, pvtLtdY);
     
     // Right decorative line
-    doc.line(textX + lineLength + lineGap + pvtLtdWidth + lineGap, pvtLtdY - 2, 
-             textX + lineLength + lineGap + pvtLtdWidth + lineGap + lineLength, pvtLtdY - 2);
+    doc.line(textX + lineLength + lineGap + pvtLtdWidth + lineGap, pvtLtdY - 1.5, 
+             textX + lineLength + lineGap + pvtLtdWidth + lineGap + lineLength, pvtLtdY - 1.5);
 
     y = headerHeight + 8;
 
@@ -1066,30 +1066,30 @@ export const exportInvoiceToPDF = (invoice) => {
     doc.setFillColor(...gold);
     doc.rect(0, headerHeight, pageWidth, 5, 'F');
     
-    // Logo
-    const logoSize = 18;
+    // Logo - BIGGER
+    const logoSize = 22;
     try {
-      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 5, 5, logoSize, logoSize);
+      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 3, 3, logoSize, logoSize);
     } catch (e) {
       doc.setFillColor(...gold);
-      doc.roundedRect(margin + 5, 5, logoSize, logoSize, 2, 2, 'F');
+      doc.roundedRect(margin + 3, 3, logoSize, logoSize, 2, 2, 'F');
     }
     
-    // Company name
+    // Company name - SMALLER
     doc.setTextColor(...gold);
-    doc.setFontSize(16);
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', margin + logoSize + 12, 13);
+    doc.text('XLAND INFRA', margin + logoSize + 8, 12);
     
-    // PVT LTD with lines
-    doc.setFontSize(6);
+    // PVT LTD with lines - smaller
+    doc.setFontSize(5);
     doc.setFont('helvetica', 'normal');
-    const pvtX = margin + logoSize + 24;
+    const pvtX = margin + logoSize + 8;
     doc.setDrawColor(...gold);
     doc.setLineWidth(0.3);
-    doc.line(pvtX - 10, 20, pvtX - 2, 20);
-    doc.text('PVT LTD', pvtX, 21);
-    doc.line(pvtX + 14, 20, pvtX + 22, 20);
+    doc.line(pvtX, 18, pvtX + 8, 18);
+    doc.text('PVT LTD', pvtX + 10, 19);
+    doc.line(pvtX + 22, 18, pvtX + 30, 18);
 
     y = headerHeight + 10;
 
@@ -1132,19 +1132,19 @@ export const exportInvoiceToPDF = (invoice) => {
     
     y += 16;
 
-    // ===== TOTAL AMOUNT DUE BANNER (Compact) =====
-    const bannerHeight = 24;
+    // ===== TOTAL AMOUNT DUE BANNER (Compact & Elegant) =====
+    const bannerHeight = 18;
     doc.setFillColor(...gold);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, bannerHeight, 4, 4, 'F');
+    doc.roundedRect(margin, y, pageWidth - margin * 2, bannerHeight, 3, 3, 'F');
     
     doc.setTextColor(...white);
-    doc.setFontSize(8);
+    doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
-    doc.text('TOTAL AMOUNT DUE', pageWidth / 2, y + 7, { align: 'center' });
+    doc.text('TOTAL AMOUNT DUE', pageWidth / 2, y + 5, { align: 'center' });
     
-    doc.setFontSize(18);
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('Rs. ' + Math.round(invoice.totalAmount || 0).toLocaleString('en-IN'), pageWidth / 2, y + 18, { align: 'center' });
+    doc.text('Rs. ' + Math.round(invoice.totalAmount || 0).toLocaleString('en-IN'), pageWidth / 2, y + 13, { align: 'center' });
     
     y += bannerHeight + 8;
 
