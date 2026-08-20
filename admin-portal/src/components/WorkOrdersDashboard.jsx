@@ -82,10 +82,17 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
   const apiPath = getApiPath(portalType);
   const datePickerRef = useRef(null);
 
-  // IST date formatting helpers
+  // IST date formatting helpers - parse string directly to avoid timezone issues
   const formatDateIST = (dateStr) => {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
+    // Parse YYYY-MM-DD format directly without Date object to avoid timezone shifts
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const [year, month, day] = parts;
+      return `${day}/${month}/${year}`;
+    }
+    // Fallback for other formats
+    const date = new Date(dateStr + 'T00:00:00');
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
