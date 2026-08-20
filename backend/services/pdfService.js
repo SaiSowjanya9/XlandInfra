@@ -541,10 +541,10 @@ const generateInvoicePDF = async (invoice) => {
         const subcategory = workOrderSubcategory || woItem.subcategory || woItem.serviceSubcategory || '-';
         const woDescription = decodeHtml(workOrderDescription || woItem.description || woItem.details || '');
         
-        // Section header - short decorative line after text
+        // Section header - decorative line AFTER text (not overlapping)
         doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('WORK ORDER DETAILS', margin, y + 3, { lineBreak: false });
-        // Short orange dash (30px) after heading
-        doc.strokeColor('#F97316').lineWidth(0.5).moveTo(margin + 98, y + 7).lineTo(margin + 128, y + 7).stroke();
+        // Orange dash starts AFTER "WORK ORDER DETAILS" text (~115px wide)
+        doc.strokeColor('#F97316').lineWidth(0.5).moveTo(margin + 118, y + 7).lineTo(margin + 148, y + 7).stroke();
         doc.font('Helvetica');
         y += 16;
         
@@ -627,8 +627,8 @@ const generateInvoicePDF = async (invoice) => {
       const summaryX = pageWidth - margin - summaryWidth;
       
       doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX, y + 2, { lineBreak: false });
-      // Short gold dash (30px) after heading
-      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 70, y + 6).lineTo(summaryX + 100, y + 6).stroke();
+      // Gold dash starts AFTER "PRICE SUMMARY" text (~72px wide)
+      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 75, y + 6).lineTo(summaryX + 105, y + 6).stroke();
       doc.font('Helvetica');
       y += 16;
       
