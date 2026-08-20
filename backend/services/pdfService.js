@@ -149,7 +149,7 @@ const generateEstimatePDF = async (estimate) => {
       // Package Price Bar (NO package name - per requirement)
       if (packagePrice) {
         doc.rect(50, y, 500, 25).fill(lightGray).stroke('#e0e0e0');
-        doc.fontSize(10).fillColor(navy).text(`Package Price: ₹${Math.round(Number(packagePrice)).toLocaleString()}`, 60, y + 8);
+        doc.fontSize(10).fillColor(navy).text(`Package Price: Rs. ${Math.round(Number(packagePrice)).toLocaleString()}`, 60, y + 8);
         doc.fontSize(10).fillColor(navy).text('Billing: Yearly', 400, y + 8);
         y += 35;
       }
@@ -374,20 +374,20 @@ const generateEstimatePDF = async (estimate) => {
       
       doc.fontSize(9).fillColor('#666666');
       doc.text('Subtotal', 60, y + 10, { continued: false });
-      doc.fillColor('#333333').text(`₹${safeSubtotal.toLocaleString()}`, 450, y + 10, { continued: false });
+      doc.fillColor('#333333').text(`Rs. ${safeSubtotal.toLocaleString()}`, 450, y + 10, { continued: false });
       
       if (safeDiscount > 0 || safeDiscountAmount > 0) {
         doc.fillColor('#666666').text(`Discount (${safeDiscount}%)`, 60, y + 25, { continued: false });
-        doc.fillColor('#333333').text(`-₹${safeDiscountAmount.toLocaleString()}`, 450, y + 25, { continued: false });
+        doc.fillColor('#333333').text(`-Rs. ${safeDiscountAmount.toLocaleString()}`, 450, y + 25, { continued: false });
       }
       
       doc.fillColor('#666666').text(`GST (${safeGstPercent}%)`, 60, y + 40, { continued: false });
-      doc.fillColor('#333333').text(`₹${safeTax.toLocaleString()}`, 450, y + 40, { continued: false });
+      doc.fillColor('#333333').text(`Rs. ${safeTax.toLocaleString()}`, 450, y + 40, { continued: false });
       
       // Total line
       doc.rect(60, y + 55, 480, 1).fill('#e0e0e0');
       doc.fontSize(12).fillColor(gold).text('Grand Total', 60, y + 62, { continued: false });
-      doc.font('Helvetica-Bold').fontSize(12).fillColor(gold).text(`₹${safeTotal.toLocaleString()}`, 450, y + 62, { continued: false });
+      doc.font('Helvetica-Bold').fontSize(12).fillColor(gold).text(`Rs. ${safeTotal.toLocaleString()}`, 450, y + 62, { continued: false });
       doc.font('Helvetica');
       y += 90;
 
@@ -494,7 +494,7 @@ const generateInvoicePDF = async (invoice) => {
 
       // ===== TOTAL AMOUNT DUE BANNER - Matching Estimate Package Bar =====
       doc.rect(50, y, 500, 25).fill(lightGray).stroke('#e0e0e0');
-      doc.fontSize(10).fillColor(navy).text(`Total Amount Due: ₹${safeTotal.toLocaleString('en-IN')}`, 60, y + 8);
+      doc.fontSize(10).fillColor(navy).text(`Total Amount Due: Rs. ${safeTotal.toLocaleString('en-IN')}`, 60, y + 8);
       doc.fontSize(10).fillColor(navy).text(`Billing: ${billingDuration || 'One-time'}`, 400, y + 8);
       y += 35;
 
@@ -628,23 +628,23 @@ const generateInvoicePDF = async (invoice) => {
 
       doc.fontSize(9).fillColor('#666666');
       doc.text('Subtotal', 60, y + 10, { continued: false });
-      doc.text(`₹${safeSubtotal.toLocaleString('en-IN')}`, 450, y + 10, { width: 80, align: 'right' });
+      doc.text(`Rs. ${safeSubtotal.toLocaleString('en-IN')}`, 450, y + 10, { width: 80, align: 'right' });
       
       let psy = y + 25;
       if (safeDiscount > 0) {
         doc.fillColor('#059669').text('Discount', 60, psy, { continued: false });
-        doc.text(`-₹${safeDiscount.toLocaleString('en-IN')}`, 450, psy, { width: 80, align: 'right' });
+        doc.text(`-Rs. ${safeDiscount.toLocaleString('en-IN')}`, 450, psy, { width: 80, align: 'right' });
         psy += 15;
       }
       
       doc.fillColor('#666666').text(`GST (${safeTaxPercent}%)`, 60, psy, { continued: false });
-      doc.text(`₹${safeTax.toLocaleString('en-IN')}`, 450, psy, { width: 80, align: 'right' });
+      doc.text(`Rs. ${safeTax.toLocaleString('en-IN')}`, 450, psy, { width: 80, align: 'right' });
       psy += 20;
       
       // Total row - gold accent
       doc.rect(50, psy - 5, 500, 25).fill('#d4a84b');
       doc.fontSize(11).fillColor('#ffffff').font('Helvetica-Bold').text('TOTAL', 60, psy, { continued: false });
-      doc.text(`₹${safeTotal.toLocaleString('en-IN')}`, 420, psy, { width: 110, align: 'right' });
+      doc.text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, 420, psy, { width: 110, align: 'right' });
       doc.font('Helvetica');
 
       y = y + summaryHeight + 30;
