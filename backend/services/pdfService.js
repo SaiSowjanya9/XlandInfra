@@ -595,12 +595,12 @@ const generateInvoicePDF = async (invoice) => {
         doc.text('#', margin + 8, y + 6);
         doc.text('Service', margin + 30, y + 6);
         doc.text('Description', margin + 135, y + 6);
-        doc.text('Frequency', margin + 395, y + 6);
+        doc.text('Frequency', margin + 390, y + 6);
         doc.text('Visits', margin + 460, y + 6);
         y += tableHeaderH;
 
-        // Table rows - with full description wrapping
-        const descColWidth = 250; // Width for description column to wrap text
+        // Table rows - with full description (no truncation)
+        const descColWidth = 240; // Width for description column
         items.forEach((item, idx) => {
           const details = decodeHtml(item.details || '');
           const fullDesc = decodeHtml(item.description || item.name || 'Service');
@@ -610,18 +610,18 @@ const generateInvoicePDF = async (invoice) => {
           const freq = item.frequency || item.frequencyType || item.billingDuration || '-';
           const visits = item.visits || item.frequencyCount || item.quantity || 1;
           
-          // Calculate row height based on description length
-          const descLines = Math.ceil(serviceDesc.length / 45); // ~45 chars per line at fontSize 7
-          const rowH = Math.max(18, descLines * 10 + 8);
+          // Calculate row height based on description length (~35 chars per line at fontSize 7 with width 240)
+          const descLines = Math.ceil(serviceDesc.length / 35);
+          const rowH = Math.max(20, descLines * 9 + 10);
           
           doc.rect(margin, y, contentWidth, rowH).lineWidth(0.3).stroke(borderGray);
           doc.fontSize(7).fillColor(primaryText);
-          doc.text(`${idx + 1}`, margin + 10, y + 5);
-          doc.text(serviceName.substring(0, 22), margin + 30, y + 5);
-          // Full description with wrapping
-          doc.fillColor(secondaryText).text(serviceDesc, margin + 135, y + 5, { width: descColWidth, height: rowH - 6 });
-          doc.fillColor(primaryText).text(freq.substring(0, 12), margin + 400, y + 5);
-          doc.text(`${visits}`, margin + 465, y + 5);
+          doc.text(`${idx + 1}`, margin + 10, y + 6);
+          doc.text(serviceName.substring(0, 22), margin + 30, y + 6);
+          // Full description with text wrapping (no height limit)
+          doc.fillColor(secondaryText).text(serviceDesc, margin + 135, y + 6, { width: descColWidth, lineBreak: true });
+          doc.fillColor(primaryText).text(freq.substring(0, 12), margin + 390, y + 6);
+          doc.text(`${visits}`, margin + 460, y + 6);
           y += rowH;
         });
 
@@ -633,8 +633,8 @@ const generateInvoicePDF = async (invoice) => {
       const summaryX = pageWidth - margin - summaryWidth;
       
       doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX, y + 2, { lineBreak: false });
-      // Gold dash starts AFTER "PRICE SUMMARY" text with spacing gap
-      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 90, y + 6).lineTo(summaryX + 120, y + 6).stroke();
+      // Gold dash starts AFTER "PRICE SUMMARY" text with proper spacing gap
+      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 100, y + 6).lineTo(summaryX + 130, y + 6).stroke();
       doc.font('Helvetica');
       y += 20;
       

@@ -960,14 +960,14 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
 
     let query = `
       SELECT i.*, 
-             COALESCE(p.community_name, p2.community_name) as property_name, 
-             COALESCE(p.property_id, p2.property_id, i.property_code) as property_code,
-             COALESCE(p.property_type, p2.property_type) as property_type,
-             COALESCE(p.zone, p2.zone) as zone, 
-             COALESCE(p.city, p2.city) as city,
-             COALESCE(p.contact_person, p2.contact_person) as contact_person, 
-             COALESCE(p.contact_phone, p2.contact_phone) as contact_phone, 
-             COALESCE(p.contact_email, p2.contact_email) as contact_email,
+             COALESCE(p.community_name, p2.community_name, p3.community_name, fe.property_name) as property_name, 
+             COALESCE(p.property_id, p2.property_id, i.property_code, fe.property_code) as property_code,
+             COALESCE(p.property_type, p2.property_type, p3.property_type, fe.property_type) as property_type,
+             COALESCE(p.zone, p2.zone, p3.zone, fe.zone) as zone, 
+             COALESCE(p.city, p2.city, p3.city, fe.city) as city,
+             COALESCE(p.contact_person, p2.contact_person, p3.contact_person) as contact_person, 
+             COALESCE(p.contact_phone, p2.contact_phone, p3.contact_phone) as contact_phone, 
+             COALESCE(p.contact_email, p2.contact_email, p3.contact_email) as contact_email,
              fe.work_order_id as est_work_order_id,
              fe.work_order_category,
              fe.work_order_subcategory,
@@ -976,6 +976,7 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
       LEFT JOIN onboarded_properties p2 ON i.property_code = p2.property_id
       LEFT JOIN fp_estimates fe ON i.source_estimate_id = fe.estimate_id
+      LEFT JOIN onboarded_properties p3 ON fe.property_id = p3.id
       WHERE i.id = ?
     `;
     const params = [id];
@@ -1711,12 +1712,12 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
     // Get invoice with all details including work order data from fp_estimates
     let query = `
       SELECT i.*, 
-             COALESCE(p.community_name, p2.community_name) as property_name, 
-             COALESCE(p.property_id, p2.property_id, i.property_code) as property_code,
-             COALESCE(p.property_type, p2.property_type) as property_type,
-             COALESCE(p.zone, p2.zone) as zone, 
-             COALESCE(p.city, p2.city) as city,
-             COALESCE(p.division, p2.division) as division,
+             COALESCE(p.community_name, p2.community_name, p3.community_name, fe.property_name) as property_name, 
+             COALESCE(p.property_id, p2.property_id, i.property_code, fe.property_code) as property_code,
+             COALESCE(p.property_type, p2.property_type, p3.property_type, fe.property_type) as property_type,
+             COALESCE(p.zone, p2.zone, p3.zone, fe.zone) as zone, 
+             COALESCE(p.city, p2.city, p3.city, fe.city) as city,
+             COALESCE(p.division, p2.division, p3.division) as division,
              fe.work_order_id as est_work_order_id,
              fe.work_order_category,
              fe.work_order_subcategory,
@@ -1725,6 +1726,7 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
       LEFT JOIN onboarded_properties p2 ON i.property_code = p2.property_id
       LEFT JOIN fp_estimates fe ON i.source_estimate_id = fe.estimate_id
+      LEFT JOIN onboarded_properties p3 ON fe.property_id = p3.id
       WHERE i.id = ?
     `;
     const params = [id];
