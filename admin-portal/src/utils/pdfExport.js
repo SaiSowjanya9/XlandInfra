@@ -1178,6 +1178,64 @@ export const exportInvoiceToPDF = (invoice) => {
 
     const isWorkOrderInvoice = invoice.invoiceType === 'work_order' || invoice.invoice_type === 'work_order';
 
+    // ===== WORK ORDER DETAILS (for work order invoices) =====
+    if (isWorkOrderInvoice) {
+      const woItem = services[0] || {};
+      const category = woItem.category || invoice.workOrderCategory || invoice.work_order_category || '-';
+      const subcategory = woItem.subcategory || invoice.workOrderSubcategory || invoice.work_order_subcategory || '-';
+      const woDescription = decodeHtml(woItem.description || invoice.workOrderDescription || '');
+      const woId = invoice.workOrderId || invoice.work_order_id || '-';
+      
+      // Section header
+      doc.setTextColor(...primaryText);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.text('WORK ORDER DETAILS', margin, y + 5);
+      doc.setDrawColor(249, 115, 22); // Orange
+      doc.setLineWidth(0.3);
+      doc.line(margin + 42, y + 4, margin + 100, y + 4);
+      y += 10;
+      
+      // Work order details box - orange tinted
+      const woBoxHeight = woDescription && woDescription.length > 50 ? 28 : 22;
+      doc.setFillColor(255, 247, 237); // #FFF7ED
+      doc.setDrawColor(253, 186, 116); // #FDBA74
+      doc.roundedRect(margin, y, pageWidth - margin * 2, woBoxHeight, 2, 2, 'FD');
+      
+      // Three columns
+      const col1 = margin + 6;
+      const col2 = margin + 75;
+      const col3 = margin + 155;
+      
+      doc.setFontSize(5);
+      doc.setTextColor(154, 52, 18); // #9A3412
+      doc.setFont('helvetica', 'normal');
+      doc.text('Work Order ID', col1, y + 5);
+      doc.text('Category', col2, y + 5);
+      doc.text('Subcategory', col3, y + 5);
+      
+      doc.setFontSize(7);
+      doc.setTextColor(234, 88, 12); // #EA580C
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(woId), col1, y + 11);
+      doc.setTextColor(...primaryText);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(category).substring(0, 20), col2, y + 11);
+      doc.text(String(subcategory).substring(0, 20), col3, y + 11);
+      
+      // Description if exists
+      if (woDescription && woDescription !== '-') {
+        doc.setFontSize(5);
+        doc.setTextColor(154, 52, 18);
+        doc.text('Description', col1, y + 17);
+        doc.setFontSize(6);
+        doc.setTextColor(...primaryText);
+        doc.text(woDescription.substring(0, 80), col1, y + 22);
+      }
+      
+      y += woBoxHeight + 8;
+    }
+
     if (!isWorkOrderInvoice && services.length > 0) {
       // Section header - text only
       doc.setTextColor(...primaryText);
@@ -1186,7 +1244,8 @@ export const exportInvoiceToPDF = (invoice) => {
       doc.text('SERVICES INCLUDED', margin, y + 5);
       doc.setDrawColor(...gold);
       doc.setLineWidth(0.3);
-      doc.line(margin + 38, y + 4, pageWidth - margin, y + 4);
+      // Short gold line after text
+      doc.line(margin + 38, y + 4, margin + 120, y + 4);
       
       y += 10;
 
@@ -1232,7 +1291,8 @@ export const exportInvoiceToPDF = (invoice) => {
     doc.text('PRICE SUMMARY', summaryX, y + 5);
     doc.setDrawColor(...gold);
     doc.setLineWidth(0.3);
-    doc.line(summaryX + 32, y + 4, pageWidth - margin, y + 4);
+    // Short gold line (contained within summary box)
+    doc.line(summaryX + 32, y + 4, summaryX + 80, y + 4);
     
     y += 10;
 

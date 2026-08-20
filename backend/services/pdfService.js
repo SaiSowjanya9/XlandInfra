@@ -530,6 +530,48 @@ const generateInvoicePDF = async (invoice) => {
 
       y += cardHeight + 12;
 
+      // ===== WORK ORDER DETAILS (for work order invoices) =====
+      if (isWorkOrderInvoice) {
+        const woItem = items[0] || {};
+        const category = woItem.category || woItem.serviceCategory || '-';
+        const subcategory = woItem.subcategory || woItem.serviceSubcategory || '-';
+        const woDescription = decodeHtml(woItem.description || woItem.details || '-');
+        
+        // Section header
+        doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('WORK ORDER DETAILS', margin, y + 3);
+        doc.strokeColor('#F97316').lineWidth(0.5).moveTo(margin + 85, y + 7).lineTo(margin + 200, y + 7).stroke();
+        doc.font('Helvetica');
+        y += 16;
+        
+        // Work order details box - orange tinted
+        const woBoxHeight = woDescription.length > 50 ? 70 : 55;
+        doc.roundedRect(margin, y, contentWidth, woBoxHeight, 4).fill('#FFF7ED').stroke('#FDBA74');
+        
+        // Three columns: Work Order ID, Category, Subcategory
+        const col1 = margin + 12;
+        const col2 = margin + 180;
+        const col3 = margin + 340;
+        
+        doc.fontSize(7).fillColor('#9A3412');
+        doc.text('Work Order ID', col1, y + 10);
+        doc.text('Category', col2, y + 10);
+        doc.text('Subcategory', col3, y + 10);
+        
+        doc.fontSize(9).fillColor('#EA580C').font('Helvetica-Bold');
+        doc.text(workOrderId || '-', col1, y + 22);
+        doc.font('Helvetica').fillColor(primaryText);
+        doc.text(category, col2, y + 22);
+        doc.text(subcategory, col3, y + 22);
+        
+        // Description row if exists
+        if (woDescription && woDescription !== '-') {
+          doc.fontSize(7).fillColor('#9A3412').text('Description', col1, y + 38);
+          doc.fontSize(8).fillColor(primaryText).text(woDescription.substring(0, 80), col1, y + 50);
+        }
+        
+        y += woBoxHeight + 15;
+      }
+
       // ===== SERVICES INCLUDED TABLE =====
       if (!isWorkOrderInvoice && items.length > 0) {
         // Section header - text only
@@ -578,7 +620,8 @@ const generateInvoicePDF = async (invoice) => {
       const summaryX = pageWidth - margin - summaryWidth;
       
       doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX, y + 2);
-      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 60, y + 6).lineTo(pageWidth - margin, y + 6).stroke();
+      // Short gold line after text (max 80px)
+      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 72, y + 6).lineTo(summaryX + 150, y + 6).stroke();
       doc.font('Helvetica');
       y += 16;
       
