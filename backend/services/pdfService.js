@@ -424,7 +424,7 @@ const generateInvoicePDF = async (invoice) => {
         propertyName, propertyCode, propertyType, zone, city,
         invoiceDate, dueDate, billingDuration,
         lineItems, subtotal, discountAmount, discountPercentage, taxAmount, taxPercentage, totalAmount, balanceAmount,
-        workOrderId
+        workOrderId, workOrderCategory, workOrderSubcategory, workOrderDescription
       } = invoice;
       
       const isWorkOrderInvoice = invoiceType === 'work_order';
@@ -532,19 +532,22 @@ const generateInvoicePDF = async (invoice) => {
 
       // ===== WORK ORDER DETAILS (for work order invoices) =====
       if (isWorkOrderInvoice) {
+        // Get work order details from invoice data or first line item
         const woItem = items[0] || {};
-        const category = woItem.category || woItem.serviceCategory || '-';
-        const subcategory = woItem.subcategory || woItem.serviceSubcategory || '-';
-        const woDescription = decodeHtml(woItem.description || woItem.details || '-');
+        const category = workOrderCategory || woItem.category || woItem.serviceCategory || '-';
+        const subcategory = workOrderSubcategory || woItem.subcategory || woItem.serviceSubcategory || '-';
+        const woDescription = decodeHtml(workOrderDescription || woItem.description || woItem.details || '');
         
-        // Section header
+        // Section header - line starts AFTER text
         doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('WORK ORDER DETAILS', margin, y + 3);
-        doc.strokeColor('#F97316').lineWidth(0.5).moveTo(margin + 85, y + 7).lineTo(margin + 200, y + 7).stroke();
+        // Short orange line after heading text (starts after ~100px)
+        doc.strokeColor('#F97316').lineWidth(0.5).moveTo(margin + 100, y + 7).lineTo(margin + 180, y + 7).stroke();
         doc.font('Helvetica');
         y += 16;
         
         // Work order details box - orange tinted
-        const woBoxHeight = woDescription.length > 50 ? 70 : 55;
+        const hasDescription = woDescription && woDescription.length > 0;
+        const woBoxHeight = hasDescription && woDescription.length > 50 ? 70 : (hasDescription ? 60 : 45);
         doc.roundedRect(margin, y, contentWidth, woBoxHeight, 4).fill('#FFF7ED').stroke('#FDBA74');
         
         // Three columns: Work Order ID, Category, Subcategory
@@ -564,7 +567,7 @@ const generateInvoicePDF = async (invoice) => {
         doc.text(subcategory, col3, y + 22);
         
         // Description row if exists
-        if (woDescription && woDescription !== '-') {
+        if (hasDescription) {
           doc.fontSize(7).fillColor('#9A3412').text('Description', col1, y + 38);
           doc.fontSize(8).fillColor(primaryText).text(woDescription.substring(0, 80), col1, y + 50);
         }
