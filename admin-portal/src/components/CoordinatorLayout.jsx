@@ -335,6 +335,53 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
                     </div>
                   )}
                 </div>
+
+                {/* Schedules Section */}
+                <div className="mt-1">
+                  <button
+                    onClick={toggleSchedules}
+                    className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                    style={{ background: (expandedMenus.schedules || (isSchedulesActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent', color: (expandedMenus.schedules || (isSchedulesActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText }}
+                    onMouseEnter={(e) => { if (!expandedMenus.schedules && !(isSchedulesActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                    onMouseLeave={(e) => { if (!expandedMenus.schedules && !(isSchedulesActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                    title={sidebarCollapsed ? 'Schedules' : ''}
+                  >
+                    <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                      <Calendar className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.schedules || (isSchedulesActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                      {!sidebarCollapsed && <span className="whitespace-nowrap">Schedules</span>}
+                    </div>
+                    {!sidebarCollapsed && (
+                      <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                        expandedMenus.schedules ? 'bg-amber-500/20' : 'bg-white/10'
+                      }`}>
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform duration-200 ${
+                            expandedMenus.schedules ? 'rotate-180' : ''
+                          }`}
+                          style={{ color: expandedMenus.schedules ? colors.activeText : colors.iconGold }}
+                        />
+                      </span>
+                    )}
+                  </button>
+                  {expandedMenus.schedules && !sidebarCollapsed && (
+                    <div className="ml-4 mt-1 space-y-1 pl-3" >
+                      {schedulesSubItems.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = location.pathname === item.path;
+                        return (
+                          <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
+                            className="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 font-medium"
+                            style={{ background: isActive ? colors.activeBg : 'transparent', color: isActive ? colors.activeText : colors.primaryText }}
+                            onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }}
+                            onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
+                            <Icon className="w-4 h-4" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
+                            <span>{item.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <>
@@ -419,6 +466,53 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
                   {expandedMenus.estimates && !sidebarCollapsed && (
                     <div className="ml-4 mt-1 space-y-1 pl-3" >
                       {estimatesSubItems.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = location.pathname === item.path;
+                        return (
+                          <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
+                            className="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 font-medium"
+                            style={{ background: isActive ? colors.activeBg : 'transparent', color: isActive ? colors.activeText : colors.primaryText }}
+                            onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }}
+                            onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
+                            <Icon className="w-4 h-4" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
+                            <span>{item.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Schedules Section - Only for regular coordinators */}
+                <div className="mt-1">
+                  <button
+                    onClick={toggleSchedules}
+                    className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                    style={{ background: (expandedMenus.schedules || (isSchedulesActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent', color: (expandedMenus.schedules || (isSchedulesActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText }}
+                    onMouseEnter={(e) => { if (!expandedMenus.schedules && !(isSchedulesActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                    onMouseLeave={(e) => { if (!expandedMenus.schedules && !(isSchedulesActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                    title={sidebarCollapsed ? 'Schedules' : ''}
+                  >
+                    <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                      <Calendar className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.schedules || (isSchedulesActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                      {!sidebarCollapsed && <span className="whitespace-nowrap">Schedules</span>}
+                    </div>
+                    {!sidebarCollapsed && (
+                      <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                        expandedMenus.schedules ? 'bg-amber-500/20' : 'bg-white/10'
+                      }`}>
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform duration-200 ${
+                            expandedMenus.schedules ? 'rotate-180' : ''
+                          }`}
+                          style={{ color: expandedMenus.schedules ? colors.activeText : colors.iconGold }}
+                        />
+                      </span>
+                    )}
+                  </button>
+                  {expandedMenus.schedules && !sidebarCollapsed && (
+                    <div className="ml-4 mt-1 space-y-1 pl-3" >
+                      {schedulesSubItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = location.pathname === item.path;
                         return (
