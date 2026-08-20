@@ -1042,11 +1042,11 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
             className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* ===== HEADER - Black with gold top border (Image 2 style) ===== */}
+            {/* ===== HEADER - Black with gold top border (compact) ===== */}
             <div className="flex-shrink-0 relative">
               {/* Gold top border */}
               <div className="h-1 bg-gradient-to-r from-[#B77A00] via-[#D39A1A] to-[#B77A00]"></div>
-              <div className="bg-[#1a1a1a] px-6 py-6 pb-12">
+              <div className="bg-[#1a1a1a] px-6 py-4 pb-8">
                 {/* Close button - top right */}
                 <button 
                   onClick={(e) => { e.stopPropagation(); setShowDetailPanel(false); setSelectedInvoice(null); }} 
@@ -1055,14 +1055,14 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                   <X className="w-5 h-5 text-gray-400" />
                 </button>
                 {/* Centered logo and text */}
-                <div className="flex items-center justify-center gap-5">
-                  <img src="/logo.webp" alt="XLAND INFRA" className="h-16 w-16 object-contain" />
+                <div className="flex items-center justify-center gap-4">
+                  <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-12 object-contain" />
                   <div>
-                    <h1 className="text-[#D39A1A] text-2xl font-bold tracking-wider">XLAND INFRA</h1>
-                    <div className="flex items-center justify-center gap-3 mt-1">
-                      <div className="w-12 h-[1px] bg-[#D39A1A]"></div>
-                      <span className="text-[#D39A1A] text-xs tracking-[0.25em]">PVT LTD</span>
-                      <div className="w-12 h-[1px] bg-[#D39A1A]"></div>
+                    <h1 className="text-[#D39A1A] text-xl font-bold tracking-wider">XLAND INFRA</h1>
+                    <div className="flex items-center justify-center gap-2 mt-0.5">
+                      <div className="w-8 h-[1px] bg-[#D39A1A]"></div>
+                      <span className="text-[#D39A1A] text-[10px] tracking-[0.2em]">PVT LTD</span>
+                      <div className="w-8 h-[1px] bg-[#D39A1A]"></div>
                     </div>
                   </div>
                 </div>
@@ -1121,16 +1121,11 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                 <p className="text-white text-4xl font-bold">Rs. {Math.round(selectedInvoice.totalAmount || 0).toLocaleString('en-IN')}</p>
               </div>
 
-              {/* ===== PROPERTY & CUSTOMER DETAILS - Cream bg, filled gold icons (Image 2) ===== */}
+              {/* ===== PROPERTY & CUSTOMER DETAILS - Cream bg, no icons ===== */}
               <div className="grid grid-cols-2 gap-4">
-                {/* Property Details - cream background, filled gold icon */}
+                {/* Property Details - cream background */}
                 <div className="bg-[#FBF7EE] rounded-xl p-5">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-lg bg-[#c9a227] flex items-center justify-center">
-                      <Building2 className="w-5 h-5 text-white" />
-                    </div>
-                    <p className="text-gray-900 text-sm font-bold uppercase">Property Details</p>
-                  </div>
+                  <p className="text-gray-900 text-sm font-bold uppercase mb-4">Property Details</p>
                   <div className="text-sm space-y-1.5">
                     <p className="text-gray-600">Property ID: {selectedInvoice.propertyCode || '-'}</p>
                     <p className="text-gray-600">Name: {selectedInvoice.propertyName || '-'}</p>
@@ -1139,14 +1134,9 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                     <p className="text-gray-600">City: {selectedInvoice.city || '-'}</p>
                   </div>
                 </div>
-                {/* Customer Details - cream background, filled gold icon */}
+                {/* Customer Details - cream background */}
                 <div className="bg-[#FBF7EE] rounded-xl p-5">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-lg bg-[#c9a227] flex items-center justify-center">
-                      <User className="w-5 h-5 text-white" />
-                    </div>
-                    <p className="text-gray-900 text-sm font-bold uppercase">Customer Details</p>
-                  </div>
+                  <p className="text-gray-900 text-sm font-bold uppercase mb-4">Customer Details</p>
                   <div className="text-sm space-y-1.5">
                     <p className="text-gray-600">Name: {selectedInvoice.customerName || '-'}</p>
                     <p className="text-gray-600">Phone: {selectedInvoice.customerPhone || '-'}</p>

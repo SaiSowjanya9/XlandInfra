@@ -453,34 +453,34 @@ const generateInvoicePDF = async (invoice) => {
       const itemCount = items.length;
       const isCompact = itemCount > 4;
 
-      // ===== HEADER - Simple black with gold wave (Image 2) =====
-      const headerHeight = 50;
+      // ===== HEADER - Simple black with gold wave (compact) =====
+      const headerHeight = 38;
       
       // Simple black header
       doc.rect(0, 0, pageWidth, headerHeight).fill(headerBlack);
       
       // Gold wave - simple bar at bottom
-      doc.rect(0, headerHeight, pageWidth, 8).fill(gold);
+      doc.rect(0, headerHeight, pageWidth, 6).fill(gold);
       
       // Logo
       try {
-        doc.image(LOGO_PATH, margin + 15, 8, { width: 32, height: 32 });
+        doc.image(LOGO_PATH, margin + 15, 6, { width: 26, height: 26 });
       } catch (logoErr) {
-        doc.roundedRect(margin + 15, 8, 32, 32, 4).fill(gold);
+        doc.roundedRect(margin + 15, 6, 26, 26, 3).fill(gold);
       }
       
       // Company name
-      doc.fontSize(20).fillColor(gold).text('XLAND INFRA', margin + 55, 15);
+      doc.fontSize(16).fillColor(gold).text('XLAND INFRA', margin + 48, 11);
       
       // PVT LTD with lines
-      doc.fontSize(7).fillColor(gold);
-      const pvtX = margin + 72;
-      doc.strokeColor(gold).lineWidth(0.5);
-      doc.moveTo(pvtX - 15, 35).lineTo(pvtX - 3, 35).stroke();
-      doc.text('PVT LTD', pvtX, 32);
-      doc.moveTo(pvtX + 25, 35).lineTo(pvtX + 37, 35).stroke();
+      doc.fontSize(6).fillColor(gold);
+      const pvtX = margin + 60;
+      doc.strokeColor(gold).lineWidth(0.4);
+      doc.moveTo(pvtX - 12, 26).lineTo(pvtX - 2, 26).stroke();
+      doc.text('PVT LTD', pvtX, 23);
+      doc.moveTo(pvtX + 22, 26).lineTo(pvtX + 32, 26).stroke();
 
-      let y = headerHeight + 15;
+      let y = headerHeight + 12;
 
       // ===== ID / DATE / DUE ROW (Image 2) =====
       doc.fontSize(9).fillColor(secondaryText).text('ID:', margin, y);
