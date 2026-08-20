@@ -96,6 +96,7 @@ import Payments from './pages/billing/Payments';
 
 import GeneratedInvoices from './pages/billing/GeneratedInvoices';
 import CreateInvoice from './pages/billing/CreateInvoice';
+import SchedulesDashboard from './pages/schedules/SchedulesDashboard';
 import { FPProvider } from './contexts/FPContext';
 
 // Session timeout in milliseconds (30 minutes)
@@ -379,6 +380,7 @@ function App() {
                     <Route path="billing/make-payments" element={<BillingPlaceholder page="make-payments" portalName="Admin" />} />
                     <Route path="billing/payment-history" element={<BillingPlaceholder page="payment-history" portalName="Admin" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="employee" defaultTab="archived" />} />
+                    <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="admin" />} />
                     <Route path="*" element={<Navigate to="/employee" replace />} />
                   </Routes>
                 </EmployeeLayout>
@@ -460,6 +462,7 @@ function App() {
                     <Route path="billing/make-payments" element={<BillingPlaceholder page="make-payments" portalName="Franchise Partner" />} />
                     <Route path="billing/payment-history" element={<BillingPlaceholder page="payment-history" portalName="Franchise Partner" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="fp" defaultTab="archived" />} />
+                    <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="franchise" />} />
                     <Route path="*" element={<Navigate to="/fp" replace />} />
                   </Routes>
                 </FPLayout>
@@ -510,6 +513,7 @@ function App() {
                     <Route path="billing/make-payments" element={<BillingPlaceholder page="make-payments" portalName="Manager" />} />
                     <Route path="billing/payment-history" element={<BillingPlaceholder page="payment-history" portalName="Manager" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="manager" defaultTab="archived" />} />
+                    <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="manager" />} />
                     <Route path="*" element={<Navigate to="/manager" replace />} />
                   </Routes>
                 </ManagerLayout>

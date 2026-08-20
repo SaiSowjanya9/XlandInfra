@@ -377,4 +377,145 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
   }
 });
 
+// Get dashboard statistics
+router.get('/dashboard/stats', authenticate, canSeeSchedule, async (req, res) => {
+  try {
+    const { startDate, endDate, zone } = req.query;
+    
+    let dateFilter = '';
+    const params = [];
+    
+    if (startDate) {
+      dateFilter += ' AND s.start_date >= ?';
+      params.push(startDate);
+    }
+    if (endDate) {
+      dateFilter += ' AND s.start_date <= ?';
+      params.push(endDate);
+    }
+
+    // Get all schedules with property info
+    const [schedules] = await pool.execute(
+      `SELECT s.*, 
+              p.name as property_name, 
+              p.property_id as property_code,
+              p.property_type,
+              p.zone,
+              p.city,
+              CONCAT(u.first_name, ' ', u.last_name) as created_by_name,
+              e.title as estimate_title,
+              e.service_category
+       FROM schedules s
+       LEFT JOIN properties p ON s.property_id = p.id
+       LEFT JOIN users u ON s.created_by = u.id
+       LEFT JOIN estimates e ON s.estimate_id = e.id
+       WHERE 1=1 ${dateFilter}
+       ORDER BY s.start_date DESC`,
+      params
+    );
+
+    // Calculate statistics
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const stats = {
+      total: schedules.length,
+      byStatus: {},
+      byPropertyType: {},
+      byServiceCategory: {},
+      todaysSchedules: [],
+      upcomingSchedules: [],
+      unscheduled: []
+    };
+
+    // Status counts
+    const statusCounts = {
+      active: 0,
+      draft: 0,
+      completed: 0,
+      cancelled: 0,
+      paused: 0,
+      rescheduled: 0,
+      in_progress: 0
+    };
+
+    // Property type counts
+    const propertyTypeCounts = {};
+    
+    // Service category counts
+    const serviceCategoryCounts = {};
+
+    schedules.forEach(s => {
+      const status = (s.status || 'draft').toLowerCase();
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+
+      // Property type
+      const propType = s.property_type || 'Other';
+      propertyTypeCounts[propType] = (propertyTypeCounts[propType] || 0) + 1;
+
+      // Service category
+      const category = s.service_category || s.title?.split(' ')[0] || 'General';
+      serviceCategoryCounts[category] = (serviceCategoryCounts[category] || 0) + 1;
+
+      // Today's schedules
+      const sDate = new Date(s.start_date);
+      sDate.setHours(0, 0, 0, 0);
+      
+      if (sDate.getTime() === today.getTime()) {
+        stats.todaysSchedules.push({
+          id: s.id,
+          scheduleId: s.schedule_id,
+          title: s.title,
+          description: s.description,
+          startDate: s.start_date,
+          status: s.status,
+          propertyName: s.property_name,
+          propertyType: s.property_type
+        });
+      }
+
+      // Upcoming (next 7 days)
+      const next7Days = new Date(today);
+      next7Days.setDate(today.getDate() + 7);
+      
+      if (sDate > today && sDate <= next7Days) {
+        stats.upcomingSchedules.push({
+          id: s.id,
+          scheduleId: s.schedule_id,
+          title: s.title,
+          startDate: s.start_date,
+          status: s.status,
+          propertyName: s.property_name
+        });
+      }
+
+      // Unscheduled (drafts)
+      if (status === 'draft' || !s.start_date) {
+        stats.unscheduled.push({
+          id: s.id,
+          scheduleId: s.schedule_id,
+          title: s.title,
+          status: s.status
+        });
+      }
+    });
+
+    stats.byStatus = statusCounts;
+    stats.byPropertyType = propertyTypeCounts;
+    stats.byServiceCategory = serviceCategoryCounts;
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error fetching schedule stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching schedule statistics',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
