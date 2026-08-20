@@ -798,14 +798,13 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                     </button>
                     <button
                       onClick={() => {
-                        const now = new Date();
-                        const lastYear = now.getFullYear() - 1;
-                        const start = new Date(lastYear, 0, 1); // Jan 1 of last year
-                        const end = new Date(lastYear, 11, 31); // Dec 31 of last year
-                        setStartDate(start.toISOString().split('T')[0]);
-                        setEndDate(end.toISOString().split('T')[0]);
-                        setStartDateDisplay(formatDateIST(start.toISOString().split('T')[0]));
-                        setEndDateDisplay(formatDateIST(end.toISOString().split('T')[0]));
+                        const lastYear = new Date().getFullYear() - 1;
+                        const startStr = `${lastYear}-01-01`; // Jan 1 of last year
+                        const endStr = `${lastYear}-12-31`; // Dec 31 of last year
+                        setStartDate(startStr);
+                        setEndDate(endStr);
+                        setStartDateDisplay(formatDateIST(startStr));
+                        setEndDateDisplay(formatDateIST(endStr));
                       }}
                       className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50"
                     >
