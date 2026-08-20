@@ -34,7 +34,9 @@ import {
   Legend,
   LineChart,
   Line,
-  CartesianGrid
+  CartesianGrid,
+  AreaChart,
+  Area
 } from 'recharts';
 import DonutChart from './common/DonutChart';
 import { getAuthToken } from '../utils/safeStorage';
@@ -1031,7 +1033,15 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
               </div>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={categoryTrend.data}>
+                  <AreaChart data={categoryTrend.data}>
+                    <defs>
+                      {categoryTrend.categories.map((cat, index) => (
+                        <linearGradient key={cat} id={`color${index}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={categoryColors[index % categoryColors.length]} stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor={categoryColors[index % categoryColors.length]} stopOpacity={0.2}/>
+                        </linearGradient>
+                      ))}
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#9CA3AF" />
                     <YAxis tick={{ fontSize: 11 }} stroke="#9CA3AF" />
@@ -1044,17 +1054,17 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                       }}
                     />
                     {categoryTrend.categories.map((cat, index) => (
-                      <Line 
+                      <Area 
                         key={cat}
                         type="monotone" 
-                        dataKey={cat} 
+                        dataKey={cat}
+                        stackId="1"
                         stroke={categoryColors[index % categoryColors.length]} 
-                        strokeWidth={2.5} 
-                        dot={{ fill: categoryColors[index % categoryColors.length], strokeWidth: 2, stroke: '#fff', r: 5 }}
-                        activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
+                        strokeWidth={2}
+                        fill={`url(#color${index})`}
                       />
                     ))}
-                  </LineChart>
+                  </AreaChart>
                 </ResponsiveContainer>
               </div>
             </>
