@@ -1193,8 +1193,8 @@ export const exportInvoiceToPDF = (invoice) => {
       doc.text('WORK ORDER DETAILS', margin, y + 5);
       doc.setDrawColor(249, 115, 22); // Orange
       doc.setLineWidth(0.3);
-      // Short orange line after heading text
-      doc.line(margin + 48, y + 4, margin + 100, y + 4);
+      // Orange line AFTER text (~50px wide at fontSize 7)
+      doc.line(margin + 52, y + 4, margin + 82, y + 4);
       y += 10;
       
       // Work order details box - orange tinted
@@ -1245,8 +1245,8 @@ export const exportInvoiceToPDF = (invoice) => {
       doc.text('SERVICES INCLUDED', margin, y + 5);
       doc.setDrawColor(...gold);
       doc.setLineWidth(0.3);
-      // Short gold line after text
-      doc.line(margin + 38, y + 4, margin + 120, y + 4);
+      // Gold line AFTER text (~42px wide at fontSize 8)
+      doc.line(margin + 44, y + 4, margin + 74, y + 4);
       
       y += 10;
 
@@ -1292,8 +1292,8 @@ export const exportInvoiceToPDF = (invoice) => {
     doc.text('PRICE SUMMARY', summaryX, y + 5);
     doc.setDrawColor(...gold);
     doc.setLineWidth(0.3);
-    // Short gold line (contained within summary box)
-    doc.line(summaryX + 32, y + 4, summaryX + 80, y + 4);
+    // Gold line AFTER text (~38px wide at fontSize 7)
+    doc.line(summaryX + 40, y + 4, summaryX + 70, y + 4);
     
     y += 10;
 
