@@ -170,6 +170,10 @@ const PublicPayment = () => {
   const [processing, setProcessing] = useState(false);
   const [copied, setCopied] = useState(null);
   const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [requireCaptcha, setRequireCaptcha] = useState(false);
+  const [checkingCaptcha, setCheckingCaptcha] = useState(true);
+  const [ipBlocked, setIpBlocked] = useState(false);
+  const [blockRetryAfter, setBlockRetryAfter] = useState(0);
 
   // Bank details for bank transfer
   const bankDetails = {
@@ -186,16 +190,49 @@ const PublicPayment = () => {
     qrCodeUrl: null // Will be generated
   };
 
+  // Check if CAPTCHA is required on initial load
   useEffect(() => {
-    if (captchaVerified && token) {
+    const checkCaptchaRequired = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/razorpay/public/captcha-status`);
+        const result = await response.json();
+        
+        if (result.blocked) {
+          setIpBlocked(true);
+          setBlockRetryAfter(result.retryAfter || 3600);
+        } else {
+          setRequireCaptcha(result.requireCaptcha || false);
+          // If no CAPTCHA required, mark as verified
+          if (!result.requireCaptcha) {
+            setCaptchaVerified(true);
+          }
+        }
+      } catch (err) {
+        // If check fails, proceed without CAPTCHA (fail-open for UX)
+        setCaptchaVerified(true);
+      } finally {
+        setCheckingCaptcha(false);
+      }
+    };
+    
+    if (token) {
+      checkCaptchaRequired();
+    } else {
+      setCheckingCaptcha(false);
+      setError('Invalid payment link');
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (captchaVerified && token && !checkingCaptcha) {
       fetchInvoiceDetails();
     } else if (!token) {
       setLoading(false);
       setError('Invalid payment link');
-    } else {
+    } else if (!checkingCaptcha && !captchaVerified) {
       setLoading(false);
     }
-  }, [captchaVerified, token]);
+  }, [captchaVerified, token, checkingCaptcha]);
 
   const fetchInvoiceDetails = async () => {
     try {
@@ -211,7 +248,20 @@ const PublicPayment = () => {
           setError('already_paid');
         }
       } else {
-        setError(result.message || 'Invoice not found or link expired');
+        // Handle blocked IP
+        if (result.blocked) {
+          setIpBlocked(true);
+          setBlockRetryAfter(result.retryAfter || 3600);
+          setError('ip_blocked');
+        } 
+        // Handle CAPTCHA requirement (if user bypassed initial check)
+        else if (result.requireCaptcha && !captchaVerified) {
+          setRequireCaptcha(true);
+          setCaptchaVerified(false);
+        }
+        else {
+          setError(result.message || 'Invoice not found or link expired');
+        }
       }
     } catch (err) {
       setError('Failed to load invoice details');
@@ -287,8 +337,44 @@ const PublicPayment = () => {
     }).format(amount || 0);
   };
 
-  // Show CAPTCHA first (before loading invoice)
-  if (!captchaVerified && !error) {
+  // Show blocked IP message
+  if (ipBlocked) {
+    const minutes = Math.ceil(blockRetryAfter / 60);
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Shield className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Access Temporarily Blocked</h2>
+          <p className="text-gray-600 mb-4">
+            Your IP has been temporarily blocked due to multiple failed attempts.
+          </p>
+          <p className="text-sm text-gray-500">
+            Please try again in <span className="font-semibold text-red-600">{minutes} minutes</span>.
+          </p>
+          <p className="text-xs text-gray-400 mt-4">
+            If you believe this is an error, please contact XLAND INFRA support.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show checking CAPTCHA status
+  if (checkingCaptcha) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Verifying security...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show CAPTCHA only if required (after 3 failed attempts)
+  if (requireCaptcha && !captchaVerified && !error) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
         <ReCaptcha onVerify={handleCaptchaVerified} />
@@ -308,6 +394,25 @@ const PublicPayment = () => {
   }
 
   if (error) {
+    // IP blocked error
+    if (error === 'ip_blocked') {
+      const minutes = Math.ceil(blockRetryAfter / 60);
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-8 h-8 text-red-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Access Temporarily Blocked</h2>
+            <p className="text-gray-600 mb-4">Too many invalid attempts detected.</p>
+            <p className="text-sm text-gray-500">
+              Please try again in <span className="font-semibold text-red-600">{minutes} minutes</span>.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     // Already paid - show success message
     if (error === 'already_paid') {
       return (

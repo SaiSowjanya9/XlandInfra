@@ -106,6 +106,157 @@ const webhookLimiter = rateLimit({
 });
 
 // =============================================================================
+// IP BLACKLISTING FOR FAILED PAYMENT ATTEMPTS
+// =============================================================================
+
+/**
+ * In-memory store for tracking failed attempts and blocked IPs
+ * In production, consider using Redis for persistence across server restarts
+ */
+const failedAttempts = new Map(); // IP -> { count, lastAttempt }
+const blockedIPs = new Map(); // IP -> unblockTime
+
+const IP_BLACKLIST_CONFIG = {
+  maxFailedAttempts: 5,        // Block after 5 failed attempts
+  blockDurationMs: 60 * 60 * 1000,  // Block for 1 hour
+  attemptWindowMs: 15 * 60 * 1000,  // Reset count after 15 minutes of no attempts
+  cleanupIntervalMs: 5 * 60 * 1000  // Cleanup every 5 minutes
+};
+
+// Cleanup old entries periodically
+setInterval(() => {
+  const now = Date.now();
+  
+  // Remove expired blocks
+  for (const [ip, unblockTime] of blockedIPs.entries()) {
+    if (now >= unblockTime) {
+      blockedIPs.delete(ip);
+      console.log(`[IP Blacklist] Unblocked IP: ${hashIP(ip).substring(0, 8)}...`);
+    }
+  }
+  
+  // Remove old failed attempts
+  for (const [ip, data] of failedAttempts.entries()) {
+    if (now - data.lastAttempt > IP_BLACKLIST_CONFIG.attemptWindowMs) {
+      failedAttempts.delete(ip);
+    }
+  }
+}, IP_BLACKLIST_CONFIG.cleanupIntervalMs);
+
+/**
+ * Record a failed payment attempt for an IP
+ * @param {string} ip - Client IP address
+ * @returns {Object} - { blocked: boolean, remainingAttempts: number }
+ */
+const recordFailedAttempt = (ip) => {
+  const now = Date.now();
+  const existing = failedAttempts.get(ip) || { count: 0, lastAttempt: now };
+  
+  // Reset count if window expired
+  if (now - existing.lastAttempt > IP_BLACKLIST_CONFIG.attemptWindowMs) {
+    existing.count = 0;
+  }
+  
+  existing.count++;
+  existing.lastAttempt = now;
+  failedAttempts.set(ip, existing);
+  
+  // Check if should be blocked
+  if (existing.count >= IP_BLACKLIST_CONFIG.maxFailedAttempts) {
+    const unblockTime = now + IP_BLACKLIST_CONFIG.blockDurationMs;
+    blockedIPs.set(ip, unblockTime);
+    failedAttempts.delete(ip); // Clear failed attempts after blocking
+    console.log(`[IP Blacklist] Blocked IP: ${hashIP(ip).substring(0, 8)}... for ${IP_BLACKLIST_CONFIG.blockDurationMs / 60000} minutes`);
+    return { blocked: true, remainingAttempts: 0 };
+  }
+  
+  return { 
+    blocked: false, 
+    remainingAttempts: IP_BLACKLIST_CONFIG.maxFailedAttempts - existing.count 
+  };
+};
+
+/**
+ * Check if an IP is blocked
+ * @param {string} ip - Client IP address
+ * @returns {Object} - { blocked: boolean, unblockIn: number (seconds) }
+ */
+const isIPBlocked = (ip) => {
+  const unblockTime = blockedIPs.get(ip);
+  if (!unblockTime) {
+    return { blocked: false, unblockIn: 0 };
+  }
+  
+  const now = Date.now();
+  if (now >= unblockTime) {
+    blockedIPs.delete(ip);
+    return { blocked: false, unblockIn: 0 };
+  }
+  
+  return { 
+    blocked: true, 
+    unblockIn: Math.ceil((unblockTime - now) / 1000) 
+  };
+};
+
+/**
+ * Get failed attempt count for an IP (used for CAPTCHA trigger)
+ * @param {string} ip - Client IP address
+ * @returns {number} - Number of failed attempts
+ */
+const getFailedAttemptCount = (ip) => {
+  const data = failedAttempts.get(ip);
+  if (!data) return 0;
+  
+  const now = Date.now();
+  if (now - data.lastAttempt > IP_BLACKLIST_CONFIG.attemptWindowMs) {
+    failedAttempts.delete(ip);
+    return 0;
+  }
+  
+  return data.count;
+};
+
+/**
+ * Clear failed attempts for an IP (call after successful payment)
+ * @param {string} ip - Client IP address
+ */
+const clearFailedAttempts = (ip) => {
+  failedAttempts.delete(ip);
+};
+
+/**
+ * Middleware to check if IP is blacklisted
+ * Apply to public payment endpoints
+ */
+const ipBlacklistMiddleware = (req, res, next) => {
+  const ip = getClientIP(req);
+  const blockStatus = isIPBlocked(ip);
+  
+  if (blockStatus.blocked) {
+    logSecurityEvent(req, 'IP_BLOCKED_ACCESS_ATTEMPT', {
+      unblockIn: blockStatus.unblockIn
+    });
+    
+    return res.status(403).json({
+      success: false,
+      message: 'Your IP has been temporarily blocked due to suspicious activity.',
+      retryAfter: blockStatus.unblockIn,
+      blocked: true
+    });
+  }
+  
+  // Attach helper to request for use in route handlers
+  req.ipBlacklist = {
+    recordFailed: () => recordFailedAttempt(ip),
+    clearFailed: () => clearFailedAttempts(ip),
+    getFailedCount: () => getFailedAttemptCount(ip)
+  };
+  
+  next();
+};
+
+// =============================================================================
 // PAYMENT VALIDATION MIDDLEWARE
 // =============================================================================
 
@@ -371,6 +522,13 @@ module.exports = {
   // Security
   fraudDetectionMiddleware,
   verifyWebhookSignatureMiddleware,
+  
+  // IP Blacklisting
+  ipBlacklistMiddleware,
+  recordFailedAttempt,
+  isIPBlocked,
+  getFailedAttemptCount,
+  clearFailedAttempts,
   
   // Audit
   paymentAuditMiddleware,
