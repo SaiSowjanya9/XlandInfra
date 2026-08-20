@@ -1708,16 +1708,23 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
     const { id } = req.params;
     const fpId = getFPScope(req);
 
-    // Get invoice with all details
+    // Get invoice with all details including work order data from fp_estimates
     let query = `
       SELECT i.*, 
              COALESCE(p.community_name, p2.community_name) as property_name, 
              COALESCE(p.property_id, p2.property_id, i.property_code) as property_code,
+             COALESCE(p.property_type, p2.property_type) as property_type,
              COALESCE(p.zone, p2.zone) as zone, 
-             COALESCE(p.division, p2.division) as division
+             COALESCE(p.city, p2.city) as city,
+             COALESCE(p.division, p2.division) as division,
+             fe.work_order_id as est_work_order_id,
+             fe.work_order_category,
+             fe.work_order_subcategory,
+             fe.work_order_description
       FROM invoices i
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
       LEFT JOIN onboarded_properties p2 ON i.property_code = p2.property_id
+      LEFT JOIN fp_estimates fe ON i.source_estimate_id = fe.estimate_id
       WHERE i.id = ?
     `;
     const params = [id];
@@ -1752,6 +1759,42 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
       WHERE id = ?
     `, [paymentLink, req.user.id, id]);
 
+    // Generate PDF attachment
+    const { generateInvoicePDF } = require('../services/pdfService');
+    let pdfBuffer = null;
+    try {
+      pdfBuffer = await generateInvoicePDF({
+        invoiceId: invoice.invoice_id,
+        estimateId: invoice.source_estimate_id,
+        invoiceType: invoice.invoice_type,
+        customerName: invoice.customer_name,
+        customerEmail: invoice.customer_email,
+        customerPhone: invoice.customer_phone,
+        propertyName: invoice.property_name,
+        propertyCode: invoice.property_code,
+        propertyType: invoice.property_type,
+        zone: invoice.zone,
+        city: invoice.city,
+        invoiceDate: invoice.invoice_date,
+        dueDate: invoice.due_date,
+        billingDuration: invoice.billing_duration,
+        lineItems: invoice.line_items,
+        subtotal: invoice.subtotal,
+        discountAmount: invoice.discount_amount,
+        taxAmount: invoice.tax_amount,
+        taxPercentage: invoice.tax_percent,
+        totalAmount: invoice.total_amount,
+        balanceAmount: invoice.balance_amount,
+        workOrderId: invoice.work_order_id || invoice.est_work_order_id,
+        workOrderCategory: invoice.work_order_category,
+        workOrderSubcategory: invoice.work_order_subcategory,
+        workOrderDescription: invoice.work_order_description
+      });
+      console.log(`📄 PDF generated for invoice ${invoice.invoice_id}`);
+    } catch (pdfError) {
+      console.error('Failed to generate invoice PDF:', pdfError.message);
+    }
+
     // Parse line items for email - Table: # | Service | Description | Frequency | Visits (no Amount)
     let lineItemsHtml = '';
     let lineItems = [];
@@ -1785,11 +1828,16 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
     const formatAmount = (amt) => `₹${(parseFloat(amt) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
     const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 
-    // Send email to customer
+    // Send email to customer with PDF attachment
     const { sendEmail } = require('../services/emailService');
     await sendEmail({
       to: invoice.customer_email,
-      subject: `Invoice ${invoice.invoice_id} from XLand Infra`,
+      subject: `Invoice ${invoice.invoice_id} from XLAND INFRA - Payment Due`,
+      attachments: pdfBuffer ? [{
+        filename: `Invoice_${invoice.invoice_id}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }] : [],
       html: `
         <!DOCTYPE html>
         <html>

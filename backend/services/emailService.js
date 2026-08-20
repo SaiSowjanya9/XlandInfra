@@ -2222,9 +2222,10 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
 const sendInvoiceEmail = async (invoice) => {
   const {
     invoiceId, customerName, customerEmail, customerPhone,
-    propertyName, propertyCode, estimateId,
-    subtotal, discountAmount, taxAmount, totalAmount, balanceAmount,
-    invoiceDate, dueDate, lineItems, paymentLink, billingDuration
+    propertyName, propertyCode, propertyType, zone, city, estimateId,
+    subtotal, discountAmount, taxAmount, taxPercentage, totalAmount, balanceAmount,
+    invoiceDate, dueDate, lineItems, paymentLink, billingDuration,
+    invoiceType, workOrderId, workOrderCategory, workOrderSubcategory, workOrderDescription
   } = invoice;
 
   if (!customerEmail) {
@@ -2291,17 +2292,21 @@ const sendInvoiceEmail = async (invoice) => {
     </div>
   ` : '';
 
-  // Generate PDF attachment
+  // Generate PDF attachment - passing all data for proper layout
   let pdfBuffer = null;
   try {
     pdfBuffer = await generateInvoicePDF({
       invoiceId,
       estimateId,
+      invoiceType,
       customerName,
       customerEmail,
       customerPhone,
       propertyName,
       propertyCode,
+      propertyType,
+      zone,
+      city,
       invoiceDate,
       dueDate,
       billingDuration,
@@ -2309,8 +2314,13 @@ const sendInvoiceEmail = async (invoice) => {
       subtotal,
       discountAmount,
       taxAmount,
+      taxPercentage,
       totalAmount,
-      balanceAmount
+      balanceAmount,
+      workOrderId,
+      workOrderCategory,
+      workOrderSubcategory,
+      workOrderDescription
     });
     console.log(`📄 Invoice PDF generated for email: ${invoiceId}`);
   } catch (pdfError) {

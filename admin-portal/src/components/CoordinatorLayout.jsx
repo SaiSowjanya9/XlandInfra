@@ -23,6 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
   BarChart3,
+  Calendar,
 } from 'lucide-react';
 
 const CoordinatorLayout = ({ admin, onLogout, children }) => {
@@ -75,8 +76,14 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
     { path: '/coordinator/estimates/archived', icon: Archive, label: 'Archived' }
   ];
 
+  // Schedules sub-items
+  const schedulesSubItems = [
+    { path: '/coordinator/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
+  ];
+
   const isVendorActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEstimatesActive = estimatesSubItems.some(item => location.pathname === item.path) || location.pathname === '/coordinator/estimates';
+  const isSchedulesActive = schedulesSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/coordinator/schedules');
   
   // Color constants for sidebar
   const colors = {
@@ -96,20 +103,28 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
   useEffect(() => {
     if (isVendorActive) setExpandedMenus(prev => ({ ...prev, vendors: true }));
     if (isEstimatesActive) setExpandedMenus(prev => ({ ...prev, estimates: true }));
-  }, [location.pathname, isVendorActive, isEstimatesActive]);
+    if (isSchedulesActive) setExpandedMenus(prev => ({ ...prev, schedules: true }));
+  }, [location.pathname, isVendorActive, isEstimatesActive, isSchedulesActive]);
 
   // Accordion toggle functions - close other sections when opening one
   const toggleVendors = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.vendors;
-      setExpandedMenus({ vendors: opening, estimates: false });
+      setExpandedMenus({ vendors: opening, estimates: false, schedules: false });
     }
   };
 
   const toggleEstimates = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.estimates;
-      setExpandedMenus({ vendors: false, estimates: opening });
+      setExpandedMenus({ vendors: false, estimates: opening, schedules: false });
+    }
+  };
+
+  const toggleSchedules = () => {
+    if (!sidebarCollapsed) {
+      const opening = !expandedMenus.schedules;
+      setExpandedMenus({ vendors: false, estimates: false, schedules: opening });
     }
   };
 
@@ -120,7 +135,7 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
   };
 
   // Check if any dropdown is open
-  const isAnyDropdownOpen = expandedMenus.vendors || expandedMenus.estimates;
+  const isAnyDropdownOpen = expandedMenus.vendors || expandedMenus.estimates || expandedMenus.schedules;
 
   const NavLink = ({ item, mobile = false }) => {
     const Icon = item.icon;
@@ -129,7 +144,7 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
     const handleClick = () => {
       if (mobile) setSidebarOpen(false);
       // Close all dropdowns when clicking on main nav items
-      setExpandedMenus({ vendors: false, estimates: false });
+      setExpandedMenus({ vendors: false, estimates: false, schedules: false });
     };
     return (
       <Link

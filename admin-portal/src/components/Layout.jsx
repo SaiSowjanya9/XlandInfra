@@ -27,6 +27,7 @@ import {
   FileText,
   Wallet,
   History,
+  Calendar,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -39,6 +40,9 @@ const Layout = ({ admin, onLogout, children }) => {
   );
   const [billingPaymentsOpen, setBillingPaymentsOpen] = useState(
     location.pathname.startsWith('/billing')
+  );
+  const [schedulesOpen, setSchedulesOpen] = useState(
+    location.pathname.startsWith('/schedules')
   );
 
   // Get user initials for avatar
@@ -77,25 +81,39 @@ const Layout = ({ admin, onLogout, children }) => {
     { path: '/billing/archived', icon: Archive, label: 'Archived' }
   ];
 
+  // Schedules sub-items
+  const schedulesSubItems = [
+    { path: '/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
+  ];
+
   const isWorkOrdersSectionActive = workOrdersSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/work-orders');
   const isBillingPaymentsSectionActive = billingPaymentsSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/billing');
+  const isSchedulesSectionActive = schedulesSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/schedules');
 
   useEffect(() => {
     if (isWorkOrdersSectionActive) setWorkOrdersOpen(true);
     if (isBillingPaymentsSectionActive) setBillingPaymentsOpen(true);
+    if (isSchedulesSectionActive) setSchedulesOpen(true);
   }, [location.pathname]);
 
   const toggleWorkOrders = () => {
     if (!sidebarCollapsed) {
       setWorkOrdersOpen(!workOrdersOpen);
-      if (!workOrdersOpen) setBillingPaymentsOpen(false);
+      if (!workOrdersOpen) { setBillingPaymentsOpen(false); setSchedulesOpen(false); }
     }
   };
 
   const toggleBillingPayments = () => {
     if (!sidebarCollapsed) {
       setBillingPaymentsOpen(!billingPaymentsOpen);
-      if (!billingPaymentsOpen) setWorkOrdersOpen(false);
+      if (!billingPaymentsOpen) { setWorkOrdersOpen(false); setSchedulesOpen(false); }
+    }
+  };
+
+  const toggleSchedules = () => {
+    if (!sidebarCollapsed) {
+      setSchedulesOpen(!schedulesOpen);
+      if (!schedulesOpen) { setWorkOrdersOpen(false); setBillingPaymentsOpen(false); }
     }
   };
 
@@ -114,7 +132,7 @@ const Layout = ({ admin, onLogout, children }) => {
     profileBg: '#1F1C18',
   };
 
-  const isAnyDropdownOpen = workOrdersOpen || billingPaymentsOpen;
+  const isAnyDropdownOpen = workOrdersOpen || billingPaymentsOpen || schedulesOpen;
 
   const NavLink = ({ item, mobile = false, collapsed = false, isSubItem = false }) => {
     const Icon = item.icon;
@@ -126,6 +144,7 @@ const Layout = ({ admin, onLogout, children }) => {
       if (!isSubItem) {
         setWorkOrdersOpen(false);
         setBillingPaymentsOpen(false);
+        setSchedulesOpen(false);
       }
     };
     return (
@@ -266,6 +285,42 @@ const Layout = ({ admin, onLogout, children }) => {
               {billingPaymentsOpen && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 pl-3">
                   {billingPaymentsSubItems.map((item) => (
+                    <NavLink key={item.path} item={item} mobile collapsed={sidebarCollapsed} isSubItem />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Schedules Section */}
+            <div className="mt-1">
+              <button
+                onClick={toggleSchedules}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{ background: (schedulesOpen || isSchedulesSectionActive) ? colors.activeBg : 'transparent', color: (schedulesOpen || isSchedulesSectionActive) ? colors.activeText : colors.primaryText }}
+                onMouseEnter={(e) => { if (!schedulesOpen && !isSchedulesSectionActive) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!schedulesOpen && !isSchedulesSectionActive) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Schedules' : ''}
+              >
+                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <Calendar className="w-5 h-5 flex-shrink-0" style={{ color: (schedulesOpen || isSchedulesSectionActive) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Schedules</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                    schedulesOpen ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        schedulesOpen ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: schedulesOpen ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
+                )}
+              </button>
+              {schedulesOpen && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3">
+                  {schedulesSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile collapsed={sidebarCollapsed} isSubItem />
                   ))}
                 </div>
