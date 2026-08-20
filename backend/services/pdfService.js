@@ -580,10 +580,10 @@ const generateInvoicePDF = async (invoice) => {
 
       // ===== SERVICES INCLUDED TABLE =====
       if (!isWorkOrderInvoice && items.length > 0) {
-        // Section header - short line after text
+        // Section header - line AFTER text
         doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES INCLUDED', margin, y + 3, { lineBreak: false });
-        // Short gold line (50px) after heading
-        doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 82, y + 7).lineTo(margin + 132, y + 7).stroke();
+        // Gold line AFTER text (~85px wide at fontSize 9)
+        doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 88, y + 7).lineTo(margin + 118, y + 7).stroke();
         doc.font('Helvetica');
         y += 18;
         
