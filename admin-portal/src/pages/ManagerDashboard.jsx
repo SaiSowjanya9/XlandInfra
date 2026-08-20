@@ -163,12 +163,13 @@ const ManagerDashboard = ({ user }) => {
   };
 
   const propertyTypeData = (() => {
-    const typeCounts = {};
+    const colors = { 'Gated Community': '#3B82F6', 'Apartment': '#8B5CF6', 'Villa': '#10B981', 'Flat': '#F59E0B', 'Plot': '#EF4444', 'Other': '#6B7280' };
+    // Initialize default types with 0 to always show labels
+    const typeCounts = { 'Gated Community': 0, 'Apartment': 0, 'Villa': 0, 'Flat': 0, 'Plot': 0 };
     filteredProperties.forEach(p => {
       const type = normalizePropertyType(p.property_type || p.propertyType || p.type);
       typeCounts[type] = (typeCounts[type] || 0) + 1;
     });
-    const colors = { 'Gated Community': '#3B82F6', 'Apartment': '#8B5CF6', 'Villa': '#10B981', 'Flat': '#F59E0B', 'Plot': '#EF4444', 'Other': '#6B7280' };
     return Object.entries(typeCounts).map(([name, value]) => ({ name, value, color: colors[name] || '#6B7280' })).sort((a, b) => b.value - a.value);
   })();
   const totalPropertiesCount = filteredProperties.length;
