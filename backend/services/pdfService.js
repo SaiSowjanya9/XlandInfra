@@ -65,12 +65,15 @@ const drawPDFHeader = (doc, margin) => {
   const textX = margin + 30;
   doc.fontSize(11).fillColor(gold).text('XLAND INFRA', textX, 6);
   
-  // PVT LTD with decorative lines - positioned below
+  // PVT LTD with decorative lines - positioned below XLAND INFRA
   doc.fontSize(5).fillColor(gold);
-  doc.strokeColor(gold).lineWidth(0.3);
-  doc.moveTo(textX, 20).lineTo(textX + 8, 20).stroke();
-  doc.text('PVT LTD', textX + 10, 17);
-  doc.moveTo(textX + 22, 20).lineTo(textX + 30, 20).stroke();
+  doc.strokeColor(gold).lineWidth(0.4);
+  // Left line
+  doc.moveTo(textX, 19).lineTo(textX + 10, 19).stroke();
+  // PVT LTD text
+  doc.text('PVT LTD', textX + 12, 16, { lineBreak: false });
+  // Right line
+  doc.moveTo(textX + 32, 19).lineTo(textX + 42, 19).stroke();
   
   return headerHeight + 10; // Return starting Y position for content
 };
@@ -538,10 +541,10 @@ const generateInvoicePDF = async (invoice) => {
         const subcategory = workOrderSubcategory || woItem.subcategory || woItem.serviceSubcategory || '-';
         const woDescription = decodeHtml(workOrderDescription || woItem.description || woItem.details || '');
         
-        // Section header - line starts AFTER text
-        doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('WORK ORDER DETAILS', margin, y + 3);
-        // Short orange line after heading text (starts after ~100px)
-        doc.strokeColor('#F97316').lineWidth(0.5).moveTo(margin + 100, y + 7).lineTo(margin + 180, y + 7).stroke();
+        // Section header - short line after text
+        doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('WORK ORDER DETAILS', margin, y + 3, { lineBreak: false });
+        // Short orange line (50px) after heading
+        doc.strokeColor('#F97316').lineWidth(0.5).moveTo(margin + 95, y + 7).lineTo(margin + 145, y + 7).stroke();
         doc.font('Helvetica');
         y += 16;
         
@@ -577,9 +580,10 @@ const generateInvoicePDF = async (invoice) => {
 
       // ===== SERVICES INCLUDED TABLE =====
       if (!isWorkOrderInvoice && items.length > 0) {
-        // Section header - text only
-        doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES INCLUDED', margin, y + 3);
-        doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 70, y + 7).lineTo(pageWidth - margin, y + 7).stroke();
+        // Section header - short line after text
+        doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES INCLUDED', margin, y + 3, { lineBreak: false });
+        // Short gold line (50px) after heading
+        doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 82, y + 7).lineTo(margin + 132, y + 7).stroke();
         doc.font('Helvetica');
         y += 18;
         
@@ -622,9 +626,9 @@ const generateInvoicePDF = async (invoice) => {
       const summaryWidth = 170;
       const summaryX = pageWidth - margin - summaryWidth;
       
-      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX, y + 2);
-      // Short gold line after text (max 80px)
-      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 72, y + 6).lineTo(summaryX + 150, y + 6).stroke();
+      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX, y + 2, { lineBreak: false });
+      // Short gold line (50px) after heading
+      doc.strokeColor(gold).lineWidth(0.5).moveTo(summaryX + 68, y + 6).lineTo(summaryX + 118, y + 6).stroke();
       doc.font('Helvetica');
       y += 16;
       
