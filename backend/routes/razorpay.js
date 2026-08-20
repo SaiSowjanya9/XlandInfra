@@ -12,7 +12,9 @@ const {
   webhookLimiter,
   validatePaymentAmountMiddleware,
   fraudDetectionMiddleware,
-  logSecurityEvent
+  logSecurityEvent,
+  ipBlacklistMiddleware,
+  getFailedAttemptCount
 } = require('../middleware/paymentSecurity');
 const {
   verifyRazorpayWebhookSignature,
@@ -1198,6 +1200,20 @@ router.post('/verify-qr-token', async (req, res) => {
 });
 
 // ============================================
+// CHECK IF CAPTCHA IS REQUIRED FOR THIS IP
+// ============================================
+router.get('/public/captcha-status', ipBlacklistMiddleware, (req, res) => {
+  const ip = getClientIP(req);
+  const failedCount = getFailedAttemptCount(ip);
+  
+  res.json({
+    success: true,
+    requireCaptcha: failedCount >= 3,
+    failedAttempts: failedCount
+  });
+});
+
+// ============================================
 // VERIFY GOOGLE reCAPTCHA TOKEN
 // ============================================
 const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || '';
@@ -1257,15 +1273,20 @@ router.post('/verify-recaptcha', async (req, res) => {
 // ============================================
 // PUBLIC: GET INVOICE DETAILS FOR PAYMENT PAGE
 // Token-only URL - invoice ID extracted from token
+// Protected by IP blacklisting
 // ============================================
-router.get('/public/pay', async (req, res) => {
+router.get('/public/pay', ipBlacklistMiddleware, async (req, res) => {
   try {
     const { token } = req.query;
+    const ip = getClientIP(req);
 
     if (!token) {
+      // Record failed attempt for missing token
+      req.ipBlacklist.recordFailed();
       return res.status(400).json({
         success: false,
-        message: 'Payment token is required'
+        message: 'Payment token is required',
+        requireCaptcha: getFailedAttemptCount(ip) >= 3
       });
     }
 
@@ -1274,9 +1295,19 @@ router.get('/public/pay', async (req, res) => {
     const verification = verifyPaymentToken(token);
 
     if (!verification.valid) {
+      // Record failed attempt for invalid token
+      const blockResult = req.ipBlacklist.recordFailed();
+      
+      logSecurityEvent(req, 'INVALID_PAYMENT_TOKEN', {
+        error: verification.error,
+        remainingAttempts: blockResult.remainingAttempts
+      });
+      
       return res.status(400).json({
         success: false,
-        message: verification.error || 'Invalid or expired payment link'
+        message: verification.error || 'Invalid or expired payment link',
+        requireCaptcha: getFailedAttemptCount(ip) >= 3,
+        blocked: blockResult.blocked
       });
     }
 
@@ -1312,9 +1343,12 @@ router.get('/public/pay', async (req, res) => {
     `, [invoiceId, tokenHash]);
 
     if (invoices.length === 0) {
+      // Record failed attempt for invalid token hash
+      req.ipBlacklist.recordFailed();
       return res.status(404).json({
         success: false,
-        message: 'Invoice not found or payment link has expired'
+        message: 'Invoice not found or payment link has expired',
+        requireCaptcha: getFailedAttemptCount(ip) >= 3
       });
     }
 
@@ -1327,6 +1361,9 @@ router.get('/public/pay', async (req, res) => {
         message: 'This invoice has been cancelled'
       });
     }
+
+    // Clear failed attempts on successful access
+    req.ipBlacklist.clearFailed();
 
     // Return invoice data (frontend will handle "paid" status display)
     res.json({
@@ -1362,15 +1399,19 @@ router.get('/public/pay', async (req, res) => {
 
 // ============================================
 // PUBLIC: RECORD PAYMENT INTENT (for non-Razorpay methods)
+// Protected by IP blacklisting
 // ============================================
-router.post('/public/record-payment-intent', async (req, res) => {
+router.post('/public/record-payment-intent', ipBlacklistMiddleware, async (req, res) => {
   try {
     const { invoiceId, token, paymentMethod } = req.body;
+    const ip = getClientIP(req);
 
     if (!invoiceId || !token || !paymentMethod) {
+      req.ipBlacklist.recordFailed();
       return res.status(400).json({
         success: false,
-        message: 'Invoice ID, token, and payment method are required'
+        message: 'Invoice ID, token, and payment method are required',
+        requireCaptcha: getFailedAttemptCount(ip) >= 3
       });
     }
 
@@ -1384,11 +1425,16 @@ router.post('/public/record-payment-intent', async (req, res) => {
     );
 
     if (invoices.length === 0) {
+      req.ipBlacklist.recordFailed();
       return res.status(404).json({
         success: false,
-        message: 'Invoice not found or token invalid'
+        message: 'Invoice not found or token invalid',
+        requireCaptcha: getFailedAttemptCount(ip) >= 3
       });
     }
+    
+    // Clear failed attempts on successful access
+    req.ipBlacklist.clearFailed();
 
     // Log the payment intent
     console.log(`[Payment Intent] Invoice: ${invoiceId}, Method: ${paymentMethod}, Time: ${new Date().toISOString()}`);
