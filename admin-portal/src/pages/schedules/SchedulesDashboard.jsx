@@ -735,7 +735,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
               className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer"
               style={{ borderLeftWidth: '4px', borderLeftColor: card.borderColor }}
             >
-              <div className="flex items-start justify-between mb-2">
+              <div className="flex items-start justify-between mb-3">
                 <div 
                   className="w-10 h-10 rounded-lg flex items-center justify-center"
                   style={{ backgroundColor: card.iconBg }}
@@ -743,6 +743,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
                   <Icon className="w-5 h-5" style={{ color: card.iconColor }} />
                 </div>
               </div>
+              <p className="text-sm font-medium text-gray-600 mb-1">{card.label}</p>
               <p className="text-2xl font-bold text-gray-900">{card.value}</p>
               <p className="text-xs text-gray-500 mt-1 line-clamp-1">{card.percentage}</p>
               <p className="text-xs font-medium text-blue-600 mt-2 hover:underline">{card.link} <ArrowRight className="inline w-3 h-3" /></p>
@@ -865,26 +866,30 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
 
           {/* Calendar Navigation */}
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => setCalendarDate(new Date())}
-                className="px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"
+                onClick={() => {
+                  const now = new Date();
+                  console.log('Today clicked, setting date to:', now);
+                  setCalendarDate(now);
+                }}
+                className="px-3 py-1.5 text-sm font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg border border-blue-200"
               >
                 Today
               </button>
-              <span className="text-lg font-semibold text-gray-900">
-                {monthNames[calendarDate.getMonth()]} {calendarDate.getFullYear()}
-              </span>
-              <div className="flex items-center">
+              <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1))}
-                  className="p-1 hover:bg-gray-100 rounded"
+                  onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1))}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg"
                 >
                   <ChevronLeft className="w-5 h-5 text-gray-600" />
                 </button>
+                <span className="text-lg font-semibold text-gray-900 min-w-[140px] text-center">
+                  {monthNames[calendarDate.getMonth()]} {calendarDate.getFullYear()}
+                </span>
                 <button
-                  onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1))}
-                  className="p-1 hover:bg-gray-100 rounded"
+                  onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1))}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg"
                 >
                   <ChevronRight className="w-5 h-5 text-gray-600" />
                 </button>
