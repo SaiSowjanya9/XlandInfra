@@ -474,15 +474,15 @@ const generateInvoicePDF = async (invoice) => {
       doc.fontSize(8).fillColor(secondaryText).text('ID:', margin, y);
       doc.fontSize(10).fillColor(primaryText).font('Helvetica-Bold').text(invoiceId || 'N/A', margin + 12, y);
       
-      if (estimateId) {
-        doc.fontSize(7).fillColor(gold).font('Helvetica').text(`Estimate: ${estimateId}`, margin, y + 10);
-      }
-      
       const dateX = pageWidth - margin - 100;
       doc.fontSize(8).fillColor(secondaryText).font('Helvetica').text('Date:', dateX, y);
       const invDateStr = invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
       doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text(invDateStr, dateX + 28, y);
       
+      // Estimate and Due on same line (y + 12)
+      if (estimateId) {
+        doc.fontSize(7).fillColor(gold).font('Helvetica').text(`Estimate: ${estimateId}`, margin, y + 12);
+      }
       doc.fontSize(8).fillColor(secondaryText).font('Helvetica').text('Due:', dateX, y + 12);
       const dueDateStr = dueDate ? new Date(dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
       doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text(dueDateStr, dateX + 28, y + 12);
@@ -500,16 +500,16 @@ const generateInvoicePDF = async (invoice) => {
 
       // ===== PROPERTY & CUSTOMER DETAILS (cream bg, compact) =====
       const cardWidth = (contentWidth - 10) / 2;
-      const cardHeight = 65;
+      const cardHeight = 80;
       
       // Property Details Card
       doc.roundedRect(margin, y, cardWidth, cardHeight, 5).fill(cardBg);
       
-      doc.fontSize(8).fillColor(primaryText).font('Helvetica-Bold').text('PROPERTY DETAILS', margin + 10, y + 15);
+      doc.fontSize(8).fillColor(primaryText).font('Helvetica-Bold').text('PROPERTY DETAILS', margin + 10, y + 8);
       doc.font('Helvetica');
       
-      let py = y + 28;
-      const lineH = isCompact ? 9 : 10;
+      let py = y + 20;
+      const lineH = 11;
       doc.fontSize(7).fillColor(secondaryText);
       doc.text(`Property ID: ${propertyCode || '-'}`, margin + 10, py); py += lineH;
       doc.text(`Name: ${decodeHtml(propertyName) || '-'}`, margin + 10, py); py += lineH;
@@ -518,21 +518,21 @@ const generateInvoicePDF = async (invoice) => {
       doc.text(`City: ${city || '-'}`, margin + 10, py);
 
       // Customer Details Card
-      const custX = margin + cardWidth + 12;
+      const custX = margin + cardWidth + 10;
       doc.roundedRect(custX, y, cardWidth, cardHeight, 5).fill(cardBg);
       
-      doc.fontSize(8).fillColor(primaryText).font('Helvetica-Bold').text('CUSTOMER DETAILS', custX + 10, y + 15);
+      doc.fontSize(8).fillColor(primaryText).font('Helvetica-Bold').text('CUSTOMER DETAILS', custX + 10, y + 8);
       doc.font('Helvetica');
       
-      let cy = y + 28;
+      let cy = y + 20;
       doc.fontSize(7).fillColor(secondaryText);
       doc.text(`Name: ${decodeHtml(customerName) || '-'}`, custX + 10, cy); cy += lineH;
       doc.text(`Phone: ${customerPhone || '-'}`, custX + 10, cy); cy += lineH;
       const emailStr = customerEmail || '-';
-      doc.text(`Email: ${emailStr.length > 28 ? emailStr.substring(0, 28) + '...' : emailStr}`, custX + 10, cy); cy += lineH;
+      doc.text(`Email: ${emailStr.length > 30 ? emailStr.substring(0, 30) + '...' : emailStr}`, custX + 10, cy); cy += lineH;
       doc.text(`City: ${city || '-'}`, custX + 10, cy);
 
-      y += cardHeight + 8;
+      y += cardHeight + 10;
 
       // ===== WORK ORDER DETAILS (for work order invoices) =====
       if (isWorkOrderInvoice) {
@@ -593,10 +593,10 @@ const generateInvoicePDF = async (invoice) => {
         doc.rect(margin, y, contentWidth, tableHeaderH).fill(gold);
         doc.fontSize(8).fillColor(white);
         doc.text('#', margin + 8, y + 6);
-        doc.text('Service', margin + 35, y + 6);
-        doc.text('Description', margin + 120, y + 6);
-        doc.text('Frequency', margin + 340, y + 6);
-        doc.text('Visits', margin + 420, y + 6);
+        doc.text('Service', margin + 30, y + 6);
+        doc.text('Description', margin + 135, y + 6);
+        doc.text('Freq', margin + 410, y + 6);
+        doc.text('Visits', margin + 460, y + 6);
         y += tableHeaderH;
 
         // Table rows - compact
@@ -613,10 +613,10 @@ const generateInvoicePDF = async (invoice) => {
           doc.rect(margin, y, contentWidth, rowH).lineWidth(0.3).stroke(borderGray);
           doc.fontSize(7).fillColor(primaryText);
           doc.text(`${idx + 1}`, margin + 10, y + 5);
-          doc.text(serviceName.substring(0, 20), margin + 35, y + 5);
-          doc.fillColor(secondaryText).text(serviceDesc.substring(0, 55), margin + 120, y + 5);
-          doc.text(freq.substring(0, 10), margin + 340, y + 5);
-          doc.text(`${visits}`, margin + 428, y + 5);
+          doc.text(serviceName.substring(0, 22), margin + 30, y + 5);
+          doc.fillColor(secondaryText).text(serviceDesc.substring(0, 60), margin + 135, y + 5);
+          doc.text(freq.substring(0, 8), margin + 410, y + 5);
+          doc.text(`${visits}`, margin + 465, y + 5);
           y += rowH;
         });
 
