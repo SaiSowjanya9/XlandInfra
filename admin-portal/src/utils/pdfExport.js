@@ -129,61 +129,43 @@ const generatePDF = (data, type, filename) => {
     const borderLight = [229, 231, 235];     // Gray-200
     const gold = [180, 144, 52];             // Professional gold
 
-    // ===== HEADER - Black with elegant flowing gold wave (compact) =====
-    const headerHeight = 36;
+    // ===== HEADER - Simple black with gold bar (compact) =====
+    const headerHeight = 28;
     
     // Black header background
     doc.setFillColor(26, 26, 26); // #1a1a1a
     doc.rect(0, 0, pageWidth, headerHeight, 'F');
     
-    // Gold wave band at bottom
+    // Gold bar at bottom
     doc.setFillColor(201, 162, 39); // #c9a227
-    doc.rect(0, headerHeight - 6, pageWidth, 6, 'F');
+    doc.rect(0, headerHeight, pageWidth, 5, 'F');
     
-    // Add subtle curve overlay for wave effect
-    doc.setFillColor(26, 26, 26); // Black overlay for wave
-    doc.ellipse(pageWidth * 0.25, headerHeight - 3, 50, 4, 'F');
-    doc.ellipse(pageWidth * 0.75, headerHeight - 3, 50, 4, 'F');
-    
-    // Logo on left - BIGGER
-    const logoSize = 26;
+    // Logo on left - compact
+    const logoSize = 22;
     try {
-      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin, 4, logoSize, logoSize);
+      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 3, 3, logoSize, logoSize);
     } catch (e) {
       doc.setFillColor(...gold);
-      doc.roundedRect(margin, 4, 26, 26, 2, 2, 'F');
+      doc.roundedRect(margin + 3, 3, logoSize, logoSize, 2, 2, 'F');
     }
     
-    // Company name - "XLAND INFRA" in gold - SMALLER
-    const textX = margin + logoSize + 5;
+    // Company name - compact
+    const textX = margin + logoSize + 8;
     doc.setTextColor(...gold);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', textX, 14);
+    doc.text('XLAND INFRA', textX, 10);
     
-    // "PVT LTD" with decorative lines on both sides - positioned below
-    const pvtLtdY = 22;
-    const pvtLtdText = 'PVT LTD';
-    doc.setFontSize(6);
+    // PVT LTD with decorative lines - positioned below
+    doc.setFontSize(5);
     doc.setFont('helvetica', 'normal');
-    const pvtLtdWidth = doc.getTextWidth(pvtLtdText);
-    const lineLength = 10;
-    const lineGap = 2;
-    
-    // Left decorative line
     doc.setDrawColor(...gold);
     doc.setLineWidth(0.3);
-    doc.line(textX, pvtLtdY - 1.5, textX + lineLength, pvtLtdY - 1.5);
-    
-    // PVT LTD text
-    doc.setTextColor(...gold);
-    doc.text(pvtLtdText, textX + lineLength + lineGap, pvtLtdY);
-    
-    // Right decorative line
-    doc.line(textX + lineLength + lineGap + pvtLtdWidth + lineGap, pvtLtdY - 1.5, 
-             textX + lineLength + lineGap + pvtLtdWidth + lineGap + lineLength, pvtLtdY - 1.5);
+    doc.line(textX, 20, textX + 8, 20);
+    doc.text('PVT LTD', textX + 10, 21);
+    doc.line(textX + 22, 20, textX + 30, 20);
 
-    y = headerHeight + 8;
+    y = headerHeight + 10;
 
     // ===== DOCUMENT INFO ROW - Gray background =====
     doc.setFillColor(248, 250, 252); // gray-50
@@ -1075,21 +1057,21 @@ export const exportInvoiceToPDF = (invoice) => {
       doc.roundedRect(margin + 3, 3, logoSize, logoSize, 2, 2, 'F');
     }
     
-    // Company name - SMALLER
+    // Company name - compact
     doc.setTextColor(...gold);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', margin + logoSize + 8, 12);
+    doc.text('XLAND INFRA', margin + logoSize + 8, 10);
     
-    // PVT LTD with lines - smaller
+    // PVT LTD with lines - positioned below company name
     doc.setFontSize(5);
     doc.setFont('helvetica', 'normal');
     const pvtX = margin + logoSize + 8;
     doc.setDrawColor(...gold);
     doc.setLineWidth(0.3);
-    doc.line(pvtX, 18, pvtX + 8, 18);
-    doc.text('PVT LTD', pvtX + 10, 19);
-    doc.line(pvtX + 22, 18, pvtX + 30, 18);
+    doc.line(pvtX, 20, pvtX + 8, 20);
+    doc.text('PVT LTD', pvtX + 10, 21);
+    doc.line(pvtX + 22, 20, pvtX + 30, 20);
 
     y = headerHeight + 10;
 

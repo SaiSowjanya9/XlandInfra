@@ -470,15 +470,15 @@ const generateInvoicePDF = async (invoice) => {
       }
       
       // Company name - compact
-      doc.fontSize(11).fillColor(gold).text('XLAND INFRA', margin + 30, 8);
+      doc.fontSize(11).fillColor(gold).text('XLAND INFRA', margin + 30, 6);
       
-      // PVT LTD with lines - compact
+      // PVT LTD with lines - positioned below company name
       doc.fontSize(5).fillColor(gold);
       const pvtX = margin + 30;
       doc.strokeColor(gold).lineWidth(0.3);
-      doc.moveTo(pvtX, 18).lineTo(pvtX + 8, 18).stroke();
-      doc.text('PVT LTD', pvtX + 10, 15);
-      doc.moveTo(pvtX + 22, 18).lineTo(pvtX + 30, 18).stroke();
+      doc.moveTo(pvtX, 20).lineTo(pvtX + 8, 20).stroke();
+      doc.text('PVT LTD', pvtX + 10, 17);
+      doc.moveTo(pvtX + 22, 20).lineTo(pvtX + 30, 20).stroke();
 
       let y = headerHeight + 10;
 
