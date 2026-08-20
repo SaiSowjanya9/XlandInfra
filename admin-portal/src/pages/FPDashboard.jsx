@@ -18,7 +18,9 @@ import {
   UserPlus,
   Bell,
   X,
-  AlertTriangle
+  AlertTriangle,
+  Calendar,
+  ChevronDown
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import EstimatesOverviewBlocks from '../components/EstimatesOverviewBlocks';
@@ -44,6 +46,14 @@ const FPDashboard = ({ user }) => {
   const [woPriorityFilter, setWoPriorityFilter] = useState('all');
   const [woPropertyTypeFilter, setWoPropertyTypeFilter] = useState('all');
   const lastFetchRef = useRef(0);
+
+  // Main date filter state
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [startDateDisplay, setStartDateDisplay] = useState('');
+  const [endDateDisplay, setEndDateDisplay] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const datePickerRef = useRef(null);
 
   // Notification states
   const [notifications, setNotifications] = useState([]);
@@ -220,6 +230,64 @@ const FPDashboard = ({ user }) => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [fetchDashboardData]);
 
+  // Date formatting helpers
+  const formatDateIST = (dateStr) => {
+    if (!dateStr) return '';
+    if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+      const [year, month, day] = dateStr.split('T')[0].split('-');
+      return `${day}/${month}/${year}`;
+    }
+    const date = new Date(dateStr + 'T00:00:00');
+    const d = String(date.getDate()).padStart(2, '0');
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const y = date.getFullYear();
+    return `${d}/${m}/${y}`;
+  };
+
+  const parseISTDate = (displayStr) => {
+    if (!displayStr || displayStr.length < 10) return null;
+    const parts = displayStr.split('/');
+    if (parts.length !== 3) return null;
+    const [day, month, year] = parts;
+    return `${year}-${month}-${day}`;
+  };
+
+  // Close date picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (datePickerRef.current && !datePickerRef.current.contains(event.target)) {
+        setShowDatePicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter data by main date range
+  const dateFilteredWorkOrders = startDate && endDate ? workOrders.filter(wo => {
+    const woDate = new Date(wo.created_at || wo.createdAt);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return woDate >= start && woDate <= end;
+  }) : workOrders;
+
+  const dateFilteredEstimates = startDate && endDate ? estimates.filter(est => {
+    const estDate = new Date(est.created_at || est.createdAt);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return estDate >= start && estDate <= end;
+  }) : estimates;
+
+  const dateFilteredProperties = startDate && endDate ? properties.filter(p => {
+    const pDate = new Date(p.created_at || p.createdAt);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return pDate >= start && pDate <= end;
+  }) : properties;
+
   // Helper function to normalize status
   const getWOStatus = (wo) => (wo.status || '').toString().trim().toLowerCase().replace(/[_\s-]/g, '');
 
@@ -354,34 +422,35 @@ const FPDashboard = ({ user }) => {
 
   // Properties by Type data with time filter
   const getFilteredProperties = () => {
-    if (propertyChartFilter === 'all') return properties;
+    // Use dateFilteredProperties as base
+    if (propertyChartFilter === 'all') return dateFilteredProperties;
     
     const now = new Date();
-    let startDate = new Date();
+    let filterStart = new Date();
     
     switch (propertyChartFilter) {
       case 'week':
-        startDate.setDate(now.getDate() - 7);
+        filterStart.setDate(now.getDate() - 7);
         break;
       case 'month':
-        startDate.setMonth(now.getMonth() - 1);
+        filterStart.setMonth(now.getMonth() - 1);
         break;
       case 'quarter':
-        startDate.setMonth(now.getMonth() - 3);
+        filterStart.setMonth(now.getMonth() - 3);
         break;
       case 'sixmonths':
-        startDate.setMonth(now.getMonth() - 6);
+        filterStart.setMonth(now.getMonth() - 6);
         break;
       case 'year':
-        startDate.setMonth(0, 1); startDate.setHours(0,0,0,0); // Jan 1 of current year
+        filterStart.setMonth(0, 1); filterStart.setHours(0,0,0,0); // Jan 1 of current year
         break;
       default:
-        return properties;
+        return dateFilteredProperties;
     }
     
-    return properties.filter(p => {
+    return dateFilteredProperties.filter(p => {
       const createdAt = new Date(p.created_at || p.createdAt);
-      return createdAt >= startDate;
+      return createdAt >= filterStart;
     });
   };
 
@@ -496,6 +565,143 @@ const FPDashboard = ({ user }) => {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {/* Main Date Range Picker */}
+          <div className="relative" ref={datePickerRef}>
+            <button
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm hover:bg-gray-50 shadow-sm"
+            >
+              <Calendar className="w-4 h-4 text-blue-600" />
+              <span className="text-gray-700 font-medium">
+                {startDate && endDate
+                  ? `${formatDateIST(startDate)} - ${formatDateIST(endDate)}`
+                  : 'All Time'}
+              </span>
+              <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {showDatePicker && (
+              <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-4">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="DD/MM/YYYY"
+                        value={startDateDisplay}
+                        onChange={(e) => {
+                          setStartDateDisplay(e.target.value);
+                          const parsed = parseISTDate(e.target.value);
+                          if (parsed) setStartDate(parsed);
+                        }}
+                        className="w-full px-3 py-2.5 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
+                      />
+                      <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
+                        <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setStartDate(e.target.value); setStartDateDisplay(formatDateIST(e.target.value)); }}} />
+                        <Calendar className="w-4 h-4 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="DD/MM/YYYY"
+                        value={endDateDisplay}
+                        onChange={(e) => {
+                          setEndDateDisplay(e.target.value);
+                          const parsed = parseISTDate(e.target.value);
+                          if (parsed) setEndDate(parsed);
+                        }}
+                        className="w-full px-3 py-2.5 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
+                      />
+                      <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
+                        <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setEndDate(e.target.value); setEndDateDisplay(formatDateIST(e.target.value)); }}} />
+                        <Calendar className="w-4 h-4 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => {
+                        const now = new Date();
+                        const start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        setStartDate(start.toISOString().split('T')[0]);
+                        setEndDate(now.toISOString().split('T')[0]);
+                        setStartDateDisplay(formatDateIST(start.toISOString().split('T')[0]));
+                        setEndDateDisplay(formatDateIST(now.toISOString().split('T')[0]));
+                      }}
+                      className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      Last 7 Days
+                    </button>
+                    <button
+                      onClick={() => {
+                        const now = new Date();
+                        const start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        setStartDate(start.toISOString().split('T')[0]);
+                        setEndDate(now.toISOString().split('T')[0]);
+                        setStartDateDisplay(formatDateIST(start.toISOString().split('T')[0]));
+                        setEndDateDisplay(formatDateIST(now.toISOString().split('T')[0]));
+                      }}
+                      className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      Last 30 Days
+                    </button>
+                    <button
+                      onClick={() => {
+                        const now = new Date();
+                        const start = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+                        setStartDate(start.toISOString().split('T')[0]);
+                        setEndDate(now.toISOString().split('T')[0]);
+                        setStartDateDisplay(formatDateIST(start.toISOString().split('T')[0]));
+                        setEndDateDisplay(formatDateIST(now.toISOString().split('T')[0]));
+                      }}
+                      className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      Last 3 Months
+                    </button>
+                    <button
+                      onClick={() => {
+                        const lastYear = new Date().getFullYear() - 1;
+                        const startStr = `${lastYear}-01-01`;
+                        const endStr = `${lastYear}-12-31`;
+                        setStartDate(startStr);
+                        setEndDate(endStr);
+                        setStartDateDisplay(formatDateIST(startStr));
+                        setEndDateDisplay(formatDateIST(endStr));
+                      }}
+                      className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      Last Year
+                    </button>
+                  </div>
+                  <div className="flex justify-between pt-3 border-t border-gray-100">
+                    <button
+                      onClick={() => {
+                        setStartDate('');
+                        setEndDate('');
+                        setStartDateDisplay('');
+                        setEndDateDisplay('');
+                      }}
+                      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      onClick={() => setShowDatePicker(false)}
+                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          
           {/* Notification Bell */}
           <div className="relative" ref={notificationRef}>
             <button
