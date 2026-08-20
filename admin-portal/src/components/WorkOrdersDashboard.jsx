@@ -409,19 +409,20 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
     });
   };
 
-  // Service Category trend data (Plumbing, Electrical, HVAC, etc.)
+  // Service Category trend data - ALL categories from actual work orders
   const getCategoryTrendData = () => {
     const filtered = applyPeriodFilter(dateFilteredWorkOrders, categoryTrendFilter);
     
-    // Get all unique service categories (Plumbing, Electrical, etc.)
-    const categorySet = new Set();
+    // Get ALL unique service categories from work orders (no limit)
+    const categoryCounts = {};
     filtered.forEach(wo => {
       const category = wo.category_name || wo.category || wo.service_category || wo.serviceCategory || 'Other';
-      if (category && category !== 'Other') {
-        categorySet.add(category);
+      if (category) {
+        categoryCounts[category] = (categoryCounts[category] || 0) + 1;
       }
     });
-    const categories = Array.from(categorySet).slice(0, 6); // Limit to top 6
+    // Sort by count (most common first) and get all categories
+    const categories = Object.keys(categoryCounts).sort((a, b) => categoryCounts[b] - categoryCounts[a]);
     
     const now = new Date();
     const timePoints = [];
@@ -504,7 +505,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
     return { data: trendData, categories };
   };
 
-  // Category colors for trend chart
+  // Category colors for trend chart - extended palette for all categories
   const categoryColors = [
     '#3B82F6', // blue
     '#10B981', // green
@@ -513,7 +514,15 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
     '#EF4444', // red
     '#06B6D4', // cyan
     '#EC4899', // pink
-    '#84CC16'  // lime
+    '#84CC16', // lime
+    '#F97316', // orange
+    '#6366F1', // indigo
+    '#14B8A6', // teal
+    '#A855F7', // violet
+    '#DC2626', // red-600
+    '#0EA5E9', // sky
+    '#22C55E', // green-500
+    '#FBBF24'  // yellow
   ];
 
   // Average completion time data
