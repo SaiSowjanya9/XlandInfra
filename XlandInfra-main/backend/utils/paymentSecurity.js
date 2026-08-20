@@ -16,23 +16,35 @@ const crypto = require('crypto');
 // CONFIGURATION
 // =============================================================================
 
-// Secret keys - MUST be set in production environment
-const PAYMENT_TOKEN_SECRET = process.env.PAYMENT_TOKEN_SECRET || process.env.JWT_SECRET || 'payment-token-secret-change-in-production';
-const QR_TOKEN_SECRET = process.env.QR_TOKEN_SECRET || process.env.JWT_SECRET || 'qr-token-secret-change-in-production';
-
 // Token expiration times
 const PAYMENT_TOKEN_EXPIRY = 30 * 60 * 1000; // 30 minutes
 const QR_TOKEN_EXPIRY = 15 * 60 * 1000; // 15 minutes for QR codes (shorter for security)
 const PAYMENT_LINK_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days for payment links
 
-// Validate secrets are set in production
-if (process.env.NODE_ENV === 'production') {
+// Secret keys - MUST be set via environment variables
+// In production: Fail immediately if not set (security requirement)
+// In development: Use JWT_SECRET as fallback for convenience
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (isProduction) {
   if (!process.env.PAYMENT_TOKEN_SECRET) {
-    console.warn('WARNING: PAYMENT_TOKEN_SECRET not set in production. Using fallback.');
+    console.error('FATAL: PAYMENT_TOKEN_SECRET must be set in production!');
+    console.error('Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+    process.exit(1);
   }
   if (!process.env.QR_TOKEN_SECRET) {
-    console.warn('WARNING: QR_TOKEN_SECRET not set in production. Using fallback.');
+    console.error('FATAL: QR_TOKEN_SECRET must be set in production!');
+    console.error('Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+    process.exit(1);
   }
+}
+
+// Use environment variables, fallback to JWT_SECRET only in development
+const PAYMENT_TOKEN_SECRET = process.env.PAYMENT_TOKEN_SECRET || process.env.JWT_SECRET;
+const QR_TOKEN_SECRET = process.env.QR_TOKEN_SECRET || process.env.JWT_SECRET;
+
+if (!PAYMENT_TOKEN_SECRET || !QR_TOKEN_SECRET) {
+  console.warn('WARNING: Payment secrets not fully configured. Set PAYMENT_TOKEN_SECRET and QR_TOKEN_SECRET in .env');
 }
 
 // =============================================================================
