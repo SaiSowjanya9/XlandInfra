@@ -53,16 +53,23 @@ const STATUS_CONFIG = {
 
 // Helper to decode HTML entities (fix triple/double encoded ampersands etc.)
 const decodeHtmlEntities = (str) => {
-  if (!str) return str;
-  return String(str)
-    .replace(/&amp;amp;amp;/g, '&')
-    .replace(/&amp;amp;/g, '&')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ');
+  if (!str) return str || '';
+  let decoded = String(str);
+  // Run multiple passes to handle nested encoding
+  for (let i = 0; i < 5; i++) {
+    const before = decoded;
+    decoded = decoded
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&#x27;/g, "'")
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&#x2F;/g, '/');
+    if (decoded === before) break; // No more changes
+  }
+  return decoded;
 };
 
 const formatCurrency = (amount) => {
@@ -1035,24 +1042,29 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
             className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* ===== HEADER - Black #151515 with gold wave separator ===== */}
+            {/* ===== HEADER - Black with gold top border (Image 2 style) ===== */}
             <div className="flex-shrink-0 relative">
-              <div className="bg-[#151515] px-6 py-5 pb-10">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-12 object-contain" />
-                    <div>
-                      <h1 className="text-[#D39A1A] text-xl font-bold tracking-wide">XLAND INFRA</h1>
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-[1px] bg-[#D39A1A]"></div>
-                        <span className="text-[#D39A1A] text-[10px] tracking-[0.2em]">PVT LTD</span>
-                        <div className="w-8 h-[1px] bg-[#D39A1A]"></div>
-                      </div>
+              {/* Gold top border */}
+              <div className="h-1 bg-gradient-to-r from-[#B77A00] via-[#D39A1A] to-[#B77A00]"></div>
+              <div className="bg-[#1a1a1a] px-6 py-6 pb-12">
+                {/* Close button - top right */}
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setShowDetailPanel(false); setSelectedInvoice(null); }} 
+                  className="absolute top-3 right-3 p-1.5 hover:bg-white/10 rounded transition-colors z-10"
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+                {/* Centered logo and text */}
+                <div className="flex items-center justify-center gap-5">
+                  <img src="/logo.webp" alt="XLAND INFRA" className="h-16 w-16 object-contain" />
+                  <div>
+                    <h1 className="text-[#D39A1A] text-2xl font-bold tracking-wider">XLAND INFRA</h1>
+                    <div className="flex items-center justify-center gap-3 mt-1">
+                      <div className="w-12 h-[1px] bg-[#D39A1A]"></div>
+                      <span className="text-[#D39A1A] text-xs tracking-[0.25em]">PVT LTD</span>
+                      <div className="w-12 h-[1px] bg-[#D39A1A]"></div>
                     </div>
                   </div>
-                  <button onClick={(e) => { e.stopPropagation(); setShowDetailPanel(false); setSelectedInvoice(null); }} className="p-1.5 hover:bg-white/10 rounded transition-colors">
-                    <X className="w-5 h-5 text-gray-400" />
-                  </button>
                 </div>
               </div>
               {/* Gold wave separator */}
@@ -1226,36 +1238,30 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                       <div className="flex-1 h-[1px] bg-[#c9a227]"></div>
                     </div>
                     
-                    {/* Services Table */}
+                    {/* Services Table - Proper HTML table for alignment */}
                     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                      {/* Table Header - Gold */}
-                      <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-[#c9a227]">
-                        <div className="col-span-1 text-sm font-semibold text-white text-center">#</div>
-                        <div className="col-span-2 text-sm font-semibold text-white">Service</div>
-                        <div className="col-span-5 text-sm font-semibold text-white text-center">Description</div>
-                        <div className="col-span-2 text-sm font-semibold text-white text-center">Frequency</div>
-                        <div className="col-span-2 text-sm font-semibold text-white text-right">Visits</div>
-                      </div>
-                      {/* Table Body */}
-                      <div className="divide-y divide-gray-100">
-                        {services.map((item, idx) => (
-                          <div key={idx} className="grid grid-cols-12 gap-2 px-4 py-3 items-center bg-white">
-                            <div className="col-span-1 text-center text-sm text-gray-700">{idx + 1}</div>
-                            <div className="col-span-2">
-                              <p className="text-sm font-medium text-gray-800">{item.name}</p>
-                            </div>
-                            <div className="col-span-5 text-center">
-                              <p className="text-sm text-gray-600">{item.description || '-'}</p>
-                            </div>
-                            <div className="col-span-2 text-center">
-                              <p className="text-sm text-gray-600">{item.frequency}</p>
-                            </div>
-                            <div className="col-span-2 text-right">
-                              <p className="text-sm font-medium text-gray-800">{item.visits}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-[#c9a227]">
+                            <th className="w-12 px-3 py-3 text-sm font-semibold text-white text-center">#</th>
+                            <th className="w-32 px-3 py-3 text-sm font-semibold text-white text-left">Service</th>
+                            <th className="px-3 py-3 text-sm font-semibold text-white text-left">Description</th>
+                            <th className="w-24 px-3 py-3 text-sm font-semibold text-white text-center">Frequency</th>
+                            <th className="w-16 px-3 py-3 text-sm font-semibold text-white text-center">Visits</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {services.map((item, idx) => (
+                            <tr key={idx} className="bg-white">
+                              <td className="px-3 py-3 text-sm text-gray-700 text-center">{idx + 1}</td>
+                              <td className="px-3 py-3 text-sm font-medium text-gray-800">{decodeHtmlEntities(item.name)}</td>
+                              <td className="px-3 py-3 text-sm text-gray-600">{decodeHtmlEntities(item.description) || '-'}</td>
+                              <td className="px-3 py-3 text-sm text-gray-600 text-center">{item.frequency}</td>
+                              <td className="px-3 py-3 text-sm font-medium text-gray-800 text-center">{item.visits}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 ) : null;
