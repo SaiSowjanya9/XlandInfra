@@ -1181,19 +1181,20 @@ export const exportInvoiceToPDF = (invoice) => {
     // ===== WORK ORDER DETAILS (for work order invoices) =====
     if (isWorkOrderInvoice) {
       const woItem = services[0] || {};
-      const category = woItem.category || invoice.workOrderCategory || invoice.work_order_category || '-';
-      const subcategory = woItem.subcategory || invoice.workOrderSubcategory || invoice.work_order_subcategory || '-';
-      const woDescription = decodeHtml(woItem.description || invoice.workOrderDescription || '');
+      const category = invoice.workOrderCategory || invoice.work_order_category || woItem.category || '-';
+      const subcategory = invoice.workOrderSubcategory || invoice.work_order_subcategory || woItem.subcategory || '-';
+      const woDescription = decodeHtml(invoice.workOrderDescription || invoice.work_order_description || woItem.description || '');
       const woId = invoice.workOrderId || invoice.work_order_id || '-';
       
-      // Section header
+      // Section header - line starts AFTER text
       doc.setTextColor(...primaryText);
       doc.setFontSize(7);
       doc.setFont('helvetica', 'bold');
       doc.text('WORK ORDER DETAILS', margin, y + 5);
       doc.setDrawColor(249, 115, 22); // Orange
       doc.setLineWidth(0.3);
-      doc.line(margin + 42, y + 4, margin + 100, y + 4);
+      // Short orange line after heading text
+      doc.line(margin + 48, y + 4, margin + 100, y + 4);
       y += 10;
       
       // Work order details box - orange tinted

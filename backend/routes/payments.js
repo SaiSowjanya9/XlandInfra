@@ -967,10 +967,15 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
              COALESCE(p.city, p2.city) as city,
              COALESCE(p.contact_person, p2.contact_person) as contact_person, 
              COALESCE(p.contact_phone, p2.contact_phone) as contact_phone, 
-             COALESCE(p.contact_email, p2.contact_email) as contact_email
+             COALESCE(p.contact_email, p2.contact_email) as contact_email,
+             e.work_order_id as est_work_order_id,
+             e.work_order_category,
+             e.work_order_subcategory,
+             e.work_order_description
       FROM invoices i
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
       LEFT JOIN onboarded_properties p2 ON i.property_code = p2.property_id
+      LEFT JOIN estimates e ON i.source_estimate_id = e.estimate_id
       WHERE i.id = ?
     `;
     const params = [id];
@@ -1010,8 +1015,17 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
       taxPercentage: invoice.tax_percentage,
       totalAmount: invoice.total_amount,
       balanceAmount: invoice.balance_amount,
-      workOrderId: invoice.work_order_id
+      workOrderId: invoice.work_order_id || invoice.est_work_order_id,
+      workOrderCategory: invoice.work_order_category,
+      workOrderSubcategory: invoice.work_order_subcategory,
+      workOrderDescription: invoice.work_order_description
     };
+    
+    console.log('[PDF] Work Order Data:', { 
+      workOrderId: pdfData.workOrderId, 
+      category: pdfData.workOrderCategory, 
+      subcategory: pdfData.workOrderSubcategory 
+    });
     
     const pdfBuffer = await generateInvoicePDF(pdfData);
     
