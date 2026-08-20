@@ -400,12 +400,6 @@ const FPDashboard = ({ user }) => {
   };
 
   const propertyTypeData = (() => {
-    const typeCounts = {};
-    filteredProperties.forEach(p => {
-      const type = normalizePropertyType(p.property_type || p.propertyType || p.type);
-      typeCounts[type] = (typeCounts[type] || 0) + 1;
-    });
-    
     const colors = {
       'Gated Community': '#3B82F6',
       'Apartment': '#8B5CF6',
@@ -414,6 +408,20 @@ const FPDashboard = ({ user }) => {
       'Plot': '#EF4444',
       'Other': '#6B7280'
     };
+    
+    // Initialize all default types with 0
+    const typeCounts = {
+      'Gated Community': 0,
+      'Apartment': 0,
+      'Villa': 0,
+      'Flat': 0,
+      'Plot': 0
+    };
+    
+    filteredProperties.forEach(p => {
+      const type = normalizePropertyType(p.property_type || p.propertyType || p.type);
+      typeCounts[type] = (typeCounts[type] || 0) + 1;
+    });
     
     return Object.entries(typeCounts)
       .map(([name, value]) => ({ 
