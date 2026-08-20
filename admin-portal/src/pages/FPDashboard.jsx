@@ -566,15 +566,15 @@ const FPDashboard = ({ user }) => {
           <div className="relative" ref={datePickerRef}>
             <button
               onClick={() => setShowDatePicker(!showDatePicker)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm hover:bg-gray-50 shadow-sm"
+              className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm hover:bg-gray-50 shadow-sm whitespace-nowrap"
             >
-              <Calendar className="w-4 h-4 text-blue-600" />
-              <span className="text-gray-700 font-medium">
+              <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
+              <span className="text-gray-700 font-medium whitespace-nowrap">
                 {startDate && endDate
                   ? `${formatDateIST(startDate)} - ${formatDateIST(endDate)}`
                   : 'All Time'}
               </span>
-              <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform shrink-0 ${showDatePicker ? 'rotate-180' : ''}`} />
             </button>
             
             {showDatePicker && (
