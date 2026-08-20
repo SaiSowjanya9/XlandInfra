@@ -968,13 +968,14 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
              COALESCE(p.contact_person, p2.contact_person) as contact_person, 
              COALESCE(p.contact_phone, p2.contact_phone) as contact_phone, 
              COALESCE(p.contact_email, p2.contact_email) as contact_email,
-             e.work_order_id as est_work_order_id,
-             e.work_order_category,
-             e.work_order_subcategory,
-             e.work_order_description
+             COALESCE(fe.work_order_id, e.work_order_id) as est_work_order_id,
+             COALESCE(fe.work_order_category, e.work_order_category) as work_order_category,
+             COALESCE(fe.work_order_subcategory, e.work_order_subcategory) as work_order_subcategory,
+             COALESCE(fe.work_order_description, e.work_order_description) as work_order_description
       FROM invoices i
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
       LEFT JOIN onboarded_properties p2 ON i.property_code = p2.property_id
+      LEFT JOIN fp_estimates fe ON i.source_estimate_id = fe.estimate_id
       LEFT JOIN estimates e ON i.source_estimate_id = e.estimate_id
       WHERE i.id = ?
     `;
