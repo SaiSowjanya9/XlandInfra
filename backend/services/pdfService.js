@@ -68,12 +68,12 @@ const drawPDFHeader = (doc, margin) => {
   // PVT LTD with decorative lines - positioned below XLAND INFRA
   doc.fontSize(5).fillColor(gold);
   doc.strokeColor(gold).lineWidth(0.4);
-  // Left line (with gap before text)
-  doc.moveTo(textX, 19).lineTo(textX + 6, 19).stroke();
-  // PVT LTD text
-  doc.text('PVT LTD', textX + 12, 16, { lineBreak: false });
-  // Right line (with 12px gap after LTD text)
-  doc.moveTo(textX + 48, 19).lineTo(textX + 58, 19).stroke();
+  // Left line (8px long)
+  doc.moveTo(textX, 19).lineTo(textX + 8, 19).stroke();
+  // PVT LTD text (6px gap on each side)
+  doc.text('PVT LTD', textX + 14, 16, { lineBreak: false });
+  // Right line (6px gap after text, 8px long) - "PVT LTD" ~22px wide at fontSize 5
+  doc.moveTo(textX + 42, 19).lineTo(textX + 50, 19).stroke();
   
   return headerHeight + 10; // Return starting Y position for content
 };
@@ -542,10 +542,10 @@ const generateInvoicePDF = async (invoice) => {
         const subcategory = workOrderSubcategory || woItem.subcategory || woItem.serviceSubcategory || '-';
         const woDescription = decodeHtml(workOrderDescription || woItem.description || woItem.details || '');
         
-        // Section header - decorative line AFTER text with spacing (gold like PRICE SUMMARY)
+        // Section header - decorative line AFTER text with spacing (matching SERVICES INCLUDED & PRICE SUMMARY)
         doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('WORK ORDER DETAILS', margin, y + 3, { lineBreak: false });
-        // Gold dash AFTER text with spacing gap
-        doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 130, y + 7).lineTo(margin + 160, y + 7).stroke();
+        // Gold dash AFTER text with 20px gap (WORK ORDER DETAILS ~115px wide)
+        doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 135, y + 7).lineTo(margin + 165, y + 7).stroke();
         doc.font('Helvetica');
         y += 16;
         
@@ -581,10 +581,10 @@ const generateInvoicePDF = async (invoice) => {
 
       // ===== SERVICES INCLUDED TABLE =====
       if (!isWorkOrderInvoice && items.length > 0) {
-        // Section header - line AFTER text with spacing
+        // Section header - line AFTER text with spacing (matching PRICE SUMMARY spacing)
         doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES INCLUDED', margin, y + 3, { lineBreak: false });
-        // Gold line AFTER text with 10px gap
-        doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 100, y + 7).lineTo(margin + 130, y + 7).stroke();
+        // Gold line AFTER text with 20px gap (SERVICES INCLUDED ~90px wide)
+        doc.strokeColor(gold).lineWidth(0.5).moveTo(margin + 110, y + 7).lineTo(margin + 140, y + 7).stroke();
         doc.font('Helvetica');
         y += 18;
         
