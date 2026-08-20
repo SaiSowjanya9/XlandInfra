@@ -129,10 +129,10 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   const [zoneFilter, setZoneFilter] = useState('all');
   const [zones, setZones] = useState([]);
   
-  // Chart filters
-  const [statusChartFilter, setStatusChartFilter] = useState('month');
-  const [propertyTypeFilter, setPropertyTypeFilter] = useState('month');
-  const [serviceCategoryFilter, setServiceCategoryFilter] = useState('month');
+  // Chart filters - default to 'all' (All Time)
+  const [statusChartFilter, setStatusChartFilter] = useState('all');
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
+  const [serviceCategoryFilter, setServiceCategoryFilter] = useState('all');
   
   // Calendar states
   const [calendarDate, setCalendarDate] = useState(new Date());
@@ -237,6 +237,9 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         break;
       case 'quarter':
         filterDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+        break;
+      case '6months':
+        filterDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
         break;
       case 'year':
         filterDate = new Date(now.getFullYear(), 0, 1);
@@ -570,11 +573,12 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         onChange={(e) => onChange(e.target.value)}
         className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-1.5 pr-8 text-sm font-medium text-gray-700 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
+        <option value="all">All Time</option>
         <option value="week">This Week</option>
         <option value="month">This Month</option>
         <option value="quarter">This Quarter</option>
+        <option value="6months">Last 6 Months</option>
         <option value="year">This Year</option>
-        <option value="all">All Time</option>
       </select>
       <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
     </div>
