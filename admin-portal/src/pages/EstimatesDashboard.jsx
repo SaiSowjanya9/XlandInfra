@@ -748,12 +748,13 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                     <button
                       onClick={() => {
                         const now = new Date();
-                        const yearAgo = new Date(now);
-                        yearAgo.setFullYear(now.getFullYear() - 1);
-                        setStartDate(yearAgo.toISOString().split('T')[0]);
-                        setEndDate(now.toISOString().split('T')[0]);
-                        setStartDateDisplay(formatDateIST(yearAgo.toISOString().split('T')[0]));
-                        setEndDateDisplay(formatDateIST(now.toISOString().split('T')[0]));
+                        const lastYear = now.getFullYear() - 1;
+                        const start = new Date(lastYear, 0, 1); // Jan 1 of last year
+                        const end = new Date(lastYear, 11, 31); // Dec 31 of last year
+                        setStartDate(start.toISOString().split('T')[0]);
+                        setEndDate(end.toISOString().split('T')[0]);
+                        setStartDateDisplay(formatDateIST(start.toISOString().split('T')[0]));
+                        setEndDateDisplay(formatDateIST(end.toISOString().split('T')[0]));
                       }}
                       className="px-3 py-1.5 text-xs bg-white/60 hover:bg-white/80 border border-gray-200/50 rounded-full backdrop-blur-sm transition-all hover:shadow-sm"
                     >
