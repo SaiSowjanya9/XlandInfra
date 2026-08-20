@@ -1055,14 +1055,14 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                   <X className="w-5 h-5 text-gray-400" />
                 </button>
                 {/* Centered logo and text */}
-                <div className="flex items-center justify-center gap-4">
-                  <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-12 object-contain" />
+                <div className="flex items-center justify-center gap-3">
+                  <img src="/logo.webp" alt="XLAND INFRA" className="h-14 w-14 object-contain" />
                   <div>
-                    <h1 className="text-[#D39A1A] text-xl font-bold tracking-wider">XLAND INFRA</h1>
-                    <div className="flex items-center justify-center gap-2 mt-0.5">
-                      <div className="w-8 h-[1px] bg-[#D39A1A]"></div>
-                      <span className="text-[#D39A1A] text-[10px] tracking-[0.2em]">PVT LTD</span>
-                      <div className="w-8 h-[1px] bg-[#D39A1A]"></div>
+                    <h1 className="text-[#D39A1A] text-base font-bold tracking-wider">XLAND INFRA</h1>
+                    <div className="flex items-center justify-center gap-1.5 mt-0.5">
+                      <div className="w-6 h-[1px] bg-[#D39A1A]"></div>
+                      <span className="text-[#D39A1A] text-[8px] tracking-[0.15em]">PVT LTD</span>
+                      <div className="w-6 h-[1px] bg-[#D39A1A]"></div>
                     </div>
                   </div>
                 </div>

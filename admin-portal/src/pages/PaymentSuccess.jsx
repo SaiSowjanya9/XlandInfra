@@ -278,9 +278,12 @@ const PaymentSuccess = () => {
           {/* Receipt Header */}
           <div className="bg-[#151515] text-white p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-[#c9a227] font-bold text-xl">XLAND INFRA</h2>
-                <p className="text-gray-400 text-sm">Payment Receipt</p>
+              <div className="flex items-center gap-3">
+                <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-12 object-contain" />
+                <div>
+                  <h2 className="text-[#c9a227] font-bold text-base">XLAND INFRA</h2>
+                  <p className="text-gray-400 text-sm">Payment Receipt</p>
+                </div>
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-400">Receipt No.</p>
