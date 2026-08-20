@@ -1298,7 +1298,7 @@ const InvoiceDetailPanel = ({
             </button>
             {/* Centered logo and text - vertically aligned */}
             <div className="flex items-center justify-center gap-3">
-              <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-12 object-contain" />
+              <img src="/logo.webp" alt="XLAND INFRA" className="h-14 w-14 object-contain" />
               <div className="flex flex-col justify-center">
                 <h1 className="text-[#D39A1A] text-sm font-bold tracking-wider leading-tight">XLAND INFRA</h1>
                 <div className="flex items-center gap-1 mt-0.5">
