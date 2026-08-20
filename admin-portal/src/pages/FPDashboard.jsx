@@ -517,7 +517,7 @@ const FPDashboard = ({ user }) => {
   return (
     <div className="space-y-6">
       {/* Header with Stats Cards - Single Row Layout */}
-      <div className="flex items-center justify-between gap-4 flex-nowrap overflow-x-auto">
+      <div className="flex items-center justify-between gap-4 flex-nowrap overflow-visible">
         <div className="flex items-center gap-6 flex-nowrap">
           <div className="shrink-0 min-w-max">
             <h1 className="text-2xl font-bold text-gray-900 whitespace-nowrap">
@@ -525,40 +525,37 @@ const FPDashboard = ({ user }) => {
             </h1>
             <p className="text-gray-500 mt-1 whitespace-nowrap">Here's what's happening with your business today.</p>
           </div>
-          <div className="flex items-center gap-3 flex-nowrap">
-            <Link to="/fp/properties" className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Building2 className="w-5 h-5 text-blue-600" />
+          <div className="flex items-center gap-2 flex-nowrap">
+            <Link to="/fp/properties" className="bg-white rounded-lg border border-gray-100 px-3 py-2 hover:shadow-md hover:border-blue-200 transition-all duration-200 group">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Building2 className="w-4 h-4 text-blue-600" />
                 </div>
-                <div>
+                <div className="text-center">
                   <p className="text-xs text-gray-500">Properties</p>
-                  <p className="text-xl font-bold text-gray-900">{stats?.properties || 0}</p>
-                  <p className="text-[10px] text-gray-400">Total Properties</p>
+                  <p className="text-lg font-bold text-gray-900">{stats?.properties || 0}</p>
                 </div>
               </div>
             </Link>
-            <Link to="/fp/vendors" className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-amber-200 transition-all duration-200 group">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Store className="w-5 h-5 text-amber-600" />
+            <Link to="/fp/vendors" className="bg-white rounded-lg border border-gray-100 px-3 py-2 hover:shadow-md hover:border-amber-200 transition-all duration-200 group">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Store className="w-4 h-4 text-amber-600" />
                 </div>
-                <div>
+                <div className="text-center">
                   <p className="text-xs text-gray-500">Vendors</p>
-                  <p className="text-xl font-bold text-gray-900">{stats?.vendors || 0}</p>
-                  <p className="text-[10px] text-gray-400">Total Vendors</p>
+                  <p className="text-lg font-bold text-gray-900">{stats?.vendors || 0}</p>
                 </div>
               </div>
             </Link>
-            <Link to="/fp/employees" className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-orange-200 transition-all duration-200 group">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Users className="w-5 h-5 text-orange-600" />
+            <Link to="/fp/employees" className="bg-white rounded-lg border border-gray-100 px-3 py-2 hover:shadow-md hover:border-orange-200 transition-all duration-200 group">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Users className="w-4 h-4 text-orange-600" />
                 </div>
-                <div>
+                <div className="text-center">
                   <p className="text-xs text-gray-500">Employees</p>
-                  <p className="text-xl font-bold text-gray-900">{stats?.employees || 0}</p>
-                  <p className="text-[10px] text-gray-400">Total Employees</p>
+                  <p className="text-lg font-bold text-gray-900">{stats?.employees || 0}</p>
                 </div>
               </div>
             </Link>
