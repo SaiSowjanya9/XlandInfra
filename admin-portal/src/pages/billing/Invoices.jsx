@@ -1463,7 +1463,7 @@ const InvoiceDetailPanel = ({
                   Work Order Details
                 </h3>
                 <div className="bg-orange-50 rounded-lg p-3 border border-orange-100">
-                  <div className="grid grid-cols-4 gap-3">
+                  <div className="grid grid-cols-3 gap-3 mb-2">
                     <div>
                       <p className="text-xs text-gray-500">Work Order ID</p>
                       <p className="text-sm font-semibold text-orange-600">{invoice.sourceWorkOrderId || '-'}</p>
@@ -1476,13 +1476,13 @@ const InvoiceDetailPanel = ({
                       <p className="text-xs text-gray-500">Subcategory</p>
                       <p className="text-sm font-semibold text-gray-800">{subcategory}</p>
                     </div>
-                    {workOrderItem.description && (
-                      <div>
-                        <p className="text-xs text-gray-500">Description</p>
-                        <p className="text-sm text-gray-700 truncate" title={workOrderItem.description}>{workOrderItem.description}</p>
-                      </div>
-                    )}
                   </div>
+                  {workOrderItem.description && (
+                    <div className="pt-2 border-t border-orange-200">
+                      <p className="text-xs text-gray-500">Description</p>
+                      <p className="text-sm text-gray-700">{workOrderItem.description}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             );
