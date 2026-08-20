@@ -1049,8 +1049,9 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                         type="monotone" 
                         dataKey={cat} 
                         stroke={categoryColors[index % categoryColors.length]} 
-                        strokeWidth={2} 
-                        dot={{ fill: categoryColors[index % categoryColors.length], strokeWidth: 0, r: 4 }}
+                        strokeWidth={2.5} 
+                        dot={{ fill: categoryColors[index % categoryColors.length], strokeWidth: 2, stroke: '#fff', r: 5 }}
+                        activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
                       />
                     ))}
                   </LineChart>
