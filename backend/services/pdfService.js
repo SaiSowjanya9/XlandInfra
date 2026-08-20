@@ -41,6 +41,40 @@ const decodeHtml = (html) => {
   return decoded;
 };
 
+// ===== SHARED PDF HEADER FUNCTION =====
+// Used by all PDF exports for consistent branding
+const drawPDFHeader = (doc, margin) => {
+  const gold = '#C9A227';
+  const headerBlack = '#1a1a1a';
+  const headerHeight = 28;
+  
+  // Black header background
+  doc.rect(0, 0, 595, headerHeight).fill(headerBlack);
+  
+  // Gold bar at bottom
+  doc.rect(0, headerHeight, 595, 5).fill(gold);
+  
+  // Logo - compact
+  try {
+    doc.image(LOGO_PATH, margin + 3, 3, { width: 22, height: 22 });
+  } catch (logoErr) {
+    doc.roundedRect(margin + 3, 3, 22, 22, 2).fill(gold);
+  }
+  
+  // Company name - compact
+  const textX = margin + 30;
+  doc.fontSize(11).fillColor(gold).text('XLAND INFRA', textX, 6);
+  
+  // PVT LTD with decorative lines - positioned below
+  doc.fontSize(5).fillColor(gold);
+  doc.strokeColor(gold).lineWidth(0.3);
+  doc.moveTo(textX, 20).lineTo(textX + 8, 20).stroke();
+  doc.text('PVT LTD', textX + 10, 17);
+  doc.moveTo(textX + 22, 20).lineTo(textX + 30, 20).stroke();
+  
+  return headerHeight + 10; // Return starting Y position for content
+};
+
 // Generate estimate PDF and return as buffer
 const generateEstimatePDF = async (estimate) => {
   return new Promise((resolve, reject) => {
@@ -87,38 +121,14 @@ const generateEstimatePDF = async (estimate) => {
       const navy = '#1e3a5f';
       const lightGray = '#f8f9fa';
 
-      // Header - Black background with clean layout
-      doc.rect(0, 0, 612, 55).fill(black);
+      // ===== HEADER - Use shared function =====
+      let y = drawPDFHeader(doc, 50);
       
-      // Logo Icon (symbol only - left side) - BIGGER
-      try {
-        doc.image(LOGO_PATH, 48, 6, { width: 42, height: 42 });
-      } catch (logoErr) {
-        console.log('Logo load error:', logoErr.message);
-        // Fallback to gold square
-        doc.rect(48, 6, 42, 42).fill(gold);
-      }
-      
-      // Company Name text beside logo - SMALLER
-      doc.fontSize(12).fillColor(gold).text('XLAND INFRA', 98, 18);
-      const mainTextWidth = doc.widthOfString('XLAND INFRA');
-      doc.fontSize(6);
-      const pvtLtdText = 'PVT LTD';
-      const pvtLtdWidth = doc.widthOfString(pvtLtdText);
-      const pvtLtdX = 98 + (mainTextWidth - pvtLtdWidth) / 2;
-      doc.fillColor(gold).text(pvtLtdText, pvtLtdX, 34);
-      // Draw equal-length lines on both sides - smaller
-      const lineY = 38;
-      const lineGap = 3;
-      doc.strokeColor(gold).lineWidth(0.4);
-      doc.moveTo(98, lineY).lineTo(pvtLtdX - lineGap, lineY).stroke();
-      doc.moveTo(pvtLtdX + pvtLtdWidth + lineGap, lineY).lineTo(98 + mainTextWidth, lineY).stroke();
-      
-      // ESTIMATE badge on the right (rounded corners to match frontend)
-      doc.roundedRect(455, 12, 100, 26, 4).fill(gold);
-      doc.fontSize(11).fillColor(black).text('ESTIMATE', 455, 19, { width: 100, align: 'center', lineBreak: false });
+      // ESTIMATE badge on the right
+      doc.roundedRect(455, 8, 90, 20, 3).fill('#C9A227');
+      doc.fontSize(10).fillColor(black).text('ESTIMATE', 455, 12, { width: 90, align: 'center', lineBreak: false });
 
-      let y = 75;
+      y = 48;
 
       // Estimate Info - styled like invoice
       // ID label
@@ -453,34 +463,8 @@ const generateInvoicePDF = async (invoice) => {
       const itemCount = items.length;
       const isCompact = itemCount > 4;
 
-      // ===== HEADER - Simple black with gold wave (compact) =====
-      const headerHeight = 28;
-      
-      // Simple black header
-      doc.rect(0, 0, pageWidth, headerHeight).fill(headerBlack);
-      
-      // Gold wave - simple bar at bottom
-      doc.rect(0, headerHeight, pageWidth, 5).fill(gold);
-      
-      // Logo - compact
-      try {
-        doc.image(LOGO_PATH, margin + 3, 3, { width: 22, height: 22 });
-      } catch (logoErr) {
-        doc.roundedRect(margin + 3, 3, 22, 22, 2).fill(gold);
-      }
-      
-      // Company name - compact
-      doc.fontSize(11).fillColor(gold).text('XLAND INFRA', margin + 30, 6);
-      
-      // PVT LTD with lines - positioned below company name
-      doc.fontSize(5).fillColor(gold);
-      const pvtX = margin + 30;
-      doc.strokeColor(gold).lineWidth(0.3);
-      doc.moveTo(pvtX, 20).lineTo(pvtX + 8, 20).stroke();
-      doc.text('PVT LTD', pvtX + 10, 17);
-      doc.moveTo(pvtX + 22, 20).lineTo(pvtX + 30, 20).stroke();
-
-      let y = headerHeight + 10;
+      // ===== HEADER - Use shared function =====
+      let y = drawPDFHeader(doc, margin);
 
       // ===== ID / DATE / DUE ROW (Compact) =====
       doc.fontSize(8).fillColor(secondaryText).text('ID:', margin, y);
