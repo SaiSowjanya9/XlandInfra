@@ -298,20 +298,31 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
                   </div>
                   <div className="col-span-2">
                     <input
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) => updateLineItem(index, 'quantity', parseFloat(e.target.value) || 0)}
-                      min="1"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      type="text"
+                      inputMode="numeric"
+                      value={item.quantity || ''}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        updateLineItem(index, 'quantity', val ? parseInt(val, 10) : '');
+                      }}
+                      onBlur={(e) => {
+                        if (!item.quantity || item.quantity < 1) updateLineItem(index, 'quantity', 1);
+                      }}
+                      placeholder="1"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm text-center"
                     />
                   </div>
                   <div className="col-span-2">
                     <input
-                      type="number"
-                      value={item.unitPrice}
-                      onChange={(e) => updateLineItem(index, 'unitPrice', parseFloat(e.target.value) || 0)}
-                      min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      type="text"
+                      inputMode="numeric"
+                      value={item.unitPrice || ''}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        updateLineItem(index, 'unitPrice', val ? parseInt(val, 10) : '');
+                      }}
+                      placeholder="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm text-right"
                     />
                   </div>
                   <div className="col-span-2 text-right font-medium text-gray-900 text-sm">
