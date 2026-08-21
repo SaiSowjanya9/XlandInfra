@@ -126,12 +126,6 @@ const generateEstimatePDF = async (estimate) => {
 
       // ===== HEADER - Use shared function =====
       let y = drawPDFHeader(doc, 50);
-      
-      // ESTIMATE badge on the right
-      doc.roundedRect(455, 8, 90, 20, 3).fill('#C9A227');
-      doc.fontSize(10).fillColor(black).text('ESTIMATE', 455, 12, { width: 90, align: 'center', lineBreak: false });
-
-      y = 48;
 
       // Estimate Info - styled like invoice
       // ID label
@@ -149,7 +143,7 @@ const generateEstimatePDF = async (estimate) => {
       // Package Price Bar (NO package name - per requirement)
       if (packagePrice) {
         doc.rect(50, y, 500, 25).fill(lightGray).stroke('#e0e0e0');
-        doc.fontSize(10).fillColor(navy).text(`Package Price: ₹${Math.round(Number(packagePrice)).toLocaleString()}`, 60, y + 8);
+        doc.fontSize(10).fillColor(navy).text(`Package Price: Rs. ${Math.round(Number(packagePrice)).toLocaleString()}`, 60, y + 8);
         doc.fontSize(10).fillColor(navy).text('Billing: Yearly', 400, y + 8);
         y += 35;
       }
@@ -374,20 +368,20 @@ const generateEstimatePDF = async (estimate) => {
       
       doc.fontSize(9).fillColor('#666666');
       doc.text('Subtotal', 60, y + 10, { continued: false });
-      doc.fillColor('#333333').text(`₹${safeSubtotal.toLocaleString()}`, 450, y + 10, { continued: false });
+      doc.fillColor('#333333').text(`Rs. ${safeSubtotal.toLocaleString()}`, 450, y + 10, { continued: false });
       
       if (safeDiscount > 0 || safeDiscountAmount > 0) {
         doc.fillColor('#666666').text(`Discount (${safeDiscount}%)`, 60, y + 25, { continued: false });
-        doc.fillColor('#333333').text(`-₹${safeDiscountAmount.toLocaleString()}`, 450, y + 25, { continued: false });
+        doc.fillColor('#333333').text(`-Rs. ${safeDiscountAmount.toLocaleString()}`, 450, y + 25, { continued: false });
       }
       
       doc.fillColor('#666666').text(`GST (${safeGstPercent}%)`, 60, y + 40, { continued: false });
-      doc.fillColor('#333333').text(`₹${safeTax.toLocaleString()}`, 450, y + 40, { continued: false });
+      doc.fillColor('#333333').text(`Rs. ${safeTax.toLocaleString()}`, 450, y + 40, { continued: false });
       
       // Total line
       doc.rect(60, y + 55, 480, 1).fill('#e0e0e0');
-      doc.fontSize(12).fillColor(gold).text('Grand Total', 60, y + 62, { continued: false });
-      doc.font('Helvetica-Bold').fontSize(12).fillColor(gold).text(`₹${safeTotal.toLocaleString()}`, 450, y + 62, { continued: false });
+      doc.fontSize(12).fillColor(navy).text('Grand Total', 60, y + 62, { continued: false });
+      doc.font('Helvetica-Bold').fontSize(12).fillColor(gold).text(`Rs. ${safeTotal.toLocaleString()}`, 450, y + 62, { continued: false });
       doc.font('Helvetica');
       y += 90;
 

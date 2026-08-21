@@ -1,4 +1,4 @@
-const nodemailer = require('nodemailer');
+﻿const nodemailer = require('nodemailer');
 const { generateEstimatePDF, generateInvoicePDF } = require('./pdfService');
 const { pool } = require('../config/database');
 
@@ -64,7 +64,7 @@ const getWorkOrderNotificationRecipients = async (franchisePartnerId, propertyZo
       );
       if (fpResult.length > 0 && fpResult[0].email) {
         recipients.add(fpResult[0].email.toLowerCase());
-        console.log(`📧 Added FP email: ${fpResult[0].email}`);
+        console.log(`ðŸ“§ Added FP email: ${fpResult[0].email}`);
       }
     }
     
@@ -85,7 +85,7 @@ const getWorkOrderNotificationRecipients = async (franchisePartnerId, propertyZo
       for (const emp of zoneEmployees) {
         if (emp.email) {
           recipients.add(emp.email.toLowerCase());
-          console.log(`📧 Added zone employee email: ${emp.email}`);
+          console.log(`ðŸ“§ Added zone employee email: ${emp.email}`);
         }
       }
       
@@ -96,7 +96,7 @@ const getWorkOrderNotificationRecipients = async (franchisePartnerId, propertyZo
     // 3. Add customer email if provided
     if (customerEmail) {
       recipients.add(customerEmail.toLowerCase());
-      console.log(`📧 Added customer email: ${customerEmail}`);
+      console.log(`ðŸ“§ Added customer email: ${customerEmail}`);
     }
     
   } catch (error) {
@@ -108,7 +108,7 @@ const getWorkOrderNotificationRecipients = async (franchisePartnerId, propertyZo
   // If no recipients found, use fallback
   if (recipients.size === 0) {
     recipients.add(NOTIFICATION_EMAIL);
-    console.log(`📧 No recipients found, using fallback: ${NOTIFICATION_EMAIL}`);
+    console.log(`ðŸ“§ No recipients found, using fallback: ${NOTIFICATION_EMAIL}`);
   }
   
   return Array.from(recipients);
@@ -136,7 +136,7 @@ const createTransporter = () => {
     rateLimit: 5
   };
 
-  console.log(`📧 Email configured: ${host}:${port} as ${process.env.EMAIL_USER}`);
+  console.log(`ðŸ“§ Email configured: ${host}:${port} as ${process.env.EMAIL_USER}`);
   return nodemailer.createTransport(config);
 };
 
@@ -218,7 +218,7 @@ const sendWorkOrderNotification = async (workOrder) => {
         
         <div style="text-align: center; padding: 20px 0; border-top: 1px solid #334155; color: #64748b; font-size: 12px;">
           <p>This is an automated notification from XlandInfra Customer Portal</p>
-          <p>© ${new Date().getFullYear()} XlandInfra Pvt Ltd. All rights reserved.</p>
+          <p>Â© ${new Date().getFullYear()} XlandInfra Pvt Ltd. All rights reserved.</p>
         </div>
       </div>
     `
@@ -226,7 +226,7 @@ const sendWorkOrderNotification = async (workOrder) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`📧 Work order notification sent to ${NOTIFICATION_EMAIL}`);
+    console.log(`ðŸ“§ Work order notification sent to ${NOTIFICATION_EMAIL}`);
     return true;
   } catch (error) {
     console.error('Error sending email:', error.message);
@@ -329,17 +329,17 @@ const sendContactNotification = async (contactData) => {
       
       try {
         await transporter.sendMail(mailOptions);
-        console.log(`📧 Contact notification sent to ${email}`);
+        console.log(`ðŸ“§ Contact notification sent to ${email}`);
         return { email, success: true };
       } catch (err) {
-        console.error(`❌ Failed to send to ${email}:`, err.message);
+        console.error(`âŒ Failed to send to ${email}:`, err.message);
         return { email, success: false, error: err.message };
       }
     });
 
     const results = await Promise.all(emailPromises);
     const successCount = results.filter(r => r.success).length;
-    console.log(`📧 Contact notification: ${successCount}/${CONTACT_EMAILS.length} emails sent successfully`);
+    console.log(`ðŸ“§ Contact notification: ${successCount}/${CONTACT_EMAILS.length} emails sent successfully`);
     
     return successCount > 0;
   } catch (error) {
@@ -419,7 +419,7 @@ const sendRegistrationNotification = async (userData) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`📧 Registration notification sent to ${NOTIFICATION_EMAIL}`);
+    console.log(`ðŸ“§ Registration notification sent to ${NOTIFICATION_EMAIL}`);
     return true;
   } catch (error) {
     console.error('Error sending email:', error.message);
@@ -431,12 +431,12 @@ const sendRegistrationNotification = async (userData) => {
 const sendCustomerActivationEmail = async (customerData) => {
   const { email, firstName, tempPassword, activationLink, propertyName, propertyId } = customerData;
   
-  console.log('📧 sendCustomerActivationEmail called with:', { email, firstName, propertyName, propertyId, activationLink: activationLink?.substring(0, 50) + '...' });
-  console.log('📧 EMAIL_USER configured:', process.env.EMAIL_USER ? 'Yes' : 'NO - MISSING!');
-  console.log('📧 EMAIL_PASS configured:', process.env.EMAIL_PASS ? 'Yes' : 'NO - MISSING!');
+  console.log('ðŸ“§ sendCustomerActivationEmail called with:', { email, firstName, propertyName, propertyId, activationLink: activationLink?.substring(0, 50) + '...' });
+  console.log('ðŸ“§ EMAIL_USER configured:', process.env.EMAIL_USER ? 'Yes' : 'NO - MISSING!');
+  console.log('ðŸ“§ EMAIL_PASS configured:', process.env.EMAIL_PASS ? 'Yes' : 'NO - MISSING!');
   
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.error('❌ Email credentials not configured! Set EMAIL_USER and EMAIL_PASS in .env');
+    console.error('âŒ Email credentials not configured! Set EMAIL_USER and EMAIL_PASS in .env');
     return { success: false, error: 'Email credentials not configured' };
   }
   
@@ -526,7 +526,7 @@ const sendCustomerActivationEmail = async (customerData) => {
               If you did not request this account, please ignore this email or contact our support team.
             </p>
             <p style="color: #444; font-size: 11px; margin: 0; text-align: center;">
-              © ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
+              Â© ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
             </p>
           </div>
         </div>
@@ -536,13 +536,13 @@ const sendCustomerActivationEmail = async (customerData) => {
   };
 
   try {
-    console.log('📧 Attempting to send email via transporter...');
+    console.log('ðŸ“§ Attempting to send email via transporter...');
     const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Customer activation email sent to ${email} (Message ID: ${info.messageId})`);
+    console.log(`âœ… Customer activation email sent to ${email} (Message ID: ${info.messageId})`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Error sending customer activation email:', error.message);
-    console.error('❌ Full error:', error);
+    console.error('âŒ Error sending customer activation email:', error.message);
+    console.error('âŒ Full error:', error);
     return { success: false, error: error.message };
   }
 };
@@ -588,7 +588,7 @@ const sendPasswordResetConfirmation = async (customerData) => {
           <!-- Footer -->
           <div style="background: #0D0D0D; padding: 25px 30px; border-radius: 0 0 16px 16px; border: 1px solid #D8B25C33; border-top: 2px solid #D8B25C;">
             <p style="color: #444; font-size: 11px; margin: 0; text-align: center;">
-              © ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
+              Â© ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
             </p>
           </div>
         </div>
@@ -599,7 +599,7 @@ const sendPasswordResetConfirmation = async (customerData) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`📧 Account activation confirmation sent to ${email}`);
+    console.log(`ðŸ“§ Account activation confirmation sent to ${email}`);
     return { success: true };
   } catch (error) {
     console.error('Error sending confirmation email:', error.message);
@@ -720,7 +720,7 @@ const sendEmployeeWelcomeEmail = async (userData) => {
               If you did not expect this email, please contact your administrator immediately.
             </p>
             <p style="color: #444; font-size: 11px; margin: 0; text-align: center;">
-              © ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
+              Â© ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
             </p>
           </div>
         </div>
@@ -731,7 +731,7 @@ const sendEmployeeWelcomeEmail = async (userData) => {
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log(`📧 Employee welcome email sent to ${email} (Message ID: ${info.messageId})`);
+    console.log(`ðŸ“§ Employee welcome email sent to ${email} (Message ID: ${info.messageId})`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Error sending employee welcome email:', error.message);
@@ -843,7 +843,7 @@ const sendFPEmployeeWelcomeEmail = async (userData) => {
               If you did not expect this email, please contact your administrator immediately.
             </p>
             <p style="color: #444; font-size: 11px; margin: 0; text-align: center;">
-              © ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
+              Â© ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
             </p>
           </div>
         </div>
@@ -854,7 +854,7 @@ const sendFPEmployeeWelcomeEmail = async (userData) => {
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log(`📧 FP Employee welcome email sent to ${email} (Message ID: ${info.messageId})`);
+    console.log(`ðŸ“§ FP Employee welcome email sent to ${email} (Message ID: ${info.messageId})`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Error sending FP employee welcome email:', error.message);
@@ -904,7 +904,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
         ${s.frequencyType ? `<br><span style="font-size: 12px; color: #6b7280;">${s.frequencyType} - ${s.frequencyCount ?? 1} visits</span>` : ''}
         ${s.description ? `<br><span style="font-size: 12px; color: #6b7280;">${decodeHtml(s.description)}</span>` : ''}
       </td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">₹${Math.round(Number(s.price || s.rate || 0)).toLocaleString()}</td>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">Rs. ${Math.round(Number(s.price || s.rate || 0)).toLocaleString()}</td>
     </tr>
   `).join('');
 
@@ -939,7 +939,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
         ${freqType ? `<br><span style="font-size: 12px; color: #6b7280;">${freqType} - ${freqCount} visits</span>` : ''}
         ${desc ? `<br><span style="font-size: 12px; color: #6b7280;">${desc}</span>` : ''}
       </td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">₹${Math.round(addonPrice).toLocaleString()}</td>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">Rs. ${Math.round(addonPrice).toLocaleString()}</td>
     </tr>
   `;
   }).join('');
@@ -1044,7 +1044,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
       isWorkOrderEstimate, workOrderId, workOrderCategory, workOrderSubcategory,
       workOrderDescription, workOrderPriority, workOrderStatus
     });
-    console.log(`📄 PDF generated for estimate ${estimateId}`);
+    console.log(`ðŸ“„ PDF generated for estimate ${estimateId}`);
   } catch (pdfError) {
     console.error('PDF generation failed:', pdfError.message);
   }
@@ -1089,7 +1089,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
               Thank you for your interest in our services. Please find attached the detailed estimate for your property.
             </p>
             
-            <!-- Estimate Info -->
+            <!-- Estimate Info & Customer Details -->
             <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
               <table style="width: 100%;">
                 <tr>
@@ -1100,68 +1100,52 @@ const sendEstimateEmail = async (estimate, actionToken) => {
                   <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Valid Until:</td>
                   <td style="padding: 8px 0; padding-left: 15px; color: #dc2626; font-weight: 600;">${expiryDate.toLocaleDateString('en-IN')}</td>
                 </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Customer Name:</td>
+                  <td style="padding: 8px 0; padding-left: 15px; color: #1f2937; font-weight: 600;">${customerName || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Email:</td>
+                  <td style="padding: 8px 0; padding-left: 15px; color: #1f2937;">${customerEmail || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Phone:</td>
+                  <td style="padding: 8px 0; padding-left: 15px; color: #1f2937;">${customerPhone || '-'}</td>
+                </tr>
               </table>
             </div>
             
-            <!-- Property & Customer Details - Cream bg, filled gold icons (Image 2 style) -->
-            <table style="width: 100%; margin-bottom: 20px;">
-              <tr>
-                <!-- Property Details -->
-                <td style="width: 48%; vertical-align: top; padding-right: 10px;">
-                  <div style="background: #FBF7EE; border-radius: 12px; padding: 16px;">
-                    <div style="margin-bottom: 12px;">
-                      <div style="width: 36px; height: 36px; background: #c9a227; border-radius: 8px; display: inline-block; text-align: center; line-height: 36px; margin-right: 10px; vertical-align: middle;">
-                        <span style="color: #ffffff; font-size: 16px;">🏢</span>
-                      </div>
-                      <span style="color: #1f2937; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: middle;">Property Details</span>
-                    </div>
-                    <p style="margin: 0 0 6px 0; color: #555555; font-size: 13px;">Name: ${propertyName || '-'}</p>
-                    ${propertyDetailsHtml}
-                  </div>
-                </td>
-                <!-- Customer Details -->
-                <td style="width: 48%; vertical-align: top; padding-left: 10px;">
-                  <div style="background: #FBF7EE; border-radius: 12px; padding: 16px;">
-                    <div style="margin-bottom: 12px;">
-                      <div style="width: 36px; height: 36px; background: #c9a227; border-radius: 8px; display: inline-block; text-align: center; line-height: 36px; margin-right: 10px; vertical-align: middle;">
-                        <span style="color: #ffffff; font-size: 16px;">👤</span>
-                      </div>
-                      <span style="color: #1f2937; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: middle;">Customer Details</span>
-                    </div>
-                    <p style="margin: 0 0 6px 0; color: #555555; font-size: 13px;">Name: ${customerName || '-'}</p>
-                    <p style="margin: 0 0 6px 0; color: #555555; font-size: 13px;">Email: ${customerEmail || '-'}</p>
-                    <p style="margin: 0; color: #555555; font-size: 13px;">Phone: ${customerPhone || '-'}</p>
-                  </div>
-                </td>
-              </tr>
-            </table>
+            <!-- Property Details -->
+            <div style="margin-bottom: 20px;">
+              <p style="margin: 0 0 10px 0; color: #1f2937; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Property Details</p>
+              <table style="width: 100%;">
+                <tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px; width: 120px;">Name:</td><td style="padding: 4px 0; padding-left: 10px; color: #1f2937;">${propertyName || '-'}</td></tr>
+                ${propertyDetailsHtml}
+              </table>
+            </div>
             
             <!-- Work Order Details (only for work order estimates) -->
             ${workOrderHtml}
             
-            <!-- Price Summary - Gold Theme -->
-            <div style="background: #fffbeb; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #fde68a;">
-              <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-                <div style="height: 1px; width: 40px; background: #c9a227;"></div>
-                <span style="margin: 0 10px; color: #c9a227; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">💰 Price Summary</span>
-                <div style="height: 1px; width: 40px; background: #c9a227;"></div>
-              </div>
+            <!-- Price Summary -->
+            <div style="margin-bottom: 20px;">
+              <p style="margin: 0 0 10px 0; color: #1f2937; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Price Summary</p>
               <table style="width: 100%;">
                 <tr>
-                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Subtotal</td>
-                  <td style="padding: 8px 0; text-align: right; color: #1f2937; font-weight: 500;">₹${Math.round(Number(subtotal || 0)).toLocaleString()}</td>
+                  <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Subtotal:</td>
+                  <td style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 500;">Rs. ${Math.round(Number(subtotal || 0)).toLocaleString()}</td>
                 </tr>
                 ${discount > 0 ? `<tr>
-                  <td style="padding: 8px 0; color: #059669; font-size: 14px;">Discount (${Math.round(discount)}%)</td>
-                  <td style="padding: 8px 0; text-align: right; color: #059669; font-weight: 500;">-₹${Math.round(Number(estimate.discountAmount || 0)).toLocaleString()}</td>
+                  <td style="padding: 6px 0; color: #059669; font-size: 14px;">Discount (${Math.round(discount)}%):</td>
+                  <td style="padding: 6px 0; text-align: right; color: #059669; font-weight: 500;">-Rs. ${Math.round(Number(estimate.discountAmount || 0)).toLocaleString()}</td>
                 </tr>` : ''}
                 <tr>
-                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">GST (${Math.round(estimate.gstPercent || 0)}%)</td>
-                  <td style="padding: 8px 0; text-align: right; color: #1f2937; font-weight: 500;">₹${Math.round(Number(tax || 0)).toLocaleString()}</td>
+                  <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">GST (${Math.round(estimate.gstPercent || 0)}%):</td>
+                  <td style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 500;">Rs. ${Math.round(Number(tax || 0)).toLocaleString()}</td>
                 </tr>
                 <tr style="border-top: 1px solid #e5e7eb;">
-                  <td style="padding: 12px 0 0 0; color: #c9a227; font-size: 16px; font-weight: 700;">Grand Total</td>
-                  <td style="padding: 12px 0 0 0; text-align: right; color: #c9a227; font-size: 18px; font-weight: 700;">₹${Math.round(Number(total || 0)).toLocaleString()}</td>
+                  <td style="padding: 10px 0 0 0; color: #1f2937; font-size: 15px; font-weight: 700;">Grand Total:</td>
+                  <td style="padding: 10px 0 0 0; text-align: right; color: #1f2937; font-size: 16px; font-weight: 700;">Rs. ${Math.round(Number(total || 0)).toLocaleString()}</td>
                 </tr>
               </table>
             </div>
@@ -1169,7 +1153,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
             <!-- PDF Notice -->
             <div style="background: #ecfdf5; border: 1px solid #10b981; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: center;">
               <p style="color: #065f46; margin: 0; font-size: 14px;">
-                📎 <strong>Detailed estimate attached as PDF</strong><br>
+                ðŸ“Ž <strong>Detailed estimate attached as PDF</strong><br>
                 <span style="font-size: 12px; color: #047857;">Please find the complete breakdown of AMC package services, add-ons, and pricing in the attached PDF document.</span>
               </p>
             </div>
@@ -1178,16 +1162,16 @@ const sendEstimateEmail = async (estimate, actionToken) => {
             <div style="text-align: center; margin: 30px 0;">
               <p style="color: #374151; font-weight: 600; margin-bottom: 20px; font-size: 16px;">Please review and take action:</p>
               <a href="${approveUrl}" style="display: inline-block; background: #059669; color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-size: 16px; font-weight: 600; margin-right: 15px;">
-                ✓ Approve Estimate
+                âœ“ Approve Estimate
               </a>
               <a href="${rejectUrl}" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-size: 16px; font-weight: 600;">
-                ✗ Reject Estimate
+                âœ— Reject Estimate
               </a>
             </div>
             
             <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin-top: 20px;">
               <p style="color: #92400e; margin: 0; font-size: 14px;">
-                <strong>⚠️ Important:</strong> This estimate will automatically expire on <strong>${expiryDate.toLocaleDateString('en-IN')}</strong> if no action is taken.
+                <strong>âš ï¸ Important:</strong> This estimate will automatically expire on <strong>${expiryDate.toLocaleDateString('en-IN')}</strong> if no action is taken.
               </p>
             </div>
             
@@ -1198,7 +1182,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
           
           <!-- Footer -->
           <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
-            <p style="margin: 0;">© ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.</p>
+            <p style="margin: 0;">Â© ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.</p>
             <p style="margin: 8px 0 0 0;">This is an automated email. Please do not reply directly.</p>
           </div>
         </div>
@@ -1209,7 +1193,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log(`📧 Estimate email sent to ${customerEmail} (Estimate: ${estimateId}, Message ID: ${info.messageId})`);
+    console.log(`ðŸ“§ Estimate email sent to ${customerEmail} (Estimate: ${estimateId}, Message ID: ${info.messageId})`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Error sending estimate email:', error.message);
@@ -1221,7 +1205,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
 const sendEstimateActionNotification = async (estimate, action, customerName) => {
   const { estimateId, propertyName, total, customerEmail } = estimate;
   const actionColor = action === 'Approved' ? '#059669' : '#dc2626';
-  const actionEmoji = action === 'Approved' ? '✅' : '❌';
+  const actionEmoji = action === 'Approved' ? 'âœ…' : 'âŒ';
 
   const emailHtml = `
     <!DOCTYPE html>
@@ -1263,7 +1247,7 @@ const sendEstimateActionNotification = async (estimate, action, customerName) =>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #c9a227; font-weight: 600;">Grand Total</td>
-                <td style="padding: 8px 0; color: #c9a227; font-weight: 700; font-size: 18px; text-align: right;">₹${Math.round(Number(total || 0)).toLocaleString()}</td>
+                <td style="padding: 8px 0; color: #c9a227; font-weight: 700; font-size: 18px; text-align: right;">Rs. ${Math.round(Number(total || 0)).toLocaleString()}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #6b7280;">Action Date:</td>
@@ -1279,7 +1263,7 @@ const sendEstimateActionNotification = async (estimate, action, customerName) =>
         </div>
         
         <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
-          <p style="margin: 0;">© ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.</p>
+          <p style="margin: 0;">Â© ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.</p>
         </div>
       </div>
     </body>
@@ -1301,17 +1285,17 @@ const sendEstimateActionNotification = async (estimate, action, customerName) =>
       
       try {
         await transporter.sendMail(mailOptions);
-        console.log(`📧 Estimate action notification sent to ${email}`);
+        console.log(`ðŸ“§ Estimate action notification sent to ${email}`);
         return { email, success: true };
       } catch (err) {
-        console.error(`❌ Failed to send to ${email}:`, err.message);
+        console.error(`âŒ Failed to send to ${email}:`, err.message);
         return { email, success: false, error: err.message };
       }
     });
 
     const results = await Promise.all(emailPromises);
     const successCount = results.filter(r => r.success).length;
-    console.log(`📧 Estimate action notification: ${successCount}/${adminEmails.length} emails sent`);
+    console.log(`ðŸ“§ Estimate action notification: ${successCount}/${adminEmails.length} emails sent`);
     return { success: successCount > 0, results };
   } catch (error) {
     console.error('Error sending estimate action notification:', error.message);
@@ -1404,7 +1388,7 @@ const sendPasswordResetEmail = async (userData) => {
               If you did not request this password reset, you can safely ignore this email.
             </p>
             <p style="color: #444; font-size: 11px; margin: 0; text-align: center;">
-              © ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
+              Â© ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
             </p>
           </div>
         </div>
@@ -1415,7 +1399,7 @@ const sendPasswordResetEmail = async (userData) => {
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log(`📧 Password reset email sent to ${email} (Message ID: ${info.messageId})`);
+    console.log(`ðŸ“§ Password reset email sent to ${email} (Message ID: ${info.messageId})`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Error sending password reset email:', error.message);
@@ -1467,7 +1451,7 @@ const sendPasswordResetSuccess = async (userData) => {
             
             <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 15px 20px; margin-top: 30px;">
               <p style="color: #888; font-size: 13px; margin: 0; line-height: 1.6;">
-                🔒 <strong style="color: #ccc;">Security Tip:</strong> If you did not make this change, please contact our support team immediately.
+                ðŸ”’ <strong style="color: #ccc;">Security Tip:</strong> If you did not make this change, please contact our support team immediately.
               </p>
             </div>
           </div>
@@ -1475,7 +1459,7 @@ const sendPasswordResetSuccess = async (userData) => {
           <!-- Footer -->
           <div style="background: #0D0D0D; padding: 25px 30px; border-radius: 0 0 16px 16px; border: 1px solid #D8B25C33; border-top: 2px solid #D8B25C;">
             <p style="color: #444; font-size: 11px; margin: 0; text-align: center;">
-              © ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
+              Â© ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
             </p>
           </div>
         </div>
@@ -1486,7 +1470,7 @@ const sendPasswordResetSuccess = async (userData) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`📧 Password reset success email sent to ${email}`);
+    console.log(`ðŸ“§ Password reset success email sent to ${email}`);
     return { success: true };
   } catch (error) {
     console.error('Error sending password reset success email:', error.message);
@@ -1558,7 +1542,7 @@ const sendPasswordUpdatedByAdminEmail = async (userData) => {
             <!-- Security Note -->
             <div style="background: #2a1a0a; border: 1px solid #D8B25C44; border-radius: 8px; padding: 15px 20px; margin-top: 30px;">
               <p style="color: #D8B25C; font-size: 13px; margin: 0; line-height: 1.6;">
-                ⚠️ <strong>Security Tip:</strong> We recommend changing your password after logging in for enhanced security.
+                âš ï¸ <strong>Security Tip:</strong> We recommend changing your password after logging in for enhanced security.
               </p>
             </div>
           </div>
@@ -1566,7 +1550,7 @@ const sendPasswordUpdatedByAdminEmail = async (userData) => {
           <!-- Footer -->
           <div style="background: #0D0D0D; padding: 25px 30px; border-radius: 0 0 16px 16px; border: 1px solid #D8B25C33; border-top: none; text-align: center;">
             <p style="color: #666; font-size: 12px; margin: 0;">
-              © ${new Date().getFullYear()} XLAND INFRA. All rights reserved.
+              Â© ${new Date().getFullYear()} XLAND INFRA. All rights reserved.
             </p>
           </div>
         </div>
@@ -1577,7 +1561,7 @@ const sendPasswordUpdatedByAdminEmail = async (userData) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`📧 Password updated email sent to ${email}`);
+    console.log(`ðŸ“§ Password updated email sent to ${email}`);
     return { success: true };
   } catch (error) {
     console.error('Error sending password updated email:', error.message);
@@ -1608,7 +1592,7 @@ const sendVendorAssignmentEmail = async (vendorEmail, vendorName, property) => {
           <div style="background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%); padding: 40px 30px; border: 1px solid #D8B25C33; border-top: none; border-bottom: none;">
             <div style="text-align: center; margin-bottom: 25px;">
               <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #D8B25C22 0%, #D8B25C11 100%); border-radius: 50%; margin: 0 auto 20px auto; border: 2px solid #D8B25C44; text-align: center; line-height: 66px;">
-                <span style="font-size: 36px; color: #D8B25C;">🏠</span>
+                <span style="font-size: 36px; color: #D8B25C;">ðŸ </span>
               </div>
               <h2 style="color: #D8B25C; margin: 0; font-size: 24px; font-weight: 400;">New Property Assignment</h2>
             </div>
@@ -1657,7 +1641,7 @@ const sendVendorAssignmentEmail = async (vendorEmail, vendorName, property) => {
           <!-- Footer -->
           <div style="background: #0D0D0D; padding: 25px 30px; border-radius: 0 0 16px 16px; border: 1px solid #D8B25C33; border-top: none; text-align: center;">
             <p style="color: #666; font-size: 12px; margin: 0;">
-              © ${new Date().getFullYear()} XLAND INFRA. All rights reserved.
+              Â© ${new Date().getFullYear()} XLAND INFRA. All rights reserved.
             </p>
           </div>
         </div>
@@ -1668,7 +1652,7 @@ const sendVendorAssignmentEmail = async (vendorEmail, vendorName, property) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`📧 Vendor assignment email sent to ${vendorEmail}`);
+    console.log(`ðŸ“§ Vendor assignment email sent to ${vendorEmail}`);
     return { success: true };
   } catch (error) {
     console.error('Error sending vendor assignment email:', error.message);
@@ -1719,7 +1703,7 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
           <td style="padding: 8px; text-align: center; vertical-align: top;">
             <a href="${fileUrl}" target="_blank" style="text-decoration: none;">
               <div style="width: 80px; height: 80px; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 0 auto; border: 1px solid #e5e7eb;">
-                <span style="font-size: 24px;">📄</span>
+                <span style="font-size: 24px;">ðŸ“„</span>
               </div>
             </a>
             <p style="margin: 4px 0 0 0; font-size: 11px; color: #6b7280; word-break: break-all;">${displayName.substring(0, 20)}${displayName.length > 20 ? '...' : ''}</p>
@@ -1732,7 +1716,7 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
       <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background: #f0f9ff; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #0ea5e9;">
         <tr>
           <td style="padding: 16px;">
-            <h2 style="margin: 0 0 12px 0; color: #1e293b; font-size: 14px; font-weight: 600;">📎 Attachments (${attachments.length})</h2>
+            <h2 style="margin: 0 0 12px 0; color: #1e293b; font-size: 14px; font-weight: 600;">ðŸ“Ž Attachments (${attachments.length})</h2>
             <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
               <tr>
                 ${attachmentItems}
@@ -1766,19 +1750,19 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
   if (franchisePartnerId) {
     const fpRecipients = await getWorkOrderNotificationRecipients(franchisePartnerId, propertyZone, null);
     internalRecipients = fpRecipients.filter(email => email.toLowerCase() !== NOTIFICATION_EMAIL.toLowerCase());
-    console.log(`📧 Work order notification recipients for FP ${franchisePartnerId}, zone ${propertyZone}:`, internalRecipients);
+    console.log(`ðŸ“§ Work order notification recipients for FP ${franchisePartnerId}, zone ${propertyZone}:`, internalRecipients);
   }
 
   // Send SEPARATE emails to each recipient (no BCC - complete privacy)
   // If no customer email, don't send
   if (!customerEmail) {
-    console.log('📧 No customer email provided, skipping work order notification');
+    console.log('ðŸ“§ No customer email provided, skipping work order notification');
     return;
   }
   
   // Build list of all recipients (customer + FP + zone employees)
   const allRecipients = [customerEmail, ...internalRecipients.filter(email => email.toLowerCase() !== customerEmail.toLowerCase())];
-  console.log(`📧 Sending separate emails to ${allRecipients.length} recipients:`, allRecipients);
+  console.log(`ðŸ“§ Sending separate emails to ${allRecipients.length} recipients:`, allRecipients);
 
   const emailSubject = `Work Order Created - ${orderNumber || orderId} | ${propertyName || 'Service Request'}`;
   const emailHtml = `
@@ -1966,19 +1950,19 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
         html: emailHtml
       };
       await transporter.sendMail(mailOptions);
-      console.log(`📧 Work order notification sent to: ${recipientEmail}`);
+      console.log(`ðŸ“§ Work order notification sent to: ${recipientEmail}`);
     }
-    console.log(`📧 Work order creation notification sent for ${orderNumber || orderId} to ${allRecipients.length} recipients`);
+    console.log(`ðŸ“§ Work order creation notification sent for ${orderNumber || orderId} to ${allRecipients.length} recipients`);
     return { success: true };
   } catch (error) {
-    console.error('❌ Error sending work order notification:', error.message);
+    console.error('âŒ Error sending work order notification:', error.message);
     return { success: false, error: error.message };
   }
 };
 
 // Send notification when work order is completed
 const sendWorkOrderCompletedNotification = async (workOrderData) => {
-  console.log('📧 [COMPLETION EMAIL] Function called with data:', JSON.stringify(workOrderData, null, 2));
+  console.log('ðŸ“§ [COMPLETION EMAIL] Function called with data:', JSON.stringify(workOrderData, null, 2));
   
   const {
     orderId, orderNumber, title, propertyName, propertyId,
@@ -1989,19 +1973,19 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
     franchisePartnerId, propertyZone
   } = workOrderData;
 
-  console.log(`📧 [COMPLETION EMAIL] Customer: ${customerEmail}, FP: ${franchisePartnerId}, Zone: ${propertyZone}`);
+  console.log(`ðŸ“§ [COMPLETION EMAIL] Customer: ${customerEmail}, FP: ${franchisePartnerId}, Zone: ${propertyZone}`);
 
   // Get recipients: FP email + zone-centric employees (NO admin email)
   let internalRecipients = [];
   if (franchisePartnerId) {
     const fpRecipients = await getWorkOrderNotificationRecipients(franchisePartnerId, propertyZone, null);
     internalRecipients = fpRecipients.filter(email => email.toLowerCase() !== NOTIFICATION_EMAIL.toLowerCase());
-    console.log(`📧 Work order completion notification recipients for FP ${franchisePartnerId}, zone ${propertyZone}:`, internalRecipients);
+    console.log(`ðŸ“§ Work order completion notification recipients for FP ${franchisePartnerId}, zone ${propertyZone}:`, internalRecipients);
   }
 
   // If no customer email, still try to send to FP/employees
   if (!customerEmail && internalRecipients.length === 0) {
-    console.log('📧 No customer email and no internal recipients, skipping work order completion notification');
+    console.log('ðŸ“§ No customer email and no internal recipients, skipping work order completion notification');
     return { success: false, error: 'No recipients found' };
   }
 
@@ -2012,11 +1996,11 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
   ].filter(Boolean); // Remove null/undefined
   
   if (allRecipients.length === 0) {
-    console.log('📧 No valid recipients for completion notification');
+    console.log('ðŸ“§ No valid recipients for completion notification');
     return { success: false, error: 'No valid recipients' };
   }
   
-  console.log(`📧 Sending separate completion emails to ${allRecipients.length} recipients:`, allRecipients);
+  console.log(`ðŸ“§ Sending separate completion emails to ${allRecipients.length} recipients:`, allRecipients);
 
   // Format completion date
   const completionDate = completedAt ? new Date(completedAt).toLocaleString('en-IN', { 
@@ -2182,7 +2166,7 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
                       XLAND INFRA Private Limited | Work Order Completion Notification
                     </p>
                     <p style="margin: 8px 0 0 0; color: #64748b; font-size: 11px;">
-                      © ${new Date().getFullYear()} All rights reserved
+                      Â© ${new Date().getFullYear()} All rights reserved
                     </p>
                   </td>
                 </tr>
@@ -2204,9 +2188,9 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
         html: emailHtml
       };
       await transporter.sendMail(mailOptions);
-      console.log(`📧 Work order completion notification sent to: ${recipientEmail}`);
+      console.log(`ðŸ“§ Work order completion notification sent to: ${recipientEmail}`);
     }
-    console.log(`📧 Work order completion notification sent for ${orderNumber || orderId} to ${allRecipients.length} recipients`);
+    console.log(`ðŸ“§ Work order completion notification sent for ${orderNumber || orderId} to ${allRecipients.length} recipients`);
     return { success: true };
   } catch (error) {
     console.error('Error sending completion notification:', error.message);
@@ -2233,7 +2217,7 @@ const sendInvoiceEmail = async (invoice) => {
   }
 
   // Format currency
-  const formatCurrency = (amount) => `₹${Math.round(Number(amount) || 0).toLocaleString('en-IN')}`;
+  const formatCurrency = (amount) => `Rs. ${Math.round(Number(amount) || 0).toLocaleString('en-IN')}`;
   
   // Format date
   const formatDate = (date) => {
@@ -2286,7 +2270,7 @@ const sendInvoiceEmail = async (invoice) => {
     <div style="text-align: center; margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 1px solid #c9a227;">
       <p style="color: #92400e; font-size: 14px; margin: 0 0 12px 0;">Click below to pay securely online</p>
       <a href="${paymentLink}" style="display: inline-block; background: linear-gradient(135deg, #c9a227 0%, #b08a1f 100%); color: #ffffff; text-decoration: none; padding: 14px 50px; border-radius: 8px; font-size: 16px; font-weight: 700; box-shadow: 0 4px 6px rgba(201, 162, 39, 0.3);">
-        💳 Pay Now
+        ðŸ’³ Pay Now
       </a>
       <p style="color: #78716c; font-size: 11px; margin: 12px 0 0 0;">Secure payment powered by Razorpay</p>
     </div>
@@ -2322,7 +2306,7 @@ const sendInvoiceEmail = async (invoice) => {
       workOrderSubcategory,
       workOrderDescription
     });
-    console.log(`📄 Invoice PDF generated for email: ${invoiceId}`);
+    console.log(`ðŸ“„ Invoice PDF generated for email: ${invoiceId}`);
   } catch (pdfError) {
     console.error('Failed to generate invoice PDF for email:', pdfError.message);
   }
@@ -2394,7 +2378,7 @@ const sendInvoiceEmail = async (invoice) => {
                   <div style="background: #FBF7EE; border-radius: 12px; padding: 16px;">
                     <div style="margin-bottom: 12px;">
                       <div style="width: 36px; height: 36px; background: #c9a227; border-radius: 8px; display: inline-block; text-align: center; line-height: 36px; margin-right: 10px; vertical-align: middle;">
-                        <span style="color: #ffffff; font-size: 16px;">🏢</span>
+                        <span style="color: #ffffff; font-size: 16px;">ðŸ¢</span>
                       </div>
                       <span style="color: #1f2937; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: middle;">Property Details</span>
                     </div>
@@ -2408,7 +2392,7 @@ const sendInvoiceEmail = async (invoice) => {
                   <div style="background: #FBF7EE; border-radius: 12px; padding: 16px;">
                     <div style="margin-bottom: 12px;">
                       <div style="width: 36px; height: 36px; background: #c9a227; border-radius: 8px; display: inline-block; text-align: center; line-height: 36px; margin-right: 10px; vertical-align: middle;">
-                        <span style="color: #ffffff; font-size: 16px;">👤</span>
+                        <span style="color: #ffffff; font-size: 16px;">ðŸ‘¤</span>
                       </div>
                       <span style="color: #1f2937; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: middle;">Customer Details</span>
                     </div>
@@ -2445,7 +2429,7 @@ const sendInvoiceEmail = async (invoice) => {
             <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
               <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
                 <div style="height: 1px; width: 40px; background: #c9a227;"></div>
-                <span style="margin: 0 10px; color: #c9a227; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">💰 Price Summary</span>
+                <span style="margin: 0 10px; color: #c9a227; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">ðŸ’° Price Summary</span>
                 <div style="height: 1px; width: 40px; background: #c9a227;"></div>
               </div>
               <table style="width: 100%;">
@@ -2486,7 +2470,7 @@ const sendInvoiceEmail = async (invoice) => {
           
           <!-- Footer -->
           <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
-            <p style="margin: 0;">© ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.</p>
+            <p style="margin: 0;">Â© ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.</p>
             <p style="margin: 8px 0 0 0;">This is an automated email. Please do not reply directly.</p>
           </div>
         </div>
@@ -2497,7 +2481,7 @@ const sendInvoiceEmail = async (invoice) => {
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log(`📧 Invoice email sent to ${customerEmail} (Invoice: ${invoiceId}, Message ID: ${info.messageId})`);
+    console.log(`ðŸ“§ Invoice email sent to ${customerEmail} (Invoice: ${invoiceId}, Message ID: ${info.messageId})`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Error sending invoice email:', error.message);
@@ -2535,10 +2519,10 @@ const sendEmail = async ({ to, subject, html, text, attachments }) => {
     }
     
     const info = await transporter.sendMail(mailOptions);
-    console.log(`📧 Email sent to ${to} (Subject: ${subject}, Message ID: ${info.messageId})`);
+    console.log(`ðŸ“§ Email sent to ${to} (Subject: ${subject}, Message ID: ${info.messageId})`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error(`❌ Error sending email to ${to}:`, error.message);
+    console.error(`âŒ Error sending email to ${to}:`, error.message);
     return { success: false, error: error.message };
   }
 };
