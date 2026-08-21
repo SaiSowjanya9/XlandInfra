@@ -574,14 +574,23 @@ const SupervisorWorkOrders = ({ user }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-          <ClipboardList className="w-6 h-6 text-white" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+            <ClipboardList className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
+            <p className="text-gray-500">Manage and track all work orders</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
-          <p className="text-gray-500">Manage and track all work orders</p>
-        </div>
+        <button
+          onClick={() => setActiveTab('create')}
+          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Create Work Order</span>
+        </button>
       </div>
 
       {/* Tabs */}
@@ -609,13 +618,6 @@ const SupervisorWorkOrders = ({ user }) => {
           <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'completed' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
             {completedCount}
           </span>
-        </button>
-        <button
-          onClick={() => setActiveTab('create')}
-          className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Work Order</span>
         </button>
       </div>
 
