@@ -238,8 +238,12 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
                 <input
                   type="tel"
                   value={customerDetails.phone}
-                  onChange={(e) => setCustomerDetails(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="Enter phone number"
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setCustomerDetails(prev => ({ ...prev, phone: value }));
+                  }}
+                  placeholder="Enter 10-digit phone number"
+                  maxLength={10}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
