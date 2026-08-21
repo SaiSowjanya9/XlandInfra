@@ -135,7 +135,7 @@ const HorizontalBarChart = ({ data }) => {
             onMouseEnter={() => setHoveredIndex(index)}
             onMouseLeave={() => setHoveredIndex(null)}
           >
-            <div className="w-20 text-xs text-gray-600 truncate">{item.name}</div>
+            <div className="w-28 text-xs text-gray-700 font-medium whitespace-nowrap">{item.name}</div>
             <div className="flex-1 bg-gray-100 rounded-full h-5 relative">
               <div 
                 className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
