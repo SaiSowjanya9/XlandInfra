@@ -12,6 +12,20 @@ import { getAuthToken } from '../../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+// Frequency types for invoice line items
+const FREQUENCY_TYPES = ['Monthly', 'Every 2 Months', 'Quarterly', 'Half-Yearly', 'Yearly', 'One-Time', 'Other'];
+
+// Auto-calculate visits based on frequency
+const FREQUENCY_COUNT_MAP = {
+  'Monthly': 12,
+  'Every 2 Months': 6,
+  'Quarterly': 4,
+  'Half-Yearly': 2,
+  'Yearly': 1,
+  'One-Time': 1,
+  'Other': null  // Custom - user enters manually
+};
+
 const formatCurrency = (amount) => {
   const num = parseFloat(amount) || 0;
   return new Intl.NumberFormat('en-IN', {
@@ -26,9 +40,9 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
   const navigate = useNavigate();
   const token = getAuthToken();
   
-  // Line items
+  // Line items with frequency-based structure (like estimates)
   const [lineItems, setLineItems] = useState([
-    { description: '', quantity: 1, unitPrice: 0, totalPrice: 0 }
+    { description: '', frequency: 'Monthly', visits: 12, price: 0, totalPrice: 0 }
   ]);
   
   // Customer details
@@ -77,7 +91,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
 
   // Line items management
   const addLineItem = () => {
-    setLineItems([...lineItems, { description: '', quantity: 1, unitPrice: 0, totalPrice: 0 }]);
+    setLineItems([...lineItems, { description: '', frequency: 'Monthly', visits: 12, price: 0, totalPrice: 0 }]);
   };
 
   const removeLineItem = (index) => {
@@ -90,11 +104,19 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
     const updated = [...lineItems];
     updated[index][field] = value;
     
-    // Auto-calculate total price
-    if (field === 'quantity' || field === 'unitPrice') {
-      const qty = parseFloat(updated[index].quantity) || 0;
-      const price = parseFloat(updated[index].unitPrice) || 0;
-      updated[index].totalPrice = qty * price;
+    // Auto-calculate visits based on frequency
+    if (field === 'frequency') {
+      const autoVisits = FREQUENCY_COUNT_MAP[value];
+      if (autoVisits !== null) {
+        updated[index].visits = autoVisits;
+      }
+    }
+    
+    // Auto-calculate total price (visits * price)
+    if (field === 'visits' || field === 'price' || field === 'frequency') {
+      const visits = parseFloat(updated[index].visits) || 0;
+      const price = parseFloat(updated[index].price) || 0;
+      updated[index].totalPrice = visits * price;
     }
     
     setLineItems(updated);
@@ -140,7 +162,19 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
         },
         body: JSON.stringify({
           customerDetails,
-          lineItems: lineItems.filter(item => item.description && item.totalPrice > 0),
+          lineItems: lineItems
+            .filter(item => item.description && item.totalPrice > 0)
+            .map(item => ({
+              description: item.description,
+              name: item.description,
+              frequency: item.frequency,
+              frequencyType: item.frequency,
+              visits: item.visits,
+              frequencyCount: item.visits,
+              price: item.price,
+              amount: item.totalPrice,
+              totalPrice: item.totalPrice
+            })),
           discountPercent,
           gstPercent,
           invoiceDate: invoiceDate || new Date().toISOString().split('T')[0],
@@ -279,9 +313,10 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
             <div className="space-y-3">
               {/* Table Header */}
               <div className="grid grid-cols-12 gap-3 px-2 text-xs font-semibold text-gray-500 uppercase">
-                <div className="col-span-5">Description</div>
-                <div className="col-span-2 text-center">Qty</div>
-                <div className="col-span-2 text-right">Unit Price (₹)</div>
+                <div className="col-span-4">Description</div>
+                <div className="col-span-2 text-center">Frequency</div>
+                <div className="col-span-1 text-center">Visits</div>
+                <div className="col-span-2 text-right">Price (₹)</div>
                 <div className="col-span-2 text-right">Total (₹)</div>
                 <div className="col-span-1"></div>
               </div>
@@ -289,39 +324,48 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
               {/* Line Items */}
               {lineItems.map((item, index) => (
                 <div key={index} className="grid grid-cols-12 gap-3 items-center bg-gray-50 rounded-lg p-3">
-                  <div className="col-span-5">
+                  <div className="col-span-4">
                     <input
                       type="text"
                       value={item.description}
                       onChange={(e) => updateLineItem(index, 'description', e.target.value)}
-                      placeholder="Service or product description"
+                      placeholder="Service description"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                     />
                   </div>
                   <div className="col-span-2">
+                    <select
+                      value={item.frequency}
+                      onChange={(e) => updateLineItem(index, 'frequency', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                    >
+                      {FREQUENCY_TYPES.map(freq => (
+                        <option key={freq} value={freq}>{freq}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-span-1">
                     <input
                       type="text"
                       inputMode="numeric"
-                      value={item.quantity || ''}
+                      value={item.visits || ''}
                       onChange={(e) => {
                         const val = e.target.value.replace(/[^0-9]/g, '');
-                        updateLineItem(index, 'quantity', val ? parseInt(val, 10) : '');
+                        updateLineItem(index, 'visits', val ? parseInt(val, 10) : '');
                       }}
-                      onBlur={(e) => {
-                        if (!item.quantity || item.quantity < 1) updateLineItem(index, 'quantity', 1);
-                      }}
+                      readOnly={item.frequency !== 'Other'}
                       placeholder="1"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm text-center"
+                      className={`w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm text-center ${item.frequency !== 'Other' ? 'bg-gray-100' : ''}`}
                     />
                   </div>
                   <div className="col-span-2">
                     <input
                       type="text"
                       inputMode="numeric"
-                      value={item.unitPrice || ''}
+                      value={item.price || ''}
                       onChange={(e) => {
                         const val = e.target.value.replace(/[^0-9]/g, '');
-                        updateLineItem(index, 'unitPrice', val ? parseInt(val, 10) : '');
+                        updateLineItem(index, 'price', val ? parseInt(val, 10) : '');
                       }}
                       placeholder="0"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm text-right"
