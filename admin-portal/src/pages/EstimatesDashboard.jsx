@@ -1317,7 +1317,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip content={<CustomTooltip />} position={{ x: 0, y: -10 }} />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: '11px' }} />
                 <Line 
                   type="monotone" 
                   dataKey="direct" 

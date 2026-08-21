@@ -366,9 +366,10 @@ const FPDashboard = ({ user }) => {
   const lowPriorityWO = priorityFilteredWO.filter(wo => (wo.priority || '').toLowerCase() === 'low').length;
   const mediumPriorityWO = priorityFilteredWO.filter(wo => (wo.priority || '').toLowerCase() === 'medium').length;
   const highPriorityWO = priorityFilteredWO.filter(wo => (wo.priority || '').toLowerCase() === 'high').length;
+  const urgentPriorityWO = priorityFilteredWO.filter(wo => (wo.priority || '').toLowerCase() === 'urgent').length;
   const unassignedPriorityWO = priorityFilteredWO.filter(wo => {
     const p = (wo.priority || '').toLowerCase();
-    return p !== 'low' && p !== 'medium' && p !== 'high';
+    return p !== 'low' && p !== 'medium' && p !== 'high' && p !== 'urgent' && p !== '';
   }).length;
   const priorityTotal = priorityFilteredWO.length;
   
@@ -376,6 +377,7 @@ const FPDashboard = ({ user }) => {
     { name: 'Low', value: lowPriorityWO, color: '#10B981' },
     { name: 'Medium', value: mediumPriorityWO, color: '#F59E0B' },
     { name: 'High', value: highPriorityWO, color: '#EF4444' },
+    ...(urgentPriorityWO > 0 ? [{ name: 'Urgent', value: urgentPriorityWO, color: '#DC2626' }] : []),
     ...(unassignedPriorityWO > 0 ? [{ name: 'Unassigned', value: unassignedPriorityWO, color: '#9CA3AF' }] : []),
   ];
 
