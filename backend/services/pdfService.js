@@ -63,17 +63,26 @@ const drawPDFHeader = (doc, margin) => {
   
   // Company name - larger
   const textX = margin + 50; // Adjusted for larger logo
-  doc.fontSize(16).fillColor(gold).font('Helvetica-Bold').text('XLAND INFRA', textX, 10); // Increased from 11
+  doc.fontSize(16).fillColor(gold).font('Helvetica-Bold').text('XLAND INFRA', textX, 10);
   
-  // PVT LTD with decorative lines - positioned below XLAND INFRA
-  doc.fontSize(7).fillColor(gold).font('Helvetica'); // Increased from 5
-  doc.strokeColor(gold).lineWidth(0.5);
-  // Left line (10px long)
-  doc.moveTo(textX, 30).lineTo(textX + 12, 30).stroke();
-  // PVT LTD text
-  doc.text('PVT LTD', textX + 18, 26, { lineBreak: false });
-  // Right line
-  doc.moveTo(textX + 55, 30).lineTo(textX + 67, 30).stroke();
+  // PVT LTD with decorative lines - centered below XLAND INFRA
+  // "XLAND INFRA" width at fontSize 16 is ~95px, center PVT LTD under it
+  const xlandWidth = 95;
+  const pvtLtdWidth = 32; // "PVT LTD" at fontSize 7
+  const lineLength = 18;
+  const gap = 6;
+  const totalWidth = lineLength + gap + pvtLtdWidth + gap + lineLength; // ~80px total
+  const startX = textX + (xlandWidth - totalWidth) / 2; // Center under XLAND INFRA
+  
+  doc.fontSize(7).fillColor(gold).font('Helvetica');
+  doc.strokeColor(gold).lineWidth(0.6);
+  
+  // Left line
+  doc.moveTo(startX, 30).lineTo(startX + lineLength, 30).stroke();
+  // PVT LTD text (centered)
+  doc.text('PVT LTD', startX + lineLength + gap, 26, { lineBreak: false });
+  // Right line (equal to left)
+  doc.moveTo(startX + lineLength + gap + pvtLtdWidth + gap, 30).lineTo(startX + lineLength + gap + pvtLtdWidth + gap + lineLength, 30).stroke();
   
   return headerHeight + 22; // Return starting Y position for content (added more spacing below gold bar)
 };
@@ -127,9 +136,9 @@ const generateEstimatePDF = async (estimate) => {
       // ===== HEADER - Use shared function =====
       let y = drawPDFHeader(doc, 50);
 
-      // Add ESTIMATE badge in header (top right) - filled gold with black text
+      // Add ESTIMATE badge in header (top right) - filled gold with black text (not bold)
       doc.roundedRect(465, 12, 90, 24, 4).fill('#D4A84B');
-      doc.fontSize(12).fillColor('#1a1a1a').font('Helvetica-Bold').text('ESTIMATE', 478, 18);
+      doc.fontSize(12).fillColor('#1a1a1a').font('Helvetica').text('ESTIMATE', 480, 18);
       doc.font('Helvetica');
 
       // Estimate Info - styled like invoice
