@@ -252,7 +252,7 @@ const GroupedBarChart = ({ data }) => {
               })}
             </div>
             {/* Property type label */}
-            <span className="text-[10px] text-gray-600 font-medium mt-2 text-center truncate w-20" title={propType}>
+            <span className="text-[10px] text-gray-600 font-medium mt-2 text-center whitespace-nowrap">
               {propType}
             </span>
           </div>
