@@ -3,11 +3,21 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import SVGDonutChart from './common/DonutChart';
 import { STATUS_COLORS, ESTIMATE_TYPE_COLORS, getConsistentColor } from '../utils/chartColors';
 
-// Helper to normalize property type
-const normalizePropertyType = (type) => {
+// Helper to normalize property type - also checks property_code prefix
+const normalizePropertyType = (type, propertyCode) => {
+  // First check property_code prefix (e.g., GC-xxx, APT-xxx)
+  if (propertyCode) {
+    const codeUpper = propertyCode.toUpperCase();
+    if (codeUpper.startsWith('GC-') || codeUpper.startsWith('GC_')) return 'Gated Community';
+    if (codeUpper.startsWith('APT-') || codeUpper.startsWith('APT_')) return 'Apartment';
+    if (codeUpper.startsWith('VL-') || codeUpper.startsWith('VILLA-')) return 'Villa';
+    if (codeUpper.startsWith('FL-') || codeUpper.startsWith('FLAT-')) return 'Flat';
+    if (codeUpper.startsWith('PL-') || codeUpper.startsWith('PLOT-')) return 'Plot';
+  }
+  
   if (!type) return 'Other';
   const upper = type.toUpperCase().replace(/[_\s-]/g, '');
-  if (upper === 'GC' || upper.includes('GATED')) return 'Apartment';
+  if (upper === 'GC' || upper.includes('GATED') || upper.includes('GATEDCOMMUNITY')) return 'Gated Community';
   if (upper === 'APT' || upper.includes('APARTMENT')) return 'Apartment';
   if (upper === 'VILLA' || upper === 'VILLAS') return 'Villa';
   if (upper === 'FLAT' || upper === 'FLATS') return 'Flat';
@@ -301,7 +311,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   );
   const propertyTypeCount = {};
   block2Filtered.forEach(est => {
-    const propType = normalizePropertyType(est.property_type || est.propertyType);
+    const propType = normalizePropertyType(est.property_type || est.propertyType, est.property_code || est.propertyCode);
     propertyTypeCount[propType] = (propertyTypeCount[propType] || 0) + 1;
   });
   const propertyTypeData = Object.entries(propertyTypeCount)
@@ -352,7 +362,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   );
   const directPropertyTypeCount = {};
   block5Filtered.forEach(est => {
-    const propType = normalizePropertyType(est.property_type || est.propertyType);
+    const propType = normalizePropertyType(est.property_type || est.propertyType, est.property_code || est.propertyCode);
     directPropertyTypeCount[propType] = (directPropertyTypeCount[propType] || 0) + 1;
   });
   const directPropertyTypeData = Object.entries(directPropertyTypeCount)
@@ -395,7 +405,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   const allCategories = new Set();
   
   block8Filtered.forEach(est => {
-    const propType = normalizePropertyType(est.property_type || est.propertyType);
+    const propType = normalizePropertyType(est.property_type || est.propertyType, est.property_code || est.propertyCode);
     const category = est.work_order_category || est.workOrderCategory || 'Other';
     
     allCategories.add(category);

@@ -570,8 +570,18 @@ const WorkOrders = ({ admin }) => {
           </p>
         </div>
         
-        {/* FP Switcher - Top Right */}
-        <div className="relative">
+        <div className="flex items-center gap-3">
+          {/* Create Work Order Button */}
+          <button
+            onClick={() => setActiveTab('create')}
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Work Order</span>
+          </button>
+          
+          {/* FP Switcher */}
+          <div className="relative">
           <button
             onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
             className="flex items-center gap-3 px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm hover:border-gray-300 hover:shadow-sm transition-all"
@@ -613,6 +623,7 @@ const WorkOrders = ({ admin }) => {
               ))}
             </div>
           )}
+        </div>
         </div>
       </div>
 
@@ -684,17 +695,6 @@ const WorkOrders = ({ admin }) => {
           }`}>
             {workOrders.filter(wo => wo.status === 'completed').length}
           </span>
-        </button>
-        <button
-          onClick={() => setActiveTab('create')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-colors ${
-            activeTab === 'create'
-              ? 'bg-blue-100 text-blue-700 border border-blue-200'
-              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-          }`}
-        >
-          <Plus className="w-4 h-4" />
-          Create New
         </button>
         <button
           onClick={fetchWorkOrders}
