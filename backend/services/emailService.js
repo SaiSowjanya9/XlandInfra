@@ -2265,14 +2265,15 @@ const sendInvoiceEmail = async (invoice) => {
     </tr>`;
   }).join('');
 
-  // Payment link section (if provided) - Gold themed
+  // Payment link section (if provided) - Green themed (consistent across all invoices)
   const paymentSection = paymentLink ? `
-    <div style="text-align: center; margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 1px solid #c9a227;">
-      <p style="color: #92400e; font-size: 14px; margin: 0 0 12px 0;">Click below to pay securely online</p>
-      <a href="${paymentLink}" style="display: inline-block; background: linear-gradient(135deg, #c9a227 0%, #b08a1f 100%); color: #ffffff; text-decoration: none; padding: 14px 50px; border-radius: 8px; font-size: 16px; font-weight: 700; box-shadow: 0 4px 6px rgba(201, 162, 39, 0.3);">
+    <div style="text-align: center; margin: 30px 0; padding: 25px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 12px; border: 1px solid #86efac;">
+      <p style="color: #166534; font-size: 16px; font-weight: 600; margin: 0 0 15px 0;">Ready to pay? Click below to complete your payment securely.</p>
+      <a href="${paymentLink}" style="display: inline-block; background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.4);">
         ðŸ’³ Pay Now
       </a>
-      <p style="color: #78716c; font-size: 11px; margin: 12px 0 0 0;">Secure payment powered by Razorpay</p>
+      <p style="color: #6b7280; font-size: 12px; margin: 15px 0 0 0;">Secure payment powered by Razorpay</p>
+      <p style="color: #9ca3af; font-size: 11px; margin: 5px 0 0 0;">UPI • Cards • Net Banking • Wallets</p>
     </div>
   ` : '';
 
