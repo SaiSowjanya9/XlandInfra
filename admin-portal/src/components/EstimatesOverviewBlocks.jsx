@@ -327,7 +327,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
     { name: 'Sent', value: block3Filtered.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block3Filtered.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block3Filtered.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected },
-    { name: 'Converted', value: block3Filtered.filter(e => getStatus(e) === 'converted').length, color: '#8B5CF6' }
+
   ];
   // Use actual filtered count as total to ensure accuracy
   const propertyStatusTotal = block3Filtered.length;
@@ -340,7 +340,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
     { name: 'Sent', value: block4Filtered.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block4Filtered.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block4Filtered.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected },
-    { name: 'Converted', value: block4Filtered.filter(e => getStatus(e) === 'converted').length, color: '#8B5CF6' }
+
   ];
   // Use actual filtered count as total to ensure accuracy
   const statusTotal = block4Filtered.length;
@@ -366,7 +366,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
     { name: 'Sent', value: block6Filtered.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block6Filtered.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block6Filtered.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected },
-    { name: 'Converted', value: block6Filtered.filter(e => getStatus(e) === 'converted').length, color: '#8B5CF6' }
+
   ];
   // Use actual filtered count as total to ensure accuracy
   const directStatusTotal = block6Filtered.length;
@@ -379,7 +379,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
     { name: 'Sent', value: block7Filtered.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block7Filtered.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block7Filtered.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected },
-    { name: 'Converted', value: block7Filtered.filter(e => getStatus(e) === 'converted').length, color: '#8B5CF6' }
+
   ];
   // Use actual filtered count as total to ensure accuracy
   const workOrderOverviewTotal = block7Filtered.length;
@@ -424,7 +424,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
     { name: 'Sent', value: block9Filtered.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block9Filtered.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block9Filtered.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected },
-    { name: 'Converted', value: block9Filtered.filter(e => getStatus(e) === 'converted').length, color: '#8B5CF6' }
+
   ];
   const workOrderStatusTotal = block9Filtered.length;
   const workOrderStatusData = workOrderStatusDataAll.filter(item => item.value > 0);
