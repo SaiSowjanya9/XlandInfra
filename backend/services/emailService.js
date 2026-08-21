@@ -957,41 +957,41 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   // Build property details HTML based on property type
   // Order: Property Type ? Address ? City ? Zone ? Division (logical flow)
   let propertyDetailsHtml = `
-    <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Property Type:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${getPropertyTypeLabel(propertyType)}</td></tr>
-    ${address ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Address:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${address}</td></tr>` : ''}
-    ${city ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">City:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${city}</td></tr>` : ''}
-    ${zone ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Zone:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${zone}</td></tr>` : ''}
-    ${division ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Division:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${division}</td></tr>` : ''}
+    <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Property Type:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${getPropertyTypeLabel(propertyType)}</td></tr>
+    ${address ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Address:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${address}</td></tr>` : ''}
+    ${city ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">City:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${city}</td></tr>` : ''}
+    ${zone ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Zone:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${zone}</td></tr>` : ''}
+    ${division ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Division:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${division}</td></tr>` : ''}
   `;
 
   // GC-specific fields
   if (['GC', 'gated_community', 'Gated Community'].includes(propertyType)) {
     propertyDetailsHtml += `
-      ${numberOfBlocks ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Number of Blocks:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${numberOfBlocks}</td></tr>` : ''}
-      ${totalUnits ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Total Units:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${totalUnits}</td></tr>` : ''}
+      ${numberOfBlocks ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Number of Blocks:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${numberOfBlocks}</td></tr>` : ''}
+      ${totalUnits ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Total Units:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${totalUnits}</td></tr>` : ''}
     `;
     // Add block details if available
     if (blockNames && Object.keys(blockNames).length > 0) {
       const blockDetailsList = Object.entries(blockNames).map(([key, name]) => 
         `${name || 'Block ' + key}: ${unitsPerBlock?.[key] || 0} units`
       ).join(', ');
-      propertyDetailsHtml += `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Block Details:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${blockDetailsList}</td></tr>`;
+      propertyDetailsHtml += `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Block Details:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${blockDetailsList}</td></tr>`;
     }
   }
 
   // Apartment-specific fields
   if (['APT', 'Apt', 'apartment', 'Apartment'].includes(propertyType)) {
     propertyDetailsHtml += `
-      ${towerName ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Tower/Building:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${towerName}</td></tr>` : ''}
-      ${blockNumber ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Block Number:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${blockNumber}</td></tr>` : ''}
-      ${totalUnits ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Number of Units:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${totalUnits}</td></tr>` : ''}
+      ${towerName ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Tower/Building:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${towerName}</td></tr>` : ''}
+      ${blockNumber ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Block Number:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${blockNumber}</td></tr>` : ''}
+      ${totalUnits ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Number of Units:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${totalUnits}</td></tr>` : ''}
     `;
   }
 
   // Villa/Plot-specific fields
   if (['VILLA', 'Villa', 'villa', 'PLOT', 'Plot', 'plot'].includes(propertyType)) {
     propertyDetailsHtml += `
-      ${villaPlotNumber ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Villa/Plot Number:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${villaPlotNumber}</td></tr>` : ''}
+      ${villaPlotNumber ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Villa/Plot Number:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${villaPlotNumber}</td></tr>` : ''}
     `;
   }
 
@@ -1118,7 +1118,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
             <div style="margin-bottom: 20px;">
               <p style="margin: 0 0 10px 0; color: #1f2937; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Property Details</p>
               <table style="width: 100%;">
-                <tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px; width: 120px;">Name:</td><td style="padding: 4px 0; padding-left: 10px; color: #1f2937;">${propertyName || '-'}</td></tr>
+                <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Name:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${propertyName || '-'}</td></tr>
                 ${propertyDetailsHtml}
               </table>
             </div>
