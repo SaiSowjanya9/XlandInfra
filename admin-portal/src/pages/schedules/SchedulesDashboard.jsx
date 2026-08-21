@@ -739,7 +739,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
               className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 hover:shadow-md transition-shadow cursor-pointer"
               style={{ borderLeftWidth: '3px', borderLeftColor: card.borderColor }}
             >
-              <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-start justify-between gap-2 mb-1">
                 <p className="text-xs font-medium text-gray-700 leading-tight">{card.label}</p>
                 <div 
                   className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -748,6 +748,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
                   <Icon className="w-3.5 h-3.5" style={{ color: card.iconColor }} />
                 </div>
               </div>
+              <p className="text-xl font-bold text-gray-900 mb-1">{card.value}</p>
               <button 
                 className="text-xs font-medium text-blue-600 hover:underline flex items-center gap-0.5"
               >
