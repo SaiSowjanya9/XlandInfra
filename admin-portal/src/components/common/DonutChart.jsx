@@ -104,7 +104,7 @@ const DonutChart = ({
         >
           <p className="font-semibold text-gray-900 text-sm mb-1">{segments[hoveredSegment].name}</p>
           <div className="flex items-center gap-2 text-sm">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: segments[hoveredSegment].color }}></div>
+            <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: segments[hoveredSegment].color, minWidth: '12px', minHeight: '12px' }}></span>
             <span className="text-gray-600">Count:</span>
             <span className="font-bold text-gray-900">{segments[hoveredSegment].value}</span>
           </div>

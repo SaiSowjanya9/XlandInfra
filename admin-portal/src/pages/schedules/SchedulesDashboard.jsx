@@ -778,7 +778,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
               {statusDonutData.map((item, idx) => (
                 <div key={idx} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '12px', minHeight: '12px' }} />
                     <span className="text-gray-600">{item.name}</span>
                   </div>
                   <span className="font-semibold text-gray-900">

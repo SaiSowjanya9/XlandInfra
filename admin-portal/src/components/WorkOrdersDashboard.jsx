@@ -863,7 +863,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-3">
         <StatCard 
           title="Total Work Orders" 
           value={stats.total} 
@@ -937,7 +937,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
             <div className="flex-1 min-w-0 space-y-1.5">
               {statusData.map((item, index) => (
                 <div key={index} className="flex items-center gap-2 text-xs">
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                  <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '8px', minHeight: '8px' }}></span>
                   <span className="text-gray-600 truncate flex-1 min-w-0">{item.name}</span>
                   <span className="font-medium text-gray-900 flex-shrink-0">{item.value} ({totalFiltered ? ((item.value / totalFiltered) * 100).toFixed(0) : 0}%)</span>
                 </div>
@@ -962,7 +962,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                 <div className="flex-1 min-w-0 space-y-3">
                   {priorityData.map((item, index) => (
                     <div key={index} className="flex items-center gap-2 text-xs">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                      <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '8px', minHeight: '8px' }}></span>
                       <span className="text-gray-600 truncate flex-1 min-w-0">{item.name}</span>
                       <span className="font-medium text-gray-900 flex-shrink-0">{item.value} ({priorityTotal ? ((item.value / priorityTotal) * 100).toFixed(0) : 0}%)</span>
                     </div>
@@ -1003,7 +1003,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                     <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
                       <p className="font-semibold text-gray-900 text-sm mb-1">{item.name}</p>
                       <div className="flex items-center gap-2 text-sm">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                        <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '12px', minHeight: '12px' }}></span>
                         <span className="text-gray-600">Count:</span>
                         <span className="font-bold text-gray-900">{item.value} work orders</span>
                       </div>
@@ -1034,7 +1034,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
               <div className="flex flex-wrap items-center gap-4 mb-4">
                 {categoryTrend.categories.map((cat, index) => (
                   <div key={cat} className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: categoryColors[index % categoryColors.length] }}></div>
+                    <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: categoryColors[index % categoryColors.length], minWidth: '10px', minHeight: '10px' }}></span>
                     <span className="text-xs text-gray-600">{cat}</span>
                   </div>
                 ))}
@@ -1147,7 +1147,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                     <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
                       <p className="font-semibold text-gray-900 text-sm mb-1">{item.name} Priority</p>
                       <div className="flex items-center gap-2 text-sm">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                        <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '12px', minHeight: '12px' }}></span>
                         <span className="text-gray-600">Avg Completion:</span>
                         <span className="font-bold text-gray-900">{item.days} days</span>
                       </div>
@@ -1184,7 +1184,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                             <div className="bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200">
                               <p className="font-semibold text-gray-900 text-sm mb-1">{data.name}</p>
                               <div className="flex items-center gap-2 text-sm">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: data.color }}></div>
+                                <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: data.color, minWidth: '12px', minHeight: '12px' }}></span>
                                 <span className="text-gray-600">Count:</span>
                                 <span className="font-bold text-gray-900">{data.value}</span>
                               </div>
@@ -1204,14 +1204,14 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
               <div className="mt-3 space-y-1 text-xs">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    <span className="inline-block w-2 h-2 rounded-full bg-green-500 flex-shrink-0" style={{ minWidth: '8px', minHeight: '8px' }}></span>
                     <span className="text-gray-600">Met SLA</span>
                   </div>
                   <span className="font-medium">{slaData.met} ({slaData.percentage}%)</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                    <span className="inline-block w-2 h-2 rounded-full bg-red-500 flex-shrink-0" style={{ minWidth: '8px', minHeight: '8px' }}></span>
                     <span className="text-gray-600">Missed SLA</span>
                   </div>
                   <span className="font-medium">{slaData.missed} ({100 - slaData.percentage}%)</span>
@@ -1238,18 +1238,16 @@ const StatCard = ({ title, value, percentage, icon: Icon, color, linkText }) => 
   const colors = colorClasses[color] || colorClasses.blue;
 
   return (
-    <div className={`${colors.bg} rounded-xl p-4 border border-gray-100`}>
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <p className="text-xs text-gray-500 font-medium">{title}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-        </div>
-        <div className={`p-2 rounded-lg ${colors.icon}`}>
-          <Icon className="w-5 h-5" />
+    <div className={`${colors.bg} rounded-xl p-3 border border-gray-100 min-w-0`}>
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <p className="text-xs text-gray-500 font-medium leading-tight">{title}</p>
+        <div className={`p-1.5 rounded-lg ${colors.icon} flex-shrink-0`}>
+          <Icon className="w-4 h-4" />
         </div>
       </div>
-      <p className="text-xs text-gray-500 whitespace-nowrap">{percentage}</p>
-      <button className={`text-xs ${colors.text} font-medium mt-2 flex items-center gap-1 hover:underline`}>
+      <p className="text-xl font-bold text-gray-900">{value}</p>
+      <p className="text-[10px] text-gray-500 mt-1 truncate">{percentage}</p>
+      <button className={`text-xs ${colors.text} font-medium mt-1.5 flex items-center gap-0.5 hover:underline`}>
         {linkText} <ChevronRight className="w-3 h-3" />
       </button>
     </div>

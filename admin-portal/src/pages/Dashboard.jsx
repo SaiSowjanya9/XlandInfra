@@ -370,7 +370,7 @@ const Dashboard = () => {
     { name: 'Low', value: lowPriorityWO, color: '#10B981' },
     { name: 'Medium', value: mediumPriorityWO, color: '#F59E0B' },
     { name: 'High', value: highPriorityWO, color: '#EF4444' },
-    ...(urgentPriorityWO > 0 ? [{ name: 'Urgent', value: urgentPriorityWO, color: '#DC2626' }] : []),
+    ...(urgentPriorityWO > 0 ? [{ name: 'Urgent', value: urgentPriorityWO, color: '#7C3AED' }] : []),
     ...(unassignedPriorityWO > 0 ? [{ name: 'Unassigned', value: unassignedPriorityWO, color: '#9CA3AF' }] : []),
   ];
 
@@ -896,26 +896,26 @@ const Dashboard = () => {
             </div>
             
             {/* Three Chart Boxes */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {/* Work Orders by Status */}
-              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-sm font-semibold text-gray-900">Work Orders by Status</h3>
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 min-w-0">
+                <div className="flex justify-between items-center mb-4 gap-2">
+                  <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap">Work Orders by Status</h3>
                   <PeriodDropdown value={woStatusFilter} onChange={setWoStatusFilter} />
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="w-28 h-28 lg:w-36 lg:h-36 flex-shrink-0">
+                  <div className="w-24 h-24 flex-shrink-0">
                     <DonutChart
                       data={woStatusData}
                       centerValue={totalWorkOrders}
                     />
                   </div>
-                  <div className="flex-1 min-w-0 space-y-1.5">
+                  <div className="flex-1 min-w-0 space-y-1">
                     {woStatusData.map((item, index) => (
                       <div key={index} className="flex items-center gap-2 text-xs">
-                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
-                        <span className="text-gray-600 truncate flex-1 min-w-0">{item.name}</span>
-                        <span className="font-medium text-gray-900 flex-shrink-0">{item.value} ({totalWorkOrders ? ((item.value / totalWorkOrders) * 100).toFixed(0) : 0}%)</span>
+                        <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '8px', minHeight: '8px' }}></span>
+                        <span className="text-gray-600 truncate">{item.name}</span>
+                        <span className="font-medium text-gray-900 whitespace-nowrap ml-auto">{item.value} ({totalWorkOrders ? ((item.value / totalWorkOrders) * 100).toFixed(0) : 0}%)</span>
                       </div>
                     ))}
                   </div>
@@ -923,24 +923,24 @@ const Dashboard = () => {
               </div>
 
               {/* Work Orders by Priority */}
-              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-sm font-semibold text-gray-900">Work Orders by Priority</h3>
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 min-w-0">
+                <div className="flex justify-between items-center mb-4 gap-2">
+                  <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap">Work Orders by Priority</h3>
                   <PeriodDropdown value={woPriorityFilter} onChange={setWoPriorityFilter} />
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="w-28 h-28 lg:w-36 lg:h-36 flex-shrink-0">
+                  <div className="w-24 h-24 flex-shrink-0">
                     <DonutChart
                       data={priorityData}
                       centerValue={priorityTotal || totalWorkOrders}
                     />
                   </div>
-                  <div className="flex-1 min-w-0 space-y-3">
+                  <div className="flex-1 min-w-0 space-y-2">
                     {priorityData.map((item, index) => (
                       <div key={index} className="flex items-center gap-2 text-xs">
-                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
-                        <span className="text-gray-600 truncate flex-1 min-w-0">{item.name}</span>
-                        <span className="font-medium text-gray-900 flex-shrink-0">{item.value} ({(priorityTotal || totalWorkOrders) ? ((item.value / (priorityTotal || totalWorkOrders)) * 100).toFixed(0) : 0}%)</span>
+                        <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '8px', minHeight: '8px' }}></span>
+                        <span className="text-gray-600 truncate">{item.name}</span>
+                        <span className="font-medium text-gray-900 whitespace-nowrap ml-auto">{item.value} ({(priorityTotal || totalWorkOrders) ? ((item.value / (priorityTotal || totalWorkOrders)) * 100).toFixed(0) : 0}%)</span>
                       </div>
                     ))}
                   </div>
@@ -948,9 +948,9 @@ const Dashboard = () => {
               </div>
 
               {/* Work Orders by Property Type */}
-              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-sm font-semibold text-gray-900">Work Orders by Property Type</h3>
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 min-w-0">
+                <div className="flex justify-between items-center mb-4 gap-2">
+                  <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap">Work Orders by Property Type</h3>
                   <PeriodDropdown value={woPropertyTypeFilter} onChange={setWoPropertyTypeFilter} />
                 </div>
                 <div className="space-y-3">
@@ -1001,7 +1001,7 @@ const Dashboard = () => {
                         <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
                           <p className="font-semibold text-gray-900 text-sm mb-1">{item.name}</p>
                           <div className="flex items-center gap-2 text-sm">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                            <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '12px', minHeight: '12px' }}></span>
                             <span className="text-gray-600">Count:</span>
                             <span className="font-bold text-gray-900">{item.value} work orders</span>
                           </div>
