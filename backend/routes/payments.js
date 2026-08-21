@@ -1781,20 +1781,28 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
       return res.status(400).json({ success: false, message: 'Customer email not found. Please update the invoice with customer email.' });
     }
     
-    // Generate payment link
-    const paymentLink = `${process.env.FRONTEND_URL || 'https://xlandinfra.com'}/pay/${invoice.invoice_id}`;
+    // Create actual Razorpay payment link (or use existing one if valid)
+    let paymentLink = invoice.razorpay_short_url;
+    if (!paymentLink || invoice.payment_link_status === 'expired' || invoice.payment_link_status === 'cancelled') {
+      try {
+        const { createPaymentLinkForInvoice } = require('../services/invoiceService');
+        paymentLink = await createPaymentLinkForInvoice(id, invoice);
+      } catch (plErr) {
+        console.error('Failed to create Razorpay payment link:', plErr.message);
+        // Fallback to frontend URL if Razorpay fails
+        paymentLink = `${process.env.FRONTEND_URL || 'https://xlandinfra.com'}/pay/${invoice.invoice_id}`;
+      }
+    }
 
     // Update invoice status
     await pool.execute(`
       UPDATE invoices SET 
         status = 'sent',
-        payment_link = ?,
-        payment_link_created_at = NOW(),
         sent_at = NOW(),
         sent_by = ?,
         email_sent_at = NOW()
       WHERE id = ?
-    `, [paymentLink, req.user.id, id]);
+    `, [req.user.id, id]);
 
     // Generate PDF attachment
     const { generateInvoicePDF } = require('../services/pdfService');
@@ -1969,9 +1977,13 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
                 </div>
               </div>
 
-              <div style="text-align: center;">
-                <a href="${paymentLink}" class="pay-btn">Pay Now</a>
-                <p style="color: #6b7280; font-size: 14px;">Or copy this link: ${paymentLink}</p>
+              <div style="text-align: center; margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-radius: 12px; border: 1px solid #86efac;">
+                <p style="margin: 0 0 15px; color: #166534; font-size: 16px; font-weight: 600;">Ready to pay? Click below to complete your payment securely.</p>
+                <a href="${paymentLink}" style="display: inline-block; background: linear-gradient(135deg, #16a34a, #22c55e); color: white; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.4);">
+                  💳 PAY NOW
+                </a>
+                <p style="margin: 15px 0 0; color: #6b7280; font-size: 12px;">Secure payment powered by Razorpay</p>
+                <p style="margin: 5px 0 0; color: #9ca3af; font-size: 11px;">UPI • Cards • Net Banking • Wallets</p>
               </div>
 
               ${invoice.notes ? `
