@@ -1290,7 +1290,7 @@ router.post('/invoices/create-from-estimate', authenticate, canEditPayments, asy
 router.post('/invoices/create-generic', authenticate, canEditPayments, async (req, res) => {
   try {
     const fpId = getFPScope(req);
-    const { customerDetails, lineItems, discountPercent, gstPercent, dueDate, notes, sendEmail } = req.body;
+    const { customerDetails, lineItems, discountPercent, gstPercent, invoiceDate, dueDate, notes, sendEmail } = req.body;
 
     // Validate required fields
     if (!customerDetails?.name || !customerDetails?.email) {
@@ -1317,9 +1317,17 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
     const totalAmount = taxableAmount + taxAmount;
 
     // Generate invoice ID
-    const invoiceId = await generateInvoiceId(fpId);
-    const invoiceDate = new Date();
-    const dueDateValue = dueDate || new Date(invoiceDate.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const invoiceIdGen = await generateInvoiceId(fpId);
+    
+    // Use provided invoiceDate or current date in IST (UTC+5:30)
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istNow = new Date(now.getTime() + istOffset);
+    const invoiceDateValue = invoiceDate || istNow.toISOString().split('T')[0];
+    
+    // Calculate due date (14 days from invoice date)
+    const invoiceDateObj = new Date(invoiceDateValue);
+    const dueDateValue = dueDate || new Date(invoiceDateObj.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
     // Format line items for storage
     const formattedLineItems = validItems.map(item => ({
@@ -1341,14 +1349,14 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
         created_by, created_by_role, notes
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      invoiceId,
+      invoiceIdGen,
       'generic',
       fpId,
       customerDetails.name,
       customerDetails.email,
       customerDetails.phone || null,
       customerDetails.address || null,
-      invoiceDate.toISOString().split('T')[0],
+      invoiceDateValue,
       dueDateValue,
       JSON.stringify(formattedLineItems),
       subtotal,
@@ -1399,7 +1407,7 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
 
         await sendEmailService({
           to: customerDetails.email,
-          subject: `Invoice ${invoiceId} from XLand Infra`,
+          subject: `Invoice ${invoiceIdGen} from XLand Infra`,
           html: `
             <!DOCTYPE html>
             <html>
@@ -1420,7 +1428,7 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
               <div class="container">
                 <div class="header">
                   <h1 style="margin: 0; font-size: 28px;">Invoice</h1>
-                  <p style="margin: 10px 0 0; opacity: 0.9;">${invoiceId}</p>
+                  <p style="margin: 10px 0 0; opacity: 0.9;">${invoiceIdGen}</p>
                 </div>
                 
                 <div class="content">
@@ -1504,7 +1512,7 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
           [insertedId]
         );
 
-        console.log(`📧 Generic invoice ${invoiceId} sent to ${customerDetails.email}`);
+        console.log(`📧 Generic invoice ${invoiceIdGen} sent to ${customerDetails.email}`);
       } catch (emailError) {
         console.error('Failed to send invoice email:', emailError);
         // Don't fail the request, just log the error
@@ -1516,7 +1524,7 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
       message: sendEmail ? `Invoice created and sent to ${customerDetails.email}` : 'Invoice created successfully',
       data: { 
         id: insertedId, 
-        invoiceId,
+        invoiceId: invoiceIdGen,
         totalAmount,
         customerEmail: customerDetails.email,
         emailSent: sendEmail
