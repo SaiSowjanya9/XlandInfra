@@ -849,16 +849,17 @@ const FPDashboard = ({ user }) => {
               <BarChart data={propertyTypeData} margin={{ top: 10, right: 10, left: 10, bottom: 30 }}>
                 <XAxis 
                   dataKey="name" 
-                  tick={{ fontSize: 11, fill: '#374151' }} 
+                  tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} 
                   stroke="#E5E7EB" 
                   axisLine={{ stroke: '#E5E7EB' }}
                   tickLine={false}
-                  angle={-20}
+                  angle={-15}
                   textAnchor="end"
                   height={50}
+                  interval={0}
                 />
                 <YAxis 
-                  tick={{ fontSize: 11, fill: '#374151' }} 
+                  tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} 
                   stroke="#E5E7EB" 
                   axisLine={false}
                   tickLine={false}
@@ -882,29 +883,29 @@ const FPDashboard = ({ user }) => {
             </ResponsiveContainer>
           </div>
 
-          {/* Stats Summary */}
-          <div className="space-y-4">
-            <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-white" />
+          {/* Stats Summary - Compact */}
+          <div className="space-y-2">
+            <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm text-blue-600 font-medium">Total Properties</p>
-                  <p className="text-3xl font-bold text-blue-700">{totalPropertiesCount}</p>
+                  <p className="text-xs text-blue-600 font-medium">Total Properties</p>
+                  <p className="text-2xl font-bold text-blue-700">{totalPropertiesCount}</p>
                 </div>
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               {propertyTypeData.slice(0, 4).map((item, index) => (
-                <div key={index} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '12px', minHeight: '12px' }}></span>
-                    <span className="text-sm font-medium text-gray-700">{item.name}</span>
+                <div key={index} className="bg-gray-50 rounded-lg p-2 border border-gray-100">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></span>
+                    <span className="text-xs font-medium text-gray-700 truncate">{item.name}</span>
                   </div>
-                  <p className="text-xl font-bold text-gray-900">{item.value}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-lg font-bold text-gray-900">{item.value}</p>
+                  <p className="text-[10px] text-gray-500">
                     {totalPropertiesCount ? ((item.value / totalPropertiesCount) * 100).toFixed(1) : 0}% of total
                   </p>
                 </div>

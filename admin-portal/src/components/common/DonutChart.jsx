@@ -90,8 +90,9 @@ const DonutChart = ({
           x={center} 
           y={center + 12} 
           textAnchor="middle" 
-          fontSize="10" 
-          fill="#6B7280"
+          fontSize="11" 
+          fontWeight="500"
+          fill="#374151"
         >
           {centerLabel}
         </text>
