@@ -847,7 +847,7 @@ const FPDashboard = ({ user }) => {
               <BarChart data={propertyTypeData} margin={{ top: 10, right: 10, left: 10, bottom: 30 }}>
                 <XAxis 
                   dataKey="name" 
-                  tick={{ fontSize: 10, fill: '#6B7280' }} 
+                  tick={{ fontSize: 11, fill: '#374151' }} 
                   stroke="#E5E7EB" 
                   axisLine={{ stroke: '#E5E7EB' }}
                   tickLine={false}
@@ -856,7 +856,7 @@ const FPDashboard = ({ user }) => {
                   height={50}
                 />
                 <YAxis 
-                  tick={{ fontSize: 10, fill: '#9CA3AF' }} 
+                  tick={{ fontSize: 11, fill: '#374151' }} 
                   stroke="#E5E7EB" 
                   axisLine={false}
                   tickLine={false}
