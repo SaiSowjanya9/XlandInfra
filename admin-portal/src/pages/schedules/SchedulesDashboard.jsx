@@ -729,28 +729,30 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
       </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
+      {/* Stat Cards - Compact */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {statCards.map((card, idx) => {
           const Icon = card.icon;
           return (
             <div
               key={idx}
-              className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer"
-              style={{ borderLeftWidth: '4px', borderLeftColor: card.borderColor }}
+              className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 hover:shadow-md transition-shadow cursor-pointer"
+              style={{ borderLeftWidth: '3px', borderLeftColor: card.borderColor }}
             >
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <p className="text-xs font-medium text-gray-700 leading-tight">{card.label}</p>
                 <div 
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: card.iconBg }}
                 >
-                  <Icon className="w-5 h-5" style={{ color: card.iconColor }} />
+                  <Icon className="w-3.5 h-3.5" style={{ color: card.iconColor }} />
                 </div>
               </div>
-              <p className="text-sm font-medium text-gray-600 mb-1">{card.label}</p>
-              <p className="text-2xl font-bold text-gray-900">{card.value}</p>
-              <p className="text-xs text-gray-500 mt-1 line-clamp-1">{card.percentage}</p>
-              <p className="text-xs font-medium text-blue-600 mt-2 hover:underline">{card.link} <ArrowRight className="inline w-3 h-3" /></p>
+              <button 
+                className="text-xs font-medium text-blue-600 hover:underline flex items-center gap-0.5"
+              >
+                {card.link} <ArrowRight className="w-3 h-3" />
+              </button>
             </div>
           );
         })}

@@ -948,10 +948,12 @@ const FPDashboard = ({ user }) => {
                 <PeriodDropdown value={woStatusFilter} onChange={setWoStatusFilter} />
               </div>
               <div className="flex items-center gap-4">
-                <div className="w-24 h-24 flex-shrink-0">
+                <div className="w-28 h-28 flex-shrink-0">
                   <DonutChart
                     data={woStatusData}
                     centerValue={totalWorkOrders}
+                    size={112}
+                    strokeWidth={16}
                   />
                 </div>
                 <div className="flex-1 min-w-0 space-y-1">
@@ -973,10 +975,12 @@ const FPDashboard = ({ user }) => {
                 <PeriodDropdown value={woPriorityFilter} onChange={setWoPriorityFilter} />
               </div>
               <div className="flex items-center gap-4">
-                <div className="w-24 h-24 flex-shrink-0">
+                <div className="w-28 h-28 flex-shrink-0">
                   <DonutChart
                     data={priorityData}
                     centerValue={priorityTotal || totalWorkOrders}
+                    size={112}
+                    strokeWidth={16}
                   />
                 </div>
                 <div className="flex-1 min-w-0 space-y-2">

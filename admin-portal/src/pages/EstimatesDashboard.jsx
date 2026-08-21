@@ -410,7 +410,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     { name: 'Sent', value: block2Sent, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block2Approved, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block2Rejected, color: STATUS_COLORS.Rejected },
-    { name: 'Converted', value: block2Data.filter(e => getStatus(e) === 'converted').length, color: '#8B5CF6' }
+
   ];
   // Use actual filtered count as total to ensure accuracy
   const statusTotal = block2Data.length;
@@ -448,7 +448,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     { name: 'Sent', value: block5Data.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block5Data.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block5Data.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected },
-    { name: 'Converted', value: block5Data.filter(e => getStatus(e) === 'converted').length, color: '#8B5CF6' }
+
   ];
   // Use actual filtered count as total to ensure accuracy
   const directStatusTotal = block5Data.length;
@@ -463,7 +463,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     { name: 'Sent', value: block6Data.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block6Data.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block6Data.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected },
-    { name: 'Converted', value: block6Data.filter(e => getStatus(e) === 'converted').length, color: '#8B5CF6' }
+
   ];
   // Use actual filtered count as total to ensure accuracy
   const propertyBasedStatusTotal = block6Data.length;
@@ -477,7 +477,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     { name: 'Sent', value: block7Data.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block7Data.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block7Data.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected },
-    { name: 'Converted', value: block7Data.filter(e => getStatus(e) === 'converted').length, color: '#8B5CF6' }
+
   ];
   // Use actual filtered count as total to ensure accuracy
   const workOrderStatusTotal = block7Data.length;
@@ -520,7 +520,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     { name: 'Sent', value: block9Data.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
     { name: 'Approved', value: block9Data.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
     { name: 'Rejected', value: block9Data.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected },
-    { name: 'Converted', value: block9Data.filter(e => getStatus(e) === 'converted').length, color: '#8B5CF6' }
+
   ];
   const workOrderOverviewTotal = block9Data.length;
   const workOrderOverviewData = workOrderOverviewDataAll.filter(item => item.value > 0);
