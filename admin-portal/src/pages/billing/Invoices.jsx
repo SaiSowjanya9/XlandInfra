@@ -515,9 +515,13 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
   };
 
   // Filter invoices based on active tab
+  // Only show invoices that have been SENT (exclude draft invoices - those are in Generated Invoices section)
   const filteredInvoices = activeTab === 'archived' 
     ? archivedInvoices 
     : invoices.filter(i => {
+        // Exclude draft invoices - they should be in "Generated Invoices" section
+        if (i.status === 'draft' || !i.status) return false;
+        
         const currentFilter = INVOICE_TABS.find(t => t.id === activeTab)?.filter;
         if (currentFilter === 'estimate') return i.invoiceType === 'estimate' || i.invoiceType === 'manual';
         if (currentFilter === 'work_order') return i.invoiceType === 'work_order';
@@ -571,13 +575,16 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
         <div className="flex gap-1 mt-4 border-b border-gray-200 -mb-4">
           {INVOICE_TABS.map(tab => {
             const Icon = tab.icon;
+            // Count only sent invoices (exclude draft - those are in Generated Invoices)
             const count = tab.filter === 'archived' 
               ? archivedInvoices.length
-              : invoices.filter(i => 
-                  tab.filter === 'estimate' ? (i.invoiceType === 'estimate' || i.invoiceType === 'manual') :
-                  tab.filter === 'work_order' ? i.invoiceType === 'work_order' :
-                  tab.filter === 'generic' ? i.invoiceType === 'generic' : true
-                ).length;
+              : invoices.filter(i => {
+                  // Exclude draft invoices from count
+                  if (i.status === 'draft' || !i.status) return false;
+                  return tab.filter === 'estimate' ? (i.invoiceType === 'estimate' || i.invoiceType === 'manual') :
+                    tab.filter === 'work_order' ? i.invoiceType === 'work_order' :
+                    tab.filter === 'generic' ? i.invoiceType === 'generic' : true;
+                }).length;
             return (
               <button
                 key={tab.id}

@@ -489,7 +489,10 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
     const matchesType = type === 'generated' 
       ? inv.invoiceType === 'estimate' 
       : inv.invoiceType === 'work_order';
-    return matchesSearch && matchesType;
+    // Only show invoices that haven't been sent yet (draft status)
+    // Once sent, they move to the Invoices section
+    const isNotSent = !inv.status || inv.status === 'draft';
+    return matchesSearch && matchesType && isNotSent;
   });
 
   const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
@@ -956,9 +959,9 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
     fetchInvoices();
   };
 
-  // Stats
-  const generatedCount = invoices.filter(i => i.invoiceType === 'estimate').length;
-  const workOrderCount = invoices.filter(i => i.invoiceType === 'work_order').length;
+  // Stats - only count draft (unsent) invoices
+  const generatedCount = invoices.filter(i => i.invoiceType === 'estimate' && (!i.status || i.status === 'draft')).length;
+  const workOrderCount = invoices.filter(i => i.invoiceType === 'work_order' && (!i.status || i.status === 'draft')).length;
 
   return (
     <div className="min-h-screen bg-gray-50">
