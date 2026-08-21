@@ -2187,8 +2187,8 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                         <div className="col-span-1">
                           <span className="w-7 h-7 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                         </div>
-                        <div className="col-span-2">
-                          <p className="font-medium text-gray-900 text-sm">{svc.name || svc.service || 'Service'}</p>
+                        <div className="col-span-2 min-w-0">
+                          <p className="font-medium text-gray-900 text-sm" style={{wordBreak: 'break-word'}}>{svc.name || svc.service || 'Service'}</p>
                         </div>
                         <div className="col-span-5">
                           <p className={`text-sm text-gray-600 text-center`}>

@@ -1238,15 +1238,11 @@ export const exportInvoiceToPDF = (invoice) => {
     }
 
     if (!isWorkOrderInvoice && services.length > 0) {
-      // Section header - text only
+      // Section header - text only (no decorative line)
       doc.setTextColor(...primaryText);
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
       doc.text('SERVICES INCLUDED', margin, y + 5);
-      doc.setDrawColor(...gold);
-      doc.setLineWidth(0.3);
-      // Gold line AFTER text (~42px wide at fontSize 8)
-      doc.line(margin + 44, y + 4, margin + 74, y + 4);
       
       y += 10;
 
@@ -1285,15 +1281,11 @@ export const exportInvoiceToPDF = (invoice) => {
     const summaryWidth = 90;
     const summaryX = pageWidth - margin - summaryWidth;
     
-    // Section header - text only
+    // Section header - text only (no decorative line)
     doc.setTextColor(...primaryText);
     doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
     doc.text('PRICE SUMMARY', summaryX, y + 5);
-    doc.setDrawColor(...gold);
-    doc.setLineWidth(0.3);
-    // Gold line AFTER text (~38px wide at fontSize 7)
-    doc.line(summaryX + 40, y + 4, summaryX + 70, y + 4);
     
     y += 10;
 
