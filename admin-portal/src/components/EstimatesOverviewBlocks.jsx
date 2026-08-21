@@ -144,7 +144,7 @@ const HorizontalBarChart = ({ data }) => {
                   backgroundColor: barColor
                 }}
               >
-                <span className="text-white text-[10px] font-medium">{item.value}</span>
+                <span className="text-white text-[11px] font-semibold">{item.value}</span>
               </div>
             </div>
             {/* Tooltip - positioned outside the bar container */}
@@ -167,7 +167,7 @@ const HorizontalBarChart = ({ data }) => {
           </div>
         );
       })}
-      <div className="flex justify-between text-[10px] text-gray-400 mt-1 px-1">
+      <div className="flex justify-between text-[11px] text-gray-500 font-medium mt-1 px-1">
         <span>0</span>
         <span>Number of Estimates</span>
         <span>{maxValue}</span>
@@ -226,7 +226,7 @@ const GroupedBarChart = ({ data }) => {
                     onMouseLeave={() => setHoveredBar(null)}
                   >
                     {value > 0 && (
-                      <span className="text-[9px] font-semibold text-gray-700 mb-1">{value}</span>
+                      <span className="text-[11px] font-bold text-gray-800 mb-1">{value}</span>
                     )}
                     <div 
                       className="w-6 rounded-t-md transition-all duration-500 cursor-pointer"
@@ -252,7 +252,7 @@ const GroupedBarChart = ({ data }) => {
               })}
             </div>
             {/* Property type label */}
-            <span className="text-[10px] text-gray-600 font-medium mt-2 text-center whitespace-nowrap">
+            <span className="text-[11px] text-gray-700 font-semibold mt-2 text-center whitespace-nowrap">
               {propType}
             </span>
           </div>
@@ -267,7 +267,7 @@ const GroupedBarChart = ({ data }) => {
               className="w-3 h-3 rounded-sm flex-shrink-0" 
               style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }}
             />
-            <span className="text-[9px] text-gray-600 leading-tight" title={cat}>
+            <span className="text-[11px] text-gray-700 font-medium leading-tight" title={cat}>
               {cat}
             </span>
           </div>

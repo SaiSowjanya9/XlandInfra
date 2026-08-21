@@ -1043,8 +1043,8 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={categoryTrend.data}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#9CA3AF" />
-                    <YAxis tick={{ fontSize: 11 }} stroke="#9CA3AF" allowDecimals={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} stroke="#9CA3AF" interval={0} />
+                    <YAxis tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} stroke="#9CA3AF" allowDecimals={false} />
                     <Tooltip 
                       contentStyle={{ 
                         backgroundColor: 'white', 
@@ -1095,8 +1095,8 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#9CA3AF" />
-                <YAxis tick={{ fontSize: 11 }} stroke="#9CA3AF" />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} stroke="#9CA3AF" interval={0} />
+                <YAxis tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} stroke="#9CA3AF" />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'white', 

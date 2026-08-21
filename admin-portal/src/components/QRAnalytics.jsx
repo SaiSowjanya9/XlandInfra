@@ -85,13 +85,13 @@ export const ScanTrendChart = ({ data, period = '7d' }) => {
         <XAxis 
           dataKey="date" 
           stroke="#6b7280" 
-          tick={{ fill: '#9ca3af', fontSize: 11 }}
+          tick={{ fill: '#374151', fontSize: 12, fontWeight: 500 }}
           tickLine={false}
           axisLine={false}
         />
         <YAxis 
           stroke="#6b7280" 
-          tick={{ fill: '#9ca3af', fontSize: 11 }}
+          tick={{ fill: '#374151', fontSize: 12, fontWeight: 500 }}
           tickLine={false}
           axisLine={false}
         />
@@ -424,13 +424,13 @@ export const BrowserChart = ({ data }) => {
     <ResponsiveContainer width="100%" height={200}>
       <BarChart data={chartData} layout="vertical" margin={{ left: 60, right: 20 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} horizontal={false} />
-        <XAxis type="number" stroke="#6b7280" tick={{ fill: '#9ca3af', fontSize: 11 }} />
+        <XAxis type="number" stroke="#6b7280" tick={{ fill: '#374151', fontSize: 12, fontWeight: 500 }} />
         <YAxis 
           type="category" 
           dataKey="name" 
           stroke="#6b7280" 
-          tick={{ fill: '#9ca3af', fontSize: 11 }}
-          width={60}
+          tick={{ fill: '#374151', fontSize: 12, fontWeight: 500 }}
+          width={80}
         />
         <Tooltip content={<CustomTooltip />} />
         <Bar 
