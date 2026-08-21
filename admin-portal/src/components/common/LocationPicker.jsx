@@ -60,8 +60,11 @@ const searchAddress = async (query) => {
 // Parse address components from Nominatim response
 const parseNominatimAddress = (data) => {
   const addr = data?.address || {};
+  // Build street address: house_number first, then road (e.g., "8625 Hickory Street")
+  const streetAddress = [addr.house_number, addr.road].filter(Boolean).join(' ');
+  const fullAddress = [streetAddress, addr.neighbourhood, addr.suburb].filter(Boolean).join(', ');
   return {
-    addressLine1: [addr.road, addr.house_number, addr.neighbourhood, addr.suburb].filter(Boolean).join(', ') || addr.amenity || '',
+    addressLine1: fullAddress || addr.amenity || '',
     city: addr.city || addr.town || addr.village || addr.county || '',
     state: addr.state || '',
     postalCode: addr.postcode || '',

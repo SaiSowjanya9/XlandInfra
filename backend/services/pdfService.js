@@ -127,6 +127,11 @@ const generateEstimatePDF = async (estimate) => {
       // ===== HEADER - Use shared function =====
       let y = drawPDFHeader(doc, 50);
 
+      // Add ESTIMATE badge in header (top right)
+      doc.roundedRect(475, 5, 70, 18, 3).fill('#C9A227');
+      doc.fontSize(10).fillColor('#ffffff').font('Helvetica-Bold').text('ESTIMATE', 483, 9);
+      doc.font('Helvetica');
+
       // Estimate Info - styled like invoice
       // ID label
       doc.fontSize(10).fillColor('#666666').font('Helvetica-Bold').text('ID:', 60, y);
@@ -181,28 +186,35 @@ const generateEstimatePDF = async (estimate) => {
 
       y += 115;
 
-      // Work Order Details (only for work order estimates) - Compact 4-column layout
+      // Work Order Details (only for work order estimates) - 2x2 Grid layout
       if (isWorkOrderEstimate && workOrderId) {
-        doc.rect(50, y, 500, 40).fill('#e8f4fc').stroke('#cce7f7');
+        doc.rect(50, y, 500, 55).fill('#e8f4fc').stroke('#cce7f7');
         doc.fontSize(10).fillColor(navy).text('Work Order Details', 60, y + 8);
         
-        // 4-column layout on single row
-        const col1 = 60, col2 = 175, col3 = 300, col4 = 430;
-        const wy = y + 22;
+        // 2x2 grid layout - labels and values inline
+        const leftCol = 60, rightCol = 300;
+        const row1Y = y + 25;
+        const row2Y = y + 40;
         
-        doc.fontSize(7).fillColor('#666666');
-        doc.text('Work Order ID', col1, wy);
-        doc.text('Category', col2, wy);
-        doc.text('Subcategory', col3, wy);
-        doc.text('Priority', col4, wy);
+        // Row 1: Work Order ID | Category
+        doc.fontSize(8).fillColor('#666666');
+        doc.text('Work Order ID:', leftCol, row1Y, { continued: true });
+        doc.fillColor('#1e40af').font('Helvetica-Bold').text('  ' + String(workOrderId || '-'), { continued: false });
         
-        doc.fontSize(8).fillColor('#333333');
-        doc.text(String(workOrderId || '-').substring(0, 20), col1, wy + 9);
-        doc.text(String(workOrderCategory || '-').substring(0, 18), col2, wy + 9);
-        doc.text(String(workOrderSubcategory || '-').substring(0, 18), col3, wy + 9);
-        doc.text(String(workOrderPriority || '-').toUpperCase(), col4, wy + 9);
+        doc.font('Helvetica').fillColor('#666666');
+        doc.text('Category:', rightCol, row1Y, { continued: true });
+        doc.fillColor('#333333').text('  ' + String(workOrderCategory || '-'), { continued: false });
         
-        y += 48;
+        // Row 2: Subcategory | Priority
+        doc.fillColor('#666666');
+        doc.text('Subcategory:', leftCol, row2Y, { continued: true });
+        doc.fillColor('#333333').text('  ' + String(workOrderSubcategory || '-'), { continued: false });
+        
+        doc.fillColor('#666666');
+        doc.text('Priority:', rightCol, row2Y, { continued: true });
+        doc.fillColor('#333333').text('  ' + String(workOrderPriority || '-').toUpperCase(), { continued: false });
+        
+        y += 63;
       }
 
       // Package Description - dynamic height based on content
@@ -380,8 +392,8 @@ const generateEstimatePDF = async (estimate) => {
       
       // Total line
       doc.rect(60, y + 55, 480, 1).fill('#e0e0e0');
-      doc.fontSize(12).fillColor(navy).text('Grand Total', 60, y + 62, { continued: false });
-      doc.font('Helvetica-Bold').fontSize(12).fillColor(gold).text(`Rs. ${safeTotal.toLocaleString()}`, 450, y + 62, { continued: false });
+      doc.fontSize(12).fillColor(navy).font('Helvetica-Bold').text('TOTAL:', 60, y + 62, { continued: false });
+      doc.fontSize(12).fillColor(gold).text(`Rs. ${safeTotal.toLocaleString()}`, 450, y + 62, { continued: false });
       doc.font('Helvetica');
       y += 90;
 
