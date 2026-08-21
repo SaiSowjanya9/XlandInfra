@@ -1204,10 +1204,9 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
 
                 return services.length > 0 ? (
                   <div>
-                    {/* Section Header - shorter gold line */}
+                    {/* Section Header */}
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xs font-bold text-gray-900 uppercase whitespace-nowrap">Services Included</span>
-                      <div className="w-full max-w-[200px] h-[1px] bg-[#c9a227]"></div>
                     </div>
                     
                     {/* Services Table - Compact */}
@@ -1284,10 +1283,9 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
               {/* ===== PRICE SUMMARY - Compact, right aligned ===== */}
               <div className="flex justify-end">
                 <div className="w-64">
-                  {/* Section Header - shorter gold line */}
+                  {/* Section Header */}
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xs font-bold text-gray-900 uppercase whitespace-nowrap">Price Summary</span>
-                    <div className="w-full max-w-[120px] h-[1px] bg-[#c9a227]"></div>
                   </div>
                   
                   {/* Summary Box - Compact */}
