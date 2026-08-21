@@ -127,9 +127,9 @@ const generateEstimatePDF = async (estimate) => {
       // ===== HEADER - Use shared function =====
       let y = drawPDFHeader(doc, 50);
 
-      // Add ESTIMATE badge in header (top right)
-      doc.roundedRect(475, 5, 70, 18, 3).fill('#C9A227');
-      doc.fontSize(10).fillColor('#ffffff').font('Helvetica-Bold').text('ESTIMATE', 483, 9);
+      // Add ESTIMATE badge in header (top right) - filled gold with black text
+      doc.roundedRect(470, 4, 80, 20, 3).fill('#D4A84B');
+      doc.fontSize(11).fillColor('#1a1a1a').font('Helvetica-Bold').text('ESTIMATE', 480, 9);
       doc.font('Helvetica');
 
       // Estimate Info - styled like invoice
@@ -196,23 +196,23 @@ const generateEstimatePDF = async (estimate) => {
         const row1Y = y + 25;
         const row2Y = y + 40;
         
-        // Row 1: Work Order ID | Category
+        // Row 1: Work Order ID | Category - all values in black
         doc.fontSize(8).fillColor('#666666');
-        doc.text('Work Order ID:', leftCol, row1Y, { continued: true });
-        doc.fillColor('#1e40af').font('Helvetica-Bold').text('  ' + String(workOrderId || '-'), { continued: false });
+        doc.text('Work Order ID:', leftCol, row1Y);
+        doc.fillColor('#333333').text(String(workOrderId || '-'), leftCol + 75, row1Y);
         
-        doc.font('Helvetica').fillColor('#666666');
-        doc.text('Category:', rightCol, row1Y, { continued: true });
-        doc.fillColor('#333333').text('  ' + String(workOrderCategory || '-'), { continued: false });
+        doc.fillColor('#666666');
+        doc.text('Category:', rightCol, row1Y);
+        doc.fillColor('#333333').text(String(workOrderCategory || '-'), rightCol + 55, row1Y);
         
         // Row 2: Subcategory | Priority
         doc.fillColor('#666666');
-        doc.text('Subcategory:', leftCol, row2Y, { continued: true });
-        doc.fillColor('#333333').text('  ' + String(workOrderSubcategory || '-'), { continued: false });
+        doc.text('Subcategory:', leftCol, row2Y);
+        doc.fillColor('#333333').text(String(workOrderSubcategory || '-'), leftCol + 75, row2Y);
         
         doc.fillColor('#666666');
-        doc.text('Priority:', rightCol, row2Y, { continued: true });
-        doc.fillColor('#333333').text('  ' + String(workOrderPriority || '-').toUpperCase(), { continued: false });
+        doc.text('Priority:', rightCol, row2Y);
+        doc.fillColor('#333333').text(String(workOrderPriority || '-').toUpperCase(), rightCol + 55, row2Y);
         
         y += 63;
       }
@@ -379,21 +379,21 @@ const generateEstimatePDF = async (estimate) => {
       doc.rect(50, y, 500, 80).fill(lightGray).stroke('#e0e0e0');
       
       doc.fontSize(9).fillColor('#666666');
-      doc.text('Subtotal', 60, y + 10, { continued: false });
-      doc.fillColor('#333333').text(`Rs. ${safeSubtotal.toLocaleString()}`, 450, y + 10, { continued: false });
+      doc.text('Subtotal:', 60, y + 10);
+      doc.fillColor('#333333').text(`Rs. ${safeSubtotal.toLocaleString()}`, 450, y + 10);
       
       if (safeDiscount > 0 || safeDiscountAmount > 0) {
-        doc.fillColor('#666666').text(`Discount (${safeDiscount}%)`, 60, y + 25, { continued: false });
-        doc.fillColor('#333333').text(`-Rs. ${safeDiscountAmount.toLocaleString()}`, 450, y + 25, { continued: false });
+        doc.fillColor('#666666').text(`Discount (${safeDiscount}%):`, 60, y + 25);
+        doc.fillColor('#333333').text(`-Rs. ${safeDiscountAmount.toLocaleString()}`, 450, y + 25);
       }
       
-      doc.fillColor('#666666').text(`GST (${safeGstPercent}%)`, 60, y + 40, { continued: false });
-      doc.fillColor('#333333').text(`Rs. ${safeTax.toLocaleString()}`, 450, y + 40, { continued: false });
+      doc.fillColor('#666666').text(`GST (${safeGstPercent}%):`, 60, y + 40);
+      doc.fillColor('#333333').text(`Rs. ${safeTax.toLocaleString()}`, 450, y + 40);
       
-      // Total line
+      // Total line - black color for value
       doc.rect(60, y + 55, 480, 1).fill('#e0e0e0');
-      doc.fontSize(12).fillColor(navy).font('Helvetica-Bold').text('TOTAL:', 60, y + 62, { continued: false });
-      doc.fontSize(12).fillColor(gold).text(`Rs. ${safeTotal.toLocaleString()}`, 450, y + 62, { continued: false });
+      doc.fontSize(12).fillColor(navy).font('Helvetica-Bold').text('TOTAL:', 60, y + 62);
+      doc.fontSize(12).fillColor('#1a1a1a').text(`Rs. ${safeTotal.toLocaleString()}`, 450, y + 62);
       doc.font('Helvetica');
       y += 90;
 
