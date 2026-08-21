@@ -55,7 +55,15 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
   
   const [discountPercent, setDiscountPercent] = useState(0);
   const [gstPercent, setGstPercent] = useState(18);
-  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+  // Use local date (not UTC) for correct timezone handling
+  const getLocalDateString = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const [invoiceDate, setInvoiceDate] = useState(getLocalDateString());
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -85,7 +93,10 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
     if (!dueDate) {
       const defaultDueDate = new Date();
       defaultDueDate.setDate(defaultDueDate.getDate() + 14);
-      setDueDate(defaultDueDate.toISOString().split('T')[0]);
+      const year = defaultDueDate.getFullYear();
+      const month = String(defaultDueDate.getMonth() + 1).padStart(2, '0');
+      const day = String(defaultDueDate.getDate()).padStart(2, '0');
+      setDueDate(`${year}-${month}-${day}`);
     }
   }, []);
 
@@ -177,7 +188,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
             })),
           discountPercent,
           gstPercent,
-          invoiceDate: invoiceDate || new Date().toISOString().split('T')[0],
+          invoiceDate: invoiceDate || getLocalDateString(),
           dueDate: dueDate || undefined,
           notes,
           sendEmail: true // Auto-send email to customer
