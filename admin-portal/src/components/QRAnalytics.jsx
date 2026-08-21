@@ -33,7 +33,7 @@ const CustomTooltip = ({ active, payload, label }) => {
         <p className="text-gray-900 font-semibold text-sm mb-2">{label}</p>
         {payload.map((entry, index) => (
           <div key={index} className="flex items-center gap-2 text-sm">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
+            <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color, minWidth: '12px', minHeight: '12px' }}></span>
             <span className="text-gray-600">{entry.name}:</span>
             <span className="font-bold text-gray-900">
               {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}

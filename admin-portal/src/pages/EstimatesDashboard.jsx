@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   FileText, 
@@ -38,13 +38,12 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 const normalizePropertyType = (type) => {
   if (!type) return 'Other';
   const upper = type.toUpperCase().replace(/[_\s-]/g, '');
-  if (upper === 'GC' || upper.includes('GATED')) return 'Apartment';
+  if (upper === 'GC' || upper.includes('GATED') || upper.includes('GATEDCOMMUNITY')) return 'Gated Community';
   if (upper === 'APT' || upper.includes('APARTMENT')) return 'Apartment';
   if (upper === 'VILLA' || upper === 'VILLAS') return 'Villa';
   if (upper === 'FLAT' || upper === 'FLATS') return 'Flat';
   if (upper === 'PLOT' || upper === 'PLOTS') return 'Plot';
-  if (upper.includes('GATED')) return 'Gated Community';
-  return 'Other';
+  return type; // Return original if no match
 };
 
 // Get portal-specific API path
@@ -580,7 +579,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           <p className="font-semibold text-gray-900 text-sm mb-2">{label || payload[0]?.name}</p>
           {payload.map((entry, index) => (
             <div key={index} className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
+              <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color, minWidth: '12px', minHeight: '12px' }}></span>
               <span className="text-gray-600">{entry.name}:</span>
               <span className="font-bold text-gray-900">{entry.value}</span>
             </div>
@@ -825,7 +824,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                 className="text-[10px] font-medium flex items-center gap-0.5 cursor-pointer hover:gap-1 transition-all"
                 style={{ color: card.borderColor }}
               >
-                View All →
+                View All â†’
               </div>
             </div>
           );
@@ -862,9 +861,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                 { name: 'Property-Based', value: block3PropertyBased, color: '#06B6D4' }
               ].map((item, index) => (
                 <div key={index} className="flex items-center gap-1.5 text-xs">
-                  <div 
-                    className="w-2 h-2 rounded-full flex-shrink-0" 
-                    style={{ backgroundColor: item.color }}
+                  <span 
+                    className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: item.color, minWidth: '8px', minHeight: '8px' }}
                   />
                   <span className="text-gray-600 w-20 flex-shrink-0">{item.name}</span>
                   <span className="font-medium text-gray-800 whitespace-nowrap">
@@ -901,9 +900,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             <div className="w-1/2 space-y-1.5 pl-3">
               {statusDataAll.map((item, index) => (
                 <div key={index} className="flex items-center gap-1.5 text-xs">
-                  <div 
-                    className="w-2 h-2 rounded-full flex-shrink-0" 
-                    style={{ backgroundColor: item.color }}
+                  <span 
+                    className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: item.color, minWidth: '8px', minHeight: '8px' }}
                   />
                   <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
                   <span className="text-gray-800 whitespace-nowrap">
@@ -943,9 +942,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             <div className="w-1/2 space-y-1.5 pl-3">
               {propertyBasedStatusDataAll.map((item, index) => (
                 <div key={index} className="flex items-center gap-1.5 text-xs">
-                  <div 
-                    className="w-2 h-2 rounded-full flex-shrink-0" 
-                    style={{ backgroundColor: item.color }}
+                  <span 
+                    className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: item.color, minWidth: '8px', minHeight: '8px' }}
                   />
                   <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
                   <span className="text-gray-800 whitespace-nowrap">
@@ -1004,7 +1003,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                           <div className="bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 whitespace-nowrap">
                             <p className="font-semibold text-gray-900 text-sm mb-1">{item.name}</p>
                             <div className="flex items-center gap-2 text-sm">
-                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: barColor }}></div>
+                              <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: barColor, minWidth: '12px', minHeight: '12px' }}></span>
                               <span className="text-gray-600">Count:</span>
                               <span className="font-bold text-gray-900">{item.value}</span>
                               <span className="text-gray-500">({total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)</span>
@@ -1058,9 +1057,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             <div className="w-1/2 space-y-1.5 pl-3">
               {directStatusDataAll.map((item, index) => (
                 <div key={index} className="flex items-center gap-1.5 text-xs">
-                  <div 
-                    className="w-2 h-2 rounded-full flex-shrink-0" 
-                    style={{ backgroundColor: item.color }}
+                  <span 
+                    className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: item.color, minWidth: '8px', minHeight: '8px' }}
                   />
                   <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
                   <span className="text-gray-800 whitespace-nowrap">
@@ -1119,7 +1118,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                           <div className="bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 whitespace-nowrap">
                             <p className="font-semibold text-gray-900 text-sm mb-1">{item.name}</p>
                             <div className="flex items-center gap-2 text-sm">
-                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: barColor }}></div>
+                              <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: barColor, minWidth: '12px', minHeight: '12px' }}></span>
                               <span className="text-gray-600">Count:</span>
                               <span className="font-bold text-gray-900">{item.value}</span>
                               <span className="text-gray-500">({total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)</span>
@@ -1173,9 +1172,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             <div className="w-1/2 space-y-1.5 pl-3">
               {workOrderStatusDataAll.map((item, index) => (
                 <div key={index} className="flex items-center gap-1.5 text-xs">
-                  <div 
-                    className="w-2 h-2 rounded-full flex-shrink-0" 
-                    style={{ backgroundColor: item.color }}
+                  <span 
+                    className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: item.color, minWidth: '8px', minHeight: '8px' }}
                   />
                   <span className="text-gray-600 w-14 flex-shrink-0">{item.name}</span>
                   <span className="text-gray-800 whitespace-nowrap">
@@ -1246,7 +1245,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                                   <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
                                     <p className="font-semibold text-gray-900 text-sm mb-1">{propType}</p>
                                     <div className="flex items-center gap-2 text-sm">
-                                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: barColor }}></div>
+                                      <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: barColor, minWidth: '12px', minHeight: '12px' }}></span>
                                       <span className="text-gray-600">{cat}:</span>
                                       <span className="font-bold text-gray-900">{value}</span>
                                     </div>

@@ -49,7 +49,7 @@ const CustomTooltip = ({ active, payload }) => {
         <p className="font-semibold text-gray-900 text-sm mb-2">{payload[0]?.name}</p>
         {payload.map((entry, index) => (
           <div key={index} className="flex items-center gap-2 text-sm">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
+            <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color, minWidth: '12px', minHeight: '12px' }}></span>
             <span className="text-gray-600">{entry.name}:</span>
             <span className="font-bold text-gray-900">{entry.value}</span>
           </div>
@@ -85,7 +85,7 @@ const DonutChartWithLegend = ({ data, dataAll, total, title }) => (
     <div className="w-1/2 space-y-1.5 pl-3">
       {dataAll.map((item, index) => (
         <div key={index} className="flex items-center gap-1.5 text-xs">
-          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+          <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '10px', minHeight: '10px' }} />
           <span className="text-gray-600 w-20 flex-shrink-0">{item.name}</span>
           <span className="text-gray-800 font-medium whitespace-nowrap">
             {item.value} ({total ? ((item.value / total) * 100).toFixed(1) : 0}%)
@@ -146,7 +146,7 @@ const HorizontalBarChart = ({ data }) => {
                 <div className="bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 whitespace-nowrap">
                   <p className="font-semibold text-gray-900 text-sm mb-1">{item.name}</p>
                   <div className="flex items-center gap-2 text-sm">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: barColor }}></div>
+                    <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: barColor, minWidth: '12px', minHeight: '12px' }}></span>
                     <span className="text-gray-600">Count:</span>
                     <span className="font-bold text-gray-900">{item.value}</span>
                     <span className="text-gray-500">({percentage}%)</span>
@@ -231,7 +231,7 @@ const GroupedBarChart = ({ data }) => {
                       <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap">
                         <p className="font-semibold text-gray-900 text-sm mb-1">{propType}</p>
                         <div className="flex items-center gap-2 text-sm">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: barColor }}></div>
+                          <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: barColor, minWidth: '12px', minHeight: '12px' }}></span>
                           <span className="text-gray-600">{cat}:</span>
                           <span className="font-bold text-gray-900">{value}</span>
                         </div>
