@@ -66,23 +66,22 @@ const drawPDFHeader = (doc, margin) => {
   doc.fontSize(16).fillColor(gold).font('Helvetica-Bold').text('XLAND INFRA', textX, 10);
   
   // PVT LTD with decorative lines - centered below XLAND INFRA
-  // "XLAND INFRA" width at fontSize 16 is ~95px, center PVT LTD under it
-  const xlandWidth = 95;
-  const pvtLtdWidth = 32; // "PVT LTD" at fontSize 7
-  const lineLength = 18;
-  const gap = 6;
-  const totalWidth = lineLength + gap + pvtLtdWidth + gap + lineLength; // ~80px total
-  const startX = textX + (xlandWidth - totalWidth) / 2; // Center under XLAND INFRA
-  
   doc.fontSize(7).fillColor(gold).font('Helvetica');
   doc.strokeColor(gold).lineWidth(0.6);
   
-  // Left line
-  doc.moveTo(startX, 30).lineTo(startX + lineLength, 30).stroke();
-  // PVT LTD text (centered)
-  doc.text('PVT LTD', startX + lineLength + gap, 26, { lineBreak: false });
-  // Right line (equal to left)
-  doc.moveTo(startX + lineLength + gap + pvtLtdWidth + gap, 30).lineTo(startX + lineLength + gap + pvtLtdWidth + gap + lineLength, 30).stroke();
+  // Fixed positions for perfect symmetry
+  const lineY = 30;
+  const lineLen = 20; // Same length for both lines
+  
+  // Left line: starts at textX, goes 20px right
+  doc.moveTo(textX, lineY).lineTo(textX + lineLen, lineY).stroke();
+  
+  // PVT LTD text in the middle
+  doc.text('PVT LTD', textX + lineLen + 8, 26, { lineBreak: false });
+  
+  // Right line: starts after text, same 20px length as left
+  const rightLineStart = textX + lineLen + 8 + 38; // 38px is PVT LTD text width
+  doc.moveTo(rightLineStart, lineY).lineTo(rightLineStart + lineLen, lineY).stroke();
   
   return headerHeight + 22; // Return starting Y position for content (added more spacing below gold bar)
 };
