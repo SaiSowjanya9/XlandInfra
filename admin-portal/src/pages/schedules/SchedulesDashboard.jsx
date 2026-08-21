@@ -133,6 +133,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   const [statusChartFilter, setStatusChartFilter] = useState('all');
   const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
   const [serviceCategoryFilter, setServiceCategoryFilter] = useState('all');
+  const [calendarFilter, setCalendarFilter] = useState('all');
   
   // Calendar states
   const [calendarDate, setCalendarDate] = useState(new Date());
@@ -198,23 +199,40 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     }
   }, [token]);
 
-  // Fetch zones
+  // Fetch zones from onboarded properties
   const fetchZones = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/${apiPath}/zones`, {
+      // Use the suggestions endpoint which gets zones from onboarded_properties and vendors
+      const response = await fetch(`${API_BASE}/api/onboarding/suggestions/zones`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
-      if (result.success || Array.isArray(result.data)) {
-        setZones(result.data || result || []);
+      if (result.success && Array.isArray(result.data)) {
+        setZones(result.data);
+      } else if (Array.isArray(result)) {
+        setZones(result);
       }
     } catch (err) {
       console.error('Fetch zones error:', err);
+      // Fallback: try portal-specific zones endpoint
+      try {
+        const fallbackResponse = await fetch(`${API_BASE}/api/${apiPath}/zones`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const fallbackResult = await fallbackResponse.json();
+        if (fallbackResult.success && Array.isArray(fallbackResult.data)) {
+          setZones(fallbackResult.data.map(z => z.name || z));
+        }
+      } catch (fallbackErr) {
+        console.error('Fallback zones fetch error:', fallbackErr);
+      }
     }
   }, [token, apiPath]);
 
   // Initial load
   useEffect(() => {
+    // Ensure calendar always starts at current date on mount
+    setCalendarDate(new Date());
     fetchSchedules();
     fetchZones();
     const interval = setInterval(() => fetchSchedules(false), 30000);
@@ -863,44 +881,36 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         {/* Schedule Calendar */}
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-gray-900">Schedule Calendar</h3>
-              <button className="p-1 hover:bg-gray-100 rounded">
-                <AlertCircle className="w-4 h-4 text-gray-400" />
-              </button>
-            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Schedule Calendar</h3>
+            <PeriodFilter value={calendarFilter} onChange={setCalendarFilter} />
           </div>
 
           {/* Calendar Navigation */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => {
-                  const now = new Date();
-                  console.log('Today clicked, setting date to:', now);
-                  setCalendarDate(now);
+                  setCalendarDate(new Date());
                 }}
                 className="px-3 py-1.5 text-sm font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg border border-blue-200"
               >
                 Today
               </button>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1))}
-                  className="p-1.5 hover:bg-gray-100 rounded-lg"
-                >
-                  <ChevronLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <span className="text-lg font-semibold text-gray-900 min-w-[140px] text-center">
-                  {monthNames[calendarDate.getMonth()]} {calendarDate.getFullYear()}
-                </span>
-                <button
-                  onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1))}
-                  className="p-1.5 hover:bg-gray-100 rounded-lg"
-                >
-                  <ChevronRight className="w-5 h-5 text-gray-600" />
-                </button>
-              </div>
+              <button
+                onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1))}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <ChevronLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <span className="text-sm font-semibold text-gray-900 min-w-[100px] text-center">
+                {monthNames[calendarDate.getMonth()]} {calendarDate.getFullYear()}
+              </span>
+              <button
+                onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1))}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <ChevronRight className="w-5 h-5 text-gray-600" />
+              </button>
             </div>
             
             <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
@@ -908,7 +918,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
                 <button
                   key={view}
                   onClick={() => setCalendarView(view)}
-                  className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                  className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${
                     calendarView === view
                       ? 'bg-blue-600 text-white'
                       : 'text-gray-600 hover:text-gray-900'

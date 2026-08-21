@@ -2314,7 +2314,7 @@ const sendInvoiceEmail = async (invoice) => {
   const mailOptions = {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
     to: customerEmail,
-    subject: `Invoice ${invoiceId} from XLAND INFRA - Payment Due`,
+    subject: `Invoice ${invoiceId} from XLand Infra`,
     headers: getDefaultHeaders(),
     attachments: pdfBuffer ? [{
       filename: `Invoice_${invoiceId}.pdf`,
@@ -2330,18 +2330,32 @@ const sendInvoiceEmail = async (invoice) => {
       </head>
       <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background-color: #f3f4f6;">
         <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">XLAND INFRA</h1>
-            <p style="color: #bfdbfe; margin: 8px 0 0 0; font-size: 14px;">Pvt. Ltd.</p>
+          <!-- Header - Black with Gold branding -->
+          <div style="background: linear-gradient(135deg, #1a1a1a 0%, #0D0D0D 100%); padding: 25px 30px; border-radius: 12px 12px 0 0; border-bottom: 3px solid #D8B25C;">
+            <table style="width: 100%;">
+              <tr>
+                <td style="text-align: center;">
+                  <h1 style="margin: 0; font-size: 28px; font-weight: 300; letter-spacing: 2px;">
+                    <span style="color: #ffffff;">XLAND </span><span style="color: #D8B25C;">INFRA</span>
+                  </h1>
+                  <p style="margin: 5px 0 0 0; color: #D8B25C; font-size: 11px; letter-spacing: 3px; text-transform: uppercase;">Private Limited</p>
+                </td>
+              </tr>
+            </table>
+          </div>
+          
+          <!-- Invoice Badge -->
+          <div style="background: #1a1a1a; padding: 15px; text-align: center;">
+            <span style="background: #D8B25C; color: #1a1a1a; padding: 8px 25px; border-radius: 20px; font-size: 14px; font-weight: 600; letter-spacing: 1px;">INVOICE</span>
+            <p style="color: #888; margin: 10px 0 0 0; font-size: 13px;">${invoiceId}</p>
           </div>
           
           <!-- Content -->
           <div style="background: #ffffff; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 20px;">Hello ${customerName || 'Valued Customer'},</h2>
+            <p style="color: #4b5563; line-height: 1.6; margin: 0 0 10px 0;">Dear <strong style="color: #1f2937;">${customerName || 'Valued Customer'}</strong>,</p>
             
             <p style="color: #4b5563; line-height: 1.6; margin: 0 0 20px 0;">
-              Thank you for approving our estimate. Your invoice has been generated and is ready for payment.
+              Please find below the details of your invoice from XLand Infra.
             </p>
             
             <!-- Invoice Info -->
