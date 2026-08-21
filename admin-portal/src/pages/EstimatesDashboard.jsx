@@ -34,8 +34,18 @@ import { STATUS_COLORS, ESTIMATE_TYPE_COLORS, getConsistentColor } from '../util
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-// Helper to normalize property type
-const normalizePropertyType = (type) => {
+// Helper to normalize property type - also checks property_code prefix
+const normalizePropertyType = (type, propertyCode) => {
+  // First check property_code prefix (e.g., GC-xxx, APT-xxx)
+  if (propertyCode) {
+    const codeUpper = propertyCode.toUpperCase();
+    if (codeUpper.startsWith('GC-') || codeUpper.startsWith('GC_')) return 'Gated Community';
+    if (codeUpper.startsWith('APT-') || codeUpper.startsWith('APT_')) return 'Apartment';
+    if (codeUpper.startsWith('VL-') || codeUpper.startsWith('VILLA-')) return 'Villa';
+    if (codeUpper.startsWith('FL-') || codeUpper.startsWith('FLAT-')) return 'Flat';
+    if (codeUpper.startsWith('PL-') || codeUpper.startsWith('PLOT-')) return 'Plot';
+  }
+  
   if (!type) return 'Other';
   const upper = type.toUpperCase().replace(/[_\s-]/g, '');
   if (upper === 'GC' || upper.includes('GATED') || upper.includes('GATEDCOMMUNITY')) return 'Gated Community';
@@ -391,7 +401,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const block1Data = applyPeriodFilter(mainFilteredEstimates, filter1).filter(e => getEstimateType(e) === 'property');
   const propertyTypeCount = {};
   block1Data.forEach(est => {
-    const propType = normalizePropertyType(est.property_type || est.propertyType);
+    const propType = normalizePropertyType(est.property_type || est.propertyType, est.property_code || est.propertyCode);
     propertyTypeCount[propType] = (propertyTypeCount[propType] || 0) + 1;
   });
   const propertyTypeData = Object.entries(propertyTypeCount)
@@ -433,7 +443,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const block4Data = applyPeriodFilter(mainFilteredEstimates, filter4).filter(e => getEstimateType(e) === 'direct');
   const directPropertyTypeCount = {};
   block4Data.forEach(est => {
-    const propType = normalizePropertyType(est.property_type || est.propertyType);
+    const propType = normalizePropertyType(est.property_type || est.propertyType, est.property_code || est.propertyCode);
     directPropertyTypeCount[propType] = (directPropertyTypeCount[propType] || 0) + 1;
   });
   const directPropertyTypeData = Object.entries(directPropertyTypeCount)
@@ -491,7 +501,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const allCategories = new Set();
   
   block8Data.forEach(est => {
-    const propType = normalizePropertyType(est.property_type || est.propertyType);
+    const propType = normalizePropertyType(est.property_type || est.propertyType, est.property_code || est.propertyCode);
     const category = est.work_order_category || est.workOrderCategory || 'Other';
     
     allCategories.add(category);
