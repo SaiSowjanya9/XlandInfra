@@ -1051,11 +1051,9 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   }
 
   // Email subject - different for work order estimates
-  // Add timestamp to prevent Gmail from collapsing duplicate threads
-  const timestamp = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
   const emailSubject = isWorkOrderEstimate 
-    ? `Work Order Estimate ${estimateId} (${workOrderId}) - Action Required [${timestamp}]`
-    : `Estimate ${estimateId} - Action Required [${timestamp}]`;
+    ? `Work Order Estimate ${estimateId} (${workOrderId}) - Action Required`
+    : `Estimate ${estimateId} - Action Required`;
 
   const mailOptions = {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
