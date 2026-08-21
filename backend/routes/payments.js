@@ -1376,6 +1376,22 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
 
     const insertedId = result.insertId;
 
+    // Create payment link for the invoice
+    let paymentLinkUrl = null;
+    try {
+      const { createPaymentLinkForInvoice } = require('../services/invoiceService');
+      paymentLinkUrl = await createPaymentLinkForInvoice(insertedId, {
+        invoice_id: invoiceIdGen,
+        customer_name: customerDetails.name,
+        customer_email: customerDetails.email,
+        customer_phone: customerDetails.phone,
+        total_amount: totalAmount,
+        balance_amount: totalAmount
+      });
+    } catch (plErr) {
+      console.error('Failed to create payment link:', plErr.message);
+    }
+
     // Send email automatically if requested
     if (sendEmail && customerDetails.email) {
       try {
@@ -1462,26 +1478,26 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
                       </tbody>
                     </table>
 
-                    <div style="margin-top: 20px;">
-                      <div class="total-row">
-                        <span>Subtotal</span>
-                        <span>${formatAmount(subtotal)}</span>
-                      </div>
+                    <table style="width: 100%; margin-top: 20px; border-collapse: collapse;">
+                      <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 10px 0; text-align: left; color: #374151;">Subtotal</td>
+                        <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #374151;">${formatAmount(subtotal)}</td>
+                      </tr>
                       ${discountAmount > 0 ? `
-                      <div class="total-row">
-                        <span>Discount (${discPct}%)</span>
-                        <span style="color: #dc2626;">-${formatAmount(discountAmount)}</span>
-                      </div>
+                      <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 10px 0; text-align: left; color: #374151;">Discount (${discPct}%)</td>
+                        <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #dc2626;">-${formatAmount(discountAmount)}</td>
+                      </tr>
                       ` : ''}
-                      <div class="total-row">
-                        <span>GST (${taxPct}%)</span>
-                        <span>${formatAmount(taxAmount)}</span>
-                      </div>
-                      <div class="total-row grand-total">
-                        <span>Grand Total</span>
-                        <span>${formatAmount(totalAmount)}</span>
-                      </div>
-                    </div>
+                      <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 10px 0; text-align: left; color: #374151;">GST (${taxPct}%)</td>
+                        <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #374151;">${formatAmount(taxAmount)}</td>
+                      </tr>
+                      <tr style="border-top: 2px solid #10b981;">
+                        <td style="padding: 14px 0; text-align: left; font-size: 18px; font-weight: bold; color: #10b981;">Grand Total</td>
+                        <td style="padding: 14px 0; text-align: right; font-size: 18px; font-weight: bold; color: #10b981;">${formatAmount(totalAmount)}</td>
+                      </tr>
+                    </table>
                   </div>
 
                   ${notes ? `
@@ -1491,9 +1507,19 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
                   </div>
                   ` : ''}
 
+                  ${paymentLinkUrl ? `
+                  <div style="text-align: center; margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-radius: 12px; border: 1px solid #86efac;">
+                    <p style="margin: 0 0 15px; color: #166534; font-size: 16px; font-weight: 600;">Ready to pay? Click below to complete your payment securely.</p>
+                    <a href="${paymentLinkUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981, #059669); color: white; text-decoration: none; padding: 14px 40px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
+                      Pay Now - ${formatAmount(totalAmount)}
+                    </a>
+                    <p style="margin: 15px 0 0; color: #6b7280; font-size: 12px;">Secure payment powered by Razorpay</p>
+                  </div>
+                  ` : `
                   <p style="margin-top: 20px; color: #6b7280; font-size: 14px;">
                     A payment link will be sent to you shortly. If you have any questions, please contact us.
                   </p>
+                  `}
                 </div>
                 
                 <div class="footer">
@@ -1527,7 +1553,8 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
         invoiceId: invoiceIdGen,
         totalAmount,
         customerEmail: customerDetails.email,
-        emailSent: sendEmail
+        emailSent: sendEmail,
+        paymentLink: paymentLinkUrl
       }
     });
   } catch (error) {
