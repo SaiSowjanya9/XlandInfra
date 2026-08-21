@@ -1317,8 +1317,9 @@ export const exportInvoiceToPDF = (invoice) => {
     
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
+    doc.setTextColor(...primaryText);
+    doc.text('Grand Total:', labelX, sy + 2);
     doc.setTextColor(...gold);
-    doc.text('Total:', labelX, sy + 2);
     doc.text('Rs. ' + Math.round(invoice.totalAmount || 0).toLocaleString('en-IN'), valueX, sy + 2, { align: 'right' });
     
     y += 42;
