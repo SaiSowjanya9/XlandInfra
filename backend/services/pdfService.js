@@ -46,7 +46,7 @@ const decodeHtml = (html) => {
 const drawPDFHeader = (doc, margin) => {
   const gold = '#C9A227';
   const headerBlack = '#1a1a1a';
-  const headerHeight = 28;
+  const headerHeight = 45; // Increased from 28
   
   // Black header background
   doc.rect(0, 0, 595, headerHeight).fill(headerBlack);
@@ -54,28 +54,28 @@ const drawPDFHeader = (doc, margin) => {
   // Gold bar at bottom
   doc.rect(0, headerHeight, 595, 5).fill(gold);
   
-  // Logo - compact
+  // Logo - larger size
   try {
-    doc.image(LOGO_PATH, margin + 3, 3, { width: 22, height: 22 });
+    doc.image(LOGO_PATH, margin + 5, 5, { width: 35, height: 35 }); // Increased from 22x22
   } catch (logoErr) {
-    doc.roundedRect(margin + 3, 3, 22, 22, 2).fill(gold);
+    doc.roundedRect(margin + 5, 5, 35, 35, 3).fill(gold);
   }
   
-  // Company name - compact
-  const textX = margin + 30;
-  doc.fontSize(11).fillColor(gold).text('XLAND INFRA', textX, 6);
+  // Company name - larger
+  const textX = margin + 50; // Adjusted for larger logo
+  doc.fontSize(16).fillColor(gold).font('Helvetica-Bold').text('XLAND INFRA', textX, 10); // Increased from 11
   
   // PVT LTD with decorative lines - positioned below XLAND INFRA
-  doc.fontSize(5).fillColor(gold);
-  doc.strokeColor(gold).lineWidth(0.4);
-  // Left line (8px long)
-  doc.moveTo(textX, 19).lineTo(textX + 8, 19).stroke();
-  // PVT LTD text (6px gap on each side)
-  doc.text('PVT LTD', textX + 14, 16, { lineBreak: false });
-  // Right line (6px gap after text, 8px long) - "PVT LTD" ~22px wide at fontSize 5
-  doc.moveTo(textX + 42, 19).lineTo(textX + 50, 19).stroke();
+  doc.fontSize(7).fillColor(gold).font('Helvetica'); // Increased from 5
+  doc.strokeColor(gold).lineWidth(0.5);
+  // Left line (10px long)
+  doc.moveTo(textX, 30).lineTo(textX + 12, 30).stroke();
+  // PVT LTD text
+  doc.text('PVT LTD', textX + 18, 26, { lineBreak: false });
+  // Right line
+  doc.moveTo(textX + 55, 30).lineTo(textX + 67, 30).stroke();
   
-  return headerHeight + 10; // Return starting Y position for content
+  return headerHeight + 22; // Return starting Y position for content (added more spacing below gold bar)
 };
 
 // Generate estimate PDF and return as buffer
@@ -128,8 +128,8 @@ const generateEstimatePDF = async (estimate) => {
       let y = drawPDFHeader(doc, 50);
 
       // Add ESTIMATE badge in header (top right) - filled gold with black text
-      doc.roundedRect(470, 4, 80, 20, 3).fill('#D4A84B');
-      doc.fontSize(11).fillColor('#1a1a1a').font('Helvetica-Bold').text('ESTIMATE', 480, 9);
+      doc.roundedRect(465, 12, 90, 24, 4).fill('#D4A84B');
+      doc.fontSize(12).fillColor('#1a1a1a').font('Helvetica-Bold').text('ESTIMATE', 478, 18);
       doc.font('Helvetica');
 
       // Estimate Info - styled like invoice
