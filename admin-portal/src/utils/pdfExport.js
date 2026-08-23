@@ -1249,28 +1249,28 @@ export const exportInvoiceToPDF = (invoice) => {
       
       y += 10;
 
-      // Services table - COMPACT
+      // Services table - with full descriptions
       const rowH = isCompact ? 2 : 2.5;
       autoTable(doc, {
         startY: y,
         head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
         body: services.map((item, idx) => [
           String(idx + 1),
-          decodeHtml(String(item.name)).substring(0, 25),
-          decodeHtml(String(item.description)).substring(0, 40) || '-',
-          String(item.frequency).substring(0, 12),
+          decodeHtml(String(item.name)),
+          decodeHtml(String(item.description)) || '-',
+          String(item.frequency),
           String(item.visits)
         ]),
         theme: 'plain',
-        styles: { fontSize: 6, cellPadding: rowH, valign: 'middle' },
+        styles: { fontSize: 6, cellPadding: rowH, valign: 'middle', overflow: 'linebreak' },
         headStyles: { fillColor: gold, textColor: white, fontStyle: 'bold', fontSize: 6.5 },
-        bodyStyles: { textColor: primaryText },
+        bodyStyles: { textColor: primaryText, minCellHeight: 8 },
         alternateRowStyles: { fillColor: [255, 255, 255] },
         columnStyles: { 
           0: { cellWidth: 10, halign: 'center' }, 
-          1: { cellWidth: 32 }, 
-          2: { cellWidth: 'auto' }, 
-          3: { cellWidth: 24, halign: 'center' }, 
+          1: { cellWidth: 32, halign: 'left' }, 
+          2: { cellWidth: 75, halign: 'left' }, 
+          3: { cellWidth: 28, halign: 'center' }, 
           4: { cellWidth: 16, halign: 'center' } 
         },
         margin: { left: margin, right: margin },
