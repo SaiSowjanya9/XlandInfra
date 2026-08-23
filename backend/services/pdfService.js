@@ -602,15 +602,15 @@ const generateInvoicePDF = async (invoice) => {
         const tableHeaderH = 20;
         doc.rect(margin, y, contentWidth, tableHeaderH).fill(gold);
         doc.fontSize(8).fillColor(white);
-        doc.text('#', margin + 8, y + 6);
+        doc.text('#', margin + 10, y + 6);
         doc.text('Service', margin + 30, y + 6);
         doc.text('Description', margin + 130, y + 6);
-        doc.text('Frequency', margin + 365, y + 6);
-        doc.text('Visits', margin + 440, y + 6);
+        doc.text('Frequency', margin + 345, y + 6);
+        doc.text('Visits', margin + 420, y + 6);
         y += tableHeaderH;
 
         // Table rows - with full description (multi-line support)
-        const descColWidth = 220; // Width for description column
+        const descColWidth = 200; // Width for description column
         items.forEach((item, idx) => {
           const details = decodeHtml(item.details || '');
           const fullDesc = decodeHtml(item.description || item.name || 'Service');
@@ -620,27 +620,29 @@ const generateInvoicePDF = async (invoice) => {
           const freq = item.frequency || item.frequencyType || item.billingDuration || '-';
           const visits = item.visits || item.frequencyCount || item.quantity || 1;
           
-          // Calculate row height based on description length (~30 chars per line at fontSize 7 with width 220)
-          const descLines = Math.ceil(serviceDesc.length / 30);
-          const rowH = Math.max(18, descLines * 10 + 8);
+          // Calculate actual row height using PDFKit's heightOfString for accurate measurement
+          doc.fontSize(7);
+          const descHeight = doc.heightOfString(serviceDesc, { width: descColWidth });
+          const rowH = Math.max(20, descHeight + 10);
           
-          // Draw row border first
+          // Draw row background (alternating colors)
+          const rowColor = idx % 2 === 0 ? '#FAFAFA' : white;
+          doc.rect(margin, y, contentWidth, rowH).fill(rowColor);
           doc.rect(margin, y, contentWidth, rowH).lineWidth(0.3).stroke(borderGray);
           
           // Draw fixed columns
           doc.fontSize(7).fillColor(primaryText);
-          doc.text(`${idx + 1}`, margin + 10, y + 5);
-          doc.text(serviceName.substring(0, 20), margin + 30, y + 5);
+          doc.text(`${idx + 1}`, margin + 10, y + 6);
+          doc.text(serviceName, margin + 30, y + 6, { width: 90 });
           
-          // Draw description with proper text wrapping
+          // Draw description with proper text wrapping - full text displayed
           doc.fillColor(secondaryText);
-          const descHeight = doc.heightOfString(serviceDesc, { width: descColWidth });
-          doc.text(serviceDesc, margin + 130, y + 5, { width: descColWidth });
+          doc.text(serviceDesc, margin + 130, y + 6, { width: descColWidth, lineGap: 2 });
           
-          // Draw frequency and visits
+          // Draw frequency and visits (aligned vertically with first line)
           doc.fillColor(primaryText);
-          doc.text(freq.substring(0, 12), margin + 365, y + 5);
-          doc.text(`${visits}`, margin + 440, y + 5);
+          doc.text(freq, margin + 345, y + 6, { width: 60 });
+          doc.text(`${visits}`, margin + 420, y + 6);
           
           y += rowH;
         });
