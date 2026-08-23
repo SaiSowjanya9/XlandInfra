@@ -113,8 +113,8 @@ const safeStr = (val, fallback = '-') => {
 // Used by all PDF exports for consistent branding
 const drawPDFHeader = (doc, margin) => {
   const pageWidth = doc.internal.pageSize.getWidth();
-  const gold = [180, 144, 52];
-  const headerHeight = 28;
+  const gold = [201, 162, 39];
+  const headerHeight = 45; // Increased to match backend
   
   // Black header background
   doc.setFillColor(26, 26, 26);
@@ -124,32 +124,36 @@ const drawPDFHeader = (doc, margin) => {
   doc.setFillColor(201, 162, 39);
   doc.rect(0, headerHeight, pageWidth, 5, 'F');
   
-  // Logo - compact
-  const logoSize = 22;
+  // Logo - larger size to match backend
+  const logoSize = 35;
   try {
-    doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 3, 3, logoSize, logoSize);
+    doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 5, 5, logoSize, logoSize);
   } catch (e) {
     doc.setFillColor(...gold);
-    doc.roundedRect(margin + 3, 3, logoSize, logoSize, 2, 2, 'F');
+    doc.roundedRect(margin + 5, 5, logoSize, logoSize, 3, 3, 'F');
   }
   
-  // Company name - compact
-  const textX = margin + logoSize + 8;
+  // Company name - larger to match backend
+  const textX = margin + logoSize + 15;
   doc.setTextColor(...gold);
-  doc.setFontSize(11);
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('XLAND INFRA', textX, 10);
+  doc.text('XLAND INFRA', textX, 18);
   
-  // PVT LTD with decorative lines - positioned below
-  doc.setFontSize(5);
+  // PVT LTD with decorative lines - centered below XLAND INFRA
+  const lineLen = 20;
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setDrawColor(...gold);
-  doc.setLineWidth(0.3);
-  doc.line(textX, 20, textX + 8, 20);
-  doc.text('PVT LTD', textX + 10, 21);
-  doc.line(textX + 22, 20, textX + 30, 20);
+  doc.setLineWidth(0.6);
+  // Left line
+  doc.line(textX, 30, textX + lineLen, 30);
+  // PVT LTD text
+  doc.text('PVT LTD', textX + lineLen + 8, 32);
+  // Right line (same length)
+  doc.line(textX + lineLen + 8 + 38, 30, textX + lineLen + 8 + 38 + lineLen, 30);
   
-  return headerHeight + 10; // Return starting Y position for content
+  return headerHeight + 22; // Return starting Y position for content (more spacing)
 };
 
 // Generate Premium PDF with professional design
@@ -173,8 +177,7 @@ const generatePDF = (data, type, filename) => {
 
     // ===== HEADER - Use shared function =====
     let y = drawPDFHeader(doc, margin);
-
-    y = headerHeight + 10;
+    // y is already set by drawPDFHeader return value
 
     // ===== DOCUMENT INFO ROW - Gray background =====
     doc.setFillColor(248, 250, 252); // gray-50
