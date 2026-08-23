@@ -1249,8 +1249,7 @@ export const exportInvoiceToPDF = (invoice) => {
       
       y += 10;
 
-      // Services table - with full descriptions
-      const rowH = isCompact ? 2 : 2.5;
+      // Services table - with full descriptions and text wrapping
       autoTable(doc, {
         startY: y,
         head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
@@ -1261,21 +1260,27 @@ export const exportInvoiceToPDF = (invoice) => {
           String(item.frequency),
           String(item.visits)
         ]),
-        theme: 'plain',
-        styles: { fontSize: 6, cellPadding: rowH, valign: 'middle', overflow: 'linebreak' },
-        headStyles: { fillColor: gold, textColor: white, fontStyle: 'bold', fontSize: 6.5 },
-        bodyStyles: { textColor: primaryText, minCellHeight: 8 },
-        alternateRowStyles: { fillColor: [255, 255, 255] },
+        theme: 'grid',
+        styles: { 
+          fontSize: 6.5, 
+          cellPadding: 3, 
+          valign: 'middle', 
+          overflow: 'linebreak',
+          cellWidth: 'wrap'
+        },
+        headStyles: { fillColor: gold, textColor: white, fontStyle: 'bold', fontSize: 7, halign: 'center' },
+        bodyStyles: { textColor: primaryText, minCellHeight: 10, lineColor: [220, 220, 220] },
+        alternateRowStyles: { fillColor: [252, 252, 252] },
         columnStyles: { 
-          0: { cellWidth: 10, halign: 'center' }, 
-          1: { cellWidth: 32, halign: 'left' }, 
-          2: { cellWidth: 75, halign: 'left' }, 
-          3: { cellWidth: 28, halign: 'center' }, 
-          4: { cellWidth: 16, halign: 'center' } 
+          0: { cellWidth: 8, halign: 'center' }, 
+          1: { cellWidth: 30, halign: 'left' }, 
+          2: { cellWidth: 'auto', halign: 'left' }, 
+          3: { cellWidth: 25, halign: 'center' }, 
+          4: { cellWidth: 15, halign: 'center' } 
         },
         margin: { left: margin, right: margin },
-        tableLineColor: borderGray,
-        tableLineWidth: 0.1
+        tableLineColor: [200, 200, 200],
+        tableLineWidth: 0.2
       });
       y = doc.lastAutoTable.finalY + 10;
     }
