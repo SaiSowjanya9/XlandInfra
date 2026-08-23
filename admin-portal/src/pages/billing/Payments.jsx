@@ -588,7 +588,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
               <Clock className="w-6 h-6 text-white" />
             </div>
             <div>
-              <p className="text-xs text-gray-500 font-medium">Verification Pending</p>
+              <p className="text-xs text-gray-500 font-medium whitespace-nowrap">Verification Pending</p>
               <p className="text-3xl font-bold text-gray-900">{stats.verificationPending}</p>
               <p className="text-xs text-gray-400 mt-0.5">{formatCurrencyShort(stats.verificationAmount)}</p>
             </div>
