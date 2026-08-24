@@ -41,10 +41,12 @@ const FPDashboard = ({ user }) => {
   const [estimates, setEstimates] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
   const [properties, setProperties] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [propertyChartFilter, setPropertyChartFilter] = useState('all');
   const [woStatusFilter, setWoStatusFilter] = useState('all');
   const [woPriorityFilter, setWoPriorityFilter] = useState('all');
   const [woPropertyTypeFilter, setWoPropertyTypeFilter] = useState('all');
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState('all');
   const lastFetchRef = useRef(0);
 
   // Main date filter state
@@ -159,7 +161,7 @@ const FPDashboard = ({ user }) => {
     
     try {
       const token = getAuthToken();
-      const [dashboardRes, estimatesRes, workOrdersRes, propertiesRes] = await Promise.all([
+      const [dashboardRes, estimatesRes, workOrdersRes, propertiesRes, invoicesRes] = await Promise.all([
         fetch(`${API_BASE}/api/fp/dashboard`, {
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         }),
@@ -171,10 +173,19 @@ const FPDashboard = ({ user }) => {
         }),
         fetch(`${API_BASE}/api/fp/properties`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        })
+        }),
+        fetch(`${API_BASE}/api/payments/invoices`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).catch(() => ({ ok: false }))
       ]);
       
-      const [dashResult, estResult, woResult, propResult] = await Promise.all([dashboardRes.json(), estimatesRes.json(), workOrdersRes.json(), propertiesRes.json()]);
+      const [dashResult, estResult, woResult, propResult, invResult] = await Promise.all([
+        dashboardRes.json(), 
+        estimatesRes.json(), 
+        workOrdersRes.json(), 
+        propertiesRes.json(),
+        invoicesRes.ok ? invoicesRes.json() : { success: false, data: [] }
+      ]);
       
       if (dashResult.success) {
         setStats(dashResult.data.stats);
@@ -192,6 +203,10 @@ const FPDashboard = ({ user }) => {
       
       if (propResult.success && Array.isArray(propResult.data)) {
         setProperties(propResult.data);
+      }
+      
+      if (invResult.success && Array.isArray(invResult.data)) {
+        setInvoices(invResult.data);
       }
     } catch (err) {
       console.error('Dashboard fetch error:', err);
@@ -915,22 +930,8 @@ const FPDashboard = ({ user }) => {
         </div>
       </div>
 
-      {/* Combined Estimates + Work Orders Overview Box */}
+      {/* Combined Work Orders + Estimates Overview Box */}
       <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-6">
-        {/* Estimates Overview Section */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Estimates Overview</h2>
-            <Link to="/fp/estimates" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
-              View All <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-          <EstimatesOverviewBlocks estimates={dateFilteredEstimates} />
-        </div>
-
-        {/* Divider */}
-        <div className="border-t border-gray-100"></div>
-
         {/* Work Orders Overview Section */}
         <div>
           <div className="flex items-center justify-between mb-4">
@@ -1060,6 +1061,94 @@ const FPDashboard = ({ user }) => {
                   ));
                 })()}
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-gray-100"></div>
+
+        {/* Estimates Overview Section */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Estimates Overview</h2>
+            <Link to="/fp/estimates" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+              View All <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+          <EstimatesOverviewBlocks estimates={dateFilteredEstimates} />
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-gray-100"></div>
+
+        {/* Payments Overview Section */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Payments Overview</h2>
+            <Link to="/fp/billing/payments" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+              View All <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+          
+          {/* Invoices by Payment Status Chart */}
+          <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 max-w-md">
+            <div className="flex justify-between items-center mb-4 gap-2">
+              <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap">Invoices by Payment Status</h3>
+              <div className="relative">
+                <select 
+                  value={invoiceStatusFilter} 
+                  onChange={(e) => setInvoiceStatusFilter(e.target.value)}
+                  className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="all">This Month</option>
+                  <option value="last_month">Last Month</option>
+                  <option value="last_3_months">Last 3 Months</option>
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              {(() => {
+                // Calculate invoice status data
+                const statusCounts = {
+                  paid: invoices.filter(inv => inv.status === 'paid').length,
+                  partially_paid: invoices.filter(inv => inv.status === 'partially_paid').length,
+                  unpaid: invoices.filter(inv => inv.status === 'unpaid' || inv.status === 'pending' || inv.status === 'sent').length,
+                  overdue: invoices.filter(inv => inv.status === 'overdue').length,
+                };
+                const total = invoices.length;
+                
+                const invoiceStatusData = [
+                  { name: 'Paid', value: statusCounts.paid, color: '#22C55E' },
+                  { name: 'Partially Paid', value: statusCounts.partially_paid, color: '#3B82F6' },
+                  { name: 'Unpaid', value: statusCounts.unpaid, color: '#F59E0B' },
+                  { name: 'Overdue', value: statusCounts.overdue, color: '#EF4444' },
+                ];
+
+                return (
+                  <>
+                    <div className="w-32 h-32 flex-shrink-0">
+                      <DonutChart
+                        data={invoiceStatusData}
+                        centerValue={total}
+                        size={128}
+                        strokeWidth={18}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-2">
+                      {invoiceStatusData.map((item, index) => (
+                        <div key={index} className="flex items-center gap-2 text-sm">
+                          <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></span>
+                          <span className="text-gray-600">{item.name}</span>
+                          <span className="font-semibold text-gray-900 ml-auto">{item.value}</span>
+                          <span className="text-gray-400 text-xs">({total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
