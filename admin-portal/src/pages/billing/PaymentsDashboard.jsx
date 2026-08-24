@@ -287,27 +287,32 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         overdue: '#EF4444'
       };
       
-      // Use paymentStatus field (API returns as paymentStatus or payment_status)
-      const getPaymentStatus = (inv) => inv.paymentStatus || inv.payment_status || inv.status;
+      // Filter out cancelled/void invoices
+      const activeInvoices = invoices.filter(inv => 
+        inv.status !== 'cancelled' && inv.status !== 'void'
+      );
       
-      const paidInvoices = invoices.filter(inv => getPaymentStatus(inv) === 'paid').length;
-      const partiallyPaidInvoices = invoices.filter(inv => getPaymentStatus(inv) === 'partially_paid').length;
-      const unpaidInvoices = invoices.filter(inv => {
+      // Helper to get payment status
+      const getPaymentStatus = (inv) => inv.paymentStatus || inv.payment_status || '';
+      
+      const paidInvoices = activeInvoices.filter(inv => 
+        getPaymentStatus(inv) === 'paid' || inv.status === 'paid'
+      ).length;
+      const partiallyPaidInvoices = activeInvoices.filter(inv => 
+        getPaymentStatus(inv) === 'partially_paid' || inv.status === 'partially_paid'
+      ).length;
+      const overdueInvoicesCount = activeInvoices.filter(inv => inv.status === 'overdue').length;
+      // Unpaid = all active invoices that are not paid, partially_paid, or overdue
+      const unpaidInvoices = activeInvoices.filter(inv => {
         const payStatus = getPaymentStatus(inv);
-        if (payStatus === 'paid' || payStatus === 'partially_paid') return false;
-        if (inv.status === 'overdue') return false;
-        const dueDate = new Date(inv.dueDate || inv.due_date);
-        return !dueDate || isNaN(dueDate) || dueDate >= new Date();
-      }).length;
-      const overdueInvoicesCount = invoices.filter(inv => {
-        const payStatus = getPaymentStatus(inv);
-        if (payStatus === 'paid') return false;
-        if (inv.status === 'overdue') return true;
-        const dueDate = new Date(inv.dueDate || inv.due_date);
-        return dueDate && !isNaN(dueDate) && dueDate < new Date();
+        const status = inv.status;
+        const isPaid = payStatus === 'paid' || status === 'paid';
+        const isPartial = payStatus === 'partially_paid' || status === 'partially_paid';
+        const isOverdue = status === 'overdue';
+        return !isPaid && !isPartial && !isOverdue;
       }).length;
       
-      const totalInvoices = invoices.length;
+      const totalInvoices = activeInvoices.length;
       const invoicesByStatus = [
         { label: 'Paid', value: paidInvoices, color: invoiceStatusColors.paid, percentage: totalInvoices > 0 ? ((paidInvoices / totalInvoices) * 100).toFixed(1) : 0 },
         { label: 'Partially Paid', value: partiallyPaidInvoices, color: invoiceStatusColors.partially_paid, percentage: totalInvoices > 0 ? ((partiallyPaidInvoices / totalInvoices) * 100).toFixed(1) : 0 },
