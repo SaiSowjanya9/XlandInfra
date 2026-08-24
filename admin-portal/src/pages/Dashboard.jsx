@@ -24,9 +24,11 @@ const Dashboard = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [estimates, setEstimates] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [woStatusFilter, setWoStatusFilter] = useState('all');
   const [woPriorityFilter, setWoPriorityFilter] = useState('all');
   const [woPropertyTypeFilter, setWoPropertyTypeFilter] = useState('all');
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState('all');
   
   // Main date filter state
   const [startDate, setStartDate] = useState('');
@@ -73,29 +75,38 @@ const Dashboard = () => {
       let endpoint;
       let estimatesEndpoint;
       let workOrdersEndpoint;
+      let invoicesEndpoint;
       if (selectedFp.id === 'all') {
         // Admin mode - fetch aggregated data from all sources
         endpoint = `${API_BASE}/api/admin/dashboard-stats`;
         estimatesEndpoint = `${API_BASE}/api/admin/estimates`;
         workOrdersEndpoint = `${API_BASE}/api/admin/work-orders`;
+        invoicesEndpoint = `${API_BASE}/api/payments/invoices`;
       } else {
         // Specific FP selected
         endpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/dashboard`;
         estimatesEndpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/estimates`;
         workOrdersEndpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/work-orders`;
+        invoicesEndpoint = `${API_BASE}/api/payments/invoices?fpId=${selectedFp.id}`;
       }
       
-      const [dashRes, estRes, woRes] = await Promise.all([
+      const [dashRes, estRes, woRes, invRes] = await Promise.all([
         fetch(endpoint, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(estimatesEndpoint, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(workOrdersEndpoint, { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(workOrdersEndpoint, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(invoicesEndpoint, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ ok: false }))
       ]);
       
       if (!dashRes.ok) {
         throw new Error(`HTTP ${dashRes.status}`);
       }
       
-      const [result, estResult, woResult] = await Promise.all([dashRes.json(), estRes.json(), woRes.json()]);
+      const [result, estResult, woResult, invResult] = await Promise.all([
+        dashRes.json(), 
+        estRes.json(), 
+        woRes.json(),
+        invRes.ok ? invRes.json() : { success: false, data: [] }
+      ]);
       if (result.success && result.data) {
         const data = result.data;
         // Map dashboard data to stats format with safe defaults
@@ -122,6 +133,9 @@ const Dashboard = () => {
       }
       if (woResult.success && Array.isArray(woResult.data)) {
         setWorkOrders(woResult.data);
+      }
+      if (invResult.success && Array.isArray(invResult.data)) {
+        setInvoices(invResult.data);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -1015,6 +1029,80 @@ const Dashboard = () => {
                     ));
                   })()}
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-gray-100"></div>
+
+          {/* Payments Overview Section */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Payments Overview</h2>
+              <button onClick={() => navigate('/employee/billing/payments')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                View All <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+            
+            {/* Invoices by Payment Status Chart */}
+            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 max-w-md">
+              <div className="flex justify-between items-center mb-4 gap-2">
+                <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap">Invoices by Payment Status</h3>
+                <div className="relative">
+                  <select 
+                    value={invoiceStatusFilter} 
+                    onChange={(e) => setInvoiceStatusFilter(e.target.value)}
+                    className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  >
+                    <option value="all">This Month</option>
+                    <option value="last_month">Last Month</option>
+                    <option value="last_3_months">Last 3 Months</option>
+                  </select>
+                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+              <div className="flex items-center gap-6">
+                {(() => {
+                  // Calculate invoice status data
+                  const statusCounts = {
+                    paid: invoices.filter(inv => inv.status === 'paid').length,
+                    partially_paid: invoices.filter(inv => inv.status === 'partially_paid').length,
+                    unpaid: invoices.filter(inv => inv.status === 'unpaid' || inv.status === 'pending' || inv.status === 'sent').length,
+                    overdue: invoices.filter(inv => inv.status === 'overdue').length,
+                  };
+                  const total = invoices.length;
+                  
+                  const invoiceStatusData = [
+                    { name: 'Paid', value: statusCounts.paid, color: '#22C55E' },
+                    { name: 'Partially Paid', value: statusCounts.partially_paid, color: '#3B82F6' },
+                    { name: 'Unpaid', value: statusCounts.unpaid, color: '#F59E0B' },
+                    { name: 'Overdue', value: statusCounts.overdue, color: '#EF4444' },
+                  ];
+
+                  return (
+                    <>
+                      <div className="w-32 h-32 flex-shrink-0">
+                        <DonutChart
+                          data={invoiceStatusData}
+                          centerValue={total}
+                          size={128}
+                          strokeWidth={18}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-2">
+                        {invoiceStatusData.map((item, index) => (
+                          <div key={index} className="flex items-center gap-2 text-sm">
+                            <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></span>
+                            <span className="text-gray-600">{item.name}</span>
+                            <span className="font-semibold text-gray-900 ml-auto">{item.value}</span>
+                            <span className="text-gray-400 text-xs">({total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
