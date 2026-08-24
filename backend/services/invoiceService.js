@@ -886,7 +886,7 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                           <table role="presentation" cellpadding="0" cellspacing="0">
                             <tr>
                               <td style="padding-right: 12px; vertical-align: middle;">
-                                <img src="https://admin.xlandinfra.com/logo.webp" alt="XLAND INFRA" style="width: 50px; height: 50px; object-fit: contain;" />
+                                <img src="https://xlandinfra.com/logo.png" alt="XLAND INFRA" style="width: 50px; height: 50px; object-fit: contain;" />
                               </td>
                               <td style="vertical-align: middle;">
                                 <h1 style="color: #d4a853; margin: 0; font-size: 22px; font-weight: bold; letter-spacing: 1px;">XLAND INFRA</h1>
@@ -1072,43 +1072,43 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                 <!-- Price Summary -->
                 <tr>
                   <td style="padding: 0 30px 20px;">
-                    <div style="background: #1e293b; border-radius: 8px; overflow: hidden;">
-                      <div style="padding: 14px 16px; border-bottom: 1px solid #334155;">
-                        <span style="color: #94a3b8; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">💰 Price Summary</span>
+                    <div style="background: #f8f9fa; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
+                      <div style="padding: 14px 16px; border-bottom: 1px solid #e2e8f0; background: #f1f5f9;">
+                        <span style="color: #1e293b; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Price Summary</span>
                       </div>
                       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding: 16px;">
                         <tr>
-                          <td style="padding: 8px 16px; color: #94a3b8; font-size: 13px;">Subtotal</td>
-                          <td style="padding: 8px 16px; text-align: right; color: #e2e8f0; font-size: 13px;">${formatCurrency(invoice.subtotal)}</td>
+                          <td style="padding: 8px 16px; color: #475569; font-size: 13px;">Subtotal</td>
+                          <td style="padding: 8px 16px; text-align: right; color: #1e293b; font-size: 13px;">${formatCurrency(invoice.subtotal)}</td>
                         </tr>
                         ${parseFloat(invoice.discount_amount) > 0 ? `
                         <tr>
-                          <td style="padding: 8px 16px; color: #94a3b8; font-size: 13px;">Discount (${invoice.discount_percentage || 0}%)</td>
-                          <td style="padding: 8px 16px; text-align: right; color: #4ade80; font-size: 13px;">-${formatCurrency(invoice.discount_amount)}</td>
+                          <td style="padding: 8px 16px; color: #475569; font-size: 13px;">Discount (${invoice.discount_percentage || 0}%)</td>
+                          <td style="padding: 8px 16px; text-align: right; color: #16a34a; font-size: 13px;">-${formatCurrency(invoice.discount_amount)}</td>
                         </tr>
                         ` : ''}
                         <tr>
-                          <td style="padding: 8px 16px; color: #94a3b8; font-size: 13px;">GST (${invoice.tax_percentage || 18}%)</td>
-                          <td style="padding: 8px 16px; text-align: right; color: #e2e8f0; font-size: 13px;">${formatCurrency(invoice.tax_amount)}</td>
+                          <td style="padding: 8px 16px; color: #475569; font-size: 13px;">GST (${invoice.tax_percentage || 18}%)</td>
+                          <td style="padding: 8px 16px; text-align: right; color: #1e293b; font-size: 13px;">${formatCurrency(invoice.tax_amount)}</td>
                         </tr>
                         <tr>
-                          <td colspan="2" style="padding: 8px 16px;"><hr style="border: none; border-top: 1px solid #475569; margin: 0;"></td>
+                          <td colspan="2" style="padding: 8px 16px;"><hr style="border: none; border-top: 1px solid #e2e8f0; margin: 0;"></td>
                         </tr>
                         <tr>
-                          <td style="padding: 10px 16px; color: #ffffff; font-size: 16px; font-weight: bold;">Grand Total</td>
-                          <td style="padding: 10px 16px; text-align: right; color: #fbbf24; font-size: 20px; font-weight: bold;">${formatCurrency(totalAmount)}</td>
+                          <td style="padding: 10px 16px; color: #1e293b; font-size: 16px; font-weight: bold;">Grand Total</td>
+                          <td style="padding: 10px 16px; text-align: right; color: #b45309; font-size: 20px; font-weight: bold;">${formatCurrency(totalAmount)}</td>
                         </tr>
                         ${parseFloat(invoice.amount_paid) > 0 ? `
                         <tr>
-                          <td colspan="2" style="padding: 4px 16px;"><hr style="border: none; border-top: 1px dashed #475569; margin: 0;"></td>
+                          <td colspan="2" style="padding: 4px 16px;"><hr style="border: none; border-top: 1px dashed #e2e8f0; margin: 0;"></td>
                         </tr>
                         <tr>
-                          <td style="padding: 8px 16px; color: #4ade80; font-size: 13px;">Amount Paid</td>
-                          <td style="padding: 8px 16px; text-align: right; color: #4ade80; font-size: 13px;">${formatCurrency(invoice.amount_paid)}</td>
+                          <td style="padding: 8px 16px; color: #16a34a; font-size: 13px;">Amount Paid</td>
+                          <td style="padding: 8px 16px; text-align: right; color: #16a34a; font-size: 13px;">${formatCurrency(invoice.amount_paid)}</td>
                         </tr>
                         <tr>
-                          <td style="padding: 10px 16px; color: #f87171; font-size: 15px; font-weight: bold;">Balance Due</td>
-                          <td style="padding: 10px 16px; text-align: right; color: #f87171; font-size: 18px; font-weight: bold;">${formatCurrency(invoice.balance_amount || totalAmount)}</td>
+                          <td style="padding: 10px 16px; color: #dc2626; font-size: 15px; font-weight: bold;">Balance Due</td>
+                          <td style="padding: 10px 16px; text-align: right; color: #dc2626; font-size: 18px; font-weight: bold;">${formatCurrency(invoice.balance_amount || totalAmount)}</td>
                         </tr>
                         ` : ''}
                       </table>
@@ -1124,7 +1124,7 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                       <tr>
                         <td align="center">
                           <a href="${paymentLink}" style="display: inline-block; background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.4);">
-                            💳 PAY NOW
+                            PAY NOW
                           </a>
                         </td>
                       </tr>
