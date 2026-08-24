@@ -726,7 +726,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       address: estimate.address,
       city: estimate.city,
       packageName: estimate.package_name,
-      billingDuration: 'Yearly',
+      billingDuration: estimate.billing_duration || 'Yearly',
       subtotal: parseFloat(estimate.subtotal) || 0,
       totalPrice: parseFloat(estimate.total_amount) || 0,
       discountPercent: parseFloat(estimate.discount_percent) || 0,

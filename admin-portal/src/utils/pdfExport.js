@@ -235,25 +235,6 @@ const generatePDF = (data, type, filename) => {
     
     y += 30;
 
-    // ===== PACKAGE PRICE BAR =====
-    if (data.packagePrice || data.package_price) {
-      doc.setFillColor(...cardBgBlue);
-      doc.setDrawColor(...borderLight);
-      doc.roundedRect(margin, y, pageWidth - margin * 2, 12, 2, 2, 'FD');
-      
-      doc.setTextColor(...navy);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Package Price: ' + formatCurrency(data.packagePrice || data.package_price), margin + 6, y + 8);
-      
-      doc.setTextColor(...slate);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      const billingLabel = (data.billing_duration || data.billingDuration || 'yearly').charAt(0).toUpperCase() + (data.billing_duration || data.billingDuration || 'yearly').slice(1).replace('-', ' ') + ' Billing';
-      doc.text(billingLabel, pageWidth - margin - 6, y + 8, { align: 'right' });
-      y += 16;
-    }
-
     // ===== SIDE-BY-SIDE CARDS: Property + Customer =====
     if (type !== 'package') {
       const gap = 6;
@@ -578,6 +559,17 @@ const generatePDF = (data, type, filename) => {
 
       y = doc.lastAutoTable.finalY + 8;
     }
+
+    // ===== BILLING DURATION (just before Price Summary) =====
+    const billingValue = data.billing_duration || data.billingDuration || 'Yearly';
+    const formattedBilling = billingValue.charAt(0).toUpperCase() + billingValue.slice(1).replace('-', ' ');
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...mediumText);
+    doc.text('Billing:', margin, y);
+    doc.setTextColor(...darkText);
+    doc.text(formattedBilling, pageWidth - margin, y, { align: 'right' });
+    y += 12;
 
     // ===== PRICE SUMMARY BOX =====
     const subtotal = parseFloat(data.subtotal) || 0;
