@@ -96,6 +96,8 @@ import Payments from './pages/billing/Payments';
 
 import GeneratedInvoices from './pages/billing/GeneratedInvoices';
 import CreateInvoice from './pages/billing/CreateInvoice';
+import MakePayments from './pages/billing/MakePayments';
+import PaymentsDashboard from './pages/billing/PaymentsDashboard';
 import SchedulesDashboard from './pages/schedules/SchedulesDashboard';
 import { FPProvider } from './contexts/FPContext';
 
@@ -376,8 +378,9 @@ function App() {
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="employee" />} />
                     <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="employee" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="employee" />} />
-                    <Route path="billing/payments" element={<Payments user={user} portalType="employee" />} />
-                    <Route path="billing/make-payments" element={<BillingPlaceholder page="make-payments" portalName="Admin" />} />
+                    <Route path="billing/payments" element={<PaymentsDashboard user={user} portalType="employee" />} />
+                    <Route path="billing/payments-list" element={<Payments user={user} portalType="employee" />} />
+                    <Route path="billing/make-payments" element={<MakePayments user={user} portalType="employee" />} />
                     <Route path="billing/payment-history" element={<BillingPlaceholder page="payment-history" portalName="Admin" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="employee" defaultTab="archived" />} />
                     <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="admin" />} />
@@ -458,8 +461,9 @@ function App() {
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="fp" />} />
                     <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="fp" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="fp" />} />
-                    <Route path="billing/payments" element={<Payments user={user} portalType="fp" />} />
-                    <Route path="billing/make-payments" element={<BillingPlaceholder page="make-payments" portalName="Franchise Partner" />} />
+                    <Route path="billing/payments" element={<PaymentsDashboard user={user} portalType="fp" />} />
+                    <Route path="billing/payments-list" element={<Payments user={user} portalType="fp" />} />
+                    <Route path="billing/make-payments" element={<MakePayments user={user} portalType="fp" />} />
                     <Route path="billing/payment-history" element={<BillingPlaceholder page="payment-history" portalName="Franchise Partner" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="fp" defaultTab="archived" />} />
                     <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="franchise" />} />
@@ -509,8 +513,9 @@ function App() {
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="manager" />} />
                     <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="manager" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="manager" />} />
-                    <Route path="billing/payments" element={<Payments user={user} portalType="manager" />} />
-                    <Route path="billing/make-payments" element={<BillingPlaceholder page="make-payments" portalName="Manager" />} />
+                    <Route path="billing/payments" element={<PaymentsDashboard user={user} portalType="manager" />} />
+                    <Route path="billing/payments-list" element={<Payments user={user} portalType="manager" />} />
+                    <Route path="billing/make-payments" element={<MakePayments user={user} portalType="manager" />} />
                     <Route path="billing/payment-history" element={<BillingPlaceholder page="payment-history" portalName="Manager" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="manager" defaultTab="archived" />} />
                     <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="manager" />} />
@@ -555,7 +560,8 @@ function App() {
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="coordinator" />} />
                     <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="coordinator" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="coordinator" />} />
-                    <Route path="billing/payments" element={<Payments user={user} portalType="coordinator" />} />
+                    <Route path="billing/payments" element={<PaymentsDashboard user={user} portalType="coordinator" />} />
+                    <Route path="billing/payments-list" element={<Payments user={user} portalType="coordinator" />} />
                     <Route path="*" element={<Navigate to="/coordinator" replace />} />
                   </Routes>
                 </CoordinatorLayout>
@@ -596,8 +602,9 @@ function App() {
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="supervisor" />} />
                     <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="supervisor" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="supervisor" />} />
-                    <Route path="billing/payments" element={<Payments user={user} portalType="supervisor" />} />
-                    <Route path="billing/make-payments" element={<BillingPlaceholder page="make-payments" portalName="Supervisor" />} />
+                    <Route path="billing/payments" element={<PaymentsDashboard user={user} portalType="supervisor" />} />
+                    <Route path="billing/payments-list" element={<Payments user={user} portalType="supervisor" />} />
+                    <Route path="billing/make-payments" element={<MakePayments user={user} portalType="supervisor" />} />
                     <Route path="billing/payment-history" element={<BillingPlaceholder page="payment-history" portalName="Supervisor" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="supervisor" defaultTab="archived" />} />
                     <Route path="*" element={<Navigate to="/supervisor" replace />} />
@@ -640,7 +647,8 @@ function App() {
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="executive" />} />
                     <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="executive" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="executive" />} />
-                    <Route path="billing/payments" element={<Payments user={user} portalType="executive" />} />
+                    <Route path="billing/payments" element={<PaymentsDashboard user={user} portalType="executive" />} />
+                    <Route path="billing/payments-list" element={<Payments user={user} portalType="executive" />} />
                     <Route path="*" element={<Navigate to="/executive" replace />} />
                   </Routes>
                 </ExecutiveLayout>

@@ -260,17 +260,18 @@ const generateEstimatePDF = async (estimate) => {
         doc.rect(50, y, 500, 20).fill('#1e3a5f');
         doc.fontSize(8).fillColor('#ffffff');
         doc.text('#', 55, y + 6, { continued: false });
-        doc.text('Service', 75, y + 6, { continued: false });
-        doc.text('Description', 190, y + 6, { width: 200, align: 'center', continued: false });
-        doc.text('Frequency', 400, y + 6, { continued: false });
-        doc.text('Visits', 490, y + 6, { continued: false });
+        doc.text('Service', 72, y + 6, { continued: false });
+        doc.text('Description', 155, y + 6, { continued: false });
+        doc.text('Frequency', 420, y + 6, { continued: false });
+        doc.text('Visits', 500, y + 6, { continued: false });
         y += 20;
 
+        const descColWidthEst = 255; // Increased width for description
         svcList.forEach((s, idx) => {
           // Use s.details as fallback for full description (backend stores it separately)
           const svcDesc = decodeHtml(s.details || s.description || s.service_description) || '-';
-          // Calculate row height based on description length (approx 40 chars per line)
-          const descLines = Math.ceil(svcDesc.length / 40);
+          // Calculate row height based on description length (approx 50 chars per line with new width)
+          const descLines = Math.ceil(svcDesc.length / 50);
           const rowHeight = Math.max(22, descLines * 11);
           
           // Check if we need a new page
@@ -284,14 +285,14 @@ const generateEstimatePDF = async (estimate) => {
           doc.fontSize(8).fillColor('#333333');
           doc.text(String(idx + 1), 55, y + 6, { continued: false });
           const svcName = decodeHtml(s.name || s.service || 'Service');
-          doc.text(svcName, 75, y + 6, { width: 110, continued: false });
-          // Full description with height constraint to prevent page overflow
-          doc.text(svcDesc, 190, y + 6, { width: 200, height: rowHeight - 8, align: 'center', continued: false });
+          doc.text(svcName, 72, y + 6, { width: 78, continued: false });
+          // Full description with proper width for wrapping
+          doc.text(svcDesc, 155, y + 6, { width: descColWidthEst, height: rowHeight - 8, continued: false });
           const freqCount = s.frequencyCount ?? s.frequency_count ?? 1;
           let freqType = s.frequencyType || s.frequency_type || 'Monthly';
           freqType = freqType.replace(/^\d+x\s*/i, '');
-          doc.text(freqType, 400, y + 6, { continued: false });
-          doc.text(String(freqCount), 490, y + 6, { continued: false });
+          doc.text(freqType, 420, y + 6, { continued: false });
+          doc.text(String(freqCount), 500, y + 6, { continued: false });
           y += rowHeight;
         });
 
@@ -604,15 +605,15 @@ const generateInvoicePDF = async (invoice) => {
         const tableHeaderH = 20;
         doc.rect(margin, y, contentWidth, tableHeaderH).fill(gold);
         doc.fontSize(8).fillColor(white);
-        doc.text('#', margin + 10, y + 6);
-        doc.text('Service', margin + 30, y + 6);
-        doc.text('Description', margin + 130, y + 6);
-        doc.text('Frequency', margin + 345, y + 6);
-        doc.text('Visits', margin + 420, y + 6);
+        doc.text('#', margin + 8, y + 6);
+        doc.text('Service', margin + 25, y + 6);
+        doc.text('Description', margin + 105, y + 6);
+        doc.text('Frequency', margin + 370, y + 6);
+        doc.text('Visits', margin + 440, y + 6);
         y += tableHeaderH;
 
         // Table rows - with full description (multi-line support)
-        const descColWidth = 200; // Width for description column
+        const descColWidth = 255; // Width for description column - increased for better readability
         items.forEach((item, idx) => {
           const details = decodeHtml(item.details || '');
           const fullDesc = decodeHtml(item.description || item.name || 'Service');
@@ -634,17 +635,17 @@ const generateInvoicePDF = async (invoice) => {
           
           // Draw fixed columns
           doc.fontSize(7).fillColor(primaryText);
-          doc.text(`${idx + 1}`, margin + 10, y + 6);
-          doc.text(serviceName, margin + 30, y + 6, { width: 90 });
+          doc.text(`${idx + 1}`, margin + 8, y + 6);
+          doc.text(serviceName, margin + 25, y + 6, { width: 75 });
           
           // Draw description with proper text wrapping - full text displayed
           doc.fillColor(secondaryText);
-          doc.text(serviceDesc, margin + 130, y + 6, { width: descColWidth, lineGap: 2 });
+          doc.text(serviceDesc, margin + 105, y + 6, { width: descColWidth, lineGap: 2 });
           
           // Draw frequency and visits (aligned vertically with first line)
           doc.fillColor(primaryText);
-          doc.text(freq, margin + 345, y + 6, { width: 60 });
-          doc.text(`${visits}`, margin + 420, y + 6);
+          doc.text(freq, margin + 370, y + 6, { width: 60 });
+          doc.text(`${visits}`, margin + 440, y + 6);
           
           y += rowH;
         });

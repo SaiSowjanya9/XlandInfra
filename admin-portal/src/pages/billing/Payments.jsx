@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import {
   Search,
   Download,
-  Plus,
   Eye,
   X,
   ChevronDown,
@@ -18,7 +18,6 @@ import {
   AlertCircle,
   XCircle,
   IndianRupee,
-  Wallet,
   Smartphone,
   FileCheck,
   MoreHorizontal,
@@ -34,48 +33,22 @@ import * as XLSX from 'xlsx';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-// Format date in IST format (dd/mm/yyyy)
-const formatDateIST = (dateStr) => {
+// Format date display
+const formatDateDisplay = (dateStr) => {
   if (!dateStr) return '';
-  if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    const [year, month, day] = dateStr.split('-');
-    return `${day}/${month}/${year}`;
-  }
   const date = new Date(dateStr);
-  if (isNaN(date)) return '';
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-};
-
-// Parse dd/mm/yyyy to yyyy-mm-dd
-const parseISTDate = (dateStr) => {
-  if (!dateStr) return '';
-  const parts = dateStr.split('/');
-  if (parts.length !== 3) return '';
-  const [day, month, year] = parts;
-  if (!day || !month || !year || year.length !== 4) return '';
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-};
-
-// Handle date input with auto-formatting
-const handleDateInput = (value, setter) => {
-  let cleaned = value.replace(/[^\d/]/g, '');
-  if (cleaned.length === 2 && !cleaned.includes('/')) cleaned += '/';
-  else if (cleaned.length === 5 && cleaned.split('/').length === 2) cleaned += '/';
-  if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
-  setter(cleaned);
+  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 // Payment method config with colors matching reference image
 const PAYMENT_METHODS = {
-  cash: { label: 'Cash', icon: Banknote, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200' },
-  bank_transfer: { label: 'Bank Transfer', icon: Building2, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
-  upi: { label: 'UPI', icon: Smartphone, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
-  debit_credit_card: { label: 'Card', icon: CreditCard, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200' },
-  check: { label: 'Check', icon: FileCheck, color: 'text-teal-600', bg: 'bg-teal-50', border: 'border-teal-200' },
-  other: { label: 'Other', icon: Wallet, color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' }
+  razorpay: { label: 'Razorpay', icon: CreditCard, color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200' },
+  cash: { label: 'Cash', icon: Banknote, color: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200' },
+  bank_transfer: { label: 'Bank Transfer', icon: Building2, color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-200' },
+  upi: { label: 'UPI', icon: Smartphone, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
+  debit_credit_card: { label: 'Card', icon: CreditCard, color: 'text-indigo-700', bg: 'bg-indigo-50', border: 'border-indigo-200' },
+  check: { label: 'Cheque', icon: FileCheck, color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200' },
+  other: { label: 'Other', icon: CreditCard, color: 'text-gray-700', bg: 'bg-gray-50', border: 'border-gray-200' }
 };
 
 // Status config
@@ -88,17 +61,7 @@ const STATUS_CONFIG = {
   refunded: { label: 'Refunded', color: 'bg-gray-100 text-gray-600' }
 };
 
-// Format currency in INR
-const formatCurrency = (amount) => {
-  const num = parseFloat(amount) || 0;
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(num);
-};
-
+// Format currency
 const formatCurrencyShort = (amount) => {
   const num = parseFloat(amount) || 0;
   return '₹' + new Intl.NumberFormat('en-IN').format(num);
@@ -121,78 +84,27 @@ const formatDateTime = (dateStr) => {
   return { date: dateFormatted, time: timeFormatted };
 };
 
-// Payment method cards config for Indian payment gateway style
-const PAYMENT_METHOD_CARDS = [
-  {
-    id: 'debit_credit_card',
-    title: 'Debit / Credit Card & Net Banking',
-    description: 'Pay securely using your debit card, credit card or net banking.',
-    icon: CreditCard,
-    iconBg: 'bg-blue-100',
-    iconColor: 'text-blue-600',
-    fee: '2% + GST',
-    noFees: false
-  },
-  {
-    id: 'upi',
-    title: 'UPI (QR / UPI ID)',
-    description: 'Scan QR code or pay using any UPI app.',
-    icon: Smartphone,
-    iconBg: 'bg-green-100',
-    iconColor: 'text-green-600',
-    fee: 'No Additional Charges',
-    noFees: true
-  },
-  {
-    id: 'bank_transfer',
-    title: 'Bank Transfer',
-    description: 'Transfer directly from your bank account.',
-    icon: Building2,
-    iconBg: 'bg-purple-100',
-    iconColor: 'text-purple-600',
-    fee: 'No Additional Charges',
-    noFees: true
-  },
-  {
-    id: 'cash',
-    title: 'Cash',
-    description: 'Pay with cash at our office / collection point.',
-    icon: Banknote,
-    iconBg: 'bg-orange-100',
-    iconColor: 'text-orange-600',
-    fee: 'No Additional Charges',
-    noFees: true
-  },
-  {
-    id: 'check',
-    title: 'Cheque',
-    description: 'Pay using cheque.',
-    icon: FileCheck,
-    iconBg: 'bg-teal-100',
-    iconColor: 'text-teal-600',
-    fee: 'No Additional Charges',
-    noFees: true
-  }
-];
-
-// Record Payment Modal
-const RecordPaymentModal = ({ isOpen, onClose, onSuccess }) => {
+// Verify Payment Modal
+const VerifyPaymentModal = ({ isOpen, onClose, onSuccess, payment }) => {
   const [formData, setFormData] = useState({
-    invoiceId: '',
-    amount: '',
-    paymentMethod: 'bank_transfer',
-    transactionId: '',
-    paymentDate: new Date().toISOString().split('T')[0],
-    notes: ''
+    status: 'paid',
+    verificationNotes: '',
+    rejectionReason: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const token = getAuthToken();
 
+  useEffect(() => {
+    if (payment) {
+      setFormData({ status: 'paid', verificationNotes: '', rejectionReason: '' });
+    }
+  }, [payment]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.invoiceId || !formData.amount || !formData.paymentMethod) {
-      setError('Please fill in all required fields');
+    if (formData.status === 'failed' && !formData.rejectionReason) {
+      setError('Please provide a reason for rejection');
       return;
     }
 
@@ -200,195 +112,179 @@ const RecordPaymentModal = ({ isOpen, onClose, onSuccess }) => {
     setError('');
 
     try {
-      const submitData = new FormData();
-      Object.keys(formData).forEach(key => {
-        if (formData[key] !== null && formData[key] !== '') {
-          submitData.append(key, formData[key]);
-        }
-      });
-
-      const response = await fetch(`${API_BASE}/api/payments`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: submitData
+      const response = await fetch(`${API_BASE}/api/payments/${payment.id}/verify`, {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: formData.status,
+          verificationNotes: formData.verificationNotes,
+          rejectionReason: formData.rejectionReason
+        })
       });
 
       const result = await response.json();
       if (result.success) {
         onSuccess();
         onClose();
-        setFormData({
-          invoiceId: '',
-          amount: '',
-          paymentMethod: 'bank_transfer',
-          transactionId: '',
-          paymentDate: new Date().toISOString().split('T')[0],
-          notes: ''
-        });
       } else {
-        setError(result.message || 'Failed to record payment');
+        setError(result.message || 'Failed to update payment');
       }
     } catch (err) {
-      setError('Failed to record payment');
+      setError('Failed to update payment status');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleClose = () => {
-    setFormData({
-      invoiceId: '',
-      amount: '',
-      paymentMethod: 'bank_transfer',
-      transactionId: '',
-      paymentDate: new Date().toISOString().split('T')[0],
-      notes: ''
-    });
-    onClose();
-  };
+  if (!isOpen || !payment) return null;
 
-  if (!isOpen) return null;
+  const method = PAYMENT_METHODS[payment.paymentMethod] || PAYMENT_METHODS.other;
+  const MethodIcon = method.icon;
+  const dateTime = formatDateTime(payment.paymentDate);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-        <div className="bg-white flex items-center justify-between px-6 py-4 border-b">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Record Payment</h2>
-            <p className="text-sm text-gray-500">Enter payment details to record</p>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-orange-50 to-amber-50">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <Clock className="w-5 h-5 text-orange-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Verify Payment</h2>
+              <p className="text-sm text-gray-500">Review and update payment status</p>
+            </div>
           </div>
-          <button onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-full">
+          <button onClick={onClose} className="p-2 hover:bg-white/80 rounded-full">
             <X className="w-5 h-5 text-gray-400" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-5">
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-80px)] space-y-5">
           {error && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">{error}</div>}
 
-          <div className="bg-white rounded-xl p-5 border border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Invoice Details</h3>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Payment Details</h3>
+            <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Invoice ID *</label>
-                <input
-                  type="text"
-                  value={formData.invoiceId}
-                  onChange={(e) => setFormData({ ...formData, invoiceId: e.target.value })}
-                  placeholder="e.g., INV-00001"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
+                <p className="text-xs text-gray-500">Payment ID</p>
+                <p className="font-semibold text-gray-900">{payment.paymentId}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Amount *</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
-                  <input
-                    type="number"
-                    value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    placeholder="0.00"
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
+                <p className="text-xs text-gray-500">Invoice ID</p>
+                <p className="font-medium text-gray-700">{payment.invoiceId || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Customer</p>
+                <p className="font-medium text-gray-700">{payment.customerName || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Amount</p>
+                <p className="font-bold text-gray-900 text-lg">{formatCurrencyShort(payment.amount)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Payment Method</p>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${method.bg} ${method.color} border ${method.border}`}>
+                  <MethodIcon className="w-3.5 h-3.5" />
+                  {method.label}
+                </span>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Payment Date</p>
+                <p className="font-medium text-gray-700">{dateTime.date} {dateTime.time}</p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-xs text-gray-500">Reference / Transaction No.</p>
+                <p className="font-mono text-gray-700">{payment.transactionId || payment.referenceNumber || '-'}</p>
+              </div>
+            </div>
+          </div>
+
+          {payment.paymentProof && (
+            <div className="bg-gray-50 rounded-xl p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Payment Proof</h3>
+              <div className="flex items-center gap-3">
+                <img src={payment.paymentProof} alt="Payment Proof" className="w-20 h-20 object-cover rounded-lg border" />
+                <a href={payment.paymentProof} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
+                  View Full Image
+                </a>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white rounded-xl p-4 border border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Verification Action</h3>
+            <div className="space-y-3">
+              <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                formData.status === 'paid' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
+              }`}>
+                <input type="radio" name="status" value="paid" checked={formData.status === 'paid'} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="sr-only" />
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.status === 'paid' ? 'border-green-500' : 'border-gray-300'}`}>
+                  {formData.status === 'paid' && <div className="w-2.5 h-2.5 rounded-full bg-green-500" />}
                 </div>
-              </div>
-            </div>
-          </div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">Verify & Mark as Paid</p>
+                  <p className="text-xs text-gray-500">Payment has been verified and received successfully</p>
+                </div>
+                <CheckCircle className="w-5 h-5 text-green-500" />
+              </label>
 
-          <div className="bg-white rounded-xl p-5 border border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Choose Payment Method</h3>
-            <div className="space-y-2">
-              {PAYMENT_METHOD_CARDS.map((method) => {
-                const Icon = method.icon;
-                const isSelected = formData.paymentMethod === method.id;
-                return (
-                  <div
-                    key={method.id}
-                    onClick={() => setFormData({ ...formData, paymentMethod: method.id })}
-                    className={`rounded-xl border-2 p-3 cursor-pointer transition-all ${
-                      isSelected ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                        isSelected ? 'border-blue-500' : 'border-gray-300'
-                      }`}>
-                        {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
-                      </div>
-                      <div className={`p-2 rounded-lg ${method.iconBg} flex-shrink-0`}>
-                        <Icon className={`w-5 h-5 ${method.iconColor}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 text-sm">{method.title}</h4>
-                        <p className="text-xs text-gray-500">{method.description}</p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className={`text-xs font-medium ${method.noFees ? 'text-green-600' : 'text-gray-600'}`}>
-                          {method.fee}
-                        </p>
-                        {method.noFees && (
-                          <div className="flex items-center justify-end gap-1">
-                            <CheckCircle className="w-3 h-3 text-green-500" />
-                            <span className="text-xs text-green-600">No Fees</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                formData.status === 'failed' ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+              }`}>
+                <input type="radio" name="status" value="failed" checked={formData.status === 'failed'} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="sr-only" />
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.status === 'failed' ? 'border-red-500' : 'border-gray-300'}`}>
+                  {formData.status === 'failed' && <div className="w-2.5 h-2.5 rounded-full bg-red-500" />}
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">Reject / Mark as Failed</p>
+                  <p className="text-xs text-gray-500">Payment could not be verified or was incorrect</p>
+                </div>
+                <XCircle className="w-5 h-5 text-red-500" />
+              </label>
             </div>
-          </div>
 
-          <div className="bg-white rounded-xl p-5 border border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Transaction Details</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Reference / Transaction No.</label>
-                <input
-                  type="text"
-                  value={formData.transactionId}
-                  onChange={(e) => setFormData({ ...formData, transactionId: e.target.value })}
-                  placeholder="UTR, Check No., Transaction ID..."
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            {formData.status === 'failed' && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Rejection Reason *</label>
+                <textarea
+                  value={formData.rejectionReason}
+                  onChange={(e) => setFormData({ ...formData, rejectionReason: e.target.value })}
+                  rows={2}
+                  placeholder="Please provide a reason for rejection..."
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Payment Date *</label>
-                <input
-                  type="date"
-                  value={formData.paymentDate}
-                  onChange={(e) => setFormData({ ...formData, paymentDate: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
+            )}
+
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Verification Notes (Optional)</label>
               <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                value={formData.verificationNotes}
+                onChange={(e) => setFormData({ ...formData, verificationNotes: e.target.value })}
                 rows={2}
-                placeholder="Additional notes..."
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="Add any notes about this verification..."
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
-            >
+            <button type="button" onClick={onClose} className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium">
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2"
+              className={`px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 ${
+                formData.status === 'paid' ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-red-600 text-white hover:bg-red-700'
+              }`}
             >
-              {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-              Record Payment
+              {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : (formData.status === 'paid' ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />)}
+              {formData.status === 'paid' ? 'Verify Payment' : 'Reject Payment'}
             </button>
           </div>
         </form>
@@ -398,22 +294,31 @@ const RecordPaymentModal = ({ isOpen, onClose, onSuccess }) => {
 };
 
 const Payments = ({ user, portalType = 'admin' }) => {
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [headerSearchTerm, setHeaderSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
   const [methodFilter, setMethodFilter] = useState('all');
   const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
-  const [dateRangeDisplay, setDateRangeDisplay] = useState({ start: '', end: '' });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [showRecordModal, setShowRecordModal] = useState(false);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [selectedPaymentForVerify, setSelectedPaymentForVerify] = useState(null);
   const [toast, setToast] = useState(null);
   const [actionMenuOpen, setActionMenuOpen] = useState(null);
 
   const token = getAuthToken();
+
+  useEffect(() => {
+    if (location.state?.message) {
+      showToast(location.state.message, 'success');
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const fetchPayments = useCallback(async () => {
     setLoading(true);
@@ -520,8 +425,18 @@ const Payments = ({ user, portalType = 'admin' }) => {
     return pages;
   };
 
+  const formatDateRangeDisplay = () => {
+    if (!dateRange.start && !dateRange.end) {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = now;
+      return `${formatDateDisplay(start)} - ${formatDateDisplay(end)}`;
+    }
+    return `${formatDateDisplay(dateRange.start)} - ${formatDateDisplay(dateRange.end)}`;
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
           toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'
@@ -531,7 +446,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
         </div>
       )}
 
-      {/* Header with Breadcrumb */}
+      {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
@@ -545,15 +460,24 @@ const Payments = ({ user, portalType = 'admin' }) => {
               <span className="text-gray-700">Payment History</span>
             </div>
           </div>
-          <div className="relative w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by Payment ID, Invoice ID, Customer, Property..."
-              value={headerSearchTerm}
-              onChange={(e) => { setHeaderSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
-            />
+          <div className="flex items-center gap-3">
+            <div className="relative w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by Payment ID, Invoice ID, Customer, Property..."
+                value={headerSearchTerm}
+                onChange={(e) => { setHeaderSearchTerm(e.target.value); setCurrentPage(1); }}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              />
+            </div>
+            <button
+              onClick={exportToExcel}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Export
+            </button>
           </div>
         </div>
       </div>
@@ -562,56 +486,56 @@ const Payments = ({ user, portalType = 'admin' }) => {
         {/* Stats Cards */}
         <div className="grid grid-cols-5 gap-4 mb-6">
           <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-start gap-3 shadow-sm">
-            <div className="p-2 bg-blue-500 rounded-lg">
-              <IndianRupee className="w-5 h-5 text-white" />
+            <div className="p-2.5 bg-blue-100 rounded-xl">
+              <IndianRupee className="w-5 h-5 text-blue-600" />
             </div>
             <div>
               <p className="text-xs text-gray-500 font-medium">Total Payments</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
               <p className="text-xs text-gray-400 mt-0.5">This Month</p>
             </div>
           </div>
 
           <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-start gap-3 shadow-sm">
-            <div className="p-2 bg-green-500 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-white" />
+            <div className="p-2.5 bg-green-100 rounded-xl">
+              <CheckCircle className="w-5 h-5 text-green-600" />
             </div>
             <div>
               <p className="text-xs text-gray-500 font-medium">Received (Paid)</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.paid}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.paid}</p>
               <p className="text-xs text-gray-400 mt-0.5">{formatCurrencyShort(stats.paidAmount)}</p>
             </div>
           </div>
 
           <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-start gap-3 shadow-sm">
-            <div className="p-2 bg-orange-500 rounded-lg">
-              <Clock className="w-5 h-5 text-white" />
+            <div className="p-2.5 bg-orange-100 rounded-xl">
+              <Clock className="w-5 h-5 text-orange-600" />
             </div>
             <div>
               <p className="text-xs text-gray-500 font-medium whitespace-nowrap">Verification Pending</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.verificationPending}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.verificationPending}</p>
               <p className="text-xs text-gray-400 mt-0.5">{formatCurrencyShort(stats.verificationAmount)}</p>
             </div>
           </div>
 
           <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-start gap-3 shadow-sm">
-            <div className="p-2 bg-yellow-500 rounded-lg">
-              <Clock className="w-5 h-5 text-white" />
+            <div className="p-2.5 bg-blue-100 rounded-xl">
+              <Clock className="w-5 h-5 text-blue-600" />
             </div>
             <div>
               <p className="text-xs text-gray-500 font-medium">Partially Paid</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.partiallyPaid}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.partiallyPaid}</p>
               <p className="text-xs text-gray-400 mt-0.5">{formatCurrencyShort(stats.partiallyPaidAmount)}</p>
             </div>
           </div>
 
           <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-start gap-3 shadow-sm">
-            <div className="p-2 bg-red-500 rounded-lg">
-              <XCircle className="w-5 h-5 text-white" />
+            <div className="p-2.5 bg-red-100 rounded-xl">
+              <XCircle className="w-5 h-5 text-red-600" />
             </div>
             <div>
               <p className="text-xs text-gray-500 font-medium">Failed / Refunded</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.failed}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.failed}</p>
               <p className="text-xs text-gray-400 mt-0.5">{formatCurrencyShort(stats.failedAmount)}</p>
             </div>
           </div>
@@ -620,7 +544,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
         {/* Filters Row */}
         <div className="bg-white rounded-xl border border-gray-200 mb-4 p-4">
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative flex-1 min-w-[180px] max-w-[250px]">
+            <div className="relative flex-1 min-w-[180px] max-w-[220px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
@@ -654,11 +578,11 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 className="appearance-none pl-4 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               >
                 <option value="all">All Payment Methods</option>
-                <option value="cash">Cash</option>
+                <option value="razorpay">Razorpay</option>
                 <option value="bank_transfer">Bank Transfer</option>
+                <option value="cash">Cash</option>
                 <option value="upi">UPI</option>
-                <option value="debit_credit_card">Debit/Credit Card</option>
-                <option value="check">Check</option>
+                <option value="check">Cheque</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
@@ -678,57 +602,23 @@ const Payments = ({ user, portalType = 'admin' }) => {
             </div>
 
             <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="dd/mm/yyyy"
-                  value={dateRangeDisplay.start}
-                  onChange={(e) => {
-                    handleDateInput(e.target.value, (val) => setDateRangeDisplay(prev => ({ ...prev, start: val })));
-                    const parsed = parseISTDate(e.target.value);
-                    if (parsed) setDateRange(prev => ({ ...prev, start: parsed }));
-                  }}
-                  className="text-sm border-none focus:outline-none bg-transparent w-[90px]"
-                />
-                <input
-                  type="date"
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      setDateRange(prev => ({ ...prev, start: e.target.value }));
-                      setDateRangeDisplay(prev => ({ ...prev, start: formatDateIST(e.target.value) }));
-                    }
-                  }}
-                />
-              </div>
+              <input
+                type="date"
+                value={dateRange.start}
+                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                className="text-sm border-none focus:outline-none bg-transparent w-[110px]"
+              />
               <span className="text-gray-400">-</span>
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="dd/mm/yyyy"
-                  value={dateRangeDisplay.end}
-                  onChange={(e) => {
-                    handleDateInput(e.target.value, (val) => setDateRangeDisplay(prev => ({ ...prev, end: val })));
-                    const parsed = parseISTDate(e.target.value);
-                    if (parsed) setDateRange(prev => ({ ...prev, end: parsed }));
-                  }}
-                  className="text-sm border-none focus:outline-none bg-transparent w-[90px]"
-                />
-                <input
-                  type="date"
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      setDateRange(prev => ({ ...prev, end: e.target.value }));
-                      setDateRangeDisplay(prev => ({ ...prev, end: formatDateIST(e.target.value) }));
-                    }
-                  }}
-                />
-              </div>
+              <input
+                type="date"
+                value={dateRange.end}
+                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                className="text-sm border-none focus:outline-none bg-transparent w-[110px]"
+              />
               <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
             </div>
 
-            <button className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <button className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
               <Filter className="w-4 h-4" />
               Filters
             </button>
@@ -787,7 +677,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
                             <span className="text-sm text-gray-600">{payment.propertyCode || payment.propertyId || '-'}</span>
                           </td>
                           <td className="px-4 py-4">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium ${method.bg} ${method.color}`}>
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium ${method.bg} ${method.color} border ${method.border}`}>
                               <MethodIcon className="w-3.5 h-3.5" />
                               {method.label}
                             </span>
@@ -800,12 +690,25 @@ const Payments = ({ user, portalType = 'admin' }) => {
                             <div className="text-xs text-gray-500">{dateTime.time}</div>
                           </td>
                           <td className="px-4 py-4 text-center">
-                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${status.color}`}>
-                              {status.label}
-                            </span>
+                            {payment.status === 'verification_pending' ? (
+                              <button
+                                onClick={() => {
+                                  setSelectedPaymentForVerify(payment);
+                                  setShowVerifyModal(true);
+                                }}
+                                className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${status.color} hover:opacity-80 cursor-pointer transition-opacity`}
+                                title="Click to verify payment"
+                              >
+                                {status.label}
+                              </button>
+                            ) : (
+                              <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${status.color}`}>
+                                {status.label}
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-4">
-                            <span className="text-sm text-gray-600">{payment.transactionId || payment.referenceNumber || '-'}</span>
+                            <span className="text-sm text-gray-600 font-mono">{payment.transactionId || payment.referenceNumber || '-'}</span>
                           </td>
                           <td className="px-4 py-4 text-center relative">
                             <button
@@ -815,12 +718,27 @@ const Payments = ({ user, portalType = 'admin' }) => {
                               <MoreHorizontal className="w-5 h-5 text-gray-400" />
                             </button>
                             {actionMenuOpen === payment.id && (
-                              <div className="absolute right-4 top-12 bg-white border border-gray-200 rounded-xl shadow-lg z-10 py-2 min-w-[140px]">
+                              <div className="absolute right-4 top-12 bg-white border border-gray-200 rounded-xl shadow-lg z-10 py-2 min-w-[160px]">
+                                {payment.status === 'verification_pending' && (
+                                  <>
+                                    <button 
+                                      onClick={() => {
+                                        setSelectedPaymentForVerify(payment);
+                                        setShowVerifyModal(true);
+                                        setActionMenuOpen(null);
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2 font-medium"
+                                    >
+                                      <CheckCircle className="w-4 h-4" /> Verify Payment
+                                    </button>
+                                    <div className="border-t border-gray-100 my-1"></div>
+                                  </>
+                                )}
                                 <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                   <Eye className="w-4 h-4" /> View Details
                                 </button>
                                 <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                  <Edit className="w-4 h-4" /> Modify
+                                  <Edit className="w-4 h-4" /> Edit Payment
                                 </button>
                                 <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                   <Download className="w-4 h-4" /> Download
@@ -901,20 +819,21 @@ const Payments = ({ user, portalType = 'admin' }) => {
         </div>
       </div>
 
-      <RecordPaymentModal
-        isOpen={showRecordModal}
-        onClose={() => setShowRecordModal(false)}
+      <VerifyPaymentModal
+        isOpen={showVerifyModal}
+        onClose={() => {
+          setShowVerifyModal(false);
+          setSelectedPaymentForVerify(null);
+        }}
         onSuccess={() => {
           fetchPayments();
-          showToast('Payment recorded successfully!');
+          showToast('Payment status updated successfully!');
         }}
+        payment={selectedPaymentForVerify}
       />
 
       {actionMenuOpen && (
-        <div
-          className="fixed inset-0 z-0"
-          onClick={() => setActionMenuOpen(null)}
-        />
+        <div className="fixed inset-0 z-0" onClick={() => setActionMenuOpen(null)} />
       )}
     </div>
   );
