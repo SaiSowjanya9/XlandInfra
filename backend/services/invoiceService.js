@@ -449,7 +449,7 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
         0, // amount_paid
         amounts.balanceAmount,
         'draft', // Auto-generated invoices start as draft for review
-        'unpaid',
+        'pending',
         true,
         approvedBy,
         'system',
