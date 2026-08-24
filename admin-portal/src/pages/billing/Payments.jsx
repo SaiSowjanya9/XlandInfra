@@ -40,6 +40,41 @@ const formatDateDisplay = (dateStr) => {
   return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+// Format date to IST (dd/mm/yyyy)
+const formatDateIST = (dateStr) => {
+  if (!dateStr) return '';
+  if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  }
+  const date = new Date(dateStr);
+  if (isNaN(date)) return '';
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+// Parse IST date (dd/mm/yyyy) to yyyy-mm-dd
+const parseISTDate = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = dateStr.replace(/[^\d/]/g, '').split('/');
+  if (parts.length !== 3) return '';
+  const [day, month, year] = parts;
+  if (!day || !month || !year || year.length !== 4) return '';
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+};
+
+// Handle IST date input with auto-formatting
+const handleISTDateInput = (value, maxLength = 10) => {
+  let cleaned = value.replace(/[^\d/]/g, '');
+  // Auto add slashes
+  if (cleaned.length === 2 && !cleaned.includes('/')) cleaned += '/';
+  else if (cleaned.length === 5 && cleaned.split('/').length === 2) cleaned += '/';
+  if (cleaned.length > maxLength) cleaned = cleaned.slice(0, maxLength);
+  return cleaned;
+};
+
 // Payment method config with colors matching reference image
 const PAYMENT_METHODS = {
   razorpay: { label: 'Razorpay', icon: CreditCard, color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200' },
@@ -603,17 +638,41 @@ const Payments = ({ user, portalType = 'admin' }) => {
 
             <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
               <input
-                type="date"
-                value={dateRange.start}
-                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                className="text-sm border-none focus:outline-none bg-transparent w-[110px]"
+                type="text"
+                placeholder="dd/mm/yyyy"
+                value={formatDateIST(dateRange.start)}
+                onChange={(e) => {
+                  const formatted = handleISTDateInput(e.target.value);
+                  if (formatted.length === 10) {
+                    setDateRange(prev => ({ ...prev, start: parseISTDate(formatted) }));
+                  } else if (formatted.length === 0) {
+                    setDateRange(prev => ({ ...prev, start: '' }));
+                  }
+                }}
+                onBlur={(e) => {
+                  const parsed = parseISTDate(e.target.value);
+                  if (parsed) setDateRange(prev => ({ ...prev, start: parsed }));
+                }}
+                className="text-sm border-none focus:outline-none bg-transparent w-[90px] text-center"
               />
               <span className="text-gray-400">-</span>
               <input
-                type="date"
-                value={dateRange.end}
-                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                className="text-sm border-none focus:outline-none bg-transparent w-[110px]"
+                type="text"
+                placeholder="dd/mm/yyyy"
+                value={formatDateIST(dateRange.end)}
+                onChange={(e) => {
+                  const formatted = handleISTDateInput(e.target.value);
+                  if (formatted.length === 10) {
+                    setDateRange(prev => ({ ...prev, end: parseISTDate(formatted) }));
+                  } else if (formatted.length === 0) {
+                    setDateRange(prev => ({ ...prev, end: '' }));
+                  }
+                }}
+                onBlur={(e) => {
+                  const parsed = parseISTDate(e.target.value);
+                  if (parsed) setDateRange(prev => ({ ...prev, end: parsed }));
+                }}
+                className="text-sm border-none focus:outline-none bg-transparent w-[90px] text-center"
               />
               <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
             </div>
