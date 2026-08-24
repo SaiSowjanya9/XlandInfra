@@ -4558,12 +4558,130 @@ router.put('/estimates/:id/status', requireFPScope, async (req, res) => {
       });
     }
     
+    const normalizedStatus = status.toLowerCase();
+    
+    // Update the estimate status
     await pool.execute(
       `UPDATE fp_estimates SET status = ?, updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
-      [status.toLowerCase(), req.params.id, req.fpId]
+      [normalizedStatus, req.params.id, req.fpId]
     );
     
-    res.json({ success: true, message: 'Status updated successfully', status: status.toLowerCase() });
+    let invoiceCreated = false;
+    let invoiceId = null;
+    
+    // Auto-generate invoice when estimate is approved
+    if (normalizedStatus === 'approved') {
+      try {
+        // Fetch the estimate details
+        const [[estimate]] = await pool.execute(
+          'SELECT * FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?',
+          [req.params.id, req.fpId]
+        );
+        
+        if (estimate) {
+          // Check if invoice already exists for this estimate
+          const [existingInvoice] = await pool.execute(
+            'SELECT id, invoice_id FROM invoices WHERE source_estimate_id = ?',
+            [estimate.estimate_id]
+          );
+          
+          if (existingInvoice.length === 0) {
+            // Generate invoice ID
+            const newInvoiceId = `INV-${Date.now()}${Math.floor(Math.random() * 1000)}`;
+            
+            // Calculate amounts
+            const subtotal = parseFloat(estimate.subtotal) || parseFloat(estimate.total_amount) || 0;
+            const discountPercent = parseFloat(estimate.discount_percent) || 0;
+            const gstPercent = parseFloat(estimate.gst_percent) || 18;
+            const discountAmount = parseFloat(estimate.discount_amount) || (subtotal * discountPercent / 100);
+            const taxableAmount = subtotal - discountAmount;
+            const gstAmount = parseFloat(estimate.gst_amount) || (taxableAmount * gstPercent / 100);
+            const totalAmount = parseFloat(estimate.total_amount) || (taxableAmount + gstAmount);
+            
+            // Parse line items from estimate
+            let lineItems = [];
+            try {
+              if (estimate.package_services) {
+                const services = typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services;
+                if (Array.isArray(services)) {
+                  lineItems = services.map(s => ({
+                    description: s.name || s.serviceName || 'Service',
+                    name: s.name || s.serviceName || 'Service',
+                    details: s.description || '',
+                    quantity: s.quantity || s.frequencyCount || 1,
+                    frequency: s.frequencyType || 'Monthly',
+                    unitPrice: parseFloat(s.price || 0),
+                    totalPrice: parseFloat(s.totalPrice || s.price || 0),
+                    type: 'service'
+                  }));
+                }
+              }
+            } catch (e) {
+              console.log('Error parsing line items:', e.message);
+            }
+            
+            // Set due date (30 days from now)
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 30);
+            
+            // Create invoice
+            const [insertResult] = await pool.execute(`
+              INSERT INTO invoices (
+                invoice_id, source_estimate_id, franchise_partner_id, property_id, estimate_id,
+                customer_id, customer_name, customer_email, customer_phone,
+                property_name, property_code,
+                subtotal, discount_percent, discount_amount, tax_percent, tax_amount, total_amount,
+                amount_paid, balance_amount, payment_status,
+                line_items, status, due_date, created_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            `, [
+              newInvoiceId,
+              estimate.estimate_id,
+              req.fpId,
+              estimate.property_id || null,
+              estimate.id,
+              null, // customer_id - can be linked later
+              estimate.client_name || '',
+              estimate.client_email || '',
+              estimate.client_phone || '',
+              estimate.property_name || '',
+              estimate.property_code || '',
+              subtotal,
+              discountPercent,
+              discountAmount,
+              gstPercent,
+              gstAmount,
+              totalAmount,
+              0, // amount_paid
+              totalAmount, // balance_amount
+              'unpaid',
+              JSON.stringify(lineItems),
+              'draft',
+              dueDate
+            ]);
+            
+            invoiceCreated = true;
+            invoiceId = newInvoiceId;
+            console.log(`[Auto-Invoice] Created invoice ${newInvoiceId} for estimate ${estimate.estimate_id}`);
+          } else {
+            console.log(`[Auto-Invoice] Invoice already exists for estimate ${estimate.estimate_id}`);
+          }
+        }
+      } catch (invoiceError) {
+        console.error('[Auto-Invoice] Error creating invoice:', invoiceError.message);
+        // Don't fail the status update if invoice creation fails
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      message: invoiceCreated 
+        ? `Status updated to approved and invoice ${invoiceId} created` 
+        : 'Status updated successfully', 
+      status: normalizedStatus,
+      invoiceCreated,
+      invoiceId
+    });
   } catch (error) {
     console.error('Update estimate status error:', error);
     res.status(500).json({ success: false, message: error.message });
