@@ -65,33 +65,47 @@ const CardLogos = () => (
   </div>
 );
 
-// UPI App logos component
+// UPI App logos component - matches reference image exactly
 const UPIAppLogos = () => (
-  <div className="flex items-center gap-2 mt-2 flex-wrap">
-    <div className="flex items-center gap-1 px-2 py-1 bg-white rounded border border-gray-200">
-      <span className="text-xs font-semibold text-gray-700">G</span>
-      <span className="text-xs text-gray-600">Pay</span>
+  <div className="flex items-center gap-2 mt-3">
+    {/* GPay */}
+    <div className="flex items-center gap-0.5 px-2 py-1.5 bg-white rounded-lg border border-gray-200">
+      <span className="text-sm font-medium">
+        <span className="text-blue-500">G</span>
+        <span className="text-red-500"> </span>
+        <span className="text-gray-700">Pay</span>
+      </span>
     </div>
-    <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
-      <span className="text-white text-[8px] font-bold">Pe</span>
+    {/* PhonePe */}
+    <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+      <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+        <circle cx="12" cy="12" r="10" fill="currentColor"/>
+        <path d="M8 12c0 2.2 1.8 4 4 4s4-1.8 4-4" stroke="white" strokeWidth="2" fill="none"/>
+      </svg>
     </div>
-    <div className="flex items-center px-2 py-1 bg-blue-50 rounded border border-blue-200">
-      <span className="text-xs font-semibold text-blue-600">Paytm</span>
+    {/* Paytm */}
+    <div className="px-2 py-1.5 bg-blue-50 rounded-lg border border-blue-100">
+      <span className="text-sm font-bold text-blue-600">pay<span className="text-blue-800">tm</span></span>
     </div>
-    <div className="flex items-center px-2 py-1 bg-green-50 rounded border border-green-200">
-      <span className="text-xs font-semibold text-green-700">BHIM</span>
+    {/* BHIM */}
+    <div className="px-2 py-1.5 bg-orange-50 rounded-lg border border-orange-100">
+      <span className="text-sm font-bold text-orange-600">BHIM</span>
     </div>
-    <span className="text-gray-400">...</span>
+    {/* More */}
+    <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200">
+      <span className="text-gray-500 font-bold">...</span>
+    </div>
   </div>
 );
 
-// Payment method icons
+// UPI Icon - matches official UPI branding
 const UPIIcon = () => (
-  <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center border border-gray-200">
-    <div className="text-center">
-      <span className="text-gray-700 font-bold text-[10px] block">UPI</span>
-      <span className="text-[8px] text-gray-500">PAYMENTS</span>
+  <div className="w-16 h-14 bg-white rounded-xl flex flex-col items-center justify-center border border-gray-200 p-1">
+    <div className="flex items-baseline">
+      <span className="text-green-600 font-bold text-lg tracking-tight">UPI</span>
+      <span className="text-orange-500 font-bold text-lg">|</span>
     </div>
+    <span className="text-[7px] text-gray-400 uppercase tracking-wider">Unified Payments</span>
   </div>
 );
 
