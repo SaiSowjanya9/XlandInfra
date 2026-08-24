@@ -483,30 +483,10 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     console.log(`✅ Invoice ${invoiceId} generated from estimate ${estimate.estimate_id}`);
     console.log(`📧 Customer email for invoice: ${customerEmail || 'NOT FOUND'}`);
     
-    // Auto-send email with payment link to customer
-    let emailSent = false;
-    let paymentLinkCreated = false;
-    if (customerEmail) {
-      try {
-        console.log(`📧 Sending invoice email with payment link to ${customerEmail}...`);
-        await sendInvoiceEmailNotification(
-          insertedId,
-          customerEmail,
-          customerName,
-          invoiceId,
-          amounts.totalAmount,
-          dueDate
-        );
-        emailSent = true;
-        paymentLinkCreated = true;
-        console.log(`✅ Invoice email sent successfully to ${customerEmail}`);
-      } catch (emailError) {
-        console.error(`❌ Failed to send invoice email:`, emailError.message);
-        // Don't fail the invoice generation if email fails
-      }
-    } else {
-      console.log(`⚠️ No customer email found - skipping automatic email`);
-    }
+    // NOTE: Email is NOT sent automatically for draft invoices
+    // The team must review the invoice in "Generated Invoices" and click "Send"
+    // This prevents sending incorrect or incomplete invoices
+    console.log(`📋 Invoice ${invoiceId} created as DRAFT - awaiting team review before sending`);
     
     return {
       success: true,
@@ -515,8 +495,8 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
       totalAmount: amounts.totalAmount,
       customerEmail,
       estimateId: estimate.estimate_id,
-      emailSent,
-      paymentLinkCreated
+      emailSent: false,
+      paymentLinkCreated: false
     };
     
   } catch (error) {

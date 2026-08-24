@@ -723,8 +723,8 @@ router.post('/:estimateId/action', async (req, res) => {
         // Use internal DB id for invoice generation, pass source to handle fp_estimates
         invoiceResult = await generateInvoiceFromEstimate(est.id, null, source);
         console.log(`✅ Auto-generated invoice for customer-approved estimate ${estimateId} (source: ${source}):`, invoiceResult);
-        // Note: Invoice email is sent automatically inside generateInvoiceFromEstimate()
-        // No need to send again here to avoid duplicate emails
+        // Note: Invoice is created as DRAFT - email is NOT sent automatically
+        // Team must review in "Generated Invoices" and click "Send" to send email with payment link
       } catch (invoiceError) {
         console.error('❌ Failed to auto-generate invoice for customer approval:', invoiceError);
         console.error('❌ Error stack:', invoiceError.stack);
