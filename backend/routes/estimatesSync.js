@@ -567,12 +567,12 @@ router.post('/:estimateId/send', async (req, res) => {
       // Services with descriptions
       services: packageServices.length > 0 ? packageServices : services,
       addons: addons,
-      subtotal: parseFloat(est.subtotal || 0),
+      subtotal: Math.round(parseFloat(est.subtotal || 0)),
       discount: parseFloat(est.discount_percent || est.discount_percentage || 0),
-      discountAmount: parseFloat(est.discount_amount || 0),
-      tax: parseFloat(est.tax_amount || est.gst_amount || 0),
+      discountAmount: Math.round(parseFloat(est.discount_amount || 0)),
+      tax: Math.round(parseFloat(est.tax_amount || est.gst_amount || 0)),
       gstPercent: parseFloat(est.gst_percent || est.tax_percentage || 18),
-      total: parseFloat(est.total_amount || 0),
+      total: Math.round(parseFloat(est.total_amount || est.total || 0)),
       validUntil: est.valid_until,
       // Work Order fields
       isWorkOrderEstimate,
@@ -797,9 +797,9 @@ router.get('/:estimateId/status', async (req, res) => {
       success: true, 
       data: {
         estimateId: est.estimate_id,
-        customerName: est.customer_name,
+        customerName: est.customer_name || est.client_name,
         propertyName: est.property_name,
-        total: parseFloat(est.total || 0),
+        total: Math.round(parseFloat(est.total || est.total_amount || 0)),
         status: est.status,
         sentAt: est.sent_at,
         source: est.source

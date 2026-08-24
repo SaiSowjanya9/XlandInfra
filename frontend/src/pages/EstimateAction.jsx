@@ -121,7 +121,7 @@ const EstimateAction = () => {
               </>
             )}
             <p className="text-sm text-gray-500 mt-3">Total Amount</p>
-            <p className="font-bold text-xl text-indigo-600">₹{Number(estimate.total).toLocaleString()}</p>
+            <p className="font-bold text-xl text-indigo-600">₹{Math.round(Number(estimate.total)).toLocaleString('en-IN')}</p>
           </div>
         </div>
       </div>
@@ -159,7 +159,7 @@ const EstimateAction = () => {
               </>
             )}
             <p className="text-sm text-gray-500 mt-3">Total Amount</p>
-            <p className="font-bold text-xl text-indigo-600">₹{Number(estimate.total).toLocaleString()}</p>
+            <p className="font-bold text-xl text-indigo-600">₹{Math.round(Number(estimate.total)).toLocaleString('en-IN')}</p>
           </div>
           <p className="text-sm text-gray-500 mt-6">
             Contact us at <a href="mailto:info@xlandinfra.com" className="text-indigo-600">info@xlandinfra.com</a>
@@ -201,7 +201,7 @@ const EstimateAction = () => {
             )}
             <div className="pt-3 border-t">
               <p className="text-sm text-gray-500">Total Amount</p>
-              <p className="font-bold text-2xl text-indigo-600">₹{Number(estimate?.total || 0).toLocaleString()}</p>
+              <p className="font-bold text-2xl text-indigo-600">₹{Math.round(Number(estimate?.total || 0)).toLocaleString('en-IN')}</p>
             </div>
           </div>
         </div>

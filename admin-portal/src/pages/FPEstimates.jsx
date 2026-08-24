@@ -2735,10 +2735,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <div className="text-xs text-gray-400 capitalize">{est.created_by_name ? (est.created_by_role || '').replace(/_/g, ' ') : ''}</div>
                     </td>
                     <td className="px-4 py-4">
-                      {isFPManager ? (
-                        // FP Manager - View only (badge)
+                      {isFPManager || est.status === 'converted' ? (
+                        // FP Manager or Invoice Generated - View only (badge)
                         <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getEstimateStatusColor(est.status)}`}>
-                          {est.status || 'draft'}
+                          {STATUS_LABELS[est.status] || STATUS_LABELS[(est.status || 'draft').toLowerCase()] || 'Draft'}
                         </span>
                       ) : (
                         // FP Owner/Admin - Dropdown to change status
@@ -3797,6 +3797,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     const s = (status || 'draft').toLowerCase();
     switch (s) {
       case 'approved': return 'bg-green-100 text-green-700';
+      case 'converted': return 'bg-purple-100 text-purple-700';
       case 'sent': return 'bg-blue-100 text-blue-700';
       case 'rejected': return 'bg-red-100 text-red-700';
       default: return 'bg-gray-100 text-gray-600';
