@@ -4384,7 +4384,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }}>
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
-              <div><h3 className="text-lg font-semibold text-gray-800">Edit Estimate</h3><p className="text-sm text-gray-500">{editEstimate.estimate_id} - {editEstimate.estimate_type === 'property_based' || editEstimate.estimate_type === 'property-based' ? 'Property Based' : 'Direct'}</p></div>
+              <div><h3 className="text-lg font-semibold text-gray-800">Edit Estimate</h3><p className="text-sm text-gray-500">{editEstimate.estimate_id} - {editEstimate.estimate_type === 'work_order' ? 'Work Order' : editEstimate.estimate_type === 'property_based' || editEstimate.estimate_type === 'property-based' ? 'Property Based' : 'Direct'}</p></div>
               <button onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5 text-gray-500" /></button>
             </div>
             <div className="p-6 space-y-6">
