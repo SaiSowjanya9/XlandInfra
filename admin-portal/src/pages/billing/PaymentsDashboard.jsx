@@ -382,7 +382,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
   const basePath = portalType === 'employee' || portalType === 'admin' ? '/employee' : `/${portalType}`;
 
   const navigateToPaymentsList = (filter = '') => {
-    navigate(`${basePath}/billing/payments-list${filter ? `?status=${filter}` : ''}`);
+    navigate(`${basePath}/billing/payments${filter ? `?status=${filter}` : ''}`);
   };
 
   const maxTrendValue = Math.max(
@@ -433,82 +433,91 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         {/* Stats Cards */}
         <div className="grid grid-cols-6 gap-4 mb-6">
           {/* Total Invoice Amount */}
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white">
-            <div className="flex items-center gap-2 mb-2">
-              <FileText className="w-4 h-4 opacity-80" />
-              <span className="text-xs font-medium opacity-80">Total Invoice Amount</span>
+          <div className="bg-white rounded-xl p-4 border-l-4 border-l-blue-500 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                <FileText className="w-4 h-4 text-blue-600" />
+              </div>
+              <span className="text-xs font-medium text-gray-500">Total Invoice Amount</span>
             </div>
-            <p className="text-2xl font-bold mb-1">{formatCurrencyShort(dashboardData.totalInvoiceAmount)}</p>
-            <p className="text-xs opacity-70">100% of all invoices</p>
-            <button onClick={() => navigate(`${basePath}/billing/invoices`)} className="flex items-center gap-1 text-xs mt-2 opacity-80 hover:opacity-100">
+            <p className="text-2xl font-bold text-gray-900 mb-1">{formatCurrencyShort(dashboardData.totalInvoiceAmount)}</p>
+            <p className="text-xs text-gray-400">100% of all invoices</p>
+            <button onClick={() => navigate(`${basePath}/billing/invoices`)} className="flex items-center gap-1 text-xs mt-2 text-blue-600 hover:text-blue-700 font-medium">
               View All <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
           {/* Amount Collected */}
-          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white">
-            <div className="flex items-center gap-2 mb-2">
-              <CheckCircle className="w-4 h-4 opacity-80" />
-              <span className="text-xs font-medium opacity-80">Amount Collected</span>
+          <div className="bg-white rounded-xl p-4 border-l-4 border-l-green-500 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+              </div>
+              <span className="text-xs font-medium text-gray-500">Amount Collected</span>
             </div>
-            <p className="text-2xl font-bold mb-1">{formatCurrencyShort(dashboardData.amountCollected)}</p>
-            <p className="text-xs opacity-70">{dashboardData.collectedPercentage}% of total invoices</p>
-            <button onClick={() => navigateToPaymentsList('paid')} className="flex items-center gap-1 text-xs mt-2 opacity-80 hover:opacity-100">
+            <p className="text-2xl font-bold text-gray-900 mb-1">{formatCurrencyShort(dashboardData.amountCollected)}</p>
+            <p className="text-xs text-gray-400">{dashboardData.collectedPercentage}% of total invoices</p>
+            <button onClick={() => navigateToPaymentsList('paid')} className="flex items-center gap-1 text-xs mt-2 text-green-600 hover:text-green-700 font-medium">
               View All <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
           {/* Pending Amount */}
-          <div className="bg-gradient-to-br from-amber-400 to-amber-500 rounded-xl p-4 text-white">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-4 h-4 opacity-80" />
-              <span className="text-xs font-medium opacity-80">Pending Amount</span>
+          <div className="bg-white rounded-xl p-4 border-l-4 border-l-amber-500 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                <Clock className="w-4 h-4 text-amber-600" />
+              </div>
+              <span className="text-xs font-medium text-gray-500">Pending Amount</span>
             </div>
-            <p className="text-2xl font-bold mb-1">{formatCurrencyShort(dashboardData.pendingAmount)}</p>
-            <p className="text-xs opacity-70">{dashboardData.pendingPercentage}% of total invoices</p>
-            <button onClick={() => navigateToPaymentsList('verification_pending')} className="flex items-center gap-1 text-xs mt-2 opacity-80 hover:opacity-100">
+            <p className="text-2xl font-bold text-gray-900 mb-1">{formatCurrencyShort(dashboardData.pendingAmount)}</p>
+            <p className="text-xs text-gray-400">{dashboardData.pendingPercentage}% of total invoices</p>
+            <button onClick={() => navigateToPaymentsList('verification_pending')} className="flex items-center gap-1 text-xs mt-2 text-amber-600 hover:text-amber-700 font-medium">
               View All <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
           {/* Overdue Amount */}
-          <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-4 text-white">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="w-4 h-4 opacity-80" />
-              <span className="text-xs font-medium opacity-80">Overdue Amount</span>
+          <div className="bg-white rounded-xl p-4 border-l-4 border-l-red-500 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
+                <AlertTriangle className="w-4 h-4 text-red-600" />
+              </div>
+              <span className="text-xs font-medium text-gray-500">Overdue Amount</span>
             </div>
-            <p className="text-2xl font-bold mb-1">{formatCurrencyShort(dashboardData.overdueAmount)}</p>
-            <p className="text-xs opacity-70">{dashboardData.overduePercentage}% of total invoices</p>
-            <button onClick={() => navigate(`${basePath}/billing/invoices?status=overdue`)} className="flex items-center gap-1 text-xs mt-2 opacity-80 hover:opacity-100">
+            <p className="text-2xl font-bold text-gray-900 mb-1">{formatCurrencyShort(dashboardData.overdueAmount)}</p>
+            <p className="text-xs text-gray-400">{dashboardData.overduePercentage}% of total invoices</p>
+            <button onClick={() => navigate(`${basePath}/billing/invoices?status=overdue`)} className="flex items-center gap-1 text-xs mt-2 text-red-600 hover:text-red-700 font-medium">
               View All <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
           {/* Today's Collections */}
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="w-4 h-4 opacity-80" />
-              <span className="text-xs font-medium opacity-80">Today's Collections</span>
+          <div className="bg-white rounded-xl p-4 border-l-4 border-l-purple-500 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-purple-600" />
+              </div>
+              <span className="text-xs font-medium text-gray-500">Today's Collections</span>
             </div>
-            <p className="text-2xl font-bold mb-1">{formatCurrencyShort(dashboardData.todaysCollections)}</p>
-            <p className="text-xs opacity-70">{dashboardData.todaysPaymentCount} Payments</p>
-            <button onClick={() => navigateToPaymentsList('paid')} className="flex items-center gap-1 text-xs mt-2 opacity-80 hover:opacity-100">
+            <p className="text-2xl font-bold text-gray-900 mb-1">{formatCurrencyShort(dashboardData.todaysCollections)}</p>
+            <p className="text-xs text-gray-400">{dashboardData.todaysPaymentCount} Payments</p>
+            <button onClick={() => navigateToPaymentsList('paid')} className="flex items-center gap-1 text-xs mt-2 text-purple-600 hover:text-purple-700 font-medium">
               View Details <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
           {/* Failed Payments */}
-          <div className="bg-gradient-to-br from-rose-500 to-rose-600 rounded-xl p-4 text-white relative">
-            <div className="absolute top-3 right-3 w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-              <XCircle className="w-4 h-4" />
+          <div className="bg-white rounded-xl p-4 border-l-4 border-l-rose-500 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center">
+                <XCircle className="w-4 h-4 text-rose-600" />
+              </div>
+              <span className="text-xs font-medium text-gray-500">Failed Payments</span>
             </div>
-            <div className="flex items-center gap-2 mb-2">
-              <XCircle className="w-4 h-4 opacity-80" />
-              <span className="text-xs font-medium opacity-80">Failed Payments</span>
-            </div>
-            <p className="text-2xl font-bold mb-1">{formatCurrencyShort(dashboardData.failedPayments)}</p>
-            <p className="text-xs opacity-70">{dashboardData.failedCount} Transactions</p>
-            <button onClick={() => navigateToPaymentsList('failed')} className="flex items-center gap-1 text-xs mt-2 opacity-80 hover:opacity-100">
+            <p className="text-2xl font-bold text-gray-900 mb-1">{formatCurrencyShort(dashboardData.failedPayments)}</p>
+            <p className="text-xs text-gray-400">{dashboardData.failedCount} Transactions</p>
+            <button onClick={() => navigateToPaymentsList('failed')} className="flex items-center gap-1 text-xs mt-2 text-rose-600 hover:text-rose-700 font-medium">
               View All <ArrowRight className="w-3 h-3" />
             </button>
           </div>
