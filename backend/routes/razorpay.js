@@ -160,6 +160,7 @@ router.post('/create-payment-link', authenticate, canManagePayments, paymentLink
     const paymentLink = await razorpay.paymentLink.create(paymentLinkOptions);
 
     // Update invoice with payment link details
+    // NOTE: Status stays unchanged - invoice remains in "Generated Invoices" until payment is received
     await pool.execute(`
       UPDATE invoices SET
         payment_link = ?,
@@ -167,8 +168,7 @@ router.post('/create-payment-link', authenticate, canManagePayments, paymentLink
         razorpay_short_url = ?,
         payment_link_created_at = NOW(),
         payment_link_expires_at = ?,
-        payment_link_status = 'created',
-        status = CASE WHEN status = 'draft' THEN 'sent' ELSE status END
+        payment_link_status = 'created'
       WHERE id = ?
     `, [
       paymentLink.short_url,

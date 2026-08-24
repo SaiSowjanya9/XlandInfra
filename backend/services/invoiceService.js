@@ -483,10 +483,30 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     console.log(`✅ Invoice ${invoiceId} generated from estimate ${estimate.estimate_id}`);
     console.log(`📧 Customer email for invoice: ${customerEmail || 'NOT FOUND'}`);
     
-    // NOTE: Email is NOT sent automatically for draft invoices
-    // The user must review the invoice in "Generated Invoices" and click "Send"
-    // This prevents sending incorrect or incomplete invoices
-    console.log(`📋 Invoice ${invoiceId} created as DRAFT - awaiting review before sending`);
+    // Auto-send email with payment link to customer
+    let emailSent = false;
+    let paymentLinkCreated = false;
+    if (customerEmail) {
+      try {
+        console.log(`📧 Sending invoice email with payment link to ${customerEmail}...`);
+        await sendInvoiceEmailNotification(
+          insertedId,
+          customerEmail,
+          customerName,
+          invoiceId,
+          amounts.totalAmount,
+          dueDate
+        );
+        emailSent = true;
+        paymentLinkCreated = true;
+        console.log(`✅ Invoice email sent successfully to ${customerEmail}`);
+      } catch (emailError) {
+        console.error(`❌ Failed to send invoice email:`, emailError.message);
+        // Don't fail the invoice generation if email fails
+      }
+    } else {
+      console.log(`⚠️ No customer email found - skipping automatic email`);
+    }
     
     return {
       success: true,
@@ -494,7 +514,9 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
       invoiceId,
       totalAmount: amounts.totalAmount,
       customerEmail,
-      estimateId: estimate.estimate_id
+      estimateId: estimate.estimate_id,
+      emailSent,
+      paymentLinkCreated
     };
     
   } catch (error) {
@@ -733,6 +755,7 @@ const createPaymentLinkForInvoice = async (invoiceDbId, invoice) => {
     const paymentLink = await razorpay.paymentLink.create(paymentLinkOptions);
     
     // Update invoice with payment link details
+    // NOTE: Status stays as 'draft' - invoice remains in "Generated Invoices" until payment is received
     await pool.execute(`
       UPDATE invoices SET
         payment_link = ?,
@@ -741,8 +764,7 @@ const createPaymentLinkForInvoice = async (invoiceDbId, invoice) => {
         payment_link_created_at = NOW(),
         payment_link_expires_at = ?,
         payment_link_status = 'sent',
-        payment_link_sent_at = NOW(),
-        status = 'sent'
+        payment_link_sent_at = NOW()
       WHERE id = ?
     `, [
       paymentLink.short_url,
@@ -1229,6 +1251,7 @@ module.exports = {
   generateInvoiceFromEstimate,
   generateInvoiceFromWorkOrder,
   sendInvoiceEmailNotification,
+  createPaymentLinkForInvoice,
   GST_RATE,
   DUE_DATE_DAYS
 };

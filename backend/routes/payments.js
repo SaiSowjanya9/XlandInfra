@@ -1794,10 +1794,9 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
       }
     }
 
-    // Update invoice status
+    // Update invoice email tracking (status stays 'draft' until payment is received)
     await pool.execute(`
       UPDATE invoices SET 
-        status = 'sent',
         sent_at = NOW(),
         sent_by = ?,
         email_sent_at = NOW()
