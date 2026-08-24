@@ -884,22 +884,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Combined Estimates + Work Orders Overview Box */}
+        {/* Combined Work Orders + Estimates Overview Box */}
         <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-6">
-          {/* Estimates Overview Section */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Estimates Overview</h2>
-              <button onClick={() => navigate('/employee/estimates/list')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
-                View All <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-            <EstimatesOverviewBlocks estimates={estimates} />
-          </div>
-
-          {/* Divider */}
-          <div className="border-t border-gray-100"></div>
-
           {/* Work Orders Overview Section */}
           <div>
             <div className="flex items-center justify-between mb-4">
@@ -1031,6 +1017,20 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-gray-100"></div>
+
+          {/* Estimates Overview Section */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Estimates Overview</h2>
+              <button onClick={() => navigate('/employee/estimates/list')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                View All <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+            <EstimatesOverviewBlocks estimates={estimates} />
           </div>
 
           {/* Divider */}
