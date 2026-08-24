@@ -1055,9 +1055,12 @@ const Dashboard = () => {
                     onChange={(e) => setInvoiceStatusFilter(e.target.value)}
                     className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                   >
-                    <option value="all">This Month</option>
-                    <option value="last_month">Last Month</option>
-                    <option value="last_3_months">Last 3 Months</option>
+                    <option value="all">All Time</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="quarter">This Quarter</option>
+                    <option value="sixmonths">Last 6 Months</option>
+                    <option value="year">This Year</option>
                   </select>
                   <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>

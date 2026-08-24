@@ -604,9 +604,12 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               </div>
               <div className="relative">
                 <select className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
-                  <option>This Month</option>
-                  <option>Last Month</option>
-                  <option>Last 3 Months</option>
+                  <option value="all">All Time</option>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="quarter">This Quarter</option>
+                  <option value="sixmonths">Last 6 Months</option>
+                  <option value="year">This Year</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
@@ -646,9 +649,12 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               <h3 className="font-semibold text-gray-900">Payments by Mode</h3>
               <div className="relative">
                 <select className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
-                  <option>This Month</option>
-                  <option>Last Month</option>
-                  <option>Last 3 Months</option>
+                  <option value="all">All Time</option>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="quarter">This Quarter</option>
+                  <option value="sixmonths">Last 6 Months</option>
+                  <option value="year">This Year</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
@@ -679,9 +685,12 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               <h3 className="font-semibold text-gray-900">Payments by Status</h3>
               <div className="relative">
                 <select className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
-                  <option>This Month</option>
-                  <option>Last Month</option>
-                  <option>Last 3 Months</option>
+                  <option value="all">All Time</option>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="quarter">This Quarter</option>
+                  <option value="sixmonths">Last 6 Months</option>
+                  <option value="year">This Year</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
@@ -743,9 +752,12 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               <h3 className="font-semibold text-gray-900">Top 5 Customers by Collection</h3>
               <div className="relative">
                 <select className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
-                  <option>This Month</option>
-                  <option>Last Month</option>
-                  <option>Last 3 Months</option>
+                  <option value="all">All Time</option>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="quarter">This Quarter</option>
+                  <option value="sixmonths">Last 6 Months</option>
+                  <option value="year">This Year</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
@@ -776,9 +788,12 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               <h3 className="font-semibold text-gray-900">Invoices by Payment Status</h3>
               <div className="relative">
                 <select className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
-                  <option>This Month</option>
-                  <option>Last Month</option>
-                  <option>Last 3 Months</option>
+                  <option value="all">All Time</option>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="quarter">This Quarter</option>
+                  <option value="sixmonths">Last 6 Months</option>
+                  <option value="year">This Year</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
