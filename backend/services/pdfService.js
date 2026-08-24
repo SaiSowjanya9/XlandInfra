@@ -621,6 +621,24 @@ const generateInvoicePDF = async (invoice) => {
         doc.text('Visits', colVisits, y + 6);
         y += tableHeaderH;
 
+        // Helper function to manually wrap text into lines
+        const wrapText = (text, maxCharsPerLine) => {
+          const words = text.split(' ');
+          const lines = [];
+          let currentLine = '';
+          
+          words.forEach(word => {
+            if ((currentLine + ' ' + word).trim().length <= maxCharsPerLine) {
+              currentLine = (currentLine + ' ' + word).trim();
+            } else {
+              if (currentLine) lines.push(currentLine);
+              currentLine = word;
+            }
+          });
+          if (currentLine) lines.push(currentLine);
+          return lines;
+        };
+
         // Table rows - with full description wrapping to multiple lines
         items.forEach((item, idx) => {
           // Extract service name and full description
@@ -642,14 +660,12 @@ const generateInvoicePDF = async (invoice) => {
           const freq = item.frequency || item.frequencyType || item.billingDuration || '-';
           const visits = item.visits || item.frequencyCount || item.quantity || 1;
           
-          console.log(`[PDF] Row ${idx + 1}: name="${serviceName}", desc="${serviceDesc}"`);
+          console.log(`[PDF-v3] Row ${idx + 1}: name="${serviceName}", desc="${serviceDesc}"`);
           
-          // Calculate row height based on description text wrapping
-          // Approx 45 characters per line at font size 7 with width 280
-          const charsPerLine = 45;
-          const numLines = Math.ceil(serviceDesc.length / charsPerLine);
-          const lineHeight = 10;
-          const rowH = Math.max(24, (numLines * lineHeight) + 14);
+          // Manually wrap description text into lines (45 chars per line)
+          const descLines = wrapText(serviceDesc, 50);
+          const lineHeight = 9;
+          const rowH = Math.max(22, (descLines.length * lineHeight) + 10);
           
           // Draw row background
           const rowColor = idx % 2 === 0 ? '#FAFAFA' : white;
@@ -658,23 +674,22 @@ const generateInvoicePDF = async (invoice) => {
           
           // Draw # column
           doc.fontSize(7).fillColor(primaryText);
-          doc.text(`${idx + 1}`, colNum, y + 8, { continued: false });
+          doc.text(`${idx + 1}`, colNum, y + 6, { lineBreak: false });
           
           // Draw Service name
-          doc.text(serviceName, colService, y + 8, { width: colServiceW, continued: false });
+          doc.text(serviceName, colService, y + 6, { width: colServiceW, lineBreak: false });
           
-          // Draw Description - wrap text across multiple lines (like Image 2)
+          // Draw Description - each line manually
           doc.fillColor(secondaryText);
-          doc.text(serviceDesc, colDesc, y + 8, { 
-            width: colDescW,
-            align: 'left',
-            continued: false
+          let descY = y + 6;
+          descLines.forEach((line, lineIdx) => {
+            doc.text(line, colDesc, descY + (lineIdx * lineHeight), { lineBreak: false });
           });
           
-          // Draw Frequency and Visits (top-aligned with row)
+          // Draw Frequency and Visits (top-aligned)
           doc.fillColor(primaryText);
-          doc.text(freq, colFreq, y + 8, { continued: false });
-          doc.text(`${visits}`, colVisits, y + 8, { continued: false });
+          doc.text(freq, colFreq, y + 6, { lineBreak: false });
+          doc.text(`${visits}`, colVisits, y + 6, { lineBreak: false });
           
           y += rowH;
         });

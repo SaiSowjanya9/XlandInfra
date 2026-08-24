@@ -75,6 +75,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
   // Schedules sub-items
   const schedulesSubItems = [
     { path: '/executive/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/executive/schedules/schedule-service', icon: Calendar, label: 'Schedule Service' },
   ];
 
   const isVendorActive = vendorSubItems.some(item => location.pathname === item.path);
