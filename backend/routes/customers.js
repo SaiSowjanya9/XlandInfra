@@ -1049,7 +1049,7 @@ router.get('/profile', async (req, res) => {
     const [customers] = await pool.execute(
       `SELECT ca.*, 
               COALESCE(op.community_name, p.name) as community_name,
-              COALESCE(op.zone, p.zone) as zone, 
+              op.zone as zone, 
               COALESCE(op.division, p.division) as division, 
               op.entry_type,
               COALESCE(op.address, p.address) as prop_address, 
