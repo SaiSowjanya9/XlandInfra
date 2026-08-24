@@ -1067,27 +1067,35 @@ const Dashboard = () => {
               </div>
               <div className="flex items-center gap-6">
                 {(() => {
-                  // Calculate invoice status data using payment_status field
-                  // payment_status can be: pending, paid, partially_paid
-                  // status can be: draft, sent, pending, paid, partially_paid, overdue, cancelled
+                  // Filter out cancelled invoices - they shouldn't appear in payment status chart
+                  const activeInvoices = invoices.filter(inv => 
+                    inv.status !== 'cancelled' && inv.status !== 'void'
+                  );
+                  
+                  // Helper to get payment status
+                  const getPayStatus = (inv) => inv.paymentStatus || inv.payment_status || '';
+                  
+                  // Calculate invoice status data
                   const statusCounts = {
-                    paid: invoices.filter(inv => 
-                      inv.paymentStatus === 'paid' || inv.payment_status === 'paid' || 
-                      inv.status === 'paid'
+                    paid: activeInvoices.filter(inv => 
+                      getPayStatus(inv) === 'paid' || inv.status === 'paid'
                     ).length,
-                    partially_paid: invoices.filter(inv => 
-                      inv.paymentStatus === 'partially_paid' || inv.payment_status === 'partially_paid' || 
-                      inv.status === 'partially_paid'
+                    partially_paid: activeInvoices.filter(inv => 
+                      getPayStatus(inv) === 'partially_paid' || inv.status === 'partially_paid'
                     ).length,
-                    unpaid: invoices.filter(inv => {
-                      const payStatus = inv.paymentStatus || inv.payment_status || inv.status;
-                      const status = inv.status;
-                      return (payStatus === 'pending' || status === 'sent' || status === 'draft' || status === 'pending') &&
-                             payStatus !== 'paid' && payStatus !== 'partially_paid' && status !== 'overdue' && status !== 'cancelled';
-                    }).length,
-                    overdue: invoices.filter(inv => inv.status === 'overdue').length,
+                    overdue: activeInvoices.filter(inv => inv.status === 'overdue').length,
                   };
-                  const total = statusCounts.paid + statusCounts.partially_paid + statusCounts.unpaid + statusCounts.overdue;
+                  // Unpaid = all active invoices that are not paid, partially_paid, or overdue
+                  statusCounts.unpaid = activeInvoices.filter(inv => {
+                    const payStatus = getPayStatus(inv);
+                    const status = inv.status;
+                    const isPaid = payStatus === 'paid' || status === 'paid';
+                    const isPartial = payStatus === 'partially_paid' || status === 'partially_paid';
+                    const isOverdue = status === 'overdue';
+                    return !isPaid && !isPartial && !isOverdue;
+                  }).length;
+                  
+                  const total = activeInvoices.length;
                   
                   const invoiceStatusData = [
                     { name: 'Paid', value: statusCounts.paid, color: '#22C55E' },
