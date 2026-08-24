@@ -621,61 +621,60 @@ const generateInvoicePDF = async (invoice) => {
         doc.text('Visits', colVisits, y + 6);
         y += tableHeaderH;
 
-        // Table rows - with full description (multi-line support)
+        // Table rows - with full description wrapping to multiple lines
         items.forEach((item, idx) => {
           // Extract service name and full description
-          // Priority: details field > service_description > description after ' - ' > full description
           const rawDesc = decodeHtml(item.description || item.name || 'Service');
           const rawDetails = decodeHtml(item.details || item.service_description || item.serviceDescription || '');
           
-          // If description contains ' - ', split it to get name and description
           const parts = rawDesc.split(' - ');
           const serviceName = decodeHtml(item.name || item.serviceName || item.service_name || parts[0] || 'Service');
           
-          // Get full description from multiple sources
+          // Get full description - try multiple sources
           let serviceDesc = rawDetails;
           if (!serviceDesc && parts.length > 1) {
             serviceDesc = parts.slice(1).join(' - ');
           }
           if (!serviceDesc) {
-            // Use the raw description if no other source available
             serviceDesc = rawDesc !== serviceName ? rawDesc : '-';
           }
           
           const freq = item.frequency || item.frequencyType || item.billingDuration || '-';
           const visits = item.visits || item.frequencyCount || item.quantity || 1;
           
-          // Log what we're rendering for debugging
-          console.log(`[PDF] Row ${idx + 1}: name="${serviceName}", desc="${serviceDesc?.substring(0, 60)}..."`);
+          console.log(`[PDF] Row ${idx + 1}: name="${serviceName}", desc="${serviceDesc}"`);
           
-          // Calculate actual row height using PDFKit's heightOfString for accurate measurement
-          doc.fontSize(7);
-          const descHeight = doc.heightOfString(serviceDesc, { width: colDescW, lineBreak: true });
-          const rowH = Math.max(22, descHeight + 12);
+          // Calculate row height based on description text wrapping
+          // Approx 45 characters per line at font size 7 with width 280
+          const charsPerLine = 45;
+          const numLines = Math.ceil(serviceDesc.length / charsPerLine);
+          const lineHeight = 10;
+          const rowH = Math.max(24, (numLines * lineHeight) + 14);
           
-          // Draw row background (alternating colors)
+          // Draw row background
           const rowColor = idx % 2 === 0 ? '#FAFAFA' : white;
           doc.rect(margin, y, contentWidth, rowH).fill(rowColor);
           doc.rect(margin, y, contentWidth, rowH).lineWidth(0.3).stroke(borderGray);
           
-          // Draw fixed columns
+          // Draw # column
           doc.fontSize(7).fillColor(primaryText);
-          doc.text(`${idx + 1}`, colNum, y + 7);
-          doc.text(serviceName, colService, y + 7, { width: colServiceW, lineBreak: false, ellipsis: true });
+          doc.text(`${idx + 1}`, colNum, y + 8, { continued: false });
           
-          // Draw description with proper text wrapping - full text displayed across multiple lines
+          // Draw Service name
+          doc.text(serviceName, colService, y + 8, { width: colServiceW, continued: false });
+          
+          // Draw Description - wrap text across multiple lines (like Image 2)
           doc.fillColor(secondaryText);
-          doc.text(serviceDesc, colDesc, y + 7, { 
-            width: colDescW, 
-            lineBreak: true,
-            lineGap: 2,
-            height: rowH - 10
+          doc.text(serviceDesc, colDesc, y + 8, { 
+            width: colDescW,
+            align: 'left',
+            continued: false
           });
           
-          // Draw frequency and visits (aligned vertically with first line)
+          // Draw Frequency and Visits (top-aligned with row)
           doc.fillColor(primaryText);
-          doc.text(freq, colFreq, y + 7, { width: 60, lineBreak: false });
-          doc.text(`${visits}`, colVisits, y + 7);
+          doc.text(freq, colFreq, y + 8, { continued: false });
+          doc.text(`${visits}`, colVisits, y + 8, { continued: false });
           
           y += rowH;
         });
