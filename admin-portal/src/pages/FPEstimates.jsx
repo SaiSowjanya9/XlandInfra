@@ -2737,7 +2737,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <td className="px-4 py-4">
                       {isFPManager || est.status === 'converted' ? (
                         // FP Manager or Invoice Generated - View only (badge)
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getEstimateStatusColor(est.status)}`}>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getEstimateStatusColor(est.status)}`}>
                           {getStatusLabel(est.status)}
                         </span>
                       ) : (
