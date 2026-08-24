@@ -774,6 +774,14 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
                         >
                           <Download className="w-4 h-4" />
                         </button>
+                        {/* Send Invoice */}
+                        <button
+                          onClick={() => onSend(invoice)}
+                          className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg"
+                          title="Send Invoice"
+                        >
+                          <Send className="w-4 h-4" />
+                        </button>
                         {/* Delete/Archive */}
                         <button
                           className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
