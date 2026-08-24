@@ -1794,9 +1794,10 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
       }
     }
 
-    // Update invoice email tracking (status stays 'draft' until payment is received)
+    // Update invoice status to 'sent' and track email sending
     await pool.execute(`
       UPDATE invoices SET 
+        status = 'sent',
         sent_at = NOW(),
         sent_by = ?,
         email_sent_at = NOW()
@@ -1979,7 +1980,7 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
               <div style="text-align: center; margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-radius: 12px; border: 1px solid #86efac;">
                 <p style="margin: 0 0 15px; color: #166534; font-size: 16px; font-weight: 600;">Ready to pay? Click below to complete your payment securely.</p>
                 <a href="${paymentLink}" style="display: inline-block; background: linear-gradient(135deg, #16a34a, #22c55e); color: white; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.4);">
-                  💳 PAY NOW
+                  PAY NOW
                 </a>
                 <p style="margin: 15px 0 0; color: #6b7280; font-size: 12px;">Secure payment powered by Razorpay</p>
                 <p style="margin: 5px 0 0; color: #9ca3af; font-size: 11px;">UPI • Cards • Net Banking • Wallets</p>
