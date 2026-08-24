@@ -450,14 +450,14 @@ const Payments = ({ user, portalType = 'admin' }) => {
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Payment History</h1>
+            <h1 className="text-xl font-bold text-gray-900">Payments</h1>
             <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
               <Home className="w-3.5 h-3.5" />
               <span>Home</span>
               <ChevronRightIcon className="w-3.5 h-3.5" />
               <span>Billing & Payments</span>
               <ChevronRightIcon className="w-3.5 h-3.5" />
-              <span className="text-gray-700">Payment History</span>
+              <span className="text-gray-700">Payments</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -643,13 +643,16 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 <table className="w-full">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100">
+                      <th className="px-4 py-3.5 w-10">
+                        <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                      </th>
                       <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment ID</th>
                       <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Invoice ID</th>
                       <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Property</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Property ID</th>
                       <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Method</th>
                       <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Paid Date & Time</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Paid Date</th>
                       <th className="px-4 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                       <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Reference / Transaction No.</th>
                       <th className="px-4 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
@@ -664,6 +667,9 @@ const Payments = ({ user, portalType = 'admin' }) => {
 
                       return (
                         <tr key={payment.id} className="hover:bg-gray-50/50">
+                          <td className="px-4 py-4">
+                            <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                          </td>
                           <td className="px-4 py-4">
                             <span className="text-sm font-semibold text-gray-900">{payment.paymentId}</span>
                           </td>
