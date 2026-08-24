@@ -448,8 +448,8 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
         amounts.totalAmount,
         0, // amount_paid
         amounts.balanceAmount,
-        'sent', // Auto-generated invoices are marked as sent
-        'pending',
+        'draft', // Auto-generated invoices start as draft for review
+        'unpaid',
         true,
         approvedBy,
         'system',
@@ -483,14 +483,10 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     console.log(`✅ Invoice ${invoiceId} generated from estimate ${estimate.estimate_id}`);
     console.log(`📧 Customer email for invoice: ${customerEmail || 'NOT FOUND'}`);
     
-    // Send email notification (don't await to avoid blocking)
-    if (customerEmail) {
-      console.log(`📧 Sending invoice email to: ${customerEmail}`);
-      sendInvoiceEmailNotification(insertedId, customerEmail, customerName, invoiceId, amounts.totalAmount, dueDate)
-        .catch(err => console.error('❌ Failed to send invoice email:', err));
-    } else {
-      console.log(`⚠️ No customer email found for invoice ${invoiceId} - email not sent`);
-    }
+    // NOTE: Email is NOT sent automatically for draft invoices
+    // The user must review the invoice in "Generated Invoices" and click "Send"
+    // This prevents sending incorrect or incomplete invoices
+    console.log(`📋 Invoice ${invoiceId} created as DRAFT - awaiting review before sending`);
     
     return {
       success: true,
