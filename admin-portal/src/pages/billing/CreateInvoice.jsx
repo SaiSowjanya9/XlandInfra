@@ -7,6 +7,7 @@ import {
   AlertCircle,
   Trash2,
   Plus,
+  ChevronDown,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 
@@ -40,9 +41,13 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
   const navigate = useNavigate();
   const token = getAuthToken();
   
+  // Service categories
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  
   // Line items with frequency-based structure (like estimates)
   const [lineItems, setLineItems] = useState([
-    { description: '', frequency: 'Monthly', visits: 12, price: 0, totalPrice: 0 }
+    { categoryId: '', subcategoryId: '', serviceName: '', description: '', frequency: 'Monthly', visits: 12, price: 0, totalPrice: 0 }
   ]);
   
   // Customer details
@@ -88,6 +93,26 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
     setTimeout(() => setToast(null), 3000);
   };
 
+  // Fetch categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/categories`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+          setCategories(result.data || []);
+        }
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+    fetchCategories();
+  }, [token]);
+
   // Set default due date (14 days from today) on mount
   useEffect(() => {
     if (!dueDate) {
@@ -100,9 +125,15 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
     }
   }, []);
 
+  // Get subcategories for a category
+  const getSubcategories = (categoryId) => {
+    const category = categories.find(c => c.id === parseInt(categoryId));
+    return category?.subcategories || [];
+  };
+
   // Line items management
   const addLineItem = () => {
-    setLineItems([...lineItems, { description: '', frequency: 'Monthly', visits: 12, price: 0, totalPrice: 0 }]);
+    setLineItems([...lineItems, { categoryId: '', subcategoryId: '', serviceName: '', description: '', frequency: 'Monthly', visits: 12, price: 0, totalPrice: 0 }]);
   };
 
   const removeLineItem = (index) => {
@@ -114,6 +145,26 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
   const updateLineItem = (index, field, value) => {
     const updated = [...lineItems];
     updated[index][field] = value;
+    
+    // When category changes, reset subcategory and service name
+    if (field === 'categoryId') {
+      updated[index].subcategoryId = '';
+      updated[index].serviceName = '';
+      const category = categories.find(c => c.id === parseInt(value));
+      if (category) {
+        updated[index].description = category.name;
+      }
+    }
+    
+    // When subcategory changes, set service name and description
+    if (field === 'subcategoryId') {
+      const category = categories.find(c => c.id === parseInt(updated[index].categoryId));
+      const subcategory = category?.subcategories?.find(s => s.id === parseInt(value));
+      if (subcategory) {
+        updated[index].serviceName = subcategory.name;
+        updated[index].description = `${category?.name || ''} - ${subcategory.name}`;
+      }
+    }
     
     // Auto-calculate visits based on frequency
     if (field === 'frequency') {
@@ -156,8 +207,8 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
       return;
     }
     
-    if (lineItems.length === 0 || !lineItems.some(item => item.description && item.totalPrice > 0)) {
-      setError('At least one valid line item is required');
+    if (lineItems.length === 0 || !lineItems.some(item => (item.categoryId || item.description) && item.totalPrice > 0)) {
+      setError('At least one service with price is required');
       return;
     }
 
@@ -174,10 +225,12 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
         body: JSON.stringify({
           customerDetails,
           lineItems: lineItems
-            .filter(item => item.description && item.totalPrice > 0)
+            .filter(item => (item.categoryId || item.description) && item.totalPrice > 0)
             .map(item => ({
-              description: item.description,
-              name: item.description,
+              description: item.description || item.serviceName,
+              name: item.serviceName || item.description,
+              categoryId: item.categoryId,
+              subcategoryId: item.subcategoryId,
               frequency: item.frequency,
               frequencyType: item.frequency,
               visits: item.visits,
@@ -323,8 +376,9 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
 
             <div className="space-y-3">
               {/* Table Header */}
-              <div className="grid grid-cols-12 gap-3 px-2 text-xs font-semibold text-gray-500 uppercase">
-                <div className="col-span-4">Description</div>
+              <div className="grid grid-cols-12 gap-2 px-2 text-xs font-semibold text-gray-500 uppercase">
+                <div className="col-span-2">Service</div>
+                <div className="col-span-2">Subcategory</div>
                 <div className="col-span-2 text-center">Frequency</div>
                 <div className="col-span-1 text-center">Visits</div>
                 <div className="col-span-2 text-right">Price (₹)</div>
@@ -334,27 +388,47 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
 
               {/* Line Items */}
               {lineItems.map((item, index) => (
-                <div key={index} className="grid grid-cols-12 gap-3 items-center bg-gray-50 rounded-lg p-3">
-                  <div className="col-span-4">
-                    <input
-                      type="text"
-                      value={item.description}
-                      onChange={(e) => updateLineItem(index, 'description', e.target.value)}
-                      placeholder="Service description"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
+                <div key={index} className="grid grid-cols-12 gap-2 items-center bg-gray-50 rounded-lg p-3">
+                  {/* Service Category */}
+                  <div className="col-span-2">
+                    <select
+                      value={item.categoryId}
+                      onChange={(e) => updateLineItem(index, 'categoryId', e.target.value)}
+                      className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                    >
+                      <option value="">Select Service</option>
+                      {categories.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
                   </div>
+                  {/* Subcategory */}
+                  <div className="col-span-2">
+                    <select
+                      value={item.subcategoryId}
+                      onChange={(e) => updateLineItem(index, 'subcategoryId', e.target.value)}
+                      disabled={!item.categoryId}
+                      className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    >
+                      <option value="">Select Issue</option>
+                      {getSubcategories(item.categoryId).map(sub => (
+                        <option key={sub.id} value={sub.id}>{sub.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* Frequency */}
                   <div className="col-span-2">
                     <select
                       value={item.frequency}
                       onChange={(e) => updateLineItem(index, 'frequency', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                      className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm bg-white"
                     >
                       {FREQUENCY_TYPES.map(freq => (
                         <option key={freq} value={freq}>{freq}</option>
                       ))}
                     </select>
                   </div>
+                  {/* Visits */}
                   <div className="col-span-1">
                     <input
                       type="text"
@@ -369,6 +443,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
                       className={`w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm text-center ${item.frequency !== 'Other' ? 'bg-gray-100' : ''}`}
                     />
                   </div>
+                  {/* Price */}
                   <div className="col-span-2">
                     <input
                       type="text"
@@ -379,12 +454,14 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
                         updateLineItem(index, 'price', val ? parseInt(val, 10) : '');
                       }}
                       placeholder="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm text-right"
+                      className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm text-right"
                     />
                   </div>
+                  {/* Total */}
                   <div className="col-span-2 text-right font-medium text-gray-900 text-sm">
                     {formatCurrency(item.totalPrice)}
                   </div>
+                  {/* Delete */}
                   <div className="col-span-1 flex justify-center">
                     <button
                       type="button"
