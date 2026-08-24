@@ -414,9 +414,21 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
             <p className="text-sm text-gray-500">Overview of all payments and collections</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-700">{formatDateRange()}</span>
+            <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg">
+              <Calendar className="w-4 h-4 text-gray-400" />
+              <input
+                type="date"
+                value={dateRange.start}
+                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                className="text-sm text-gray-700 border-none focus:outline-none bg-transparent w-[115px] cursor-pointer"
+              />
+              <span className="text-gray-400">-</span>
+              <input
+                type="date"
+                value={dateRange.end}
+                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                className="text-sm text-gray-700 border-none focus:outline-none bg-transparent w-[115px] cursor-pointer"
+              />
             </div>
             <button
               onClick={() => navigate(`${basePath}/billing/make-payments`)}
@@ -431,93 +443,93 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
 
       <div className="p-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-6 gap-4 mb-6">
+        <div className="grid grid-cols-6 gap-3 mb-6">
           {/* Total Invoice Amount */}
           <div className="bg-white rounded-xl p-4 border-l-4 border-l-blue-500 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                <FileText className="w-4 h-4 text-blue-600" />
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded-md bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <FileText className="w-3 h-3 text-blue-600" />
               </div>
-              <span className="text-xs font-medium text-gray-500">Total Invoice Amount</span>
+              <span className="text-[11px] font-medium text-gray-500 leading-tight">Total Invoice Amount</span>
             </div>
-            <p className="text-2xl font-bold text-gray-900 mb-1">{formatCurrencyShort(dashboardData.totalInvoiceAmount)}</p>
-            <p className="text-xs text-gray-400">100% of all invoices</p>
-            <button onClick={() => navigate(`${basePath}/billing/invoices`)} className="flex items-center gap-1 text-xs mt-2 text-blue-600 hover:text-blue-700 font-medium">
+            <p className="text-xl font-bold text-gray-900">{formatCurrencyShort(dashboardData.totalInvoiceAmount)}</p>
+            <p className="text-[10px] text-gray-400 mb-1">100% of all invoices</p>
+            <button onClick={() => navigate(`${basePath}/billing/invoices`)} className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 font-medium">
               View All <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
           {/* Amount Collected */}
           <div className="bg-white rounded-xl p-4 border-l-4 border-l-green-500 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                <CheckCircle className="w-4 h-4 text-green-600" />
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded-md bg-green-100 flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="w-3 h-3 text-green-600" />
               </div>
-              <span className="text-xs font-medium text-gray-500">Amount Collected</span>
+              <span className="text-[11px] font-medium text-gray-500 leading-tight">Amount Collected</span>
             </div>
-            <p className="text-2xl font-bold text-gray-900 mb-1">{formatCurrencyShort(dashboardData.amountCollected)}</p>
-            <p className="text-xs text-gray-400">{dashboardData.collectedPercentage}% of total invoices</p>
-            <button onClick={() => navigateToPaymentsList('paid')} className="flex items-center gap-1 text-xs mt-2 text-green-600 hover:text-green-700 font-medium">
+            <p className="text-xl font-bold text-gray-900">{formatCurrencyShort(dashboardData.amountCollected)}</p>
+            <p className="text-[10px] text-gray-400 mb-1">{dashboardData.collectedPercentage}% of total invoices</p>
+            <button onClick={() => navigateToPaymentsList('paid')} className="flex items-center gap-1 text-[11px] text-green-600 hover:text-green-700 font-medium">
               View All <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
           {/* Pending Amount */}
           <div className="bg-white rounded-xl p-4 border-l-4 border-l-amber-500 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
-                <Clock className="w-4 h-4 text-amber-600" />
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded-md bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <Clock className="w-3 h-3 text-amber-600" />
               </div>
-              <span className="text-xs font-medium text-gray-500">Pending Amount</span>
+              <span className="text-[11px] font-medium text-gray-500 leading-tight">Pending Amount</span>
             </div>
-            <p className="text-2xl font-bold text-gray-900 mb-1">{formatCurrencyShort(dashboardData.pendingAmount)}</p>
-            <p className="text-xs text-gray-400">{dashboardData.pendingPercentage}% of total invoices</p>
-            <button onClick={() => navigateToPaymentsList('verification_pending')} className="flex items-center gap-1 text-xs mt-2 text-amber-600 hover:text-amber-700 font-medium">
+            <p className="text-xl font-bold text-gray-900">{formatCurrencyShort(dashboardData.pendingAmount)}</p>
+            <p className="text-[10px] text-gray-400 mb-1">{dashboardData.pendingPercentage}% of total invoices</p>
+            <button onClick={() => navigateToPaymentsList('verification_pending')} className="flex items-center gap-1 text-[11px] text-amber-600 hover:text-amber-700 font-medium">
               View All <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
           {/* Overdue Amount */}
           <div className="bg-white rounded-xl p-4 border-l-4 border-l-red-500 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
-                <AlertTriangle className="w-4 h-4 text-red-600" />
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded-md bg-red-100 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-3 h-3 text-red-600" />
               </div>
-              <span className="text-xs font-medium text-gray-500">Overdue Amount</span>
+              <span className="text-[11px] font-medium text-gray-500 leading-tight">Overdue Amount</span>
             </div>
-            <p className="text-2xl font-bold text-gray-900 mb-1">{formatCurrencyShort(dashboardData.overdueAmount)}</p>
-            <p className="text-xs text-gray-400">{dashboardData.overduePercentage}% of total invoices</p>
-            <button onClick={() => navigate(`${basePath}/billing/invoices?status=overdue`)} className="flex items-center gap-1 text-xs mt-2 text-red-600 hover:text-red-700 font-medium">
+            <p className="text-xl font-bold text-gray-900">{formatCurrencyShort(dashboardData.overdueAmount)}</p>
+            <p className="text-[10px] text-gray-400 mb-1">{dashboardData.overduePercentage}% of total invoices</p>
+            <button onClick={() => navigate(`${basePath}/billing/invoices?status=overdue`)} className="flex items-center gap-1 text-[11px] text-red-600 hover:text-red-700 font-medium">
               View All <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
           {/* Today's Collections */}
           <div className="bg-white rounded-xl p-4 border-l-4 border-l-purple-500 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                <TrendingUp className="w-4 h-4 text-purple-600" />
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded-md bg-purple-100 flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-3 h-3 text-purple-600" />
               </div>
-              <span className="text-xs font-medium text-gray-500">Today's Collections</span>
+              <span className="text-[11px] font-medium text-gray-500 leading-tight">Today's Collections</span>
             </div>
-            <p className="text-2xl font-bold text-gray-900 mb-1">{formatCurrencyShort(dashboardData.todaysCollections)}</p>
-            <p className="text-xs text-gray-400">{dashboardData.todaysPaymentCount} Payments</p>
-            <button onClick={() => navigateToPaymentsList('paid')} className="flex items-center gap-1 text-xs mt-2 text-purple-600 hover:text-purple-700 font-medium">
+            <p className="text-xl font-bold text-gray-900">{formatCurrencyShort(dashboardData.todaysCollections)}</p>
+            <p className="text-[10px] text-gray-400 mb-1">{dashboardData.todaysPaymentCount} Payments</p>
+            <button onClick={() => navigateToPaymentsList('paid')} className="flex items-center gap-1 text-[11px] text-purple-600 hover:text-purple-700 font-medium">
               View Details <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
           {/* Failed Payments */}
           <div className="bg-white rounded-xl p-4 border-l-4 border-l-rose-500 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center">
-                <XCircle className="w-4 h-4 text-rose-600" />
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded-md bg-rose-100 flex items-center justify-center flex-shrink-0">
+                <XCircle className="w-3 h-3 text-rose-600" />
               </div>
-              <span className="text-xs font-medium text-gray-500">Failed Payments</span>
+              <span className="text-[11px] font-medium text-gray-500 leading-tight">Failed Payments</span>
             </div>
-            <p className="text-2xl font-bold text-gray-900 mb-1">{formatCurrencyShort(dashboardData.failedPayments)}</p>
-            <p className="text-xs text-gray-400">{dashboardData.failedCount} Transactions</p>
-            <button onClick={() => navigateToPaymentsList('failed')} className="flex items-center gap-1 text-xs mt-2 text-rose-600 hover:text-rose-700 font-medium">
+            <p className="text-xl font-bold text-gray-900">{formatCurrencyShort(dashboardData.failedPayments)}</p>
+            <p className="text-[10px] text-gray-400 mb-1">{dashboardData.failedCount} Transactions</p>
+            <button onClick={() => navigateToPaymentsList('failed')} className="flex items-center gap-1 text-[11px] text-rose-600 hover:text-rose-700 font-medium">
               View All <ArrowRight className="w-3 h-3" />
             </button>
           </div>
@@ -532,11 +544,14 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 <h3 className="font-semibold text-gray-900">Collection Trend</h3>
                 <Info className="w-4 h-4 text-gray-400" />
               </div>
-              <select className="text-xs border border-gray-200 rounded px-2 py-1 bg-white">
-                <option>This Month</option>
-                <option>Last Month</option>
-                <option>Last 3 Months</option>
-              </select>
+              <div className="relative">
+                <select className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                  <option>This Month</option>
+                  <option>Last Month</option>
+                  <option>Last 3 Months</option>
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
             </div>
             <div className="flex items-center gap-4 mb-4 text-xs">
               <div className="flex items-center gap-1">
@@ -571,9 +586,14 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Payments by Mode</h3>
-              <select className="text-xs border border-gray-200 rounded px-2 py-1 bg-white">
-                <option>This Month</option>
-              </select>
+              <div className="relative">
+                <select className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                  <option>This Month</option>
+                  <option>Last Month</option>
+                  <option>Last 3 Months</option>
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
             </div>
             <div className="flex items-center justify-between">
               <DonutChart 
@@ -599,9 +619,14 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Payments by Status</h3>
-              <select className="text-xs border border-gray-200 rounded px-2 py-1 bg-white">
-                <option>This Month</option>
-              </select>
+              <div className="relative">
+                <select className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                  <option>This Month</option>
+                  <option>Last Month</option>
+                  <option>Last 3 Months</option>
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
             </div>
             <div className="flex items-center justify-between">
               <DonutChart 
@@ -658,9 +683,14 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Top 5 Customers by Collection</h3>
-              <select className="text-xs border border-gray-200 rounded px-2 py-1 bg-white">
-                <option>This Month</option>
-              </select>
+              <div className="relative">
+                <select className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                  <option>This Month</option>
+                  <option>Last Month</option>
+                  <option>Last 3 Months</option>
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
             </div>
             <div className="space-y-3">
               {dashboardData.topCustomers.length > 0 ? dashboardData.topCustomers.map((customer, idx) => (
@@ -686,9 +716,14 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Invoices by Payment Status</h3>
-              <select className="text-xs border border-gray-200 rounded px-2 py-1 bg-white">
-                <option>This Month</option>
-              </select>
+              <div className="relative">
+                <select className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                  <option>This Month</option>
+                  <option>Last Month</option>
+                  <option>Last 3 Months</option>
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
             </div>
             <div className="flex items-center justify-between">
               <DonutChartCount 
