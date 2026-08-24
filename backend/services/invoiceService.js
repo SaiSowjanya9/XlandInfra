@@ -878,24 +878,28 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                 
                 <!-- Header with Logo and Company Info -->
                 <tr>
-                  <td style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); padding: 24px 30px;">
+                  <td style="background: #0D0D0D; padding: 30px 40px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td width="50%" style="vertical-align: middle;">
-                          <!-- Company Logo & Name -->
-                          <table role="presentation" cellpadding="0" cellspacing="0">
+                        <td style="text-align: center;">
+                          <!-- Logo and Company Name centered -->
+                          <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
                             <tr>
-                              <td style="padding-right: 12px; vertical-align: middle;">
-                                <img src="https://xlandinfra.com/logo.png" alt="XLAND INFRA" style="width: 50px; height: 50px; object-fit: contain;" />
+                              <td style="padding-right: 20px; vertical-align: middle;">
+                                <img src="https://xlandinfra.com/logo.png" alt="XLAND INFRA" style="width: 70px; height: 70px; object-fit: contain;" />
                               </td>
-                              <td style="vertical-align: middle;">
-                                <h1 style="color: #d4a853; margin: 0; font-size: 22px; font-weight: bold; letter-spacing: 1px;">XLAND INFRA</h1>
-                                <p style="color: #888; margin: 2px 0 0; font-size: 11px; letter-spacing: 2px;">PVT LTD</p>
+                              <td style="vertical-align: middle; text-align: left;">
+                                <h1 style="color: #D4A853; margin: 0; font-size: 32px; font-weight: 600; letter-spacing: 3px; font-family: Georgia, serif;">XLAND INFRA</h1>
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 6px;">
+                                  <tr>
+                                    <td style="width: 50px; height: 1px; background: linear-gradient(to right, transparent, #D4A853);"></td>
+                                    <td style="padding: 0 12px;"><span style="color: #D4A853; font-size: 12px; letter-spacing: 4px; font-weight: 400;">PVT LTD</span></td>
+                                    <td style="width: 50px; height: 1px; background: linear-gradient(to left, transparent, #D4A853);"></td>
+                                  </tr>
+                                </table>
                               </td>
                             </tr>
                           </table>
-                        </td>
-                        <td width="50%" style="vertical-align: middle; text-align: right;">
                         </td>
                       </tr>
                     </table>
@@ -930,19 +934,19 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                   <td style="padding: 25px 30px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                       <tr>
-                        <!-- FROM: Company Details -->
+                        <!-- FROM: Company Details - Light background to match BILL TO -->
                         <td width="48%" style="vertical-align: top; padding-right: 15px;">
-                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #1a1a1a; border-radius: 8px; overflow: hidden;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f0f9ff; border-radius: 8px; overflow: hidden; border: 1px solid #bfdbfe; height: 100%;">
                             <tr>
-                              <td style="padding: 16px 18px;">
-                                <span style="color: #d4a853; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">From</span>
-                                <h3 style="color: #ffffff; margin: 8px 0 4px; font-size: 15px; font-weight: bold;">XLAND INFRA PVT LTD</h3>
-                                <p style="color: #a0aec0; margin: 0; font-size: 12px; line-height: 1.6;">
+                              <td style="padding: 16px 18px; vertical-align: top;">
+                                <span style="color: #1e40af; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">From</span>
+                                <h3 style="color: #1e3a5f; margin: 8px 0 4px; font-size: 15px; font-weight: bold;">XLAND INFRA PVT LTD</h3>
+                                <p style="color: #475569; margin: 0; font-size: 12px; line-height: 1.8;">
                                   Property Management Services<br>
                                   D.No. 7-333/A/1, Nri Hospital Road<br>
                                   Mangalagiri, Guntur, 522503<br>
-                                  <span style="color: #d4a853;">Email:</span> info@xlandinfra.com<br>
-                                  <span style="color: #d4a853;">Phone:</span> +91 8500 010 111
+                                  <strong>Email:</strong> <a href="mailto:info@xlandinfra.com" style="color: #2563eb; text-decoration: none;">info@xlandinfra.com</a><br>
+                                  <strong>Phone:</strong> +91 8500 010 111
                                 </p>
                               </td>
                             </tr>
@@ -950,18 +954,18 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                         </td>
                         <!-- BILL TO: Customer Details -->
                         <td width="48%" style="vertical-align: top; padding-left: 15px;">
-                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f0f9ff; border-radius: 8px; overflow: hidden; border: 1px solid #bfdbfe;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f0f9ff; border-radius: 8px; overflow: hidden; border: 1px solid #bfdbfe; height: 100%;">
                             <tr>
-                              <td style="padding: 16px 18px;">
+                              <td style="padding: 16px 18px; vertical-align: top;">
                                 <span style="color: #1e40af; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Bill To</span>
                                 <h3 style="color: #1e3a5f; margin: 8px 0 4px; font-size: 15px; font-weight: bold;">${customerName || invoice.client_name || 'Customer'}</h3>
-                                <p style="color: #475569; margin: 0; font-size: 12px; line-height: 1.6;">
+                                <p style="color: #475569; margin: 0; font-size: 12px; line-height: 1.8;">
                                   ${invoice.property_name ? `<strong>Property:</strong> ${invoice.property_name}<br>` : ''}
                                   ${invoice.property_code ? `<strong>Property ID:</strong> ${invoice.property_code}<br>` : ''}
                                   ${invoice.property_type ? `<strong>Type:</strong> ${invoice.property_type}<br>` : ''}
                                   ${invoice.city || invoice.zone ? `${invoice.city || ''}${invoice.city && invoice.zone ? ', ' : ''}${invoice.zone || ''}<br>` : ''}
                                   <strong>Phone:</strong> ${invoice.customer_phone || invoice.client_phone || '-'}<br>
-                                  <strong>Email:</strong> ${customerEmail || invoice.client_email || '-'}
+                                  <strong>Email:</strong> <a href="mailto:${customerEmail || invoice.client_email || ''}" style="color: #2563eb; text-decoration: none;">${customerEmail || invoice.client_email || '-'}</a>
                                 </p>
                               </td>
                             </tr>
