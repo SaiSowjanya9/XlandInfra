@@ -2738,7 +2738,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       {isFPManager || est.status === 'converted' ? (
                         // FP Manager or Invoice Generated - View only (badge)
                         <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getEstimateStatusColor(est.status)}`}>
-                          {STATUS_LABELS[est.status] || STATUS_LABELS[(est.status || 'draft').toLowerCase()] || 'Draft'}
+                          {getStatusLabel(est.status)}
                         </span>
                       ) : (
                         // FP Owner/Admin - Dropdown to change status
