@@ -383,7 +383,6 @@ function App() {
                     <Route path="billing/make-payments" element={<MakePayments user={user} portalType="employee" />} />
                     <Route path="billing/payment-history" element={<Payments user={user} portalType="employee" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="employee" defaultTab="archived" />} />
-                    <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="admin" />} />
                     <Route path="schedules/schedule-service" element={<ScheduleService user={user} portalType="admin" />} />
                     <Route path="*" element={<Navigate to="/employee" replace />} />
                   </Routes>
@@ -518,7 +517,6 @@ function App() {
                     <Route path="billing/make-payments" element={<MakePayments user={user} portalType="manager" />} />
                     <Route path="billing/payment-history" element={<Payments user={user} portalType="manager" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="manager" defaultTab="archived" />} />
-                    <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="manager" />} />
                     <Route path="schedules/schedule-service" element={<ScheduleService user={user} portalType="manager" />} />
                     <Route path="*" element={<Navigate to="/manager" replace />} />
                   </Routes>
@@ -553,7 +551,6 @@ function App() {
                     <Route path="vendors/assigned" element={<AssignedVendors user={user} />} />
                     <Route path="employees/zones" element={<CoordinatorEmployees user={user} />} />
                     <Route path="estimates" element={<CoordinatorEstimates user={user} defaultTab="list" />} />
-                    <Route path="estimates/dashboard" element={<EstimatesDashboard user={user} portalType="coordinator" />} />
                     <Route path="estimates/create" element={<CoordinatorEstimates user={user} defaultTab="create" />} />
                     <Route path="estimates/amc" element={<CoordinatorEstimates user={user} defaultTab="amc" />} />
                     <Route path="estimates/addons" element={<CoordinatorEstimates user={user} defaultTab="addons" />} />
@@ -561,7 +558,6 @@ function App() {
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="coordinator" />} />
                     <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="coordinator" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="coordinator" />} />
-                    <Route path="billing/dashboard" element={<PaymentsDashboard user={user} portalType="coordinator" />} />
                     <Route path="billing/payments" element={<Payments user={user} portalType="coordinator" />} />
                     <Route path="billing/payment-history" element={<Payments user={user} portalType="coordinator" />} />
                     <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="coordinator" />} />
@@ -597,12 +593,10 @@ function App() {
                     <Route path="vendors/add" element={<SupervisorAddVendor user={user} />} />
                     <Route path="vendors/assigned" element={<AssignedVendors user={user} />} />
                     <Route path="estimates" element={<SupervisorEstimates user={user} defaultTab="list" />} />
-                    <Route path="estimates/dashboard" element={<EstimatesDashboard user={user} portalType="supervisor" />} />
                     <Route path="estimates/create" element={<SupervisorEstimates user={user} defaultTab="create" />} />
                     <Route path="estimates/amc" element={<SupervisorEstimates user={user} defaultTab="amc" />} />
                     <Route path="estimates/addons" element={<SupervisorEstimates user={user} defaultTab="addons" />} />
                     <Route path="estimates/archived" element={<SupervisorEstimates user={user} defaultTab="archived" />} />
-                    <Route path="billing/dashboard" element={<PaymentsDashboard user={user} portalType="supervisor" />} />
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="supervisor" />} />
                     <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="supervisor" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="supervisor" />} />
@@ -644,7 +638,6 @@ function App() {
                     <Route path="vendors/assigned" element={<AssignedVendors user={user} />} />
                     <Route path="employees/zones" element={<ManagerEmployeeZones user={user} viewOnly={true} />} />
                     <Route path="estimates" element={<ExecutiveEstimates user={user} defaultTab="list" />} />
-                    <Route path="estimates/dashboard" element={<EstimatesDashboard user={user} portalType="executive" />} />
                     <Route path="estimates/create" element={<ExecutiveEstimates user={user} defaultTab="create" />} />
                     <Route path="estimates/amc" element={<ExecutiveEstimates user={user} defaultTab="amc" />} />
                     <Route path="estimates/addons" element={<ExecutiveEstimates user={user} defaultTab="addons" />} />
@@ -652,10 +645,8 @@ function App() {
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="executive" />} />
                     <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="executive" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="executive" />} />
-                    <Route path="billing/dashboard" element={<PaymentsDashboard user={user} portalType="executive" />} />
                     <Route path="billing/payments" element={<Payments user={user} portalType="executive" />} />
                     <Route path="billing/payment-history" element={<Payments user={user} portalType="executive" />} />
-                    <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="executive" />} />
                     <Route path="schedules/schedule-service" element={<ScheduleService user={user} portalType="executive" />} />
                     <Route path="*" element={<Navigate to="/executive" replace />} />
                   </Routes>
