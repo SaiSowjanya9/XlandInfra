@@ -1067,14 +1067,27 @@ const Dashboard = () => {
               </div>
               <div className="flex items-center gap-6">
                 {(() => {
-                  // Calculate invoice status data
+                  // Calculate invoice status data using payment_status field
+                  // payment_status can be: pending, paid, partially_paid
+                  // status can be: draft, sent, pending, paid, partially_paid, overdue, cancelled
                   const statusCounts = {
-                    paid: invoices.filter(inv => inv.status === 'paid').length,
-                    partially_paid: invoices.filter(inv => inv.status === 'partially_paid').length,
-                    unpaid: invoices.filter(inv => inv.status === 'unpaid' || inv.status === 'pending' || inv.status === 'sent').length,
+                    paid: invoices.filter(inv => 
+                      inv.paymentStatus === 'paid' || inv.payment_status === 'paid' || 
+                      inv.status === 'paid'
+                    ).length,
+                    partially_paid: invoices.filter(inv => 
+                      inv.paymentStatus === 'partially_paid' || inv.payment_status === 'partially_paid' || 
+                      inv.status === 'partially_paid'
+                    ).length,
+                    unpaid: invoices.filter(inv => {
+                      const payStatus = inv.paymentStatus || inv.payment_status || inv.status;
+                      const status = inv.status;
+                      return (payStatus === 'pending' || status === 'sent' || status === 'draft' || status === 'pending') &&
+                             payStatus !== 'paid' && payStatus !== 'partially_paid' && status !== 'overdue' && status !== 'cancelled';
+                    }).length,
                     overdue: invoices.filter(inv => inv.status === 'overdue').length,
                   };
-                  const total = invoices.length;
+                  const total = statusCounts.paid + statusCounts.partially_paid + statusCounts.unpaid + statusCounts.overdue;
                   
                   const invoiceStatusData = [
                     { name: 'Paid', value: statusCounts.paid, color: '#22C55E' },
