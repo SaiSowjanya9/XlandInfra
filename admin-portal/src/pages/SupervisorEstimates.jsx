@@ -1999,17 +1999,9 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                 return (
                   <div className="border-t border-gray-100 pt-4">
                     <p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p>
-                    <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="text-xs text-indigo-600">{viewEstimate.billing_duration ? viewEstimate.billing_duration.charAt(0).toUpperCase() + viewEstimate.billing_duration.slice(1).replace('-', ' ') : 'Yearly'} Billing</p>
-                        </div>
-                        <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.package_price || 0).toLocaleString()}</p>
-                      </div>
-                      {pkgDescription && (
-                        <p className="text-sm text-indigo-700 mt-2 pt-2 border-t border-indigo-100">{pkgDescription}</p>
-                      )}
-                    </div>
+                    {pkgDescription && (
+                      <p className="text-sm text-gray-600 mb-3">{pkgDescription}</p>
+                    )}
                     {/* Package Services - Horizontal Table */}
                     {pkgServices.length > 0 && (
                       <div className="mt-3">
@@ -2101,6 +2093,14 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                   </div>
                 </div>
               )}
+
+              {/* Billing Duration */}
+              <div className="border-t border-gray-100 pt-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Billing</span>
+                  <span className="font-medium capitalize">{viewEstimate.billing_duration ? viewEstimate.billing_duration.replace('-', ' ') : 'Yearly'}</span>
+                </div>
+              </div>
 
               {/* Price Summary */}
               <div className="border-t border-gray-100 pt-4">
@@ -2242,7 +2242,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
             <div className="p-4 sm:p-6 space-y-4">
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-100">
-                <p className="text-lg font-semibold text-green-900">{viewAddon.service_name}</p>
+                <p className="text-lg font-semibold text-green-900">{decodeHtml(viewAddon.service_name)}</p>
                 <p className="text-sm text-green-600">{getPropertyTypeLabel(viewAddon.property_type)}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -2266,7 +2266,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
               {viewAddon.description && (
                 <div className="border-t border-gray-100 pt-4">
                   <p className="text-xs text-gray-500 mb-1">Description</p>
-                  <p className="text-sm text-gray-700">{viewAddon.description}</p>
+                  <p className="text-sm text-gray-700">{decodeHtml(viewAddon.description)}</p>
                 </div>
               )}
             </div>

@@ -182,7 +182,7 @@ const sendWorkOrderNotification = async (workOrder) => {
             </tr>
             <tr>
               <td style="padding: 10px; border-bottom: 1px solid #334155; color: #94a3b8;">Description:</td>
-              <td style="padding: 10px; border-bottom: 1px solid #334155; color: #f1f5f9;">${workOrder.description || 'N/A'}</td>
+              <td style="padding: 10px; border-bottom: 1px solid #334155; color: #f1f5f9;">${decodeHtml(workOrder.description) || 'N/A'}</td>
             </tr>
             <tr>
               <td style="padding: 10px; border-bottom: 1px solid #334155; color: #94a3b8;">Permission to Enter:</td>
@@ -1889,7 +1889,7 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
                       <tr>
                         <td style="padding: 16px;">
                           <h2 style="margin: 0 0 8px 0; color: #1e293b; font-size: 14px; font-weight: 600;">Description</h2>
-                          <p style="margin: 0; color: #374151; line-height: 1.5; font-size: 13px; word-break: break-word;">${description}</p>
+                          <p style="margin: 0; color: #374151; line-height: 1.5; font-size: 13px; word-break: break-word;">${decodeHtml(description)}</p>
                         </td>
                       </tr>
                     </table>
@@ -1901,7 +1901,7 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
                       <tr>
                         <td style="padding: 16px;">
                           <h2 style="margin: 0 0 8px 0; color: #991b1b; font-size: 14px; font-weight: 600;">Entry Notes</h2>
-                          <p style="margin: 0; color: #374151; line-height: 1.5; font-size: 13px; word-break: break-word;">${entryNotes}</p>
+                          <p style="margin: 0; color: #374151; line-height: 1.5; font-size: 13px; word-break: break-word;">${decodeHtml(entryNotes)}</p>
                         </td>
                       </tr>
                     </table>
@@ -2126,7 +2126,7 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
                       <tr>
                         <td style="padding: 20px;">
                           <h2 style="margin: 0 0 10px 0; color: #92400e; font-size: 14px; font-weight: 600;">Description</h2>
-                          <p style="margin: 0; color: #1e293b; font-size: 14px; line-height: 1.5;">${description}</p>
+                          <p style="margin: 0; color: #1e293b; font-size: 14px; line-height: 1.5;">${decodeHtml(description)}</p>
                         </td>
                       </tr>
                     </table>
@@ -2138,7 +2138,7 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
                       <tr>
                         <td style="padding: 20px;">
                           <h2 style="margin: 0 0 10px 0; color: #0369a1; font-size: 14px; font-weight: 600;">Closing Notes</h2>
-                          <p style="margin: 0; color: #1e293b; font-size: 14px; line-height: 1.5;">${closingNotes}</p>
+                          <p style="margin: 0; color: #1e293b; font-size: 14px; line-height: 1.5;">${decodeHtml(closingNotes)}</p>
                         </td>
                       </tr>
                     </table>

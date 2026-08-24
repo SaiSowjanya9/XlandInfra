@@ -266,9 +266,9 @@ const generateEstimatePDF = async (estimate) => {
         doc.fontSize(8).fillColor('#ffffff');
         doc.text('#', 55, y + 6, { continued: false });
         doc.text('Service', 75, y + 6, { continued: false });
-        doc.text('Description', 260, y + 6, { width: 130, align: 'center', continued: false });
+        doc.text('Description', 190, y + 6, { width: 200, align: 'center', continued: false });
         doc.text('Frequency', 400, y + 6, { continued: false });
-        doc.text('Visits', 480, y + 6, { continued: false });
+        doc.text('Visits', 490, y + 6, { continued: false });
         y += 20;
 
         svcList.forEach((s, idx) => {
@@ -336,9 +336,9 @@ const generateEstimatePDF = async (estimate) => {
         doc.fontSize(8).fillColor('#ffffff');
         doc.text('#', 55, y + 6, { continued: false });
         doc.text('Add-on Service', 75, y + 6, { continued: false });
-        doc.text('Description', 260, y + 6, { width: 130, align: 'center', continued: false });
+        doc.text('Description', 190, y + 6, { width: 200, align: 'center', continued: false });
         doc.text('Frequency', 400, y + 6, { continued: false });
-        doc.text('Visits', 480, y + 6, { continued: false });
+        doc.text('Visits', 490, y + 6, { continued: false });
         y += 20;
 
         addonList.forEach((a, idx) => {
@@ -414,7 +414,7 @@ const generateEstimatePDF = async (estimate) => {
         }
         doc.fontSize(10).fillColor(navy).text('NOTES / DESCRIPTION', 50, y, { continued: false });
         y += 18;
-        doc.fontSize(9).fillColor('#333333').text(description, 50, y, { width: 500, lineGap: 4, continued: false });
+        doc.fontSize(9).fillColor('#333333').text(decodeHtml(description), 50, y, { width: 500, lineGap: 4, continued: false });
         y += 50;
       }
 
