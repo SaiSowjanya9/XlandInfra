@@ -103,6 +103,7 @@ const generateEstimatePDF = async (estimate) => {
         numberOfBlocks, totalUnits, towerName, blockNumber, villaPlotNumber,
         packageName, packagePrice, amcPackageDescription, services, addons,
         subtotal, discount, discountAmount, tax, gstPercent, total, description, createdAt,
+        billingDuration, billing_duration,
         // Work Order Estimate fields
         isWorkOrderEstimate, workOrderId, workOrderCategory, workOrderSubcategory,
         workOrderDescription, workOrderPriority, workOrderStatus
@@ -153,13 +154,7 @@ const generateEstimatePDF = async (estimate) => {
       doc.font('Helvetica'); // Reset font
       y += 30;
 
-      // Package Price Bar (NO package name - per requirement)
-      if (packagePrice) {
-        doc.rect(50, y, 500, 25).fill(lightGray).stroke('#e0e0e0');
-        doc.fontSize(10).fillColor(navy).text(`Package Price: Rs. ${Math.round(Number(packagePrice)).toLocaleString()}`, 60, y + 8);
-        doc.fontSize(10).fillColor(navy).text('Billing: Yearly', 400, y + 8);
-        y += 35;
-      }
+      
 
       // Property & Customer Details (side by side)
       const cardWidth = 235;
@@ -376,10 +371,17 @@ const generateEstimatePDF = async (estimate) => {
       }
 
       // Check if Price Summary needs new page
-      if (y + 100 > pageHeight) {
+      if (y + 120 > pageHeight) {
         doc.addPage();
         y = 50;
       }
+
+      // Billing Duration - just before Price Summary
+      const billingValue = billingDuration || billing_duration || 'Yearly';
+      const formattedBilling = billingValue.charAt(0).toUpperCase() + billingValue.slice(1).replace('-', ' ');
+      doc.fontSize(9).fillColor('#666666').text('Billing:', 50, y);
+      doc.fillColor('#333333').text(formattedBilling, 500, y, { align: 'right' });
+      y += 20;
       
       // Price Summary - use safe values
       doc.fontSize(10).fillColor(navy).text('PRICE SUMMARY', 50, y, { continued: false });
