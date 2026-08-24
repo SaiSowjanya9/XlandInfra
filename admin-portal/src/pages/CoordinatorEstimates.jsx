@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import {
@@ -696,7 +696,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200"><span className="text-sm font-semibold text-blue-700">Additional Services (Add-ons)</span></div>
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-blue-100 bg-white"><th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[10%]">Service</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[48%]">Description</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[18%]">Frequency</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[14%]">Visits</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[10%]">Action</th></tr></thead>
-                <tbody className="divide-y divide-gray-100 bg-white">{selectedAddons.map((addonId, idx) => { const addon = addons.find(a => getAddonId(a) === addonId); if (!addon) return null; const freqType = addon.frequency_type || addon.frequencyType || addon.services?.[0]?.frequencyType || 'Monthly'; return (<tr key={idx}><td className="px-3 py-2.5 text-gray-800">{getAddonName(addon)}</td><td className={`px-3 py-2.5 text-gray-600 text-center`}>{addon.description || '-'}</td><td className="px-3 py-2.5 text-center text-gray-600">{freqType}</td><td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_count ?? addon.frequencyCount ?? getFrequencyVisits(freqType)}</td><td className="px-3 py-2.5 text-center"><button onClick={() => setSelectedAddons(selectedAddons.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button></td></tr>); })}</tbody>
+                <tbody className="divide-y divide-gray-100 bg-white">{selectedAddons.map((addonId, idx) => { const addon = addons.find(a => getAddonId(a) === addonId); if (!addon) return null; const freqType = addon.frequency_type || addon.frequencyType || addon.services?.[0]?.frequencyType || 'Monthly'; return (<tr key={idx}><td className="px-3 py-2.5 text-gray-800">{getAddonName(addon)}</td><td className={`px-3 py-2.5 text-gray-600 text-center`}>{decodeHtml(addon.description) || '-'}</td><td className="px-3 py-2.5 text-center text-gray-600">{freqType}</td><td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_count ?? addon.frequencyCount ?? getFrequencyVisits(freqType)}</td><td className="px-3 py-2.5 text-center"><button onClick={() => setSelectedAddons(selectedAddons.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button></td></tr>); })}</tbody>
                 <tfoot className="bg-blue-50 border-t border-blue-200"><tr><td colSpan={4} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td><td className="px-5 py-2.5 text-right font-bold text-blue-700">{formatCurrency(selectedAddons.reduce((sum, id) => sum + getAddonPrice(addons.find(a => getAddonId(a) === id)), 0))}</td></tr></tfoot>
               </table>
             </div>
@@ -1781,7 +1781,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
       {addonActiveTab === 'all-addons' && (
         <div className="space-y-4">
           <div className="bg-white rounded-xl border border-gray-200 p-4"><div className="flex items-center justify-between"><div><h3 className="font-semibold text-gray-900">All Add-ons</h3><p className="text-sm text-gray-500">{addons.length} add-on(s) available</p></div><div className="flex gap-2 flex-wrap"><button onClick={() => setAddonFilterPropertyType('all')} className={`px-3 py-1.5 text-sm rounded-lg ${addonFilterPropertyType === 'all' ? 'bg-stone-700 text-white' : 'bg-gray-100 text-gray-700'}`}>All{addons.length > 0 && <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${addonFilterPropertyType === 'all' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'}`}>{addons.length}</span>}</button>{PROPERTY_TYPE_OPTIONS.map(t => { const count = addons.filter(a => matchPropertyType(a.property_type, t.id)).length; return <button key={t.id} onClick={() => setAddonFilterPropertyType(t.id)} className={`px-3 py-1.5 text-sm rounded-lg ${addonFilterPropertyType === t.id ? 'bg-stone-700 text-white' : 'bg-gray-100 text-gray-700'}`}>{t.label}{count > 0 && <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${addonFilterPropertyType === t.id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'}`}>{count}</span>}</button>; })}</div></div></div>
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{filteredAddons.length === 0 ? <div className="py-16 text-center"><p className="text-gray-500">No add-ons found</p></div> : <table className="w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Add-on Name</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Property Type</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Frequency</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">No.of visits</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Total Rate</th><th className="px-4 py-3 text-center font-medium text-gray-600 uppercase text-xs">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{filteredAddons.map(a => <tr key={a.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-medium">{a.service_name}</td><td className="px-4 py-3 text-gray-500">{getPropertyTypeLabel(a.property_type)}</td><td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${a.frequency_type === 'Monthly' ? 'bg-blue-100 text-blue-700' : a.frequency_type === 'Quarterly' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>{a.frequency_type}</span></td><td className="px-4 py-3 text-gray-600">{a.frequency_count}x</td><td className="px-4 py-3 font-semibold">{formatCurrency(a.price)}</td><td className="px-4 py-3"><div className="flex items-center justify-center"><button onClick={() => setViewAddon(a)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details"><Eye className="w-4 h-4" /></button></div></td></tr>)}</tbody></table>}</div>
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{filteredAddons.length === 0 ? <div className="py-16 text-center"><p className="text-gray-500">No add-ons found</p></div> : <table className="w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Add-on Name</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Property Type</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Frequency</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">No.of visits</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Total Rate</th><th className="px-4 py-3 text-center font-medium text-gray-600 uppercase text-xs">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{filteredAddons.map(a => <tr key={a.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-medium">{decodeHtml(a.service_name)}</td><td className="px-4 py-3 text-gray-500">{getPropertyTypeLabel(a.property_type)}</td><td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${a.frequency_type === 'Monthly' ? 'bg-blue-100 text-blue-700' : a.frequency_type === 'Quarterly' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>{a.frequency_type}</span></td><td className="px-4 py-3 text-gray-600">{a.frequency_count}x</td><td className="px-4 py-3 font-semibold">{formatCurrency(a.price)}</td><td className="px-4 py-3"><div className="flex items-center justify-center"><button onClick={() => setViewAddon(a)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details"><Eye className="w-4 h-4" /></button></div></td></tr>)}</tbody></table>}</div>
         </div>
       )}
     </div>
@@ -2012,17 +2012,9 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                 return (
                   <div className="border-t border-gray-100 pt-4">
                     <p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p>
-                    <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="text-xs text-indigo-600">{viewEstimate.billing_duration ? viewEstimate.billing_duration.charAt(0).toUpperCase() + viewEstimate.billing_duration.slice(1).replace('-', ' ') : 'Yearly'} Billing</p>
-                        </div>
-                        <p className="text-lg font-bold text-indigo-700">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹{Number(viewEstimate.package_price || 0).toLocaleString()}</p>
-                      </div>
-                      {pkgDescription && (
-                        <p className="text-sm text-indigo-700 mt-2 pt-2 border-t border-indigo-100">{pkgDescription}</p>
-                      )}
-                    </div>
+                    {pkgDescription && (
+                      <p className="text-sm text-gray-600 mb-3">{pkgDescription}</p>
+                    )}
                     {/* Package Services - Horizontal Table */}
                     {pkgServices.length > 0 && (
                       <div className="mt-3">
@@ -2114,6 +2106,14 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                   </div>
                 </div>
               )}
+
+              {/* Billing Duration */}
+              <div className="border-t border-gray-100 pt-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Billing</span>
+                  <span className="font-medium capitalize">{viewEstimate.billing_duration ? viewEstimate.billing_duration.replace('-', ' ') : 'Yearly'}</span>
+                </div>
+              </div>
 
               {/* Price Summary */}
               <div className="border-t border-gray-100 pt-4">
@@ -2255,7 +2255,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
             <div className="p-4 sm:p-6 space-y-4">
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-100">
-                <p className="text-lg font-semibold text-green-900">{viewAddon.service_name}</p>
+                <p className="text-lg font-semibold text-green-900">{decodeHtml(viewAddon.service_name)}</p>
                 <p className="text-sm text-green-600">{getPropertyTypeLabel(viewAddon.property_type)}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -2279,7 +2279,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
               {viewAddon.description && (
                 <div className="border-t border-gray-100 pt-4">
                   <p className="text-xs text-gray-500 mb-1">Description</p>
-                  <p className="text-sm text-gray-700">{viewAddon.description}</p>
+                  <p className="text-sm text-gray-700">{decodeHtml(viewAddon.description)}</p>
                 </div>
               )}
             </div>

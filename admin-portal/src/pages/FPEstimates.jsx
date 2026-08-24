@@ -1483,7 +1483,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     if (!searchType) return <option disabled>Select property type first</option>;
                     const filteredAddons = addons.filter(addon => normalizePropertyType(addon.property_type) === searchType);
                     if (filteredAddons.length === 0) return <option disabled>No add-ons for {propertyType}</option>;
-                    return filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name}</option>);
+                    return filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{decodeHtml(addon.service_name)}</option>);
                   })()}
                 </select>
               </div>
@@ -1825,7 +1825,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     if (!searchType) return <option disabled>Select property type first</option>;
                     const filteredAddons = addons.filter(addon => normalizePropertyType(addon.property_type) === searchType);
                     if (filteredAddons.length === 0) return <option disabled>No add-ons for {propertyType}</option>;
-                    return filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name}</option>);
+                    return filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{decodeHtml(addon.service_name)}</option>);
                   })()}
                 </select>
               </div>
@@ -3554,7 +3554,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <PlusCircle className="w-5 h-5 text-gray-400" />
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-800">{a.service_name}</p>
+                          <p className="font-semibold text-gray-800">{decodeHtml(a.service_name)}</p>
                           <p className="text-sm text-gray-500">{a.frequency_type} - {a.frequency_count} visits</p>
                         </div>
                       </div>
@@ -3634,7 +3634,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         <p className="font-medium text-gray-800 text-sm">{a.service_name || a.name || 'Unnamed'}</p>
                       </div>
                       <div className="col-span-3">
-                        <p className="text-xs text-gray-500 break-words">{a.description || '-'}</p>
+                        <p className="text-xs text-gray-500 break-words">{decodeHtml(a.description) || '-'}</p>
                       </div>
                       <div className="col-span-2">
                         <p className="text-sm text-gray-600">{a.frequency_type || 'Monthly'}</p>
@@ -4127,17 +4127,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 return (
                   <div className="border-t border-gray-100 pt-4">
                     <p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p>
-                    <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="text-xs text-indigo-600">{viewEstimate.billing_duration ? viewEstimate.billing_duration.charAt(0).toUpperCase() + viewEstimate.billing_duration.slice(1).replace('-', ' ') : 'Yearly'} Billing</p>
-                        </div>
-                        <p className="text-lg font-bold text-indigo-700">{formatCurrency(viewEstimate.package_price)}</p>
-                      </div>
-                      {pkgDescription && (
-                        <p className="text-sm text-indigo-700 mt-2 pt-2 border-t border-indigo-100">{pkgDescription}</p>
-                      )}
-                    </div>
+                    {pkgDescription && (
+                      <p className="text-sm text-gray-600 mb-3">{pkgDescription}</p>
+                    )}
                     {/* Package Services - Horizontal Table */}
                     {pkgServices.length > 0 && (
                       <div className="mt-3">
@@ -4216,7 +4208,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                             (a.property_type || '').toUpperCase() === estPropertyType
                           ) || addonFromList;
                         }
-                        const addonDescription = addon.description || addonFromList?.description || '';
+                        const addonDescription = decodeHtml(addon.description || addonFromList?.description) || '';
                         const frequencyCount = addon.frequency_count ?? addon.frequencyCount ?? addonFromList?.frequency_count ?? 1;
                         const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
                         return (
@@ -4249,6 +4241,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
                 );
               })()}
+
+              {/* Billing Duration */}
+              <div className="border-t border-gray-100 pt-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Billing</span>
+                  <span className="font-medium capitalize">{viewEstimate.billing_duration ? viewEstimate.billing_duration.replace('-', ' ') : 'Yearly'}</span>
+                </div>
+              </div>
 
               {/* Price Summary */}
               <div className="border-t border-gray-100 pt-4">
@@ -4407,7 +4407,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               ) : (
                 <>
                   <div><p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p><select value={editEstimateForm.package_id || ''} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, package_id: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white"><option value="">Select Package</option>{amcPackages.filter(p => normalizePropertyType(getPkgPropertyType(p)) === normalizePropertyType(editEstimate.property_type)).map(pkg => (<option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>))}</select></div>
-                  <div><p className="text-sm font-semibold text-gray-700 mb-3">Add-ons</p><div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">{addons.filter(a => normalizePropertyType(a.property_type) === normalizePropertyType(editEstimate.property_type)).map(addon => { const existing = (editEstimateForm.selectedAddons || []).find(item => item.id === addon.id); const qty = existing?.quantity || 0; return (<div key={addon.id} className="flex items-center justify-between hover:bg-gray-50 p-2 rounded"><span className="text-sm text-gray-700 flex-1">{addon.service_name}</span><div className="flex items-center gap-2"><button type="button" onClick={() => { const current = editEstimateForm.selectedAddons || []; if (qty <= 1) { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.filter(item => item.id !== addon.id) }); } else { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.map(item => item.id === addon.id ? { ...item, quantity: item.quantity - 1 } : item) }); } }} className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50" disabled={qty === 0}>-</button><span className="w-6 text-center text-sm font-medium">{qty}</span><button type="button" onClick={() => { const current = editEstimateForm.selectedAddons || []; if (qty === 0) { setEditEstimateForm({ ...editEstimateForm, selectedAddons: [...current, { id: addon.id, quantity: 1 }] }); } else { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.map(item => item.id === addon.id ? { ...item, quantity: item.quantity + 1 } : item) }); } }} className="w-7 h-7 flex items-center justify-center rounded-full border border-amber-500 text-amber-600 hover:bg-amber-50">+</button></div></div>); })}</div></div>
+                  <div><p className="text-sm font-semibold text-gray-700 mb-3">Add-ons</p><div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">{addons.filter(a => normalizePropertyType(a.property_type) === normalizePropertyType(editEstimate.property_type)).map(addon => { const existing = (editEstimateForm.selectedAddons || []).find(item => item.id === addon.id); const qty = existing?.quantity || 0; return (<div key={addon.id} className="flex items-center justify-between hover:bg-gray-50 p-2 rounded"><span className="text-sm text-gray-700 flex-1">{decodeHtml(addon.service_name)}</span><div className="flex items-center gap-2"><button type="button" onClick={() => { const current = editEstimateForm.selectedAddons || []; if (qty <= 1) { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.filter(item => item.id !== addon.id) }); } else { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.map(item => item.id === addon.id ? { ...item, quantity: item.quantity - 1 } : item) }); } }} className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50" disabled={qty === 0}>-</button><span className="w-6 text-center text-sm font-medium">{qty}</span><button type="button" onClick={() => { const current = editEstimateForm.selectedAddons || []; if (qty === 0) { setEditEstimateForm({ ...editEstimateForm, selectedAddons: [...current, { id: addon.id, quantity: 1 }] }); } else { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.map(item => item.id === addon.id ? { ...item, quantity: item.quantity + 1 } : item) }); } }} className="w-7 h-7 flex items-center justify-center rounded-full border border-amber-500 text-amber-600 hover:bg-amber-50">+</button></div></div>); })}</div></div>
                 </>
               )}
               <div><p className="text-sm font-semibold text-gray-700 mb-3">Pricing</p><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-medium text-gray-600 mb-1">Discount (%)</label><input type="number" min="0" max="100" value={editEstimateForm.discount_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, discount_percent: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">GST (%)</label><input type="number" min="0" max="100" value={editEstimateForm.gst_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, gst_percent: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div></div><div className="mt-4 bg-gray-50 p-4 rounded-lg space-y-2"><div className="flex justify-between text-sm"><span>Subtotal</span><span>{formatCurrency(calculateEditPricing().subtotal)}</span></div><div className="flex justify-between text-sm"><span>Discount</span><span className="text-red-500">-{formatCurrency(calculateEditPricing().discountAmt)}</span></div><div className="flex justify-between text-sm"><span>GST</span><span>{formatCurrency(calculateEditPricing().gstAmt)}</span></div><div className="flex justify-between font-semibold pt-2 border-t"><span>Total</span><span className="text-amber-600">{formatCurrency(calculateEditPricing().total)}</span></div></div></div>
