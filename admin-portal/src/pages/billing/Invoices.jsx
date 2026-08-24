@@ -1064,6 +1064,19 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
+                              {/* Make Payment - only show if balance > 0 */}
+                              {invoice.balanceAmount > 0 && invoice.status !== 'paid' && (
+                                <button
+                                  onClick={() => {
+                                    const basePath = portalType === 'employee' || portalType === 'admin' ? '/employee' : `/${portalType}`;
+                                    navigate(`${basePath}/billing/make-payments?invoiceId=${invoice.id}`);
+                                  }}
+                                  className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                  title="Make Payment"
+                                >
+                                  <Banknote className="w-4 h-4" />
+                                </button>
+                              )}
                               {/* Download */}
                               <button
                                 onClick={() => handleDownloadPDF(invoice)}
