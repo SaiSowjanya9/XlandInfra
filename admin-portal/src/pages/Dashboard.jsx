@@ -1040,7 +1040,7 @@ const Dashboard = () => {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Payments Overview</h2>
-              <button onClick={() => navigate('/employee/billing/payments')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+              <button onClick={() => navigate('/employee/billing/invoices')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
                 View All <ArrowRight className="w-4 h-4" />
               </button>
             </div>
