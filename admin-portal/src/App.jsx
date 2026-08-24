@@ -99,6 +99,7 @@ import CreateInvoice from './pages/billing/CreateInvoice';
 import MakePayments from './pages/billing/MakePayments';
 import PaymentsDashboard from './pages/billing/PaymentsDashboard';
 import SchedulesDashboard from './pages/schedules/SchedulesDashboard';
+import ScheduleService from './pages/schedules/ScheduleService';
 import { FPProvider } from './contexts/FPContext';
 
 // Session timeout in milliseconds (30 minutes)
@@ -383,6 +384,7 @@ function App() {
                     <Route path="billing/payment-history" element={<Payments user={user} portalType="employee" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="employee" defaultTab="archived" />} />
                     <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="admin" />} />
+                    <Route path="schedules/schedule-service" element={<ScheduleService user={user} portalType="admin" />} />
                     <Route path="*" element={<Navigate to="/employee" replace />} />
                   </Routes>
                 </EmployeeLayout>
@@ -465,6 +467,7 @@ function App() {
                     <Route path="billing/payment-history" element={<Payments user={user} portalType="fp" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="fp" defaultTab="archived" />} />
                     <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="franchise" />} />
+                    <Route path="schedules/schedule-service" element={<ScheduleService user={user} portalType="franchise" />} />
                     <Route path="*" element={<Navigate to="/fp" replace />} />
                   </Routes>
                 </FPLayout>
@@ -516,6 +519,7 @@ function App() {
                     <Route path="billing/payment-history" element={<Payments user={user} portalType="manager" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="manager" defaultTab="archived" />} />
                     <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="manager" />} />
+                    <Route path="schedules/schedule-service" element={<ScheduleService user={user} portalType="manager" />} />
                     <Route path="*" element={<Navigate to="/manager" replace />} />
                   </Routes>
                 </ManagerLayout>
@@ -560,6 +564,8 @@ function App() {
                     <Route path="billing/dashboard" element={<PaymentsDashboard user={user} portalType="coordinator" />} />
                     <Route path="billing/payments" element={<Payments user={user} portalType="coordinator" />} />
                     <Route path="billing/payment-history" element={<Payments user={user} portalType="coordinator" />} />
+                    <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="coordinator" />} />
+                    <Route path="schedules/schedule-service" element={<ScheduleService user={user} portalType="coordinator" />} />
                     <Route path="*" element={<Navigate to="/coordinator" replace />} />
                   </Routes>
                 </CoordinatorLayout>
@@ -604,6 +610,8 @@ function App() {
                     <Route path="billing/make-payments" element={<MakePayments user={user} portalType="supervisor" />} />
                     <Route path="billing/payment-history" element={<Payments user={user} portalType="supervisor" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="supervisor" defaultTab="archived" />} />
+                    <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="supervisor" />} />
+                    <Route path="schedules/schedule-service" element={<ScheduleService user={user} portalType="supervisor" />} />
                     <Route path="*" element={<Navigate to="/supervisor" replace />} />
                   </Routes>
                 </SupervisorLayout>
@@ -647,6 +655,8 @@ function App() {
                     <Route path="billing/dashboard" element={<PaymentsDashboard user={user} portalType="executive" />} />
                     <Route path="billing/payments" element={<Payments user={user} portalType="executive" />} />
                     <Route path="billing/payment-history" element={<Payments user={user} portalType="executive" />} />
+                    <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="executive" />} />
+                    <Route path="schedules/schedule-service" element={<ScheduleService user={user} portalType="executive" />} />
                     <Route path="*" element={<Navigate to="/executive" replace />} />
                   </Routes>
                 </ExecutiveLayout>

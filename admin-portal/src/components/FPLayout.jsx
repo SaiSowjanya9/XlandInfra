@@ -298,6 +298,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
   // Schedules sub-items
   const schedulesSubItems = [
     { path: '/fp/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/fp/schedules/schedule-service', icon: Calendar, label: 'Schedule Service' },
   ];
 
   const isWorkOrdersSectionActive = workOrdersSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/fp/work-orders');

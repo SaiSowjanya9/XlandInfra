@@ -79,6 +79,7 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
   // Schedules sub-items
   const schedulesSubItems = [
     { path: '/coordinator/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/coordinator/schedules/schedule-service', icon: Calendar, label: 'Schedule Service' },
   ];
 
   const isVendorActive = vendorSubItems.some(item => location.pathname === item.path);

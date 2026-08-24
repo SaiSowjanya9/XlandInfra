@@ -84,6 +84,7 @@ const Layout = ({ admin, onLogout, children }) => {
   // Schedules sub-items
   const schedulesSubItems = [
     { path: '/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/schedules/schedule-service', icon: Calendar, label: 'Schedule Service' },
   ];
 
   const isWorkOrdersSectionActive = workOrdersSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/work-orders');

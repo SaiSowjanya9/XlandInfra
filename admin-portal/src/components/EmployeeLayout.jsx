@@ -177,6 +177,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   // Schedules sub-items
   const schedulesSubItems = [
     { path: '/employee/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/employee/schedules/schedule-service', icon: Calendar, label: 'Schedule Service' },
   ];
 
   const isBillingPaymentsSectionActive = billingPaymentsSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/employee/billing');
