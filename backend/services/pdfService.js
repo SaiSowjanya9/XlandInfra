@@ -602,18 +602,26 @@ const generateInvoicePDF = async (invoice) => {
         y += 18;
         
         // Table header - Gold background
+        // Column positions: # | Service | Description (centered header) | Frequency | Visits
         const tableHeaderH = 20;
+        const colNum = margin + 8;
+        const colService = margin + 28;
+        const colServiceW = 70;
+        const colDesc = margin + 100;
+        const colDescW = 280; // Wide description column
+        const colFreq = margin + 390;
+        const colVisits = margin + 460;
+        
         doc.rect(margin, y, contentWidth, tableHeaderH).fill(gold);
         doc.fontSize(8).fillColor(white);
-        doc.text('#', margin + 8, y + 6);
-        doc.text('Service', margin + 25, y + 6);
-        doc.text('Description', margin + 105, y + 6);
-        doc.text('Frequency', margin + 370, y + 6);
-        doc.text('Visits', margin + 440, y + 6);
+        doc.text('#', colNum, y + 6);
+        doc.text('Service', colService, y + 6);
+        doc.text('Description', colDesc + (colDescW / 2) - 25, y + 6); // Centered header
+        doc.text('Frequency', colFreq, y + 6);
+        doc.text('Visits', colVisits, y + 6);
         y += tableHeaderH;
 
         // Table rows - with full description (multi-line support)
-        const descColWidth = 255; // Width for description column - increased for better readability
         items.forEach((item, idx) => {
           const details = decodeHtml(item.details || '');
           const fullDesc = decodeHtml(item.description || item.name || 'Service');
@@ -625,7 +633,7 @@ const generateInvoicePDF = async (invoice) => {
           
           // Calculate actual row height using PDFKit's heightOfString for accurate measurement
           doc.fontSize(7);
-          const descHeight = doc.heightOfString(serviceDesc, { width: descColWidth });
+          const descHeight = doc.heightOfString(serviceDesc, { width: colDescW });
           const rowH = Math.max(20, descHeight + 10);
           
           // Draw row background (alternating colors)
@@ -635,17 +643,17 @@ const generateInvoicePDF = async (invoice) => {
           
           // Draw fixed columns
           doc.fontSize(7).fillColor(primaryText);
-          doc.text(`${idx + 1}`, margin + 8, y + 6);
-          doc.text(serviceName, margin + 25, y + 6, { width: 75 });
+          doc.text(`${idx + 1}`, colNum, y + 6);
+          doc.text(serviceName, colService, y + 6, { width: colServiceW });
           
           // Draw description with proper text wrapping - full text displayed
           doc.fillColor(secondaryText);
-          doc.text(serviceDesc, margin + 105, y + 6, { width: descColWidth, lineGap: 2 });
+          doc.text(serviceDesc, colDesc, y + 6, { width: colDescW, lineGap: 2 });
           
           // Draw frequency and visits (aligned vertically with first line)
           doc.fillColor(primaryText);
-          doc.text(freq, margin + 370, y + 6, { width: 60 });
-          doc.text(`${visits}`, margin + 440, y + 6);
+          doc.text(freq, colFreq, y + 6, { width: 60 });
+          doc.text(`${visits}`, colVisits, y + 6);
           
           y += rowH;
         });
