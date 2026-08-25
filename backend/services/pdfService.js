@@ -585,10 +585,10 @@ const generateInvoicePDF = async (invoice) => {
         doc.text(category, col2, y + 22);
         doc.text(subcategory, col3, y + 22);
         
-        // Description row if exists
+        // Description row if exists - centered
         if (hasDescription) {
-          doc.fontSize(7).fillColor('#9A3412').text('Description', col1, y + 38);
-          doc.fontSize(8).fillColor(primaryText).text(woDescription.substring(0, 80), col1, y + 50);
+          doc.fontSize(7).fillColor('#9A3412').text('Description', margin, y + 38, { width: contentWidth, align: 'center' });
+          doc.fontSize(8).fillColor(primaryText).text(woDescription.substring(0, 100), margin, y + 50, { width: contentWidth, align: 'center' });
         }
         
         y += woBoxHeight + 15;
@@ -640,6 +640,24 @@ const generateInvoicePDF = async (invoice) => {
         };
 
         // Table rows - with full description wrapping to multiple lines
+        // Check for page break and add new page if needed
+        const checkPageBreak = (neededHeight) => {
+          const reservedForSummary = 150; // Space for price summary + footer
+          if (y + neededHeight > pageHeight - reservedForSummary) {
+            doc.addPage();
+            y = margin;
+            // Redraw table header on new page
+            doc.rect(margin, y, contentWidth, tableHeaderH).fill(gold);
+            doc.fontSize(8).fillColor(white);
+            doc.text('#', colNum, y + 6);
+            doc.text('Service', colService, y + 6);
+            doc.text('Description', colDesc + (colDescW / 2) - 25, y + 6);
+            doc.text('Frequency', colFreq, y + 6);
+            doc.text('Visits', colVisits, y + 6);
+            y += tableHeaderH;
+          }
+        };
+
         items.forEach((item, idx) => {
           // Extract service name and full description
           const rawDesc = decodeHtml(item.description || item.name || 'Service');
@@ -667,6 +685,9 @@ const generateInvoicePDF = async (invoice) => {
           const lineHeight = 9;
           const rowH = Math.max(22, (descLines.length * lineHeight) + 10);
           
+          // Check if we need a page break before this row
+          checkPageBreak(rowH);
+          
           // Draw row background
           const rowColor = idx % 2 === 0 ? '#FAFAFA' : white;
           doc.rect(margin, y, contentWidth, rowH).fill(rowColor);
@@ -679,11 +700,11 @@ const generateInvoicePDF = async (invoice) => {
           // Draw Service name
           doc.text(serviceName, colService, y + 6, { width: colServiceW, lineBreak: false });
           
-          // Draw Description - each line manually
+          // Draw Description - each line manually, centered in the description column
           doc.fillColor(secondaryText);
           let descY = y + 6;
           descLines.forEach((line, lineIdx) => {
-            doc.text(line, colDesc, descY + (lineIdx * lineHeight), { lineBreak: false });
+            doc.text(line, colDesc, descY + (lineIdx * lineHeight), { width: colDescW, align: 'center', lineBreak: false });
           });
           
           // Draw Frequency and Visits (top-aligned)

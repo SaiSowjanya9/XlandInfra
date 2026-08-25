@@ -1512,11 +1512,26 @@ const InvoiceDetailPanel = ({
             const services = filteredItems.map(item => {
               const fullDesc = decodeHtml(String(item.description || item.name || 'Service'));
               const parts = fullDesc.split(' - ');
-              const descFromDetails = decodeHtml(item.details || '');
-              const rawName = decodeHtml(item.name || 'Service');
+              // Check all possible description fields like the PDF does
+              const descFromDetails = decodeHtml(
+                item.details || 
+                item.service_description || 
+                item.serviceDescription || 
+                item.itemDescription ||
+                ''
+              );
+              const serviceName = decodeHtml(item.name || item.serviceName || item.service_name || parts[0] || 'Service');
+              // Build full description from available sources
+              let serviceDesc = descFromDetails;
+              if (!serviceDesc && parts.length > 1) {
+                serviceDesc = parts.slice(1).join(' - ');
+              }
+              if (!serviceDesc && fullDesc !== serviceName) {
+                serviceDesc = fullDesc;
+              }
               return {
-                name: parts[0] || rawName,
-                description: descFromDetails || parts.slice(1).join(' - ') || '',
+                name: serviceName,
+                description: decodeHtml(serviceDesc || '-'),
                 frequency: getFrequency(item),
                 visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
               };

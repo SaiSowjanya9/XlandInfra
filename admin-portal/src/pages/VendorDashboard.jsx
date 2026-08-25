@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { safeStorage } from '../utils/safeStorage';
 import { Building2, FileText, Users, Briefcase, TrendingUp, ArrowUpRight, Clock, CheckCircle2, ClipboardList, RefreshCw, ArrowRight, Star } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import DateRangeFilter from '../components/common/DateRangeFilter';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -14,6 +15,10 @@ const VendorDashboard = ({ user }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const lastFetchRef = useRef(0);
+  
+  // Date filter state
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   const fetchVendorDashboard = useCallback(async (isInitialLoad = false) => {
     const now = Date.now();
@@ -101,13 +106,16 @@ const VendorDashboard = ({ user }) => {
             </div>
           </div>
         </div>
-        <button
-          onClick={() => fetchVendorDashboard(false)}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors text-white"
-        >
-          <RefreshCw className="w-4 h-4" />
-          <span>Refresh</span>
-        </button>
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(start, end) => {
+            setStartDate(start);
+            setEndDate(end);
+          }}
+          onRefresh={() => fetchVendorDashboard(false)}
+          showRefreshButton={true}
+        />
       </div>
 
       {/* First Stats Row - 4 cards */}

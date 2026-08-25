@@ -20,6 +20,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import DateRangeFilter from '../../components/common/DateRangeFilter';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -460,53 +461,13 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
             <p className="text-sm text-gray-500">Overview of all payments and collections</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg">
-              <Calendar className="w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="dd/mm/yyyy"
-                value={formatDateIST(dateRange.start)}
-                onChange={(e) => {
-                  const formatted = handleISTDateInput(e.target.value);
-                  if (formatted.length === 10) {
-                    setDateRange(prev => ({ ...prev, start: parseISTDate(formatted) }));
-                  } else if (formatted.length === 0) {
-                    setDateRange(prev => ({ ...prev, start: '' }));
-                  }
-                }}
-                onBlur={(e) => {
-                  const parsed = parseISTDate(e.target.value);
-                  if (parsed) setDateRange(prev => ({ ...prev, start: parsed }));
-                }}
-                className="text-sm text-gray-700 border-none focus:outline-none bg-transparent w-[90px] text-center"
-              />
-              <span className="text-gray-400">-</span>
-              <input
-                type="text"
-                placeholder="dd/mm/yyyy"
-                value={formatDateIST(dateRange.end)}
-                onChange={(e) => {
-                  const formatted = handleISTDateInput(e.target.value);
-                  if (formatted.length === 10) {
-                    setDateRange(prev => ({ ...prev, end: parseISTDate(formatted) }));
-                  } else if (formatted.length === 0) {
-                    setDateRange(prev => ({ ...prev, end: '' }));
-                  }
-                }}
-                onBlur={(e) => {
-                  const parsed = parseISTDate(e.target.value);
-                  if (parsed) setDateRange(prev => ({ ...prev, end: parsed }));
-                }}
-                className="text-sm text-gray-700 border-none focus:outline-none bg-transparent w-[90px] text-center"
-              />
-            </div>
-            <button
-              onClick={() => navigate(`${basePath}/billing/make-payments`)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Record Payment
-            </button>
+            <DateRangeFilter
+              startDate={dateRange.start}
+              endDate={dateRange.end}
+              onDateChange={(start, end) => setDateRange({ start, end })}
+              onRefresh={fetchDashboardData}
+              showRefreshButton={true}
+            />
           </div>
         </div>
       </div>
