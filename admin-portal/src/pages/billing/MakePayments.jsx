@@ -357,7 +357,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ 
-          invoiceId: selectedInvoice.invoiceId || selectedInvoice.id 
+          invoiceId: selectedInvoice.id || selectedInvoice.invoiceId 
         })
       });
       
@@ -1370,6 +1370,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   <p className="text-xs text-gray-500 mt-0.5">Pay securely using your debit card, credit card or net banking.</p>
                   <CardLogos />
                 </div>
+                <FeeIndicator />
               </label>
 
               {/* UPI */}
@@ -1399,6 +1400,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   <p className="text-xs text-gray-500 mt-0.5">Scan QR code or pay using any UPI app.</p>
                   <UPIAppLogos />
                 </div>
+                <NoFeesIndicator />
               </label>
 
               {/* Bank Transfer */}
@@ -1430,6 +1432,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   </div>
                   <p className="text-xs text-gray-500 mt-0.5">Transfer directly from your bank account.</p>
                 </div>
+                <NoFeesIndicator />
               </label>
 
               {/* Cash */}
@@ -1459,6 +1462,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   </div>
                   <p className="text-xs text-gray-500 mt-0.5">Pay with cash at our office / collection point.</p>
                 </div>
+                <NoFeesIndicator />
               </label>
 
               {/* Check */}
@@ -1489,6 +1493,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   </div>
                   <p className="text-xs text-gray-500 mt-0.5">Pay using cheque.</p>
                 </div>
+                <NoFeesIndicator />
               </label>
             </div>
           </div>
