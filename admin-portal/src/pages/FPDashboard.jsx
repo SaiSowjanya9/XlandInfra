@@ -960,76 +960,78 @@ const FPDashboard = ({ user }) => {
         {/* Divider */}
         <div className="border-t border-gray-100"></div>
 
-        {/* Payments Overview Section */}
+        {/* Payments Overview Section - Centered and Large */}
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Payments Overview</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Payments Overview</h2>
             <Link to="/fp/billing/payments" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
               View All <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
           
-          {/* Invoices by Payment Status Chart */}
-          <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 max-w-md">
-            <div className="flex justify-between items-center mb-4 gap-2">
-              <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap">Invoices by Payment Status</h3>
-              <div className="relative">
-                <select 
-                  value={invoiceStatusFilter} 
-                  onChange={(e) => setInvoiceStatusFilter(e.target.value)}
-                  className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                >
-                  <option value="all">All Time</option>
-                  <option value="week">This Week</option>
-                  <option value="month">This Month</option>
-                  <option value="quarter">This Quarter</option>
-                  <option value="sixmonths">Last 6 Months</option>
-                  <option value="year">This Year</option>
-                </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          {/* Invoices by Payment Status Chart - Centered and Large */}
+          <div className="flex justify-center">
+            <div className="bg-gray-50 rounded-2xl border border-gray-200 p-8 w-full max-w-2xl">
+              <div className="flex justify-between items-center mb-6 gap-4">
+                <h3 className="text-lg font-semibold text-gray-900">Invoices by Payment Status</h3>
+                <div className="relative">
+                  <select 
+                    value={invoiceStatusFilter} 
+                    onChange={(e) => setInvoiceStatusFilter(e.target.value)}
+                    className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-4 pr-10 py-2 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  >
+                    <option value="all">All Time</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="quarter">This Quarter</option>
+                    <option value="sixmonths">Last 6 Months</option>
+                    <option value="year">This Year</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-6">
-              {(() => {
-                // Calculate invoice status data
-                const statusCounts = {
-                  paid: invoices.filter(inv => inv.status === 'paid').length,
-                  partially_paid: invoices.filter(inv => inv.status === 'partially_paid').length,
-                  unpaid: invoices.filter(inv => inv.status === 'unpaid' || inv.status === 'pending' || inv.status === 'sent').length,
-                  overdue: invoices.filter(inv => inv.status === 'overdue').length,
-                };
-                const total = invoices.length;
-                
-                const invoiceStatusData = [
-                  { name: 'Paid', value: statusCounts.paid, color: '#22C55E' },
-                  { name: 'Partially Paid', value: statusCounts.partially_paid, color: '#3B82F6' },
-                  { name: 'Unpaid', value: statusCounts.unpaid, color: '#F59E0B' },
-                  { name: 'Overdue', value: statusCounts.overdue, color: '#EF4444' },
-                ];
+              <div className="flex items-center justify-center gap-12">
+                {(() => {
+                  // Calculate invoice status data
+                  const statusCounts = {
+                    paid: invoices.filter(inv => inv.status === 'paid').length,
+                    partially_paid: invoices.filter(inv => inv.status === 'partially_paid').length,
+                    unpaid: invoices.filter(inv => inv.status === 'unpaid' || inv.status === 'pending' || inv.status === 'sent').length,
+                    overdue: invoices.filter(inv => inv.status === 'overdue').length,
+                  };
+                  const total = invoices.length;
+                  
+                  const invoiceStatusData = [
+                    { name: 'Paid', value: statusCounts.paid, color: '#22C55E' },
+                    { name: 'Partially Paid', value: statusCounts.partially_paid, color: '#3B82F6' },
+                    { name: 'Unpaid', value: statusCounts.unpaid, color: '#F59E0B' },
+                    { name: 'Overdue', value: statusCounts.overdue, color: '#EF4444' },
+                  ];
 
-                return (
-                  <>
-                    <div className="w-32 h-32 flex-shrink-0">
-                      <DonutChart
-                        data={invoiceStatusData}
-                        centerValue={total}
-                        size={128}
-                        strokeWidth={18}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0 space-y-2">
-                      {invoiceStatusData.map((item, index) => (
-                        <div key={index} className="flex items-center gap-2 text-sm">
-                          <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></span>
-                          <span className="text-gray-600">{item.name}</span>
-                          <span className="font-semibold text-gray-900 ml-auto">{item.value}</span>
-                          <span className="text-gray-400 text-xs">({total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)</span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                );
-              })()}
+                  return (
+                    <>
+                      <div className="w-48 h-48 flex-shrink-0">
+                        <DonutChart
+                          data={invoiceStatusData}
+                          centerValue={total}
+                          size={192}
+                          strokeWidth={24}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-4 max-w-xs">
+                        {invoiceStatusData.map((item, index) => (
+                          <div key={index} className="flex items-center gap-3 text-base">
+                            <span className="inline-block w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></span>
+                            <span className="text-gray-600">{item.name}</span>
+                            <span className="font-bold text-gray-900 ml-auto text-lg">{item.value}</span>
+                            <span className="text-gray-400 text-sm">({total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
             </div>
           </div>
         </div>

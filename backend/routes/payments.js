@@ -771,60 +771,46 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
           // The AMC package has full descriptions; estimate/invoice may have truncated versions
           const originalLineItems = [...lineItems]; // Keep original for matching
           
-          if (amcServices.length > 0) {
-            console.log('[Invoice Enrichment] Using AMC package services as primary source, count:', amcServices.length);
-            console.log('[Invoice Enrichment] Original line items count:', originalLineItems.length);
-            
-            // Build a name lookup map for better matching
-            const amcServiceByName = {};
-            amcServices.forEach(ams => {
-              const name = (ams.service || ams.name || '').toLowerCase().trim();
-              if (name) amcServiceByName[name] = ams;
+          // Determine the primary source of services (AMC package or estimate)
+          const primaryServices = amcServices.length > 0 ? amcServices : estimateServices;
+          const sourceType = amcServices.length > 0 ? 'AMC' : 'estimate';
+          
+          console.log(`[Invoice Enrichment] Using ${sourceType} services as primary source, count: ${primaryServices.length}`);
+          console.log('[Invoice Enrichment] Original line items count:', originalLineItems.length);
+          
+          if (primaryServices.length > 0) {
+            // Build a name lookup map for matching existing items
+            const existingByName = {};
+            originalLineItems.forEach((item, idx) => {
+              const name = (item.name || item.description?.split(' - ')[0] || '').toLowerCase().trim();
+              if (name) existingByName[name] = { item, idx };
             });
             
-            // Enrich each original line item by matching with AMC services
-            lineItems = originalLineItems.map((existingItem, idx) => {
-              // Try to find matching AMC service by name or index
-              const existingName = (existingItem.name || existingItem.description?.split(' - ')[0] || '').toLowerCase().trim();
-              let ams = amcServiceByName[existingName] || amcServices[idx] || {};
-              const estimateService = estimateServices[idx] || {};
+            // Use ALL services from the primary source (AMC/estimate), not just matching existing ones
+            lineItems = primaryServices.map((service, idx) => {
+              const serviceName = service.service || service.name || service.serviceName || 'Service';
+              const fullDescription = service.description || service.service_description || service.details || '';
               
-              const serviceName = ams.service || ams.name || estimateService.name || existingItem.name || 'Service';
-              const fullDescription = ams.description || estimateService.description || existingItem.details || '';
+              // Try to find matching existing line item for price info
+              const existingName = serviceName.toLowerCase().trim();
+              const existing = existingByName[existingName]?.item || originalLineItems[idx] || {};
               
-              console.log(`[Invoice Enrichment] Service ${idx + 1}: "${serviceName}" - Desc: "${fullDescription?.substring(0, 100)}"`);
+              console.log(`[Invoice Enrichment] Service ${idx + 1}: "${serviceName}" - Desc: "${fullDescription?.substring(0, 80)}..."`);
               
               return {
-                ...existingItem,
+                ...existing,
                 name: serviceName,
                 description: fullDescription ? `${serviceName} - ${fullDescription}` : serviceName,
                 details: fullDescription,
-                frequency: ams.frequency_type || ams.frequencyType || estimateService.frequencyType || existingItem.frequency || 'Other',
-                visits: ams.frequency_count || ams.frequencyCount || estimateService.frequencyCount || existingItem.visits || 1,
-                totalPrice: parseFloat(existingItem.totalPrice || existingItem.total_price || estimateService.totalPrice || ams.price || 0),
-                type: existingItem.type || 'service'
+                service_description: fullDescription,
+                frequency: service.frequency_type || service.frequencyType || service.frequency || existing.frequency || 'Other',
+                visits: service.frequency_count || service.frequencyCount || service.visits || existing.visits || 1,
+                totalPrice: parseFloat(existing.totalPrice || existing.total_price || service.totalPrice || service.price || 0),
+                type: existing.type || 'service'
               };
             });
-          } else if (estimateServices.length > 0) {
-            // Fallback: Use estimate services if no AMC package found
-            console.log('[Invoice Enrichment] No AMC package found, using estimate services, count:', estimateServices.length);
             
-            lineItems = originalLineItems.map((existingItem, idx) => {
-              const s = estimateServices[idx] || {};
-              const serviceName = s.name || s.serviceName || s.service || existingItem.name || 'Service';
-              const fullDescription = s.description || s.service_description || existingItem.details || '';
-              
-              return {
-                ...existingItem,
-                name: serviceName,
-                description: fullDescription ? `${serviceName} - ${fullDescription}` : serviceName,
-                details: fullDescription,
-                frequency: s.frequency || s.frequencyType || s.frequency_type || existingItem.frequency || 'Other',
-                visits: s.visits || s.frequencyCount || s.frequency_count || existingItem.visits || 1,
-                totalPrice: parseFloat(existingItem.totalPrice || existingItem.total_price || s.totalPrice || s.price || 0),
-                type: existingItem.type || s.type || 'service'
-              };
-            });
+            console.log(`[Invoice Enrichment] Final line items count: ${lineItems.length}`);
           } else {
             console.log('[Invoice Enrichment] No AMC services or estimate services found - keeping original line items');
           }
@@ -992,6 +978,108 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
 
     const invoice = invoices[0];
     
+    // Parse existing line items
+    let lineItems = invoice.line_items ? (typeof invoice.line_items === 'string' ? JSON.parse(invoice.line_items) : invoice.line_items) : [];
+    
+    // Enrich line items from estimate if available (same logic as single invoice endpoint)
+    if (invoice.source_estimate_id) {
+      try {
+        const [estimates] = await pool.execute(
+          `SELECT fe.package_services, fe.addons_data, fe.package_id, fe.package_name,
+                  fpamc_id.services as amcPackageServices,
+                  fpamc_name.services as amcPackageServicesByName
+           FROM fp_estimates fe
+           LEFT JOIN fp_amc_packages fpamc_id ON fe.package_id = fpamc_id.id
+           LEFT JOIN fp_amc_packages fpamc_name ON fe.package_name = fpamc_name.name AND fe.franchise_partner_id = fpamc_name.franchise_partner_id
+           WHERE fe.estimate_id = ?`,
+          [invoice.source_estimate_id]
+        );
+        
+        if (estimates.length > 0) {
+          const estimate = estimates[0];
+          
+          // Parse AMC services
+          let amcServices = [];
+          const amcServicesRaw = estimate.amcPackageServices || estimate.amcPackageServicesByName;
+          if (amcServicesRaw) {
+            try {
+              const parsed = typeof amcServicesRaw === 'string' ? JSON.parse(amcServicesRaw) : amcServicesRaw;
+              amcServices = parsed?.serviceRows || parsed?.services || (Array.isArray(parsed) ? parsed : []);
+            } catch (e) { }
+          }
+          
+          // Parse estimate services
+          let estimateServices = [];
+          if (estimate.package_services) {
+            try {
+              const rawEstServices = typeof estimate.package_services === 'string' 
+                ? JSON.parse(estimate.package_services) 
+                : estimate.package_services;
+              if (Array.isArray(rawEstServices)) {
+                estimateServices = rawEstServices;
+              } else if (rawEstServices?.serviceRows) {
+                estimateServices = rawEstServices.serviceRows;
+              } else if (rawEstServices?.services) {
+                estimateServices = rawEstServices.services;
+              }
+            } catch (e) { }
+          }
+          
+          // Use ALL services from primary source
+          const primaryServices = amcServices.length > 0 ? amcServices : estimateServices;
+          const originalLineItems = [...lineItems];
+          
+          if (primaryServices.length > 0) {
+            console.log(`[PDF Enrichment] Using ${primaryServices.length} services from estimate/AMC (original: ${originalLineItems.length})`);
+            
+            lineItems = primaryServices.map((service, idx) => {
+              const serviceName = service.service || service.name || service.serviceName || 'Service';
+              const fullDescription = service.description || service.service_description || service.details || '';
+              const existing = originalLineItems[idx] || {};
+              
+              return {
+                ...existing,
+                name: serviceName,
+                description: fullDescription ? `${serviceName} - ${fullDescription}` : serviceName,
+                details: fullDescription,
+                service_description: fullDescription,
+                frequency: service.frequency_type || service.frequencyType || service.frequency || existing.frequency || 'Other',
+                visits: service.frequency_count || service.frequencyCount || service.visits || existing.visits || 1,
+                totalPrice: parseFloat(existing.totalPrice || existing.total_price || service.totalPrice || service.price || 0),
+                type: existing.type || 'service'
+              };
+            });
+          }
+          
+          // Add addons
+          if (estimate.addons_data) {
+            const addons = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
+            if (Array.isArray(addons)) {
+              addons.forEach(addon => {
+                const addonName = addon.name || addon.serviceName || 'Add-on';
+                const addonDesc = addon.description || addon.service_description || '';
+                const exists = lineItems.some(item => item.name?.toLowerCase() === addonName.toLowerCase());
+                if (!exists) {
+                  lineItems.push({
+                    name: addonName,
+                    description: addonDesc ? `${addonName} - ${addonDesc}` : addonName,
+                    details: addonDesc,
+                    frequency: addon.frequency || 'Other',
+                    visits: addon.visits || 1,
+                    type: 'addon'
+                  });
+                }
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.error('[PDF] Error enriching line items:', e);
+      }
+    }
+    
+    console.log(`[PDF] Final line items count: ${lineItems.length}`);
+    
     // Generate PDF using pdfService
     const pdfData = {
       invoiceId: invoice.invoice_id,
@@ -1008,7 +1096,7 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
       invoiceDate: invoice.invoice_date,
       dueDate: invoice.due_date,
       billingDuration: invoice.billing_duration,
-      lineItems: invoice.line_items,
+      lineItems: JSON.stringify(lineItems), // Use enriched line items
       subtotal: invoice.subtotal,
       discountAmount: invoice.discount_amount,
       discountPercentage: invoice.discount_percentage,
@@ -1022,10 +1110,15 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
       workOrderDescription: invoice.work_order_description
     };
     
-    console.log('[PDF] Work Order Data:', { 
-      workOrderId: pdfData.workOrderId, 
-      category: pdfData.workOrderCategory, 
-      subcategory: pdfData.workOrderSubcategory 
+    console.log('[PDF] Invoice Data:', { 
+      invoiceId: pdfData.invoiceId,
+      lineItemsCount: lineItems.length,
+      lineItems: lineItems.map((item, idx) => ({
+        index: idx + 1,
+        name: item.name || item.serviceName,
+        hasDescription: !!(item.description || item.details || item.service_description)
+      })),
+      workOrderId: pdfData.workOrderId
     });
     
     const pdfBuffer = await generateInvoicePDF(pdfData);
@@ -1170,18 +1263,34 @@ router.post('/invoices/create-from-estimate', authenticate, canEditPayments, asy
     let lineItems = [];
     try {
       if (estimate.package_services) {
-        const services = typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services;
+        const rawServices = typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services;
+        
+        // Handle different formats: array, object with serviceRows, or object with services
+        let services = [];
+        if (Array.isArray(rawServices)) {
+          services = rawServices;
+        } else if (rawServices?.serviceRows) {
+          services = rawServices.serviceRows;
+        } else if (rawServices?.services) {
+          services = rawServices.services;
+        }
+        
+        console.log('[Invoice Creation] Parsed services count:', services.length);
+        
         if (Array.isArray(services)) {
-          lineItems = services.map(s => {
+          lineItems = services.map((s, idx) => {
             // Build full description: name + description if both exist
-            const serviceName = s.name || s.serviceName || 'Service';
-            const serviceDesc = s.description || s.service_description || '';
+            const serviceName = s.name || s.serviceName || s.service_name || 'Service';
+            const serviceDesc = s.description || s.service_description || s.details || '';
             const fullDescription = serviceDesc ? `${serviceName} - ${serviceDesc}` : serviceName;
+            
+            console.log(`[Invoice Creation] Service ${idx + 1}: name="${serviceName}", desc="${serviceDesc.substring(0, 50)}..."`);
             
             return {
               description: fullDescription,
               name: serviceName,
               details: serviceDesc,
+              service_description: serviceDesc,
               quantity: s.quantity || s.visits || s.frequencyCount || s.frequency_count || 1,
               frequency: s.frequency || s.frequencyType || s.frequency_type || 'Other',
               visits: s.visits || s.frequencyCount || s.frequency_count || 1,
@@ -1195,17 +1304,33 @@ router.post('/invoices/create-from-estimate', authenticate, canEditPayments, asy
       
       // Also include addons if present
       if (estimate.addons_data) {
-        const addons = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
+        const rawAddons = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
+        
+        // Handle different formats
+        let addons = [];
+        if (Array.isArray(rawAddons)) {
+          addons = rawAddons;
+        } else if (rawAddons?.serviceRows) {
+          addons = rawAddons.serviceRows;
+        } else if (rawAddons?.addons) {
+          addons = rawAddons.addons;
+        }
+        
+        console.log('[Invoice Creation] Parsed addons count:', addons.length);
+        
         if (Array.isArray(addons)) {
-          addons.forEach(addon => {
+          addons.forEach((addon, idx) => {
             const addonName = addon.name || addon.serviceName || addon.service_name || 'Add-on';
-            const addonDesc = addon.description || addon.service_description || '';
+            const addonDesc = addon.description || addon.service_description || addon.details || '';
             const fullDescription = addonDesc ? `${addonName} - ${addonDesc}` : addonName;
+            
+            console.log(`[Invoice Creation] Addon ${idx + 1}: name="${addonName}", desc="${addonDesc.substring(0, 50)}..."`);
             
             lineItems.push({
               description: fullDescription,
               name: addonName,
               details: addonDesc,
+              service_description: addonDesc,
               quantity: addon.quantity || addon.visits || 1,
               frequency: addon.frequency || addon.frequencyType || 'Other',
               visits: addon.visits || addon.frequencyCount || 1,
@@ -1216,6 +1341,8 @@ router.post('/invoices/create-from-estimate', authenticate, canEditPayments, asy
           });
         }
       }
+      
+      console.log('[Invoice Creation] Total line items:', lineItems.length);
     } catch (e) { 
       console.error('Error parsing estimate services:', e);
     }

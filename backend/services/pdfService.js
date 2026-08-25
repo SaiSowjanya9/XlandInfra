@@ -659,21 +659,31 @@ const generateInvoicePDF = async (invoice) => {
         };
 
         items.forEach((item, idx) => {
-          // Extract service name and full description
-          const rawDesc = decodeHtml(item.description || item.name || 'Service');
-          const rawDetails = decodeHtml(item.details || item.service_description || item.serviceDescription || '');
+          // Get service name from dedicated name field first
+          const serviceName = decodeHtml(item.name || item.serviceName || item.service_name || 'Service');
           
-          const parts = rawDesc.split(' - ');
-          const serviceName = decodeHtml(item.name || item.serviceName || item.service_name || parts[0] || 'Service');
+          // Get description from all possible fields - prioritize dedicated description fields
+          let serviceDesc = decodeHtml(
+            item.details || 
+            item.service_description || 
+            item.serviceDescription || 
+            item.itemDescription ||
+            ''
+          );
           
-          // Get full description - try multiple sources
-          let serviceDesc = rawDetails;
-          if (!serviceDesc && parts.length > 1) {
-            serviceDesc = parts.slice(1).join(' - ');
+          // If no dedicated description field, check the main description field
+          if (!serviceDesc && item.description) {
+            const fullDesc = decodeHtml(String(item.description));
+            // Only split if description starts with service name followed by " - "
+            if (fullDesc.toLowerCase().startsWith(serviceName.toLowerCase() + ' - ')) {
+              serviceDesc = fullDesc.substring(serviceName.length + 3); // Remove "ServiceName - "
+            } else if (fullDesc.toLowerCase() !== serviceName.toLowerCase()) {
+              // Use full description if it's different from the name
+              serviceDesc = fullDesc;
+            }
           }
-          if (!serviceDesc) {
-            serviceDesc = rawDesc !== serviceName ? rawDesc : '-';
-          }
+          
+          if (!serviceDesc) serviceDesc = '-';
           
           const freq = item.frequency || item.frequencyType || item.billingDuration || '-';
           const visits = item.visits || item.frequencyCount || item.quantity || 1;

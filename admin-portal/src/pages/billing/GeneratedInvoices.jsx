@@ -1231,28 +1231,35 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                 };
 
                 const services = allItems.map(item => {
-                  const fullDesc = decodeHtmlEntities(String(item.description || item.name || 'Service'));
-                  const parts = fullDesc.split(' - ');
-                  // Check all possible description fields like the PDF does
-                  const descFromDetails = decodeHtmlEntities(
+                  // Get service name from dedicated name field first
+                  const serviceName = decodeHtmlEntities(
+                    item.name || item.serviceName || item.service_name || 'Service'
+                  );
+                  
+                  // Get description from all possible fields - prioritize dedicated description fields
+                  let serviceDesc = decodeHtmlEntities(
                     item.details || 
                     item.service_description || 
                     item.serviceDescription || 
                     item.itemDescription ||
                     ''
                   );
-                  const serviceName = decodeHtmlEntities(item.name || item.serviceName || item.service_name || parts[0] || 'Service');
-                  // Build full description from available sources
-                  let serviceDesc = descFromDetails;
-                  if (!serviceDesc && parts.length > 1) {
-                    serviceDesc = parts.slice(1).join(' - ');
+                  
+                  // If no dedicated description field, check the main description field
+                  if (!serviceDesc && item.description) {
+                    const fullDesc = decodeHtmlEntities(String(item.description));
+                    // Only split if description starts with service name followed by " - "
+                    if (fullDesc.toLowerCase().startsWith(serviceName.toLowerCase() + ' - ')) {
+                      serviceDesc = fullDesc.substring(serviceName.length + 3); // Remove "ServiceName - "
+                    } else if (fullDesc.toLowerCase() !== serviceName.toLowerCase()) {
+                      // Use full description if it's different from the name
+                      serviceDesc = fullDesc;
+                    }
                   }
-                  if (!serviceDesc && fullDesc !== serviceName) {
-                    serviceDesc = fullDesc;
-                  }
+                  
                   return {
                     name: serviceName,
-                    description: decodeHtmlEntities(serviceDesc || '-'),
+                    description: serviceDesc || '-',
                     frequency: getFrequency(item),
                     visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
                   };
