@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
+  ArrowRight,
   Building2,
   Banknote,
   CheckCircle,
@@ -20,6 +21,9 @@ import {
   CreditCard,
   Lock,
   HelpCircle,
+  Clock,
+  User,
+  MapPin,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 
@@ -144,6 +148,92 @@ const FeeIndicator = () => (
   </div>
 );
 
+// Payment method labels
+const PAYMENT_METHOD_LABELS = {
+  razorpay: 'Card / Net Banking',
+  upi: 'UPI',
+  bank_transfer: 'Bank Transfer',
+  cash: 'Cash',
+  check: 'Cheque'
+};
+
+// Step Progress Component
+const StepProgress = ({ currentStep, selectedMethod }) => (
+  <div className="flex items-center justify-center gap-4 py-4 bg-white border-b border-gray-100">
+    <div className="flex items-center gap-2">
+      {currentStep > 1 ? (
+        <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+          <CheckCircle className="w-5 h-5 text-white" />
+        </div>
+      ) : (
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${currentStep === 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>1</div>
+      )}
+      <div>
+        <p className={`text-sm font-medium ${currentStep >= 1 ? 'text-gray-900' : 'text-gray-400'}`}>Select Method</p>
+        {currentStep > 1 && <p className="text-xs text-gray-500">{PAYMENT_METHOD_LABELS[selectedMethod]}</p>}
+      </div>
+    </div>
+    <div className={`w-12 h-0.5 ${currentStep > 1 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+    <div className="flex items-center gap-2">
+      {currentStep > 2 ? (
+        <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+          <CheckCircle className="w-5 h-5 text-white" />
+        </div>
+      ) : (
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${currentStep === 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>2</div>
+      )}
+      <div>
+        <p className={`text-sm font-medium ${currentStep >= 2 ? 'text-gray-900' : 'text-gray-400'}`}>Payment Details</p>
+        {currentStep === 2 && <p className="text-xs text-gray-500">Enter {PAYMENT_METHOD_LABELS[selectedMethod]?.toLowerCase()} details</p>}
+      </div>
+    </div>
+    <div className={`w-12 h-0.5 ${currentStep > 2 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+    <div className="flex items-center gap-2">
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${currentStep === 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>3</div>
+      <div>
+        <p className={`text-sm font-medium ${currentStep >= 3 ? 'text-gray-900' : 'text-gray-400'}`}>Review & Confirm</p>
+        <p className="text-xs text-gray-500">Verify and complete</p>
+      </div>
+    </div>
+  </div>
+);
+
+// Invoice Details Bar
+const InvoiceDetailsBar = ({ invoice, daysUntilDue, balanceAmount }) => (
+  <div className="bg-white border-b border-gray-200 px-6 py-4">
+    <div className="max-w-5xl mx-auto flex items-center justify-between">
+      <div className="grid grid-cols-4 gap-8">
+        <div>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice ID</p>
+          <p className="font-semibold text-blue-600 mt-1">{invoice.invoiceId}</p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Customer</p>
+          <p className="font-medium text-gray-900 mt-1">{invoice.propertyName || invoice.customerName}</p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice Date</p>
+          <p className="font-medium text-gray-900 mt-1">{formatDate(invoice.invoiceDate)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Due Date</p>
+          <p className={`font-medium mt-1 ${daysUntilDue < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatDate(invoice.dueDate)}</p>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className="text-xs text-gray-500 uppercase tracking-wide">Amount Payable</p>
+        <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(balanceAmount)}</p>
+        {daysUntilDue !== null && (
+          <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs mt-1 ${daysUntilDue < 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+            <Clock className="w-3 h-3" />
+            {daysUntilDue < 0 ? `Overdue by ${Math.abs(daysUntilDue)} days` : `Due in ${daysUntilDue} days`}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+);
+
 const MakePayments = ({ user, portalType = 'admin' }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -158,8 +248,8 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
   const [error, setError] = useState(null);
   const [showInvoiceSelector, setShowInvoiceSelector] = useState(false);
 
-  // Step 2 state for manual payments
-  const [showStep2, setShowStep2] = useState(false);
+  // Step state for payment flow (1=method selection, 2=payment details, 3=review)
+  const [currentStep, setCurrentStep] = useState(1);
   const [paymentDetails, setPaymentDetails] = useState({
     transactionReference: '',
     receivedBy: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : '',
@@ -175,11 +265,12 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
 
   // Bank details
   const bankDetails = {
-    accountName: 'XLAND INFRA PVT LTD',
+    accountName: 'XLAND INFRA PM SERVICES PVT LTD',
     accountNumber: '50200012345678',
     ifscCode: 'HDFC0001234',
     bankName: 'HDFC Bank',
-    branch: 'Main Branch'
+    branch: 'Gachibowli, Hyderabad',
+    accountType: 'Current Account'
   };
 
   // UPI details
@@ -235,8 +326,8 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
   };
 
   const handleBack = () => {
-    if (showStep2) {
-      setShowStep2(false);
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
       return;
     }
     const basePath = portalType === 'employee' || portalType === 'admin' ? '/employee' : `/${portalType}`;
@@ -288,18 +379,41 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     }
   };
 
-  // Handle proceed to pay
-  const handleProceedToPay = () => {
+  // Handle proceed to next step
+  const handleNextStep = () => {
     if (!selectedInvoice) {
       setError('Please select an invoice');
       return;
     }
     setError(null);
     
-    if (selectedMethod === 'razorpay') {
-      handleRazorpayPayment();
-    } else {
-      setShowStep2(true);
+    if (currentStep === 1) {
+      if (selectedMethod === 'razorpay') {
+        handleRazorpayPayment();
+      } else {
+        setCurrentStep(2);
+      }
+    } else if (currentStep === 2) {
+      // Validate step 2 before proceeding to review
+      if (selectedMethod === 'cash' && !paymentDetails.receivedBy) {
+        setError('Please enter who received the payment');
+        return;
+      }
+      if (selectedMethod === 'check') {
+        if (!paymentDetails.chequeNumber) {
+          setError('Please enter the cheque number');
+          return;
+        }
+        if (!paymentDetails.chequeBank) {
+          setError('Please enter the bank name');
+          return;
+        }
+        if (!paymentDetails.receivedBy) {
+          setError('Please enter who received the cheque');
+          return;
+        }
+      }
+      setCurrentStep(3);
     }
   };
 
@@ -390,216 +504,116 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     );
   }
 
-  // Step 2 - Manual Payment Details
-  if (showStep2 && selectedInvoice) {
+  // ==================== STEP 3: REVIEW & CONFIRM ====================
+  if (currentStep === 3 && selectedInvoice) {
     return (
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
         <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="max-w-4xl mx-auto flex items-center gap-4">
+          <div className="max-w-5xl mx-auto flex items-center gap-4">
             <button onClick={handleBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">Complete Payment</h1>
-              <p className="text-sm text-gray-500">
-                {selectedMethod === 'upi' && 'Pay using UPI'}
-                {selectedMethod === 'bank_transfer' && 'Bank Transfer Details'}
-                {selectedMethod === 'cash' && 'Record Cash Payment'}
-                {selectedMethod === 'check' && 'Record Cheque Payment'}
-              </p>
+              <h1 className="text-xl font-semibold text-gray-900">Make Payment</h1>
+              <p className="text-sm text-gray-500">Review and confirm your payment</p>
             </div>
           </div>
         </div>
+        <InvoiceDetailsBar invoice={selectedInvoice} daysUntilDue={daysUntilDue} balanceAmount={balanceAmount} />
+        <StepProgress currentStep={3} selectedMethod={selectedMethod} />
 
-        <div className="max-w-4xl mx-auto px-6 py-6">
+        <div className="max-w-5xl mx-auto px-6 py-6">
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-red-600" />
               <p className="text-red-700">{error}</p>
-              <button onClick={() => setError(null)} className="ml-auto p-1 hover:bg-red-100 rounded">
-                <X className="w-4 h-4 text-red-600" />
-              </button>
+              <button onClick={() => setError(null)} className="ml-auto"><X className="w-4 h-4 text-red-600" /></button>
             </div>
           )}
 
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            {/* UPI Payment */}
-            {selectedMethod === 'upi' && (
-              <div className="space-y-6">
-                <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
-                  <Smartphone className="w-6 h-6 text-green-600" />
-                  <div>
-                    <p className="font-medium text-green-800">UPI ID</p>
-                    <p className="font-mono text-lg">{upiDetails.upiId}</p>
-                  </div>
-                  <button 
-                    onClick={() => copyToClipboard(upiDetails.upiId, 'upi')} 
-                    className="ml-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                  >
-                    {copied === 'upi' ? 'Copied!' : 'Copy'}
-                  </button>
-                </div>
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-800 mb-1">Reference Number (use in remarks)</p>
-                  <div className="flex items-center gap-2">
-                    <p className="font-mono font-semibold text-blue-900">{generatedReference}</p>
-                    <button onClick={() => copyToClipboard(generatedReference, 'ref')} className="text-blue-600 hover:text-blue-700">
-                      {copied === 'ref' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                <UPIAppLogos />
-              </div>
-            )}
-
-            {/* Bank Transfer */}
-            {selectedMethod === 'bank_transfer' && (
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">Payment Summary</h3>
+            <div className="grid grid-cols-2 gap-6">
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-500">Account Name</p>
-                    <p className="font-semibold">{bankDetails.accountName}</p>
+                <div className="flex justify-between py-2 border-b border-gray-100">
+                  <span className="text-gray-600">Payment Method</span>
+                  <span className="font-semibold">{PAYMENT_METHOD_LABELS[selectedMethod]}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-gray-100">
+                  <span className="text-gray-600">Invoice ID</span>
+                  <span className="font-semibold text-blue-600">{selectedInvoice.invoiceId}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-gray-100">
+                  <span className="text-gray-600">Customer</span>
+                  <span className="font-semibold">{selectedInvoice.customerName || selectedInvoice.propertyName}</span>
+                </div>
+                {(selectedMethod === 'bank_transfer' || selectedMethod === 'upi') && (
+                  <div className="flex justify-between py-2 border-b border-gray-100">
+                    <span className="text-gray-600">Reference Number</span>
+                    <span className="font-mono font-semibold">{generatedReference}</span>
                   </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-500">Bank Name</p>
-                    <p className="font-semibold">{bankDetails.bankName}</p>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-500">Account Number</p>
-                    <div className="flex items-center gap-2">
-                      <p className="font-mono font-semibold">{bankDetails.accountNumber}</p>
-                      <button onClick={() => copyToClipboard(bankDetails.accountNumber, 'acc')}>
-                        {copied === 'acc' ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-400" />}
-                      </button>
+                )}
+                {selectedMethod === 'check' && (
+                  <>
+                    <div className="flex justify-between py-2 border-b border-gray-100">
+                      <span className="text-gray-600">Cheque Number</span>
+                      <span className="font-semibold">{paymentDetails.chequeNumber}</span>
                     </div>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-500">IFSC Code</p>
-                    <div className="flex items-center gap-2">
-                      <p className="font-mono font-semibold">{bankDetails.ifscCode}</p>
-                      <button onClick={() => copyToClipboard(bankDetails.ifscCode, 'ifsc')}>
-                        {copied === 'ifsc' ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-400" />}
-                      </button>
+                    <div className="flex justify-between py-2 border-b border-gray-100">
+                      <span className="text-gray-600">Bank</span>
+                      <span className="font-semibold">{paymentDetails.chequeBank}</span>
                     </div>
+                  </>
+                )}
+                {(selectedMethod === 'cash' || selectedMethod === 'check') && (
+                  <div className="flex justify-between py-2 border-b border-gray-100">
+                    <span className="text-gray-600">Received By</span>
+                    <span className="font-semibold">{paymentDetails.receivedBy}</span>
                   </div>
-                </div>
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-800 mb-1">Reference Number (use in remarks)</p>
-                  <div className="flex items-center gap-2">
-                    <p className="font-mono font-semibold text-blue-900">{generatedReference}</p>
-                    <button onClick={() => copyToClipboard(generatedReference, 'ref')} className="text-blue-600 hover:text-blue-700">
-                      {copied === 'ref' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
+                )}
               </div>
-            )}
-
-            {/* Cash Payment */}
-            {selectedMethod === 'cash' && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Received By *</label>
-                  <input
-                    type="text"
-                    value={paymentDetails.receivedBy}
-                    onChange={(e) => setPaymentDetails(prev => ({ ...prev, receivedBy: e.target.value }))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Name of person receiving payment"
-                  />
+              <div className="bg-gray-50 rounded-lg p-6">
+                <div className="flex justify-between py-2">
+                  <span className="text-gray-600">Invoice Amount</span>
+                  <span className="font-semibold">{formatCurrency(totalAmount)}</span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
-                  <textarea
-                    value={paymentDetails.notes}
-                    onChange={(e) => setPaymentDetails(prev => ({ ...prev, notes: e.target.value }))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    rows={3}
-                    placeholder="Any additional notes..."
-                  />
+                <div className="flex justify-between py-2">
+                  <span className="text-gray-600">Amount Paid</span>
+                  <span className="font-semibold">{formatCurrency(totalAmount - balanceAmount)}</span>
                 </div>
-              </div>
-            )}
-
-            {/* Cheque Payment */}
-            {selectedMethod === 'check' && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cheque Number *</label>
-                    <input
-                      type="text"
-                      value={paymentDetails.chequeNumber}
-                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, chequeNumber: e.target.value, transactionReference: e.target.value }))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter cheque number"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cheque Date *</label>
-                    <input
-                      type="date"
-                      value={paymentDetails.chequeDate}
-                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, chequeDate: e.target.value }))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
+                <div className="flex justify-between py-3 border-t-2 border-blue-500 mt-3">
+                  <span className="text-lg font-semibold">Amount Payable</span>
+                  <span className="text-2xl font-bold text-blue-600">{formatCurrency(balanceAmount)}</span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name *</label>
-                  <input
-                    type="text"
-                    value={paymentDetails.chequeBank}
-                    onChange={(e) => setPaymentDetails(prev => ({ ...prev, chequeBank: e.target.value }))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Bank name on cheque"
-                  />
+                <div className="flex items-center gap-2 text-green-600 mt-2">
+                  <CheckCircle className="w-4 h-4" />
+                  <span className="text-sm">No additional charges</span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Received By *</label>
-                  <input
-                    type="text"
-                    value={paymentDetails.receivedBy}
-                    onChange={(e) => setPaymentDetails(prev => ({ ...prev, receivedBy: e.target.value }))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Name of person receiving cheque"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Payment Proof Upload */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Upload Payment Proof {selectedMethod === 'cash' || selectedMethod === 'check' ? '(Optional)' : '(Recommended)'}
-              </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
-                <input type="file" onChange={handleFileChange} className="hidden" id="proof-upload" accept="image/*,.pdf" />
-                <label htmlFor="proof-upload" className="cursor-pointer">
-                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">{paymentProof ? paymentProof.name : 'Click to upload or drag and drop'}</p>
-                  <p className="text-xs text-gray-400 mt-1">PNG, JPG, PDF up to 5MB</p>
-                </label>
               </div>
             </div>
+            {paymentProof && (
+              <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <span className="text-green-800 font-medium">Payment proof uploaded: {paymentProof.name}</span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Footer Buttons */}
+          <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100 flex items-center gap-3">
+            <Info className="w-5 h-5 text-blue-600 flex-shrink-0" />
+            <p className="text-sm text-blue-700">After confirmation, your payment will be verified and the invoice will be marked as Paid. A receipt will be sent to you.</p>
+          </div>
+
           <div className="mt-6 flex items-center justify-between">
-            <button
-              onClick={handleBack}
-              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50"
-            >
-              Back
+            <button onClick={handleBack} className="flex items-center gap-2 px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50">
+              <ArrowLeft className="w-4 h-4" /> Back
             </button>
-            <button
-              onClick={handleConfirmPayment}
-              disabled={processing}
-              className="px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-            >
+            <button onClick={handleConfirmPayment} disabled={processing} className="flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-600/20">
               {processing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Lock className="w-5 h-5" />}
               {processing ? 'Processing...' : 'Confirm Payment'}
+              {!processing && <ArrowRight className="w-4 h-4" />}
             </button>
           </div>
         </div>
@@ -607,7 +621,371 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     );
   }
 
-  // Main Payment Selection Screen (Image 2 Layout)
+  // ==================== STEP 2: PAYMENT DETAILS ====================
+  if (currentStep === 2 && selectedInvoice) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="max-w-5xl mx-auto flex items-center gap-4">
+            <button onClick={handleBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">Make Payment</h1>
+              <p className="text-sm text-gray-500">Complete your payment securely</p>
+            </div>
+          </div>
+        </div>
+        <InvoiceDetailsBar invoice={selectedInvoice} daysUntilDue={daysUntilDue} balanceAmount={balanceAmount} />
+        <StepProgress currentStep={2} selectedMethod={selectedMethod} />
+
+        <div className="max-w-5xl mx-auto px-6 py-6">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+              <p className="text-red-700">{error}</p>
+              <button onClick={() => setError(null)} className="ml-auto"><X className="w-4 h-4 text-red-600" /></button>
+            </div>
+          )}
+
+          {/* ===== BANK TRANSFER ===== */}
+          {selectedMethod === 'bank_transfer' && (
+            <>
+              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Bank Transfer Details</h3>
+                <p className="text-sm text-gray-500 mb-6">Transfer the amount to the bank account below</p>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="border border-gray-200 rounded-xl p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                        <Building2 className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">How it works?</h4>
+                    </div>
+                    <ol className="space-y-3 text-sm text-gray-600">
+                      <li className="flex gap-2"><span className="font-semibold text-gray-900">1.</span>Transfer the exact amount to the bank account</li>
+                      <li className="flex gap-2"><span className="font-semibold text-gray-900">2.</span>Use the provided reference number in your transfer</li>
+                      <li className="flex gap-2"><span className="font-semibold text-gray-900">3.</span>Upload payment proof for verification</li>
+                      <li className="flex gap-2"><span className="font-semibold text-gray-900">4.</span>We will verify and update your payment</li>
+                    </ol>
+                    <div className="mt-4 flex items-center gap-2 text-green-600">
+                      <Info className="w-4 h-4" />
+                      <span className="text-sm">No additional charges for Bank Transfer</span>
+                    </div>
+                  </div>
+                  <div className="border border-blue-200 rounded-xl p-5 bg-blue-50/30">
+                    <h4 className="font-semibold text-blue-800 mb-4">Our Bank Account Details</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <User className="w-4 h-4 text-gray-400" />
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500">Account Holder Name</p>
+                          <p className="font-semibold text-gray-900">{bankDetails.accountName}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Building2 className="w-4 h-4 text-gray-400" />
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500">Bank Name</p>
+                          <p className="font-semibold text-gray-900">{bankDetails.bankName}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-4 h-4 text-gray-400" />
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500">Account Number</p>
+                          <p className="font-mono font-semibold text-gray-900">{bankDetails.accountNumber}</p>
+                        </div>
+                        <button onClick={() => copyToClipboard(bankDetails.accountNumber, 'account')} className="p-1.5 hover:bg-blue-100 rounded">
+                          {copied === 'account' ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-400" />}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <FileCheck className="w-4 h-4 text-gray-400" />
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500">IFSC Code</p>
+                          <p className="font-mono font-semibold text-gray-900">{bankDetails.ifscCode}</p>
+                        </div>
+                        <button onClick={() => copyToClipboard(bankDetails.ifscCode, 'ifsc')} className="p-1.5 hover:bg-blue-100 rounded">
+                          {copied === 'ifsc' ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-400" />}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Banknote className="w-4 h-4 text-gray-400" />
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500">Account Type</p>
+                          <p className="font-semibold text-gray-900">{bankDetails.accountType}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <MapPin className="w-4 h-4 text-gray-400" />
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500">Branch</p>
+                          <p className="font-semibold text-gray-900">{bankDetails.branch}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 pt-3 border-t border-blue-200">
+                        <FileText className="w-4 h-4 text-blue-500" />
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500">Reference / UTR Number</p>
+                          <p className="font-mono font-bold text-blue-600">{generatedReference}</p>
+                        </div>
+                        <button onClick={() => copyToClipboard(generatedReference, 'ref')} className="p-1.5 hover:bg-blue-100 rounded">
+                          {copied === 'ref' ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-400" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5" />
+                        <p className="text-xs text-amber-700">Please use the above Reference Number in the remarks/notes while making the transfer.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Upload Payment Proof</h3>
+                <p className="text-sm text-gray-500 mb-6">Please upload the screenshot or receipt of the bank transfer</p>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors">
+                    <input type="file" onChange={handleFileChange} className="hidden" id="proof-upload" accept="image/*,.pdf" />
+                    <label htmlFor="proof-upload" className="cursor-pointer">
+                      <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-600 mb-2">Drag & drop your file here or</p>
+                      <span className="inline-block px-4 py-2 border border-blue-600 text-blue-600 rounded-lg font-medium hover:bg-blue-50">Choose File</span>
+                      <p className="text-xs text-gray-400 mt-3">Supports: JPG, PNG, PDF (Max size: 5MB)</p>
+                      {paymentProof && <p className="mt-3 text-sm text-green-600 font-medium">Selected: {paymentProof.name}</p>}
+                    </label>
+                  </div>
+                  <div className="bg-amber-50 rounded-xl p-5 border border-amber-200">
+                    <h4 className="font-semibold text-amber-800 mb-3">Important Notes</h4>
+                    <ul className="space-y-2 text-sm text-amber-700">
+                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-amber-600 rounded-full flex-shrink-0"></span>Make sure to transfer the exact amount</li>
+                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-amber-600 rounded-full flex-shrink-0"></span>Use the reference number in your transfer</li>
+                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-amber-600 rounded-full flex-shrink-0"></span>Upload clear payment proof</li>
+                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-amber-600 rounded-full flex-shrink-0"></span>Payments are verified within 24 hours</li>
+                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-amber-600 rounded-full flex-shrink-0"></span>You will receive confirmation once verified</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ===== UPI PAYMENT ===== */}
+          {selectedMethod === 'upi' && (
+            <>
+              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">UPI Payment Details</h3>
+                <p className="text-sm text-gray-500 mb-6">Pay using any UPI app</p>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="border border-gray-200 rounded-xl p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                        <Smartphone className="w-6 h-6 text-green-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">How it works?</h4>
+                    </div>
+                    <ol className="space-y-3 text-sm text-gray-600">
+                      <li className="flex gap-2"><span className="font-semibold text-gray-900">1.</span>Open any UPI app (GPay, PhonePe, Paytm, BHIM)</li>
+                      <li className="flex gap-2"><span className="font-semibold text-gray-900">2.</span>Enter the UPI ID or scan QR code</li>
+                      <li className="flex gap-2"><span className="font-semibold text-gray-900">3.</span>Enter the exact amount and add reference in remarks</li>
+                      <li className="flex gap-2"><span className="font-semibold text-gray-900">4.</span>Upload payment screenshot for verification</li>
+                    </ol>
+                    <div className="mt-4 flex items-center gap-2 text-green-600">
+                      <Info className="w-4 h-4" />
+                      <span className="text-sm">No additional charges for UPI Payment</span>
+                    </div>
+                    <UPIAppLogos />
+                  </div>
+                  <div className="border border-green-200 rounded-xl p-5 bg-green-50/30">
+                    <h4 className="font-semibold text-green-800 mb-4">Our UPI Details</h4>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-green-200">
+                        <Smartphone className="w-6 h-6 text-green-600" />
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500">UPI ID</p>
+                          <p className="font-mono font-bold text-lg text-gray-900">{upiDetails.upiId}</p>
+                        </div>
+                        <button onClick={() => copyToClipboard(upiDetails.upiId, 'upi')} className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700">
+                          {copied === 'upi' ? 'Copied!' : 'Copy'}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-green-200">
+                        <FileText className="w-6 h-6 text-green-600" />
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500">Reference Number (use in remarks)</p>
+                          <p className="font-mono font-bold text-green-600">{generatedReference}</p>
+                        </div>
+                        <button onClick={() => copyToClipboard(generatedReference, 'ref')} className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-medium hover:bg-green-200">
+                          {copied === 'ref' ? 'Copied!' : 'Copy'}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5" />
+                        <p className="text-xs text-amber-700">Please use the Reference Number in remarks while making the UPI payment.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Upload Payment Proof</h3>
+                <p className="text-sm text-gray-500 mb-6">Please upload the screenshot of the UPI payment</p>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-green-400 transition-colors">
+                    <input type="file" onChange={handleFileChange} className="hidden" id="proof-upload" accept="image/*,.pdf" />
+                    <label htmlFor="proof-upload" className="cursor-pointer">
+                      <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-600 mb-2">Drag & drop your file here or</p>
+                      <span className="inline-block px-4 py-2 border border-green-600 text-green-600 rounded-lg font-medium hover:bg-green-50">Choose File</span>
+                      <p className="text-xs text-gray-400 mt-3">Supports: JPG, PNG, PDF (Max size: 5MB)</p>
+                      {paymentProof && <p className="mt-3 text-sm text-green-600 font-medium">Selected: {paymentProof.name}</p>}
+                    </label>
+                  </div>
+                  <div className="bg-green-50 rounded-xl p-5 border border-green-200">
+                    <h4 className="font-semibold text-green-800 mb-3">Important Notes</h4>
+                    <ul className="space-y-2 text-sm text-green-700">
+                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-green-600 rounded-full flex-shrink-0"></span>Make sure to transfer the exact amount</li>
+                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-green-600 rounded-full flex-shrink-0"></span>Use the reference number in remarks</li>
+                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-green-600 rounded-full flex-shrink-0"></span>Upload clear payment screenshot</li>
+                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-green-600 rounded-full flex-shrink-0"></span>Payments are verified within 24 hours</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ===== CASH PAYMENT ===== */}
+          {selectedMethod === 'cash' && (
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Cash Payment Details</h3>
+              <p className="text-sm text-gray-500 mb-6">Record cash payment received</p>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="border border-gray-200 rounded-xl p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                      <Banknote className="w-6 h-6 text-orange-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900">How it works?</h4>
+                  </div>
+                  <ol className="space-y-3 text-sm text-gray-600">
+                    <li className="flex gap-2"><span className="font-semibold text-gray-900">1.</span>Collect cash payment from customer</li>
+                    <li className="flex gap-2"><span className="font-semibold text-gray-900">2.</span>Enter payment details below</li>
+                    <li className="flex gap-2"><span className="font-semibold text-gray-900">3.</span>Issue receipt to customer</li>
+                    <li className="flex gap-2"><span className="font-semibold text-gray-900">4.</span>Payment will be recorded in system</li>
+                  </ol>
+                  <div className="mt-4 flex items-center gap-2 text-green-600">
+                    <Info className="w-4 h-4" />
+                    <span className="text-sm">No additional charges for Cash Payment</span>
+                  </div>
+                </div>
+                <div className="border border-orange-200 rounded-xl p-5 bg-orange-50/30">
+                  <h4 className="font-semibold text-orange-800 mb-4">Payment Details</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Received By *</label>
+                      <input type="text" value={paymentDetails.receivedBy} onChange={(e) => setPaymentDetails(prev => ({ ...prev, receivedBy: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500" placeholder="Name of person receiving payment" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+                      <textarea value={paymentDetails.notes} onChange={(e) => setPaymentDetails(prev => ({ ...prev, notes: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500" rows={3} placeholder="Any additional notes..." />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===== CHEQUE PAYMENT ===== */}
+          {selectedMethod === 'check' && (
+            <>
+              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Cheque Payment Details</h3>
+                <p className="text-sm text-gray-500 mb-6">Record cheque payment received</p>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="border border-gray-200 rounded-xl p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                        <FileCheck className="w-6 h-6 text-red-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">How it works?</h4>
+                    </div>
+                    <ol className="space-y-3 text-sm text-gray-600">
+                      <li className="flex gap-2"><span className="font-semibold text-gray-900">1.</span>Collect cheque from customer</li>
+                      <li className="flex gap-2"><span className="font-semibold text-gray-900">2.</span>Enter cheque details below</li>
+                      <li className="flex gap-2"><span className="font-semibold text-gray-900">3.</span>Deposit cheque in bank</li>
+                      <li className="flex gap-2"><span className="font-semibold text-gray-900">4.</span>Payment updated after cheque clears</li>
+                    </ol>
+                    <div className="mt-4 flex items-center gap-2 text-green-600">
+                      <Info className="w-4 h-4" />
+                      <span className="text-sm">No additional charges for Cheque Payment</span>
+                    </div>
+                  </div>
+                  <div className="border border-red-200 rounded-xl p-5 bg-red-50/30">
+                    <h4 className="font-semibold text-red-800 mb-4">Cheque Details</h4>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Cheque Number *</label>
+                          <input type="text" value={paymentDetails.chequeNumber} onChange={(e) => setPaymentDetails(prev => ({ ...prev, chequeNumber: e.target.value, transactionReference: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" placeholder="Enter cheque number" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Cheque Date *</label>
+                          <input type="date" value={paymentDetails.chequeDate} onChange={(e) => setPaymentDetails(prev => ({ ...prev, chequeDate: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name *</label>
+                        <input type="text" value={paymentDetails.chequeBank} onChange={(e) => setPaymentDetails(prev => ({ ...prev, chequeBank: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" placeholder="Bank name on cheque" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Received By *</label>
+                        <input type="text" value={paymentDetails.receivedBy} onChange={(e) => setPaymentDetails(prev => ({ ...prev, receivedBy: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" placeholder="Name of person receiving cheque" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Upload Cheque Image (Optional)</h3>
+                <p className="text-sm text-gray-500 mb-6">Take a photo of the cheque for records</p>
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-red-400 transition-colors">
+                  <input type="file" onChange={handleFileChange} className="hidden" id="proof-upload" accept="image/*,.pdf" />
+                  <label htmlFor="proof-upload" className="cursor-pointer">
+                    <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600 mb-2">Drag & drop your file here or</p>
+                    <span className="inline-block px-4 py-2 border border-red-600 text-red-600 rounded-lg font-medium hover:bg-red-50">Choose File</span>
+                    <p className="text-xs text-gray-400 mt-3">Supports: JPG, PNG, PDF (Max size: 5MB)</p>
+                    {paymentProof && <p className="mt-3 text-sm text-green-600 font-medium">Selected: {paymentProof.name}</p>}
+                  </label>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Footer Buttons */}
+          <div className="mt-6 flex items-center justify-between">
+            <button onClick={handleBack} className="flex items-center gap-2 px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50">
+              <ArrowLeft className="w-4 h-4" /> Back
+            </button>
+            <div className="text-right">
+              <button onClick={handleNextStep} className="flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow-lg shadow-blue-600/20">
+                Review Payment <ArrowRight className="w-4 h-4" />
+              </button>
+              <p className="text-xs text-gray-500 mt-2">You will review details before confirming</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ==================== STEP 1: PAYMENT METHOD SELECTION ====================
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -860,7 +1238,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                 Cancel
               </button>
               <button
-                onClick={handleProceedToPay}
+                onClick={handleNextStep}
                 disabled={processing || !selectedInvoice}
                 className="px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-blue-600/20"
               >
@@ -873,6 +1251,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   <>
                     <Lock className="w-5 h-5" />
                     Proceed to Pay
+                    <ArrowRight className="w-4 h-4" />
                   </>
                 )}
               </button>
