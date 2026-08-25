@@ -35,6 +35,7 @@ import {
   Cell
 } from 'recharts';
 import DonutChart from '../../components/common/DonutChart';
+import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { getAuthToken } from '../../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -659,82 +660,18 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
           
           {/* Date Range */}
-          <div className="relative" ref={datePickerRef}>
-            <button
-              onClick={() => setShowDatePicker(!showDatePicker)}
-              className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:border-gray-300"
-            >
-              <Calendar className="w-4 h-4 text-gray-400" />
-              {startDateDisplay && endDateDisplay 
-                ? `${startDateDisplay} - ${endDateDisplay}`
-                : 'Select Date Range'}
-            </button>
-            
-            {showDatePicker && (
-              <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-50 w-80">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
-                    <input
-                      type="text"
-                      value={startDateDisplay}
-                      onChange={(e) => {
-                        handleDateInput(e.target.value, setStartDateDisplay);
-                        if (e.target.value.length === 10) {
-                          setStartDate(parseISTDate(e.target.value));
-                        }
-                      }}
-                      placeholder="dd/mm/yyyy"
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">End Date</label>
-                    <input
-                      type="text"
-                      value={endDateDisplay}
-                      onChange={(e) => {
-                        handleDateInput(e.target.value, setEndDateDisplay);
-                        if (e.target.value.length === 10) {
-                          setEndDate(parseISTDate(e.target.value));
-                        }
-                      }}
-                      placeholder="dd/mm/yyyy"
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2 mt-4">
-                  <button
-                    onClick={() => {
-                      setStartDate('');
-                      setEndDate('');
-                      setStartDateDisplay('');
-                      setEndDateDisplay('');
-                    }}
-                    className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800"
-                  >
-                    Clear
-                  </button>
-                  <button
-                    onClick={() => setShowDatePicker(false)}
-                    className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    Apply
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Refresh */}
-          <button
-            onClick={() => fetchSchedules(true)}
-            disabled={refreshing}
-            className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-          >
-            <RefreshCw className={`w-5 h-5 text-gray-600 ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onDateChange={(start, end) => {
+              setStartDate(start);
+              setEndDate(end);
+              setStartDateDisplay(start ? new Date(start + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/') : '');
+              setEndDateDisplay(end ? new Date(end + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/') : '');
+            }}
+            onRefresh={() => fetchSchedules(true)}
+            showRefreshButton={true}
+          />
 
           {/* Schedule Service Button */}
           <button

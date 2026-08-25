@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
+import DateRangeFilter from '../components/common/DateRangeFilter';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -23,6 +24,10 @@ const FPPaymentDashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [error, setError] = useState(null);
+  
+  // Date filter state
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   const token = getAuthToken();
 
@@ -152,14 +157,17 @@ const FPPaymentDashboard = ({ user }) => {
           <h1 className="text-2xl font-bold text-gray-900">Payment Dashboard</h1>
           <p className="text-gray-500 mt-1">Overview of all payments and collections</p>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={fetchDashboard}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Refresh
-          </button>
+        <div className="flex gap-3 items-center">
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onDateChange={(start, end) => {
+              setStartDate(start);
+              setEndDate(end);
+            }}
+            onRefresh={fetchDashboard}
+            showRefreshButton={true}
+          />
           {canEdit && (
             <button
               onClick={() => navigate('/fp/payments/record')}

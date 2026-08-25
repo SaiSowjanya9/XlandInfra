@@ -482,7 +482,7 @@ const CreateInvoiceForm = ({ onSuccess, onCancel, token }) => {
 };
 
 // Invoice List Component
-const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, onSend, completedWorkOrders = [], loadingWorkOrders = false, onWorkOrderClick, getBasePath }) => {
+const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, onSend, onArchive, completedWorkOrders = [], loadingWorkOrders = false, onWorkOrderClick, getBasePath }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -784,8 +784,9 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
                         </button>
                         {/* Delete/Archive */}
                         <button
+                          onClick={() => onArchive && onArchive(invoice)}
                           className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                          title="Delete"
+                          title="Archive"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -946,6 +947,28 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
     }
   };
 
+  const handleArchive = async (invoice) => {
+    if (!window.confirm('Are you sure you want to archive this invoice? It will be moved to Archived Invoices.')) {
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE}/api/payments/invoices/${invoice.id}/archive`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast('Invoice archived successfully');
+        fetchInvoices();
+      } else {
+        showToast(result.message || 'Failed to archive invoice', 'error');
+      }
+    } catch (err) {
+      console.error('Error archiving invoice:', err);
+      showToast('Failed to archive invoice', 'error');
+    }
+  };
+
   const handleView = async (invoice) => {
     // Fetch full invoice details with enriched descriptions
     try {
@@ -1044,6 +1067,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
           onView={handleView}
           onDownload={handleDownload}
           onSend={handleSend}
+          onArchive={handleArchive}
           completedWorkOrders={completedWorkOrders}
           loadingWorkOrders={loadingWorkOrders}
           onWorkOrderClick={(wo) => navigate(`${getBasePath()}/estimates/create?workOrderId=${wo.work_order_id}`)}
@@ -1209,10 +1233,26 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                 const services = allItems.map(item => {
                   const fullDesc = decodeHtmlEntities(String(item.description || item.name || 'Service'));
                   const parts = fullDesc.split(' - ');
-                  const descFromDetails = decodeHtmlEntities(item.details || '');
+                  // Check all possible description fields like the PDF does
+                  const descFromDetails = decodeHtmlEntities(
+                    item.details || 
+                    item.service_description || 
+                    item.serviceDescription || 
+                    item.itemDescription ||
+                    ''
+                  );
+                  const serviceName = decodeHtmlEntities(item.name || item.serviceName || item.service_name || parts[0] || 'Service');
+                  // Build full description from available sources
+                  let serviceDesc = descFromDetails;
+                  if (!serviceDesc && parts.length > 1) {
+                    serviceDesc = parts.slice(1).join(' - ');
+                  }
+                  if (!serviceDesc && fullDesc !== serviceName) {
+                    serviceDesc = fullDesc;
+                  }
                   return {
-                    name: decodeHtmlEntities(parts[0] || item.name || 'Service'),
-                    description: descFromDetails || decodeHtmlEntities(parts.slice(1).join(' - ') || ''),
+                    name: serviceName,
+                    description: decodeHtmlEntities(serviceDesc || '-'),
                     frequency: getFrequency(item),
                     visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
                   };

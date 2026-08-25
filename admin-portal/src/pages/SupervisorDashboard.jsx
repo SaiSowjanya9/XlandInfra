@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import EstimatesOverviewBlocks from '../components/EstimatesOverviewBlocks';
+import DateRangeFilter from '../components/common/DateRangeFilter';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -28,6 +29,10 @@ const SupervisorDashboard = ({ user }) => {
   const [properties, setProperties] = useState([]);
   const [propertyChartFilter, setPropertyChartFilter] = useState('all');
   const lastFetchRef = useRef(0);
+  
+  // Date filter state
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   const fetchDashboard = useCallback(async (isInitialLoad = false) => {
     const now = Date.now();
@@ -216,13 +221,16 @@ const SupervisorDashboard = ({ user }) => {
             </button>
           </div>
         </div>
-        <button
-          onClick={() => fetchDashboard(false)}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <RefreshCw className="w-4 h-4" />
-          <span>Refresh</span>
-        </button>
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(start, end) => {
+            setStartDate(start);
+            setEndDate(end);
+          }}
+          onRefresh={() => fetchDashboard(false)}
+          showRefreshButton={true}
+        />
       </div>
 
       {/* Properties Overview Chart */}

@@ -29,6 +29,7 @@ import {
   CartesianGrid
 } from 'recharts';
 import DonutChart from '../components/common/DonutChart';
+import DateRangeFilter from '../components/common/DateRangeFilter';
 import { getAuthToken } from '../utils/safeStorage';
 import { STATUS_COLORS, ESTIMATE_TYPE_COLORS, getConsistentColor } from '../utils/chartColors';
 
@@ -638,170 +639,18 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           <p className="text-gray-500 text-sm mt-1">Overview of all your estimates</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Date Range Picker */}
-          <div className="relative" ref={datePickerRef}>
-            <button
-              onClick={() => setShowDatePicker(!showDatePicker)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white/80 backdrop-blur-md border border-white/30 rounded-xl hover:bg-white/95 transition-all shadow-sm hover:shadow-md"
-            >
-              <Calendar className="w-4 h-4 text-gray-600" />
-              <span className="text-sm text-gray-700 font-medium">
-                {startDate && endDate 
-                  ? `${formatDateIST(startDate)} - ${formatDateIST(endDate)}`
-                  : startDate 
-                    ? `From ${formatDateIST(startDate)}`
-                    : endDate
-                      ? `Until ${formatDateIST(endDate)}`
-                      : 'All Time'}
-              </span>
-              <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
-            </button>
-            
-            {showDatePicker && (
-              <div className="absolute right-0 mt-2 bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-5 z-50 min-w-[320px]"
-                   style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.5) inset' }}>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Start Date</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="dd/mm/yyyy"
-                        value={startDateDisplay}
-                        onChange={(e) => {
-                          handleDateInput(e.target.value, setStartDateDisplay);
-                          const parsed = parseISTDate(e.target.value);
-                          if (parsed) setStartDate(parsed);
-                        }}
-                        onBlur={() => {
-                          const parsed = parseISTDate(startDateDisplay);
-                          if (parsed) setStartDate(parsed);
-                          else if (startDateDisplay && startDateDisplay.length < 10) setStartDateDisplay('');
-                        }}
-                        className="w-full px-3 py-2.5 pr-10 bg-white/70 border border-gray-200/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 backdrop-blur-sm transition-all"
-                      />
-                      <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
-                        <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setStartDate(e.target.value); setStartDateDisplay(formatDateIST(e.target.value)); }}} />
-                        <Calendar className="w-4 h-4 text-gray-400 pointer-events-none" />
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">End Date</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="dd/mm/yyyy"
-                        value={endDateDisplay}
-                        onChange={(e) => {
-                          handleDateInput(e.target.value, setEndDateDisplay);
-                          const parsed = parseISTDate(e.target.value);
-                          if (parsed) setEndDate(parsed);
-                        }}
-                        onBlur={() => {
-                          const parsed = parseISTDate(endDateDisplay);
-                          if (parsed) setEndDate(parsed);
-                          else if (endDateDisplay && endDateDisplay.length < 10) setEndDateDisplay('');
-                        }}
-                        className="w-full px-3 py-2.5 pr-10 bg-white/70 border border-gray-200/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 backdrop-blur-sm transition-all"
-                      />
-                      <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
-                        <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setEndDate(e.target.value); setEndDateDisplay(formatDateIST(e.target.value)); }}} />
-                        <Calendar className="w-4 h-4 text-gray-400 pointer-events-none" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => {
-                        const now = new Date();
-                        const weekAgo = new Date(now);
-                        weekAgo.setDate(now.getDate() - 7);
-                        setStartDate(weekAgo.toISOString().split('T')[0]);
-                        setEndDate(now.toISOString().split('T')[0]);
-                        setStartDateDisplay(formatDateIST(weekAgo.toISOString().split('T')[0]));
-                        setEndDateDisplay(formatDateIST(now.toISOString().split('T')[0]));
-                      }}
-                      className="px-3 py-1.5 text-xs bg-white/60 hover:bg-white/80 border border-gray-200/50 rounded-full backdrop-blur-sm transition-all hover:shadow-sm"
-                    >
-                      Last 7 Days
-                    </button>
-                    <button
-                      onClick={() => {
-                        const now = new Date();
-                        const monthAgo = new Date(now);
-                        monthAgo.setMonth(now.getMonth() - 1);
-                        setStartDate(monthAgo.toISOString().split('T')[0]);
-                        setEndDate(now.toISOString().split('T')[0]);
-                        setStartDateDisplay(formatDateIST(monthAgo.toISOString().split('T')[0]));
-                        setEndDateDisplay(formatDateIST(now.toISOString().split('T')[0]));
-                      }}
-                      className="px-3 py-1.5 text-xs bg-white/60 hover:bg-white/80 border border-gray-200/50 rounded-full backdrop-blur-sm transition-all hover:shadow-sm"
-                    >
-                      Last 30 Days
-                    </button>
-                    <button
-                      onClick={() => {
-                        const now = new Date();
-                        const quarterAgo = new Date(now);
-                        quarterAgo.setMonth(now.getMonth() - 3);
-                        setStartDate(quarterAgo.toISOString().split('T')[0]);
-                        setEndDate(now.toISOString().split('T')[0]);
-                        setStartDateDisplay(formatDateIST(quarterAgo.toISOString().split('T')[0]));
-                        setEndDateDisplay(formatDateIST(now.toISOString().split('T')[0]));
-                      }}
-                      className="px-3 py-1.5 text-xs bg-white/60 hover:bg-white/80 border border-gray-200/50 rounded-full backdrop-blur-sm transition-all hover:shadow-sm"
-                    >
-                      Last 3 Months
-                    </button>
-                    <button
-                      onClick={() => {
-                        const lastYear = new Date().getFullYear() - 1;
-                        const startStr = `${lastYear}-01-01`; // Jan 1 of last year
-                        const endStr = `${lastYear}-12-31`; // Dec 31 of last year
-                        setStartDate(startStr);
-                        setEndDate(endStr);
-                        setStartDateDisplay(formatDateIST(startStr));
-                        setEndDateDisplay(formatDateIST(endStr));
-                      }}
-                      className="px-3 py-1.5 text-xs bg-white/60 hover:bg-white/80 border border-gray-200/50 rounded-full backdrop-blur-sm transition-all hover:shadow-sm"
-                    >
-                      Last Year
-                    </button>
-                  </div>
-                  <div className="flex justify-between pt-3 border-t border-gray-200/30">
-                    <button
-                      onClick={() => {
-                        setStartDate('');
-                        setEndDate('');
-                        setStartDateDisplay('');
-                        setEndDateDisplay('');
-                      }}
-                      className="px-4 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-white/50 rounded-lg transition-all"
-                    >
-                      Clear
-                    </button>
-                    <button
-                      onClick={() => setShowDatePicker(false)}
-                      className="px-5 py-1.5 text-sm bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/25 transition-all"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Refresh Button */}
-          <button
-            onClick={() => fetchEstimates(true)}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onDateChange={(start, end) => {
+              setStartDate(start);
+              setEndDate(end);
+              setStartDateDisplay(start ? new Date(start + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/') : '');
+              setEndDateDisplay(end ? new Date(end + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/') : '');
+            }}
+            onRefresh={() => fetchEstimates(true)}
+            showRefreshButton={true}
+          />
         </div>
       </div>
 
