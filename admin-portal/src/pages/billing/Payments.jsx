@@ -27,6 +27,9 @@ import {
   Filter,
   Home,
   ChevronRight as ChevronRightIcon,
+  Receipt,
+  User,
+  Send,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import * as XLSX from 'xlsx';
@@ -328,6 +331,198 @@ const VerifyPaymentModal = ({ isOpen, onClose, onSuccess, payment }) => {
   );
 };
 
+// Receipt View Modal Component
+const ReceiptModal = ({ isOpen, onClose, payment, onDownload, onSend, downloading }) => {
+  if (!isOpen || !payment) return null;
+
+  const method = PAYMENT_METHODS[payment.paymentMethod] || PAYMENT_METHODS.other;
+  const status = STATUS_CONFIG[payment.status] || STATUS_CONFIG.pending;
+  const MethodIcon = method.icon;
+  const dateTime = formatDateTime(payment.paymentDate);
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Receipt className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-white">Payment Receipt</h2>
+                <p className="text-green-100 text-sm">{payment.paymentId}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {payment.status === 'paid' && onSend && (
+                <button
+                  onClick={() => onSend(payment)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  <Send className="w-4 h-4" />
+                  Send to Customer
+                </button>
+              )}
+              <button
+                onClick={() => onDownload(payment)}
+                disabled={downloading}
+                className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                {downloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                Download PDF
+              </button>
+              <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-full transition-colors">
+                <X className="w-5 h-5 text-white" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+          {/* Company Header */}
+          <div className="text-center mb-6 pb-4 border-b border-gray-200">
+            <h3 className="text-xl font-bold text-gray-900">XLAND INFRA PM SERVICES PVT LTD</h3>
+            <p className="text-sm text-gray-500 mt-1">Gachibowli, Hyderabad, Telangana - 500032</p>
+            <p className="text-sm text-gray-500">GST: 36AADCX1234A1Z5</p>
+          </div>
+
+          {/* Receipt Title */}
+          <div className="text-center mb-6">
+            <h4 className="text-lg font-semibold text-gray-900 inline-flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              PAYMENT RECEIPT
+            </h4>
+            <p className="text-sm text-gray-500 mt-1">Receipt No: {payment.paymentId}</p>
+          </div>
+
+          {/* Two Column Details */}
+          <div className="grid grid-cols-2 gap-6 mb-6">
+            {/* Payment Details */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <h5 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-gray-500" />
+                Payment Details
+              </h5>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Payment ID:</span>
+                  <span className="font-semibold text-gray-900">{payment.paymentId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Invoice ID:</span>
+                  <span className="font-medium text-blue-600">{payment.invoiceId || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Payment Date:</span>
+                  <span className="font-medium text-gray-900">{dateTime.date}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Payment Time:</span>
+                  <span className="font-medium text-gray-900">{dateTime.time}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Payment Method:</span>
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium ${method.bg} ${method.color} border ${method.border}`}>
+                    <MethodIcon className="w-3 h-3" />
+                    {method.label}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Status:</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
+                    {status.label}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Customer Details */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <h5 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <User className="w-4 h-4 text-gray-500" />
+                Customer Details
+              </h5>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Name:</span>
+                  <span className="font-medium text-gray-900">{payment.customerName || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Property:</span>
+                  <span className="font-medium text-gray-900">{payment.propertyName || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Property ID:</span>
+                  <span className="font-medium text-gray-900">{payment.propertyCode || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Email:</span>
+                  <span className="font-medium text-gray-900 text-xs">{payment.customerEmail || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Phone:</span>
+                  <span className="font-medium text-gray-900">{payment.customerPhone || '-'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Transaction Details */}
+          {(payment.transactionId || payment.referenceNumber) && (
+            <div className="bg-blue-50 rounded-xl p-4 mb-6">
+              <h5 className="text-sm font-semibold text-blue-700 mb-2">Transaction Information</h5>
+              <div className="text-sm space-y-1">
+                {payment.transactionId && (
+                  <p className="text-gray-700">Transaction ID: <span className="font-mono font-semibold">{payment.transactionId}</span></p>
+                )}
+                {payment.referenceNumber && (
+                  <p className="text-gray-700">Reference No: <span className="font-mono font-semibold">{payment.referenceNumber}</span></p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Amount Section */}
+          <div className="bg-green-50 rounded-xl p-5 border border-green-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Amount Received</p>
+                <p className="text-3xl font-bold text-green-700">{formatCurrencyShort(payment.amount)}</p>
+              </div>
+              <div className="text-right">
+                <div className="flex items-center gap-2 text-green-700">
+                  <CheckCircle className="w-6 h-6" />
+                  <span className="font-semibold">Payment Successful</span>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">Thank you for your payment</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Verification Info */}
+          {payment.verifiedBy && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm">
+              <p className="text-gray-600">
+                Verified by: <span className="font-medium text-gray-900">{payment.verifiedBy}</span>
+                {payment.verifiedAt && <span className="text-gray-500"> on {formatDateDisplay(payment.verifiedAt)}</span>}
+              </p>
+            </div>
+          )}
+
+          {/* Footer Note */}
+          <div className="mt-6 pt-4 border-t border-gray-200 text-center">
+            <p className="text-xs text-gray-500">This is a computer-generated receipt and does not require a signature.</p>
+            <p className="text-xs text-gray-400 mt-1">For queries, contact: support@xlandinfra.com | +91-XXXXXXXXXX</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Payments = ({ user, portalType = 'admin' }) => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -343,6 +538,9 @@ const Payments = ({ user, portalType = 'admin' }) => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [selectedPaymentForVerify, setSelectedPaymentForVerify] = useState(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [selectedPaymentForReceipt, setSelectedPaymentForReceipt] = useState(null);
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
   const [toast, setToast] = useState(null);
   const [actionMenuOpen, setActionMenuOpen] = useState(null);
 
@@ -389,6 +587,66 @@ const Payments = ({ user, portalType = 'admin' }) => {
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  // View payment receipt
+  const handleViewReceipt = (payment) => {
+    setSelectedPaymentForReceipt(payment);
+    setShowReceiptModal(true);
+  };
+
+  // Download receipt PDF
+  const handleDownloadReceipt = async (payment) => {
+    setDownloadingReceipt(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/payments/${payment.id}/receipt/pdf`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate receipt');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Receipt_${payment.paymentId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showToast('Receipt downloaded successfully!');
+    } catch (err) {
+      console.error('Error downloading receipt:', err);
+      showToast('Failed to download receipt', 'error');
+    } finally {
+      setDownloadingReceipt(false);
+    }
+  };
+
+  // Send receipt email to customer
+  const handleSendReceipt = async (payment) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/payments/${payment.id}/receipt/send`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        showToast('Receipt sent to customer successfully!');
+        fetchPayments();
+      } else {
+        showToast(result.message || 'Failed to send receipt', 'error');
+      }
+    } catch (err) {
+      console.error('Error sending receipt:', err);
+      showToast('Failed to send receipt', 'error');
+    }
   };
 
   // Calculate stats
@@ -730,7 +988,12 @@ const Payments = ({ user, portalType = 'admin' }) => {
                             <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                           </td>
                           <td className="px-4 py-4">
-                            <span className="text-sm font-semibold text-gray-900">{payment.paymentId}</span>
+                            <button
+                              onClick={() => handleViewReceipt(payment)}
+                              className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                            >
+                              {payment.paymentId}
+                            </button>
                           </td>
                           <td className="px-4 py-4">
                             <span className="text-sm text-gray-600">{payment.invoiceId || '-'}</span>
@@ -799,15 +1062,26 @@ const Payments = ({ user, portalType = 'admin' }) => {
                                     <div className="border-t border-gray-100 my-1"></div>
                                   </>
                                 )}
-                                <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                  <Eye className="w-4 h-4" /> View Details
+                                <button 
+                                  onClick={() => { handleViewReceipt(payment); setActionMenuOpen(null); }}
+                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                >
+                                  <Eye className="w-4 h-4" /> View Receipt
                                 </button>
-                                <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                  <Edit className="w-4 h-4" /> Edit Payment
+                                <button 
+                                  onClick={() => { handleDownloadReceipt(payment); setActionMenuOpen(null); }}
+                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                >
+                                  <Download className="w-4 h-4" /> Download Receipt
                                 </button>
-                                <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                  <Download className="w-4 h-4" /> Download
-                                </button>
+                                {payment.status === 'paid' && (
+                                  <button 
+                                    onClick={() => { handleSendReceipt(payment); setActionMenuOpen(null); }}
+                                    className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center gap-2"
+                                  >
+                                    <Send className="w-4 h-4" /> Send Receipt
+                                  </button>
+                                )}
                                 <div className="border-t border-gray-100 my-1"></div>
                                 <button className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
                                   <Trash2 className="w-4 h-4" /> Delete
@@ -895,6 +1169,18 @@ const Payments = ({ user, portalType = 'admin' }) => {
           showToast('Payment status updated successfully!');
         }}
         payment={selectedPaymentForVerify}
+      />
+
+      <ReceiptModal
+        isOpen={showReceiptModal}
+        onClose={() => {
+          setShowReceiptModal(false);
+          setSelectedPaymentForReceipt(null);
+        }}
+        payment={selectedPaymentForReceipt}
+        onDownload={handleDownloadReceipt}
+        onSend={handleSendReceipt}
+        downloading={downloadingReceipt}
       />
 
       {actionMenuOpen && (
