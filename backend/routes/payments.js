@@ -1558,23 +1558,24 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
               <style>
                 body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
                 .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-                .content { background: #fff; padding: 30px; border: 1px solid #e5e7eb; }
+                .header { background: #C9A227; height: 6px; border-radius: 10px 10px 0 0; }
+                .content { background: #fff; padding: 30px; border: 1px solid #e5e7eb; border-radius: 0 0 10px 10px; }
                 .footer { background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none; }
                 table { width: 100%; border-collapse: collapse; margin: 15px 0; }
                 th { background: #f1f5f9; padding: 10px; text-align: left; font-size: 12px; text-transform: uppercase; color: #64748b; }
                 .total-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
-                .grand-total { font-size: 18px; font-weight: bold; color: #10b981; border-top: 2px solid #10b981; padding-top: 12px; margin-top: 12px; }
+                .grand-total { font-size: 18px; font-weight: bold; color: #C9A227; border-top: 2px solid #C9A227; padding-top: 12px; margin-top: 12px; }
               </style>
             </head>
             <body>
               <div class="container">
-                <div class="header">
-                  <h1 style="margin: 0; font-size: 28px;">Invoice</h1>
-                  <p style="margin: 10px 0 0; opacity: 0.9;">${invoiceIdGen}</p>
-                </div>
+                <div class="header"></div>
                 
                 <div class="content">
+                  <div style="text-align: center; margin-bottom: 20px;">
+                    <h1 style="margin: 0; font-size: 24px; color: #1a1a1a; font-weight: bold;">Invoice</h1>
+                    <p style="margin: 5px 0 0; color: #666; font-size: 14px;">${invoiceIdGen}</p>
+                  </div>
                   <p>Dear <strong>${customerDetails.name}</strong>,</p>
                   <p>Please find below the details of your invoice from XLand Infra.</p>
                   
@@ -2017,25 +2018,26 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #fff; padding: 30px; border: 1px solid #e5e7eb; }
+            .header { background: #C9A227; height: 6px; border-radius: 10px 10px 0 0; }
+            .content { background: #fff; padding: 30px; border: 1px solid #e5e7eb; border-radius: 0 0 10px 10px; }
             .footer { background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none; }
             .invoice-box { background: #f8fafc; border-radius: 8px; padding: 20px; margin: 20px 0; }
             .amount-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
-            .total-row { font-size: 18px; font-weight: bold; color: #2563eb; border-top: 2px solid #2563eb; padding-top: 12px; margin-top: 12px; }
-            .pay-btn { display: inline-block; background: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+            .total-row { font-size: 18px; font-weight: bold; color: #C9A227; border-top: 2px solid #C9A227; padding-top: 12px; margin-top: 12px; }
+            .pay-btn { display: inline-block; background: #C9A227; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
             table { width: 100%; border-collapse: collapse; margin: 15px 0; }
             th { background: #f1f5f9; padding: 10px; text-align: left; font-size: 12px; text-transform: uppercase; color: #64748b; }
           </style>
         </head>
         <body>
           <div class="container">
-            <div class="header">
-              <h1 style="margin: 0; font-size: 28px;">Invoice</h1>
-              <p style="margin: 10px 0 0; opacity: 0.9;">${invoice.invoice_id}</p>
-            </div>
+            <div class="header"></div>
             
             <div class="content">
+              <div style="text-align: center; margin-bottom: 20px;">
+                <h1 style="margin: 0; font-size: 24px; color: #1a1a1a; font-weight: bold;">Invoice</h1>
+                <p style="margin: 5px 0 0; color: #666; font-size: 14px;">${invoice.invoice_id}</p>
+              </div>
               <p>Dear <strong>${invoice.customer_name || 'Customer'}</strong>,</p>
               <p>Please find below the details of your invoice from XLand Infra.</p>
               
@@ -2198,9 +2200,9 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
     }
 
     if (search) {
-      query += ' AND (p.payment_id LIKE ? OR p.customer_name LIKE ? OR p.transaction_reference LIKE ?)';
+      query += ' AND (p.payment_id LIKE ? OR p.customer_name LIKE ? OR p.transaction_reference LIKE ? OR prop.property_id LIKE ? OR i.invoice_id LIKE ?)';
       const searchPattern = `%${search}%`;
-      params.push(searchPattern, searchPattern, searchPattern);
+      params.push(searchPattern, searchPattern, searchPattern, searchPattern, searchPattern);
     }
 
     query += ' ORDER BY p.payment_date DESC, p.created_at DESC';

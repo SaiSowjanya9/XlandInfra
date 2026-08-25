@@ -1074,14 +1074,15 @@ const sendEstimateEmail = async (estimate, actionToken) => {
       </head>
       <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background-color: #f3f4f6;">
         <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">XLAND INFRA</h1>
-            <p style="color: #bfdbfe; margin: 8px 0 0 0; font-size: 14px;">Pvt. Ltd.</p>
-          </div>
+          <!-- Thin Gold Bar Header -->
+          <div style="background: #C9A227; height: 6px; border-radius: 12px 12px 0 0;"></div>
           
           <!-- Content -->
           <div style="background: #ffffff; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <h1 style="margin: 0; font-size: 24px; color: #1a1a1a; font-weight: bold;">Estimate</h1>
+              <p style="margin: 5px 0 0; color: #666; font-size: 14px;">${estimateId}</p>
+            </div>
             <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 20px;">Hello ${customerName || 'Valued Customer'},</h2>
             
             <p style="color: #4b5563; line-height: 1.6; margin: 0 0 20px 0;">
