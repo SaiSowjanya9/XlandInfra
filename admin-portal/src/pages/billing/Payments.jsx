@@ -902,44 +902,60 @@ const Payments = ({ user, portalType = 'admin' }) => {
             </div>
 
             <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
-              <input
-                type="text"
-                placeholder="dd/mm/yyyy"
-                value={formatDateIST(dateRange.start)}
-                onChange={(e) => {
-                  const formatted = handleISTDateInput(e.target.value);
-                  if (formatted.length === 10) {
-                    setDateRange(prev => ({ ...prev, start: parseISTDate(formatted) }));
-                  } else if (formatted.length === 0) {
-                    setDateRange(prev => ({ ...prev, start: '' }));
-                  }
-                }}
-                onBlur={(e) => {
-                  const parsed = parseISTDate(e.target.value);
-                  if (parsed) setDateRange(prev => ({ ...prev, start: parsed }));
-                }}
-                className="text-sm border-none focus:outline-none bg-transparent w-[90px] text-center"
-              />
-              <span className="text-gray-400">-</span>
-              <input
-                type="text"
-                placeholder="dd/mm/yyyy"
-                value={formatDateIST(dateRange.end)}
-                onChange={(e) => {
-                  const formatted = handleISTDateInput(e.target.value);
-                  if (formatted.length === 10) {
-                    setDateRange(prev => ({ ...prev, end: parseISTDate(formatted) }));
-                  } else if (formatted.length === 0) {
-                    setDateRange(prev => ({ ...prev, end: '' }));
-                  }
-                }}
-                onBlur={(e) => {
-                  const parsed = parseISTDate(e.target.value);
-                  if (parsed) setDateRange(prev => ({ ...prev, end: parsed }));
-                }}
-                className="text-sm border-none focus:outline-none bg-transparent w-[90px] text-center"
-              />
               <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="dd/mm/yyyy"
+                  value={formatDateIST(dateRange.start)}
+                  onChange={(e) => {
+                    const formatted = handleISTDateInput(e.target.value);
+                    if (formatted.length === 10) {
+                      setDateRange(prev => ({ ...prev, start: parseISTDate(formatted) }));
+                    } else if (formatted.length === 0) {
+                      setDateRange(prev => ({ ...prev, start: '' }));
+                    }
+                  }}
+                  className="text-sm border-none focus:outline-none bg-transparent w-[85px]"
+                />
+                <input
+                  type="date"
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  value={dateRange.start}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setDateRange(prev => ({ ...prev, start: e.target.value }));
+                    }
+                  }}
+                />
+              </div>
+              <span className="text-gray-400">-</span>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="dd/mm/yyyy"
+                  value={formatDateIST(dateRange.end)}
+                  onChange={(e) => {
+                    const formatted = handleISTDateInput(e.target.value);
+                    if (formatted.length === 10) {
+                      setDateRange(prev => ({ ...prev, end: parseISTDate(formatted) }));
+                    } else if (formatted.length === 0) {
+                      setDateRange(prev => ({ ...prev, end: '' }));
+                    }
+                  }}
+                  className="text-sm border-none focus:outline-none bg-transparent w-[85px]"
+                />
+                <input
+                  type="date"
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  value={dateRange.end}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setDateRange(prev => ({ ...prev, end: e.target.value }));
+                    }
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
