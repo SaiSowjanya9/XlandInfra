@@ -789,10 +789,11 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
             </button>
             <button
               onClick={exportToExcel}
-              className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              title="Export"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              title="Export All Invoices"
             >
-              <Download className="w-4 h-4 text-gray-500" />
+              <Download className="w-4 h-4" />
+              Export All
             </button>
           </div>
         </div>
