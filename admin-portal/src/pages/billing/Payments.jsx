@@ -30,6 +30,7 @@ import {
   Receipt,
   User,
   Send,
+  Info,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import * as XLSX from 'xlsx';
@@ -482,6 +483,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [payments, setPayments] = useState([]);
+  const [razorpayHistory, setRazorpayHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [headerSearchTerm, setHeaderSearchTerm] = useState('');
@@ -498,6 +500,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
   const [toast, setToast] = useState(null);
   const [actionMenuOpen, setActionMenuOpen] = useState(null);
+  const [activeTab, setActiveTab] = useState('payments'); // 'payments' or 'razorpay-history'
 
   const token = getAuthToken();
 
@@ -538,6 +541,33 @@ const Payments = ({ user, portalType = 'admin' }) => {
   useEffect(() => {
     fetchPayments();
   }, [fetchPayments]);
+
+  // Fetch Razorpay transaction history
+  const fetchRazorpayHistory = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (dateRange.start) params.append('startDate', dateRange.start);
+      if (dateRange.end) params.append('endDate', dateRange.end);
+      if (headerSearchTerm) params.append('search', headerSearchTerm);
+      
+      const url = `${API_BASE}/api/payments/razorpay-history${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setRazorpayHistory(result.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching Razorpay history:', err);
+    }
+  }, [token, dateRange, headerSearchTerm]);
+
+  useEffect(() => {
+    if (activeTab === 'razorpay-history') {
+      fetchRazorpayHistory();
+    }
+  }, [activeTab, fetchRazorpayHistory]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -731,6 +761,39 @@ const Payments = ({ user, portalType = 'admin' }) => {
       </div>
 
       <div className="p-6">
+        {/* Tabs */}
+        <div className="flex items-center gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
+          <button
+            onClick={() => setActiveTab('payments')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              activeTab === 'payments' 
+                ? 'bg-white text-gray-900 shadow-sm' 
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              All Payments
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('razorpay-history')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              activeTab === 'razorpay-history' 
+                ? 'bg-white text-gray-900 shadow-sm' 
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Receipt className="w-4 h-4" />
+              Payment History (Razorpay)
+              <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">Auto-receipts</span>
+            </div>
+          </button>
+        </div>
+
+        {activeTab === 'payments' && (
+          <>
         {/* Stats Cards */}
         <div className="grid grid-cols-5 gap-4 mb-6">
           <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-start gap-3 shadow-sm">
@@ -1111,6 +1174,120 @@ const Payments = ({ user, portalType = 'admin' }) => {
             </>
           )}
         </div>
+          </>
+        )}
+
+        {/* Razorpay Payment History Tab */}
+        {activeTab === 'razorpay-history' && (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            {/* Info Banner */}
+            <div className="bg-blue-50 border-b border-blue-100 px-6 py-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Info className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-blue-900">Razorpay Transaction History</h3>
+                  <p className="text-sm text-blue-700 mt-1">
+                    For Card, Debit Card, Credit Card, and Net Banking payments processed through Razorpay, 
+                    <strong> receipts are automatically sent to customers by Razorpay</strong>. 
+                    Each transaction below shows the receipt details.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* History Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Transaction</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Invoice</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Customer</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Payment Method</th>
+                    <th className="text-right text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Amount</th>
+                    <th className="text-right text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Balance</th>
+                    <th className="text-center text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Receipt Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {razorpayHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-12 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="p-4 bg-gray-100 rounded-full">
+                            <Receipt className="w-8 h-8 text-gray-400" />
+                          </div>
+                          <p className="text-gray-500 font-medium">No Razorpay transactions yet</p>
+                          <p className="text-sm text-gray-400">Razorpay card/net banking transactions will appear here</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    razorpayHistory.map((txn) => (
+                      <tr key={txn.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <div>
+                            <p className="font-medium text-gray-900 text-sm">{txn.paymentId || `TXN-${txn.id}`}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {new Date(txn.transactionDate).toLocaleDateString('en-IN', { 
+                                day: '2-digit', month: 'short', year: 'numeric', 
+                                hour: '2-digit', minute: '2-digit' 
+                              })}
+                            </p>
+                            {txn.razorpayPaymentId && (
+                              <p className="text-xs text-blue-600 font-mono mt-0.5">{txn.razorpayPaymentId}</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="font-medium text-blue-600 text-sm">{txn.invoiceId || '-'}</p>
+                          {txn.invoiceTotal && (
+                            <p className="text-xs text-gray-500">Total: {formatCurrencyShort(txn.invoiceTotal)}</p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="text-sm text-gray-900">{txn.customerName || '-'}</p>
+                          <p className="text-xs text-gray-500">{txn.propertyName || '-'}</p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium">
+                            <CreditCard className="w-3 h-3" />
+                            {txn.paymentMethod}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <p className="font-semibold text-green-600">{formatCurrencyShort(txn.amountPaid)}</p>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <p className={`font-medium ${txn.balanceRemaining <= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                            {txn.balanceRemaining <= 0 ? '₹0' : formatCurrencyShort(txn.balanceRemaining)}
+                          </p>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            Sent by Razorpay
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Footer Note */}
+            <div className="bg-gray-50 border-t border-gray-200 px-6 py-4">
+              <p className="text-xs text-gray-500 flex items-center gap-2">
+                <Info className="w-4 h-4" />
+                Razorpay automatically sends payment receipts to customers via email/SMS for all card and net banking transactions. 
+                These receipts include transaction ID, amount, and payment confirmation.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <VerifyPaymentModal
