@@ -1350,8 +1350,17 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   onChange={(e) => setSelectedMethod(e.target.value)} 
                   className="mt-2 w-4 h-4 text-blue-600"
                 />
-                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <CreditCard className="w-6 h-6 text-white" />
+                {/* Card Icon - Blue card with chip and stripe */}
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg width="28" height="22" viewBox="0 0 28 22" fill="none">
+                    <rect x="1" y="1" width="26" height="20" rx="3" fill="#3b82f6" stroke="#2563eb" strokeWidth="1"/>
+                    <rect x="4" y="5" width="5" height="4" rx="1" fill="#fbbf24"/>
+                    <line x1="4" y1="6" x2="9" y2="6" stroke="#f59e0b" strokeWidth="0.5"/>
+                    <line x1="4" y1="7.5" x2="9" y2="7.5" stroke="#f59e0b" strokeWidth="0.5"/>
+                    <rect x="1" y="11" width="26" height="3" fill="#1d4ed8"/>
+                    <circle cx="22" cy="16" r="2" fill="#60a5fa" opacity="0.6"/>
+                    <circle cx="25" cy="16" r="2" fill="#93c5fd" opacity="0.6"/>
+                  </svg>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -1373,10 +1382,14 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   onChange={(e) => setSelectedMethod(e.target.value)} 
                   className="mt-2 w-4 h-4 text-blue-600"
                 />
-                <div className="w-12 h-12 bg-white rounded-lg flex flex-col items-center justify-center border border-gray-200 flex-shrink-0">
-                  <span className="text-green-600 font-bold text-sm">UPI</span>
-                  <span className="text-[6px] text-gray-400 leading-none">UNIFIED</span>
-                  <span className="text-[6px] text-gray-400 leading-none">PAYMENTS</span>
+                {/* UPI Logo Icon */}
+                <div className="w-12 h-12 bg-white rounded-xl flex flex-col items-center justify-center border border-gray-200 flex-shrink-0">
+                  <div className="flex items-center">
+                    <span className="text-[#5f259f] font-bold text-sm tracking-tight">UPI</span>
+                    <div className="w-0.5 h-4 bg-gradient-to-b from-[#5f259f] via-[#097a44] to-[#097a44] ml-0.5"></div>
+                  </div>
+                  <span className="text-[5px] text-gray-400 tracking-widest mt-0.5">UNIFIED PAYMENTS</span>
+                  <span className="text-[5px] text-gray-400 tracking-widest -mt-0.5">INTERFACE</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -1398,8 +1411,17 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   onChange={(e) => setSelectedMethod(e.target.value)} 
                   className="mt-2 w-4 h-4 text-blue-600"
                 />
-                <div className="w-12 h-12 bg-amber-50 rounded-lg flex items-center justify-center border border-amber-200 flex-shrink-0">
-                  <Building2 className="w-6 h-6 text-amber-600" />
+                {/* Bank Building Icon - Classical pillars */}
+                <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center border border-amber-200 flex-shrink-0">
+                  <svg width="26" height="24" viewBox="0 0 26 24" fill="none">
+                    <path d="M13 1L2 8H24L13 1Z" fill="#f59e0b" stroke="#d97706" strokeWidth="1" strokeLinejoin="round"/>
+                    <rect x="2" y="8" width="22" height="2" fill="#fbbf24"/>
+                    <rect x="4" y="10" width="2" height="10" fill="#f59e0b"/>
+                    <rect x="9" y="10" width="2" height="10" fill="#f59e0b"/>
+                    <rect x="15" y="10" width="2" height="10" fill="#f59e0b"/>
+                    <rect x="20" y="10" width="2" height="10" fill="#f59e0b"/>
+                    <rect x="2" y="20" width="22" height="3" rx="0.5" fill="#fbbf24" stroke="#d97706" strokeWidth="0.5"/>
+                  </svg>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -1411,7 +1433,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
               </label>
 
               {/* Cash */}
-              <label className={`flex items-start gap-3 p-4 cursor-pointer transition-colors ${selectedMethod === 'cash' ? 'bg-orange-50' : 'hover:bg-gray-50'}`}>
+              <label className={`flex items-start gap-3 p-4 cursor-pointer transition-colors ${selectedMethod === 'cash' ? 'bg-amber-50' : 'hover:bg-gray-50'}`}>
                 <input 
                   type="radio" 
                   name="paymentMethod" 
@@ -1420,8 +1442,15 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   onChange={(e) => setSelectedMethod(e.target.value)} 
                   className="mt-2 w-4 h-4 text-blue-600"
                 />
-                <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center border border-orange-200 flex-shrink-0">
-                  <Banknote className="w-6 h-6 text-orange-500" />
+                {/* Cash/Banknote Icon with coin */}
+                <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center border border-amber-200 flex-shrink-0">
+                  <svg width="28" height="22" viewBox="0 0 28 22" fill="none">
+                    <rect x="1" y="4" width="22" height="14" rx="2" fill="#fef3c7" stroke="#f59e0b" strokeWidth="1.5"/>
+                    <circle cx="12" cy="11" r="4" fill="#fbbf24" stroke="#d97706" strokeWidth="1"/>
+                    <text x="12" y="13" textAnchor="middle" fill="#92400e" fontSize="5" fontWeight="bold">₹</text>
+                    <circle cx="22" cy="15" r="5" fill="#fbbf24" stroke="#d97706" strokeWidth="1"/>
+                    <text x="22" y="17" textAnchor="middle" fill="#92400e" fontSize="5" fontWeight="bold">₹</text>
+                  </svg>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -1442,8 +1471,16 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   onChange={(e) => setSelectedMethod(e.target.value)} 
                   className="mt-2 w-4 h-4 text-blue-600"
                 />
-                <div className="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center border border-red-200 flex-shrink-0">
-                  <FileCheck className="w-6 h-6 text-red-500" />
+                {/* Cheque Icon with checkmark */}
+                <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center border border-red-200 flex-shrink-0">
+                  <svg width="26" height="22" viewBox="0 0 26 22" fill="none">
+                    <rect x="1" y="2" width="20" height="16" rx="2" fill="#fef2f2" stroke="#ef4444" strokeWidth="1.5"/>
+                    <line x1="4" y1="7" x2="14" y2="7" stroke="#fca5a5" strokeWidth="1.5"/>
+                    <line x1="4" y1="10" x2="18" y2="10" stroke="#fca5a5" strokeWidth="1.5"/>
+                    <line x1="4" y1="13" x2="12" y2="13" stroke="#fca5a5" strokeWidth="1.5"/>
+                    <circle cx="20" cy="16" r="5" fill="#ef4444"/>
+                    <path d="M17.5 16L19 17.5L22.5 14" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
