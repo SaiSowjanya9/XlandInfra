@@ -1329,14 +1329,6 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                 <p className="text-xl font-bold text-red-600">{formatCurrency(balanceAmount)}</p>
               </div>
             </div>
-            {invoices.length > 1 && (
-              <button 
-                onClick={() => { setSelectedInvoice(null); setShowInvoiceSelector(true); }}
-                className="mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Change Invoice
-              </button>
-            )}
           </div>
         )}
 
