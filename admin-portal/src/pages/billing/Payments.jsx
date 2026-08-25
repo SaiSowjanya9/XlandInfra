@@ -751,10 +751,10 @@ const Payments = ({ user, portalType = 'admin' }) => {
             </div>
             <button
               onClick={exportToExcel}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
             >
               <Download className="w-4 h-4" />
-              Export
+              Export All
             </button>
           </div>
         </div>
@@ -866,20 +866,20 @@ const Payments = ({ user, portalType = 'admin' }) => {
               />
             </div>
 
-            <div className="relative">
+            <div className="relative w-[140px]">
               <select
                 value={statusFilter}
                 onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                className="appearance-none pl-4 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                className="w-full appearance-none pl-3 pr-8 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               >
                 <option value="all">All Status</option>
                 <option value="paid">Paid</option>
-                <option value="verification_pending">Verification Pending</option>
-                <option value="partially_paid">Partially Paid</option>
+                <option value="verification_pending">Pending</option>
+                <option value="partially_paid">Partial</option>
                 <option value="failed">Failed</option>
                 <option value="refunded">Refunded</option>
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
 
             <div className="relative">

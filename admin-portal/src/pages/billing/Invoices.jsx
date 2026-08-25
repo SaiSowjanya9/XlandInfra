@@ -560,15 +560,36 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
               Home &gt; Billing & Payments &gt; Invoices
             </p>
           </div>
-          {activeTab === 'manual' && (
+          <div className="flex items-center gap-3">
+            {/* Header Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by Invoice ID, Property ID, Customer..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-[320px] pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              />
+            </div>
+            {/* Export All Button */}
             <button
-              onClick={() => navigate(`/${portalType === 'admin' ? 'employee' : portalType}/billing/create-invoice`)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              onClick={exportToExcel}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
             >
-              <Plus className="w-4 h-4" />
-              Create Invoice
+              <Download className="w-4 h-4" />
+              Export All
             </button>
-          )}
+            {activeTab === 'manual' && (
+              <button
+                onClick={() => navigate(`/${portalType === 'admin' ? 'employee' : portalType}/billing/create-invoice`)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                Create Invoice
+              </button>
+            )}
+          </div>
         </div>
         
         {/* Invoice Type Tabs */}
@@ -698,29 +719,17 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
         {activeTab !== 'archived' && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6">
           <div className="p-4 flex items-center gap-3">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by Invoice ID, Property ID, Customer..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-              />
-            </div>
-
             {/* Status Filter */}
-            <div className="relative">
+            <div className="relative w-[140px]">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-700 cursor-pointer min-w-[120px]"
+                className="w-full appearance-none pl-3 pr-8 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-700 cursor-pointer"
               >
                 <option value="all">All Status</option>
                 <option value="draft">Draft</option>
                 <option value="sent">Sent</option>
-                <option value="partially_paid">Partially Paid</option>
+                <option value="partially_paid">Partial</option>
                 <option value="paid">Paid</option>
                 <option value="overdue">Overdue</option>
               </select>
@@ -728,7 +737,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
             </div>
 
             {/* Date Range - IST Format (dd/mm/yyyy) */}
-            <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-2 py-1.5 bg-white">
+            <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
               <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
               <div className="relative">
                 <input
@@ -779,21 +788,13 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
               </div>
             </div>
 
-            {/* Refresh & Export */}
+            {/* Refresh */}
             <button
               onClick={fetchInvoices}
-              className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="p-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               title="Refresh"
             >
               <RefreshCw className={`w-4 h-4 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-            <button
-              onClick={exportToExcel}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-              title="Export All Invoices"
-            >
-              <Download className="w-4 h-4" />
-              Export All
             </button>
           </div>
         </div>
