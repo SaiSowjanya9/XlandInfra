@@ -855,17 +855,6 @@ const Payments = ({ user, portalType = 'admin' }) => {
         {/* Filters Row */}
         <div className="bg-white rounded-xl border border-gray-200 mb-4 p-4">
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative flex-1 min-w-[180px] max-w-[220px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search payments..."
-                value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
             <div className="relative w-[140px]">
               <select
                 value={statusFilter}
@@ -952,11 +941,6 @@ const Payments = ({ user, portalType = 'admin' }) => {
               />
               <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
             </div>
-
-            <button className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-              <Filter className="w-4 h-4" />
-              Filters
-            </button>
           </div>
         </div>
 
