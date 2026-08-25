@@ -2563,6 +2563,190 @@ router.put('/payments/:id/archive', authenticate, canEditPayments, async (req, r
 });
 
 // Update payment
+// Verify payment (update status and send receipt if paid)
+router.put('/payments/:id/verify', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+    const { status, verificationNotes, rejectionReason } = req.body;
+    const userId = req.user?.id;
+    const userName = req.user?.firstName ? `${req.user.firstName} ${req.user.lastName || ''}`.trim() : 'Admin';
+    
+    // Validate status
+    if (!['paid', 'failed'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status. Must be "paid" or "failed".' });
+    }
+
+    // Get payment details
+    let selectQuery = `
+      SELECT p.*, 
+             i.invoice_id as invoice_code, i.total_amount as invoice_amount,
+             prop.community_name as property_name, prop.property_id as property_code,
+             prop.customer_email, prop.customer_phone
+      FROM payments p
+      LEFT JOIN invoices i ON p.invoice_id = i.id
+      LEFT JOIN onboarded_properties prop ON p.property_id = prop.id
+      WHERE p.id = ?
+    `;
+    const selectParams = [id];
+    if (fpId) {
+      selectQuery += ' AND p.franchise_partner_id = ?';
+      selectParams.push(fpId);
+    }
+
+    const [payments] = await pool.execute(selectQuery, selectParams);
+
+    if (payments.length === 0) {
+      return res.status(404).json({ success: false, message: 'Payment not found' });
+    }
+
+    const p = payments[0];
+
+    // Update payment status
+    const remarks = status === 'paid' ? verificationNotes : rejectionReason;
+    await pool.execute(`
+      UPDATE payments SET 
+        status = ?,
+        verified_by = ?,
+        verified_at = NOW(),
+        remarks = COALESCE(?, remarks),
+        updated_at = NOW()
+      WHERE id = ?
+    `, [status, userName, remarks, id]);
+
+    // If payment is marked as paid, update invoice and send receipt
+    if (status === 'paid') {
+      // Update invoice balance and status
+      if (p.invoice_id) {
+        const invoiceAmount = parseFloat(p.invoice_amount) || 0;
+        const paymentAmount = parseFloat(p.amount) || 0;
+        
+        // Get total paid for this invoice
+        const [paidPayments] = await pool.execute(
+          'SELECT SUM(amount) as total_paid FROM payments WHERE invoice_id = ? AND status = ?',
+          [p.invoice_id, 'paid']
+        );
+        const totalPaid = parseFloat(paidPayments[0]?.total_paid || 0) + paymentAmount;
+        const newBalance = Math.max(0, invoiceAmount - totalPaid);
+        const invoiceStatus = newBalance <= 0 ? 'paid' : 'partially_paid';
+
+        await pool.execute(`
+          UPDATE invoices SET 
+            balance_amount = ?,
+            payment_status = ?,
+            updated_at = NOW()
+          WHERE id = ?
+        `, [newBalance, invoiceStatus, p.invoice_id]);
+      }
+
+      // Send receipt email automatically
+      const customerEmail = p.customer_email || p.email;
+      if (customerEmail) {
+        try {
+          const paymentData = {
+            paymentId: p.payment_id || `PAY-${String(p.id).padStart(4, '0')}`,
+            invoiceId: p.invoice_code,
+            customerName: p.customer_name,
+            customerEmail,
+            customerPhone: p.customer_phone || p.phone,
+            propertyName: p.property_name,
+            propertyCode: p.property_code,
+            amount: parseFloat(p.amount),
+            paymentMethod: p.payment_method,
+            paymentDate: p.payment_date,
+            transactionReference: p.transaction_reference,
+            referenceNumber: p.reference_number,
+            status: 'paid',
+            verifiedBy: userName,
+            verifiedAt: new Date(),
+            remarks: remarks
+          };
+
+          // Generate PDF
+          const { generateReceiptPDF } = require('../services/pdfService');
+          const pdfBuffer = await generateReceiptPDF(paymentData);
+
+          // Send email
+          const nodemailer = require('nodemailer');
+          const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST || 'smtp.gmail.com',
+            port: parseInt(process.env.SMTP_PORT || '587'),
+            secure: process.env.SMTP_SECURE === 'true',
+            auth: {
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS
+            }
+          });
+
+          const paymentDateFormatted = p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-IN', {
+            day: '2-digit', month: 'short', year: 'numeric'
+          }) : '-';
+
+          await transporter.sendMail({
+            from: `"XLAND INFRA" <${process.env.SMTP_USER || 'noreply@xlandinfra.com'}>`,
+            to: customerEmail,
+            subject: `Payment Receipt - ${paymentData.paymentId} | XLAND INFRA`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background-color: #1a1a1a; padding: 20px; text-align: center;">
+                  <h1 style="color: #C9A227; margin: 0;">XLAND INFRA</h1>
+                  <p style="color: #888; margin: 5px 0 0;">PM SERVICES PVT LTD</p>
+                </div>
+                <div style="padding: 30px; background-color: #f9fafb;">
+                  <h2 style="color: #16a34a; margin-top: 0;">Payment Received Successfully!</h2>
+                  <p>Dear ${paymentData.customerName || 'Customer'},</p>
+                  <p>Thank you for your payment. We have received your payment successfully.</p>
+                  
+                  <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border: 1px solid #e5e7eb;">
+                    <h3 style="margin-top: 0; color: #333;">Payment Details</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                      <tr><td style="padding: 8px 0; color: #666;">Receipt No:</td><td style="padding: 8px 0; font-weight: bold;">${paymentData.paymentId}</td></tr>
+                      <tr><td style="padding: 8px 0; color: #666;">Invoice ID:</td><td style="padding: 8px 0;">${paymentData.invoiceId || '-'}</td></tr>
+                      <tr><td style="padding: 8px 0; color: #666;">Amount:</td><td style="padding: 8px 0; font-weight: bold; color: #16a34a; font-size: 18px;">₹${parseFloat(paymentData.amount).toLocaleString('en-IN')}</td></tr>
+                      <tr><td style="padding: 8px 0; color: #666;">Date:</td><td style="padding: 8px 0;">${paymentDateFormatted}</td></tr>
+                      <tr><td style="padding: 8px 0; color: #666;">Property:</td><td style="padding: 8px 0;">${paymentData.propertyName || '-'}</td></tr>
+                    </table>
+                  </div>
+                  
+                  <p>Please find your payment receipt attached to this email.</p>
+                  <p style="color: #666; font-size: 14px;">If you have any questions, please contact us at support@xlandinfra.com</p>
+                </div>
+                <div style="background-color: #1a1a1a; padding: 15px; text-align: center;">
+                  <p style="color: #888; margin: 0; font-size: 12px;">© ${new Date().getFullYear()} XLAND INFRA PM SERVICES PVT LTD. All rights reserved.</p>
+                </div>
+              </div>
+            `,
+            attachments: [{
+              filename: `Receipt_${paymentData.paymentId}.pdf`,
+              content: pdfBuffer,
+              contentType: 'application/pdf'
+            }]
+          });
+
+          // Mark receipt as sent
+          await pool.execute(
+            'UPDATE payments SET receipt_sent = 1, receipt_sent_at = NOW() WHERE id = ?',
+            [id]
+          );
+
+          console.log(`Receipt sent to ${customerEmail} for payment ${paymentData.paymentId}`);
+        } catch (emailError) {
+          console.error('Error sending receipt email:', emailError);
+          // Don't fail the verification if email fails
+        }
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: status === 'paid' ? 'Payment verified and receipt sent to customer' : 'Payment rejected'
+    });
+  } catch (error) {
+    console.error('Error verifying payment:', error);
+    res.status(500).json({ success: false, message: 'Error verifying payment', error: error.message });
+  }
+});
+
 router.put('/payments/:id', authenticate, canEditPayments, async (req, res) => {
   try {
     const { id } = req.params;
@@ -2796,6 +2980,261 @@ router.delete('/qr-codes/:id', authenticate, canEditPayments, async (req, res) =
   } catch (error) {
     console.error('Error deleting QR code:', error);
     res.status(500).json({ success: false, message: 'Error deleting QR code', error: error.message });
+  }
+});
+
+// ============================================
+// PAYMENT RECEIPTS
+// ============================================
+
+// Get payment details for receipt
+router.get('/payments/:id/receipt', authenticate, canViewPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+
+    let query = `
+      SELECT p.*, 
+             i.invoice_id as invoice_code, i.total_amount as invoice_amount,
+             prop.community_name as property_name, prop.property_id as property_code,
+             prop.customer_email, prop.customer_phone
+      FROM payments p
+      LEFT JOIN invoices i ON p.invoice_id = i.id
+      LEFT JOIN onboarded_properties prop ON p.property_id = prop.id
+      WHERE p.id = ?
+    `;
+    const params = [id];
+
+    if (fpId) {
+      query += ' AND p.franchise_partner_id = ?';
+      params.push(fpId);
+    }
+
+    const [payments] = await pool.execute(query, params);
+
+    if (payments.length === 0) {
+      return res.status(404).json({ success: false, message: 'Payment not found' });
+    }
+
+    const p = payments[0];
+    res.json({
+      success: true,
+      data: {
+        id: p.id,
+        paymentId: p.payment_id || `PAY-${String(p.id).padStart(4, '0')}`,
+        invoiceId: p.invoice_code,
+        customerName: p.customer_name,
+        customerEmail: p.customer_email || p.email,
+        customerPhone: p.customer_phone || p.phone,
+        propertyName: p.property_name,
+        propertyCode: p.property_code,
+        amount: parseFloat(p.amount),
+        paymentMethod: p.payment_method,
+        paymentDate: p.payment_date,
+        transactionReference: p.transaction_reference,
+        referenceNumber: p.reference_number,
+        status: p.status,
+        verifiedBy: p.verified_by,
+        verifiedAt: p.verified_at,
+        remarks: p.remarks
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching payment receipt:', error);
+    res.status(500).json({ success: false, message: 'Error fetching payment receipt', error: error.message });
+  }
+});
+
+// Generate and download receipt PDF
+router.get('/payments/:id/receipt/pdf', authenticate, canViewPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+
+    let query = `
+      SELECT p.*, 
+             i.invoice_id as invoice_code, i.total_amount as invoice_amount,
+             prop.community_name as property_name, prop.property_id as property_code,
+             prop.customer_email, prop.customer_phone
+      FROM payments p
+      LEFT JOIN invoices i ON p.invoice_id = i.id
+      LEFT JOIN onboarded_properties prop ON p.property_id = prop.id
+      WHERE p.id = ?
+    `;
+    const params = [id];
+
+    if (fpId) {
+      query += ' AND p.franchise_partner_id = ?';
+      params.push(fpId);
+    }
+
+    const [payments] = await pool.execute(query, params);
+
+    if (payments.length === 0) {
+      return res.status(404).json({ success: false, message: 'Payment not found' });
+    }
+
+    const p = payments[0];
+    const paymentData = {
+      paymentId: p.payment_id || `PAY-${String(p.id).padStart(4, '0')}`,
+      invoiceId: p.invoice_code,
+      customerName: p.customer_name,
+      customerEmail: p.customer_email || p.email,
+      customerPhone: p.customer_phone || p.phone,
+      propertyName: p.property_name,
+      propertyCode: p.property_code,
+      amount: parseFloat(p.amount),
+      paymentMethod: p.payment_method,
+      paymentDate: p.payment_date,
+      transactionReference: p.transaction_reference,
+      referenceNumber: p.reference_number,
+      status: p.status,
+      verifiedBy: p.verified_by,
+      verifiedAt: p.verified_at,
+      remarks: p.remarks
+    };
+
+    // Generate PDF
+    const { generateReceiptPDF } = require('../services/pdfService');
+    const pdfBuffer = await generateReceiptPDF(paymentData);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="Receipt_${paymentData.paymentId}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Error generating receipt PDF:', error);
+    res.status(500).json({ success: false, message: 'Error generating receipt PDF', error: error.message });
+  }
+});
+
+// Send receipt email to customer
+router.post('/payments/:id/receipt/send', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fpId = getFPScope(req);
+
+    let query = `
+      SELECT p.*, 
+             i.invoice_id as invoice_code, i.total_amount as invoice_amount,
+             prop.community_name as property_name, prop.property_id as property_code,
+             prop.customer_email, prop.customer_phone
+      FROM payments p
+      LEFT JOIN invoices i ON p.invoice_id = i.id
+      LEFT JOIN onboarded_properties prop ON p.property_id = prop.id
+      WHERE p.id = ?
+    `;
+    const params = [id];
+
+    if (fpId) {
+      query += ' AND p.franchise_partner_id = ?';
+      params.push(fpId);
+    }
+
+    const [payments] = await pool.execute(query, params);
+
+    if (payments.length === 0) {
+      return res.status(404).json({ success: false, message: 'Payment not found' });
+    }
+
+    const p = payments[0];
+    const customerEmail = p.customer_email || p.email;
+
+    if (!customerEmail) {
+      return res.status(400).json({ success: false, message: 'Customer email not found' });
+    }
+
+    const paymentData = {
+      paymentId: p.payment_id || `PAY-${String(p.id).padStart(4, '0')}`,
+      invoiceId: p.invoice_code,
+      customerName: p.customer_name,
+      customerEmail,
+      customerPhone: p.customer_phone || p.phone,
+      propertyName: p.property_name,
+      propertyCode: p.property_code,
+      amount: parseFloat(p.amount),
+      paymentMethod: p.payment_method,
+      paymentDate: p.payment_date,
+      transactionReference: p.transaction_reference,
+      referenceNumber: p.reference_number,
+      status: p.status,
+      verifiedBy: p.verified_by,
+      verifiedAt: p.verified_at,
+      remarks: p.remarks
+    };
+
+    // Generate PDF
+    const { generateReceiptPDF } = require('../services/pdfService');
+    const pdfBuffer = await generateReceiptPDF(paymentData);
+
+    // Send email with receipt
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
+    });
+
+    const paymentDateFormatted = p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric'
+    }) : '-';
+
+    const mailOptions = {
+      from: `"XLAND INFRA" <${process.env.SMTP_USER || 'noreply@xlandinfra.com'}>`,
+      to: customerEmail,
+      subject: `Payment Receipt - ${paymentData.paymentId} | XLAND INFRA`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #1a1a1a; padding: 20px; text-align: center;">
+            <h1 style="color: #C9A227; margin: 0;">XLAND INFRA</h1>
+            <p style="color: #888; margin: 5px 0 0;">PM SERVICES PVT LTD</p>
+          </div>
+          <div style="padding: 30px; background-color: #f9fafb;">
+            <h2 style="color: #16a34a; margin-top: 0;">Payment Received Successfully!</h2>
+            <p>Dear ${paymentData.customerName || 'Customer'},</p>
+            <p>Thank you for your payment. We have received your payment successfully.</p>
+            
+            <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border: 1px solid #e5e7eb;">
+              <h3 style="margin-top: 0; color: #333;">Payment Details</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr><td style="padding: 8px 0; color: #666;">Receipt No:</td><td style="padding: 8px 0; font-weight: bold;">${paymentData.paymentId}</td></tr>
+                <tr><td style="padding: 8px 0; color: #666;">Invoice ID:</td><td style="padding: 8px 0;">${paymentData.invoiceId || '-'}</td></tr>
+                <tr><td style="padding: 8px 0; color: #666;">Amount:</td><td style="padding: 8px 0; font-weight: bold; color: #16a34a; font-size: 18px;">₹${parseFloat(paymentData.amount).toLocaleString('en-IN')}</td></tr>
+                <tr><td style="padding: 8px 0; color: #666;">Date:</td><td style="padding: 8px 0;">${paymentDateFormatted}</td></tr>
+                <tr><td style="padding: 8px 0; color: #666;">Property:</td><td style="padding: 8px 0;">${paymentData.propertyName || '-'}</td></tr>
+              </table>
+            </div>
+            
+            <p>Please find your payment receipt attached to this email.</p>
+            <p style="color: #666; font-size: 14px;">If you have any questions, please contact us at support@xlandinfra.com</p>
+          </div>
+          <div style="background-color: #1a1a1a; padding: 15px; text-align: center;">
+            <p style="color: #888; margin: 0; font-size: 12px;">© ${new Date().getFullYear()} XLAND INFRA PM SERVICES PVT LTD. All rights reserved.</p>
+          </div>
+        </div>
+      `,
+      attachments: [{
+        filename: `Receipt_${paymentData.paymentId}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }]
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    // Update payment to mark receipt sent
+    await pool.execute(
+      'UPDATE payments SET receipt_sent = 1, receipt_sent_at = NOW() WHERE id = ?',
+      [id]
+    );
+
+    res.json({ success: true, message: 'Receipt sent successfully to ' + customerEmail });
+  } catch (error) {
+    console.error('Error sending receipt email:', error);
+    res.status(500).json({ success: false, message: 'Error sending receipt email', error: error.message });
   }
 });
 
