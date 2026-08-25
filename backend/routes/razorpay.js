@@ -820,11 +820,54 @@ async function handlePaymentLinkPaid(payload, webhookId) {
       `, [invoice.work_order_id]);
     }
 
-    // Log in payment history
+    // Extract Razorpay payment details for receipt
+    const paymentMethod = paymentEntity?.method || 'card'; // card, netbanking, upi, wallet
+    const cardLast4 = paymentEntity?.card?.last4 || null;
+    const cardNetwork = paymentEntity?.card?.network || null; // Visa, Mastercard, etc
+    const bankName = paymentEntity?.bank || null;
+    const razorpayReceiptId = paymentEntity?.receipt || paymentLinkEntity.receipt || null;
+    
+    // Build receipt description with payment method details
+    let receiptDescription = `Razorpay Payment Successful - ₹${amountPaid.toLocaleString('en-IN')}`;
+    if (paymentMethod === 'card' && cardLast4) {
+      receiptDescription += ` | ${cardNetwork || 'Card'}****${cardLast4}`;
+    } else if (paymentMethod === 'netbanking' && bankName) {
+      receiptDescription += ` | Net Banking - ${bankName}`;
+    } else if (paymentMethod === 'upi') {
+      receiptDescription += ` | UPI`;
+    }
+    receiptDescription += ` | Txn: ${paymentEntity?.id || paymentLinkId}`;
+
+    // Log in payment history with Razorpay receipt details
     await connection.execute(`
-      INSERT INTO payment_history (invoice_id, action, new_status, amount, description, performed_by_name, performed_by_role)
-      VALUES (?, 'created', 'completed', ?, ?, 'Razorpay', 'system')
-    `, [invoice.id, amountPaid, `Online payment received via Razorpay (${paymentEntity?.id || paymentLinkId})`]);
+      INSERT INTO payment_history (
+        invoice_id, payment_id, action, new_status, amount, description, 
+        performed_by_name, performed_by_role,
+        razorpay_payment_id, razorpay_receipt_id, payment_method_details
+      )
+      VALUES (?, ?, 'razorpay_payment', 'completed', ?, ?, 'Razorpay', 'system', ?, ?, ?)
+    `, [
+      invoice.id, 
+      paymentId,
+      amountPaid, 
+      receiptDescription,
+      paymentEntity?.id || null,
+      razorpayReceiptId,
+      JSON.stringify({
+        method: paymentMethod,
+        card_last4: cardLast4,
+        card_network: cardNetwork,
+        bank: bankName,
+        email: paymentEntity?.email || invoice.customer_email,
+        contact: paymentEntity?.contact || invoice.customer_phone,
+        invoice_id: invoice.invoice_id,
+        invoice_amount: parseFloat(invoice.total_amount),
+        amount_paid: amountPaid,
+        balance_remaining: Math.max(0, newBalance),
+        payment_date: new Date().toISOString(),
+        razorpay_payment_link_id: paymentLinkId
+      })
+    ]);
 
     // Update webhook record
     await connection.execute(

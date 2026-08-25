@@ -2824,13 +2824,16 @@ router.put('/payments/:id', authenticate, canEditPayments, async (req, res) => {
 router.get('/history', authenticate, canViewPayments, async (req, res) => {
   try {
     const fpId = getFPScope(req);
-    const { invoiceId, paymentId, startDate, endDate } = req.query;
+    const { invoiceId, paymentId, startDate, endDate, type } = req.query;
 
     let query = `
-      SELECT ph.*, p.payment_id as payment_code, i.invoice_id as invoice_code
+      SELECT ph.*, p.payment_id as payment_code, i.invoice_id as invoice_code,
+             i.customer_name, i.total_amount as invoice_total,
+             prop.community_name as property_name
       FROM payment_history ph
       LEFT JOIN payments p ON ph.payment_id = p.id
       LEFT JOIN invoices i ON ph.invoice_id = i.id
+      LEFT JOIN onboarded_properties prop ON i.property_id = prop.id
       WHERE 1=1
     `;
     const params = [];
@@ -2838,6 +2841,11 @@ router.get('/history', authenticate, canViewPayments, async (req, res) => {
     if (fpId) {
       query += ' AND (p.franchise_partner_id = ? OR i.franchise_partner_id = ?)';
       params.push(fpId, fpId);
+    }
+
+    // Filter for Razorpay transactions only
+    if (type === 'razorpay') {
+      query += " AND ph.action = 'razorpay_payment'";
     }
 
     if (invoiceId) {
@@ -2866,25 +2874,151 @@ router.get('/history', authenticate, canViewPayments, async (req, res) => {
 
     res.json({
       success: true,
-      data: history.map(h => ({
-        id: h.id,
-        paymentId: h.payment_id,
-        paymentCode: h.payment_code,
-        invoiceId: h.invoice_id,
-        invoiceCode: h.invoice_code,
-        action: h.action,
-        oldStatus: h.old_status,
-        newStatus: h.new_status,
-        amount: h.amount ? parseFloat(h.amount) : null,
-        description: h.description,
-        performedBy: h.performed_by_name,
-        performedByRole: h.performed_by_role,
-        createdAt: h.created_at
-      }))
+      data: history.map(h => {
+        // Parse payment method details if available
+        let methodDetails = null;
+        try {
+          if (h.payment_method_details) {
+            methodDetails = JSON.parse(h.payment_method_details);
+          }
+        } catch (e) {}
+
+        return {
+          id: h.id,
+          paymentId: h.payment_id,
+          paymentCode: h.payment_code,
+          invoiceId: h.invoice_id,
+          invoiceCode: h.invoice_code,
+          customerName: h.customer_name,
+          propertyName: h.property_name,
+          invoiceTotal: h.invoice_total ? parseFloat(h.invoice_total) : null,
+          action: h.action,
+          oldStatus: h.old_status,
+          newStatus: h.new_status,
+          amount: h.amount ? parseFloat(h.amount) : null,
+          description: h.description,
+          performedBy: h.performed_by_name,
+          performedByRole: h.performed_by_role,
+          createdAt: h.created_at,
+          // Razorpay specific fields
+          isRazorpay: h.action === 'razorpay_payment',
+          razorpayPaymentId: h.razorpay_payment_id || null,
+          razorpayReceiptId: h.razorpay_receipt_id || null,
+          methodDetails: methodDetails
+        };
+      })
     });
   } catch (error) {
     console.error('Error fetching payment history:', error);
     res.status(500).json({ success: false, message: 'Error fetching payment history', error: error.message });
+  }
+});
+
+// Get Razorpay transaction history with receipt details
+router.get('/razorpay-history', authenticate, canViewPayments, async (req, res) => {
+  try {
+    const fpId = getFPScope(req);
+    const { startDate, endDate, search } = req.query;
+
+    let query = `
+      SELECT ph.*, 
+             p.payment_id as payment_code, p.amount as payment_amount,
+             i.invoice_id as invoice_code, i.customer_name, i.total_amount as invoice_total,
+             i.balance_amount as invoice_balance,
+             prop.community_name as property_name, prop.property_id as property_code
+      FROM payment_history ph
+      LEFT JOIN payments p ON ph.payment_id = p.id
+      LEFT JOIN invoices i ON ph.invoice_id = i.id
+      LEFT JOIN onboarded_properties prop ON i.property_id = prop.id
+      WHERE ph.action = 'razorpay_payment'
+    `;
+    const params = [];
+
+    if (fpId) {
+      query += ' AND i.franchise_partner_id = ?';
+      params.push(fpId);
+    }
+
+    if (startDate) {
+      query += ' AND DATE(ph.created_at) >= ?';
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      query += ' AND DATE(ph.created_at) <= ?';
+      params.push(endDate);
+    }
+
+    if (search) {
+      query += ` AND (
+        i.invoice_id LIKE ? OR 
+        i.customer_name LIKE ? OR 
+        p.payment_id LIKE ? OR
+        ph.razorpay_payment_id LIKE ?
+      )`;
+      const searchPattern = `%${search}%`;
+      params.push(searchPattern, searchPattern, searchPattern, searchPattern);
+    }
+
+    query += ' ORDER BY ph.created_at DESC LIMIT 100';
+
+    const [history] = await pool.execute(query, params);
+
+    res.json({
+      success: true,
+      data: history.map(h => {
+        let methodDetails = null;
+        try {
+          if (h.payment_method_details) {
+            methodDetails = JSON.parse(h.payment_method_details);
+          }
+        } catch (e) {}
+
+        // Determine payment method display
+        let paymentMethodDisplay = 'Card/Net Banking';
+        if (methodDetails) {
+          if (methodDetails.method === 'card' && methodDetails.card_last4) {
+            paymentMethodDisplay = `${methodDetails.card_network || 'Card'}****${methodDetails.card_last4}`;
+          } else if (methodDetails.method === 'netbanking' && methodDetails.bank) {
+            paymentMethodDisplay = `Net Banking - ${methodDetails.bank}`;
+          } else if (methodDetails.method === 'upi') {
+            paymentMethodDisplay = 'UPI';
+          }
+        }
+
+        return {
+          id: h.id,
+          // Receipt Info
+          receiptId: h.razorpay_receipt_id || `RZP-${h.id}`,
+          razorpayPaymentId: h.razorpay_payment_id,
+          transactionDate: h.created_at,
+          // Invoice Info
+          invoiceId: h.invoice_code,
+          invoiceTotal: h.invoice_total ? parseFloat(h.invoice_total) : null,
+          // Payment Info
+          paymentId: h.payment_code,
+          amountPaid: h.amount ? parseFloat(h.amount) : (h.payment_amount ? parseFloat(h.payment_amount) : null),
+          balanceRemaining: methodDetails?.balance_remaining || (h.invoice_balance ? parseFloat(h.invoice_balance) : 0),
+          // Customer Info
+          customerName: h.customer_name,
+          customerEmail: methodDetails?.email || null,
+          customerPhone: methodDetails?.contact || null,
+          propertyName: h.property_name,
+          propertyCode: h.property_code,
+          // Payment Method
+          paymentMethod: paymentMethodDisplay,
+          methodDetails: methodDetails,
+          // Status
+          status: h.new_status === 'completed' ? 'Successful' : h.new_status,
+          description: h.description,
+          // Razorpay sends receipt automatically
+          receiptSentByRazorpay: true
+        };
+      })
+    });
+  } catch (error) {
+    console.error('Error fetching Razorpay history:', error);
+    res.status(500).json({ success: false, message: 'Error fetching Razorpay history', error: error.message });
   }
 });
 
