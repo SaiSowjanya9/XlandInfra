@@ -79,15 +79,23 @@ const CardLogos = () => (
 // UPI App logos component - matching official logos
 const UPIAppLogos = () => (
   <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-    <div className="px-2 py-1 bg-white rounded border border-gray-200">
-      <span className="text-xs font-medium text-gray-700">G Pay</span>
+    {/* Google Pay - Colorful G + Pay */}
+    <div className="flex items-center gap-0.5 px-1.5 py-1 bg-white rounded border border-gray-200">
+      <svg width="14" height="14" viewBox="0 0 24 24">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      <span className="text-[10px] font-medium text-gray-600">Pay</span>
     </div>
     {/* PhonePe - Purple circle with "पे" */}
     <div className="w-7 h-7 bg-[#5f259f] rounded-full flex items-center justify-center">
       <span className="text-white text-sm font-bold" style={{ fontFamily: 'Arial, sans-serif' }}>पे</span>
     </div>
-    <div className="px-2 py-1 bg-[#00baf2] rounded">
-      <span className="text-[10px] font-bold text-white">pay<span className="text-[#002970]">tm</span></span>
+    {/* Paytm - Dark blue circle outline with paytm text */}
+    <div className="w-7 h-7 bg-white rounded-full flex items-center justify-center border-2 border-[#00325b]">
+      <span className="text-[7px] font-bold"><span className="text-[#00325b]">pay</span><span className="text-[#00baf2]">tm</span></span>
     </div>
     <div className="px-2 py-1 bg-[#ed752e] rounded">
       <span className="text-[10px] font-bold text-white">BHIM</span>
@@ -1409,16 +1417,22 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   onChange={(e) => setSelectedMethod(e.target.value)} 
                   className="mt-2 w-4 h-4 text-blue-600"
                 />
-                {/* Bank Building Icon - Classical pillars */}
-                <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center border border-amber-200 flex-shrink-0">
-                  <svg width="26" height="24" viewBox="0 0 26 24" fill="none">
-                    <path d="M13 1L2 8H24L13 1Z" fill="#f59e0b" stroke="#d97706" strokeWidth="1" strokeLinejoin="round"/>
-                    <rect x="2" y="8" width="22" height="2" fill="#fbbf24"/>
-                    <rect x="4" y="10" width="2" height="10" fill="#f59e0b"/>
-                    <rect x="9" y="10" width="2" height="10" fill="#f59e0b"/>
-                    <rect x="15" y="10" width="2" height="10" fill="#f59e0b"/>
-                    <rect x="20" y="10" width="2" height="10" fill="#f59e0b"/>
-                    <rect x="2" y="20" width="22" height="3" rx="0.5" fill="#fbbf24" stroke="#d97706" strokeWidth="0.5"/>
+                {/* Bank Building Icon - Line art style */}
+                <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-200 flex-shrink-0">
+                  <svg width="28" height="26" viewBox="0 0 32 30" fill="none" stroke="#1f2937" strokeWidth="1.5">
+                    {/* Roof triangle */}
+                    <path d="M16 2L3 10H29L16 2Z" strokeLinejoin="round" fill="none"/>
+                    {/* Circle in roof */}
+                    <circle cx="16" cy="7" r="2" fill="none"/>
+                    {/* Top beam */}
+                    <rect x="3" y="10" width="26" height="2" fill="none"/>
+                    {/* Pillars */}
+                    <rect x="6" y="12" width="2" height="12" fill="none"/>
+                    <rect x="12" y="12" width="2" height="12" fill="none"/>
+                    <rect x="18" y="12" width="2" height="12" fill="none"/>
+                    <rect x="24" y="12" width="2" height="12" fill="none"/>
+                    {/* Base */}
+                    <rect x="3" y="24" width="26" height="3" rx="0.5" fill="none"/>
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -1437,14 +1451,24 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   onChange={(e) => setSelectedMethod(e.target.value)} 
                   className="mt-2 w-4 h-4 text-blue-600"
                 />
-                {/* Cash/Banknote Icon with coin */}
-                <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center border border-amber-200 flex-shrink-0">
-                  <svg width="28" height="22" viewBox="0 0 28 22" fill="none">
-                    <rect x="1" y="4" width="22" height="14" rx="2" fill="#fef3c7" stroke="#f59e0b" strokeWidth="1.5"/>
-                    <circle cx="12" cy="11" r="4" fill="#fbbf24" stroke="#d97706" strokeWidth="1"/>
-                    <text x="12" y="13" textAnchor="middle" fill="#92400e" fontSize="5" fontWeight="bold">₹</text>
-                    <circle cx="22" cy="15" r="5" fill="#fbbf24" stroke="#d97706" strokeWidth="1"/>
-                    <text x="22" y="17" textAnchor="middle" fill="#92400e" fontSize="5" fontWeight="bold">₹</text>
+                {/* Cash - Rupee Banknote with coins */}
+                <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-200 flex-shrink-0">
+                  <svg width="32" height="24" viewBox="0 0 40 28" fill="none">
+                    {/* Banknote */}
+                    <rect x="1" y="2" width="26" height="16" rx="1" fill="white" stroke="#1f2937" strokeWidth="2"/>
+                    {/* Corner decorations */}
+                    <path d="M1 5C1 3.5 2 2 4 2" stroke="#1f2937" strokeWidth="1.5" fill="none"/>
+                    <path d="M27 5C27 3.5 26 2 24 2" stroke="#1f2937" strokeWidth="1.5" fill="none"/>
+                    <path d="M1 15C1 16.5 2 18 4 18" stroke="#1f2937" strokeWidth="1.5" fill="none"/>
+                    <path d="M27 15C27 16.5 26 18 24 18" stroke="#1f2937" strokeWidth="1.5" fill="none"/>
+                    {/* Rupee circle in banknote */}
+                    <circle cx="14" cy="10" r="5" fill="#1f2937"/>
+                    <text x="14" y="13" textAnchor="middle" fill="white" fontSize="7" fontWeight="bold">₹</text>
+                    {/* Stacked coins */}
+                    <ellipse cx="32" cy="22" rx="6" ry="2" fill="white" stroke="#1f2937" strokeWidth="1.5"/>
+                    <ellipse cx="32" cy="19" rx="6" ry="2" fill="white" stroke="#1f2937" strokeWidth="1.5"/>
+                    <ellipse cx="32" cy="16" rx="6" ry="2" fill="white" stroke="#1f2937" strokeWidth="1.5"/>
+                    <text x="32" y="18.5" textAnchor="middle" fill="#1f2937" fontSize="5" fontWeight="bold">₹</text>
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -1463,15 +1487,18 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   onChange={(e) => setSelectedMethod(e.target.value)} 
                   className="mt-2 w-4 h-4 text-blue-600"
                 />
-                {/* Cheque Icon with checkmark */}
-                <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center border border-red-200 flex-shrink-0">
-                  <svg width="26" height="22" viewBox="0 0 26 22" fill="none">
-                    <rect x="1" y="2" width="20" height="16" rx="2" fill="#fef2f2" stroke="#ef4444" strokeWidth="1.5"/>
-                    <line x1="4" y1="7" x2="14" y2="7" stroke="#fca5a5" strokeWidth="1.5"/>
-                    <line x1="4" y1="10" x2="18" y2="10" stroke="#fca5a5" strokeWidth="1.5"/>
-                    <line x1="4" y1="13" x2="12" y2="13" stroke="#fca5a5" strokeWidth="1.5"/>
-                    <circle cx="20" cy="16" r="5" fill="#ef4444"/>
-                    <path d="M17.5 16L19 17.5L22.5 14" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                {/* Cheque Icon - Line art style matching other icons */}
+                <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-200 flex-shrink-0">
+                  <svg width="28" height="22" viewBox="0 0 30 24" fill="none" stroke="#1f2937" strokeWidth="1.5">
+                    {/* Cheque paper */}
+                    <rect x="1" y="2" width="22" height="16" rx="1" fill="none"/>
+                    {/* Lines on cheque */}
+                    <line x1="4" y1="7" x2="14" y2="7"/>
+                    <line x1="4" y1="10" x2="20" y2="10"/>
+                    <line x1="4" y1="13" x2="12" y2="13"/>
+                    {/* Checkmark circle */}
+                    <circle cx="24" cy="18" r="5" fill="#1f2937" stroke="none"/>
+                    <path d="M21.5 18L23 19.5L26.5 16" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
