@@ -1189,9 +1189,13 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 <div>
                   <h3 className="font-semibold text-blue-900">Razorpay Transaction History</h3>
                   <p className="text-sm text-blue-700 mt-1">
-                    For Card, Debit Card, Credit Card, and Net Banking payments processed through Razorpay, 
+                    For <strong>Card (Credit/Debit), Net Banking, and UPI</strong> payments processed through Razorpay, 
                     <strong> receipts are automatically sent to customers by Razorpay</strong>. 
                     Each transaction below shows the receipt details.
+                  </p>
+                  <p className="text-xs text-blue-600 mt-2 flex items-center gap-1">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    For Cash, Cheque, and Bank Transfer payments, receipts are sent by XLAND INFRA from the "All Payments" tab.
                   </p>
                 </div>
               </div>
@@ -1280,11 +1284,25 @@ const Payments = ({ user, portalType = 'admin' }) => {
 
             {/* Footer Note */}
             <div className="bg-gray-50 border-t border-gray-200 px-6 py-4">
-              <p className="text-xs text-gray-500 flex items-center gap-2">
-                <Info className="w-4 h-4" />
-                Razorpay automatically sends payment receipts to customers via email/SMS for all card and net banking transactions. 
-                These receipts include transaction ID, amount, and payment confirmation.
-              </p>
+              <div className="flex flex-col gap-2">
+                <p className="text-xs text-gray-600 font-medium">Receipt Distribution:</p>
+                <div className="grid grid-cols-2 gap-4 text-xs">
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-1"></div>
+                    <div>
+                      <p className="font-medium text-gray-700">Razorpay sends receipts for:</p>
+                      <p className="text-gray-500">Card (Credit/Debit), Net Banking, UPI</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full mt-1"></div>
+                    <div>
+                      <p className="font-medium text-gray-700">XLAND INFRA sends receipts for:</p>
+                      <p className="text-gray-500">Cash, Cheque, Bank Transfer</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
