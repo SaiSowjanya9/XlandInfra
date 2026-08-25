@@ -1359,16 +1359,12 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   onChange={(e) => setSelectedMethod(e.target.value)} 
                   className="mt-2 w-4 h-4 text-blue-600"
                 />
-                {/* Card Icon - Blue card with chip and stripe */}
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                {/* Card Icon - Blue card with chip */}
+                <div className="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center border-2 border-gray-200 flex-shrink-0">
                   <svg width="28" height="22" viewBox="0 0 28 22" fill="none">
-                    <rect x="1" y="1" width="26" height="20" rx="3" fill="#3b82f6" stroke="#2563eb" strokeWidth="1"/>
+                    <rect x="1" y="1" width="26" height="20" rx="3" fill="#3b82f6"/>
                     <rect x="4" y="5" width="5" height="4" rx="1" fill="#fbbf24"/>
-                    <line x1="4" y1="6" x2="9" y2="6" stroke="#f59e0b" strokeWidth="0.5"/>
-                    <line x1="4" y1="7.5" x2="9" y2="7.5" stroke="#f59e0b" strokeWidth="0.5"/>
                     <rect x="1" y="11" width="26" height="3" fill="#1d4ed8"/>
-                    <circle cx="22" cy="16" r="2" fill="#60a5fa" opacity="0.6"/>
-                    <circle cx="25" cy="16" r="2" fill="#93c5fd" opacity="0.6"/>
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -1389,15 +1385,16 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   className="mt-2 w-4 h-4 text-blue-600"
                 />
                 {/* Official UPI Logo Icon */}
-                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center border-2 border-gray-400 flex-shrink-0 p-1">
-                  <svg viewBox="0 0 80 50" className="w-full h-full">
+                <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center border-2 border-gray-200 flex-shrink-0">
+                  <svg viewBox="0 0 60 45" className="w-10 h-8">
                     {/* UPI Text */}
-                    <text x="5" y="28" fill="#6b7280" fontSize="22" fontWeight="bold" fontFamily="Arial, sans-serif">UPI</text>
-                    {/* Orange and Green triangles on the I */}
-                    <polygon points="52,8 60,8 52,20" fill="#f97316"/>
-                    <polygon points="52,20 60,20 60,32" fill="#22c55e"/>
-                    {/* UNIFIED PAYMENTS INTERFACE text */}
-                    <text x="5" y="42" fill="#9ca3af" fontSize="5.5" fontFamily="Arial, sans-serif" letterSpacing="0.5">UNIFIED PAYMENTS INTERFACE</text>
+                    <text x="2" y="22" fill="#5a5a5a" fontSize="18" fontWeight="bold" fontFamily="Arial, sans-serif" letterSpacing="-1">UPI</text>
+                    {/* Orange triangle - pointing down-left */}
+                    <polygon points="38,6 44,6 38,16" fill="#f97316"/>
+                    {/* Green triangle - pointing right */}
+                    <polygon points="38,16 44,16 44,26" fill="#22c55e"/>
+                    {/* UNIFIED PAYMENTS text */}
+                    <text x="2" y="35" fill="#9ca3af" fontSize="5" fontFamily="Arial, sans-serif" letterSpacing="0.3">UNIFIED PAYMENTS</text>
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -1418,8 +1415,8 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   className="mt-2 w-4 h-4 text-blue-600"
                 />
                 {/* Bank Building Icon - Line art style */}
-                <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-200 flex-shrink-0">
-                  <svg width="28" height="26" viewBox="0 0 32 30" fill="none" stroke="#1f2937" strokeWidth="1.5">
+                <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center border-2 border-gray-200 flex-shrink-0">
+                  <svg width="28" height="26" viewBox="0 0 32 30" fill="none" stroke="#6b7280" strokeWidth="1.5">
                     {/* Roof triangle */}
                     <path d="M16 2L3 10H29L16 2Z" strokeLinejoin="round" fill="none"/>
                     {/* Circle in roof */}
@@ -1452,23 +1449,18 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   className="mt-2 w-4 h-4 text-blue-600"
                 />
                 {/* Cash - Rupee Banknote with coins */}
-                <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-200 flex-shrink-0">
-                  <svg width="32" height="24" viewBox="0 0 40 28" fill="none">
+                <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center border-2 border-gray-200 flex-shrink-0">
+                  <svg width="32" height="24" viewBox="0 0 40 28" fill="none" stroke="#6b7280" strokeWidth="1.5">
                     {/* Banknote */}
-                    <rect x="1" y="2" width="26" height="16" rx="1" fill="white" stroke="#1f2937" strokeWidth="2"/>
-                    {/* Corner decorations */}
-                    <path d="M1 5C1 3.5 2 2 4 2" stroke="#1f2937" strokeWidth="1.5" fill="none"/>
-                    <path d="M27 5C27 3.5 26 2 24 2" stroke="#1f2937" strokeWidth="1.5" fill="none"/>
-                    <path d="M1 15C1 16.5 2 18 4 18" stroke="#1f2937" strokeWidth="1.5" fill="none"/>
-                    <path d="M27 15C27 16.5 26 18 24 18" stroke="#1f2937" strokeWidth="1.5" fill="none"/>
+                    <rect x="1" y="2" width="24" height="16" rx="1" fill="none"/>
                     {/* Rupee circle in banknote */}
-                    <circle cx="14" cy="10" r="5" fill="#1f2937"/>
-                    <text x="14" y="13" textAnchor="middle" fill="white" fontSize="7" fontWeight="bold">₹</text>
+                    <circle cx="13" cy="10" r="4" fill="#6b7280" stroke="none"/>
+                    <text x="13" y="12.5" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold" stroke="none">₹</text>
                     {/* Stacked coins */}
-                    <ellipse cx="32" cy="22" rx="6" ry="2" fill="white" stroke="#1f2937" strokeWidth="1.5"/>
-                    <ellipse cx="32" cy="19" rx="6" ry="2" fill="white" stroke="#1f2937" strokeWidth="1.5"/>
-                    <ellipse cx="32" cy="16" rx="6" ry="2" fill="white" stroke="#1f2937" strokeWidth="1.5"/>
-                    <text x="32" y="18.5" textAnchor="middle" fill="#1f2937" fontSize="5" fontWeight="bold">₹</text>
+                    <ellipse cx="32" cy="20" rx="5" ry="2" fill="none"/>
+                    <ellipse cx="32" cy="17" rx="5" ry="2" fill="none"/>
+                    <ellipse cx="32" cy="14" rx="5" ry="2" fill="none"/>
+                    <text x="32" y="16" textAnchor="middle" fill="#6b7280" fontSize="4" fontWeight="bold" stroke="none">₹</text>
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -1488,17 +1480,17 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   className="mt-2 w-4 h-4 text-blue-600"
                 />
                 {/* Cheque Icon - Line art style matching other icons */}
-                <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-200 flex-shrink-0">
-                  <svg width="28" height="22" viewBox="0 0 30 24" fill="none" stroke="#1f2937" strokeWidth="1.5">
+                <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center border-2 border-gray-200 flex-shrink-0">
+                  <svg width="28" height="22" viewBox="0 0 32 26" fill="none" stroke="#6b7280" strokeWidth="1.5">
                     {/* Cheque paper */}
                     <rect x="1" y="2" width="22" height="16" rx="1" fill="none"/>
                     {/* Lines on cheque */}
-                    <line x1="4" y1="7" x2="14" y2="7"/>
+                    <line x1="4" y1="6" x2="14" y2="6"/>
                     <line x1="4" y1="10" x2="20" y2="10"/>
-                    <line x1="4" y1="13" x2="12" y2="13"/>
+                    <line x1="4" y1="14" x2="12" y2="14"/>
                     {/* Checkmark circle */}
-                    <circle cx="24" cy="18" r="5" fill="#1f2937" stroke="none"/>
-                    <path d="M21.5 18L23 19.5L26.5 16" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="26" cy="20" r="5" fill="#22c55e" stroke="none"/>
+                    <path d="M23.5 20L25 21.5L28.5 18" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
