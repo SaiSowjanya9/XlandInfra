@@ -76,14 +76,15 @@ const CardLogos = () => (
   </div>
 );
 
-// UPI App logos component - matching Image 1 exactly
+// UPI App logos component - matching official logos
 const UPIAppLogos = () => (
   <div className="flex items-center gap-1.5 mt-2 flex-wrap">
     <div className="px-2 py-1 bg-white rounded border border-gray-200">
       <span className="text-xs font-medium text-gray-700">G Pay</span>
     </div>
-    <div className="w-6 h-6 bg-[#5f259f] rounded flex items-center justify-center">
-      <div className="w-4 h-4 border-2 border-white rounded-full"></div>
+    {/* PhonePe - Purple circle with "पे" */}
+    <div className="w-7 h-7 bg-[#5f259f] rounded-full flex items-center justify-center">
+      <span className="text-white text-sm font-bold" style={{ fontFamily: 'Arial, sans-serif' }}>पे</span>
     </div>
     <div className="px-2 py-1 bg-[#00baf2] rounded">
       <span className="text-[10px] font-bold text-white">pay<span className="text-[#002970]">tm</span></span>
@@ -1363,14 +1364,10 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-semibold text-gray-900 text-sm">Debit / Card Payments & Net Banking</h4>
-                    <RazorpayBadge />
-                  </div>
+                  <h4 className="font-semibold text-gray-900 text-sm">Debit / Card Payments & Net Banking</h4>
                   <p className="text-xs text-gray-500 mt-0.5">Pay securely using your debit card, credit card or net banking.</p>
                   <CardLogos />
                 </div>
-                <FeeIndicator />
               </label>
 
               {/* UPI */}
@@ -1383,24 +1380,23 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   onChange={(e) => setSelectedMethod(e.target.value)} 
                   className="mt-2 w-4 h-4 text-blue-600"
                 />
-                {/* UPI Logo Icon */}
-                <div className="w-12 h-12 bg-white rounded-xl flex flex-col items-center justify-center border border-gray-200 flex-shrink-0">
-                  <div className="flex items-center">
-                    <span className="text-[#5f259f] font-bold text-sm tracking-tight">UPI</span>
-                    <div className="w-0.5 h-4 bg-gradient-to-b from-[#5f259f] via-[#097a44] to-[#097a44] ml-0.5"></div>
-                  </div>
-                  <span className="text-[5px] text-gray-400 tracking-widest mt-0.5">UNIFIED PAYMENTS</span>
-                  <span className="text-[5px] text-gray-400 tracking-widest -mt-0.5">INTERFACE</span>
+                {/* Official UPI Logo Icon */}
+                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center border-2 border-gray-400 flex-shrink-0 p-1">
+                  <svg viewBox="0 0 80 50" className="w-full h-full">
+                    {/* UPI Text */}
+                    <text x="5" y="28" fill="#6b7280" fontSize="22" fontWeight="bold" fontFamily="Arial, sans-serif">UPI</text>
+                    {/* Orange and Green triangles on the I */}
+                    <polygon points="52,8 60,8 52,20" fill="#f97316"/>
+                    <polygon points="52,20 60,20 60,32" fill="#22c55e"/>
+                    {/* UNIFIED PAYMENTS INTERFACE text */}
+                    <text x="5" y="42" fill="#9ca3af" fontSize="5.5" fontFamily="Arial, sans-serif" letterSpacing="0.5">UNIFIED PAYMENTS INTERFACE</text>
+                  </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-semibold text-gray-900 text-sm">UPI (QR / UPI ID)</h4>
-                    <YourCollectionBadge />
-                  </div>
+                  <h4 className="font-semibold text-gray-900 text-sm">UPI (QR / UPI ID)</h4>
                   <p className="text-xs text-gray-500 mt-0.5">Scan QR code or pay using any UPI app.</p>
                   <UPIAppLogos />
                 </div>
-                <NoFeesIndicator />
               </label>
 
               {/* Bank Transfer */}
@@ -1426,13 +1422,9 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-semibold text-gray-900 text-sm">Bank Transfer</h4>
-                    <YourCollectionBadge />
-                  </div>
+                  <h4 className="font-semibold text-gray-900 text-sm">Bank Transfer</h4>
                   <p className="text-xs text-gray-500 mt-0.5">Transfer directly from your bank account.</p>
                 </div>
-                <NoFeesIndicator />
               </label>
 
               {/* Cash */}
@@ -1456,13 +1448,9 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-semibold text-gray-900 text-sm">Cash</h4>
-                    <YourCollectionBadge />
-                  </div>
+                  <h4 className="font-semibold text-gray-900 text-sm">Cash</h4>
                   <p className="text-xs text-gray-500 mt-0.5">Pay with cash at our office / collection point.</p>
                 </div>
-                <NoFeesIndicator />
               </label>
 
               {/* Check */}
@@ -1487,13 +1475,9 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-semibold text-gray-900 text-sm">Check</h4>
-                    <YourCollectionBadge />
-                  </div>
+                  <h4 className="font-semibold text-gray-900 text-sm">Check</h4>
                   <p className="text-xs text-gray-500 mt-0.5">Pay using cheque.</p>
                 </div>
-                <NoFeesIndicator />
               </label>
             </div>
           </div>
