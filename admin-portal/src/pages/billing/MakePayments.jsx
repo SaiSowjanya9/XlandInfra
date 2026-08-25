@@ -57,93 +57,90 @@ const getDaysUntilDue = (dueDate) => {
   return diffDays;
 };
 
-// Card logos component
+// Card logos component - matching Image 1 exactly
 const CardLogos = () => (
-  <div className="flex items-center gap-2 mt-3 flex-wrap">
-    <div className="px-2.5 py-1 bg-[#1a1f71] rounded text-white text-[11px] font-bold tracking-wide">VISA</div>
-    <div className="w-7 h-5 bg-gradient-to-r from-[#eb001b] via-[#ff5f00] to-[#f79e1b] rounded flex items-center justify-center">
+  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+    <div className="px-2 py-0.5 bg-[#1a1f71] rounded text-white text-[10px] font-bold tracking-wide">VISA</div>
+    <div className="w-6 h-4 rounded flex items-center justify-center">
       <div className="flex">
-        <div className="w-3 h-3 bg-[#eb001b] rounded-full opacity-80"></div>
-        <div className="w-3 h-3 bg-[#f79e1b] rounded-full -ml-1.5 opacity-80"></div>
+        <div className="w-2.5 h-2.5 bg-[#eb001b] rounded-full"></div>
+        <div className="w-2.5 h-2.5 bg-[#f79e1b] rounded-full -ml-1"></div>
       </div>
     </div>
-    <div className="px-2 py-1 bg-[#097a44] rounded text-white text-[10px] font-bold">RuPay</div>
-    <div className="px-2 py-1 bg-[#016fd0] rounded text-white text-[10px] font-bold">maestro</div>
-    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded border border-gray-200">
-      <Building2 className="w-3.5 h-3.5 text-gray-600" />
-      <span className="text-[11px] text-gray-700 font-medium">Net Banking</span>
+    <div className="px-1.5 py-0.5 bg-[#097a44] rounded text-white text-[9px] font-bold">RuPay</div>
+    <div className="px-1.5 py-0.5 bg-[#016fd0] rounded text-white text-[9px] font-bold">maestro</div>
+    <div className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded border border-gray-200">
+      <Building2 className="w-3 h-3 text-gray-600" />
+      <span className="text-[10px] text-gray-700 font-medium">Net Banking</span>
     </div>
   </div>
 );
 
-// UPI App logos component
+// UPI App logos component - matching Image 1 exactly
 const UPIAppLogos = () => (
-  <div className="flex items-center gap-2 mt-3 flex-wrap">
-    <div className="flex items-center gap-1 px-2.5 py-1.5 bg-white rounded-lg border border-gray-200">
-      <span className="text-sm font-medium">
-        <span className="text-[#4285f4]">G</span>
-        <span className="text-gray-700"> Pay</span>
-      </span>
+  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+    <div className="px-2 py-1 bg-white rounded border border-gray-200">
+      <span className="text-xs font-medium text-gray-700">G Pay</span>
     </div>
-    <div className="w-8 h-8 bg-[#5f259f] rounded-lg flex items-center justify-center">
-      <div className="w-5 h-5 border-2 border-white rounded-full"></div>
+    <div className="w-6 h-6 bg-[#5f259f] rounded flex items-center justify-center">
+      <div className="w-4 h-4 border-2 border-white rounded-full"></div>
     </div>
-    <div className="px-2.5 py-1.5 bg-[#00baf2] rounded-lg">
-      <span className="text-sm font-bold text-white">pay<span className="text-[#002970]">tm</span></span>
+    <div className="px-2 py-1 bg-[#00baf2] rounded">
+      <span className="text-[10px] font-bold text-white">pay<span className="text-[#002970]">tm</span></span>
     </div>
-    <div className="px-2.5 py-1.5 bg-[#ed752e] rounded-lg">
-      <span className="text-sm font-bold text-white">BHIM</span>
+    <div className="px-2 py-1 bg-[#ed752e] rounded">
+      <span className="text-[10px] font-bold text-white">BHIM</span>
     </div>
-    <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200">
-      <span className="text-gray-500 font-bold text-sm">...</span>
+    <div className="w-6 h-6 bg-gray-100 rounded flex items-center justify-center border border-gray-200">
+      <span className="text-gray-400 font-bold text-xs">...</span>
     </div>
   </div>
 );
 
-// Your Collection Badge
+// Your Collection Badge - green badge matching Image 1
 const YourCollectionBadge = () => (
-  <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-semibold rounded-full border border-green-200">
+  <span className="px-2 py-0.5 bg-green-500 text-white text-[9px] font-semibold rounded">
     Your Collection
   </span>
 );
 
-// Powered by Razorpay Badge
+// Powered by Razorpay Badge - blue badge matching Image 1
 const RazorpayBadge = () => (
-  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-semibold rounded-full border border-blue-200">
+  <span className="px-2 py-0.5 bg-blue-500 text-white text-[9px] font-semibold rounded">
     Powered by Razorpay
   </span>
 );
 
-// No Fees indicator
+// No Fees indicator - matching Image 1 layout
 const NoFeesIndicator = () => (
-  <div className="text-right">
-    <p className="text-green-600 font-semibold text-sm">No Additional Charges</p>
-    <div className="flex items-center justify-end gap-1.5 mt-1">
-      <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-      <span className="text-xs text-gray-500">Direct Collection</span>
+  <div className="text-right flex-shrink-0">
+    <p className="text-green-600 font-semibold text-xs">No Additional Charges</p>
+    <div className="flex items-center justify-end gap-1 mt-0.5">
+      <CheckCircle className="w-3 h-3 text-green-500" />
+      <span className="text-[10px] text-gray-500">Direct Collection</span>
     </div>
-    <div className="flex items-center justify-end gap-1.5 mt-0.5">
-      <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-      <span className="text-xs text-green-600 font-medium">No Fees</span>
+    <div className="flex items-center justify-end gap-1 mt-0.5">
+      <CheckCircle className="w-3 h-3 text-green-500" />
+      <span className="text-[10px] text-green-600 font-medium">No Fees</span>
     </div>
   </div>
 );
 
-// Fee indicator for Card/Net Banking
+// Fee indicator for Card/Net Banking - matching Image 1 layout
 const FeeIndicator = () => (
-  <div className="text-right">
-    <p className="text-gray-500 text-xs">Processing Fee</p>
+  <div className="text-right flex-shrink-0">
+    <p className="text-gray-500 text-[10px]">Processing Fee</p>
     <div className="flex items-center justify-end gap-1 mt-0.5">
-      <span className="text-gray-900 font-semibold">2% + GST</span>
-      <HelpCircle className="w-3.5 h-3.5 text-gray-400" />
+      <span className="text-gray-900 font-semibold text-sm">2% + GST</span>
+      <HelpCircle className="w-3 h-3 text-gray-400" />
     </div>
-    <div className="flex items-center justify-end gap-1.5 mt-2">
-      <Lock className="w-3.5 h-3.5 text-gray-400" />
-      <span className="text-xs text-gray-500">Secure Payment</span>
+    <div className="flex items-center justify-end gap-1 mt-1.5">
+      <Lock className="w-3 h-3 text-gray-400" />
+      <span className="text-[10px] text-gray-500">Secure Payment</span>
     </div>
-    <div className="flex items-center justify-end gap-1.5 mt-0.5">
-      <Shield className="w-3.5 h-3.5 text-blue-500" />
-      <span className="text-xs text-blue-600 font-medium">Razorpay Trusted</span>
+    <div className="flex items-center justify-end gap-1 mt-0.5">
+      <Shield className="w-3 h-3 text-blue-500" />
+      <span className="text-[10px] text-blue-600 font-medium">Razorpay Trusted</span>
     </div>
   </div>
 );
@@ -1337,126 +1334,127 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
         {/* Choose Payment Method Section */}
         {selectedInvoice && (
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="p-6 border-b border-gray-100">
-              <h3 className="font-semibold text-gray-900">Choose Payment Method</h3>
-              <p className="text-sm text-gray-500 mt-1">Select any one payment method to proceed</p>
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="font-semibold text-gray-900 text-base">Choose Payment Method</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Select any one payment method to proceed</p>
             </div>
 
             <div className="divide-y divide-gray-100">
               {/* Debit/Card Payments & Net Banking */}
-              <label className={`flex items-start gap-4 p-5 cursor-pointer transition-colors ${selectedMethod === 'razorpay' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+              <label className={`flex items-start gap-3 p-4 cursor-pointer transition-colors ${selectedMethod === 'razorpay' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
                 <input 
                   type="radio" 
                   name="paymentMethod" 
                   value="razorpay" 
                   checked={selectedMethod === 'razorpay'} 
                   onChange={(e) => setSelectedMethod(e.target.value)} 
-                  className="mt-1 w-5 h-5 text-blue-600"
+                  className="mt-2 w-4 h-4 text-blue-600"
                 />
-                <div className="w-16 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <CreditCard className="w-7 h-7 text-white" />
+                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <CreditCard className="w-6 h-6 text-white" />
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-semibold text-gray-900">Debit / Card Payments & Net Banking</h4>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-semibold text-gray-900 text-sm">Debit / Card Payments & Net Banking</h4>
                     <RazorpayBadge />
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">Pay securely using your debit card, credit card or net banking.</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Pay securely using your debit card, credit card or net banking.</p>
                   <CardLogos />
                 </div>
                 <FeeIndicator />
               </label>
 
               {/* UPI */}
-              <label className={`flex items-start gap-4 p-5 cursor-pointer transition-colors ${selectedMethod === 'upi' ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
+              <label className={`flex items-start gap-3 p-4 cursor-pointer transition-colors ${selectedMethod === 'upi' ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
                 <input 
                   type="radio" 
                   name="paymentMethod" 
                   value="upi" 
                   checked={selectedMethod === 'upi'} 
                   onChange={(e) => setSelectedMethod(e.target.value)} 
-                  className="mt-1 w-5 h-5 text-green-600"
+                  className="mt-2 w-4 h-4 text-blue-600"
                 />
-                <div className="w-16 h-14 bg-white rounded-xl flex flex-col items-center justify-center border-2 border-gray-200 flex-shrink-0">
-                  <span className="text-green-600 font-bold text-lg">UPI</span>
-                  <span className="text-[7px] text-gray-400">UNIFIED PAYMENTS</span>
+                <div className="w-12 h-12 bg-white rounded-lg flex flex-col items-center justify-center border border-gray-200 flex-shrink-0">
+                  <span className="text-green-600 font-bold text-sm">UPI</span>
+                  <span className="text-[6px] text-gray-400 leading-none">UNIFIED</span>
+                  <span className="text-[6px] text-gray-400 leading-none">PAYMENTS</span>
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-semibold text-gray-900">UPI (QR / UPI ID)</h4>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-semibold text-gray-900 text-sm">UPI (QR / UPI ID)</h4>
                     <YourCollectionBadge />
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">Scan QR code or pay using any UPI app.</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Scan QR code or pay using any UPI app.</p>
                   <UPIAppLogos />
                 </div>
                 <NoFeesIndicator />
               </label>
 
               {/* Bank Transfer */}
-              <label className={`flex items-start gap-4 p-5 cursor-pointer transition-colors ${selectedMethod === 'bank_transfer' ? 'bg-amber-50' : 'hover:bg-gray-50'}`}>
+              <label className={`flex items-start gap-3 p-4 cursor-pointer transition-colors ${selectedMethod === 'bank_transfer' ? 'bg-amber-50' : 'hover:bg-gray-50'}`}>
                 <input 
                   type="radio" 
                   name="paymentMethod" 
                   value="bank_transfer" 
                   checked={selectedMethod === 'bank_transfer'} 
                   onChange={(e) => setSelectedMethod(e.target.value)} 
-                  className="mt-1 w-5 h-5 text-amber-600"
+                  className="mt-2 w-4 h-4 text-blue-600"
                 />
-                <div className="w-16 h-14 bg-amber-50 rounded-xl flex items-center justify-center border border-amber-200 flex-shrink-0">
-                  <Building2 className="w-7 h-7 text-amber-600" />
+                <div className="w-12 h-12 bg-amber-50 rounded-lg flex items-center justify-center border border-amber-200 flex-shrink-0">
+                  <Building2 className="w-6 h-6 text-amber-600" />
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-semibold text-gray-900">Bank Transfer</h4>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-semibold text-gray-900 text-sm">Bank Transfer</h4>
                     <YourCollectionBadge />
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">Transfer directly from your bank account.</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Transfer directly from your bank account.</p>
                 </div>
                 <NoFeesIndicator />
               </label>
 
               {/* Cash */}
-              <label className={`flex items-start gap-4 p-5 cursor-pointer transition-colors ${selectedMethod === 'cash' ? 'bg-orange-50' : 'hover:bg-gray-50'}`}>
+              <label className={`flex items-start gap-3 p-4 cursor-pointer transition-colors ${selectedMethod === 'cash' ? 'bg-orange-50' : 'hover:bg-gray-50'}`}>
                 <input 
                   type="radio" 
                   name="paymentMethod" 
                   value="cash" 
                   checked={selectedMethod === 'cash'} 
                   onChange={(e) => setSelectedMethod(e.target.value)} 
-                  className="mt-1 w-5 h-5 text-orange-600"
+                  className="mt-2 w-4 h-4 text-blue-600"
                 />
-                <div className="w-16 h-14 bg-orange-50 rounded-xl flex items-center justify-center border border-orange-200 flex-shrink-0">
-                  <Banknote className="w-7 h-7 text-orange-500" />
+                <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center border border-orange-200 flex-shrink-0">
+                  <Banknote className="w-6 h-6 text-orange-500" />
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-semibold text-gray-900">Cash</h4>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-semibold text-gray-900 text-sm">Cash</h4>
                     <YourCollectionBadge />
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">Pay with cash at our office / collection point.</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Pay with cash at our office / collection point.</p>
                 </div>
                 <NoFeesIndicator />
               </label>
 
               {/* Check */}
-              <label className={`flex items-start gap-4 p-5 cursor-pointer transition-colors ${selectedMethod === 'check' ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
+              <label className={`flex items-start gap-3 p-4 cursor-pointer transition-colors ${selectedMethod === 'check' ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
                 <input 
                   type="radio" 
                   name="paymentMethod" 
                   value="check" 
                   checked={selectedMethod === 'check'} 
                   onChange={(e) => setSelectedMethod(e.target.value)} 
-                  className="mt-1 w-5 h-5 text-red-600"
+                  className="mt-2 w-4 h-4 text-blue-600"
                 />
-                <div className="w-16 h-14 bg-red-50 rounded-xl flex items-center justify-center border border-red-200 flex-shrink-0">
-                  <FileCheck className="w-7 h-7 text-red-500" />
+                <div className="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center border border-red-200 flex-shrink-0">
+                  <FileCheck className="w-6 h-6 text-red-500" />
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-semibold text-gray-900">Check</h4>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-semibold text-gray-900 text-sm">Check</h4>
                     <YourCollectionBadge />
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">Pay using cheque.</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Pay using cheque.</p>
                 </div>
                 <NoFeesIndicator />
               </label>
