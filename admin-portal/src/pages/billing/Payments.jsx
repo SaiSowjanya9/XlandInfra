@@ -336,186 +336,141 @@ const ReceiptModal = ({ isOpen, onClose, payment, onDownload, onSend, downloadin
   if (!isOpen || !payment) return null;
 
   const method = PAYMENT_METHODS[payment.paymentMethod] || PAYMENT_METHODS.other;
-  const status = STATUS_CONFIG[payment.status] || STATUS_CONFIG.pending;
-  const MethodIcon = method.icon;
-  const dateTime = formatDateTime(payment.paymentDate);
+  
+  // Calculate values
+  const amountPaid = parseFloat(payment.amount) || 0;
+  const invoiceTotal = parseFloat(payment.invoiceAmount) || amountPaid;
+  const remainingBalance = parseFloat(payment.balanceAmount) || 0;
+  const isFullyPaid = remainingBalance <= 0;
+  
+  // Format date
+  const paymentDateFormatted = payment.paymentDate 
+    ? new Date(payment.paymentDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : '-';
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-lg">
-                <Receipt className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-white">Payment Receipt</h2>
-                <p className="text-green-100 text-sm">{payment.paymentId}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {payment.status === 'paid' && onSend && (
-                <button
-                  onClick={() => onSend(payment)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-colors"
-                >
-                  <Send className="w-4 h-4" />
-                  Send to Customer
-                </button>
-              )}
-              <button
-                onClick={() => onDownload(payment)}
-                disabled={downloading}
-                className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-colors"
-              >
-                {downloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                Download PDF
-              </button>
-              <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-full transition-colors">
-                <X className="w-5 h-5 text-white" />
-              </button>
-            </div>
-          </div>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {/* Action Buttons - Top Right */}
+        <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+          {payment.status === 'paid' && onSend && (
+            <button
+              onClick={() => onSend(payment)}
+              className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+              title="Send to Customer"
+            >
+              <Send className="w-4 h-4 text-gray-600" />
+            </button>
+          )}
+          <button
+            onClick={() => onDownload(payment)}
+            disabled={downloading}
+            className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+            title="Download PDF"
+          >
+            {downloading ? <RefreshCw className="w-4 h-4 animate-spin text-gray-600" /> : <Download className="w-4 h-4 text-gray-600" />}
+          </button>
+          <button onClick={onClose} className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors" title="Close">
+            <X className="w-4 h-4 text-gray-600" />
+          </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
-          {/* Company Header */}
-          <div className="text-center mb-6 pb-4 border-b border-gray-200">
-            <h3 className="text-xl font-bold text-gray-900">XLAND INFRA PM SERVICES PVT LTD</h3>
-            <p className="text-sm text-gray-500 mt-1">Gachibowli, Hyderabad, Telangana - 500032</p>
-            <p className="text-sm text-gray-500">GST: 36AADCX1234A1Z5</p>
-          </div>
-
-          {/* Receipt Title */}
-          <div className="text-center mb-6">
-            <h4 className="text-lg font-semibold text-gray-900 inline-flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              PAYMENT RECEIPT
-            </h4>
-            <p className="text-sm text-gray-500 mt-1">Receipt No: {payment.paymentId}</p>
-          </div>
-
-          {/* Two Column Details */}
-          <div className="grid grid-cols-2 gap-6 mb-6">
-            {/* Payment Details */}
-            <div className="bg-gray-50 rounded-xl p-4">
-              <h5 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-gray-500" />
-                Payment Details
-              </h5>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Payment ID:</span>
-                  <span className="font-semibold text-gray-900">{payment.paymentId}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Invoice ID:</span>
-                  <span className="font-medium text-blue-600">{payment.invoiceId || '-'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Payment Date:</span>
-                  <span className="font-medium text-gray-900">{dateTime.date}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Payment Time:</span>
-                  <span className="font-medium text-gray-900">{dateTime.time}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500">Payment Method:</span>
-                  <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium ${method.bg} ${method.color} border ${method.border}`}>
-                    <MethodIcon className="w-3 h-3" />
-                    {method.label}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500">Status:</span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
-                    {status.label}
-                  </span>
-                </div>
-              </div>
+        <div className="p-6 pt-8 overflow-y-auto max-h-[90vh]">
+          {/* Header - Green checkmark with amount */}
+          <div className="flex items-start gap-4 mb-2">
+            <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="w-7 h-7 text-white" />
             </div>
-
-            {/* Customer Details */}
-            <div className="bg-gray-50 rounded-xl p-4">
-              <h5 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <User className="w-4 h-4 text-gray-500" />
-                Customer Details
-              </h5>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Name:</span>
-                  <span className="font-medium text-gray-900">{payment.customerName || '-'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Property:</span>
-                  <span className="font-medium text-gray-900">{payment.propertyName || '-'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Property ID:</span>
-                  <span className="font-medium text-gray-900">{payment.propertyCode || '-'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Email:</span>
-                  <span className="font-medium text-gray-900 text-xs">{payment.customerEmail || '-'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Phone:</span>
-                  <span className="font-medium text-gray-900">{payment.customerPhone || '-'}</span>
-                </div>
-              </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">You paid {formatCurrencyShort(amountPaid)}</h2>
+              <p className="text-gray-500 mt-1">to XLAND INFRA on {paymentDateFormatted}</p>
             </div>
           </div>
 
-          {/* Transaction Details */}
-          {(payment.transactionId || payment.referenceNumber) && (
-            <div className="bg-blue-50 rounded-xl p-4 mb-6">
-              <h5 className="text-sm font-semibold text-blue-700 mb-2">Transaction Information</h5>
-              <div className="text-sm space-y-1">
-                {payment.transactionId && (
-                  <p className="text-gray-700">Transaction ID: <span className="font-mono font-semibold">{payment.transactionId}</span></p>
-                )}
-                {payment.referenceNumber && (
-                  <p className="text-gray-700">Reference No: <span className="font-mono font-semibold">{payment.referenceNumber}</span></p>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Divider */}
+          <div className="border-t border-gray-200 my-6"></div>
 
-          {/* Amount Section */}
-          <div className="bg-green-50 rounded-xl p-5 border border-green-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Amount Received</p>
-                <p className="text-3xl font-bold text-green-700">{formatCurrencyShort(payment.amount)}</p>
-              </div>
-              <div className="text-right">
-                <div className="flex items-center gap-2 text-green-700">
-                  <CheckCircle className="w-6 h-6" />
-                  <span className="font-semibold">Payment Successful</span>
-                </div>
-                <p className="text-sm text-gray-500 mt-1">Thank you for your payment</p>
-              </div>
+          {/* Payment Details Section */}
+          <h3 className="text-lg font-semibold text-gray-900 mb-5">Payment details</h3>
+
+          <div className="space-y-4">
+            {/* Invoice no */}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500">Invoice no.</span>
+              <span className="text-blue-600 font-medium">{payment.invoiceId || payment.paymentId}</span>
+            </div>
+
+            {/* Invoice amount */}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500">Invoice amount</span>
+              <span className="text-gray-900">{formatCurrencyShort(invoiceTotal)}</span>
+            </div>
+
+            {/* Amount paid */}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500">Amount paid</span>
+              <span className="text-gray-900 font-semibold">{formatCurrencyShort(amountPaid)}</span>
+            </div>
+
+            {/* Remaining balance */}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500">Remaining balance</span>
+              <span className={`font-semibold ${isFullyPaid ? 'text-green-600' : 'text-red-500'}`}>
+                {isFullyPaid ? '₹0' : formatCurrencyShort(remainingBalance)}
+              </span>
             </div>
           </div>
 
-          {/* Verification Info */}
-          {payment.verifiedBy && (
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm">
-              <p className="text-gray-600">
-                Verified by: <span className="font-medium text-gray-900">{payment.verifiedBy}</span>
-                {payment.verifiedAt && <span className="text-gray-500"> on {formatDateDisplay(payment.verifiedAt)}</span>}
-              </p>
+          {/* Divider */}
+          <div className="border-t border-gray-200 my-6"></div>
+
+          <div className="space-y-4">
+            {/* Status */}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500">Status</span>
+              <span className={`font-semibold ${isFullyPaid ? 'text-green-600' : 'text-amber-500'}`}>
+                {isFullyPaid ? 'Fully Paid' : 'Partially Paid'}
+              </span>
             </div>
-          )}
+
+            {/* Payment method */}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500">Payment method</span>
+              <span className="text-gray-900">{method.label}</span>
+            </div>
+
+            {/* Reference ID */}
+            {(payment.transactionReference || payment.referenceNumber) && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">Reference ID</span>
+                <span className="text-gray-900 font-mono text-sm">{payment.transactionReference || payment.referenceNumber}</span>
+              </div>
+            )}
+
+            {/* Receipt ID */}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500">Receipt ID</span>
+              <span className="text-gray-900">{payment.paymentId}</span>
+            </div>
+
+            {/* Customer */}
+            {(payment.customerName || payment.propertyName) && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">Customer</span>
+                <span className="text-gray-900">{payment.customerName || payment.propertyName}</span>
+              </div>
+            )}
+          </div>
 
           {/* Footer Note */}
-          <div className="mt-6 pt-4 border-t border-gray-200 text-center">
-            <p className="text-xs text-gray-500">This is a computer-generated receipt and does not require a signature.</p>
-            <p className="text-xs text-gray-400 mt-1">For queries, contact: support@xlandinfra.com | +91-XXXXXXXXXX</p>
+          <div className="mt-8 pt-4">
+            <p className="text-gray-400 text-sm leading-relaxed">
+              Please don't reply to this email, if you need any help regarding this message, please contact the business directly.
+            </p>
+            
+            <p className="text-gray-900 mt-6">Thank you,</p>
+            <p className="text-gray-900 font-semibold">XLAND INFRA PM SERVICES PVT LTD</p>
           </div>
         </div>
       </div>

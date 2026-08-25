@@ -2643,30 +2643,31 @@ router.put('/payments/:id/verify', authenticate, canEditPayments, async (req, re
       const customerEmail = p.customer_email || p.email;
       if (customerEmail) {
         try {
+          const amountPaid = parseFloat(p.amount) || 0;
+          const invoiceTotal = parseFloat(p.invoice_amount) || amountPaid;
+          const currentBalance = parseFloat(newBalance) || 0;
+
           const paymentData = {
             paymentId: p.payment_id || `PAY-${String(p.id).padStart(4, '0')}`,
             invoiceId: p.invoice_code,
             customerName: p.customer_name,
             customerEmail,
-            customerPhone: p.customer_phone || p.phone,
             propertyName: p.property_name,
-            propertyCode: p.property_code,
-            amount: parseFloat(p.amount),
+            amount: amountPaid,
+            invoiceAmount: invoiceTotal,
+            balanceAmount: currentBalance,
             paymentMethod: p.payment_method,
             paymentDate: p.payment_date,
             transactionReference: p.transaction_reference,
             referenceNumber: p.reference_number,
-            status: 'paid',
-            verifiedBy: userName,
-            verifiedAt: new Date(),
-            remarks: remarks
+            status: 'paid'
           };
 
           // Generate PDF
           const { generateReceiptPDF } = require('../services/pdfService');
           const pdfBuffer = await generateReceiptPDF(paymentData);
 
-          // Send email
+          // Send email - Simple clean design
           const nodemailer = require('nodemailer');
           const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -2679,41 +2680,77 @@ router.put('/payments/:id/verify', authenticate, canEditPayments, async (req, re
           });
 
           const paymentDateFormatted = p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-IN', {
-            day: '2-digit', month: 'short', year: 'numeric'
-          }) : '-';
+            day: '2-digit', month: '2-digit', year: 'numeric'
+          }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+          const balanceText = currentBalance <= 0 ? '₹0' : `₹${currentBalance.toLocaleString('en-IN')}`;
+          const statusText = currentBalance <= 0 ? 'Fully Paid' : 'Partially Paid';
+          const methodLabel = paymentData.paymentMethod === 'razorpay' ? 'Card/Net Banking' : paymentData.paymentMethod === 'upi' ? 'UPI' : paymentData.paymentMethod === 'bank_transfer' ? 'Bank Transfer' : paymentData.paymentMethod === 'cash' ? 'Cash' : paymentData.paymentMethod === 'check' ? 'Cheque' : paymentData.paymentMethod || '-';
 
           await transporter.sendMail({
             from: `"XLAND INFRA" <${process.env.SMTP_USER || 'noreply@xlandinfra.com'}>`,
             to: customerEmail,
-            subject: `Payment Receipt - ${paymentData.paymentId} | XLAND INFRA`,
+            subject: `Payment Receipt - ₹${amountPaid.toLocaleString('en-IN')} | XLAND INFRA`,
             html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="background-color: #1a1a1a; padding: 20px; text-align: center;">
-                  <h1 style="color: #C9A227; margin: 0;">XLAND INFRA</h1>
-                  <p style="color: #888; margin: 5px 0 0;">PM SERVICES PVT LTD</p>
-                </div>
-                <div style="padding: 30px; background-color: #f9fafb;">
-                  <h2 style="color: #16a34a; margin-top: 0;">Payment Received Successfully!</h2>
-                  <p>Dear ${paymentData.customerName || 'Customer'},</p>
-                  <p>Thank you for your payment. We have received your payment successfully.</p>
-                  
-                  <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border: 1px solid #e5e7eb;">
-                    <h3 style="margin-top: 0; color: #333;">Payment Details</h3>
-                    <table style="width: 100%; border-collapse: collapse;">
-                      <tr><td style="padding: 8px 0; color: #666;">Receipt No:</td><td style="padding: 8px 0; font-weight: bold;">${paymentData.paymentId}</td></tr>
-                      <tr><td style="padding: 8px 0; color: #666;">Invoice ID:</td><td style="padding: 8px 0;">${paymentData.invoiceId || '-'}</td></tr>
-                      <tr><td style="padding: 8px 0; color: #666;">Amount:</td><td style="padding: 8px 0; font-weight: bold; color: #16a34a; font-size: 18px;">₹${parseFloat(paymentData.amount).toLocaleString('en-IN')}</td></tr>
-                      <tr><td style="padding: 8px 0; color: #666;">Date:</td><td style="padding: 8px 0;">${paymentDateFormatted}</td></tr>
-                      <tr><td style="padding: 8px 0; color: #666;">Property:</td><td style="padding: 8px 0;">${paymentData.propertyName || '-'}</td></tr>
-                    </table>
+              <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+                <!-- Header with checkmark -->
+                <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                  <div style="width: 40px; height: 40px; background-color: #22c55e; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-right: 15px;">
+                    <span style="color: white; font-size: 20px;">✓</span>
                   </div>
-                  
-                  <p>Please find your payment receipt attached to this email.</p>
-                  <p style="color: #666; font-size: 14px;">If you have any questions, please contact us at support@xlandinfra.com</p>
+                  <div style="display: inline-block; vertical-align: middle;">
+                    <h1 style="margin: 0; font-size: 22px; color: #1f2937;">You paid ₹${amountPaid.toLocaleString('en-IN')}</h1>
+                  </div>
                 </div>
-                <div style="background-color: #1a1a1a; padding: 15px; text-align: center;">
-                  <p style="color: #888; margin: 0; font-size: 12px;">© ${new Date().getFullYear()} XLAND INFRA PM SERVICES PVT LTD. All rights reserved.</p>
-                </div>
+                <p style="color: #6b7280; margin: 0 0 25px 55px; font-size: 14px;">to XLAND INFRA on ${paymentDateFormatted}</p>
+                
+                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+                
+                <!-- Payment Details -->
+                <h2 style="font-size: 18px; color: #1f2937; margin-bottom: 20px;">Payment details</h2>
+                
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 10px 0; color: #6b7280; font-size: 14px;">Invoice no.</td>
+                    <td style="padding: 10px 0; text-align: right; color: #3b82f6; font-size: 14px;">${paymentData.invoiceId || paymentData.paymentId}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0; color: #6b7280; font-size: 14px;">Invoice amount</td>
+                    <td style="padding: 10px 0; text-align: right; color: #1f2937; font-size: 14px;">₹${invoiceTotal.toLocaleString('en-IN')}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0; color: #6b7280; font-size: 14px;">Amount paid</td>
+                    <td style="padding: 10px 0; text-align: right; color: #1f2937; font-size: 14px; font-weight: bold;">₹${amountPaid.toLocaleString('en-IN')}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0; color: #6b7280; font-size: 14px;">Remaining balance</td>
+                    <td style="padding: 10px 0; text-align: right; color: ${currentBalance <= 0 ? '#22c55e' : '#ef4444'}; font-size: 14px; font-weight: bold;">${balanceText}</td>
+                  </tr>
+                </table>
+                
+                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+                
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 10px 0; color: #6b7280; font-size: 14px;">Status</td>
+                    <td style="padding: 10px 0; text-align: right; color: ${currentBalance <= 0 ? '#22c55e' : '#f59e0b'}; font-size: 14px; font-weight: bold;">${statusText}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0; color: #6b7280; font-size: 14px;">Payment method</td>
+                    <td style="padding: 10px 0; text-align: right; color: #1f2937; font-size: 14px;">${methodLabel}</td>
+                  </tr>
+                  ${paymentData.transactionReference || paymentData.referenceNumber ? `<tr>
+                    <td style="padding: 10px 0; color: #6b7280; font-size: 14px;">Reference ID</td>
+                    <td style="padding: 10px 0; text-align: right; color: #1f2937; font-size: 14px;">${paymentData.transactionReference || paymentData.referenceNumber}</td>
+                  </tr>` : ''}
+                </table>
+                
+                <p style="color: #6b7280; font-size: 12px; margin-top: 30px; line-height: 1.5;">
+                  Please don't reply to this email, if you need any help regarding this message, please contact the business directly.
+                </p>
+                
+                <p style="color: #1f2937; font-size: 14px; margin-top: 25px;">Thank you,</p>
+                <p style="color: #1f2937; font-size: 14px; font-weight: bold; margin-top: 5px;">XLAND INFRA PM SERVICES PVT LTD</p>
               </div>
             `,
             attachments: [{
@@ -3053,7 +3090,7 @@ router.get('/payments/:id/receipt/pdf', authenticate, canViewPayments, async (re
 
     let query = `
       SELECT p.*, 
-             i.invoice_id as invoice_code, i.total_amount as invoice_amount,
+             i.invoice_id as invoice_code, i.total_amount as invoice_amount, i.balance_amount as invoice_balance,
              prop.community_name as property_name, prop.property_id as property_code,
              prop.customer_email, prop.customer_phone
       FROM payments p
@@ -3075,6 +3112,10 @@ router.get('/payments/:id/receipt/pdf', authenticate, canViewPayments, async (re
     }
 
     const p = payments[0];
+    const amountPaid = parseFloat(p.amount) || 0;
+    const invoiceTotal = parseFloat(p.invoice_amount) || amountPaid;
+    const currentBalance = parseFloat(p.invoice_balance) || 0;
+    
     const paymentData = {
       paymentId: p.payment_id || `PAY-${String(p.id).padStart(4, '0')}`,
       invoiceId: p.invoice_code,
@@ -3083,15 +3124,14 @@ router.get('/payments/:id/receipt/pdf', authenticate, canViewPayments, async (re
       customerPhone: p.customer_phone || p.phone,
       propertyName: p.property_name,
       propertyCode: p.property_code,
-      amount: parseFloat(p.amount),
+      amount: amountPaid,
+      invoiceAmount: invoiceTotal,
+      balanceAmount: currentBalance,
       paymentMethod: p.payment_method,
       paymentDate: p.payment_date,
       transactionReference: p.transaction_reference,
       referenceNumber: p.reference_number,
-      status: p.status,
-      verifiedBy: p.verified_by,
-      verifiedAt: p.verified_at,
-      remarks: p.remarks
+      status: p.status
     };
 
     // Generate PDF
@@ -3115,7 +3155,7 @@ router.post('/payments/:id/receipt/send', authenticate, canEditPayments, async (
 
     let query = `
       SELECT p.*, 
-             i.invoice_id as invoice_code, i.total_amount as invoice_amount,
+             i.invoice_id as invoice_code, i.total_amount as invoice_amount, i.balance_amount as invoice_balance,
              prop.community_name as property_name, prop.property_id as property_code,
              prop.customer_email, prop.customer_phone
       FROM payments p
@@ -3143,30 +3183,31 @@ router.post('/payments/:id/receipt/send', authenticate, canEditPayments, async (
       return res.status(400).json({ success: false, message: 'Customer email not found' });
     }
 
+    const amountPaid = parseFloat(p.amount) || 0;
+    const invoiceTotal = parseFloat(p.invoice_amount) || amountPaid;
+    const currentBalance = parseFloat(p.invoice_balance) || 0;
+
     const paymentData = {
       paymentId: p.payment_id || `PAY-${String(p.id).padStart(4, '0')}`,
       invoiceId: p.invoice_code,
       customerName: p.customer_name,
       customerEmail,
-      customerPhone: p.customer_phone || p.phone,
       propertyName: p.property_name,
-      propertyCode: p.property_code,
-      amount: parseFloat(p.amount),
+      amount: amountPaid,
+      invoiceAmount: invoiceTotal,
+      balanceAmount: currentBalance,
       paymentMethod: p.payment_method,
       paymentDate: p.payment_date,
       transactionReference: p.transaction_reference,
       referenceNumber: p.reference_number,
-      status: p.status,
-      verifiedBy: p.verified_by,
-      verifiedAt: p.verified_at,
-      remarks: p.remarks
+      status: p.status
     };
 
     // Generate PDF
     const { generateReceiptPDF } = require('../services/pdfService');
     const pdfBuffer = await generateReceiptPDF(paymentData);
 
-    // Send email with receipt
+    // Send email with receipt - Simple clean design like reference image
     const nodemailer = require('nodemailer');
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -3179,41 +3220,76 @@ router.post('/payments/:id/receipt/send', authenticate, canEditPayments, async (
     });
 
     const paymentDateFormatted = p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-IN', {
-      day: '2-digit', month: 'short', year: 'numeric'
-    }) : '-';
+      day: '2-digit', month: '2-digit', year: 'numeric'
+    }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    const balanceText = currentBalance <= 0 ? '₹0' : `₹${currentBalance.toLocaleString('en-IN')}`;
+    const statusText = currentBalance <= 0 ? 'Fully Paid' : 'Partially Paid';
 
     const mailOptions = {
       from: `"XLAND INFRA" <${process.env.SMTP_USER || 'noreply@xlandinfra.com'}>`,
       to: customerEmail,
-      subject: `Payment Receipt - ${paymentData.paymentId} | XLAND INFRA`,
+      subject: `Payment Receipt - ₹${amountPaid.toLocaleString('en-IN')} | XLAND INFRA`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background-color: #1a1a1a; padding: 20px; text-align: center;">
-            <h1 style="color: #C9A227; margin: 0;">XLAND INFRA</h1>
-            <p style="color: #888; margin: 5px 0 0;">PM SERVICES PVT LTD</p>
-          </div>
-          <div style="padding: 30px; background-color: #f9fafb;">
-            <h2 style="color: #16a34a; margin-top: 0;">Payment Received Successfully!</h2>
-            <p>Dear ${paymentData.customerName || 'Customer'},</p>
-            <p>Thank you for your payment. We have received your payment successfully.</p>
-            
-            <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border: 1px solid #e5e7eb;">
-              <h3 style="margin-top: 0; color: #333;">Payment Details</h3>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr><td style="padding: 8px 0; color: #666;">Receipt No:</td><td style="padding: 8px 0; font-weight: bold;">${paymentData.paymentId}</td></tr>
-                <tr><td style="padding: 8px 0; color: #666;">Invoice ID:</td><td style="padding: 8px 0;">${paymentData.invoiceId || '-'}</td></tr>
-                <tr><td style="padding: 8px 0; color: #666;">Amount:</td><td style="padding: 8px 0; font-weight: bold; color: #16a34a; font-size: 18px;">₹${parseFloat(paymentData.amount).toLocaleString('en-IN')}</td></tr>
-                <tr><td style="padding: 8px 0; color: #666;">Date:</td><td style="padding: 8px 0;">${paymentDateFormatted}</td></tr>
-                <tr><td style="padding: 8px 0; color: #666;">Property:</td><td style="padding: 8px 0;">${paymentData.propertyName || '-'}</td></tr>
-              </table>
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+          <!-- Header with checkmark -->
+          <div style="display: flex; align-items: center; margin-bottom: 5px;">
+            <div style="width: 40px; height: 40px; background-color: #22c55e; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-right: 15px;">
+              <span style="color: white; font-size: 20px;">✓</span>
             </div>
-            
-            <p>Please find your payment receipt attached to this email.</p>
-            <p style="color: #666; font-size: 14px;">If you have any questions, please contact us at support@xlandinfra.com</p>
+            <div style="display: inline-block; vertical-align: middle;">
+              <h1 style="margin: 0; font-size: 22px; color: #1f2937;">You paid ₹${amountPaid.toLocaleString('en-IN')}</h1>
+            </div>
           </div>
-          <div style="background-color: #1a1a1a; padding: 15px; text-align: center;">
-            <p style="color: #888; margin: 0; font-size: 12px;">© ${new Date().getFullYear()} XLAND INFRA PM SERVICES PVT LTD. All rights reserved.</p>
-          </div>
+          <p style="color: #6b7280; margin: 0 0 25px 55px; font-size: 14px;">to XLAND INFRA on ${paymentDateFormatted}</p>
+          
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+          
+          <!-- Payment Details -->
+          <h2 style="font-size: 18px; color: #1f2937; margin-bottom: 20px;">Payment details</h2>
+          
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 10px 0; color: #6b7280; font-size: 14px;">Invoice no.</td>
+              <td style="padding: 10px 0; text-align: right; color: #3b82f6; font-size: 14px;">${paymentData.invoiceId || paymentData.paymentId}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; color: #6b7280; font-size: 14px;">Invoice amount</td>
+              <td style="padding: 10px 0; text-align: right; color: #1f2937; font-size: 14px;">₹${invoiceTotal.toLocaleString('en-IN')}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; color: #6b7280; font-size: 14px;">Amount paid</td>
+              <td style="padding: 10px 0; text-align: right; color: #1f2937; font-size: 14px; font-weight: bold;">₹${amountPaid.toLocaleString('en-IN')}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; color: #6b7280; font-size: 14px;">Remaining balance</td>
+              <td style="padding: 10px 0; text-align: right; color: ${currentBalance <= 0 ? '#22c55e' : '#ef4444'}; font-size: 14px; font-weight: bold;">${balanceText}</td>
+            </tr>
+          </table>
+          
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+          
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 10px 0; color: #6b7280; font-size: 14px;">Status</td>
+              <td style="padding: 10px 0; text-align: right; color: ${currentBalance <= 0 ? '#22c55e' : '#f59e0b'}; font-size: 14px; font-weight: bold;">${statusText}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; color: #6b7280; font-size: 14px;">Payment method</td>
+              <td style="padding: 10px 0; text-align: right; color: #1f2937; font-size: 14px;">${paymentData.paymentMethod === 'razorpay' ? 'Card/Net Banking' : paymentData.paymentMethod === 'upi' ? 'UPI' : paymentData.paymentMethod === 'bank_transfer' ? 'Bank Transfer' : paymentData.paymentMethod === 'cash' ? 'Cash' : paymentData.paymentMethod === 'check' ? 'Cheque' : paymentData.paymentMethod || '-'}</td>
+            </tr>
+            ${paymentData.transactionReference || paymentData.referenceNumber ? `<tr>
+              <td style="padding: 10px 0; color: #6b7280; font-size: 14px;">Reference ID</td>
+              <td style="padding: 10px 0; text-align: right; color: #1f2937; font-size: 14px;">${paymentData.transactionReference || paymentData.referenceNumber}</td>
+            </tr>` : ''}
+          </table>
+          
+          <p style="color: #6b7280; font-size: 12px; margin-top: 30px; line-height: 1.5;">
+            Please don't reply to this email, if you need any help regarding this message, please contact the business directly.
+          </p>
+          
+          <p style="color: #1f2937; font-size: 14px; margin-top: 25px;">Thank you,</p>
+          <p style="color: #1f2937; font-size: 14px; font-weight: bold; margin-top: 5px;">XLAND INFRA PM SERVICES PVT LTD</p>
         </div>
       `,
       attachments: [{
