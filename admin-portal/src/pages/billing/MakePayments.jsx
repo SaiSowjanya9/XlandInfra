@@ -506,21 +506,30 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
 
   // ==================== STEP 3: REVIEW & CONFIRM ====================
   if (currentStep === 3 && selectedInvoice) {
+    const getPaymentMethodDescription = () => {
+      switch (selectedMethod) {
+        case 'bank_transfer': return 'Bank transfer information';
+        case 'upi': return 'UPI payment information';
+        case 'cash': return 'Cash payment information';
+        case 'check': return 'Cheque payment information';
+        default: return 'Payment information';
+      }
+    };
+
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="min-h-screen bg-gray-100">
+        {/* Header */}
+        <div className="bg-white px-6 py-5">
           <div className="max-w-5xl mx-auto flex items-center gap-4">
             <button onClick={handleBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">Make Payment</h1>
-              <p className="text-sm text-gray-500">Review and confirm your payment</p>
+              <h1 className="text-xl font-semibold text-gray-900">Review & Confirm Payment</h1>
+              <p className="text-sm text-gray-500">Please review all payment details before confirming</p>
             </div>
           </div>
         </div>
-        <InvoiceDetailsBar invoice={selectedInvoice} daysUntilDue={daysUntilDue} balanceAmount={balanceAmount} />
-        <StepProgress currentStep={3} selectedMethod={selectedMethod} />
 
         <div className="max-w-5xl mx-auto px-6 py-6">
           {error && (
@@ -531,89 +540,322 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
             </div>
           )}
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Payment Summary</h3>
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="flex justify-between py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Payment Method</span>
-                  <span className="font-semibold">{PAYMENT_METHOD_LABELS[selectedMethod]}</span>
+          {/* Invoice Summary Bar */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="grid grid-cols-4 gap-8">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Invoice ID</p>
+                  <p className="font-semibold text-gray-900">{selectedInvoice.invoiceId}</p>
                 </div>
-                <div className="flex justify-between py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Invoice ID</span>
-                  <span className="font-semibold text-blue-600">{selectedInvoice.invoiceId}</span>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Customer</p>
+                  <p className="font-semibold text-gray-900">{selectedInvoice.propertyName || selectedInvoice.customerName}</p>
                 </div>
-                <div className="flex justify-between py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Customer</span>
-                  <span className="font-semibold">{selectedInvoice.customerName || selectedInvoice.propertyName}</span>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Invoice Date</p>
+                  <p className="font-semibold text-gray-900">{formatDate(selectedInvoice.invoiceDate)}</p>
                 </div>
-                {(selectedMethod === 'bank_transfer' || selectedMethod === 'upi') && (
-                  <div className="flex justify-between py-2 border-b border-gray-100">
-                    <span className="text-gray-600">Reference Number</span>
-                    <span className="font-mono font-semibold">{generatedReference}</span>
-                  </div>
-                )}
-                {selectedMethod === 'check' && (
-                  <>
-                    <div className="flex justify-between py-2 border-b border-gray-100">
-                      <span className="text-gray-600">Cheque Number</span>
-                      <span className="font-semibold">{paymentDetails.chequeNumber}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-gray-100">
-                      <span className="text-gray-600">Bank</span>
-                      <span className="font-semibold">{paymentDetails.chequeBank}</span>
-                    </div>
-                  </>
-                )}
-                {(selectedMethod === 'cash' || selectedMethod === 'check') && (
-                  <div className="flex justify-between py-2 border-b border-gray-100">
-                    <span className="text-gray-600">Received By</span>
-                    <span className="font-semibold">{paymentDetails.receivedBy}</span>
-                  </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Due Date</p>
+                  <p className={`font-semibold ${daysUntilDue < 0 ? 'text-red-600' : 'text-orange-500'}`}>{formatDate(selectedInvoice.dueDate)}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-500 mb-1">Amount Payable</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(balanceAmount)}</p>
+                {daysUntilDue !== null && (
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs mt-1 ${daysUntilDue < 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                    <Clock className="w-3 h-3" />
+                    {daysUntilDue < 0 ? `Overdue by ${Math.abs(daysUntilDue)} days` : `Due in ${daysUntilDue} days`}
+                  </span>
                 )}
               </div>
-              <div className="bg-gray-50 rounded-lg p-6">
-                <div className="flex justify-between py-2">
-                  <span className="text-gray-600">Invoice Amount</span>
-                  <span className="font-semibold">{formatCurrency(totalAmount)}</span>
+            </div>
+          </div>
+
+          {/* Step Progress */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+            <div className="flex items-center justify-center gap-6">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-white" />
                 </div>
-                <div className="flex justify-between py-2">
-                  <span className="text-gray-600">Amount Paid</span>
-                  <span className="font-semibold">{formatCurrency(totalAmount - balanceAmount)}</span>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Select Payment Method</p>
+                  <p className="text-xs text-gray-500">{PAYMENT_METHOD_LABELS[selectedMethod]}</p>
                 </div>
-                <div className="flex justify-between py-3 border-t-2 border-blue-500 mt-3">
-                  <span className="text-lg font-semibold">Amount Payable</span>
-                  <span className="text-2xl font-bold text-blue-600">{formatCurrency(balanceAmount)}</span>
+              </div>
+              <div className="w-16 h-0.5 bg-green-500"></div>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-white" />
                 </div>
-                <div className="flex items-center gap-2 text-green-600 mt-2">
-                  <CheckCircle className="w-4 h-4" />
-                  <span className="text-sm">No additional charges</span>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Payment Details</p>
+                  <p className="text-xs text-gray-500">{getPaymentMethodDescription()}</p>
+                </div>
+              </div>
+              <div className="w-16 h-0.5 bg-green-500"></div>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
+                  <span className="text-white font-semibold text-sm">3</span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-blue-600">Review & Confirm</p>
+                  <p className="text-xs text-gray-500">Review and confirm payment</p>
                 </div>
               </div>
             </div>
-            {paymentProof && (
-              <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span className="text-green-800 font-medium">Payment proof uploaded: {paymentProof.name}</span>
+          </div>
+
+          {/* Review Payment Information Header */}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Review Payment Information</h2>
+            <button onClick={() => setCurrentStep(2)} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50">
+              <FileText className="w-4 h-4" /> Edit
+            </button>
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-2 gap-6 mb-6">
+            {/* Left Column */}
+            <div className="space-y-6">
+              {/* Invoice Details Card */}
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Invoice Details</h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Invoice ID</span>
+                    <span className="text-sm font-medium text-gray-900">{selectedInvoice.invoiceId}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Customer</span>
+                    <span className="text-sm font-medium text-gray-900">{selectedInvoice.propertyName || selectedInvoice.customerName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Invoice Date</span>
+                    <span className="text-sm font-medium text-gray-900">{formatDate(selectedInvoice.invoiceDate)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Due Date</span>
+                    <span className={`text-sm font-medium ${daysUntilDue < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatDate(selectedInvoice.dueDate)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Total Amount</span>
+                    <span className="text-sm font-medium text-gray-900">{formatCurrency(totalAmount)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Amount Payable</span>
+                    <span className="text-sm font-medium text-gray-900">{formatCurrency(balanceAmount)}</span>
+                  </div>
                 </div>
               </div>
-            )}
+
+              {/* Payment Proof Card */}
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <FileCheck className="w-5 h-5 text-green-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Payment Proof</h3>
+                </div>
+                {paymentProof ? (
+                  <div className="flex items-start gap-4">
+                    <div className="w-20 h-20 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center overflow-hidden">
+                      {paymentProof.type?.startsWith('image/') ? (
+                        <img src={URL.createObjectURL(paymentProof)} alt="Payment proof" className="w-full h-full object-cover" />
+                      ) : (
+                        <FileText className="w-8 h-8 text-gray-400" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 text-sm">{paymentProof.name}</p>
+                      <p className="text-xs text-gray-500 mt-1">Uploaded on: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}, {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
+                      <p className="text-xs text-gray-500">Uploaded by: {paymentDetails.receivedBy || user?.firstName || 'Admin'}</p>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full mt-2">
+                        <CheckCircle className="w-3 h-3" /> Proof Uploaded
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-500">No payment proof uploaded</p>
+                    <p className="text-xs text-gray-400 mt-1">{selectedMethod === 'cash' || selectedMethod === 'check' ? 'Optional for this payment method' : 'Recommended for faster verification'}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column */}
+            <div className="space-y-6">
+              {/* Payment Method Card */}
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                    <Building2 className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Payment Method</h3>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="px-3 py-1.5 bg-blue-100 text-blue-700 text-sm font-medium rounded-lg">{PAYMENT_METHOD_LABELS[selectedMethod]}</span>
+                  <span className="text-sm text-gray-500">No Additional Charges</span>
+                </div>
+              </div>
+
+              {/* Amount Information Card */}
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Banknote className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Amount Information</h3>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Invoice Amount</span>
+                    <div className="flex gap-8">
+                      <span className="text-gray-400">Tax (0%)</span>
+                      <span className="font-medium text-gray-900">{formatCurrency(totalAmount)}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Discount</span>
+                    <div className="flex gap-8">
+                      <span className="text-gray-400">₹0</span>
+                      <span className="font-medium text-gray-900">₹0</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between text-sm border-t border-gray-100 pt-2 mt-2">
+                    <span className="text-gray-500">Total Amount</span>
+                    <div className="flex gap-8">
+                      <span className="text-gray-400">Tax Incl.</span>
+                      <span className="font-medium text-gray-900">{formatCurrency(totalAmount)}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Amount Paid</span>
+                    <div className="flex gap-8">
+                      <span className="text-gray-400">₹0</span>
+                      <span className="font-medium text-gray-900">{formatCurrency(totalAmount - balanceAmount)}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center border-t-2 border-blue-500 pt-3 mt-3">
+                    <span className="text-blue-600 font-semibold">Amount Payable</span>
+                    <span className="text-2xl font-bold text-blue-600">{formatCurrency(balanceAmount)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Information Card */}
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <Info className="w-5 h-5 text-gray-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Additional Information</h3>
+                </div>
+                <div className="space-y-3">
+                  {selectedMethod === 'bank_transfer' && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Payment Type</span>
+                        <span className="text-sm font-medium text-gray-900">Bank Transfer / NEFT / RTGS</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Reference Number</span>
+                        <span className="text-sm font-medium text-gray-900 font-mono">{generatedReference}</span>
+                      </div>
+                    </>
+                  )}
+                  {selectedMethod === 'upi' && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Payment Type</span>
+                        <span className="text-sm font-medium text-gray-900">UPI Payment</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Reference Number</span>
+                        <span className="text-sm font-medium text-gray-900 font-mono">{generatedReference}</span>
+                      </div>
+                    </>
+                  )}
+                  {selectedMethod === 'cash' && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Payment Location</span>
+                        <span className="text-sm font-medium text-gray-900">Office / Collection Point</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Received By</span>
+                        <span className="text-sm font-medium text-gray-900">{paymentDetails.receivedBy || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Notes</span>
+                        <span className="text-sm font-medium text-gray-900">{paymentDetails.notes || '-'}</span>
+                      </div>
+                    </>
+                  )}
+                  {selectedMethod === 'check' && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Cheque Number</span>
+                        <span className="text-sm font-medium text-gray-900">{paymentDetails.chequeNumber}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Cheque Date</span>
+                        <span className="text-sm font-medium text-gray-900">{paymentDetails.chequeDate ? formatDate(paymentDetails.chequeDate) : '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Bank Name</span>
+                        <span className="text-sm font-medium text-gray-900">{paymentDetails.chequeBank}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Received By</span>
+                        <span className="text-sm font-medium text-gray-900">{paymentDetails.receivedBy || '-'}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100 flex items-center gap-3">
-            <Info className="w-5 h-5 text-blue-600 flex-shrink-0" />
-            <p className="text-sm text-blue-700">After confirmation, your payment will be verified and the invoice will be marked as Paid. A receipt will be sent to you.</p>
+          {/* Warning Banner */}
+          <div className="bg-blue-50 rounded-xl border border-blue-100 p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-gray-700">Please verify all the details carefully before confirming.</p>
+                <p className="text-sm text-gray-500">Once confirmed, the payment will be marked as "Verification Pending" and our team will verify the payment.</p>
+              </div>
+            </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-between">
-            <button onClick={handleBack} className="flex items-center gap-2 px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50">
-              <ArrowLeft className="w-4 h-4" /> Back
+          {/* Footer Buttons */}
+          <div className="flex items-center justify-between">
+            <button onClick={handleBack} className="flex flex-col items-start px-6 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors">
+              <span className="flex items-center gap-2 font-medium">
+                <ArrowLeft className="w-4 h-4" /> Back
+              </span>
+              <span className="text-xs text-gray-500 mt-0.5">Go back and edit</span>
             </button>
-            <button onClick={handleConfirmPayment} disabled={processing} className="flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-600/20">
-              {processing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Lock className="w-5 h-5" />}
-              {processing ? 'Processing...' : 'Confirm Payment'}
-              {!processing && <ArrowRight className="w-4 h-4" />}
+            <button 
+              onClick={handleConfirmPayment} 
+              disabled={processing} 
+              className="flex flex-col items-center px-10 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-600/20 transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                {processing ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                {processing ? 'Processing...' : 'Confirm Payment'}
+                {!processing && <Check className="w-4 h-4" />}
+              </span>
+              {!processing && <span className="text-xs text-blue-200 mt-0.5">Payment will be marked as "Verification Pending"</span>}
             </button>
           </div>
         </div>
