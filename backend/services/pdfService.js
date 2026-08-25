@@ -785,7 +785,7 @@ const generateInvoicePDF = async (invoice) => {
   });
 };
 
-// Generate Payment Receipt PDF
+// Generate Payment Receipt PDF - Simple clean design
 const generateReceiptPDF = async (payment) => {
   return new Promise((resolve, reject) => {
     try {
@@ -800,176 +800,139 @@ const generateReceiptPDF = async (payment) => {
         paymentId,
         invoiceId,
         customerName,
-        customerEmail,
-        customerPhone,
         propertyName,
-        propertyCode,
-        amount,
+        amount,          // Amount paid in this transaction
+        invoiceAmount,   // Total invoice amount
+        balanceAmount,   // Remaining balance after this payment
         paymentMethod,
         paymentDate,
         transactionReference,
         referenceNumber,
-        status,
-        verifiedBy,
-        verifiedAt,
-        remarks
+        status
       } = payment;
 
       const margin = 50;
-      const gold = '#C9A227';
-      const green = '#16a34a';
-      const darkGray = '#333';
-      const lightGray = '#666';
-      const veryLightGray = '#f3f4f6';
+      const green = '#22c55e';
+      const darkGray = '#1f2937';
+      const lightGray = '#6b7280';
+      const blue = '#3b82f6';
 
-      // Draw header
-      const contentStartY = drawPDFHeader(doc, margin);
-      let yPos = contentStartY + 15;
+      // Calculate values
+      const amountPaid = parseFloat(amount) || 0;
+      const totalInvoice = parseFloat(invoiceAmount) || amountPaid;
+      const remaining = parseFloat(balanceAmount) || 0;
 
-      // Receipt Title
-      doc.fontSize(18).fillColor(green).font('Helvetica-Bold')
-         .text('PAYMENT RECEIPT', margin, yPos, { align: 'center' });
-      yPos += 30;
-
-      // Receipt number and date row
-      doc.fontSize(10).fillColor(darkGray).font('Helvetica');
-      doc.text(`Receipt No: ${paymentId}`, margin, yPos);
+      // Format date
       const paymentDateFormatted = paymentDate ? new Date(paymentDate).toLocaleDateString('en-IN', {
-        day: '2-digit', month: 'short', year: 'numeric'
-      }) : '-';
-      doc.text(`Date: ${paymentDateFormatted}`, margin, yPos, { align: 'right' });
-      yPos += 25;
+        day: '2-digit', month: '2-digit', year: 'numeric'
+      }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-      // Divider line
-      doc.strokeColor('#e5e7eb').lineWidth(1).moveTo(margin, yPos).lineTo(545, yPos).stroke();
-      yPos += 20;
-
-      // Payment Details Box
-      doc.rect(margin, yPos, 495, 100).fillColor(veryLightGray).fill();
-      doc.fillColor(darkGray);
-
-      // Left column - Payment info
-      const leftCol = margin + 15;
-      const rightCol = 320;
-      let boxY = yPos + 12;
-
-      doc.fontSize(11).font('Helvetica-Bold').text('Payment Details', leftCol, boxY);
-      boxY += 18;
-      doc.fontSize(9).font('Helvetica').fillColor(lightGray);
-      
-      doc.text('Payment ID:', leftCol, boxY);
-      doc.fillColor(darkGray).font('Helvetica-Bold').text(paymentId || '-', leftCol + 80, boxY);
-      boxY += 15;
-
-      doc.fillColor(lightGray).font('Helvetica').text('Invoice ID:', leftCol, boxY);
-      doc.fillColor('#2563eb').text(invoiceId || '-', leftCol + 80, boxY);
-      boxY += 15;
-
-      doc.fillColor(lightGray).font('Helvetica').text('Payment Method:', leftCol, boxY);
+      // Payment method labels
       const methodLabels = {
-        razorpay: 'Card / Net Banking',
+        razorpay: 'Card/Net Banking',
         cash: 'Cash',
         bank_transfer: 'Bank Transfer',
         upi: 'UPI',
         check: 'Cheque'
       };
-      doc.fillColor(darkGray).font('Helvetica-Bold').text(methodLabels[paymentMethod] || paymentMethod || '-', leftCol + 80, boxY);
-      boxY += 15;
 
-      doc.fillColor(lightGray).font('Helvetica').text('Status:', leftCol, boxY);
-      const statusText = status === 'paid' ? 'PAID' : status === 'verification_pending' ? 'Verification Pending' : (status || '-').toUpperCase();
-      doc.fillColor(status === 'paid' ? green : '#f59e0b').font('Helvetica-Bold').text(statusText, leftCol + 80, boxY);
+      let yPos = margin;
 
-      // Right column - Customer info
-      boxY = yPos + 12;
-      doc.fontSize(11).font('Helvetica-Bold').fillColor(darkGray).text('Customer Details', rightCol, boxY);
-      boxY += 18;
+      // ========== HEADER SECTION ==========
+      // Green checkmark circle
+      doc.circle(margin + 20, yPos + 20, 18).fill(green);
+      doc.fillColor('#ffffff').fontSize(20).font('Helvetica-Bold')
+         .text('✓', margin + 12, yPos + 10);
 
-      doc.fontSize(9).font('Helvetica').fillColor(lightGray).text('Name:', rightCol, boxY);
-      doc.fillColor(darkGray).font('Helvetica-Bold').text(customerName || '-', rightCol + 60, boxY);
-      boxY += 15;
+      // "You paid ₹X,XXX" heading
+      doc.fillColor(darkGray).fontSize(22).font('Helvetica-Bold')
+         .text(`You paid ₹${amountPaid.toLocaleString('en-IN')}`, margin + 50, yPos + 8);
 
-      doc.fillColor(lightGray).font('Helvetica').text('Property:', rightCol, boxY);
-      doc.fillColor(darkGray).text(propertyName || '-', rightCol + 60, boxY);
-      boxY += 15;
+      // "to Company Name on Date"
+      doc.fillColor(lightGray).fontSize(12).font('Helvetica')
+         .text(`to XLAND INFRA on ${paymentDateFormatted}`, margin + 50, yPos + 35);
 
-      doc.fillColor(lightGray).font('Helvetica').text('Property ID:', rightCol, boxY);
-      doc.fillColor(darkGray).text(propertyCode || '-', rightCol + 60, boxY);
-      boxY += 15;
+      yPos += 80;
 
-      if (customerPhone) {
-        doc.fillColor(lightGray).font('Helvetica').text('Phone:', rightCol, boxY);
-        doc.fillColor(darkGray).text(customerPhone, rightCol + 60, boxY);
-      }
+      // Divider line
+      doc.strokeColor('#e5e7eb').lineWidth(1).moveTo(margin, yPos).lineTo(545, yPos).stroke();
+      yPos += 30;
 
-      yPos += 115;
+      // ========== PAYMENT DETAILS SECTION ==========
+      doc.fillColor(darkGray).fontSize(16).font('Helvetica-Bold')
+         .text('Payment details', margin, yPos);
+      yPos += 35;
 
-      // Transaction Reference (if exists)
+      // Helper function for detail rows
+      const addDetailRow = (label, value, valueColor = darkGray, isBold = false) => {
+        doc.fillColor(lightGray).fontSize(11).font('Helvetica').text(label, margin, yPos);
+        doc.fillColor(valueColor).font(isBold ? 'Helvetica-Bold' : 'Helvetica')
+           .text(value, 350, yPos, { width: 195, align: 'right' });
+        yPos += 28;
+      };
+
+      // Invoice no.
+      addDetailRow('Invoice no.', invoiceId || paymentId, blue);
+
+      // Invoice amount (total)
+      addDetailRow('Invoice amount', `₹${totalInvoice.toLocaleString('en-IN')}`);
+
+      // Amount paid
+      addDetailRow('Amount paid', `₹${amountPaid.toLocaleString('en-IN')}`, darkGray, true);
+
+      // Remaining balance
+      const balanceText = remaining <= 0 ? '₹0' : `₹${remaining.toLocaleString('en-IN')}`;
+      const balanceColor = remaining <= 0 ? green : '#ef4444';
+      addDetailRow('Remaining balance', balanceText, balanceColor, true);
+
+      yPos += 10;
+
+      // Divider line
+      doc.strokeColor('#e5e7eb').lineWidth(1).moveTo(margin, yPos).lineTo(545, yPos).stroke();
+      yPos += 25;
+
+      // Status
+      const statusText = remaining <= 0 ? 'Fully Paid' : 'Partially Paid';
+      addDetailRow('Status', statusText, remaining <= 0 ? green : '#f59e0b', true);
+
+      // Payment method
+      addDetailRow('Payment method', methodLabels[paymentMethod] || paymentMethod || '-');
+
+      // Reference/Transaction ID
       if (transactionReference || referenceNumber) {
-        doc.rect(margin, yPos, 495, 40).fillColor('#eff6ff').fill();
-        doc.fillColor('#1e40af').fontSize(10).font('Helvetica-Bold')
-           .text('Transaction Information', margin + 15, yPos + 10);
-        doc.fillColor(darkGray).fontSize(9).font('Helvetica')
-           .text(`Reference / Transaction No: ${transactionReference || referenceNumber || '-'}`, margin + 15, yPos + 25);
-        yPos += 50;
+        addDetailRow('Reference ID', transactionReference || referenceNumber);
       }
 
-      yPos += 15;
+      // Receipt ID
+      addDetailRow('Receipt ID', paymentId);
 
-      // Amount Section - Green box
-      doc.rect(margin, yPos, 495, 70).fillColor('#dcfce7').fill();
-      doc.strokeColor(green).lineWidth(2).rect(margin, yPos, 495, 70).stroke();
-
-      doc.fillColor(lightGray).fontSize(10).font('Helvetica')
-         .text('Amount Received', margin + 20, yPos + 15);
-      doc.fillColor(green).fontSize(28).font('Helvetica-Bold')
-         .text(`₹${parseFloat(amount || 0).toLocaleString('en-IN')}`, margin + 20, yPos + 32);
-
-      // Checkmark and status
-      doc.fillColor(green).fontSize(12).font('Helvetica-Bold')
-         .text('✓ Payment Successful', 380, yPos + 25);
-      doc.fillColor(lightGray).fontSize(9).font('Helvetica')
-         .text('Thank you for your payment', 380, yPos + 42);
-
-      yPos += 90;
-
-      // Verification info (if verified)
-      if (verifiedBy) {
-        doc.fillColor(lightGray).fontSize(9).font('Helvetica');
-        const verifiedDateStr = verifiedAt ? new Date(verifiedAt).toLocaleDateString('en-IN', {
-          day: '2-digit', month: 'short', year: 'numeric'
-        }) : '';
-        doc.text(`Verified by: ${verifiedBy}${verifiedDateStr ? ` on ${verifiedDateStr}` : ''}`, margin, yPos);
-        yPos += 20;
-      }
-
-      // Remarks (if any)
-      if (remarks) {
-        doc.fillColor(lightGray).fontSize(9).font('Helvetica').text('Remarks:', margin, yPos);
-        doc.fillColor(darkGray).text(remarks, margin + 50, yPos);
-        yPos += 20;
+      // Customer/Property
+      if (customerName || propertyName) {
+        addDetailRow('Customer', customerName || propertyName);
       }
 
       yPos += 30;
 
-      // Footer divider
+      // ========== FOOTER NOTE ==========
+      doc.fillColor(lightGray).fontSize(10).font('Helvetica')
+         .text("Please don't reply to this email, if you need any help regarding this message, please contact the business directly.", margin, yPos, { width: 495 });
+      
+      yPos += 50;
+
+      doc.fillColor(darkGray).fontSize(11).font('Helvetica')
+         .text('Thank you,', margin, yPos);
+      yPos += 18;
+      doc.fillColor(darkGray).fontSize(11).font('Helvetica-Bold')
+         .text('XLAND INFRA PM SERVICES PVT LTD', margin, yPos);
+
+      // ========== COMPANY FOOTER ==========
+      yPos = 750;
       doc.strokeColor('#e5e7eb').lineWidth(1).moveTo(margin, yPos).lineTo(545, yPos).stroke();
       yPos += 15;
-
-      // Footer note
       doc.fillColor('#9ca3af').fontSize(8).font('Helvetica')
-         .text('This is a computer-generated receipt and does not require a signature.', margin, yPos, { align: 'center' });
+         .text('Gachibowli, Hyderabad, Telangana - 500032 | GST: 36AADCX1234A1Z5', margin, yPos, { align: 'center' });
       yPos += 12;
-      doc.text('For queries, contact: support@xlandinfra.com | +91-XXXXXXXXXX', margin, yPos, { align: 'center' });
-
-      // Company footer
-      yPos = 780;
-      doc.rect(0, yPos, 595, 62).fill('#1a1a1a');
-      doc.rect(0, yPos, 595, 4).fill(gold);
-      doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold')
-         .text('XLAND INFRA PM SERVICES PVT LTD', margin, yPos + 15, { align: 'center' });
-      doc.fillColor('#9ca3af').fontSize(8).font('Helvetica')
-         .text('Gachibowli, Hyderabad, Telangana - 500032 | GST: 36AADCX1234A1Z5', margin, yPos + 30, { align: 'center' });
+      doc.text('support@xlandinfra.com | www.xlandinfra.com', margin, yPos, { align: 'center' });
 
       doc.end();
     } catch (error) {
