@@ -85,7 +85,8 @@ router.post('/create-payment-link', authenticate, canManagePayments, paymentLink
       return res.status(400).json({ success: false, message: 'Invoice ID is required' });
     }
 
-    // Get invoice details
+    // Get invoice details - check both numeric id and string invoice_id
+    const isNumericId = !isNaN(parseInt(invoiceId)) && String(parseInt(invoiceId)) === String(invoiceId);
     const [invoices] = await pool.execute(`
       SELECT i.*, 
              p.community_name as property_name, p.property_id as property_code,
@@ -93,7 +94,7 @@ router.post('/create-payment-link', authenticate, canManagePayments, paymentLink
       FROM invoices i
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
       LEFT JOIN clients c ON i.customer_id = c.id
-      WHERE i.id = ?
+      WHERE ${isNumericId ? 'i.id = ?' : 'i.invoice_id = ?'}
     `, [invoiceId]);
 
     if (invoices.length === 0) {
