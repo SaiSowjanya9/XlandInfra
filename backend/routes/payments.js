@@ -2915,14 +2915,17 @@ router.get('/history', authenticate, canViewPayments, async (req, res) => {
 });
 
 // Get Razorpay transaction history with receipt details
+// Includes: Card, Net Banking, UPI - all processed via Razorpay
 router.get('/razorpay-history', authenticate, canViewPayments, async (req, res) => {
   try {
     const fpId = getFPScope(req);
     const { startDate, endDate, search } = req.query;
 
+    // Razorpay handles: Card, Net Banking, UPI
+    // XLAND INFRA handles: Cash, Cheque, Bank Transfer
     let query = `
       SELECT ph.*, 
-             p.payment_id as payment_code, p.amount as payment_amount,
+             p.payment_id as payment_code, p.amount as payment_amount, p.payment_method,
              i.invoice_id as invoice_code, i.customer_name, i.total_amount as invoice_total,
              i.balance_amount as invoice_balance,
              prop.community_name as property_name, prop.property_id as property_code
@@ -2930,7 +2933,7 @@ router.get('/razorpay-history', authenticate, canViewPayments, async (req, res) 
       LEFT JOIN payments p ON ph.payment_id = p.id
       LEFT JOIN invoices i ON ph.invoice_id = i.id
       LEFT JOIN onboarded_properties prop ON i.property_id = prop.id
-      WHERE ph.action = 'razorpay_payment'
+      WHERE (ph.action = 'razorpay_payment' OR (p.payment_method = 'razorpay' AND ph.action = 'created'))
     `;
     const params = [];
 
@@ -2975,15 +2978,20 @@ router.get('/razorpay-history', authenticate, canViewPayments, async (req, res) 
         } catch (e) {}
 
         // Determine payment method display
-        let paymentMethodDisplay = 'Card/Net Banking';
+        // Razorpay processes: Card, Net Banking, UPI
+        let paymentMethodDisplay = 'Razorpay';
         if (methodDetails) {
           if (methodDetails.method === 'card' && methodDetails.card_last4) {
             paymentMethodDisplay = `${methodDetails.card_network || 'Card'}****${methodDetails.card_last4}`;
           } else if (methodDetails.method === 'netbanking' && methodDetails.bank) {
             paymentMethodDisplay = `Net Banking - ${methodDetails.bank}`;
           } else if (methodDetails.method === 'upi') {
-            paymentMethodDisplay = 'UPI';
+            paymentMethodDisplay = 'UPI (Razorpay)';
+          } else if (methodDetails.method === 'wallet') {
+            paymentMethodDisplay = `Wallet - ${methodDetails.wallet || 'Razorpay'}`;
           }
+        } else if (h.payment_method === 'razorpay') {
+          paymentMethodDisplay = 'Card/Net Banking/UPI';
         }
 
         return {
