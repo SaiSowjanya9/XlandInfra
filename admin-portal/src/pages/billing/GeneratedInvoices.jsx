@@ -488,9 +488,12 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
   const itemsPerPage = 10;
 
   const filteredInvoices = invoices.filter(inv => {
+    const searchLower = searchTerm.toLowerCase();
     const matchesSearch = !searchTerm || 
-      inv.invoiceId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inv.customerName?.toLowerCase().includes(searchTerm.toLowerCase());
+      inv.invoiceId?.toLowerCase().includes(searchLower) ||
+      inv.customerName?.toLowerCase().includes(searchLower) ||
+      inv.propertyCode?.toLowerCase().includes(searchLower) ||
+      inv.property_code?.toLowerCase().includes(searchLower);
     const matchesType = type === 'generated' 
       ? inv.invoiceType === 'estimate' 
       : inv.invoiceType === 'work_order';
@@ -534,7 +537,7 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by Invoice ID, Customer..."
+            placeholder="Search by Invoice ID, Customer, Property ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"

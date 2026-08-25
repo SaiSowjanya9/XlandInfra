@@ -594,9 +594,9 @@ router.get('/invoices', authenticate, canViewPayments, async (req, res) => {
     }
 
     if (search) {
-      query += ' AND (i.invoice_id LIKE ? OR i.customer_name LIKE ? OR i.customer_email LIKE ?)';
+      query += ' AND (i.invoice_id LIKE ? OR i.customer_name LIKE ? OR i.customer_email LIKE ? OR i.property_code LIKE ? OR COALESCE(p.property_id, p2.property_id, fe.property_code) LIKE ?)';
       const searchPattern = `%${search}%`;
-      params.push(searchPattern, searchPattern, searchPattern);
+      params.push(searchPattern, searchPattern, searchPattern, searchPattern, searchPattern);
     }
 
     query += ' ORDER BY i.created_at DESC';
