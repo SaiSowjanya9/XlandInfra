@@ -14,6 +14,7 @@ import { FREQUENCY_TYPES, FREQUENCY_COUNT_MAP } from '../utils/estimateStore';
 import { getAuthToken } from '../utils/safeStorage';
 import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
 import * as XLSX from 'xlsx';
+import AutocompleteInput from '../components/common/AutocompleteInput';
 
 // Decode HTML entities (e.g., &#x2F; -> /, &amp;amp; -> &)
 const decodeHtml = (html) => {
@@ -595,6 +596,29 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     numberOfBlocks: '', blockNumber: '', blockName: '', numberOfUnits: '',
     villaNumber: '', flatNumber: '', plotNumber: ''
   });
+  
+  // Zone and City options for autocomplete
+  const [zoneOptions, setZoneOptions] = useState([]);
+  const [cityOptions, setCityOptions] = useState([]);
+  
+  // Fetch zones and cities for autocomplete
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const [zonesRes, citiesRes] = await Promise.all([
+          fetch(`${API_BASE}/api/onboarding/suggestions/zones`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_BASE}/api/onboarding/suggestions/cities`, { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+        const zonesData = await zonesRes.json();
+        const citiesData = await citiesRes.json();
+        setZoneOptions(zonesData.success ? (zonesData.data || []).map(z => z.name || z) : []);
+        setCityOptions(citiesData.success ? (citiesData.data || []).map(c => c.name || c) : []);
+      } catch (error) {
+        console.error('Error loading zones/cities:', error);
+      }
+    };
+    if (token) fetchOptions();
+  }, [token]);
 
   // Helper to normalize property type to match PROPERTY_TYPE_OPTIONS IDs
   const normalizePropertyType = (type) => {
@@ -1646,12 +1670,26 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <input type="text" placeholder="Enter property name" value={estimateForm.propertyName} onChange={(e) => setEstimateForm({...estimateForm, propertyName: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1.5">Zone</label>
-                  <input type="text" placeholder="Enter zone" value={estimateForm.zone} onChange={(e) => setEstimateForm({...estimateForm, zone: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                  <AutocompleteInput
+                    label="Zone"
+                    value={estimateForm.zone}
+                    onChange={(val) => setEstimateForm({...estimateForm, zone: val})}
+                    options={zoneOptions}
+                    placeholder="Type or select zone..."
+                    allowCustom={true}
+                    inputClassName="text-sm"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1.5">City</label>
-                  <input type="text" placeholder="Enter city" value={estimateForm.city} onChange={(e) => setEstimateForm({...estimateForm, city: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                  <AutocompleteInput
+                    label="City"
+                    value={estimateForm.city}
+                    onChange={(val) => setEstimateForm({...estimateForm, city: val})}
+                    options={cityOptions}
+                    placeholder="Type or select city..."
+                    allowCustom={true}
+                    inputClassName="text-sm"
+                  />
                 </div>
               </div>
               <div>
