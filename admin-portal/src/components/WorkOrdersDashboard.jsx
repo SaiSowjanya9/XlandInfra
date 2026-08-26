@@ -715,30 +715,42 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                 onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
                 className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
               >
-                <Users className="w-4 h-4 text-gray-500" />
-                <span className="text-sm text-gray-700">
-                  {selectedFp ? (selectedFp.id === 'all' ? 'All Franchise Partners' : selectedFp.name || selectedFp.companyName) : 'All Franchise Partners'}
+                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                <span className="text-sm font-medium text-gray-700">
+                  {selectedFp ? (selectedFp.id === 'all' ? 'Admin (All FPs)' : selectedFp.fpId || selectedFp.fp_code || 'FP') : 'Admin (All FPs)'}
                 </span>
                 <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
               {fpDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-80 overflow-auto">
-                  <div className="p-2 border-b border-gray-100">
-                    <button
-                      onClick={() => { selectFp({ id: 'all', name: 'All Franchise Partners' }); setFpDropdownOpen(false); }}
-                      className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${!selectedFp || selectedFp.id === 'all' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}
-                    >
-                      All Franchise Partners
-                    </button>
-                  </div>
-                  <div className="p-2">
+                <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-auto">
+                  {/* Admin (All FPs) Option */}
+                  <button
+                    onClick={() => { selectFp({ id: 'all', name: 'All Franchise Partners' }); setFpDropdownOpen(false); }}
+                    className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors ${!selectedFp || selectedFp.id === 'all' ? 'bg-blue-50' : ''}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-gray-400" />
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">Admin (All FPs)</p>
+                        <p className="text-xs text-gray-500">View aggregated data</p>
+                      </div>
+                    </div>
+                  </button>
+                  {/* FP List */}
+                  <div className="py-1">
                     {fpList.map(fp => (
                       <button
                         key={fp.id}
                         onClick={() => { selectFp(fp); setFpDropdownOpen(false); }}
-                        className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${selectedFp?.id === fp.id ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                        className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${selectedFp?.id === fp.id ? 'bg-blue-50' : ''}`}
                       >
-                        {fp.name || fp.companyName}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{fp.fpId || fp.fp_code}</p>
+                            <p className="text-xs text-gray-500">{fp.companyName || fp.company_name || fp.name}</p>
+                          </div>
+                          <span className="text-xs text-gray-400">{fp.ownerName || fp.owner_name || ''}</span>
+                        </div>
                       </button>
                     ))}
                   </div>
