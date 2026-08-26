@@ -100,9 +100,6 @@ const UPIAppLogos = () => (
     <div className="px-2 py-1 bg-[#ed752e] rounded">
       <span className="text-[10px] font-bold text-white">BHIM</span>
     </div>
-    <div className="w-6 h-6 bg-gray-100 rounded flex items-center justify-center border border-gray-200">
-      <span className="text-gray-400 font-bold text-xs">...</span>
-    </div>
   </div>
 );
 
