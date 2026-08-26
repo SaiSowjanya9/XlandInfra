@@ -551,49 +551,52 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">Invoices</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              Home &gt; Billing & Payments &gt; Invoices
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            {/* Header Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by Invoice ID, Property ID, Customer..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-[320px] pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-              />
+      {/* Main Container */}
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        {/* Header Card */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">Invoices</h1>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Home &gt; Billing & Payments &gt; Invoices
+              </p>
             </div>
-            {/* Export All Button */}
-            <button
-              onClick={exportToExcel}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Export All
-            </button>
-            {activeTab === 'manual' && (
+            <div className="flex items-center gap-3">
+              {/* Header Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by Invoice ID, Property ID, Customer..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-[320px] pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                />
+              </div>
+              {/* Export All Button */}
               <button
-                onClick={() => navigate(`/${portalType === 'admin' ? 'employee' : portalType}/billing/create-invoice`)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                onClick={exportToExcel}
+                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
               >
-                <Plus className="w-4 h-4" />
-                Create Invoice
+                <Download className="w-4 h-4" />
+                Export All
               </button>
-            )}
+              {activeTab === 'manual' && (
+                <button
+                  onClick={() => navigate(`/${portalType === 'admin' ? 'employee' : portalType}/billing/create-invoice`)}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Invoice
+                </button>
+              )}
+            </div>
           </div>
         </div>
-        
-        {/* Invoice Type Tabs */}
-        <div className="flex gap-1 mt-4 border-b border-gray-200 -mb-4">
+
+        {/* Invoice Type Tabs - Below Header */}
+        <div className="flex gap-2 mb-4">
           {INVOICE_TABS.map(tab => {
             const Icon = tab.icon;
             // Count only sent invoices (exclude draft - those are in Generated Invoices)
@@ -610,10 +613,10 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
               <button
                 key={tab.id}
                 onClick={() => { setActiveTab(tab.id); setCurrentPage(1); }}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border transition-colors ${
                   activeTab === tab.id
-                    ? 'border-blue-600 text-blue-600 bg-blue-50/50'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -625,9 +628,6 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
             );
           })}
         </div>
-      </div>
-
-      <div className="p-6">
         {/* Stats Cards - Hide for Archived tab */}
         {activeTab !== 'archived' && (
           <div className="grid grid-cols-6 gap-4 mb-6">
