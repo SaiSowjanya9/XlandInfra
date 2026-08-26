@@ -1210,14 +1210,25 @@ const Payments = ({ user, portalType = 'admin' }) => {
                     type="text"
                     placeholder="dd/mm/yyyy"
                     value={formatDateIST(dateRange.start)}
-                    onChange={(e) => handleISTDateInput(e.target.value, (val) => setDateRange(prev => ({ ...prev, start: val })))}
-                    className="w-24 text-sm text-gray-700 focus:outline-none"
+                    onChange={(e) => {
+                      const formatted = handleISTDateInput(e.target.value);
+                      if (formatted.length === 10) {
+                        setDateRange(prev => ({ ...prev, start: parseISTDate(formatted) }));
+                      } else if (formatted.length === 0) {
+                        setDateRange(prev => ({ ...prev, start: '' }));
+                      }
+                    }}
+                    className="text-sm border-none focus:outline-none bg-transparent w-[85px]"
                   />
                   <input
                     type="date"
-                    value={dateRange.start}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
                     className="absolute inset-0 opacity-0 cursor-pointer"
+                    value={dateRange.start}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setDateRange(prev => ({ ...prev, start: e.target.value }));
+                      }
+                    }}
                   />
                 </div>
                 <span className="text-gray-400">-</span>
@@ -1226,14 +1237,25 @@ const Payments = ({ user, portalType = 'admin' }) => {
                     type="text"
                     placeholder="dd/mm/yyyy"
                     value={formatDateIST(dateRange.end)}
-                    onChange={(e) => handleISTDateInput(e.target.value, (val) => setDateRange(prev => ({ ...prev, end: val })))}
-                    className="w-24 text-sm text-gray-700 focus:outline-none"
+                    onChange={(e) => {
+                      const formatted = handleISTDateInput(e.target.value);
+                      if (formatted.length === 10) {
+                        setDateRange(prev => ({ ...prev, end: parseISTDate(formatted) }));
+                      } else if (formatted.length === 0) {
+                        setDateRange(prev => ({ ...prev, end: '' }));
+                      }
+                    }}
+                    className="text-sm border-none focus:outline-none bg-transparent w-[85px]"
                   />
                   <input
                     type="date"
-                    value={dateRange.end}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
                     className="absolute inset-0 opacity-0 cursor-pointer"
+                    value={dateRange.end}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setDateRange(prev => ({ ...prev, end: e.target.value }));
+                      }
+                    }}
                   />
                 </div>
               </div>
