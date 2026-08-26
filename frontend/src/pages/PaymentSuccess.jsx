@@ -205,11 +205,11 @@ const PaymentSuccess = () => {
                 Back to Home
               </Link>
               <Link
-                to="/login"
+                to="/dashboard/payment"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gold-500 hover:bg-gold-400 text-dark-900 font-semibold rounded-xl transition-colors"
               >
                 <FileText className="w-5 h-5" />
-                View Invoice
+                View Invoices
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
