@@ -2084,9 +2084,10 @@ router.get('/estimates', authenticate, adminOnly, async (req, res) => {
     const { archived, fpId } = req.query;
     const isArchived = archived === 'true' ? 1 : 0;
     
-    // Get from fp_estimates table (main source for FP estimates)
-    let query = `
+    // Query 1: Get from fp_estimates table (FP-created estimates)
+    let fpQuery = `
       SELECT fe.*, 
+             'fp_estimates' as source_table,
              fp.fp_code, fp.company_name as fp_name,
              fe.estimate_id as estimateId,
              COALESCE(fe.customer_name, fe.property_name, 'Direct Estimate') as clientName,
@@ -2100,25 +2101,60 @@ router.get('/estimates', authenticate, adminOnly, async (req, res) => {
       LEFT JOIN franchise_partners fp ON fe.franchise_partner_id = fp.id
       WHERE 1=1
     `;
-    const params = [];
+    const fpParams = [];
     
     if (isArchived) {
-      query += ` AND fe.is_archived = 1`;
+      fpQuery += ` AND fe.is_archived = 1`;
     } else {
-      query += ` AND (fe.is_archived = 0 OR fe.is_archived IS NULL)`;
+      fpQuery += ` AND (fe.is_archived = 0 OR fe.is_archived IS NULL)`;
     }
     
     // Filter by FP if specified
     if (fpId) {
-      query += ` AND fe.franchise_partner_id = ?`;
-      params.push(fpId);
+      fpQuery += ` AND fe.franchise_partner_id = ?`;
+      fpParams.push(fpId);
     }
     
-    query += ` ORDER BY fe.created_at DESC`;
+    fpQuery += ` ORDER BY fe.created_at DESC`;
     
-    const [estimates] = await pool.execute(query, params);
+    // Query 2: Get from estimates table (Admin-created estimates)
+    let adminQuery = `
+      SELECT e.*, 
+             'estimates' as source_table,
+             NULL as fp_code, 'Admin' as fp_name,
+             e.estimate_id as estimateId,
+             COALESCE(e.customer_name, e.property_name, 'Direct Estimate') as clientName,
+             COALESCE(e.customer_name, e.property_name, 'Direct Estimate') as customerName,
+             COALESCE(e.estimate_type, 'direct') as estimateType,
+             e.property_type as propertyType,
+             COALESCE(e.total, 0) as totalPrice,
+             NULL as archivedAt,
+             e.created_at as createdAt
+      FROM estimates e
+      WHERE 1=1
+    `;
+    const adminParams = [];
     
-    res.json({ success: true, data: estimates || [] });
+    if (isArchived) {
+      adminQuery += ` AND e.status = 'archived'`;
+    } else {
+      adminQuery += ` AND (e.status IS NULL OR e.status != 'archived')`;
+    }
+    
+    // Don't filter admin estimates by fpId (they don't have FP association)
+    adminQuery += ` ORDER BY e.created_at DESC`;
+    
+    // Execute both queries
+    const [[fpEstimates], [adminEstimates]] = await Promise.all([
+      pool.execute(fpQuery, fpParams),
+      fpId ? Promise.resolve([[]]) : pool.execute(adminQuery, adminParams) // Only include admin estimates if not filtering by FP
+    ]);
+    
+    // Combine and sort by created_at
+    const allEstimates = [...(fpEstimates || []), ...(adminEstimates || [])];
+    allEstimates.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
+    
+    res.json({ success: true, data: allEstimates });
   } catch (error) {
     console.error('Error fetching estimates:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch estimates' });
