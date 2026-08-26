@@ -24,8 +24,11 @@ import {
   Clock,
   User,
   MapPin,
+  ChevronDown,
+  Users,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import { useFP } from '../../contexts/FPContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -241,6 +244,9 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const preselectedInvoiceId = searchParams.get('invoiceId');
+  const { fpList, selectedFp, selectFp } = useFP();
+  const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
+  const isAdminPortal = portalType === 'admin' || portalType === 'employee';
   
   const [selectedMethod, setSelectedMethod] = useState('razorpay');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -285,7 +291,12 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
   const fetchInvoices = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/api/payments/invoices`, {
+      const params = new URLSearchParams();
+      if (selectedFp && selectedFp.id !== 'all') {
+        params.append('fpId', selectedFp.id);
+      }
+      const url = params.toString() ? `${API_BASE}/api/payments/invoices?${params.toString()}` : `${API_BASE}/api/payments/invoices`;
+      const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -316,7 +327,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     } finally {
       setLoading(false);
     }
-  }, [token, preselectedInvoiceId]);
+  }, [token, preselectedInvoiceId, selectedFp]);
 
   useEffect(() => {
     fetchInvoices();
@@ -1235,14 +1246,66 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center gap-4">
-          <button onClick={handleBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
-          </button>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">Make Payment</h1>
-            <p className="text-sm text-gray-500">Choose a payment method and complete your payment</p>
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button onClick={handleBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">Make Payment</h1>
+              <p className="text-sm text-gray-500">Choose a payment method and complete your payment</p>
+            </div>
           </div>
+          {/* FP Selector - Only for Admin Portal */}
+          {isAdminPortal && (
+            <div className="relative">
+              <button
+                onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+              >
+                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                <span className="text-sm font-medium text-gray-700">
+                  {selectedFp ? (selectedFp.id === 'all' ? 'Admin (All FPs)' : selectedFp.fpId || selectedFp.fp_code || selectedFp.name) : 'Admin (All FPs)'}
+                </span>
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {fpDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-auto">
+                  {/* Admin (All FPs) Option */}
+                  <button
+                    onClick={() => { selectFp({ id: 'all', name: 'All Franchise Partners' }); setFpDropdownOpen(false); }}
+                    className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors ${!selectedFp || selectedFp.id === 'all' ? 'bg-blue-50' : ''}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-gray-400" />
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">Admin (All FPs)</p>
+                        <p className="text-xs text-gray-500">View aggregated data</p>
+                      </div>
+                    </div>
+                  </button>
+                  {/* FP List */}
+                  <div className="py-1">
+                    {fpList.map(fp => (
+                      <button
+                        key={fp.id}
+                        onClick={() => { selectFp(fp); setFpDropdownOpen(false); }}
+                        className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${selectedFp?.id === fp.id ? 'bg-blue-50' : ''}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{fp.fpId || fp.fp_code}</p>
+                            <p className="text-xs text-gray-500">{fp.companyName || fp.company_name || fp.name}</p>
+                          </div>
+                          <span className="text-xs text-gray-400">{fp.ownerName || fp.owner_name || ''}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
