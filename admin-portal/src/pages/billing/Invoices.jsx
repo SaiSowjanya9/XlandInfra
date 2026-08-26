@@ -1574,10 +1574,11 @@ const InvoiceDetailPanel = ({
               return decoded;
             };
 
-            // Filter out AMC Package entries
+            // Filter to only include services (exclude addons and AMC package entries)
             const filteredItems = lineItems.filter(item => {
               const desc = String(item.description || item.name || '').toLowerCase();
-              return !desc.includes('amc package') && !desc.includes('amc services');
+              const isAddon = item.type === 'addon' || desc.includes('add-on') || desc.includes('addon');
+              return !isAddon && !desc.includes('amc package') && !desc.includes('amc services');
             });
 
             // Helper to extract frequency
@@ -1650,6 +1651,101 @@ const InvoiceDetailPanel = ({
                           <td className="px-2 py-2 text-xs text-gray-600">{decodeHtml(item.description) || '-'}</td>
                           <td className="px-2 py-2 text-xs text-gray-600 text-center">{item.frequency}</td>
                           <td className="px-2 py-2 text-xs font-medium text-gray-800 text-center">{item.visits}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null;
+          })()}
+
+          {/* ===== ADDONS SECTION - Below Services ===== */}
+          {lineItems.length > 0 && (() => {
+            // Decode HTML entities
+            const decodeHtml = (str) => {
+              if (!str) return str || '';
+              let decoded = String(str);
+              for (let i = 0; i < 5; i++) {
+                const before = decoded;
+                decoded = decoded
+                  .replace(/&amp;/g, '&')
+                  .replace(/&lt;/g, '<')
+                  .replace(/&gt;/g, '>')
+                  .replace(/&quot;/g, '"')
+                  .replace(/&#39;/g, "'")
+                  .replace(/&#x27;/g, "'")
+                  .replace(/&nbsp;/g, ' ')
+                  .replace(/&#x2F;/g, '/');
+                if (decoded === before) break;
+              }
+              return decoded;
+            };
+
+            // Filter addon items - check type field or description patterns
+            const addonItems = lineItems.filter(item => {
+              if (item.type === 'addon') return true;
+              const desc = String(item.description || item.name || '').toLowerCase();
+              return desc.includes('add-on') || desc.includes('addon');
+            });
+
+            const getFrequency = (item) => {
+              const freq = item.frequency || item.frequencyType || item.frequency_type || item.billingDuration || '';
+              if (!freq || freq === '-') return '-';
+              return String(freq).charAt(0).toUpperCase() + String(freq).slice(1).toLowerCase();
+            };
+
+            const addons = addonItems.map(item => {
+              // Parse addon name and description from description field
+              const fullDesc = decodeHtml(item.description || item.name || 'Add-on');
+              let addonName = fullDesc;
+              let addonDesc = '-';
+              
+              // Split by " - " to separate name and description
+              if (fullDesc.includes(' - ')) {
+                const parts = fullDesc.split(' - ');
+                addonName = parts[0];
+                addonDesc = parts.slice(1).join(' - ') || '-';
+              }
+              
+              return {
+                name: addonName,
+                description: addonDesc,
+                frequency: getFrequency(item),
+                visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1,
+                price: parseFloat(item.total_price || item.totalPrice || item.unit_price || 0)
+              };
+            });
+
+            return addons.length > 0 ? (
+              <div className="mt-4">
+                {/* Section Header */}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-bold text-gray-900 uppercase whitespace-nowrap">Add-ons</span>
+                </div>
+                
+                {/* Addons Table - Compact */}
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-[#7c3aed]">
+                        <th className="w-8 px-2 py-2 text-xs font-semibold text-white text-center">#</th>
+                        <th className="w-28 px-2 py-2 text-xs font-semibold text-white text-left">Add-on</th>
+                        <th className="px-2 py-2 text-xs font-semibold text-white text-left">Description</th>
+                        <th className="w-20 px-2 py-2 text-xs font-semibold text-white text-center">Frequency</th>
+                        <th className="w-12 px-2 py-2 text-xs font-semibold text-white text-center">Visits</th>
+                        <th className="w-20 px-2 py-2 text-xs font-semibold text-white text-right">Price</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {addons.map((item, idx) => (
+                        <tr key={idx} className="bg-white">
+                          <td className="px-2 py-2 text-xs text-gray-700 text-center">{idx + 1}</td>
+                          <td className="px-2 py-2 text-xs font-medium text-gray-800">{decodeHtml(item.name)}</td>
+                          <td className="px-2 py-2 text-xs text-gray-600">{decodeHtml(item.description) || '-'}</td>
+                          <td className="px-2 py-2 text-xs text-gray-600 text-center">{item.frequency}</td>
+                          <td className="px-2 py-2 text-xs font-medium text-gray-800 text-center">{item.visits}</td>
+                          <td className="px-2 py-2 text-xs font-medium text-gray-800 text-right">₹{item.price.toLocaleString('en-IN')}</td>
                         </tr>
                       ))}
                     </tbody>

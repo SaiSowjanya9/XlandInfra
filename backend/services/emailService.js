@@ -2247,9 +2247,22 @@ const sendInvoiceEmail = async (invoice) => {
       .replace(/&#39;/g, "'");
   };
 
-  // Generate line items HTML with Service, Description, Frequency, Visits format
-  const itemsHtml = items.map((item, idx) => {
-    // Use item.details as fallback for full description
+  // Filter services (exclude addons)
+  const serviceItems = items.filter(item => {
+    const desc = String(item.description || item.name || '').toLowerCase();
+    const isAddon = item.type === 'addon' || desc.includes('add-on') || desc.includes('addon');
+    return !isAddon;
+  });
+
+  // Filter addons
+  const addonItems = items.filter(item => {
+    if (item.type === 'addon') return true;
+    const desc = String(item.description || item.name || '').toLowerCase();
+    return desc.includes('add-on') || desc.includes('addon');
+  });
+
+  // Generate services HTML
+  const servicesHtml = serviceItems.map((item, idx) => {
     const details = decodeHtml(item.details || '');
     const fullDesc = decodeHtml(item.description || item.name || 'Service');
     const parts = fullDesc.split(' - ');
@@ -2265,6 +2278,34 @@ const sendInvoiceEmail = async (invoice) => {
       <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #4a5568;">${serviceDesc}</td>
       <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4a5568;">${freqDisplay}</td>
       <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4a5568;">${visits}</td>
+    </tr>`;
+  }).join('');
+
+  // Generate addons HTML
+  const addonsHtml = addonItems.map((item, idx) => {
+    const fullDesc = decodeHtml(item.description || item.name || 'Add-on');
+    let addonName = fullDesc;
+    let addonDesc = '-';
+    
+    if (fullDesc.includes(' - ')) {
+      const parts = fullDesc.split(' - ');
+      addonName = parts[0];
+      addonDesc = parts.slice(1).join(' - ') || '-';
+    }
+    
+    const freq = item.frequency || item.frequencyType || item.frequency_type || item.billingDuration || '-';
+    const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
+    const visits = item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1;
+    const price = Math.round(parseFloat(item.totalPrice || item.total_price || item.unitPrice || item.unit_price || 0));
+    
+    return `
+    <tr>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4a5568;">${idx + 1}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #5b21b6; font-weight: 600;">${addonName}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #4a5568;">${addonDesc}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4a5568;">${freqDisplay}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4a5568;">${visits}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #1f2937; font-weight: 600;">Rs. ${price.toLocaleString('en-IN')}</td>
     </tr>`;
   }).join('');
 
@@ -2423,21 +2464,43 @@ const sendInvoiceEmail = async (invoice) => {
             </table>
             
             <!-- Services Included -->
-            ${items.length > 0 ? `
+            ${serviceItems.length > 0 ? `
             <div style="margin-bottom: 20px;">
               <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Services Included</h3>
               <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 8px;">
                 <thead>
-                  <tr style="background: #f9fafb;">
-                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #4a5568; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 30px;">#</th>
-                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #4a5568; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 120px;">Service</th>
-                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #4a5568; font-weight: 600; border-bottom: 1px solid #e5e7eb;">Description</th>
-                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #4a5568; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 80px;">Frequency</th>
-                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #4a5568; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 50px;">Visits</th>
+                  <tr style="background: #c9a227;">
+                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 30px;">#</th>
+                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 120px;">Service</th>
+                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb;">Description</th>
+                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 80px;">Frequency</th>
+                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 50px;">Visits</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${itemsHtml}
+                  ${servicesHtml}
+                </tbody>
+              </table>
+            </div>
+            ` : ''}
+            
+            <!-- Add-ons -->
+            ${addonItems.length > 0 ? `
+            <div style="margin-bottom: 20px;">
+              <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Add-ons</h3>
+              <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 8px;">
+                <thead>
+                  <tr style="background: #7c3aed;">
+                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 30px;">#</th>
+                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 120px;">Add-on</th>
+                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb;">Description</th>
+                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 80px;">Frequency</th>
+                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 50px;">Visits</th>
+                    <th style="padding: 10px; text-align: right; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 80px;">Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${addonsHtml}
                 </tbody>
               </table>
             </div>

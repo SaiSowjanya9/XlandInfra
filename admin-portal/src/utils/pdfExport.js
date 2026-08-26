@@ -1155,7 +1155,9 @@ export const exportInvoiceToPDF = (invoice) => {
 
     const isAddon = (item) => {
       const typeStr = String(item.type || '').toLowerCase();
-      return typeStr === 'addon' || typeStr === 'add-on' || typeStr === 'add_on';
+      if (typeStr === 'addon' || typeStr === 'add-on' || typeStr === 'add_on') return true;
+      const desc = String(item.description || item.name || '').toLowerCase();
+      return desc.includes('add-on') || desc.includes('addon');
     };
 
     const services = allItems.filter(item => !isAddon(item)).map(item => {
@@ -1168,6 +1170,27 @@ export const exportInvoiceToPDF = (invoice) => {
         description: itemDetails || parts.slice(1).join(' - ') || '-',
         frequency: item.frequency || item.frequencyType || item.frequency_type || '-',
         visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
+      };
+    });
+
+    // Extract addons
+    const addons = allItems.filter(item => isAddon(item)).map(item => {
+      const fullDesc = decodeHtml(String(item.description || item.name || 'Add-on'));
+      let addonName = fullDesc;
+      let addonDesc = '-';
+      
+      if (fullDesc.includes(' - ')) {
+        const parts = fullDesc.split(' - ');
+        addonName = parts[0];
+        addonDesc = parts.slice(1).join(' - ') || '-';
+      }
+      
+      return {
+        name: addonName,
+        description: addonDesc,
+        frequency: item.frequency || item.frequencyType || item.frequency_type || '-',
+        visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1,
+        price: parseFloat(item.totalPrice || item.total_price || item.unitPrice || item.unit_price || 0)
       };
     });
 
@@ -1269,6 +1292,55 @@ export const exportInvoiceToPDF = (invoice) => {
           2: { cellWidth: 'auto', halign: 'left' }, 
           3: { cellWidth: 25, halign: 'center' }, 
           4: { cellWidth: 15, halign: 'center' } 
+        },
+        margin: { left: margin, right: margin },
+        tableLineColor: [200, 200, 200],
+        tableLineWidth: 0.2
+      });
+      y = doc.lastAutoTable.finalY + 10;
+    }
+
+    // ===== ADDONS SECTION =====
+    if (!isWorkOrderInvoice && addons.length > 0) {
+      // Section header
+      doc.setTextColor(...primaryText);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ADD-ONS', margin, y + 5);
+      
+      y += 10;
+
+      // Addons table - purple themed
+      const addonPurple = [124, 58, 237]; // #7c3aed
+      autoTable(doc, {
+        startY: y,
+        head: [['#', 'Add-on', 'Description', 'Frequency', 'Visits', 'Price']],
+        body: addons.map((item, idx) => [
+          String(idx + 1),
+          decodeHtml(String(item.name)),
+          decodeHtml(String(item.description)) || '-',
+          String(item.frequency),
+          String(item.visits),
+          `Rs. ${Math.round(item.price).toLocaleString('en-IN')}`
+        ]),
+        theme: 'grid',
+        styles: { 
+          fontSize: 6.5, 
+          cellPadding: 3, 
+          valign: 'middle', 
+          overflow: 'linebreak',
+          cellWidth: 'wrap'
+        },
+        headStyles: { fillColor: addonPurple, textColor: white, fontStyle: 'bold', fontSize: 7, halign: 'center' },
+        bodyStyles: { textColor: primaryText, minCellHeight: 10, lineColor: [220, 220, 220] },
+        alternateRowStyles: { fillColor: [252, 252, 252] },
+        columnStyles: { 
+          0: { cellWidth: 8, halign: 'center' }, 
+          1: { cellWidth: 28, halign: 'left' }, 
+          2: { cellWidth: 'auto', halign: 'left' }, 
+          3: { cellWidth: 22, halign: 'center' }, 
+          4: { cellWidth: 12, halign: 'center' },
+          5: { cellWidth: 25, halign: 'right' } 
         },
         margin: { left: margin, right: margin },
         tableLineColor: [200, 200, 200],
