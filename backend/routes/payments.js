@@ -2035,12 +2035,8 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
             <div class="header"></div>
             
             <div class="content">
-              <div style="text-align: center; margin-bottom: 20px;">
-                <h1 style="margin: 0; font-size: 24px; color: #1a1a1a; font-weight: bold;">Invoice</h1>
-                <p style="margin: 5px 0 0; color: #666; font-size: 14px;">${invoice.invoice_id}</p>
-              </div>
-              <p>Dear <strong>${invoice.customer_name || 'Customer'}</strong>,</p>
-              <p>Please find below the details of your invoice from XLand Infra.</p>
+              <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 20px;">Hello ${invoice.customer_name || 'Valued Customer'},</h2>
+              <p style="color: #4b5563; line-height: 1.6; margin: 0 0 20px 0;">Please find below the details of your invoice from XLand Infra.</p>
               
               <div class="invoice-box">
                 <table style="width: 100%; margin-bottom: 15px;">
