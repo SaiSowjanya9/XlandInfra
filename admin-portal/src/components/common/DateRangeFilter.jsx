@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Calendar, ChevronDown, RefreshCw } from 'lucide-react';
+import { Calendar, ChevronDown } from 'lucide-react';
 
 // Get current date in IST timezone
 const getISTDate = () => {
@@ -56,8 +56,6 @@ const DateRangeFilter = ({
   startDate,
   endDate,
   onDateChange,
-  onRefresh,
-  showRefreshButton = true,
   className = ''
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -284,17 +282,6 @@ const DateRangeFilter = ({
           </div>
         )}
       </div>
-
-      {/* Refresh Button */}
-      {showRefreshButton && onRefresh && (
-        <button
-          onClick={onRefresh}
-          className="flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors shadow-sm"
-        >
-          <RefreshCw className="w-4 h-4" />
-          <span className="font-medium">Refresh</span>
-        </button>
-      )}
     </div>
   );
 };
