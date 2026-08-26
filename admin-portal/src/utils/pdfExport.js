@@ -1311,7 +1311,7 @@ export const exportInvoiceToPDF = (invoice) => {
       y += 10;
 
       // Addons table - purple themed
-      const addonPurple = [124, 58, 237]; // #7c3aed
+      const addonGold = [201, 162, 39]; // #c9a227 - same as services for consistency
       autoTable(doc, {
         startY: y,
         head: [['#', 'Add-on', 'Description', 'Frequency', 'Visits', 'Price']],
@@ -1331,7 +1331,7 @@ export const exportInvoiceToPDF = (invoice) => {
           overflow: 'linebreak',
           cellWidth: 'wrap'
         },
-        headStyles: { fillColor: addonPurple, textColor: white, fontStyle: 'bold', fontSize: 7, halign: 'center' },
+        headStyles: { fillColor: addonGold, textColor: white, fontStyle: 'bold', fontSize: 7, halign: 'center' },
         bodyStyles: { textColor: primaryText, minCellHeight: 10, lineColor: [220, 220, 220] },
         alternateRowStyles: { fillColor: [252, 252, 252] },
         columnStyles: { 

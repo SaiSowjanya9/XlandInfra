@@ -760,8 +760,8 @@ const generateInvoicePDF = async (invoice) => {
         const colVisits = margin + 400;
         const colPrice = margin + 450;
         
-        const addonPurple = '#7c3aed';
-        doc.rect(margin, y, contentWidth, tableHeaderH).fill(addonPurple);
+        const addonGold = '#c9a227';
+        doc.rect(margin, y, contentWidth, tableHeaderH).fill(addonGold);
         doc.fontSize(8).fillColor(white);
         doc.text('#', colNum, y + 6);
         doc.text('Add-on', colAddon, y + 6);
@@ -795,7 +795,7 @@ const generateInvoicePDF = async (invoice) => {
           if (y + neededHeight > pageHeight - reservedForSummary) {
             doc.addPage();
             y = margin;
-            doc.rect(margin, y, contentWidth, tableHeaderH).fill(addonPurple);
+            doc.rect(margin, y, contentWidth, tableHeaderH).fill(addonGold);
             doc.fontSize(8).fillColor(white);
             doc.text('#', colNum, y + 6);
             doc.text('Add-on', colAddon, y + 6);
