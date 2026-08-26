@@ -724,45 +724,50 @@ const Payments = ({ user, portalType = 'admin' }) => {
         </div>
       )}
 
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Payments</h1>
-            <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
-              <Home className="w-3.5 h-3.5" />
-              <span>Home</span>
-              <ChevronRightIcon className="w-3.5 h-3.5" />
-              <span>Billing & Payments</span>
-              <ChevronRightIcon className="w-3.5 h-3.5" />
-              <span className="text-gray-700">Payments</span>
+      {/* Main Container */}
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        {/* Header Card */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">
+                {activeTab === 'razorpay-history' ? 'Payment History (Razorpay)' : 'Payments'}
+              </h1>
+              <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
+                <Home className="w-3.5 h-3.5" />
+                <span>Home</span>
+                <ChevronRightIcon className="w-3.5 h-3.5" />
+                <span>Billing & Payments</span>
+                <ChevronRightIcon className="w-3.5 h-3.5" />
+                <span className="text-gray-700">
+                  {activeTab === 'razorpay-history' ? 'Payment History' : 'Payments'}
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="relative w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by Payment ID, Invoice ID, Customer, Property..."
-                value={headerSearchTerm}
-                onChange={(e) => { setHeaderSearchTerm(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-              />
+            <div className="flex items-center gap-3">
+              <div className="relative w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by Payment ID, Invoice ID, Customer, Property..."
+                  value={headerSearchTerm}
+                  onChange={(e) => { setHeaderSearchTerm(e.target.value); setCurrentPage(1); }}
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                />
+              </div>
+              <button
+                onClick={exportToExcel}
+                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Export All
+              </button>
             </div>
-            <button
-              onClick={exportToExcel}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Export All
-            </button>
           </div>
         </div>
-      </div>
 
-      <div className="p-6">
-        {/* Tabs */}
-        <div className="flex items-center gap-3 mb-6">
+        {/* Tabs - Below Header */}
+        <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => setActiveTab('payments')}
             className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
