@@ -2301,7 +2301,7 @@ const sendInvoiceEmail = async (invoice) => {
     return `
     <tr>
       <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4a5568;">${idx + 1}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #5b21b6; font-weight: 600;">${addonName}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #92400e; font-weight: 600;">${addonName}</td>
       <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #4a5568;">${addonDesc}</td>
       <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4a5568;">${freqDisplay}</td>
       <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4a5568;">${visits}</td>
