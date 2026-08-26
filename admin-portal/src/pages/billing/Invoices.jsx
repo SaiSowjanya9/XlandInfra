@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText,
@@ -126,6 +126,11 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [dateRangeDisplay, setDateRangeDisplay] = useState({ start: '', end: '' });
+  
+  // Refs for date inputs
+  const startDateRef = useRef(null);
+  const endDateRef = useRef(null);
+  
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
   const [showRecordPayment, setShowRecordPayment] = useState(false);
@@ -738,11 +743,11 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
 
             {/* Date Range - IST Format (dd/mm/yyyy) */}
             <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
-              <div className="relative flex items-center gap-2 cursor-pointer">
-                <Calendar 
-                  className="w-4 h-4 text-gray-400 flex-shrink-0 cursor-pointer" 
-                  onClick={() => document.getElementById('invoiceStartDate')?.showPicker?.()}
-                />
+              <Calendar 
+                className="w-4 h-4 text-gray-400 flex-shrink-0 cursor-pointer" 
+                onClick={() => startDateRef.current?.click()}
+              />
+              <div className="relative">
                 <input
                   type="text"
                   placeholder="dd/mm/yyyy"
@@ -752,12 +757,13 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                     const parsed = parseISTDate(e.target.value);
                     if (parsed) setDateRange(prev => ({ ...prev, start: parsed }));
                   }}
-                  className="text-sm border-none focus:outline-none bg-transparent w-[90px]"
+                  onClick={() => startDateRef.current?.click()}
+                  className="text-sm border-none focus:outline-none bg-transparent w-[90px] cursor-pointer"
                 />
                 <input
-                  id="invoiceStartDate"
+                  ref={startDateRef}
                   type="date"
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
                   onChange={(e) => {
                     if (e.target.value) {
                       setDateRange(prev => ({ ...prev, start: e.target.value }));
@@ -767,7 +773,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                 />
               </div>
               <span className="text-gray-400">-</span>
-              <div className="relative flex items-center cursor-pointer">
+              <div className="relative">
                 <input
                   type="text"
                   placeholder="dd/mm/yyyy"
@@ -777,12 +783,13 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                     const parsed = parseISTDate(e.target.value);
                     if (parsed) setDateRange(prev => ({ ...prev, end: parsed }));
                   }}
-                  className="text-sm border-none focus:outline-none bg-transparent w-[90px]"
+                  onClick={() => endDateRef.current?.click()}
+                  className="text-sm border-none focus:outline-none bg-transparent w-[90px] cursor-pointer"
                 />
                 <input
-                  id="invoiceEndDate"
+                  ref={endDateRef}
                   type="date"
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
                   onChange={(e) => {
                     if (e.target.value) {
                       setDateRange(prev => ({ ...prev, end: e.target.value }));
