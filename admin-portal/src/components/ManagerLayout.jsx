@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -16,6 +16,7 @@ import {
   Archive,
   Store,
   UserPlus,
+  Users,
   Hammer,
   ClipboardCheck,
   MapPin,
@@ -31,7 +32,13 @@ import {
   Wallet,
   History,
   Calendar,
+  Bell,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
+import { getAuthToken } from '../utils/safeStorage';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const ManagerLayout = ({ admin, onLogout, children }) => {
   const navigate = useNavigate();
@@ -39,6 +46,107 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState({});
+  
+  // Notification states
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef(null);
+  const token = getAuthToken();
+
+  // Get read/dismissed notification IDs from localStorage
+  const getReadNotifications = () => {
+    try {
+      return JSON.parse(localStorage.getItem('manager_read_notifications') || '[]');
+    } catch { return []; }
+  };
+
+  const getDismissedNotifications = () => {
+    try {
+      return JSON.parse(localStorage.getItem('manager_dismissed_notifications') || '[]');
+    } catch { return []; }
+  };
+
+  // Fetch work orders approaching auto-deletion
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/manager/work-orders/approaching-deletion`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success && result.data) {
+        const readIds = getReadNotifications();
+        const dismissedIds = getDismissedNotifications();
+        
+        const woNotifications = result.data
+          .filter(wo => !dismissedIds.includes(`wo-delete-${wo.id}`))
+          .map(wo => ({
+            id: `wo-delete-${wo.id}`,
+            type: 'warning',
+            title: 'Work Order Auto-Delete',
+            message: `${wo.workOrderId} - (${wo.daysUntilDeletion} days left)`,
+            workOrderId: wo.workOrderId,
+            daysRemaining: wo.daysUntilDeletion,
+            read: readIds.includes(`wo-delete-${wo.id}`)
+          }));
+        setNotifications(woNotifications);
+      }
+    } catch (error) {
+      console.error('Fetch notifications error:', error);
+    }
+  };
+
+  // Fetch notifications on mount
+  useEffect(() => {
+    if (token) {
+      fetchNotifications();
+      // Refresh every 5 minutes
+      const interval = setInterval(fetchNotifications, 5 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [token]);
+
+  // Close notifications on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Mark single notification as read
+  const markAsRead = (id) => {
+    const readIds = getReadNotifications();
+    if (!readIds.includes(id)) {
+      localStorage.setItem('manager_read_notifications', JSON.stringify([...readIds, id]));
+    }
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  };
+
+  // Mark all notifications as read
+  const markAllAsRead = () => {
+    const allIds = notifications.map(n => n.id);
+    localStorage.setItem('manager_read_notifications', JSON.stringify(allIds));
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  // Dismiss (remove) notification - stored in localStorage so it doesn't come back
+  const dismissNotification = (id) => {
+    const dismissedIds = getDismissedNotifications();
+    localStorage.setItem('manager_dismissed_notifications', JSON.stringify([...dismissedIds, id]));
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  // Clear all dismissed notifications (to show them again)
+  const resetDismissedNotifications = () => {
+    localStorage.removeItem('manager_dismissed_notifications');
+    localStorage.removeItem('manager_read_notifications');
+    fetchNotifications();
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   // Check if this is an FP-created Manager (has franchisePartnerId)
   const isFPManager = !!admin?.franchisePartnerId;
@@ -213,14 +321,143 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
             <Menu className="w-6 h-6 text-slate-700" />
           </button>
           <span className="font-semibold text-slate-800">{admin?.firstName} {admin?.lastName}</span>
-          <button
-            onClick={onLogout}
-            className="p-2 rounded-xl bg-slate-800 text-amber-400 hover:bg-slate-700 transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Mobile Notification Bell */}
+            <div className="relative" ref={notificationRef}>
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="p-2 rounded-xl hover:bg-slate-100 transition-colors relative"
+              >
+                <Bell className="w-5 h-5 text-slate-600" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+            </div>
+            <button
+              onClick={onLogout}
+              className="p-2 rounded-xl bg-slate-800 text-amber-400 hover:bg-slate-700 transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </header>
+
+      {/* Notification Dropdown (Mobile only - Desktop uses Dashboard) */}
+      {showNotifications && (
+        <div className="lg:hidden fixed inset-0 z-50" onClick={() => setShowNotifications(false)}>
+          <div 
+            ref={notificationRef}
+            onClick={(e) => e.stopPropagation()}
+            className="absolute right-4 top-16 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden"
+          >
+            <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-800">Notifications</span>
+                {unreadCount > 0 && (
+                  <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">
+                    {unreadCount} new
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllAsRead}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Mark All Read
+                  </button>
+                )}
+                <button
+                  onClick={resetDismissedNotifications}
+                  className="text-xs text-gray-500 hover:text-gray-700 font-medium"
+                  title="Refresh notifications"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+            <div className="max-h-96 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="p-6 text-center">
+                  <Bell className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm text-gray-500">No notifications</p>
+                  <button
+                    onClick={resetDismissedNotifications}
+                    className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Check for new notifications
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  {notifications.some(n => n.type === 'warning') && (
+                    <div className="px-4 py-2 bg-amber-50 border-b border-amber-100">
+                      <div className="flex items-center gap-2 text-amber-800">
+                        <AlertTriangle className="w-4 h-4" />
+                        <span className="text-xs font-medium">Work Orders Approaching Auto-Delete</span>
+                      </div>
+                      <p className="text-xs text-amber-700 mt-1">
+                        Closed/cancelled work orders are deleted 30 days after completion.
+                      </p>
+                    </div>
+                  )}
+                  {notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      onClick={() => !notification.read && markAsRead(notification.id)}
+                      className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
+                        !notification.read ? 'bg-blue-50/50' : ''
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-3">
+                          <div className="relative">
+                            <div className={`p-1.5 rounded-lg flex-shrink-0 ${
+                              notification.type === 'warning' ? 'bg-amber-100' : 'bg-blue-100'
+                            }`}>
+                              {notification.type === 'warning' ? (
+                                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                              ) : (
+                                <Bell className="w-4 h-4 text-blue-600" />
+                              )}
+                            </div>
+                            {!notification.read && (
+                              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white"></span>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>
+                              {notification.workOrderId}
+                            </p>
+                            <p className={`text-xs mt-0.5 ${!notification.read ? 'text-amber-700' : 'text-amber-600/80'}`}>
+                              {notification.daysRemaining} days until auto-delete
+                            </p>
+                            {!notification.read && (
+                              <span className="inline-block mt-1 text-[10px] text-blue-600 font-medium">Click to mark as read</span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); dismissNotification(notification.id); }}
+                          className="p-1.5 hover:bg-red-100 rounded-lg transition-colors group"
+                          title="Dismiss notification"
+                        >
+                          <X className="w-3.5 h-3.5 text-gray-400 group-hover:text-red-500" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (

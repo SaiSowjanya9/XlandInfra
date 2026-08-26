@@ -518,6 +518,7 @@ function App() {
                     <Route path="billing/make-payments" element={<MakePayments user={user} portalType="manager" />} />
                     <Route path="billing/payment-history" element={<Payments user={user} portalType="manager" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="manager" defaultTab="archived" />} />
+                    <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="manager" />} />
                     <Route path="schedules/schedule-service" element={<ScheduleService user={user} portalType="manager" />} />
                     <Route path="*" element={<Navigate to="/manager" replace />} />
                   </Routes>

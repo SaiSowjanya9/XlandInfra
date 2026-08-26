@@ -1,17 +1,19 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import {
   FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
   List, ChevronDown, ChevronLeft, ChevronRight, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
-  DollarSign, Layers, Filter, Download, Mail, Save, Edit, RefreshCw, FolderOpen, ExternalLink, Link, ArrowLeft
+  DollarSign, Layers, Filter, Download, Mail, Save, Edit, Send, RefreshCw, FolderOpen, ExternalLink, Link, ArrowLeft,
+  CheckSquare, Square, Loader2
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { FREQUENCY_TYPES, FREQUENCY_COUNT_MAP } from '../utils/estimateStore';
 
 const ITEMS_PER_PAGE = 10;
-import { exportEstimateToPDF } from '../utils/pdfExport';
+import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
+import * as XLSX from 'xlsx';
 
 // Decode HTML entities (e.g., &amp;amp; -> &)
 const decodeHtml = (html) => {
@@ -193,6 +195,13 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const [viewAmcPackage, setViewAmcPackage] = useState(null);
   const [viewAddon, setViewAddon] = useState(null);
   const [fpPortalLinks, setFpPortalLinks] = useState([]);
+  
+  // Email sending state
+  const [sendingEmailId, setSendingEmailId] = useState(null);
+  
+  // Bulk selection state
+  const [selectedEstimates, setSelectedEstimates] = useState([]);
+  const [archivingSelected, setArchivingSelected] = useState(false);
 
   const token = getAuthToken();
 
@@ -300,7 +309,229 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   };
 
   const showToast = (msg, type = 'success') => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3500); };
-    const formatCurrency = (amt) => { const num = parseFloat(amt); return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(isNaN(num) ? 0 : Math.round(num)); };
+  const formatCurrency = (amt) => { const num = parseFloat(amt); return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(isNaN(num) ? 0 : Math.round(num)); };
+
+  // Excel export function
+  const handleExportExcel = (estimatesToExport) => {
+    if (!estimatesToExport || estimatesToExport.length === 0) {
+      showToast('No estimates to export', 'error');
+      return;
+    }
+    
+    const exportData = estimatesToExport.map(est => ({
+      'Estimate ID': est.estimate_id || '',
+      'Customer Name': est.client_name || '',
+      'Phone': est.client_phone || '',
+      'Email': est.client_email || '',
+      'Property Code': est.property_code || '',
+      'Property Name': est.property_name || '',
+      'Property Type': getPropertyTypeLabel(est.property_type),
+      'Type': est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property Based' : 'Direct',
+      'Package': est.package_name || '',
+      'Subtotal': parseFloat(est.subtotal) || 0,
+      'Discount %': parseFloat(est.discount_percent) || 0,
+      'GST %': parseFloat(est.gst_percent) || 0,
+      'Total Amount': parseFloat(est.total_amount) || 0,
+      'Status': getStatusLabel(est.status),
+      'Zone': est.zone || '',
+      'City': est.city || '',
+      'Created By': est.created_by_name || '',
+      'Created Date': formatDateIST(est.created_at)
+    }));
+    
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Estimates');
+    XLSX.writeFile(wb, `Estimates_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast(`Exported ${estimatesToExport.length} estimates`);
+  };
+
+  // Send email with estimate
+  const handleSendEmail = async (estimate) => {
+    if (sendingEmailId === estimate.id) {
+      console.log('Email already being sent for this estimate');
+      return;
+    }
+    
+    const clientEmail = estimate.client_email;
+    if (!clientEmail) {
+      showToast('No email address found for this customer', 'error');
+      return;
+    }
+    
+    setSendingEmailId(estimate.id);
+    
+    try {
+      const res = await fetch(`${API_BASE}/api/manager/estimates/send-email`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estimateId: estimate.id, email: clientEmail })
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast(`Email sent to ${clientEmail}`);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to send email', 'error');
+      }
+    } catch (e) {
+      console.error('Send email error:', e);
+      showToast('Failed to send email', 'error');
+    } finally {
+      setSendingEmailId(null);
+    }
+  };
+
+  // Bulk selection handlers
+  const handleSelectAll = () => {
+    if (selectedEstimates.length === paginatedEstimates.length) {
+      setSelectedEstimates([]);
+    } else {
+      setSelectedEstimates(paginatedEstimates.map(e => e.id));
+    }
+  };
+
+  const handleSelectEstimate = (id) => {
+    setSelectedEstimates(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  // Bulk archive selected estimates
+  const handleBulkArchive = async () => {
+    if (selectedEstimates.length === 0) {
+      showToast('No estimates selected', 'error');
+      return;
+    }
+    
+    setArchivingSelected(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/manager/estimates/bulk-archive`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estimateIds: selectedEstimates })
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast(`Archived ${selectedEstimates.length} estimates`);
+        setSelectedEstimates([]);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to archive estimates', 'error');
+      }
+    } catch (e) {
+      console.error('Bulk archive error:', e);
+      showToast('Failed to archive estimates', 'error');
+    } finally {
+      setArchivingSelected(false);
+    }
+  };
+
+  // Export estimate to PDF
+  const handleExportPDF = (estimate) => {
+    // Parse addons from multiple possible sources
+    let addonsArray = [];
+    if (estimate.addons && Array.isArray(estimate.addons) && estimate.addons.length > 0) {
+      addonsArray = estimate.addons;
+    } else if (estimate.addons_data) {
+      try {
+        const parsed = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
+        if (Array.isArray(parsed)) addonsArray = parsed;
+      } catch (e) { console.log('Addon parse error:', e); }
+    }
+    
+    // Parse package services
+    let packageServices = [];
+    const rawPackageServices = estimate.packageServices || estimate.package_services;
+    if (rawPackageServices) {
+      try {
+        const parsed = typeof rawPackageServices === 'string' ? JSON.parse(rawPackageServices) : rawPackageServices;
+        if (parsed.serviceRows && Array.isArray(parsed.serviceRows)) {
+          packageServices = parsed.serviceRows;
+        } else if (parsed.services && Array.isArray(parsed.services)) {
+          packageServices = parsed.services;
+        } else if (Array.isArray(parsed)) {
+          packageServices = parsed;
+        }
+      } catch (e) { console.log('Package services parse error:', e); }
+    }
+    if (packageServices.length === 0 && estimate.services_data) {
+      try {
+        const parsed = typeof estimate.services_data === 'string' ? JSON.parse(estimate.services_data) : estimate.services_data;
+        if (parsed.serviceRows && Array.isArray(parsed.serviceRows)) {
+          packageServices = parsed.serviceRows;
+        } else if (Array.isArray(parsed)) {
+          packageServices = parsed;
+        }
+      } catch (e) { console.log('Services parse error:', e); }
+    }
+    // If we have a package_id, try to find package services from amcPackages
+    if (packageServices.length === 0 && estimate.package_id && amcPackages.length > 0) {
+      const pkg = amcPackages.find(p => p.id?.toString() === estimate.package_id?.toString());
+      if (pkg) {
+        try {
+          const servicesData = typeof pkg.services === 'string' ? JSON.parse(pkg.services) : pkg.services;
+          if (servicesData?.serviceRows) {
+            packageServices = servicesData.serviceRows;
+          } else if (servicesData?.services) {
+            packageServices = servicesData.services;
+          } else if (Array.isArray(servicesData)) {
+            packageServices = servicesData;
+          }
+        } catch (e) { console.log('Package lookup error:', e); }
+      }
+    }
+    
+    // Prepare estimate data for PDF
+    const pdfData = {
+      ...estimate,
+      estimateId: estimate.estimate_id,
+      estimateType: estimate.estimate_type,
+      propertyId: estimate.property_code || estimate.property_id,
+      propertyType: estimate.property_type,
+      propertyName: estimate.property_name,
+      communityName: estimate.property_name,
+      zone: estimate.zone,
+      division: estimate.division || '',
+      towerName: estimate.tower_name,
+      blockNumber: estimate.block_number,
+      numberOfBlocks: estimate.number_of_blocks,
+      totalUnits: estimate.total_units,
+      villaPlotNumber: estimate.villa_plot_number,
+      customerName: estimate.client_name,
+      customerPhone: estimate.client_phone,
+      customerEmail: estimate.client_email,
+      address: estimate.address,
+      city: estimate.city,
+      packageName: estimate.package_name,
+      billingDuration: estimate.billing_duration || 'Yearly',
+      subtotal: parseFloat(estimate.subtotal) || 0,
+      totalPrice: parseFloat(estimate.total_amount) || 0,
+      discountPercent: parseFloat(estimate.discount_percent) || 0,
+      discountAmount: parseFloat(estimate.discount_amount) || 0,
+      gstPercent: parseFloat(estimate.gst_percent) || 0,
+      gstAmount: parseFloat(estimate.gst_amount) || 0,
+      description: estimate.description || '',
+      packageServices: packageServices.map(s => ({
+        name: s.service || s.name || s.serviceName || 'Service',
+        frequencyCount: s.frequencyCount ?? s.frequency_count ?? s.frequency ?? 0,
+        frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
+        description: s.description || ''
+      })),
+      addons: addonsArray.map(a => {
+        const addonName = a.name || a.service_name || a.serviceName || '';
+        const addonFromList = addons.find(ad => ad.id == a.id || ad.id == a.addon_id);
+        return {
+          name: addonName || 'Add-on',
+          frequencyType: a.frequency_type || a.frequencyType || addonFromList?.frequency_type || 'One-time',
+          frequencyCount: a.frequency_count ?? a.frequencyCount ?? addonFromList?.frequency_count ?? 0,
+          description: a.description || addonFromList?.description || ''
+        };
+      })
+    };
+    
+    exportEstimateToPDF(pdfData);
+  };
 
   // Edit estimate functions for DIRECT estimates only
   const openEditEstimate = (estimate) => {
@@ -1280,9 +1511,31 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const renderAllEstimates = () => (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex gap-3">
-          <div className="relative w-72"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input type="text" placeholder="Search by Property ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm" /></div>
-          <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 hover:bg-gray-50"><Filter className="w-4 h-4" />Filters<ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} /></button>
+        <div className="flex flex-wrap gap-3 items-center justify-between">
+          <div className="flex gap-3 items-center">
+            <div className="relative w-72"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input type="text" placeholder="Search by Property ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm" /></div>
+            <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 hover:bg-gray-50"><Filter className="w-4 h-4" />Filters<ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} /></button>
+          </div>
+          <div className="flex gap-2 items-center">
+            {selectedEstimates.length > 0 && (
+              <button
+                onClick={handleBulkArchive}
+                disabled={archivingSelected}
+                className="px-4 py-2 bg-amber-100 text-amber-700 rounded-lg flex items-center gap-2 hover:bg-amber-200 disabled:opacity-50"
+              >
+                {archivingSelected ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
+                Archive ({selectedEstimates.length})
+              </button>
+            )}
+            <button
+              onClick={() => handleExportExcel(filteredEstimates)}
+              className="px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 hover:bg-gray-50"
+              title="Export to Excel"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Export</span>
+            </button>
+          </div>
         </div>
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-gray-200">
@@ -1344,9 +1597,59 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {loading ? <div className="py-16 text-center"><div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div></div> : filteredEstimates.length === 0 ? <div className="py-16 text-center"><DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No estimates found</p><p className="text-gray-400 text-sm mt-1">Try adjusting your search or filters</p></div> : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[700px]">
-              <thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Estimate ID</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Client</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden sm:table-cell">Type</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden md:table-cell">Division</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Amount</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden md:table-cell">Status</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden lg:table-cell">Created By</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden lg:table-cell">Created</th><th className="px-3 py-3 text-center font-medium text-gray-600 whitespace-nowrap text-xs">Actions</th></tr></thead>
-              <tbody className="divide-y divide-gray-100">{paginatedEstimates.map((est) => <tr key={est.id} className="hover:bg-gray-50"><td className="px-3 py-3 font-mono text-xs whitespace-nowrap">{est.estimate_id}</td><td className="px-3 py-3"><div className="font-medium text-gray-900 truncate max-w-[120px]">{est.client_name}</div>{est.property_code && <div className="text-xs text-gray-400">{est.property_code}</div>}</td><td className="px-3 py-3 whitespace-nowrap hidden sm:table-cell"><span className={`px-2 py-0.5 rounded text-xs font-medium ${est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span></td><td className="px-3 py-3 text-gray-600 whitespace-nowrap hidden md:table-cell">{(est.estimate_type === 'property_based' || est.estimate_type === 'property-based') ? (est.division || est.property_division || '-') : '-'}</td><td className="px-3 py-3 font-semibold whitespace-nowrap">{formatCurrency(est.total_amount)}</td><td className="px-3 py-3 hidden md:table-cell"><span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'rejected' ? 'bg-red-100 text-red-700' : est.status === 'sent' ? 'bg-blue-100 text-blue-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{est.status || 'draft'}</span></td><td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell truncate max-w-[100px]">{est.created_by_name || (est.created_by_role ? est.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</td><td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell">{formatDateIST(est.created_at)}</td><td className="px-3 py-3"><div className="flex items-center justify-center"><button onClick={() => setViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details"><Eye className="w-4 h-4" /></button>{(est.estimate_type === 'direct' || (est.estimate_type && !est.estimate_type.includes('property'))) && <button onClick={() => openEditEstimate(est)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="Edit"><Edit2 className="w-4 h-4" /></button>}</div></td></tr>)}</tbody>
+            <table className="w-full text-sm min-w-[800px]">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-2 py-3 text-center font-medium text-gray-600 whitespace-nowrap text-xs w-10">
+                    <button onClick={handleSelectAll} className="p-1 hover:bg-gray-200 rounded">
+                      {selectedEstimates.length === paginatedEstimates.length && paginatedEstimates.length > 0 ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-gray-400" />}
+                    </button>
+                  </th>
+                  <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Estimate ID</th>
+                  <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Customer</th>
+                  <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden sm:table-cell">Type</th>
+                  <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden md:table-cell">Division</th>
+                  <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Amount</th>
+                  <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden md:table-cell">Status</th>
+                  <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden lg:table-cell">Created By</th>
+                  <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden lg:table-cell">Created</th>
+                  <th className="px-3 py-3 text-center font-medium text-gray-600 whitespace-nowrap text-xs">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">{paginatedEstimates.map((est) => (
+                <tr key={est.id} className={`hover:bg-gray-50 ${selectedEstimates.includes(est.id) ? 'bg-blue-50' : ''}`}>
+                  <td className="px-2 py-3 text-center">
+                    <button onClick={() => handleSelectEstimate(est.id)} className="p-1 hover:bg-gray-200 rounded">
+                      {selectedEstimates.includes(est.id) ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-gray-400" />}
+                    </button>
+                  </td>
+                  <td className="px-3 py-3 font-mono text-xs whitespace-nowrap">{est.estimate_id}</td>
+                  <td className="px-3 py-3"><div className="font-medium text-gray-900 truncate max-w-[120px]">{est.client_name}</div>{est.property_code && <div className="text-xs text-gray-400">{est.property_code}</div>}</td>
+                  <td className="px-3 py-3 whitespace-nowrap hidden sm:table-cell"><span className={`px-2 py-0.5 rounded text-xs font-medium ${est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span></td>
+                  <td className="px-3 py-3 text-gray-600 whitespace-nowrap hidden md:table-cell">{(est.estimate_type === 'property_based' || est.estimate_type === 'property-based') ? (est.division || est.property_division || '-') : '-'}</td>
+                  <td className="px-3 py-3 font-semibold whitespace-nowrap">{formatCurrency(est.total_amount)}</td>
+                  <td className="px-3 py-3 hidden md:table-cell"><span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'rejected' ? 'bg-red-100 text-red-700' : est.status === 'sent' ? 'bg-blue-100 text-blue-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{est.status || 'draft'}</span></td>
+                  <td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell truncate max-w-[100px]">{est.created_by_name || (est.created_by_role ? est.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</td>
+                  <td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell">{formatDateIST(est.created_at)}</td>
+                  <td className="px-3 py-3">
+                    <div className="flex items-center justify-center gap-1">
+                      <button onClick={() => setViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View"><Eye className="w-4 h-4" /></button>
+                      <button onClick={() => handleExportPDF(est)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button>
+                      <button 
+                        onClick={() => handleSendEmail(est)} 
+                        disabled={sendingEmailId === est.id || !est.client_email}
+                        className={`p-1.5 rounded ${!est.client_email ? 'text-gray-300 cursor-not-allowed' : sendingEmailId === est.id ? 'text-blue-400' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'}`}
+                        title={!est.client_email ? 'No email address' : 'Send Email'}
+                      >
+                        {sendingEmailId === est.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      </button>
+                      {(est.estimate_type === 'direct') && (
+                        <button onClick={() => openEditEstimate(est)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="Edit"><Edit2 className="w-4 h-4" /></button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}</tbody>
             </table>
           </div>
         )}

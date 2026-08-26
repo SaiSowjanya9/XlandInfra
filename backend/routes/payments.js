@@ -1181,81 +1181,10 @@ router.post('/invoices', authenticate, canEditPayments, paymentCreationLimiter, 
       req.user.id, req.user.role
     ]);
 
-    const insertedId = result.insertId;
-    let emailSent = false;
-
-    // Automatically send invoice email if customer email exists
-    if (customerEmail) {
-      try {
-        // Create payment link
-        let paymentLinkUrl = null;
-        try {
-          const { createPaymentLinkForInvoice } = require('../services/invoiceService');
-          paymentLinkUrl = await createPaymentLinkForInvoice(insertedId, {
-            invoice_id: invoiceId,
-            customer_name: customerName,
-            customer_email: customerEmail,
-            total_amount: totalAmount
-          });
-        } catch (plErr) {
-          console.error('Failed to create payment link:', plErr.message);
-          paymentLinkUrl = `${process.env.FRONTEND_URL || 'https://xlandinfra.com'}/pay/${invoiceId}`;
-        }
-
-        // Update invoice status to 'sent'
-        await pool.execute(`
-          UPDATE invoices SET status = 'sent', sent_at = NOW(), sent_by = ?, email_sent_at = NOW() WHERE id = ?
-        `, [req.user.id, insertedId]);
-
-        // Format amounts
-        const formatAmount = (amt) => `₹${(parseFloat(amt) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-        const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-
-        // Send email
-        const { sendEmail } = require('../services/emailService');
-        await sendEmail({
-          to: customerEmail,
-          subject: `Invoice ${invoiceId} from XLAND INFRA - Payment Due`,
-          html: `
-            <!DOCTYPE html>
-            <html>
-            <head><meta charset="UTF-8"></head>
-            <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6;">
-              <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <h1 style="color: white; margin: 0; font-size: 24px;">XLAND INFRA</h1>
-                  <p style="color: #bfdbfe; margin: 10px 0 0; font-size: 14px;">Property Management Services</p>
-                </div>
-                <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                  <h2 style="color: #1f2937; margin: 0 0 20px; font-size: 20px;">Invoice Generated</h2>
-                  <p style="color: #4b5563; margin: 0 0 20px; line-height: 1.6;">Dear ${customerName || 'Customer'},<br><br>Your invoice has been generated. Please find the details below:</p>
-                  <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                      <tr><td style="padding: 8px 0; color: #6b7280;">Invoice Number:</td><td style="padding: 8px 0; color: #1f2937; font-weight: 600; text-align: right;">${invoiceId}</td></tr>
-                      <tr><td style="padding: 8px 0; color: #6b7280;">Amount Due:</td><td style="padding: 8px 0; color: #059669; font-weight: 700; font-size: 18px; text-align: right;">${formatAmount(totalAmount)}</td></tr>
-                      <tr><td style="padding: 8px 0; color: #6b7280;">Due Date:</td><td style="padding: 8px 0; color: #1f2937; text-align: right;">${formatDate(dueDate)}</td></tr>
-                    </table>
-                  </div>
-                  ${paymentLinkUrl ? `<div style="text-align: center; margin: 30px 0;"><a href="${paymentLinkUrl}" style="display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; text-decoration: none; padding: 14px 40px; border-radius: 8px; font-weight: 600;">Pay Now</a></div>` : ''}
-                </div>
-                <div style="text-align: center; padding: 20px;"><p style="margin: 0; color: #6b7280; font-size: 14px;">Thank you for your business!</p></div>
-              </div>
-            </body>
-            </html>
-          `
-        });
-
-        emailSent = true;
-        console.log(`📧 Invoice ${invoiceId} sent to ${customerEmail}`);
-      } catch (emailError) {
-        console.error('Failed to send invoice email:', emailError);
-      }
-    }
-
     res.status(201).json({
       success: true,
-      message: emailSent ? `Invoice created and sent to ${customerEmail}` : 'Invoice created successfully',
-      data: { id: insertedId, invoiceId, emailSent }
+      message: 'Invoice created successfully',
+      data: { id: result.insertId, invoiceId }
     });
   } catch (error) {
     console.error('Error creating invoice:', error);
@@ -1469,121 +1398,14 @@ router.post('/invoices/create-from-estimate', authenticate, canEditPayments, asy
       notes || `Created from Estimate ${estimateId}`
     ]);
 
-    const insertedId = result.insertId;
-    let emailSent = false;
-
-    // Automatically send invoice email if customer email exists
-    if (finalCustomerEmail) {
-      try {
-        // Create payment link for the invoice
-        let paymentLinkUrl = null;
-        try {
-          const { createPaymentLinkForInvoice } = require('../services/invoiceService');
-          paymentLinkUrl = await createPaymentLinkForInvoice(insertedId, {
-            invoice_id: invoiceId,
-            customer_name: finalCustomerName,
-            customer_email: finalCustomerEmail,
-            total_amount: totalAmount
-          });
-        } catch (plErr) {
-          console.error('Failed to create payment link:', plErr.message);
-          paymentLinkUrl = `${process.env.FRONTEND_URL || 'https://xlandinfra.com'}/pay/${invoiceId}`;
-        }
-
-        // Update invoice status to 'sent'
-        await pool.execute(`
-          UPDATE invoices SET
-            status = 'sent',
-            sent_at = NOW(),
-            sent_by = ?,
-            email_sent_at = NOW()
-          WHERE id = ?
-        `, [req.user.id, insertedId]);
-
-        // Format amounts
-        const formatAmount = (amt) => `₹${(parseFloat(amt) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-        const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-
-        // Send email
-        const { sendEmail } = require('../services/emailService');
-        await sendEmail({
-          to: finalCustomerEmail,
-          subject: `Invoice ${invoiceId} from XLAND INFRA - Payment Due`,
-          html: `
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            </head>
-            <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6;">
-              <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <h1 style="color: white; margin: 0; font-size: 24px;">XLAND INFRA</h1>
-                  <p style="color: #bfdbfe; margin: 10px 0 0; font-size: 14px;">Property Management Services</p>
-                </div>
-                <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                  <h2 style="color: #1f2937; margin: 0 0 20px; font-size: 20px;">Invoice Generated</h2>
-                  <p style="color: #4b5563; margin: 0 0 20px; line-height: 1.6;">
-                    Dear ${finalCustomerName || 'Customer'},<br><br>
-                    Your invoice has been generated for the approved estimate. Please find the details below:
-                  </p>
-                  <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                      <tr>
-                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Invoice Number:</td>
-                        <td style="padding: 8px 0; color: #1f2937; font-weight: 600; text-align: right;">${invoiceId}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Estimate ID:</td>
-                        <td style="padding: 8px 0; color: #1f2937; text-align: right;">${estimateId}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Amount Due:</td>
-                        <td style="padding: 8px 0; color: #059669; font-weight: 700; font-size: 18px; text-align: right;">${formatAmount(totalAmount)}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Due Date:</td>
-                        <td style="padding: 8px 0; color: #1f2937; text-align: right;">${formatDate(dueDateValue)}</td>
-                      </tr>
-                    </table>
-                  </div>
-                  ${paymentLinkUrl ? `
-                  <div style="text-align: center; margin: 30px 0;">
-                    <a href="${paymentLinkUrl}" style="display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; text-decoration: none; padding: 14px 40px; border-radius: 8px; font-weight: 600; font-size: 16px;">Pay Now</a>
-                  </div>
-                  ` : ''}
-                  <p style="color: #6b7280; font-size: 14px; margin: 20px 0 0; line-height: 1.6;">
-                    If you have any questions about this invoice, please contact us.
-                  </p>
-                </div>
-                <div style="text-align: center; padding: 20px;">
-                  <p style="margin: 0; color: #6b7280; font-size: 14px;">Thank you for your business!</p>
-                  <p style="margin: 5px 0 0; color: #9ca3af; font-size: 12px;">XLand Infra - Property Management Services</p>
-                </div>
-              </div>
-            </body>
-            </html>
-          `
-        });
-
-        emailSent = true;
-        console.log(`📧 Invoice ${invoiceId} sent to ${finalCustomerEmail}`);
-      } catch (emailError) {
-        console.error('Failed to send invoice email:', emailError);
-        // Don't fail the request, invoice was created
-      }
-    }
-
     res.status(201).json({
       success: true,
-      message: emailSent ? `Invoice created and sent to ${finalCustomerEmail}` : 'Invoice created successfully from estimate',
+      message: 'Invoice created successfully from estimate',
       data: { 
-        id: insertedId, 
+        id: result.insertId, 
         invoiceId,
         totalAmount,
-        customerEmail: finalCustomerEmail,
-        emailSent
+        customerEmail: finalCustomerEmail
       }
     });
   } catch (error) {
