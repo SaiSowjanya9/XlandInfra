@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
+import { useFP } from '../../contexts/FPContext';
 import {
   Search,
   Download,
@@ -482,6 +483,7 @@ const ReceiptModal = ({ isOpen, onClose, payment, onDownload, onSend, downloadin
 const Payments = ({ user, portalType = 'admin' }) => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { selectedFp } = useFP();
   
   // Set initial tab based on URL
   const getInitialTab = () => {
@@ -531,6 +533,10 @@ const Payments = ({ user, portalType = 'admin' }) => {
     try {
       let url = `${API_BASE}/api/payments/payments`;
       const params = new URLSearchParams();
+      // Add FP filter for admin viewing specific FP
+      if (selectedFp && selectedFp.id !== 'all') {
+        params.append('fpId', selectedFp.id);
+      }
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (methodFilter !== 'all') params.append('paymentMethod', methodFilter);
       const search = headerSearchTerm || searchTerm;
@@ -551,7 +557,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
     } finally {
       setLoading(false);
     }
-  }, [token, statusFilter, methodFilter, searchTerm, headerSearchTerm, dateRange]);
+  }, [token, statusFilter, methodFilter, searchTerm, headerSearchTerm, dateRange, selectedFp]);
 
   useEffect(() => {
     fetchPayments();
@@ -561,6 +567,10 @@ const Payments = ({ user, portalType = 'admin' }) => {
   const fetchRazorpayHistory = useCallback(async () => {
     try {
       const params = new URLSearchParams();
+      // Add FP filter for admin viewing specific FP
+      if (selectedFp && selectedFp.id !== 'all') {
+        params.append('fpId', selectedFp.id);
+      }
       if (dateRange.start) params.append('startDate', dateRange.start);
       if (dateRange.end) params.append('endDate', dateRange.end);
       if (headerSearchTerm) params.append('search', headerSearchTerm);
@@ -576,7 +586,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
     } catch (err) {
       console.error('Error fetching Razorpay history:', err);
     }
-  }, [token, dateRange, headerSearchTerm]);
+  }, [token, dateRange, headerSearchTerm, selectedFp]);
 
   useEffect(() => {
     if (activeTab === 'online') {
