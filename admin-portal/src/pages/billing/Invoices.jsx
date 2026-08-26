@@ -738,8 +738,11 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
 
             {/* Date Range - IST Format (dd/mm/yyyy) */}
             <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
-              <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              <div className="relative">
+              <div className="relative flex items-center gap-2 cursor-pointer">
+                <Calendar 
+                  className="w-4 h-4 text-gray-400 flex-shrink-0 cursor-pointer" 
+                  onClick={() => document.getElementById('invoiceStartDate')?.showPicker?.()}
+                />
                 <input
                   type="text"
                   placeholder="dd/mm/yyyy"
@@ -752,8 +755,9 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                   className="text-sm border-none focus:outline-none bg-transparent w-[90px]"
                 />
                 <input
+                  id="invoiceStartDate"
                   type="date"
-                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                   onChange={(e) => {
                     if (e.target.value) {
                       setDateRange(prev => ({ ...prev, start: e.target.value }));
@@ -763,7 +767,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                 />
               </div>
               <span className="text-gray-400">-</span>
-              <div className="relative">
+              <div className="relative flex items-center cursor-pointer">
                 <input
                   type="text"
                   placeholder="dd/mm/yyyy"
@@ -776,8 +780,9 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                   className="text-sm border-none focus:outline-none bg-transparent w-[90px]"
                 />
                 <input
+                  id="invoiceEndDate"
                   type="date"
-                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                   onChange={(e) => {
                     if (e.target.value) {
                       setDateRange(prev => ({ ...prev, end: e.target.value }));
