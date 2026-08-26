@@ -2490,7 +2490,7 @@ const sendInvoiceEmail = async (invoice) => {
               <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Add-ons</h3>
               <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 8px;">
                 <thead>
-                  <tr style="background: #7c3aed;">
+                  <tr style="background: #c9a227;">
                     <th style="padding: 10px; text-align: center; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 30px;">#</th>
                     <th style="padding: 10px; text-align: left; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 120px;">Add-on</th>
                     <th style="padding: 10px; text-align: left; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb;">Description</th>

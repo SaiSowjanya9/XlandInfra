@@ -1728,7 +1728,7 @@ const InvoiceDetailPanel = ({
                 <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                   <table className="w-full">
                     <thead>
-                      <tr className="bg-[#7c3aed]">
+                      <tr className="bg-[#c9a227]">
                         <th className="w-8 px-2 py-2 text-xs font-semibold text-white text-center">#</th>
                         <th className="w-28 px-2 py-2 text-xs font-semibold text-white text-left">Add-on</th>
                         <th className="px-2 py-2 text-xs font-semibold text-white text-left">Description</th>
