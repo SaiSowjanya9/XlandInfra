@@ -45,7 +45,7 @@ const getStatusLabel = (status) => {
     pending_approval: 'Pending Approval',
     approved: 'Approved',
     rejected: 'Rejected',
-    converted: 'Approved',
+
     sent: 'Sent',
     archived: 'Archived'
   };
@@ -1628,7 +1628,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                   <td className="px-3 py-3 whitespace-nowrap hidden sm:table-cell"><span className={`px-2 py-0.5 rounded text-xs font-medium ${est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span></td>
                   <td className="px-3 py-3 text-gray-600 whitespace-nowrap hidden md:table-cell">{(est.estimate_type === 'property_based' || est.estimate_type === 'property-based') ? (est.division || est.property_division || '-') : '-'}</td>
                   <td className="px-3 py-3 font-semibold whitespace-nowrap">{formatCurrency(est.total_amount)}</td>
-                  <td className="px-3 py-3 hidden md:table-cell"><span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'rejected' ? 'bg-red-100 text-red-700' : est.status === 'sent' ? 'bg-blue-100 text-blue-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{est.status || 'draft'}</span></td>
+                  <td className="px-3 py-3 hidden md:table-cell"><span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'rejected' ? 'bg-red-100 text-red-700' : est.status === 'sent' ? 'bg-blue-100 text-blue-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{getStatusLabel(est.status)}</span></td>
                   <td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell truncate max-w-[100px]">{est.created_by_name || (est.created_by_role ? est.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</td>
                   <td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell">{formatDateIST(est.created_at)}</td>
                   <td className="px-3 py-3">
@@ -2241,7 +2241,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' : 
                     viewEstimate.status === 'sent' ? 'bg-blue-100 text-blue-700' : 
-                    viewEstimate.status === 'converted' ? 'bg-green-100 text-green-700' :
+                    
                     viewEstimate.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
                   }`}>{getStatusLabel(viewEstimate.status)}</span>
                 </div>

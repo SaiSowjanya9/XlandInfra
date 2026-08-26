@@ -273,10 +273,10 @@ router.put('/:id', authenticate, canMakeEstimate, async (req, res) => {
       });
     }
 
-    if (['approved', 'converted'].includes(existing[0].status)) {
+    if (existing[0].status === 'approved') {
       return res.status(400).json({
         success: false,
-        message: 'Cannot modify approved or converted estimates'
+        message: 'Cannot modify approved estimates'
       });
     }
 

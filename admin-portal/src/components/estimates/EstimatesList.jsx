@@ -39,12 +39,23 @@ const STATUS_STYLES = {
   sent: 'bg-blue-100 text-blue-700',
   Approved: 'bg-green-100 text-green-700',
   approved: 'bg-green-100 text-green-700',
+
   Rejected: 'bg-red-100 text-red-700',
   rejected: 'bg-red-100 text-red-700',
   Expired: 'bg-orange-100 text-orange-700',
   expired: 'bg-orange-100 text-orange-700',
   Archived: 'bg-slate-100 text-slate-700',
   archived: 'bg-slate-100 text-slate-700'
+};
+
+const STATUS_LABELS = {
+  draft: 'Draft',
+  sent: 'Sent',
+  approved: 'Approved',
+
+  rejected: 'Rejected',
+  expired: 'Expired',
+  archived: 'Archived'
 };
 
 // Format date in IST format (dd/mm/yyyy)
@@ -384,6 +395,27 @@ const EstimatesList = ({
       showToast('Failed to archive', 'error');
     }
     setDeleteConfirm(null);
+  };
+
+  // Handle estimate status change
+  const handleStatusChange = async (estimateId, newStatus) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/estimates/${estimateId}/status`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast(`Status updated to ${STATUS_LABELS[newStatus] || newStatus}`);
+        onRefresh();
+      } else {
+        showToast(result.message || 'Failed to update status', 'error');
+      }
+    } catch (error) {
+      console.error('Status update error:', error);
+      showToast('Failed to update status', 'error');
+    }
   };
 
   // Multi-select handlers
@@ -877,9 +909,25 @@ const EstimatesList = ({
                       )}
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 hidden lg:table-cell">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_STYLES[estimate.status] || 'bg-gray-100 text-gray-700'}`}>
-                        {estimate.status?.charAt(0).toUpperCase() + estimate.status?.slice(1) || 'Draft'}
-                      </span>
+                      {isOpsManager ? (
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_STYLES[estimate.status] || 'bg-gray-100 text-gray-700'}`}>
+                          {STATUS_LABELS[estimate.status] || estimate.status?.charAt(0).toUpperCase() + estimate.status?.slice(1) || 'Draft'}
+                        </span>
+                      ) : (
+                        <div className="relative inline-block">
+                          <select
+                            value={(estimate.status || 'draft').toLowerCase()}
+                            onChange={(e) => handleStatusChange(estimate.id, e.target.value)}
+                            className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer focus:ring-2 focus:ring-blue-200 ${STATUS_STYLES[estimate.status] || 'bg-gray-100 text-gray-700'}`}
+                          >
+                            <option value="draft" className="bg-white text-gray-900">Draft</option>
+                            <option value="sent" className="bg-white text-gray-900">Sent</option>
+                            <option value="approved" className="bg-white text-gray-900">Approved</option>
+                            <option value="rejected" className="bg-white text-gray-900">Rejected</option>
+                          </select>
+                          <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex items-center justify-end gap-1">

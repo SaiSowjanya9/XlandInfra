@@ -38,7 +38,7 @@ const getStatusLabel = (status) => {
     pending_approval: 'Pending Approval',
     approved: 'Approved',
     rejected: 'Rejected',
-    converted: 'Approved',
+
     sent: 'Sent',
     archived: 'Archived'
   };
@@ -2773,8 +2773,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <div className="text-xs text-gray-400 capitalize">{est.created_by_name ? (est.created_by_role || '').replace(/_/g, ' ') : ''}</div>
                     </td>
                     <td className="px-4 py-4">
-                      {isFPManager || est.status === 'converted' ? (
-                        // FP Manager or Invoice Generated - View only (badge)
+                      {isFPManager ? (
+                        // FP Manager - View only (badge)
                         <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getEstimateStatusColor(est.status)}`}>
                           {getStatusLabel(est.status)}
                         </span>
@@ -3835,7 +3835,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     const s = (status || 'draft').toLowerCase();
     switch (s) {
       case 'approved': return 'bg-green-100 text-green-700';
-      case 'converted': return 'bg-green-100 text-green-700';
+
       case 'sent': return 'bg-blue-100 text-blue-700';
       case 'rejected': return 'bg-red-100 text-red-700';
       default: return 'bg-gray-100 text-gray-600';
@@ -3962,7 +3962,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' : 
                     viewEstimate.status === 'sent' ? 'bg-blue-100 text-blue-700' : 
-                    viewEstimate.status === 'converted' ? 'bg-green-100 text-green-700' :
+                    
                     viewEstimate.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
                   }`}>{getStatusLabel(viewEstimate.status)}</span>
                 </div>

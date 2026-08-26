@@ -368,13 +368,7 @@ router.post('/', authenticate, canMakeSchedule, async (req, res) => {
       ]
     );
 
-    // If schedule is from an estimate, mark estimate as converted
-    if (estimateId) {
-      await pool.execute(
-        `UPDATE estimates SET status = 'converted' WHERE id = ?`,
-        [estimateId]
-      );
-    }
+    // Estimate status stays as 'approved' - no need to change it
 
     res.status(201).json({
       success: true,
