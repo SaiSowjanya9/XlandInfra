@@ -584,6 +584,29 @@ router.get('/suggestions/areas', async (req, res) => {
 });
 
 // ============================================
+// GET /api/onboarding/suggestions/cities — Distinct cities from properties + vendors
+// ============================================
+router.get('/suggestions/cities', async (req, res) => {
+  try {
+    const [propRows] = await pool.execute(
+      `SELECT DISTINCT city FROM onboarded_properties WHERE city IS NOT NULL AND city != '' AND status = 'active'`
+    );
+    let vendorCities = [];
+    try {
+      const [vRows] = await pool.execute(
+        `SELECT DISTINCT city FROM onboarded_vendors WHERE city IS NOT NULL AND city != '' AND status = 'active'`
+      );
+      vendorCities = vRows;
+    } catch (_) {}
+    const allCities = [...new Set([...propRows.map(r => r.city), ...vendorCities.map(r => r.city)])].filter(Boolean).sort();
+    res.json({ success: true, data: allCities });
+  } catch (error) {
+    console.error('Error fetching city suggestions:', error);
+    res.json({ success: true, data: [] });
+  }
+});
+
+// ============================================
 // GET /api/onboarding/lookup/:propertyId — Find property by property_id string
 // ============================================
 router.get('/lookup/:propertyId', async (req, res) => {

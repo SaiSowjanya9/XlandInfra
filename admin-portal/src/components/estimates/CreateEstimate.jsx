@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useFP } from '../../contexts/FPContext';
 import PhoneInput from '../common/PhoneInput';
+import AutocompleteInput from '../common/AutocompleteInput';
 import { 
   createEstimate, calculateEstimateTotal, getServices, PROPERTY_TYPES,
   getAMCPackageByPropertyId, addService, FREQUENCY_TYPES, FREQUENCY_COUNT_MAP,
@@ -204,6 +205,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   const [propertyIdInput, setPropertyIdInput] = useState('');
   const [showPropertySuggestions, setShowPropertySuggestions] = useState(false);
   const [properties, setProperties] = useState([]);
+  const [zoneOptions, setZoneOptions] = useState([]);
+  const [cityOptions, setCityOptions] = useState([]);
   const [availableServices, setAvailableServices] = useState([]);
   const [amcPackage, setAmcPackage] = useState(null);
   const [showEmailConfirm, setShowEmailConfirm] = useState(false);
@@ -415,6 +418,20 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       console.error('Error loading packages/addons:', error);
       setAvailablePackages([]);
       setAvailableAddons([]);
+    }
+    
+    // Fetch zones and cities for autocomplete
+    try {
+      const [zonesRes, citiesRes] = await Promise.all([
+        fetch(`${API_BASE}/api/onboarding/suggestions/zones`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/onboarding/suggestions/cities`, { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
+      const zonesData = await zonesRes.json();
+      const citiesData = await citiesRes.json();
+      setZoneOptions(zonesData.success ? (zonesData.data || []).map(z => z.name || z) : []);
+      setCityOptions(citiesData.success ? (citiesData.data || []).map(c => c.name || c) : []);
+    } catch (error) {
+      console.error('Error loading zones/cities:', error);
     }
   };
 
@@ -2548,23 +2565,25 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Zone</label>
-                <input
-                  type="text"
+                <AutocompleteInput
+                  label="Zone"
                   value={estimateForm.zone}
-                  onChange={(e) => setEstimateForm({ ...estimateForm, zone: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                  placeholder="Enter zone"
+                  onChange={(val) => setEstimateForm({ ...estimateForm, zone: val })}
+                  options={zoneOptions}
+                  placeholder="Type or select zone..."
+                  allowCustom={true}
+                  inputClassName="text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">City</label>
-                <input
-                  type="text"
+                <AutocompleteInput
+                  label="City"
                   value={estimateForm.city}
-                  onChange={(e) => setEstimateForm({ ...estimateForm, city: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                  placeholder="Enter city"
+                  onChange={(val) => setEstimateForm({ ...estimateForm, city: val })}
+                  options={cityOptions}
+                  placeholder="Type or select city..."
+                  allowCustom={true}
+                  inputClassName="text-sm"
                 />
               </div>
             </div>

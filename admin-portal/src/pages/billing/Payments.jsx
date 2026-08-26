@@ -186,8 +186,8 @@ const VerifyPaymentModal = ({ isOpen, onClose, onSuccess, payment }) => {
   const dateTime = formatDateTime(payment.paymentDate);
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-orange-50 to-amber-50">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-orange-100 rounded-lg">
