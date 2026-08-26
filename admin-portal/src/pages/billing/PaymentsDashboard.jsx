@@ -528,7 +528,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               endDate={dateRange.end}
               onDateChange={(start, end) => setDateRange({ start, end })}
               onRefresh={fetchDashboardData}
-              showRefreshButton={true}
+              showRefreshButton={false}
             />
           </div>
         </div>
