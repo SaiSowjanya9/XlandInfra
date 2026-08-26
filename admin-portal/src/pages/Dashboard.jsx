@@ -1099,32 +1099,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Summary Cards Row */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* Work Orders Summary */}
-          <div className="bg-white rounded-xl p-5 border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-medium text-gray-800">Work Orders Summary</h3>
-              <ClipboardList className="w-4 h-4 text-gray-400" />
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <p className="text-2xl font-semibold text-gray-800">{stats?.workOrders ?? 0}</p>
-                <p className="text-xs text-gray-500 mt-1">Total</p>
-              </div>
-              <div className="text-center p-3 bg-amber-50 rounded-lg">
-                <p className="text-2xl font-semibold text-amber-600">{stats?.pendingWorkOrders ?? 0}</p>
-                <p className="text-xs text-gray-500 mt-1">Pending</p>
-              </div>
-              <div className="text-center p-3 bg-emerald-50 rounded-lg">
-                <p className="text-2xl font-semibold text-emerald-600">{stats?.completedWorkOrders ?? 0}</p>
-                <p className="text-xs text-gray-500 mt-1">Completed</p>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
         {/* Quick Actions */}
         <div className="bg-white rounded-xl border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>

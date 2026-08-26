@@ -535,8 +535,9 @@ router.get('/dashboard', authenticate, canViewPayments, async (req, res) => {
 // Get all invoices
 router.get('/invoices', authenticate, canViewPayments, async (req, res) => {
   try {
-    const fpId = getFPScope(req);
-    const { status, paymentStatus, search, propertyId, customerId, archived, invoiceType } = req.query;
+    // For admins, allow fpId from query params; for FP users, use their scope
+    const { status, paymentStatus, search, propertyId, customerId, archived, invoiceType, fpId: queryFpId } = req.query;
+    const fpId = getFPScope(req) || (req.user.role === 'admin' || req.user.role === 'super_admin' ? queryFpId : null);
     
     let query = `
       SELECT i.*, 
@@ -2153,8 +2154,9 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
 // Get all payments
 router.get('/payments', authenticate, canViewPayments, async (req, res) => {
   try {
-    const fpId = getFPScope(req);
-    const { invoiceId, status, paymentMethod, startDate, endDate, search } = req.query;
+    // For admins, allow fpId from query params; for FP users, use their scope
+    const { invoiceId, status, paymentMethod, startDate, endDate, search, fpId: queryFpId } = req.query;
+    const fpId = getFPScope(req) || (req.user.role === 'admin' || req.user.role === 'super_admin' ? queryFpId : null);
 
     let query = `
       SELECT p.*, 
@@ -2920,8 +2922,9 @@ router.get('/history', authenticate, canViewPayments, async (req, res) => {
 // Includes: Card, Net Banking, UPI - all processed via Razorpay
 router.get('/razorpay-history', authenticate, canViewPayments, async (req, res) => {
   try {
-    const fpId = getFPScope(req);
-    const { startDate, endDate, search } = req.query;
+    // For admins, allow fpId from query params; for FP users, use their scope
+    const { startDate, endDate, search, fpId: queryFpId } = req.query;
+    const fpId = getFPScope(req) || (req.user.role === 'admin' || req.user.role === 'super_admin' ? queryFpId : null);
 
     // Razorpay handles: Card, Net Banking, UPI
     // XLAND INFRA handles: Cash, Cheque, Bank Transfer
