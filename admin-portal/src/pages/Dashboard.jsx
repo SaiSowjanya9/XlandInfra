@@ -1010,41 +1010,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Franchise Partners Section - Only show in Admin (All FPs) mode */}
-        {selectedFp.id === 'all' && fpList.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-100 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Franchise Partners</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {fpList.slice(0, 4).map((fp, index) => {
-                const colors = [
-                  { bg: 'bg-indigo-50', text: 'text-indigo-700', iconBg: 'bg-indigo-100', iconText: 'text-indigo-600' },
-                  { bg: 'bg-purple-50', text: 'text-purple-700', iconBg: 'bg-purple-100', iconText: 'text-purple-600' },
-                  { bg: 'bg-amber-50', text: 'text-amber-700', iconBg: 'bg-amber-100', iconText: 'text-amber-600' },
-                  { bg: 'bg-teal-50', text: 'text-teal-700', iconBg: 'bg-teal-100', iconText: 'text-teal-600' },
-                ];
-                const color = colors[index % 4];
-                return (
-                  <div 
-                    key={fp.id}
-                    onClick={() => selectFp(fp)}
-                    className={`${color.bg} rounded-xl p-4 cursor-pointer hover:shadow-md transition-all`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 ${color.iconBg} rounded-lg flex items-center justify-center`}>
-                        <Building2 className={`w-5 h-5 ${color.iconText}`} />
-                      </div>
-                      <div>
-                        <p className={`text-lg font-bold ${color.text}`}>{fp.fpId}</p>
-                        <p className={`text-sm ${color.text} opacity-80`}>{fp.companyName?.substring(0, 15) || 'Franchise Partner'}</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* Quick Access QR Codes */}
         <div className="bg-white rounded-xl p-5 border border-gray-100">
           <div className="flex items-center justify-between mb-4">

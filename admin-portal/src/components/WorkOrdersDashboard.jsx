@@ -19,8 +19,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  Building2
+  Building2,
+  Users
 } from 'lucide-react';
+import { useFP } from '../contexts/FPContext';
 import { 
   PieChart, 
   Pie, 
@@ -81,6 +83,11 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
   const token = getAuthToken();
   const apiPath = getApiPath(portalType);
   const datePickerRef = useRef(null);
+  
+  // FP Context for admin portal
+  const { fpList, selectedFp, selectFp, loading: fpLoading } = useFP();
+  const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
+  const isAdminPortal = portalType === 'admin' || portalType === 'employee';
 
   // IST date formatting helpers - parse string directly to avoid timezone issues
   const formatDateIST = (dateStr) => {
@@ -148,7 +155,13 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE}/api/${apiPath}/work-orders`, {
+      // Build URL with optional FP filter for admin portal
+      let url = `${API_BASE}/api/${apiPath}/work-orders`;
+      if (isAdminPortal && selectedFp && selectedFp.id !== 'all') {
+        url += `?fpId=${selectedFp.id}`;
+      }
+      
+      const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -169,7 +182,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token, apiPath]);
+  }, [token, apiPath, isAdminPortal, selectedFp]);
 
   useEffect(() => {
     fetchWorkOrders();
@@ -687,10 +700,53 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Work Orders Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-1">Overview of all work orders</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {isAdminPortal && selectedFp ? (
+              selectedFp.id === 'all' ? 'Overview of all work orders' : `Work orders for ${selectedFp.name || selectedFp.companyName}`
+            ) : 'Overview of all work orders'}
+          </p>
         </div>
         
         <div className="flex items-center gap-3">
+          {/* FP Selector - Only for Admin Portal */}
+          {isAdminPortal && (
+            <div className="relative">
+              <button
+                onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+              >
+                <Users className="w-4 h-4 text-gray-500" />
+                <span className="text-sm text-gray-700">
+                  {selectedFp ? (selectedFp.id === 'all' ? 'All Franchise Partners' : selectedFp.name || selectedFp.companyName) : 'All Franchise Partners'}
+                </span>
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {fpDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-80 overflow-auto">
+                  <div className="p-2 border-b border-gray-100">
+                    <button
+                      onClick={() => { selectFp({ id: 'all', name: 'All Franchise Partners' }); setFpDropdownOpen(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${!selectedFp || selectedFp.id === 'all' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                    >
+                      All Franchise Partners
+                    </button>
+                  </div>
+                  <div className="p-2">
+                    {fpList.map(fp => (
+                      <button
+                        key={fp.id}
+                        onClick={() => { selectFp(fp); setFpDropdownOpen(false); }}
+                        className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${selectedFp?.id === fp.id ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                      >
+                        {fp.name || fp.companyName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
           {/* Date Range Picker */}
           <div className="relative" ref={datePickerRef}>
             <button 
