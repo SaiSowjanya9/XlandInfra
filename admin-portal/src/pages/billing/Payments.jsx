@@ -482,6 +482,13 @@ const ReceiptModal = ({ isOpen, onClose, payment, onDownload, onSend, downloadin
 const Payments = ({ user, portalType = 'admin' }) => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  
+  // Set initial tab based on URL
+  const getInitialTab = () => {
+    if (location.pathname.includes('payment-history') || location.pathname.includes('offline')) return 'offline';
+    return 'online';
+  };
+  
   const [payments, setPayments] = useState([]);
   const [razorpayHistory, setRazorpayHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -500,7 +507,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
   const [toast, setToast] = useState(null);
   const [actionMenuOpen, setActionMenuOpen] = useState(null);
-  const [activeTab, setActiveTab] = useState('payments'); // 'payments' or 'razorpay-history'
+  const [activeTab, setActiveTab] = useState(getInitialTab); // 'online' or 'offline'
 
   const token = getAuthToken();
 
@@ -564,7 +571,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
   }, [token, dateRange, headerSearchTerm]);
 
   useEffect(() => {
-    if (activeTab === 'razorpay-history') {
+    if (activeTab === 'online') {
       fetchRazorpayHistory();
     }
   }, [activeTab, fetchRazorpayHistory]);
@@ -731,7 +738,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-gray-900">
-                {activeTab === 'razorpay-history' ? 'Payment History' : 'Payments'}
+                {activeTab === 'offline' ? 'Offline Payments' : 'Online Payments'}
               </h1>
               <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
                 <Home className="w-3.5 h-3.5" />
@@ -740,7 +747,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 <span>Billing & Payments</span>
                 <ChevronRightIcon className="w-3.5 h-3.5" />
                 <span className="text-gray-700">
-                  {activeTab === 'razorpay-history' ? 'Payment History' : 'Payments'}
+                  {activeTab === 'offline' ? 'Offline Payments' : 'Online Payments'}
                 </span>
               </div>
             </div>
@@ -769,30 +776,31 @@ const Payments = ({ user, portalType = 'admin' }) => {
         {/* Tabs - Below Header */}
         <div className="flex items-center gap-3 mb-4">
           <button
-            onClick={() => setActiveTab('payments')}
+            onClick={() => setActiveTab('online')}
             className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-              activeTab === 'payments' 
-                ? 'bg-green-100 text-green-800 border border-green-200' 
+              activeTab === 'online' 
+                ? 'bg-blue-100 text-blue-800 border border-blue-200' 
                 : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
             }`}
           >
             <CreditCard className="w-4 h-4" />
-            All Payments
+            Online Payments
           </button>
           <button
-            onClick={() => setActiveTab('razorpay-history')}
+            onClick={() => setActiveTab('offline')}
             className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-              activeTab === 'razorpay-history' 
-                ? 'bg-purple-100 text-purple-800 border border-purple-200' 
+              activeTab === 'offline' 
+                ? 'bg-green-100 text-green-800 border border-green-200' 
                 : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
             }`}
           >
             <Receipt className="w-4 h-4" />
-            Payment History
+            Offline Payments
           </button>
         </div>
 
-        {activeTab === 'payments' && (
+        {/* Offline Payments Tab - Cash, Cheque, Bank Transfer */}
+        {activeTab === 'offline' && (
           <>
         {/* Stats Cards */}
         <div className="grid grid-cols-5 gap-4 mb-6">
@@ -1177,8 +1185,8 @@ const Payments = ({ user, portalType = 'admin' }) => {
           </>
         )}
 
-        {/* Razorpay Payment History Tab */}
-        {activeTab === 'razorpay-history' && (
+        {/* Online Payments Tab - Card, Net Banking, UPI */}
+        {activeTab === 'online' && (
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             {/* History Table */}
             <div className="overflow-x-auto">
@@ -1191,7 +1199,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Payment Method</th>
                     <th className="text-right text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Amount</th>
                     <th className="text-right text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Balance</th>
-                    <th className="text-center text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Receipt Status</th>
+                    <th className="text-center text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -1202,8 +1210,8 @@ const Payments = ({ user, portalType = 'admin' }) => {
                           <div className="p-4 bg-gray-100 rounded-full">
                             <Receipt className="w-8 h-8 text-gray-400" />
                           </div>
-                          <p className="text-gray-500 font-medium">No payment history yet</p>
-                          <p className="text-sm text-gray-400">Payment history records will appear here</p>
+                          <p className="text-gray-500 font-medium">No online payments yet</p>
+                          <p className="text-sm text-gray-400">Card, Net Banking & UPI payments will appear here</p>
                         </div>
                       </td>
                     </tr>
