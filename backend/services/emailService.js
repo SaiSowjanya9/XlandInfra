@@ -1079,10 +1079,6 @@ const sendEstimateEmail = async (estimate, actionToken) => {
           
           <!-- Content -->
           <div style="background: #ffffff; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <div style="text-align: center; margin-bottom: 20px;">
-              <h1 style="margin: 0; font-size: 24px; color: #1a1a1a; font-weight: bold;">Estimate</h1>
-              <p style="margin: 5px 0 0; color: #666; font-size: 14px;">${estimateId}</p>
-            </div>
             <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 20px;">Hello ${customerName || 'Valued Customer'},</h2>
             
             <p style="color: #4b5563; line-height: 1.6; margin: 0 0 20px 0;">
@@ -2387,12 +2383,6 @@ const sendInvoiceEmail = async (invoice) => {
                 </td>
               </tr>
             </table>
-          </div>
-          
-          <!-- Invoice Badge -->
-          <div style="background: #1a1a1a; padding: 15px; text-align: center;">
-            <span style="background: #D8B25C; color: #1a1a1a; padding: 8px 25px; border-radius: 20px; font-size: 14px; font-weight: 600; letter-spacing: 1px;">INVOICE</span>
-            <p style="color: #888; margin: 10px 0 0 0; font-size: 13px;">${invoiceId}</p>
           </div>
           
           <!-- Content -->
