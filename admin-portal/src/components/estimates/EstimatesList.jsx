@@ -989,8 +989,8 @@ const EstimatesList = ({
 
       {/* View Estimate Modal */}
       {viewEstimate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4" onClick={() => setViewEstimate(null)}>
+          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
               <h3 className="text-base sm:text-lg font-semibold text-gray-800">Estimate Details</h3>
               <button onClick={() => setViewEstimate(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
@@ -1268,8 +1268,8 @@ const EstimatesList = ({
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md m-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-white rounded-xl p-6 max-w-md m-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-gray-800 mb-2">Archive Estimate?</h3>
             <p className="text-gray-600 mb-4">
               Are you sure you want to archive estimate <strong>{deleteConfirm.estimateId || deleteConfirm.estimate_id}</strong>? 
