@@ -38,7 +38,7 @@ const getStatusLabel = (status) => {
     pending_approval: 'Pending Approval',
     approved: 'Approved',
     rejected: 'Rejected',
-    converted: 'Approved',
+
     sent: 'Sent',
     archived: 'Archived'
   };
@@ -582,7 +582,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const removeLineItem = (index) => { if (estimateForm.items.length > 1) setEstimateForm({ ...estimateForm, items: estimateForm.items.filter((_, i) => i !== index) }); };
   const updateLineItem = (index, field, value) => { const updatedItems = [...estimateForm.items]; updatedItems[index][field] = value; setEstimateForm({ ...estimateForm, items: updatedItems }); };
 
-  const getStatusColor = (status) => { const colors = { draft: 'bg-gray-100 text-gray-700', pending_approval: 'bg-yellow-100 text-yellow-700', approved: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-700', converted: 'bg-green-100 text-green-700', archived: 'bg-gray-100 text-gray-500' }; return colors[status] || 'bg-gray-100 text-gray-700'; };
+  const getStatusColor = (status) => { const colors = { draft: 'bg-gray-100 text-gray-700', pending_approval: 'bg-yellow-100 text-yellow-700', approved: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-700', archived: 'bg-gray-100 text-gray-500' }; return colors[status] || 'bg-gray-100 text-gray-700'; };
   const calculateTotals = () => { const subtotal = estimateForm.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0); const tax = (subtotal * estimateForm.taxPercentage) / 100; const discount = (subtotal * estimateForm.discountPercentage) / 100; return { subtotal, tax, discount, total: subtotal + tax - discount }; };
   const getPackageServices = (pkg) => {
     let servicesData = pkg?.services || pkg?.services_data || pkg?.serviceRows;
@@ -876,7 +876,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                               <td className="py-4 px-4"><div className="font-medium text-gray-900">{estimate.client_name || '-'}</div>{estimate.property_code && <div className="text-xs text-gray-400">{estimate.property_code}</div>}</td>
                               <td className="py-4 px-4"><div className="flex items-center gap-1.5 text-gray-600"><Calendar className="w-4 h-4" />{formatDateIST(estimate.created_at)}</div></td>
                               <td className="py-4 px-4"><div><p className="font-medium text-gray-900">{estimate.created_by_name || (estimate.created_by_role ? estimate.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</p>{estimate.created_by_name && estimate.created_by_role && <p className="text-xs text-gray-400 capitalize">{estimate.created_by_role.replace(/_/g, ' ')}</p>}</div></td>
-                              <td className="py-4 px-4"><span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(estimate.status)}`}>{estimate.status?.charAt(0).toUpperCase() + estimate.status?.slice(1) || 'Draft'}</span></td>
+                              <td className="py-4 px-4"><span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(estimate.status)}`}>{STATUS_LABELS[estimate.status] || estimate.status?.charAt(0).toUpperCase() + estimate.status?.slice(1) || 'Draft'}</span></td>
                               <td className="py-4 px-4"><div className="flex items-center justify-center gap-1"><button onClick={() => setViewEstimate(estimate)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button>{(estimate.estimate_type === 'direct' || (estimate.estimate_type && !estimate.estimate_type.includes('property'))) && <button onClick={() => openEditEstimate(estimate)} className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>}</div></td>
                             </tr>
                           );
@@ -1477,7 +1477,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' : 
                     viewEstimate.status === 'sent' ? 'bg-blue-100 text-blue-700' : 
-                    viewEstimate.status === 'converted' ? 'bg-green-100 text-green-700' :
+                    
                     viewEstimate.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
                   }`}>{getStatusLabel(viewEstimate.status)}</span>
                 </div>
