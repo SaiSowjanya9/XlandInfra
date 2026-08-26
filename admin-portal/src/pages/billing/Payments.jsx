@@ -483,7 +483,9 @@ const ReceiptModal = ({ isOpen, onClose, payment, onDownload, onSend, downloadin
 const Payments = ({ user, portalType = 'admin' }) => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { selectedFp } = useFP();
+  const { fpList, selectedFp, selectFp } = useFP();
+  const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
+  const isAdminPortal = portalType === 'admin' || portalType === 'employee';
   
   // Set initial tab based on URL
   const getInitialTab = () => {
@@ -770,7 +772,57 @@ const Payments = ({ user, portalType = 'admin' }) => {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="relative w-80">
+              {/* FP Selector - Only for Admin Portal */}
+              {isAdminPortal && (
+                <div className="relative">
+                  <button
+                    onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    <span className="text-sm font-medium text-gray-700">
+                      {selectedFp ? (selectedFp.id === 'all' ? 'Admin (All FPs)' : selectedFp.fpId || selectedFp.fp_code || selectedFp.name) : 'Admin (All FPs)'}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {fpDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-auto">
+                      {/* Admin (All FPs) Option */}
+                      <button
+                        onClick={() => { selectFp({ id: 'all', name: 'All Franchise Partners' }); setFpDropdownOpen(false); }}
+                        className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors ${!selectedFp || selectedFp.id === 'all' ? 'bg-blue-50' : ''}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-gray-400" />
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">Admin (All FPs)</p>
+                            <p className="text-xs text-gray-500">View aggregated data</p>
+                          </div>
+                        </div>
+                      </button>
+                      {/* FP List */}
+                      <div className="py-1">
+                        {fpList.map(fp => (
+                          <button
+                            key={fp.id}
+                            onClick={() => { selectFp(fp); setFpDropdownOpen(false); }}
+                            className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${selectedFp?.id === fp.id ? 'bg-blue-50' : ''}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">{fp.fpId || fp.fp_code}</p>
+                                <p className="text-xs text-gray-500">{fp.companyName || fp.company_name || fp.name}</p>
+                              </div>
+                              <span className="text-xs text-gray-400">{fp.ownerName || fp.owner_name || ''}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="relative w-72">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"

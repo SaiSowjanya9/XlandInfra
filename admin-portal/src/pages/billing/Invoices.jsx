@@ -28,8 +28,10 @@ import {
   Archive,
   Copy,
   User,
+  Users,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import { useFP } from '../../contexts/FPContext';
 import * as XLSX from 'xlsx';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -118,6 +120,10 @@ const INVOICE_TABS = [
 
 const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
   const navigate = useNavigate();
+  const { fpList, selectedFp, selectFp } = useFP();
+  const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
+  const isAdminPortal = portalType === 'admin' || portalType === 'employee';
+  
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState([]);
   const [archivedInvoices, setArchivedInvoices] = useState([]);
@@ -152,6 +158,10 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
       // Fetch ALL active invoices (filter by type on client side)
       let url = `${API_BASE}/api/payments/invoices`;
       const params = new URLSearchParams();
+      // Add FP filter for admin viewing specific FP
+      if (selectedFp && selectedFp.id !== 'all') {
+        params.append('fpId', selectedFp.id);
+      }
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (searchTerm) params.append('search', searchTerm);
       if (dateRange.start) params.append('startDate', dateRange.start);
@@ -168,7 +178,12 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
       }
       
       // Fetch archived invoices
-      const archivedResponse = await fetch(`${API_BASE}/api/payments/invoices?archived=true`, {
+      const archivedParams = new URLSearchParams();
+      archivedParams.append('archived', 'true');
+      if (selectedFp && selectedFp.id !== 'all') {
+        archivedParams.append('fpId', selectedFp.id);
+      }
+      const archivedResponse = await fetch(`${API_BASE}/api/payments/invoices?${archivedParams.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const archivedResult = await archivedResponse.json();
@@ -180,7 +195,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
     } finally {
       setLoading(false);
     }
-  }, [token, statusFilter, searchTerm, dateRange]);
+  }, [token, statusFilter, searchTerm, dateRange, selectedFp]);
 
   useEffect(() => {
     fetchInvoices();
@@ -568,6 +583,56 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
               </p>
             </div>
             <div className="flex items-center gap-3">
+              {/* FP Selector - Only for Admin Portal */}
+              {isAdminPortal && (
+                <div className="relative">
+                  <button
+                    onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    <span className="text-sm font-medium text-gray-700">
+                      {selectedFp ? (selectedFp.id === 'all' ? 'Admin (All FPs)' : selectedFp.fpId || selectedFp.fp_code || selectedFp.name) : 'Admin (All FPs)'}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {fpDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-auto">
+                      {/* Admin (All FPs) Option */}
+                      <button
+                        onClick={() => { selectFp({ id: 'all', name: 'All Franchise Partners' }); setFpDropdownOpen(false); }}
+                        className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors ${!selectedFp || selectedFp.id === 'all' ? 'bg-blue-50' : ''}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-gray-400" />
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">Admin (All FPs)</p>
+                            <p className="text-xs text-gray-500">View aggregated data</p>
+                          </div>
+                        </div>
+                      </button>
+                      {/* FP List */}
+                      <div className="py-1">
+                        {fpList.map(fp => (
+                          <button
+                            key={fp.id}
+                            onClick={() => { selectFp(fp); setFpDropdownOpen(false); }}
+                            className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${selectedFp?.id === fp.id ? 'bg-blue-50' : ''}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">{fp.fpId || fp.fp_code}</p>
+                                <p className="text-xs text-gray-500">{fp.companyName || fp.company_name || fp.name}</p>
+                              </div>
+                              <span className="text-xs text-gray-400">{fp.ownerName || fp.owner_name || ''}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               {/* Header Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -576,7 +641,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                   placeholder="Search by Invoice ID, Property ID, Customer..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-[320px] pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-[280px] pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 />
               </div>
               {/* Export All Button */}
