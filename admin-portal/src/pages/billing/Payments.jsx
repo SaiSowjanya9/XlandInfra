@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import {
   Search,
@@ -511,6 +511,12 @@ const Payments = ({ user, portalType = 'admin' }) => {
   const [actionMenuOpen, setActionMenuOpen] = useState(null);
   const [activeTab, setActiveTab] = useState(getInitialTab); // 'online' or 'offline'
 
+  // Refs for date inputs
+  const offlineStartDateRef = useRef(null);
+  const offlineEndDateRef = useRef(null);
+  const onlineStartDateRef = useRef(null);
+  const onlineEndDateRef = useRef(null);
+
   const token = getAuthToken();
 
   useEffect(() => {
@@ -523,7 +529,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
   const fetchPayments = useCallback(async () => {
     setLoading(true);
     try {
-      let url = `${API_BASE}/api/payments`;
+      let url = `${API_BASE}/api/payments/payments`;
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (methodFilter !== 'all') params.append('paymentMethod', methodFilter);
@@ -911,11 +917,11 @@ const Payments = ({ user, portalType = 'admin' }) => {
             </div>
 
             <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
-              <div className="relative flex items-center gap-2 cursor-pointer">
-                <Calendar 
-                  className="w-4 h-4 text-gray-400 flex-shrink-0 cursor-pointer" 
-                  onClick={() => document.getElementById('offlineStartDate')?.showPicker?.()}
-                />
+              <Calendar 
+                className="w-4 h-4 text-gray-400 flex-shrink-0 cursor-pointer" 
+                onClick={() => offlineStartDateRef.current?.click()}
+              />
+              <div className="relative">
                 <input
                   type="text"
                   placeholder="dd/mm/yyyy"
@@ -930,12 +936,13 @@ const Payments = ({ user, portalType = 'admin' }) => {
                     }
                   }}
                   onBlur={() => setDateDisplayStart('')}
-                  className="text-sm border-none focus:outline-none bg-transparent w-[85px]"
+                  onClick={() => offlineStartDateRef.current?.click()}
+                  className="text-sm border-none focus:outline-none bg-transparent w-[85px] cursor-pointer"
                 />
                 <input
-                  id="offlineStartDate"
+                  ref={offlineStartDateRef}
                   type="date"
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
                   value={dateRange.start}
                   onChange={(e) => {
                     if (e.target.value) {
@@ -946,7 +953,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 />
               </div>
               <span className="text-gray-400">-</span>
-              <div className="relative flex items-center cursor-pointer">
+              <div className="relative">
                 <input
                   type="text"
                   placeholder="dd/mm/yyyy"
@@ -961,12 +968,13 @@ const Payments = ({ user, portalType = 'admin' }) => {
                     }
                   }}
                   onBlur={() => setDateDisplayEnd('')}
-                  className="text-sm border-none focus:outline-none bg-transparent w-[85px]"
+                  onClick={() => offlineEndDateRef.current?.click()}
+                  className="text-sm border-none focus:outline-none bg-transparent w-[85px] cursor-pointer"
                 />
                 <input
-                  id="offlineEndDate"
+                  ref={offlineEndDateRef}
                   type="date"
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
                   value={dateRange.end}
                   onChange={(e) => {
                     if (e.target.value) {
@@ -1217,11 +1225,11 @@ const Payments = ({ user, portalType = 'admin' }) => {
               </div>
 
               <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
-                <div className="relative flex items-center gap-2 cursor-pointer">
-                  <Calendar 
-                    className="w-4 h-4 text-gray-400 flex-shrink-0 cursor-pointer" 
-                    onClick={() => document.getElementById('onlineStartDate')?.showPicker?.()}
-                  />
+                <Calendar 
+                  className="w-4 h-4 text-gray-400 flex-shrink-0 cursor-pointer" 
+                  onClick={() => onlineStartDateRef.current?.click()}
+                />
+                <div className="relative">
                   <input
                     type="text"
                     placeholder="dd/mm/yyyy"
@@ -1236,12 +1244,13 @@ const Payments = ({ user, portalType = 'admin' }) => {
                       }
                     }}
                     onBlur={() => setDateDisplayStart('')}
-                    className="text-sm border-none focus:outline-none bg-transparent w-[85px]"
+                    onClick={() => onlineStartDateRef.current?.click()}
+                    className="text-sm border-none focus:outline-none bg-transparent w-[85px] cursor-pointer"
                   />
                   <input
-                    id="onlineStartDate"
+                    ref={onlineStartDateRef}
                     type="date"
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
                     value={dateRange.start}
                     onChange={(e) => {
                       if (e.target.value) {
@@ -1252,7 +1261,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
                   />
                 </div>
                 <span className="text-gray-400">-</span>
-                <div className="relative flex items-center cursor-pointer">
+                <div className="relative">
                   <input
                     type="text"
                     placeholder="dd/mm/yyyy"
@@ -1267,12 +1276,13 @@ const Payments = ({ user, portalType = 'admin' }) => {
                       }
                     }}
                     onBlur={() => setDateDisplayEnd('')}
-                    className="text-sm border-none focus:outline-none bg-transparent w-[85px]"
+                    onClick={() => onlineEndDateRef.current?.click()}
+                    className="text-sm border-none focus:outline-none bg-transparent w-[85px] cursor-pointer"
                   />
                   <input
-                    id="onlineEndDate"
+                    ref={onlineEndDateRef}
                     type="date"
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
                     value={dateRange.end}
                     onChange={(e) => {
                       if (e.target.value) {
