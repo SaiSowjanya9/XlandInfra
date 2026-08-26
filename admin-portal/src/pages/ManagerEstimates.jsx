@@ -1628,7 +1628,21 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                   <td className="px-3 py-3 whitespace-nowrap hidden sm:table-cell"><span className={`px-2 py-0.5 rounded text-xs font-medium ${est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span></td>
                   <td className="px-3 py-3 text-gray-600 whitespace-nowrap hidden md:table-cell">{(est.estimate_type === 'property_based' || est.estimate_type === 'property-based') ? (est.division || est.property_division || '-') : '-'}</td>
                   <td className="px-3 py-3 font-semibold whitespace-nowrap">{formatCurrency(est.total_amount)}</td>
-                  <td className="px-3 py-3 hidden md:table-cell"><span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'rejected' ? 'bg-red-100 text-red-700' : est.status === 'sent' ? 'bg-blue-100 text-blue-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{getStatusLabel(est.status)}</span></td>
+                  <td className="px-3 py-3 hidden md:table-cell">
+                    <div className="relative inline-block">
+                      <select
+                        value={(est.status || 'draft').toLowerCase()}
+                        onChange={(e) => handleStatusChange(est.id, e.target.value)}
+                        className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer focus:ring-2 focus:ring-blue-200 ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'rejected' ? 'bg-red-100 text-red-700' : est.status === 'sent' ? 'bg-blue-100 text-blue-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}
+                      >
+                        <option value="draft" className="bg-white text-gray-900">Draft</option>
+                        <option value="sent" className="bg-white text-gray-900">Sent</option>
+                        <option value="approved" className="bg-white text-gray-900">Approved</option>
+                        <option value="rejected" className="bg-white text-gray-900">Rejected</option>
+                      </select>
+                      <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
+                    </div>
+                  </td>
                   <td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell truncate max-w-[100px]">{est.created_by_name || (est.created_by_role ? est.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</td>
                   <td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell">{formatDateIST(est.created_at)}</td>
                   <td className="px-3 py-3">
@@ -2156,6 +2170,28 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
 
   // ARCHIVED
   const handleArchiveEstimate = async (id) => { try { const res = await fetch(`/api/manager/estimates/${id}/archive`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Estimate archived'); loadData(); } } catch (e) { showToast('Failed to archive', 'error'); } };
+  
+  // Handle estimate status change
+  const handleStatusChange = async (estimateId, newStatus) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/manager/estimates/${estimateId}/status`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast(`Status updated to ${getStatusLabel(newStatus)}`);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to update status', 'error');
+      }
+    } catch (e) {
+      console.error('Status update error:', e);
+      showToast('Failed to update status', 'error');
+    }
+  };
+
   const handleRestoreEstimate = async (id) => { try { const res = await fetch(`/api/manager/estimates/${id}/restore`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Estimate restored'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
   const handleDeletePermanent = async (id) => { try { const res = await fetch(`/api/manager/estimates/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted permanently'); setDeleteConfirm(null); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
 
