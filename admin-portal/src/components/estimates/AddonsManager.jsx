@@ -295,22 +295,9 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center">
-            <PlusCircle className="w-5 h-5 text-stone-600" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Add-ons</h1>
-            <p className="text-sm text-gray-500">Create optional services for AMC packages by property type</p>
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       {/* Tabs - Create tab hidden for Operations Manager */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit mb-6">
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
         {!isOpsManager && (
           <button
             onClick={() => setActiveTab('create')}
