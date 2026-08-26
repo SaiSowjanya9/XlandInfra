@@ -30,8 +30,10 @@ import {
   Truck,
   Trash2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Download
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const ITEMS_PER_PAGE = 10;
@@ -675,6 +677,40 @@ const ManagerWorkOrders = ({ user }) => {
     });
   };
 
+  // Excel export function
+  const handleExportExcel = () => {
+    if (filteredWorkOrders.length === 0) {
+      setMessage({ type: 'error', text: 'No work orders to export' });
+      return;
+    }
+    
+    const exportData = filteredWorkOrders.map(wo => ({
+      'Work Order ID': wo.work_order_id || '',
+      'Property ID': wo.actual_property_id || wo.property_code || '',
+      'Property Name': wo.property_name || '',
+      'Category': wo.category_name || '',
+      'Subcategory': wo.subcategory_name || '',
+      'Customer Name': wo.customer_name || '',
+      'Customer Phone': wo.customer_phone || '',
+      'Customer Email': wo.customer_email || '',
+      'Status': wo.status || '',
+      'Priority': wo.priority || '',
+      'Description': wo.description || '',
+      'Assigned Vendor': wo.vendor_name || '',
+      'Assigned Employee': wo.employee_name || '',
+      'Created Date': formatDate(wo.created_at),
+      'Completed Date': wo.completed_at ? formatDate(wo.completed_at) : '',
+      'Block': wo.block || '',
+      'Flat Number': wo.flat_number || ''
+    }));
+    
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Work Orders');
+    XLSX.writeFile(wb, `WorkOrders_${new Date().toISOString().split('T')[0]}.xlsx`);
+    setMessage({ type: 'success', text: `Exported ${filteredWorkOrders.length} work orders` });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -788,6 +824,14 @@ const ManagerWorkOrders = ({ user }) => {
               title="Refresh"
             >
               <RefreshCw className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleExportExcel}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+              title="Export to Excel"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Export</span>
             </button>
           </div>
         </div>

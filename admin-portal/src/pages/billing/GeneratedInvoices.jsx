@@ -1464,14 +1464,6 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
               >
                 Close
               </button>
-              {selectedInvoice.balanceAmount > 0 && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); /* TODO: Record payment functionality */ }}
-                  className="px-5 py-2.5 bg-[#c9a227] text-white rounded-lg font-medium hover:bg-[#b8941f] transition-colors shadow-sm"
-                >
-                  Record Payment
-                </button>
-              )}
             </div>
           </div>
         </div>
