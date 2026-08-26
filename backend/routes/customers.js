@@ -1464,4 +1464,719 @@ router.get('/work-orders', async (req, res) => {
   }
 });
 
+// ============================================
+// GET CUSTOMER INVOICES - Get all invoices for logged-in customer's property
+// ============================================
+router.get('/invoices', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
+
+    const customerId = decoded.id;
+
+    // Get customer details
+    const [customer] = await pool.execute(
+      `SELECT * FROM customer_accounts WHERE id = ?`,
+      [customerId]
+    );
+
+    if (customer.length === 0) {
+      return res.status(404).json({ success: false, message: 'Customer not found' });
+    }
+
+    const customerData = customer[0];
+    const customerEmail = customerData.email;
+    const storedPropertyId = customerData.property_id;
+    const storedPropertyCode = customerData.property_code;
+
+    // Resolve property to get numeric ID and code
+    let numericPropertyId = storedPropertyId;
+    let propertyCode = storedPropertyCode;
+
+    const lookupId = storedPropertyId || storedPropertyCode;
+    if (lookupId) {
+      const [opData] = await pool.execute(
+        `SELECT id, property_id FROM onboarded_properties WHERE id = ? OR property_id = ?`,
+        [lookupId, lookupId]
+      );
+      if (opData.length > 0) {
+        numericPropertyId = opData[0].id;
+        propertyCode = propertyCode || opData[0].property_id;
+      } else {
+        const [pData] = await pool.execute(
+          `SELECT id, property_id FROM properties WHERE id = ? OR property_id = ?`,
+          [lookupId, lookupId]
+        );
+        if (pData.length > 0) {
+          numericPropertyId = pData[0].id;
+          propertyCode = propertyCode || pData[0].property_id;
+        }
+      }
+    }
+
+    // Get all invoices for this property
+    const [invoices] = await pool.execute(
+      `SELECT i.*,
+              COALESCE(
+                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status = 'completed'),
+                0
+              ) as amount_paid
+       FROM invoices i
+       WHERE i.property_id = ? 
+          OR i.property_code = ?
+          OR LOWER(i.customer_email) = LOWER(?)
+       ORDER BY i.created_at DESC`,
+      [numericPropertyId, propertyCode, customerEmail]
+    );
+
+    // Parse line items and calculate balance
+    const formattedInvoices = invoices.map(inv => {
+      let lineItems = [];
+      try {
+        lineItems = typeof inv.line_items === 'string' ? JSON.parse(inv.line_items) : (inv.line_items || []);
+      } catch (e) { lineItems = []; }
+
+      const amountPaid = parseFloat(inv.amount_paid) || 0;
+      const totalAmount = parseFloat(inv.total_amount) || 0;
+      const balanceAmount = totalAmount - amountPaid;
+
+      return {
+        id: inv.id,
+        invoiceId: inv.invoice_id,
+        invoiceType: inv.invoice_type,
+        estimateId: inv.source_estimate_id,
+        propertyCode: inv.property_code,
+        propertyName: inv.property_name,
+        propertyType: inv.property_type,
+        customerName: inv.customer_name,
+        customerEmail: inv.customer_email,
+        customerPhone: inv.customer_phone,
+        invoiceDate: inv.invoice_date,
+        dueDate: inv.due_date,
+        billingDuration: inv.billing_duration,
+        lineItems: lineItems,
+        subtotal: parseFloat(inv.subtotal) || 0,
+        discountAmount: parseFloat(inv.discount_amount) || 0,
+        discountPercentage: parseFloat(inv.discount_percentage) || 0,
+        taxAmount: parseFloat(inv.tax_amount) || 0,
+        taxPercentage: parseFloat(inv.tax_percent) || 18,
+        totalAmount: totalAmount,
+        amountPaid: amountPaid,
+        balanceAmount: balanceAmount,
+        status: inv.status,
+        paymentLinkId: inv.payment_link_id,
+        paymentLinkUrl: inv.payment_link_url,
+        paymentLinkStatus: inv.payment_link_status,
+        sentAt: inv.sent_at,
+        paidAt: inv.paid_at,
+        createdAt: inv.created_at,
+        // Work order specific fields
+        workOrderId: inv.work_order_id,
+        workOrderCategory: inv.work_order_category,
+        workOrderSubcategory: inv.work_order_subcategory,
+        workOrderDescription: inv.work_order_description,
+        zone: inv.zone,
+        city: inv.city
+      };
+    });
+
+    res.json({
+      success: true,
+      data: formattedInvoices
+    });
+  } catch (error) {
+    console.error('Error fetching customer invoices:', error);
+    res.status(500).json({ success: false, message: 'Error fetching invoices', error: error.message });
+  }
+});
+
+// ============================================
+// GET SINGLE INVOICE DETAILS - Get detailed invoice for logged-in customer
+// ============================================
+router.get('/invoices/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
+
+    const customerId = decoded.id;
+
+    // Get customer details
+    const [customer] = await pool.execute(
+      `SELECT * FROM customer_accounts WHERE id = ?`,
+      [customerId]
+    );
+
+    if (customer.length === 0) {
+      return res.status(404).json({ success: false, message: 'Customer not found' });
+    }
+
+    const customerData = customer[0];
+    const customerEmail = customerData.email;
+    const storedPropertyCode = customerData.property_code;
+
+    // Get invoice
+    const [invoices] = await pool.execute(
+      `SELECT i.*,
+              COALESCE(
+                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status = 'completed'),
+                0
+              ) as amount_paid
+       FROM invoices i
+       WHERE i.id = ?`,
+      [id]
+    );
+
+    if (invoices.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    const inv = invoices[0];
+
+    // Verify the invoice belongs to this customer's property
+    const invoicePropertyCode = inv.property_code;
+    const invoiceCustomerEmail = inv.customer_email?.toLowerCase();
+    const custPropertyCode = storedPropertyCode;
+    const custEmail = customerEmail?.toLowerCase();
+
+    const hasAccess = (invoicePropertyCode && custPropertyCode && invoicePropertyCode === custPropertyCode) ||
+                      (invoiceCustomerEmail && custEmail && invoiceCustomerEmail === custEmail);
+
+    if (!hasAccess) {
+      return res.status(403).json({ success: false, message: 'Access denied to this invoice' });
+    }
+
+    // Parse line items
+    let lineItems = [];
+    try {
+      lineItems = typeof inv.line_items === 'string' ? JSON.parse(inv.line_items) : (inv.line_items || []);
+    } catch (e) { lineItems = []; }
+
+    const amountPaid = parseFloat(inv.amount_paid) || 0;
+    const totalAmount = parseFloat(inv.total_amount) || 0;
+    const balanceAmount = totalAmount - amountPaid;
+
+    // Get payment history for this invoice
+    const [payments] = await pool.execute(
+      `SELECT id, amount, payment_method, payment_date, transaction_id, status, remarks, created_at
+       FROM payments WHERE invoice_id = ? ORDER BY payment_date DESC`,
+      [id]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        id: inv.id,
+        invoiceId: inv.invoice_id,
+        invoiceType: inv.invoice_type,
+        estimateId: inv.source_estimate_id,
+        propertyCode: inv.property_code,
+        propertyName: inv.property_name,
+        propertyType: inv.property_type,
+        customerName: inv.customer_name,
+        customerEmail: inv.customer_email,
+        customerPhone: inv.customer_phone,
+        invoiceDate: inv.invoice_date,
+        dueDate: inv.due_date,
+        billingDuration: inv.billing_duration,
+        lineItems: lineItems,
+        subtotal: parseFloat(inv.subtotal) || 0,
+        discountAmount: parseFloat(inv.discount_amount) || 0,
+        discountPercentage: parseFloat(inv.discount_percentage) || 0,
+        taxAmount: parseFloat(inv.tax_amount) || 0,
+        taxPercentage: parseFloat(inv.tax_percent) || 18,
+        totalAmount: totalAmount,
+        amountPaid: amountPaid,
+        balanceAmount: balanceAmount,
+        status: inv.status,
+        notes: inv.notes,
+        paymentLinkId: inv.payment_link_id,
+        paymentLinkUrl: inv.payment_link_url,
+        paymentLinkStatus: inv.payment_link_status,
+        sentAt: inv.sent_at,
+        paidAt: inv.paid_at,
+        createdAt: inv.created_at,
+        // Work order specific fields
+        workOrderId: inv.work_order_id,
+        workOrderCategory: inv.work_order_category,
+        workOrderSubcategory: inv.work_order_subcategory,
+        workOrderDescription: inv.work_order_description,
+        zone: inv.zone,
+        city: inv.city,
+        // Payment history
+        payments: payments
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching invoice details:', error);
+    res.status(500).json({ success: false, message: 'Error fetching invoice details', error: error.message });
+  }
+});
+
+// ============================================
+// INITIATE PAYMENT - Create or get Razorpay payment link for an invoice
+// ============================================
+router.post('/invoices/:id/initiate-payment', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
+
+    const customerId = decoded.id;
+
+    // Get customer details
+    const [customer] = await pool.execute(
+      `SELECT * FROM customer_accounts WHERE id = ?`,
+      [customerId]
+    );
+
+    if (customer.length === 0) {
+      return res.status(404).json({ success: false, message: 'Customer not found' });
+    }
+
+    const customerData = customer[0];
+    const customerEmail = customerData.email;
+    const storedPropertyCode = customerData.property_code;
+
+    // Get invoice
+    const [invoices] = await pool.execute(
+      `SELECT i.*,
+              COALESCE(
+                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status = 'completed'),
+                0
+              ) as amount_paid
+       FROM invoices i
+       WHERE i.id = ?`,
+      [id]
+    );
+
+    if (invoices.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    const inv = invoices[0];
+
+    // Verify the invoice belongs to this customer
+    const invoicePropertyCode = inv.property_code;
+    const invoiceCustomerEmail = inv.customer_email?.toLowerCase();
+    const custPropertyCode = storedPropertyCode;
+    const custEmail = customerEmail?.toLowerCase();
+
+    const hasAccess = (invoicePropertyCode && custPropertyCode && invoicePropertyCode === custPropertyCode) ||
+                      (invoiceCustomerEmail && custEmail && invoiceCustomerEmail === custEmail);
+
+    if (!hasAccess) {
+      return res.status(403).json({ success: false, message: 'Access denied to this invoice' });
+    }
+
+    // Calculate balance
+    const amountPaid = parseFloat(inv.amount_paid) || 0;
+    const totalAmount = parseFloat(inv.total_amount) || 0;
+    const balanceAmount = totalAmount - amountPaid;
+
+    if (balanceAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Invoice is already fully paid' });
+    }
+
+    // Check if there's an existing valid payment link
+    if (inv.payment_link_url && inv.payment_link_status !== 'expired' && inv.payment_link_status !== 'cancelled') {
+      return res.json({
+        success: true,
+        message: 'Existing payment link found',
+        data: {
+          paymentLinkUrl: inv.payment_link_url,
+          paymentLinkId: inv.payment_link_id,
+          amount: balanceAmount,
+          invoiceId: inv.invoice_id
+        }
+      });
+    }
+
+    // Create new Razorpay payment link
+    const Razorpay = require('razorpay');
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET
+    });
+
+    const paymentLinkOptions = {
+      amount: Math.round(balanceAmount * 100), // Razorpay expects amount in paise
+      currency: 'INR',
+      accept_partial: false,
+      description: `Payment for Invoice ${inv.invoice_id}`,
+      customer: {
+        name: inv.customer_name || customerData.first_name + ' ' + customerData.last_name,
+        email: inv.customer_email || customerEmail,
+        contact: inv.customer_phone || customerData.phone || ''
+      },
+      notify: {
+        sms: true,
+        email: true
+      },
+      reminder_enable: true,
+      notes: {
+        invoice_id: inv.invoice_id,
+        invoice_db_id: inv.id.toString(),
+        property_code: inv.property_code || '',
+        customer_id: customerId.toString()
+      },
+      callback_url: `${FRONTEND_URL}/payment/success?invoice_id=${inv.invoice_id}`,
+      callback_method: 'get'
+    };
+
+    const paymentLink = await razorpay.paymentLink.create(paymentLinkOptions);
+
+    // Update invoice with payment link details
+    await pool.execute(
+      `UPDATE invoices 
+       SET payment_link_id = ?, payment_link_url = ?, payment_link_status = 'created', updated_at = NOW()
+       WHERE id = ?`,
+      [paymentLink.id, paymentLink.short_url, id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Payment link created successfully',
+      data: {
+        paymentLinkUrl: paymentLink.short_url,
+        paymentLinkId: paymentLink.id,
+        amount: balanceAmount,
+        invoiceId: inv.invoice_id
+      }
+    });
+  } catch (error) {
+    console.error('Error initiating payment:', error);
+    res.status(500).json({ success: false, message: 'Error initiating payment', error: error.message });
+  }
+});
+
+// ============================================
+// CREATE RAZORPAY ORDER - For Checkout SDK integration
+// ============================================
+router.post('/invoices/:id/create-order', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
+
+    const customerId = decoded.id;
+
+    // Get customer details
+    const [customer] = await pool.execute(
+      `SELECT * FROM customer_accounts WHERE id = ?`,
+      [customerId]
+    );
+
+    if (customer.length === 0) {
+      return res.status(404).json({ success: false, message: 'Customer not found' });
+    }
+
+    const customerData = customer[0];
+    const customerEmail = customerData.email;
+    const storedPropertyCode = customerData.property_code;
+
+    // Get invoice
+    const [invoices] = await pool.execute(
+      `SELECT i.*,
+              COALESCE(
+                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status = 'completed'),
+                0
+              ) as amount_paid
+       FROM invoices i
+       WHERE i.id = ?`,
+      [id]
+    );
+
+    if (invoices.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    const inv = invoices[0];
+
+    // Verify the invoice belongs to this customer
+    const invoicePropertyCode = inv.property_code;
+    const invoiceCustomerEmail = inv.customer_email?.toLowerCase();
+    const custPropertyCode = storedPropertyCode;
+    const custEmail = customerEmail?.toLowerCase();
+
+    const hasAccess = (invoicePropertyCode && custPropertyCode && invoicePropertyCode === custPropertyCode) ||
+                      (invoiceCustomerEmail && custEmail && invoiceCustomerEmail === custEmail);
+
+    if (!hasAccess) {
+      return res.status(403).json({ success: false, message: 'Access denied to this invoice' });
+    }
+
+    // Calculate balance
+    const amountPaid = parseFloat(inv.amount_paid) || 0;
+    const totalAmount = parseFloat(inv.total_amount) || 0;
+    const balanceAmount = totalAmount - amountPaid;
+
+    if (balanceAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Invoice is already fully paid' });
+    }
+
+    // Create Razorpay Order
+    const Razorpay = require('razorpay');
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET
+    });
+
+    const orderOptions = {
+      amount: Math.round(balanceAmount * 100), // Razorpay expects amount in paise
+      currency: 'INR',
+      receipt: `inv_${inv.invoice_id}_${Date.now()}`,
+      notes: {
+        invoice_id: inv.invoice_id,
+        invoice_db_id: inv.id.toString(),
+        property_code: inv.property_code || '',
+        customer_id: customerId.toString()
+      }
+    };
+
+    const order = await razorpay.orders.create(orderOptions);
+
+    res.json({
+      success: true,
+      message: 'Order created successfully',
+      data: {
+        orderId: order.id,
+        amount: balanceAmount,
+        amountInPaise: order.amount,
+        currency: order.currency,
+        invoiceId: inv.invoice_id,
+        invoiceDbId: inv.id,
+        customerName: inv.customer_name || customerData.first_name + ' ' + customerData.last_name,
+        customerEmail: inv.customer_email || customerEmail,
+        customerPhone: inv.customer_phone || customerData.phone || '',
+        razorpayKeyId: process.env.RAZORPAY_KEY_ID
+      }
+    });
+  } catch (error) {
+    console.error('Error creating order:', error);
+    res.status(500).json({ success: false, message: 'Error creating order', error: error.message });
+  }
+});
+
+// ============================================
+// VERIFY RAZORPAY PAYMENT - Verify payment signature and update invoice
+// ============================================
+router.post('/invoices/:id/verify-payment', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
+
+    // Verify signature
+    const crypto = require('crypto');
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+
+    if (expectedSignature !== razorpay_signature) {
+      return res.status(400).json({ success: false, message: 'Invalid payment signature' });
+    }
+
+    // Get invoice details
+    const [invoices] = await pool.execute(
+      `SELECT i.*,
+              COALESCE(
+                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status = 'completed'),
+                0
+              ) as amount_paid
+       FROM invoices i
+       WHERE i.id = ?`,
+      [id]
+    );
+
+    if (invoices.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    const inv = invoices[0];
+    const amountPaid = parseFloat(inv.amount_paid) || 0;
+    const totalAmount = parseFloat(inv.total_amount) || 0;
+    const balanceAmount = totalAmount - amountPaid;
+
+    // Record the payment
+    const [paymentResult] = await pool.execute(
+      `INSERT INTO payments (
+        invoice_id, property_id, amount, payment_method, payment_date,
+        transaction_id, razorpay_order_id, razorpay_payment_id, razorpay_signature,
+        status, remarks, created_at
+      ) VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?, 'completed', 'Payment via Customer Portal', NOW())`,
+      [inv.id, inv.property_id, balanceAmount, 'razorpay', razorpay_payment_id, razorpay_order_id, razorpay_payment_id, razorpay_signature]
+    );
+
+    // Update invoice status
+    const newAmountPaid = amountPaid + balanceAmount;
+    const newStatus = newAmountPaid >= totalAmount ? 'paid' : 'partially_paid';
+
+    await pool.execute(
+      `UPDATE invoices 
+       SET status = ?, amount_paid = ?, balance_amount = ?, paid_at = NOW(), updated_at = NOW()
+       WHERE id = ?`,
+      [newStatus, newAmountPaid, totalAmount - newAmountPaid, inv.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Payment verified and recorded successfully',
+      data: {
+        paymentId: razorpay_payment_id,
+        orderId: razorpay_order_id,
+        amount: balanceAmount,
+        invoiceId: inv.invoice_id,
+        invoiceStatus: newStatus
+      }
+    });
+  } catch (error) {
+    console.error('Error verifying payment:', error);
+    res.status(500).json({ success: false, message: 'Error verifying payment', error: error.message });
+  }
+});
+
+// ============================================
+// RECORD OFFLINE PAYMENT INTENT - For Cash, Cheque, Bank Transfer
+// ============================================
+router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { paymentMethod, amount } = req.body;
+    
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
+
+    const customerId = decoded.id;
+
+    // Get customer details
+    const [customer] = await pool.execute(
+      `SELECT * FROM customer_accounts WHERE id = ?`,
+      [customerId]
+    );
+
+    if (customer.length === 0) {
+      return res.status(404).json({ success: false, message: 'Customer not found' });
+    }
+
+    const customerData = customer[0];
+    const storedPropertyCode = customerData.property_code;
+
+    // Get invoice
+    const [invoices] = await pool.execute(
+      `SELECT * FROM invoices WHERE id = ?`,
+      [id]
+    );
+
+    if (invoices.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    const inv = invoices[0];
+
+    // Verify the invoice belongs to this customer
+    const invoicePropertyCode = inv.property_code;
+    const invoiceCustomerEmail = inv.customer_email?.toLowerCase();
+    const custPropertyCode = storedPropertyCode;
+    const custEmail = customerData.email?.toLowerCase();
+
+    const hasAccess = (invoicePropertyCode && custPropertyCode && invoicePropertyCode === custPropertyCode) ||
+                      (invoiceCustomerEmail && custEmail && invoiceCustomerEmail === custEmail);
+
+    if (!hasAccess) {
+      return res.status(403).json({ success: false, message: 'Access denied to this invoice' });
+    }
+
+    // Generate reference ID
+    const referenceId = `OFF-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+    // Record the payment intent as pending
+    const [paymentResult] = await pool.execute(
+      `INSERT INTO payments (
+        invoice_id, property_id, amount, payment_method, payment_date,
+        transaction_id, status, remarks, created_at
+      ) VALUES (?, ?, ?, ?, NOW(), ?, 'pending', 'Offline payment intent from Customer Portal', NOW())`,
+      [inv.id, inv.property_id, amount || inv.total_amount, paymentMethod, referenceId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Payment intent recorded successfully',
+      data: {
+        referenceId: referenceId,
+        paymentId: paymentResult.insertId,
+        amount: amount || inv.total_amount,
+        invoiceId: inv.invoice_id,
+        paymentMethod: paymentMethod
+      }
+    });
+  } catch (error) {
+    console.error('Error recording offline payment intent:', error);
+    res.status(500).json({ success: false, message: 'Error recording payment intent', error: error.message });
+  }
+});
+
 module.exports = router;
