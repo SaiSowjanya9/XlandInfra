@@ -731,7 +731,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-gray-900">
-                {activeTab === 'razorpay-history' ? 'Payment History (Razorpay)' : 'Payments'}
+                {activeTab === 'razorpay-history' ? 'Payment History' : 'Payments'}
               </h1>
               <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
                 <Home className="w-3.5 h-3.5" />
@@ -788,7 +788,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
             }`}
           >
             <Receipt className="w-4 h-4" />
-            Payment History (Razorpay)
+            Payment History
           </button>
         </div>
 
@@ -1202,8 +1202,8 @@ const Payments = ({ user, portalType = 'admin' }) => {
                           <div className="p-4 bg-gray-100 rounded-full">
                             <Receipt className="w-8 h-8 text-gray-400" />
                           </div>
-                          <p className="text-gray-500 font-medium">No Razorpay transactions yet</p>
-                          <p className="text-sm text-gray-400">Razorpay card/net banking transactions will appear here</p>
+                          <p className="text-gray-500 font-medium">No payment history yet</p>
+                          <p className="text-sm text-gray-400">Payment history records will appear here</p>
                         </div>
                       </td>
                     </tr>
@@ -1212,20 +1212,22 @@ const Payments = ({ user, portalType = 'admin' }) => {
                       <tr key={txn.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3">
                           <div>
-                            <p className="font-medium text-gray-900 text-sm">{txn.paymentId || `TXN-${txn.id}`}</p>
+                            <button
+                              onClick={() => handleViewReceipt(txn)}
+                              className="font-medium text-blue-600 hover:text-blue-800 hover:underline text-sm cursor-pointer"
+                            >
+                              {txn.paymentId || `PAY-${txn.id}`}
+                            </button>
                             <p className="text-xs text-gray-500 mt-0.5">
                               {new Date(txn.transactionDate).toLocaleDateString('en-IN', { 
                                 day: '2-digit', month: 'short', year: 'numeric', 
                                 hour: '2-digit', minute: '2-digit' 
                               })}
                             </p>
-                            {txn.razorpayPaymentId && (
-                              <p className="text-xs text-blue-600 font-mono mt-0.5">{txn.razorpayPaymentId}</p>
-                            )}
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <p className="font-medium text-blue-600 text-sm">{txn.invoiceId || '-'}</p>
+                          <p className="font-medium text-gray-900 text-sm">{txn.invoiceId || '-'}</p>
                           {txn.invoiceTotal && (
                             <p className="text-xs text-gray-500">Total: {formatCurrencyShort(txn.invoiceTotal)}</p>
                           )}
@@ -1235,7 +1237,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
                           <p className="text-xs text-gray-500">{txn.propertyName || '-'}</p>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium">
+                          <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium">
                             <CreditCard className="w-3 h-3" />
                             {txn.paymentMethod}
                           </div>
@@ -1249,10 +1251,13 @@ const Payments = ({ user, portalType = 'admin' }) => {
                           </p>
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                            <CheckCircle className="w-3.5 h-3.5" />
-                            Sent by Razorpay
-                          </div>
+                          <button
+                            onClick={() => handleViewReceipt(txn)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-medium transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            View Receipt
+                          </button>
                         </td>
                       </tr>
                     ))
