@@ -886,11 +886,10 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 className="appearance-none pl-4 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               >
                 <option value="all">All Payment Methods</option>
-                <option value="razorpay">Credit Card / Debit Card / Net Banking</option>
-                <option value="bank_transfer">Bank Transfer</option>
+                {/* Offline tab: Cash, Cheque, Bank Transfer */}
                 <option value="cash">Cash</option>
-                <option value="upi">UPI</option>
                 <option value="check">Cheque</option>
+                <option value="bank_transfer">Bank Transfer</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
@@ -1187,6 +1186,68 @@ const Payments = ({ user, portalType = 'admin' }) => {
 
         {/* Online Payments Tab - Card, Net Banking, UPI */}
         {activeTab === 'online' && (
+          <>
+          {/* Filters Row for Online Payments */}
+          <div className="bg-white rounded-xl border border-gray-200 mb-4 p-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative">
+                <select
+                  value={methodFilter}
+                  onChange={(e) => { setMethodFilter(e.target.value); setCurrentPage(1); }}
+                  className="appearance-none pl-4 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="all">All Payment Methods</option>
+                  <option value="card">Credit Card / Debit Card / Net Banking</option>
+                  <option value="upi">UPI</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+
+              <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
+                <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="dd/mm/yyyy"
+                    value={formatDateIST(dateRange.start)}
+                    onChange={(e) => handleISTDateInput(e.target.value, (val) => setDateRange(prev => ({ ...prev, start: val })))}
+                    className="w-24 text-sm text-gray-700 focus:outline-none"
+                  />
+                  <input
+                    type="date"
+                    value={dateRange.start}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                </div>
+                <span className="text-gray-400">-</span>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="dd/mm/yyyy"
+                    value={formatDateIST(dateRange.end)}
+                    onChange={(e) => handleISTDateInput(e.target.value, (val) => setDateRange(prev => ({ ...prev, end: val })))}
+                    className="w-24 text-sm text-gray-700 focus:outline-none"
+                  />
+                  <input
+                    type="date"
+                    value={dateRange.end}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={() => fetchRazorpayHistory()}
+                className="p-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                title="Refresh"
+              >
+                <RefreshCw className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
+          </div>
+
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             {/* History Table */}
             <div className="overflow-x-auto">
@@ -1274,6 +1335,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
               </table>
             </div>
           </div>
+          </>
         )}
       </div>
 
