@@ -1092,10 +1092,19 @@ const EstimatesList = ({
               {/* Customer Details */}
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">Customer Details</p>
-                <div className="bg-blue-50 p-4 rounded-lg grid grid-cols-2 gap-3">
-                  <div><p className="text-xs text-gray-500">Contact Name</p><p className="font-medium text-sm">{viewEstimate.customerName || viewEstimate.clientName || viewEstimate.client_name || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Phone</p><p className="font-medium text-sm">{viewEstimate.customerPhone || viewEstimate.phone || viewEstimate.client_phone || '-'}</p></div>
-                  <div className="col-span-2"><p className="text-xs text-gray-500">Email</p><p className="font-medium text-sm">{viewEstimate.customerEmail || viewEstimate.email || viewEstimate.client_email || '-'}</p></div>
+                <div className="bg-blue-50 p-4 rounded-lg grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Contact Name</p>
+                    <p className="font-medium text-sm break-words">{viewEstimate.customerName || viewEstimate.clientName || viewEstimate.client_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Phone</p>
+                    <p className="font-medium text-sm">{viewEstimate.customerPhone || viewEstimate.phone || viewEstimate.client_phone || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Email</p>
+                    <p className="font-medium text-sm break-all">{viewEstimate.customerEmail || viewEstimate.email || viewEstimate.client_email || '-'}</p>
+                  </div>
                 </div>
               </div>
 
