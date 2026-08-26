@@ -18,9 +18,11 @@ import {
   CreditCard,
   Banknote,
   Wallet,
+  Users,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
+import { useFP } from '../../contexts/FPContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -173,23 +175,31 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
     invoicesByStatus: [],
     collectionTrend: [],
     outstandingByAging: [],
-    topCustomers: []
+    topCustomers: [],
+    recentPayments: []
   });
+  
+  // FP Context
+  const { fpList, selectedFp, selectFp, loading: fpLoading } = useFP();
+  const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
 
   const token = getAuthToken();
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
     try {
+      // Build query params with optional FP filter
+      const fpParam = selectedFp ? `&fpId=${selectedFp.id}` : '';
+      
       // Fetch payments data
-      const paymentsRes = await fetch(`${API_BASE}/api/payments?startDate=${dateRange.start}&endDate=${dateRange.end}`, {
+      const paymentsRes = await fetch(`${API_BASE}/api/payments?startDate=${dateRange.start}&endDate=${dateRange.end}${fpParam}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const paymentsResult = await paymentsRes.json();
       const payments = paymentsResult.success ? (paymentsResult.data || []) : [];
 
       // Fetch invoices data
-      const invoicesRes = await fetch(`${API_BASE}/api/payments/invoices`, {
+      const invoicesRes = await fetch(`${API_BASE}/api/payments/invoices${selectedFp ? `?fpId=${selectedFp.id}` : ''}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const invoicesResult = await invoicesRes.json();
@@ -389,6 +399,19 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         .sort((a, b) => b.amount - a.amount)
         .slice(0, 5);
 
+      // Recent Payments (last 5)
+      const recentPayments = [...payments]
+        .sort((a, b) => new Date(b.paymentDate || b.createdAt) - new Date(a.paymentDate || a.createdAt))
+        .slice(0, 5)
+        .map(p => ({
+          id: p.id,
+          customerName: p.customerName || p.propertyName || 'Unknown',
+          invoiceId: p.invoiceId,
+          paymentMethod: p.paymentMethod,
+          amount: parseFloat(p.amount) || 0,
+          paymentDate: p.paymentDate || p.createdAt
+        }));
+
       setDashboardData({
         totalInvoiceAmount,
         amountCollected,
@@ -407,14 +430,15 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         collectionTrend: last30Days,
         outstandingByAging: agingBuckets,
         topCustomers,
-        totalInvoices
+        totalInvoices,
+        recentPayments
       });
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
     } finally {
       setLoading(false);
     }
-  }, [token, dateRange]);
+  }, [token, dateRange, selectedFp]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -458,9 +482,47 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Payments Dashboard</h1>
-            <p className="text-sm text-gray-500">Overview of all payments and collections</p>
+            <p className="text-sm text-gray-500">
+              {selectedFp ? `Viewing payments for ${selectedFp.name}` : 'Overview of all payments and collections'}
+            </p>
           </div>
           <div className="flex items-center gap-3">
+            {/* FP Selector */}
+            <div className="relative">
+              <button
+                onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+              >
+                <Users className="w-4 h-4 text-gray-500" />
+                <span className="text-sm text-gray-700">
+                  {selectedFp ? selectedFp.name : 'All Franchise Partners'}
+                </span>
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {fpDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-80 overflow-auto">
+                  <div className="p-2 border-b border-gray-100">
+                    <button
+                      onClick={() => { selectFp(null); setFpDropdownOpen(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${!selectedFp ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                    >
+                      All Franchise Partners
+                    </button>
+                  </div>
+                  <div className="p-2">
+                    {fpList.map(fp => (
+                      <button
+                        key={fp.id}
+                        onClick={() => { selectFp(fp); setFpDropdownOpen(false); }}
+                        className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${selectedFp?.id === fp.id ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                      >
+                        {fp.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <DateRangeFilter
               startDate={dateRange.start}
               endDate={dateRange.end}
@@ -787,6 +849,78 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions and Recent Payments Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
+            <div className="grid grid-cols-3 gap-4">
+              <button
+                onClick={() => navigate(`${basePath}/billing/invoices`)}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+              >
+                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-indigo-600" />
+                </div>
+                <span className="text-sm font-medium text-gray-700">View All Invoices</span>
+              </button>
+              <button
+                onClick={() => navigate(`${basePath}/billing/payments`)}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-colors"
+              >
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-green-600" />
+                </div>
+                <span className="text-sm font-medium text-gray-700">Payment History</span>
+              </button>
+              <button
+                onClick={() => navigate(`${basePath}/billing/create-invoice`)}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+              >
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Plus className="w-5 h-5 text-blue-600" />
+                </div>
+                <span className="text-sm font-medium text-gray-700">Create Invoice</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Recent Payments */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">Recent Payments</h3>
+              <button 
+                onClick={() => navigate(`${basePath}/billing/payments`)}
+                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
+              >
+                View All <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              {dashboardData.recentPayments && dashboardData.recentPayments.length > 0 ? (
+                dashboardData.recentPayments.map((payment, idx) => (
+                  <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{payment.customerName}</p>
+                      <p className="text-xs text-gray-500">
+                        {payment.invoiceId} | {payment.paymentMethod?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-green-600">{formatCurrencyShort(payment.amount)}</p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(payment.paymentDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500 text-center py-4">No recent payments</p>
+              )}
             </div>
           </div>
         </div>
