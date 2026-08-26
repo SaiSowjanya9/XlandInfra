@@ -287,7 +287,7 @@ router.get('/estimates/by-property/:code', authenticate, canViewPayments, async 
     // Search in fp_estimates table
     let query = `
       SELECT fe.id, fe.estimate_id, fe.property_id, fe.property_name, fe.property_code,
-             fe.customer_name, fe.customer_email, fe.customer_phone,
+             fe.client_name as customer_name, fe.client_email as customer_email, fe.client_phone as customer_phone,
              fe.service_type, fe.subtotal, fe.discount, fe.tax, fe.total,
              fe.line_items, fe.status, fe.created_at
       FROM fp_estimates fe
