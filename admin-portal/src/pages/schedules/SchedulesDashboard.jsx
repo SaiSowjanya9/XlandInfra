@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useFP } from '../../contexts/FPContext';
 import {
   Calendar,
   CalendarDays,
@@ -114,6 +115,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   const navigate = useNavigate();
   const token = getAuthToken();
   const apiPath = getApiPath(portalType);
+  const { selectedFp } = useFP();
   
   // States
   const [loading, setLoading] = useState(true);
@@ -166,7 +168,14 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE}/api/schedules`, {
+      // Build URL with FP filter for admin viewing specific FP
+      const params = new URLSearchParams();
+      if (selectedFp && selectedFp.id !== 'all') {
+        params.append('fpId', selectedFp.id);
+      }
+      const url = `${API_BASE}/api/schedules${params.toString() ? '?' + params.toString() : ''}`;
+      
+      const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -198,7 +207,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, selectedFp]);
 
   // Fetch zones from onboarded properties
   const fetchZones = useCallback(async () => {

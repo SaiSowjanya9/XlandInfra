@@ -26,7 +26,11 @@ const generateScheduleId = () => {
 // Get all schedules (Admin, Manager full access; Supervisor view only)
 router.get('/', authenticate, canSeeSchedule, async (req, res) => {
   try {
-    const { status, propertyId } = req.query;
+    const { status, propertyId, fpId } = req.query;
+    
+    // Get FP scope for non-admin users
+    const userFpId = req.user?.franchisePartnerId || req.user?.fpId;
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin' || req.user?.role === 'operations_manager';
     
     let query = `
       SELECT s.*, 
@@ -35,6 +39,7 @@ router.get('/', authenticate, canSeeSchedule, async (req, res) => {
              COALESCE(op.property_type, p.property_type) as property_type,
              op.zone as zone,
              COALESCE(op.city, p.city) as city,
+             op.franchise_partner_id as fp_id,
              fe.estimate_id as fp_estimate_id, fe.title as fp_estimate_title,
              fe.service_category,
              CONCAT(u.first_name, ' ', u.last_name) as created_by_name
@@ -46,6 +51,15 @@ router.get('/', authenticate, canSeeSchedule, async (req, res) => {
       WHERE 1=1
     `;
     const params = [];
+
+    // Filter by FP - for non-admin users use their FP, for admin use query param
+    if (userFpId) {
+      query += ` AND op.franchise_partner_id = ?`;
+      params.push(userFpId);
+    } else if (isAdmin && fpId) {
+      query += ` AND op.franchise_partner_id = ?`;
+      params.push(fpId);
+    }
 
     if (status) {
       query += ` AND s.status = ?`;
