@@ -1021,11 +1021,13 @@ const Payments = ({ user, portalType = 'admin' }) => {
                       </th>
                       <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment ID</th>
                       <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Invoice ID</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">Estimate ID</th>
                       <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
                       <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Property ID</th>
                       <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Method</th>
                       <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
                       <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Paid Date</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Received By</th>
                       <th className="px-4 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                       <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Reference / Transaction No.</th>
                       <th className="px-4 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
@@ -1054,6 +1056,9 @@ const Payments = ({ user, portalType = 'admin' }) => {
                           <td className="px-4 py-4">
                             <span className="text-sm text-gray-600">{payment.invoiceId || '-'}</span>
                           </td>
+                          <td className="px-4 py-4 hidden xl:table-cell">
+                            <span className="text-sm text-gray-600">{payment.estimateId || payment.estimate_id || '-'}</span>
+                          </td>
                           <td className="px-4 py-4">
                             <span className="text-sm text-gray-800">{payment.customerName || payment.propertyName || '-'}</span>
                           </td>
@@ -1072,6 +1077,16 @@ const Payments = ({ user, portalType = 'admin' }) => {
                           <td className="px-4 py-4">
                             <div className="text-sm text-gray-800">{dateTime.date}</div>
                             <div className="text-xs text-gray-500">{dateTime.time}</div>
+                          </td>
+                          <td className="px-4 py-4 hidden lg:table-cell">
+                            <div className="text-sm font-medium text-gray-900">
+                              {payment.receivedByName || payment.received_by_name || payment.createdByName || 'System'}
+                            </div>
+                            {(payment.receivedByRole || payment.received_by_role || payment.createdByRole) && (
+                              <div className="text-xs text-gray-400 capitalize">
+                                {(payment.receivedByRole || payment.received_by_role || payment.createdByRole || '').replace(/_/g, ' ')}
+                              </div>
+                            )}
                           </td>
                           <td className="px-4 py-4 text-center">
                             {payment.status === 'verification_pending' ? (

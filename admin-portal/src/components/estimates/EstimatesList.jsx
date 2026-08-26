@@ -115,6 +115,7 @@ const EstimatesList = ({
   const [amcPackages, setAmcPackages] = useState([]);
   const [addons, setAddons] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sendingEmailId, setSendingEmailId] = useState(null); // Track which estimate email is being sent
   const token = getAuthToken();
 
   // Sync internal filter with external prop when it changes
@@ -326,7 +327,12 @@ const EstimatesList = ({
     }
     const exportData = filteredEstimates.map(e => ({
       'Estimate ID': e.estimateId || e.estimate_id || '-',
-      'Type': e.estimateType === 'property_based' || e.estimateType === 'property-based' ? 'Property Based' : 'Direct',
+      'Type': e.estimateType === 'work_order' || e.estimateType === 'work-order' 
+        ? 'Work Order' 
+        : e.estimateType === 'property_based' || e.estimateType === 'property-based' 
+        ? 'Property Based' 
+        : 'Direct',
+      'Work Order ID': e.work_order_id || '-',
       'Client Name': e.clientName || e.client_name || '-',
       'Property': e.propertyName || e.property_name || '-',
       'Property Type': e.propertyType || e.property_type || '-',
@@ -544,6 +550,49 @@ const EstimatesList = ({
     }, 100);
   };
 
+  // Send email with estimate - with guard against double sending
+  const handleSendEmail = async (estimate) => {
+    // Prevent double sending
+    if (sendingEmailId === estimate.id) {
+      console.log('Email already being sent for this estimate');
+      return;
+    }
+
+    const clientEmail = estimate.client_email || estimate.customerEmail || estimate.email;
+    if (!clientEmail) {
+      showToast?.('No customer email found for this estimate', 'error');
+      return;
+    }
+
+    setSendingEmailId(estimate.id);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/estimates-sync/${estimate.estimateId || estimate.estimate_id}/send`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        showToast?.(`Estimate sent to ${result.email || clientEmail}`, 'success');
+        // Update estimate status to 'sent' if currently draft
+        if (estimate.status === 'draft' || estimate.status === 'Draft') {
+          onRefresh?.();
+        }
+      } else {
+        showToast?.(result.message || 'Failed to send email', 'error');
+      }
+    } catch (error) {
+      console.error('Send email error:', error);
+      showToast?.('Failed to send email', 'error');
+    } finally {
+      setSendingEmailId(null);
+    }
+  };
+
   const clearFilters = () => {
     setFilters({
       estimateType: 'all',
@@ -745,6 +794,7 @@ const EstimatesList = ({
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Client</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap hidden md:table-cell">Date</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Total</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap hidden xl:table-cell">Created By</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap hidden lg:table-cell">Status</th>
                 <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Actions</th>
               </tr>
@@ -777,11 +827,15 @@ const EstimatesList = ({
                       <div className="flex items-center gap-2">
                         <Icon className="w-4 h-4 text-gray-400" />
                         <span className={`text-sm whitespace-nowrap px-2 py-0.5 rounded ${
-                          estimate.estimateType === 'property-based' || estimate.estimateType === 'property_based' || estimate.propertyId 
+                          estimate.estimateType === 'work_order' || estimate.estimateType === 'work-order'
+                            ? 'bg-orange-100 text-orange-700'
+                            : estimate.estimateType === 'property-based' || estimate.estimateType === 'property_based' || estimate.propertyId 
                             ? 'bg-blue-100 text-blue-700' 
                             : 'bg-purple-100 text-purple-700'
                         }`}>
-                          {estimate.estimateType === 'property-based' || estimate.estimateType === 'property_based' || estimate.propertyId 
+                          {estimate.estimateType === 'work_order' || estimate.estimateType === 'work-order'
+                            ? 'Work Order'
+                            : estimate.estimateType === 'property-based' || estimate.estimateType === 'property_based' || estimate.propertyId 
                             ? 'Property' 
                             : 'Direct'}
                         </span>
@@ -810,8 +864,17 @@ const EstimatesList = ({
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <span className="font-semibold text-gray-800 text-xs sm:text-sm whitespace-nowrap">
-                        â‚¹{(estimate.totalPrice || calculateEstimateTotal(estimate)).toLocaleString()}
+                        ₹{(estimate.totalPrice || calculateEstimateTotal(estimate)).toLocaleString()}
                       </span>
+                    </td>
+                    {/* Created By column */}
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 hidden xl:table-cell">
+                      <div className="font-medium text-gray-900 text-sm">
+                        {estimate.created_by_name || (estimate.created_by_role ? estimate.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}
+                      </div>
+                      {estimate.created_by_name && estimate.created_by_role && (
+                        <div className="text-xs text-gray-400 capitalize">{estimate.created_by_role.replace(/_/g, ' ')}</div>
+                      )}
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 hidden lg:table-cell">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_STYLES[estimate.status] || 'bg-gray-100 text-gray-700'}`}>
@@ -841,6 +904,15 @@ const EstimatesList = ({
                               title="Download PDF"
                             >
                               <Download className="w-4 h-4" />
+                            </button>
+                            {/* Send Email */}
+                            <button
+                              onClick={() => handleSendEmail(estimate)}
+                              disabled={sendingEmailId === estimate.id}
+                              className={`p-2 rounded-lg ${sendingEmailId === estimate.id ? 'text-indigo-400 cursor-wait' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
+                              title="Send Email"
+                            >
+                              <Send className={`w-4 h-4 ${sendingEmailId === estimate.id ? 'animate-pulse' : ''}`} />
                             </button>
                             {/* Archive */}
                             <button

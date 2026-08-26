@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
-import { Search, Eye, X, XCircle, Check, Clock, AlertCircle, AlertTriangle, ChevronDown, Shield, RefreshCw, ClipboardList, CheckCircle, CheckCircle2, Pencil, Plus, Building2, User, List, Download, Lock } from 'lucide-react';
+import { Search, Eye, X, XCircle, Check, Clock, AlertCircle, AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Shield, RefreshCw, ClipboardList, CheckCircle, CheckCircle2, Pencil, Plus, Building2, User, List, Download, Lock } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useFP } from '../contexts/FPContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+const ITEMS_PER_PAGE = 10;
 
 const WorkOrders = ({ admin }) => {
   const [workOrders, setWorkOrders] = useState([]);
@@ -45,6 +46,9 @@ const WorkOrders = ({ admin }) => {
   // Auto-delete notification states
   const [approachingDeletion, setApproachingDeletion] = useState([]);
   const [showDeletionWarning, setShowDeletionWarning] = useState(false);
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
   
   // FP Context
   const { fpList, selectedFp, selectFp, loading: fpLoading } = useFP();
@@ -497,6 +501,17 @@ const WorkOrders = ({ admin }) => {
       wo.customer_name?.toLowerCase().includes(q)
     );
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, activeTab, selectedFp]);
 
   // Export all work orders to Excel
   const exportAllWorkOrders = () => {
@@ -993,7 +1008,7 @@ const WorkOrders = ({ admin }) => {
                   <p className="text-sm text-gray-400 mt-1">Work orders will appear here when created</p>
                 </td></tr>
               ) : (
-                filteredOrders.map((wo) => (
+                paginatedOrders.map((wo) => (
                   <tr key={wo.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-4 font-mono text-sm whitespace-nowrap text-gray-700">{wo.work_order_id}</td>
                     <td className="px-4 py-4">
@@ -1064,9 +1079,57 @@ const WorkOrders = ({ admin }) => {
             </tbody>
           </table>
         </div>
+        {/* Pagination Controls */}
         {filteredOrders.length > 0 && (
-          <div className="px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
-            Showing {filteredOrders.length} of {workOrders.length} work orders
+          <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-gray-500">
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} work orders
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`w-8 h-8 rounded-lg text-sm ${
+                          currentPage === pageNum
+                            ? 'bg-indigo-600 text-white'
+                            : 'hover:bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
