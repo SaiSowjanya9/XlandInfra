@@ -498,6 +498,8 @@ const Payments = ({ user, portalType = 'admin' }) => {
   const [methodFilter, setMethodFilter] = useState('all');
   const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [dateDisplayStart, setDateDisplayStart] = useState('');
+  const [dateDisplayEnd, setDateDisplayEnd] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
@@ -909,56 +911,67 @@ const Payments = ({ user, portalType = 'admin' }) => {
             </div>
 
             <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
-              <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              <div className="relative">
+              <div className="relative flex items-center gap-2 cursor-pointer">
+                <Calendar 
+                  className="w-4 h-4 text-gray-400 flex-shrink-0 cursor-pointer" 
+                  onClick={() => document.getElementById('offlineStartDate')?.showPicker?.()}
+                />
                 <input
                   type="text"
                   placeholder="dd/mm/yyyy"
-                  value={formatDateIST(dateRange.start)}
+                  value={dateDisplayStart || formatDateIST(dateRange.start)}
                   onChange={(e) => {
                     const formatted = handleISTDateInput(e.target.value);
+                    setDateDisplayStart(formatted);
                     if (formatted.length === 10) {
                       setDateRange(prev => ({ ...prev, start: parseISTDate(formatted) }));
                     } else if (formatted.length === 0) {
                       setDateRange(prev => ({ ...prev, start: '' }));
                     }
                   }}
+                  onBlur={() => setDateDisplayStart('')}
                   className="text-sm border-none focus:outline-none bg-transparent w-[85px]"
                 />
                 <input
+                  id="offlineStartDate"
                   type="date"
-                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                   value={dateRange.start}
                   onChange={(e) => {
                     if (e.target.value) {
                       setDateRange(prev => ({ ...prev, start: e.target.value }));
+                      setDateDisplayStart('');
                     }
                   }}
                 />
               </div>
               <span className="text-gray-400">-</span>
-              <div className="relative">
+              <div className="relative flex items-center cursor-pointer">
                 <input
                   type="text"
                   placeholder="dd/mm/yyyy"
-                  value={formatDateIST(dateRange.end)}
+                  value={dateDisplayEnd || formatDateIST(dateRange.end)}
                   onChange={(e) => {
                     const formatted = handleISTDateInput(e.target.value);
+                    setDateDisplayEnd(formatted);
                     if (formatted.length === 10) {
                       setDateRange(prev => ({ ...prev, end: parseISTDate(formatted) }));
                     } else if (formatted.length === 0) {
                       setDateRange(prev => ({ ...prev, end: '' }));
                     }
                   }}
+                  onBlur={() => setDateDisplayEnd('')}
                   className="text-sm border-none focus:outline-none bg-transparent w-[85px]"
                 />
                 <input
+                  id="offlineEndDate"
                   type="date"
-                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                   value={dateRange.end}
                   onChange={(e) => {
                     if (e.target.value) {
                       setDateRange(prev => ({ ...prev, end: e.target.value }));
+                      setDateDisplayEnd('');
                     }
                   }}
                 />
@@ -1204,56 +1217,67 @@ const Payments = ({ user, portalType = 'admin' }) => {
               </div>
 
               <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
-                <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                <div className="relative">
+                <div className="relative flex items-center gap-2 cursor-pointer">
+                  <Calendar 
+                    className="w-4 h-4 text-gray-400 flex-shrink-0 cursor-pointer" 
+                    onClick={() => document.getElementById('onlineStartDate')?.showPicker?.()}
+                  />
                   <input
                     type="text"
                     placeholder="dd/mm/yyyy"
-                    value={formatDateIST(dateRange.start)}
+                    value={dateDisplayStart || formatDateIST(dateRange.start)}
                     onChange={(e) => {
                       const formatted = handleISTDateInput(e.target.value);
+                      setDateDisplayStart(formatted);
                       if (formatted.length === 10) {
                         setDateRange(prev => ({ ...prev, start: parseISTDate(formatted) }));
                       } else if (formatted.length === 0) {
                         setDateRange(prev => ({ ...prev, start: '' }));
                       }
                     }}
+                    onBlur={() => setDateDisplayStart('')}
                     className="text-sm border-none focus:outline-none bg-transparent w-[85px]"
                   />
                   <input
+                    id="onlineStartDate"
                     type="date"
-                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                     value={dateRange.start}
                     onChange={(e) => {
                       if (e.target.value) {
                         setDateRange(prev => ({ ...prev, start: e.target.value }));
+                        setDateDisplayStart('');
                       }
                     }}
                   />
                 </div>
                 <span className="text-gray-400">-</span>
-                <div className="relative">
+                <div className="relative flex items-center cursor-pointer">
                   <input
                     type="text"
                     placeholder="dd/mm/yyyy"
-                    value={formatDateIST(dateRange.end)}
+                    value={dateDisplayEnd || formatDateIST(dateRange.end)}
                     onChange={(e) => {
                       const formatted = handleISTDateInput(e.target.value);
+                      setDateDisplayEnd(formatted);
                       if (formatted.length === 10) {
                         setDateRange(prev => ({ ...prev, end: parseISTDate(formatted) }));
                       } else if (formatted.length === 0) {
                         setDateRange(prev => ({ ...prev, end: '' }));
                       }
                     }}
+                    onBlur={() => setDateDisplayEnd('')}
                     className="text-sm border-none focus:outline-none bg-transparent w-[85px]"
                   />
                   <input
+                    id="onlineEndDate"
                     type="date"
-                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                     value={dateRange.end}
                     onChange={(e) => {
                       if (e.target.value) {
                         setDateRange(prev => ({ ...prev, end: e.target.value }));
+                        setDateDisplayEnd('');
                       }
                     }}
                   />
