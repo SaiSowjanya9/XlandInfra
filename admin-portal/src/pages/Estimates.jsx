@@ -195,9 +195,10 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-6">
+      {/* Content Container - Single consistent wrapper */}
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        {/* Header Card - Aligned with content below */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
@@ -285,10 +286,8 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
+        {/* Content */}
         {renderContent()}
       </div>
 
