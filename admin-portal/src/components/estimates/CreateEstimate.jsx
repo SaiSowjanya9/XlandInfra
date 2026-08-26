@@ -251,10 +251,12 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   const [workOrderData, setWorkOrderData] = useState(null);
   const [workOrderStep, setWorkOrderStep] = useState('input'); // 'input', 'review', 'pricing'
   const [workOrderAmount, setWorkOrderAmount] = useState('');
-  const [workOrderGst, setWorkOrderGst] = useState('');
+  const [workOrderGst, setWorkOrderGst] = useState('18'); // Default GST 18%
   const [workOrderDiscount, setWorkOrderDiscount] = useState('');
   const [workOrderServices, setWorkOrderServices] = useState([]);
   const [workOrderNotes, setWorkOrderNotes] = useState('');
+  const [completedWorkOrders, setCompletedWorkOrders] = useState([]);
+  const [loadingCompletedWO, setLoadingCompletedWO] = useState(false);
   
   const [estimateForm, setEstimateForm] = useState({
     // Property-based auto-populated fields
@@ -1083,10 +1085,11 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     setWorkOrderData(null);
     setWorkOrderStep('input');
     setWorkOrderAmount('');
-    setWorkOrderGst('');
+    setWorkOrderGst('18'); // Default GST
     setWorkOrderDiscount('');
     setWorkOrderServices([]);
     setWorkOrderNotes('');
+    setCompletedWorkOrders([]);
     setEstimateForm({
       propertyId: '',
       propertyName: '',
@@ -1135,7 +1138,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       setWorkOrderData(null);
       setWorkOrderStep('input');
       setWorkOrderAmount('');
-      setWorkOrderGst('');
+      setWorkOrderGst('18'); // Default GST
       setWorkOrderDiscount('');
       setWorkOrderNotes('');
     } else {
@@ -1189,6 +1192,24 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     }
   };
 
+  // Fetch pending work orders for selection (exclude work orders that already have estimates)
+  const fetchCompletedWorkOrders = async () => {
+    setLoadingCompletedWO(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/fp/work-orders?status=pending&excludeWithEstimates=true`, { 
+        headers: { 'Authorization': `Bearer ${token}` } 
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCompletedWorkOrders(Array.isArray(data.data) ? data.data : []);
+      }
+    } catch (e) { 
+      console.error('Error fetching pending work orders:', e); 
+    } finally { 
+      setLoadingCompletedWO(false); 
+    }
+  };
+
   // Save Work Order Estimate
   const handleSaveWorkOrderEstimate = async () => {
     if (!workOrderData || !workOrderAmount || parseFloat(workOrderAmount) <= 0) {
@@ -1218,23 +1239,29 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       
       const estimatePayload = {
         estimate_type: 'work_order',
-        property_id: workOrderData.property_id,
-        property_code: workOrderData.property_code || workOrderData.actual_property_id,
-        client_name: workOrderData.customer_name,
-        client_phone: workOrderData.customer_phone,
-        client_email: workOrderData.customer_email,
-        property_name: workOrderData.property_name,
-        property_type: workOrderData.property_type || workOrderData.entry_type,
-        zone: workOrderData.zone,
-        division: workOrderData.division,
-        city: workOrderData.city,
-        address: workOrderData.address,
+        property_id: workOrderData.property_id || null,
+        property_code: workOrderData.property_code || workOrderData.actual_property_id || null,
+        client_name: workOrderData.client_name || workOrderData.customer_name || '',
+        client_phone: workOrderData.client_phone || workOrderData.customer_phone || '',
+        client_email: workOrderData.client_email || workOrderData.customer_email || '',
+        property_name: workOrderData.property_name || '',
+        property_type: workOrderData.property_type || workOrderData.entry_type || '',
+        zone: workOrderData.zone || '',
+        division: workOrderData.division || '',
+        city: workOrderData.city || '',
+        address: workOrderData.address || '',
+        // GC/APT specific fields (matching FP portal)
+        number_of_blocks: workOrderData.number_of_blocks || workOrderData.total_blocks || workOrderData.numberOfBlocks || null,
+        total_units: workOrderData.total_units || workOrderData.totalUnits || workOrderData.units || null,
+        units_per_block: workOrderData.units_per_block || workOrderData.unitsPerBlock || {},
+        block_names: workOrderData.block_names || workOrderData.blockNames || {},
+        // Pricing
         subtotal: amount,
         discount_percent: discountPercent,
         discount_amount: discountAmount,
         gst_percent: gstPercent,
         gst_amount: gstAmount,
-        total_amount: total,
+        total_amount: Math.round(total),
         description: workOrderNotes,
         // Work Order specific fields
         work_order_id: workOrderData.work_order_id,
@@ -1280,7 +1307,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
         setWorkOrderStep('input');
         setWorkOrderIdInput('');
         setWorkOrderAmount('');
-        setWorkOrderGst('');
+        setWorkOrderGst('18'); // Default GST
         setWorkOrderDiscount('');
         setWorkOrderNotes('');
         
@@ -1426,6 +1453,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   setWorkOrderData(null);
                   setWorkOrderError('');
                   setWorkOrderIdInput('');
+                  fetchCompletedWorkOrders(); // Fetch pending work orders for selection
                 }}
                 className={`p-6 rounded-xl border-2 transition-all ${
                   estimateType === 'work_order'
@@ -3120,6 +3148,71 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     </button>
                   </div>
                 </div>
+
+                {/* Pending Work Orders Table - Select from list */}
+                {completedWorkOrders.length > 0 && (
+                  <div className="mt-6 border-t border-gray-200 pt-6">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <ClipboardList className="w-4 h-4" />
+                      Or Select from Pending Work Orders ({completedWorkOrders.length})
+                    </h4>
+                    <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 sticky top-0">
+                          <tr className="text-left">
+                            <th className="py-2 px-3 font-medium text-gray-600">Work Order ID</th>
+                            <th className="py-2 px-3 font-medium text-gray-600">Property</th>
+                            <th className="py-2 px-3 font-medium text-gray-600">Category</th>
+                            <th className="py-2 px-3 font-medium text-gray-600">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {completedWorkOrders.map((wo) => (
+                            <tr key={wo.id} className="hover:bg-orange-50/50">
+                              <td className="py-3 px-3 font-medium text-gray-900">{wo.work_order_id}</td>
+                              <td className="py-3 px-3 text-gray-600">{wo.property_name || '-'}</td>
+                              <td className="py-3 px-3 text-gray-600">{wo.category_name || '-'}</td>
+                              <td className="py-3 px-3">
+                                <button
+                                  onClick={async () => {
+                                    setWorkOrderLoading(true);
+                                    setWorkOrderError('');
+                                    try {
+                                      const response = await fetch(`${API_BASE}/api/fp/work-orders/by-order-id/${encodeURIComponent(wo.work_order_id)}`, {
+                                        headers: { 'Authorization': `Bearer ${token}` }
+                                      });
+                                      const result = await response.json();
+                                      if (result.success && result.data) {
+                                        setWorkOrderData(result.data);
+                                        setWorkOrderStep('review');
+                                      } else {
+                                        setWorkOrderError(result.message || 'Failed to load work order details');
+                                      }
+                                    } catch (error) {
+                                      setWorkOrderError('Failed to load work order details');
+                                    } finally {
+                                      setWorkOrderLoading(false);
+                                    }
+                                  }}
+                                  className="px-3 py-1 text-xs font-medium bg-orange-100 text-orange-700 rounded-full hover:bg-orange-200"
+                                >
+                                  Select
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {loadingCompletedWO && (
+                  <div className="mt-6 flex items-center justify-center gap-2 text-gray-500">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Loading pending work orders...</span>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -3413,7 +3506,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       setWorkOrderData(null);
                       setWorkOrderStep('input');
                       setWorkOrderAmount('');
-                      setWorkOrderGst('');
+                      setWorkOrderGst('18'); // Default GST
                       setWorkOrderDiscount('');
                       setWorkOrderNotes('');
                     }}

@@ -2078,6 +2078,53 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
   }
 });
 
+// Alias /estimates to /all-estimates for EstimatesDashboard compatibility
+router.get('/estimates', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { archived, fpId } = req.query;
+    const isArchived = archived === 'true' ? 1 : 0;
+    
+    // Get from fp_estimates table (main source for FP estimates)
+    let query = `
+      SELECT fe.*, 
+             fp.fp_code, fp.company_name as fp_name,
+             fe.estimate_id as estimateId,
+             COALESCE(fe.customer_name, fe.property_name, 'Direct Estimate') as clientName,
+             COALESCE(fe.customer_name, fe.property_name, 'Direct Estimate') as customerName,
+             COALESCE(fe.estimate_type, 'direct') as estimateType,
+             fe.property_type as propertyType,
+             COALESCE(fe.total_price, fe.total_amount, 0) as totalPrice,
+             fe.archived_at as archivedAt,
+             fe.created_at as createdAt
+      FROM fp_estimates fe
+      LEFT JOIN franchise_partners fp ON fe.franchise_partner_id = fp.id
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    if (isArchived) {
+      query += ` AND fe.is_archived = 1`;
+    } else {
+      query += ` AND (fe.is_archived = 0 OR fe.is_archived IS NULL)`;
+    }
+    
+    // Filter by FP if specified
+    if (fpId) {
+      query += ` AND fe.franchise_partner_id = ?`;
+      params.push(fpId);
+    }
+    
+    query += ` ORDER BY fe.created_at DESC`;
+    
+    const [estimates] = await pool.execute(query, params);
+    
+    res.json({ success: true, data: estimates || [] });
+  } catch (error) {
+    console.error('Error fetching estimates:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch estimates' });
+  }
+});
+
 // Get FP-specific estimates
 router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res) => {
   try {

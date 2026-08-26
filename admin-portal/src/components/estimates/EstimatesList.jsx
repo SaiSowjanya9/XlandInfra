@@ -620,6 +620,7 @@ const EstimatesList = ({
                   <option value="all">All Estimates</option>
                   <option value="property-based">Property ID Based</option>
                   <option value="direct">Direct Estimate</option>
+                  <option value="work-order">Work Order Estimate</option>
                 </select>
               </div>
               <div>
