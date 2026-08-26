@@ -38,7 +38,7 @@ const getStatusLabel = (status) => {
     pending_approval: 'Pending Approval',
     approved: 'Approved',
     rejected: 'Rejected',
-    converted: 'Invoice Generated',
+    converted: 'Approved',
     sent: 'Sent',
     archived: 'Archived'
   };
@@ -582,7 +582,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const removeLineItem = (index) => { if (estimateForm.items.length > 1) setEstimateForm({ ...estimateForm, items: estimateForm.items.filter((_, i) => i !== index) }); };
   const updateLineItem = (index, field, value) => { const updatedItems = [...estimateForm.items]; updatedItems[index][field] = value; setEstimateForm({ ...estimateForm, items: updatedItems }); };
 
-  const getStatusColor = (status) => { const colors = { draft: 'bg-gray-100 text-gray-700', pending_approval: 'bg-yellow-100 text-yellow-700', approved: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-700', converted: 'bg-blue-100 text-blue-700', archived: 'bg-gray-100 text-gray-500' }; return colors[status] || 'bg-gray-100 text-gray-700'; };
+  const getStatusColor = (status) => { const colors = { draft: 'bg-gray-100 text-gray-700', pending_approval: 'bg-yellow-100 text-yellow-700', approved: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-700', converted: 'bg-green-100 text-green-700', archived: 'bg-gray-100 text-gray-500' }; return colors[status] || 'bg-gray-100 text-gray-700'; };
   const calculateTotals = () => { const subtotal = estimateForm.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0); const tax = (subtotal * estimateForm.taxPercentage) / 100; const discount = (subtotal * estimateForm.discountPercentage) / 100; return { subtotal, tax, discount, total: subtotal + tax - discount }; };
   const getPackageServices = (pkg) => {
     let servicesData = pkg?.services || pkg?.services_data || pkg?.serviceRows;
@@ -1477,7 +1477,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' : 
                     viewEstimate.status === 'sent' ? 'bg-blue-100 text-blue-700' : 
-                    viewEstimate.status === 'converted' ? 'bg-purple-100 text-purple-700' :
+                    viewEstimate.status === 'converted' ? 'bg-green-100 text-green-700' :
                     viewEstimate.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
                   }`}>{getStatusLabel(viewEstimate.status)}</span>
                 </div>

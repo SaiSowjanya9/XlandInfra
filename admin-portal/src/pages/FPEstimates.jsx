@@ -38,7 +38,7 @@ const getStatusLabel = (status) => {
     pending_approval: 'Pending Approval',
     approved: 'Approved',
     rejected: 'Rejected',
-    converted: 'Invoice Generated',
+    converted: 'Approved',
     sent: 'Sent',
     archived: 'Archived'
   };
@@ -3835,7 +3835,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     const s = (status || 'draft').toLowerCase();
     switch (s) {
       case 'approved': return 'bg-green-100 text-green-700';
-      case 'converted': return 'bg-purple-100 text-purple-700';
+      case 'converted': return 'bg-green-100 text-green-700';
       case 'sent': return 'bg-blue-100 text-blue-700';
       case 'rejected': return 'bg-red-100 text-red-700';
       default: return 'bg-gray-100 text-gray-600';
@@ -3962,7 +3962,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' : 
                     viewEstimate.status === 'sent' ? 'bg-blue-100 text-blue-700' : 
-                    viewEstimate.status === 'converted' ? 'bg-purple-100 text-purple-700' :
+                    viewEstimate.status === 'converted' ? 'bg-green-100 text-green-700' :
                     viewEstimate.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
                   }`}>{getStatusLabel(viewEstimate.status)}</span>
                 </div>

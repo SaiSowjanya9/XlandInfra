@@ -465,18 +465,9 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     
     const insertedId = result.insertId;
     
-    // Update estimate status to 'converted' based on source table
-    if (source === 'fp') {
-      await connection.execute(
-        'UPDATE fp_estimates SET status = ? WHERE id = ?',
-        ['converted', estimateId]
-      );
-    } else {
-      await connection.execute(
-        'UPDATE estimates SET status = ? WHERE id = ?',
-        ['converted', estimateId]
-      );
-    }
+    // Keep estimate status as 'approved' - don't change to 'converted'
+    // The invoice status is tracked separately in the invoices table
+    // Estimate remains 'approved' for reference
     
     await connection.commit();
     
