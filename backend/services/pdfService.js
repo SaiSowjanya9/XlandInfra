@@ -595,7 +595,21 @@ const generateInvoicePDF = async (invoice) => {
       }
 
       // ===== SERVICES INCLUDED TABLE =====
-      if (!isWorkOrderInvoice && items.length > 0) {
+      // Filter to only include services (exclude addons)
+      const serviceItems = items.filter(item => {
+        const desc = String(item.description || item.name || '').toLowerCase();
+        const isAddon = item.type === 'addon' || desc.includes('add-on') || desc.includes('addon');
+        return !isAddon;
+      });
+      
+      // Filter addon items
+      const addonItems = items.filter(item => {
+        if (item.type === 'addon') return true;
+        const desc = String(item.description || item.name || '').toLowerCase();
+        return desc.includes('add-on') || desc.includes('addon');
+      });
+      
+      if (!isWorkOrderInvoice && serviceItems.length > 0) {
         // Section header - no decorative line
         doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES INCLUDED', margin, y + 3, { lineBreak: false });
         doc.font('Helvetica');
@@ -658,7 +672,7 @@ const generateInvoicePDF = async (invoice) => {
           }
         };
 
-        items.forEach((item, idx) => {
+        serviceItems.forEach((item, idx) => {
           // Get service name from dedicated name field first
           const serviceName = decodeHtml(item.name || item.serviceName || item.service_name || 'Service');
           
@@ -721,6 +735,118 @@ const generateInvoicePDF = async (invoice) => {
           doc.fillColor(primaryText);
           doc.text(freq, colFreq, y + 6, { lineBreak: false });
           doc.text(`${visits}`, colVisits, y + 6, { lineBreak: false });
+          
+          y += rowH;
+        });
+
+        y += 15;
+      }
+
+      // ===== ADD-ONS TABLE =====
+      if (!isWorkOrderInvoice && addonItems.length > 0) {
+        // Section header
+        doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('ADD-ONS', margin, y + 3, { lineBreak: false });
+        doc.font('Helvetica');
+        y += 18;
+        
+        // Table header - Purple background for addons
+        const tableHeaderH = 20;
+        const colNum = margin + 8;
+        const colAddon = margin + 28;
+        const colAddonW = 70;
+        const colDesc = margin + 100;
+        const colDescW = 220; // Description column
+        const colFreq = margin + 330;
+        const colVisits = margin + 400;
+        const colPrice = margin + 450;
+        
+        const addonPurple = '#7c3aed';
+        doc.rect(margin, y, contentWidth, tableHeaderH).fill(addonPurple);
+        doc.fontSize(8).fillColor(white);
+        doc.text('#', colNum, y + 6);
+        doc.text('Add-on', colAddon, y + 6);
+        doc.text('Description', colDesc + (colDescW / 2) - 25, y + 6);
+        doc.text('Frequency', colFreq, y + 6);
+        doc.text('Visits', colVisits, y + 6);
+        doc.text('Price', colPrice, y + 6);
+        y += tableHeaderH;
+
+        // Helper function to wrap text
+        const wrapAddonText = (text, maxCharsPerLine) => {
+          const words = text.split(' ');
+          const lines = [];
+          let currentLine = '';
+          
+          words.forEach(word => {
+            if ((currentLine + ' ' + word).trim().length <= maxCharsPerLine) {
+              currentLine = (currentLine + ' ' + word).trim();
+            } else {
+              if (currentLine) lines.push(currentLine);
+              currentLine = word;
+            }
+          });
+          if (currentLine) lines.push(currentLine);
+          return lines;
+        };
+
+        // Check page break function for addons
+        const checkAddonPageBreak = (neededHeight) => {
+          const reservedForSummary = 150;
+          if (y + neededHeight > pageHeight - reservedForSummary) {
+            doc.addPage();
+            y = margin;
+            doc.rect(margin, y, contentWidth, tableHeaderH).fill(addonPurple);
+            doc.fontSize(8).fillColor(white);
+            doc.text('#', colNum, y + 6);
+            doc.text('Add-on', colAddon, y + 6);
+            doc.text('Description', colDesc + (colDescW / 2) - 25, y + 6);
+            doc.text('Frequency', colFreq, y + 6);
+            doc.text('Visits', colVisits, y + 6);
+            doc.text('Price', colPrice, y + 6);
+            y += tableHeaderH;
+          }
+        };
+
+        addonItems.forEach((item, idx) => {
+          // Parse addon name and description
+          const fullDesc = decodeHtml(item.description || item.name || 'Add-on');
+          let addonName = fullDesc;
+          let addonDesc = '-';
+          
+          if (fullDesc.includes(' - ')) {
+            const parts = fullDesc.split(' - ');
+            addonName = parts[0];
+            addonDesc = parts.slice(1).join(' - ') || '-';
+          }
+          
+          const freq = item.frequency || item.frequencyType || item.billingDuration || '-';
+          const visits = item.visits || item.frequencyCount || item.quantity || 1;
+          const price = parseFloat(item.totalPrice || item.total_price || item.unitPrice || item.unit_price || 0);
+          
+          const descLines = wrapAddonText(addonDesc, 40);
+          const lineHeight = 9;
+          const rowH = Math.max(22, (descLines.length * lineHeight) + 10);
+          
+          checkAddonPageBreak(rowH);
+          
+          const rowColor = idx % 2 === 0 ? '#FAFAFA' : white;
+          doc.rect(margin, y, contentWidth, rowH).fill(rowColor);
+          doc.rect(margin, y, contentWidth, rowH).lineWidth(0.3).stroke(borderGray);
+          
+          doc.fontSize(7).fillColor(primaryText);
+          doc.text(`${idx + 1}`, colNum, y + 6, { lineBreak: false });
+          doc.text(addonName.substring(0, 15), colAddon, y + 6, { width: colAddonW, lineBreak: false });
+          
+          doc.fillColor(secondaryText);
+          let descY = y + 6;
+          descLines.forEach((line, lineIdx) => {
+            doc.text(line, colDesc, descY + (lineIdx * lineHeight), { width: colDescW, align: 'center', lineBreak: false });
+          });
+          
+          doc.fillColor(primaryText);
+          doc.text(freq, colFreq, y + 6, { lineBreak: false });
+          doc.text(`${visits}`, colVisits, y + 6, { lineBreak: false });
+          doc.text(`Rs.${price.toLocaleString('en-IN')}`, colPrice, y + 6, { lineBreak: false });
           
           y += rowH;
         });
