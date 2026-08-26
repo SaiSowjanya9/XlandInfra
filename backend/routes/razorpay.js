@@ -1035,9 +1035,14 @@ async function handleRefund(payload, webhookId) {
               WHEN balance_amount + ? >= total_amount THEN 'unpaid'
               WHEN balance_amount + ? > 0 THEN 'partially_paid'
               ELSE payment_status
+            END,
+            status = CASE 
+              WHEN balance_amount + ? >= total_amount THEN 'sent'
+              WHEN balance_amount + ? > 0 THEN 'partially_paid'
+              ELSE status
             END
           WHERE id = ?
-        `, [refundAmount, refundAmount, refundAmount, refundAmount, payment.invoice_db_id]);
+        `, [refundAmount, refundAmount, refundAmount, refundAmount, refundAmount, refundAmount, payment.invoice_db_id]);
       }
 
       // Update webhook record

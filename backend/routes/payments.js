@@ -2632,11 +2632,13 @@ router.put('/payments/:id/verify', authenticate, canEditPayments, async (req, re
 
         await pool.execute(`
           UPDATE invoices SET 
+            amount_paid = ?,
             balance_amount = ?,
             payment_status = ?,
+            status = ?,
             updated_at = NOW()
           WHERE id = ?
-        `, [newBalance, invoiceStatus, p.invoice_id]);
+        `, [totalPaid, newBalance, invoiceStatus, invoiceStatus, p.invoice_id]);
       }
 
       // Send receipt email automatically
