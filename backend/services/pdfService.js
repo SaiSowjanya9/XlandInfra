@@ -268,11 +268,16 @@ const generateEstimatePDF = async (estimate) => {
       const pageHeight = 780; // A4 usable height
       
       // Only show Services Table for NON-work order estimates
-      // Work Order Estimates: SKIP services table entirely - they show work order details instead
-      // IMPORTANT: If workOrderId exists, this is a work order estimate - DO NOT show services
       const hasWorkOrderId = workOrderId && String(workOrderId).length > 0;
       const isWOEstimate = isWorkOrderEstimate || hasWorkOrderId || estimateType === 'work_order';
-      console.log('🔴 [PDF Service] SERVICES CHECK v2 - isWorkOrderEstimate:', isWorkOrderEstimate, 'workOrderId:', workOrderId, 'hasWorkOrderId:', hasWorkOrderId, 'estimateType:', estimateType, 'isWOEstimate:', isWOEstimate, 'WILL SHOW SERVICES:', !isWOEstimate && svcList.length > 0);
+      
+      // Billing Duration - left side, before services
+      const billingValue = billingDuration || billing_duration || 'Yearly';
+      const formattedBilling = billingValue.charAt(0).toUpperCase() + billingValue.slice(1).replace('-', ' ');
+      doc.fontSize(9).fillColor('#666666').text('Billing:', 50, y, { lineBreak: false });
+      doc.fillColor('#333333').font('Helvetica-Bold').text(formattedBilling, 85, y, { lineBreak: false });
+      doc.font('Helvetica');
+      y += 12;
       
       if (!isWOEstimate && svcList.length > 0) {
         doc.fontSize(10).fillColor(navy).text('SERVICES INCLUDED', 50, y, { continued: false });
@@ -394,56 +399,51 @@ const generateEstimatePDF = async (estimate) => {
       }
 
       // Check if Price Summary needs new page
-      if (y + 120 > pageHeight) {
+      if (y + 60 > pageHeight) {
         doc.addPage();
         y = 50;
       }
-
-      // Billing Duration - right aligned, side by side
-      const billingValue = billingDuration || billing_duration || 'Yearly';
-      const formattedBilling = billingValue.charAt(0).toUpperCase() + billingValue.slice(1).replace('-', ' ');
-      const billingLabelWidth = doc.widthOfString('Billing: ');
-      const billingValueWidth = doc.widthOfString(formattedBilling);
-      doc.fontSize(9).fillColor('#666666').text('Billing:', 550 - billingLabelWidth - billingValueWidth - 5, y, { lineBreak: false });
-      doc.fillColor('#333333').font('Helvetica-Bold').text(formattedBilling, 550 - billingValueWidth, y, { lineBreak: false });
-      doc.font('Helvetica');
-      y += 15;
       
-      // Price Summary - use safe values
-      doc.fontSize(10).fillColor(navy).text('PRICE SUMMARY', 50, y, { continued: false });
-      y += 15;
-      doc.rect(50, y, 500, 80).fill(lightGray).stroke('#e0e0e0');
+      // Price Summary - Plain layout
+      doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('PRICE SUMMARY', 50, y, { continued: false });
+      y += 12;
       
-      doc.fontSize(9).fillColor('#666666');
-      doc.text('Subtotal:', 60, y + 10);
-      doc.fillColor('#333333').text(`Rs. ${safeSubtotal.toLocaleString()}`, 450, y + 10);
+      const priceCol1 = 50;
+      const priceCol2 = 130;
       
+      // Subtotal
+      doc.fontSize(9).fillColor('#666666').font('Helvetica').text('Subtotal:', priceCol1, y);
+      doc.fillColor('#333333').font('Helvetica-Bold').text(`Rs. ${safeSubtotal.toLocaleString()}`, priceCol2, y);
+      y += 10;
+      
+      // Discount
       if (safeDiscount > 0 || safeDiscountAmount > 0) {
-        doc.fillColor('#666666').text(`Discount (${safeDiscount}%):`, 60, y + 25);
-        doc.fillColor('#333333').text(`-Rs. ${safeDiscountAmount.toLocaleString()}`, 450, y + 25);
+        doc.fillColor('#666666').font('Helvetica').text(`Discount (${safeDiscount}%):`, priceCol1, y);
+        doc.fillColor('#333333').font('Helvetica-Bold').text(`-Rs. ${safeDiscountAmount.toLocaleString()}`, priceCol2, y);
+        y += 10;
       }
       
-      doc.fillColor('#666666').text(`GST (${safeGstPercent}%):`, 60, y + 40);
-      doc.fillColor('#333333').text(`Rs. ${safeTax.toLocaleString()}`, 450, y + 40);
+      // GST
+      doc.fillColor('#666666').font('Helvetica').text(`GST (${safeGstPercent}%):`, priceCol1, y);
+      doc.fillColor('#333333').font('Helvetica-Bold').text(`Rs. ${safeTax.toLocaleString()}`, priceCol2, y);
+      y += 12;
       
-      // Total line - black color for value
-      doc.rect(60, y + 55, 480, 1).fill('#e0e0e0');
-      doc.fontSize(12).fillColor(navy).font('Helvetica-Bold').text('TOTAL:', 60, y + 62);
-      doc.fontSize(12).fillColor('#1a1a1a').text(`Rs. ${safeTotal.toLocaleString()}`, 450, y + 62);
+      // Total
+      doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('TOTAL:', priceCol1, y);
+      doc.text(`Rs. ${safeTotal.toLocaleString()}`, priceCol2, y);
       doc.font('Helvetica');
-      y += 90;
+      y += 15;
 
-      // Notes/Description (after Price Summary)
+      // Notes/Description - Plain
       if (description) {
-        // Check if notes need new page
-        if (y + 70 > pageHeight) {
+        if (y + 30 > pageHeight) {
           doc.addPage();
           y = 50;
         }
-        doc.fontSize(10).fillColor(navy).text('NOTES / DESCRIPTION', 50, y, { continued: false });
-        y += 18;
-        doc.fontSize(9).fillColor('#333333').text(decodeHtml(description), 50, y, { width: 500, lineGap: 4, continued: false });
-        y += 50;
+        doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('NOTES / DESCRIPTION', 50, y, { continued: false });
+        y += 12;
+        doc.fontSize(9).fillColor('#333333').font('Helvetica').text(decodeHtml(description), 50, y, { width: 500, lineGap: 3, continued: false });
+        y += 30;
       }
 
       doc.end();
