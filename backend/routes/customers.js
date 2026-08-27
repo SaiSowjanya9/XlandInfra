@@ -1267,7 +1267,43 @@ router.get('/dashboard', async (req, res) => {
       storedPropertyId, storedPropertyCode, numericPropertyId, propertyCode, propertyName, custEmail, customerId
     });
 
-    // Get work orders for this customer - match by property_id (numeric or code string), property_name, resident_id, or customer_email
+    // Build WHERE conditions - prioritize unique identifiers, AVOID property_name as it's not unique
+    // Match by: property_id (numeric), property_code (unique string), resident_id (customer account), or customer_email
+    const whereConditions = [];
+    const whereParams = [];
+    
+    // Primary: Match by numeric property ID (most reliable)
+    if (numericPropertyId) {
+      whereConditions.push('wo.property_id = ?');
+      whereParams.push(numericPropertyId);
+    }
+    
+    // Secondary: Match by property code (unique identifier like "GC-1781557633834")
+    if (propertyCode && propertyCode !== numericPropertyId) {
+      whereConditions.push('wo.property_id = ?');
+      whereParams.push(propertyCode);
+    }
+    
+    // Tertiary: Match by resident_id (customer account ID - ties to specific customer)
+    if (customerId) {
+      whereConditions.push('wo.resident_id = ?');
+      whereParams.push(customerId);
+    }
+    
+    // Quaternary: Match by customer email (ties to specific customer)
+    if (custEmail) {
+      whereConditions.push('LOWER(wo.customer_email) = LOWER(?)');
+      whereParams.push(custEmail);
+    }
+    
+    // NOTE: We intentionally DO NOT match by property_name because names are NOT unique
+    // and can cause cross-customer data leakage (e.g., multiple "OHSS" properties)
+    
+    const whereClause = whereConditions.length > 0 
+      ? `WHERE (${whereConditions.join(' OR ')})` 
+      : 'WHERE 1=0'; // No valid conditions = no results
+
+    // Get work orders for this customer
     const [workOrders] = await pool.execute(
       `SELECT DISTINCT wo.id, wo.work_order_id, wo.category_id, wo.subcategory_id,
               wo.category_name, wo.subcategory_name, wo.description,
@@ -1281,17 +1317,13 @@ router.get('/dashboard', async (req, res) => {
        FROM work_orders wo
        LEFT JOIN properties p ON (wo.property_id = p.id OR wo.property_id = p.property_id) AND p.status != 'deleted'
        LEFT JOIN onboarded_properties op ON (wo.property_id = op.id OR wo.property_id = op.property_id) AND op.status = 'active'
-       WHERE wo.property_id = ? 
-          OR wo.property_id = ?
-          OR wo.property_name = ?
-          OR wo.resident_id = ?
-          OR LOWER(wo.customer_email) = LOWER(?)
+       ${whereClause}
        ORDER BY wo.created_at DESC
        LIMIT 10`,
-      [numericPropertyId, propertyCode, propertyName, customerId, custEmail]
+      whereParams
     );
 
-    console.log('[Customer Dashboard] Found work orders:', workOrders.length, 'for property:', propertyName);
+    console.log('[Customer Dashboard] Found work orders:', workOrders.length, 'for property:', propertyName, 'with conditions:', whereConditions.length);
 
     // Fetch attachments for each work order
     for (const wo of workOrders) {
@@ -1304,19 +1336,20 @@ router.get('/dashboard', async (req, res) => {
     }
 
     // Get stats for this customer with detailed status breakdown
+    // Use the same WHERE conditions to ensure consistency
     const [[stats]] = await pool.execute(
       `SELECT 
-         COUNT(*) as total,
-         SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-         SUM(CASE WHEN status = 'under_review' THEN 1 ELSE 0 END) as under_review,
-         SUM(CASE WHEN status = 'assigned' THEN 1 ELSE 0 END) as assigned,
-         SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
-         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-         SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled,
-         SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed
-       FROM work_orders 
-       WHERE property_id = ? OR property_id = ? OR property_name = ? OR resident_id = ? OR LOWER(customer_email) = LOWER(?)`,
-      [numericPropertyId, propertyCode, propertyName, customerId, custEmail]
+         COUNT(DISTINCT id) as total,
+         COUNT(DISTINCT CASE WHEN status = 'pending' THEN id END) as pending,
+         COUNT(DISTINCT CASE WHEN status = 'under_review' THEN id END) as under_review,
+         COUNT(DISTINCT CASE WHEN status = 'assigned' THEN id END) as assigned,
+         COUNT(DISTINCT CASE WHEN status = 'in_progress' THEN id END) as in_progress,
+         COUNT(DISTINCT CASE WHEN status = 'completed' THEN id END) as completed,
+         COUNT(DISTINCT CASE WHEN status = 'cancelled' THEN id END) as cancelled,
+         COUNT(DISTINCT CASE WHEN status = 'closed' THEN id END) as closed
+       FROM work_orders wo
+       ${whereClause}`,
+      whereParams
     );
 
     const pendingCount = (stats?.pending || 0) + (stats?.under_review || 0) + (stats?.assigned || 0) + (stats?.in_progress || 0);
@@ -1421,7 +1454,33 @@ router.get('/work-orders', async (req, res) => {
       }
     }
 
-    // Get all work orders with full details - match by property_id (numeric or code string), property_name, resident_id, or customer_email
+    // Build WHERE conditions - prioritize unique identifiers, AVOID property_name as it's not unique
+    // Match by: property_id (numeric), property_code (unique string), resident_id (customer account), or customer_email
+    const whereConditions = [];
+    const whereParams = [];
+    
+    if (numericPropertyId) {
+      whereConditions.push('wo.property_id = ?');
+      whereParams.push(numericPropertyId);
+    }
+    if (propertyCode && propertyCode !== numericPropertyId) {
+      whereConditions.push('wo.property_id = ?');
+      whereParams.push(propertyCode);
+    }
+    if (customerId) {
+      whereConditions.push('wo.resident_id = ?');
+      whereParams.push(customerId);
+    }
+    if (custEmail) {
+      whereConditions.push('LOWER(wo.customer_email) = LOWER(?)');
+      whereParams.push(custEmail);
+    }
+    
+    const whereClause = whereConditions.length > 0 
+      ? `WHERE (${whereConditions.join(' OR ')})` 
+      : 'WHERE 1=0';
+
+    // Get all work orders with full details
     const [workOrders] = await pool.execute(
       `SELECT DISTINCT wo.id, wo.work_order_id, wo.category_id, wo.subcategory_id,
               wo.category_name, wo.subcategory_name, wo.description,
@@ -1435,13 +1494,9 @@ router.get('/work-orders', async (req, res) => {
        FROM work_orders wo
        LEFT JOIN properties p ON (wo.property_id = p.id OR wo.property_id = p.property_id) AND p.status != 'deleted'
        LEFT JOIN onboarded_properties op ON (wo.property_id = op.id OR wo.property_id = op.property_id) AND op.status = 'active'
-       WHERE wo.property_id = ? 
-          OR wo.property_id = ?
-          OR wo.property_name = ?
-          OR wo.resident_id = ?
-          OR LOWER(wo.customer_email) = LOWER(?)
+       ${whereClause}
        ORDER BY wo.created_at DESC`,
-      [numericPropertyId, propertyCode, propertyName, customerId, custEmail]
+      whereParams
     );
 
     // Get attachments for each work order
