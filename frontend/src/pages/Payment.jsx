@@ -416,27 +416,60 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                         </p>
                         <p className="text-xs text-dark-400 mt-0.5">{method.description}</p>
                         
-                        {/* Payment Badges */}
+                        {/* Payment Brand Icons */}
                         {method.badges && (
-                          <div className="flex flex-wrap gap-1.5 mt-2">
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
                             {method.badges.map((badge, idx) => (
-                              <span 
-                                key={idx} 
-                                className={`px-2 py-0.5 text-xs rounded font-medium ${
-                                  badge === 'VISA' ? 'bg-blue-600 text-white' :
-                                  badge === 'MC' ? 'bg-red-500 text-white' :
-                                  badge === 'RuPay' ? 'bg-green-600 text-white' :
-                                  badge === 'maestro' ? 'bg-blue-500 text-white' :
-                                  badge === 'Net Banking' ? 'bg-dark-600 text-dark-200 border border-dark-500' :
-                                  badge === 'GPay' ? 'bg-white text-dark-800 border border-dark-300' :
-                                  badge === 'PhonePe' ? 'bg-purple-600 text-white' :
-                                  badge === 'Paytm' ? 'bg-blue-400 text-white' :
-                                  badge === 'BHIM' ? 'bg-green-500 text-white' :
-                                  'bg-dark-600 text-dark-300'
-                                }`}
-                              >
-                                {badge}
-                              </span>
+                              <div key={idx} className="flex items-center justify-center">
+                                {badge === 'VISA' && (
+                                  <div className="bg-[#1A1F71] text-white px-2 py-1 rounded text-[10px] font-bold italic tracking-tight">
+                                    VISA
+                                  </div>
+                                )}
+                                {badge === 'MC' && (
+                                  <div className="flex items-center">
+                                    <div className="w-5 h-5 bg-[#EB001B] rounded-full -mr-2"></div>
+                                    <div className="w-5 h-5 bg-[#F79E1B] rounded-full opacity-90"></div>
+                                  </div>
+                                )}
+                                {badge === 'RuPay' && (
+                                  <div className="bg-[#097A44] text-white px-2 py-0.5 rounded text-[10px] font-bold">
+                                    RuPay
+                                  </div>
+                                )}
+                                {badge === 'maestro' && (
+                                  <div className="bg-[#0066A1] text-white px-2 py-0.5 rounded text-[10px] font-medium">
+                                    maestro
+                                  </div>
+                                )}
+                                {badge === 'Net Banking' && (
+                                  <div className="flex items-center gap-1 bg-dark-600 border border-dark-500 px-2 py-0.5 rounded text-[10px] text-dark-200">
+                                    <Landmark className="w-3 h-3" />
+                                    <span>Net Banking</span>
+                                  </div>
+                                )}
+                                {badge === 'GPay' && (
+                                  <div className="flex items-center gap-1 bg-white border border-gray-300 px-2 py-0.5 rounded text-[10px] font-medium">
+                                    <span className="text-[#4285F4]">G</span>
+                                    <span className="text-gray-700">Pay</span>
+                                  </div>
+                                )}
+                                {badge === 'PhonePe' && (
+                                  <div className="w-7 h-7 bg-[#5F259F] rounded-full flex items-center justify-center">
+                                    <span className="text-white text-xs font-bold">₹</span>
+                                  </div>
+                                )}
+                                {badge === 'Paytm' && (
+                                  <div className="bg-[#00B9F5] text-white px-2 py-0.5 rounded text-[10px] font-medium">
+                                    paytm
+                                  </div>
+                                )}
+                                {badge === 'BHIM' && (
+                                  <div className="bg-[#EF6C00] text-white px-2 py-0.5 rounded text-[10px] font-bold">
+                                    BHIM
+                                  </div>
+                                )}
+                              </div>
                             ))}
                           </div>
                         )}
@@ -821,39 +854,39 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
 
           {/* Customer & Property Info - Combined */}
           <div className="bg-dark-700/50 rounded-xl p-4 border border-dark-600">
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+            <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
               {invoice.customerName && (
-                <div className="flex justify-between">
+                <div className="flex gap-2">
                   <span className="text-dark-400">Customer:</span>
                   <span className="text-white">{invoice.customerName}</span>
                 </div>
               )}
               {invoice.propertyCode && (
-                <div className="flex justify-between">
+                <div className="flex gap-2">
                   <span className="text-dark-400">Property ID:</span>
                   <span className="text-white">{invoice.propertyCode}</span>
                 </div>
               )}
               {invoice.customerEmail && (
-                <div className="flex justify-between">
+                <div className="flex gap-2">
                   <span className="text-dark-400">Email:</span>
                   <span className="text-white truncate">{invoice.customerEmail}</span>
                 </div>
               )}
               {invoice.propertyName && (
-                <div className="flex justify-between">
+                <div className="flex gap-2">
                   <span className="text-dark-400">Property:</span>
                   <span className="text-white">{invoice.propertyName}</span>
                 </div>
               )}
               {invoice.customerPhone && (
-                <div className="flex justify-between">
+                <div className="flex gap-2">
                   <span className="text-dark-400">Phone:</span>
                   <span className="text-white">{invoice.customerPhone}</span>
                 </div>
               )}
               {invoice.propertyType && (
-                <div className="flex justify-between">
+                <div className="flex gap-2">
                   <span className="text-dark-400">Type:</span>
                   <span className="text-white">{invoice.propertyType}</span>
                 </div>
