@@ -610,7 +610,7 @@ const generatePDF = (data, type, filename) => {
       doc.setTextColor(...navy);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('NOTES / DESCRIPTION', margin, y);
+      doc.text('NOTES', margin, y);
       y += 6;
       
       const noteLines = doc.splitTextToSize(decodeHtml(String(data.description)), pageWidth - margin * 2);
