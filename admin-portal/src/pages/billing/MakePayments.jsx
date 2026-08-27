@@ -48,6 +48,40 @@ const formatDate = (date) => {
   });
 };
 
+// Format date to IST (dd/mm/yyyy)
+const formatDateIST = (dateStr) => {
+  if (!dateStr) return '';
+  if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+    const [year, month, day] = dateStr.split('T')[0].split('-');
+    return `${day}/${month}/${year}`;
+  }
+  const date = new Date(dateStr + 'T00:00:00');
+  if (isNaN(date)) return '';
+  const d = String(date.getDate()).padStart(2, '0');
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const y = date.getFullYear();
+  return `${d}/${m}/${y}`;
+};
+
+// Parse IST date (dd/mm/yyyy) to yyyy-mm-dd
+const parseISTDate = (displayStr) => {
+  if (!displayStr || displayStr.length < 10) return '';
+  const parts = displayStr.split('/');
+  if (parts.length !== 3) return '';
+  const [day, month, year] = parts;
+  if (!day || !month || !year || year.length !== 4) return '';
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+};
+
+// Handle IST date input with auto-formatting
+const handleISTDateInput = (value) => {
+  let cleaned = value.replace(/[^\d/]/g, '');
+  if (cleaned.length === 2 && !cleaned.includes('/')) cleaned += '/';
+  else if (cleaned.length === 5 && cleaned.split('/').length === 2) cleaned += '/';
+  if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
+  return cleaned;
+};
+
 // Calculate days until due date
 const getDaysUntilDue = (dueDate) => {
   if (!dueDate) return null;
@@ -1192,7 +1226,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Cheque Date *</label>
-                          <input type="date" value={paymentDetails.chequeDate} onChange={(e) => setPaymentDetails(prev => ({ ...prev, chequeDate: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" />
+                          <input type="text" placeholder="dd/mm/yyyy" value={formatDateIST(paymentDetails.chequeDate)} onChange={(e) => { const formatted = handleISTDateInput(e.target.value); const parsed = parseISTDate(formatted); setPaymentDetails(prev => ({ ...prev, chequeDate: parsed || '', chequeDateDisplay: formatted })); }} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" />
                         </div>
                       </div>
                       <div>
