@@ -46,7 +46,7 @@ const decodeHtml = (html) => {
 const drawPDFHeader = (doc, margin) => {
   const gold = '#C9A227';
   const headerBlack = '#1a1a1a';
-  const headerHeight = 18; // Thin header strip
+  const headerHeight = 22; // Thin header strip
   
   // Black header background
   doc.rect(0, 0, 595, headerHeight).fill(headerBlack);
@@ -56,34 +56,38 @@ const drawPDFHeader = (doc, margin) => {
   
   // Logo - small size
   try {
-    doc.image(LOGO_PATH, margin + 3, 3, { width: 12, height: 12 });
+    doc.image(LOGO_PATH, margin + 3, 3, { width: 16, height: 16 });
   } catch (logoErr) {
-    doc.roundedRect(margin + 3, 3, 12, 12, 1).fill(gold);
+    doc.roundedRect(margin + 3, 3, 16, 16, 1).fill(gold);
   }
   
-  // Company name
-  const textX = margin + 20;
-  doc.fontSize(10).fillColor(gold).font('Helvetica-Bold').text('XLAND INFRA', textX, 5);
+  // Company name - XLAND INFRA
+  const textX = margin + 24;
+  doc.fontSize(10).fillColor(gold).font('Helvetica-Bold').text('XLAND INFRA', textX, 4);
   
-  // PVT LTD with decorative lines - on same line
+  // Get XLAND INFRA width to center PVT LTD below it
+  const xlandWidth = doc.widthOfString('XLAND INFRA');
+  const xlandCenterX = textX + (xlandWidth / 2);
+  
+  // PVT LTD with decorative lines - centered below XLAND INFRA
   doc.fontSize(4).fillColor(gold).font('Helvetica');
   doc.strokeColor(gold).lineWidth(0.25);
   
-  // Fixed positions - after XLAND INFRA
-  const pvtX = textX + 55;
-  const lineY = 9;
+  const pvtLtdWidth = doc.widthOfString('PVT LTD');
   const lineLen = 4;
   const gap = 0.5;
-  const pvtLtdWidth = doc.widthOfString('PVT LTD');
+  const totalWidth = lineLen + gap + pvtLtdWidth + gap + lineLen;
+  const pvtStartX = xlandCenterX - (totalWidth / 2);
+  const lineY = 16;
   
   // Left line
-  doc.moveTo(pvtX, lineY).lineTo(pvtX + lineLen, lineY).stroke();
+  doc.moveTo(pvtStartX, lineY).lineTo(pvtStartX + lineLen, lineY).stroke();
   
   // PVT LTD text
-  doc.text('PVT LTD', pvtX + lineLen + gap, 6.5, { lineBreak: false });
+  doc.text('PVT LTD', pvtStartX + lineLen + gap, 13.5, { lineBreak: false });
   
   // Right line
-  const rightLineStart = pvtX + lineLen + gap + pvtLtdWidth + gap;
+  const rightLineStart = pvtStartX + lineLen + gap + pvtLtdWidth + gap;
   doc.moveTo(rightLineStart, lineY).lineTo(rightLineStart + lineLen, lineY).stroke();
   
   return headerHeight + 8; // Return starting Y position for content
