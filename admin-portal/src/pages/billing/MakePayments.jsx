@@ -295,14 +295,24 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [paymentDetails, setPaymentDetails] = useState({
     transactionReference: '',
-    receivedBy: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : '',
+    receivedBy: '',
+    receivedById: '',
     notes: '',
     chequeBank: '',
     chequeNumber: '',
     chequeDate: '',
+    // Cash payment specific fields
+    amountReceived: '',
+    receivedDate: new Date().toISOString().split('T')[0],
+    paymentLocation: 'office', // 'office' or 'property_site'
+    receiptNumber: '',
   });
   const [paymentProof, setPaymentProof] = useState(null);
   const [copied, setCopied] = useState(null);
+  
+  // Employee list for cash payment "Received By" dropdown
+  const [employees, setEmployees] = useState([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
 
   const token = getAuthToken();
 
@@ -366,6 +376,44 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
   useEffect(() => {
     fetchInvoices();
   }, [fetchInvoices]);
+
+  // Fetch employees for the "Received By" dropdown
+  const fetchEmployees = useCallback(async () => {
+    try {
+      setLoadingEmployees(true);
+      const response = await fetch(`${API_BASE}/api/staff`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        // Filter to only active employees
+        const activeEmployees = (result.data || []).filter(emp => emp.status === 'active');
+        setEmployees(activeEmployees);
+      }
+    } catch (err) {
+      console.error('Error fetching employees:', err);
+    } finally {
+      setLoadingEmployees(false);
+    }
+  }, [token]);
+
+  // Fetch employees when cash is selected
+  useEffect(() => {
+    if (selectedMethod === 'cash' && employees.length === 0) {
+      fetchEmployees();
+    }
+  }, [selectedMethod, employees.length, fetchEmployees]);
+
+  // Initialize amount received with balance amount when invoice is selected
+  useEffect(() => {
+    if (selectedInvoice && selectedMethod === 'cash' && !paymentDetails.amountReceived) {
+      setPaymentDetails(prev => ({
+        ...prev,
+        amountReceived: (parseFloat(selectedInvoice.balanceAmount) || parseFloat(selectedInvoice.totalAmount) || 0).toFixed(2)
+      }));
+    }
+  }, [selectedInvoice, selectedMethod, paymentDetails.amountReceived]);
 
   const copyToClipboard = (text, field) => {
     navigator.clipboard.writeText(text);
@@ -443,9 +491,19 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
       }
     } else if (currentStep === 2) {
       // Validate step 2 before proceeding to review
-      if (selectedMethod === 'cash' && !paymentDetails.receivedBy) {
-        setError('Please enter who received the payment');
-        return;
+      if (selectedMethod === 'cash') {
+        if (!paymentDetails.amountReceived || parseFloat(paymentDetails.amountReceived) <= 0) {
+          setError('Please enter the amount received');
+          return;
+        }
+        if (!paymentDetails.receivedDate) {
+          setError('Please select the date when payment was received');
+          return;
+        }
+        if (!paymentDetails.receivedById) {
+          setError('Please select who received the payment');
+          return;
+        }
       }
       if (selectedMethod === 'check') {
         if (!paymentDetails.chequeNumber) {
@@ -475,19 +533,34 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     const generatedReference = `XLAND${selectedInvoice.invoiceId?.replace(/[^0-9]/g, '') || ''}${new Date().getFullYear()}`;
     const finalReference = (selectedMethod === 'bank_transfer' || selectedMethod === 'upi') 
       ? generatedReference 
-      : paymentDetails.transactionReference || paymentDetails.chequeNumber;
+      : paymentDetails.receiptNumber || paymentDetails.transactionReference || paymentDetails.chequeNumber;
+    
+    // For cash payments, use the entered amount and date; otherwise use invoice amount
+    const paymentAmount = selectedMethod === 'cash' 
+      ? paymentDetails.amountReceived 
+      : (selectedInvoice.balanceAmount || selectedInvoice.totalAmount);
+    const paymentDate = selectedMethod === 'cash' 
+      ? paymentDetails.receivedDate 
+      : new Date().toISOString().split('T')[0];
     
     try {
       const submitData = new FormData();
       submitData.append('invoiceId', selectedInvoice.id || selectedInvoice.invoiceId);
-      submitData.append('amount', selectedInvoice.balanceAmount || selectedInvoice.totalAmount);
+      submitData.append('amount', paymentAmount);
       submitData.append('paymentMethod', selectedMethod);
-      submitData.append('paymentDate', new Date().toISOString().split('T')[0]);
+      submitData.append('paymentDate', paymentDate);
       submitData.append('customerName', selectedInvoice.customerName || '');
       submitData.append('paymentStatus', 'verification_pending');
       submitData.append('transactionReference', finalReference);
       submitData.append('receivedBy', paymentDetails.receivedBy || user?.firstName || 'Admin');
       submitData.append('remarks', paymentDetails.notes || '');
+      
+      // Cash payment specific fields
+      if (selectedMethod === 'cash') {
+        submitData.append('receivedById', paymentDetails.receivedById || '');
+        submitData.append('paymentLocation', paymentDetails.paymentLocation || 'office');
+        submitData.append('receiptNumber', paymentDetails.receiptNumber || '');
+      }
       
       if (selectedMethod === 'check') {
         submitData.append('chequeBank', paymentDetails.chequeBank || '');
@@ -836,17 +909,33 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   {selectedMethod === 'cash' && (
                     <>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Payment Location</span>
-                        <span className="text-sm font-medium text-gray-900">Office / Collection Point</span>
+                        <span className="text-sm text-gray-500">Amount Received</span>
+                        <span className="text-sm font-medium text-gray-900">{formatCurrency(paymentDetails.amountReceived)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Received Date</span>
+                        <span className="text-sm font-medium text-gray-900">{paymentDetails.receivedDate ? formatDate(paymentDetails.receivedDate) : '-'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-500">Received By</span>
                         <span className="text-sm font-medium text-gray-900">{paymentDetails.receivedBy || '-'}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Notes</span>
-                        <span className="text-sm font-medium text-gray-900">{paymentDetails.notes || '-'}</span>
+                        <span className="text-sm text-gray-500">Payment Location</span>
+                        <span className="text-sm font-medium text-gray-900">{paymentDetails.paymentLocation === 'office' ? 'Office / Collection Point' : 'At Property Site'}</span>
                       </div>
+                      {paymentDetails.receiptNumber && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-500">Receipt / Reference No.</span>
+                          <span className="text-sm font-medium text-gray-900">{paymentDetails.receiptNumber}</span>
+                        </div>
+                      )}
+                      {paymentDetails.notes && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-500">Notes</span>
+                          <span className="text-sm font-medium text-gray-900 text-right max-w-xs">{paymentDetails.notes}</span>
+                        </div>
+                      )}
                     </>
                   )}
                   {selectedMethod === 'check' && (
@@ -1154,39 +1243,172 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
           {selectedMethod === 'cash' && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-1">Cash Payment Details</h3>
-              <p className="text-sm text-gray-500 mb-6">Record cash payment received</p>
-              <div className="grid grid-cols-2 gap-6">
-                <div className="border border-gray-200 rounded-xl p-5">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                      <Banknote className="w-6 h-6 text-orange-600" />
-                    </div>
-                    <h4 className="font-semibold text-gray-900">How it works?</h4>
-                  </div>
-                  <ol className="space-y-3 text-sm text-gray-600">
-                    <li className="flex gap-2"><span className="font-semibold text-gray-900">1.</span>Collect cash payment from customer</li>
-                    <li className="flex gap-2"><span className="font-semibold text-gray-900">2.</span>Enter payment details below</li>
-                    <li className="flex gap-2"><span className="font-semibold text-gray-900">3.</span>Issue receipt to customer</li>
-                    <li className="flex gap-2"><span className="font-semibold text-gray-900">4.</span>Payment will be recorded in system</li>
-                  </ol>
-                  <div className="mt-4 flex items-center gap-2 text-green-600">
-                    <Info className="w-4 h-4" />
-                    <span className="text-sm">No additional charges for Cash Payment</span>
-                  </div>
-                </div>
-                <div className="border border-orange-200 rounded-xl p-5 bg-orange-50/30">
-                  <h4 className="font-semibold text-orange-800 mb-4">Payment Details</h4>
-                  <div className="space-y-4">
+              <p className="text-sm text-gray-500 mb-6">Enter the cash payment information below</p>
+              
+              <div className="grid grid-cols-3 gap-6">
+                {/* Left Column - Form Fields */}
+                <div className="col-span-2 space-y-5">
+                  {/* Amount Received & Received Date Row */}
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Received By *</label>
-                      <input type="text" value={paymentDetails.receivedBy} onChange={(e) => setPaymentDetails(prev => ({ ...prev, receivedBy: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500" placeholder="Name of person receiving payment" />
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount Received <span className="text-red-500">*</span></label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
+                        <input 
+                          type="text" 
+                          value={paymentDetails.amountReceived} 
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/[^0-9.]/g, '');
+                            setPaymentDetails(prev => ({ ...prev, amountReceived: value }));
+                          }}
+                          className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                          placeholder="15,000.00" 
+                        />
+                      </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
-                      <textarea value={paymentDetails.notes} onChange={(e) => setPaymentDetails(prev => ({ ...prev, notes: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500" rows={3} placeholder="Any additional notes..." />
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Received Date <span className="text-red-500">*</span></label>
+                      <div className="relative">
+                        <input 
+                          type="date" 
+                          value={paymentDetails.receivedDate} 
+                          onChange={(e) => setPaymentDetails(prev => ({ ...prev, receivedDate: e.target.value }))}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                        />
+                      </div>
                     </div>
                   </div>
+
+                  {/* Received By & Payment Location Row */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Received By <span className="text-red-500">*</span></label>
+                      <div className="relative">
+                        <select
+                          value={paymentDetails.receivedById}
+                          onChange={(e) => {
+                            const selectedEmp = employees.find(emp => emp.id === parseInt(e.target.value));
+                            setPaymentDetails(prev => ({ 
+                              ...prev, 
+                              receivedById: e.target.value,
+                              receivedBy: selectedEmp ? `${selectedEmp.firstName || ''} ${selectedEmp.lastName || ''}`.trim() : ''
+                            }));
+                          }}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+                        >
+                          <option value="">Select Staff / Employee</option>
+                          {loadingEmployees ? (
+                            <option disabled>Loading employees...</option>
+                          ) : (
+                            employees.map(emp => (
+                              <option key={emp.id} value={emp.id}>
+                                {emp.firstName || ''} {emp.lastName || ''} ({emp.userId || emp.role || 'Staff'})
+                              </option>
+                            ))
+                          )}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Payment Location <span className="text-red-500">*</span></label>
+                      <div className="space-y-2 mt-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name="paymentLocation" 
+                            value="office" 
+                            checked={paymentDetails.paymentLocation === 'office'} 
+                            onChange={(e) => setPaymentDetails(prev => ({ ...prev, paymentLocation: e.target.value }))}
+                            className="w-4 h-4 text-blue-600"
+                          />
+                          <span className="text-sm text-gray-700">Office / Collection Point</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name="paymentLocation" 
+                            value="property_site" 
+                            checked={paymentDetails.paymentLocation === 'property_site'} 
+                            onChange={(e) => setPaymentDetails(prev => ({ ...prev, paymentLocation: e.target.value }))}
+                            className="w-4 h-4 text-blue-600"
+                          />
+                          <span className="text-sm text-gray-700">At Property Site</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Receipt / Reference No. */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Receipt / Reference No.</label>
+                    <input 
+                      type="text" 
+                      value={paymentDetails.receiptNumber} 
+                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, receiptNumber: e.target.value }))}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                      placeholder="Enter receipt or reference number" 
+                    />
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Notes (Optional)</label>
+                    <textarea 
+                      value={paymentDetails.notes} 
+                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, notes: e.target.value }))}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none" 
+                      rows={3} 
+                      placeholder="Add any additional notes about this payment..." 
+                    />
+                  </div>
                 </div>
+
+                {/* Right Column - Info Cards */}
+                <div className="space-y-4">
+                  {/* Cash Payment Info Card */}
+                  <div className="border border-green-200 rounded-xl p-5 bg-green-50/50">
+                    <div className="flex items-start gap-3">
+                      <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <Banknote className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Cash Payment</h4>
+                        <p className="text-sm text-green-600 font-medium">No Additional Charges</p>
+                        <p className="text-xs text-gray-500 mt-2">Collect cash from the customer and record the payment details.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Important Reminders Card */}
+                  <div className="border border-amber-200 rounded-xl p-5 bg-amber-50/50">
+                    <h4 className="font-semibold text-amber-800 mb-3">Important Reminders</h4>
+                    <ul className="space-y-2.5">
+                      <li className="flex items-start gap-2 text-sm text-gray-700">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Count and verify the cash amount before saving</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-700">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Provide a receipt to the customer</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-700">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Keep the cash in the safe / cash box</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-700">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Update the payment status after collection</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Verification Pending Notice */}
+              <div className="mt-6 flex items-center gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <Info className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                <p className="text-sm text-blue-700">After saving, the payment will be marked as "Verification Pending".</p>
               </div>
             </div>
           )}
@@ -1556,7 +1778,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                 </div>
               </label>
 
-              {/* Check */}
+              {/* Cheque */}
               <label className={`flex items-start gap-3 p-4 cursor-pointer transition-colors ${selectedMethod === 'check' ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
                 <input 
                   type="radio" 
@@ -1581,7 +1803,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-gray-900 text-sm">Check</h4>
+                  <h4 className="font-semibold text-gray-900 text-sm">Cheque</h4>
                   <p className="text-xs text-gray-500 mt-0.5">Pay using cheque.</p>
                 </div>
               </label>

@@ -127,18 +127,16 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
     setPaymentStatus('processing');
 
     try {
-      const token = sessionStorage.getItem('portalUser');
+      const token = localStorage.getItem('customerToken');
       if (!token) {
         throw new Error('Please login to make a payment');
       }
-
-      const user = JSON.parse(token);
 
       // Create Razorpay Order
       const orderResponse = await fetch(`${API_BASE}/api/customers/invoices/${invoice.id}/create-order`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user.token}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -182,7 +180,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
             const verifyResponse = await fetch(`${API_BASE}/api/customers/invoices/${invoice.id}/verify-payment`, {
               method: 'POST',
               headers: {
-                'Authorization': `Bearer ${user.token}`,
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
@@ -248,18 +246,16 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
     setPaymentStatus('processing');
 
     try {
-      const token = sessionStorage.getItem('portalUser');
+      const token = localStorage.getItem('customerToken');
       if (!token) {
         throw new Error('Please login to submit payment');
       }
-
-      const user = JSON.parse(token);
 
       // Record offline payment intent
       const response = await fetch(`${API_BASE}/api/customers/invoices/${invoice.id}/offline-payment-intent`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user.token}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -985,17 +981,16 @@ const Payment = () => {
     setError(null);
     
     try {
-      const token = sessionStorage.getItem('portalUser');
+      const token = localStorage.getItem('customerToken');
       if (!token) {
         setError('Please login to view invoices');
         setLoading(false);
         return;
       }
 
-      const user = JSON.parse(token);
       const response = await fetch(`${API_BASE}/api/customers/invoices`, {
         headers: {
-          'Authorization': `Bearer ${user.token}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -1022,13 +1017,12 @@ const Payment = () => {
   // Fetch single invoice details
   const fetchInvoiceDetails = async (invoiceId) => {
     try {
-      const token = sessionStorage.getItem('portalUser');
+      const token = localStorage.getItem('customerToken');
       if (!token) return;
 
-      const user = JSON.parse(token);
       const response = await fetch(`${API_BASE}/api/customers/invoices/${invoiceId}`, {
         headers: {
-          'Authorization': `Bearer ${user.token}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });

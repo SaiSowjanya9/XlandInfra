@@ -2153,12 +2153,12 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
     // Generate reference ID
     const referenceId = `OFF-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-    // Record the payment intent as pending
+    // Record the payment intent as verification_pending (for Cash, Cheque, Bank Transfer)
     const [paymentResult] = await pool.execute(
       `INSERT INTO payments (
         invoice_id, property_id, amount, payment_method, payment_date,
         transaction_id, status, remarks, created_at
-      ) VALUES (?, ?, ?, ?, NOW(), ?, 'pending', 'Offline payment intent from Customer Portal', NOW())`,
+      ) VALUES (?, ?, ?, ?, NOW(), ?, 'verification_pending', 'Offline payment intent from Customer Portal - Awaiting verification', NOW())`,
       [inv.id, inv.property_id, amount || inv.total_amount, paymentMethod, referenceId]
     );
 

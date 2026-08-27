@@ -12,7 +12,8 @@ import {
   Copy,
   Check,
   RefreshCw,
-  Lock
+  Lock,
+  Clock
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -239,6 +240,8 @@ const PublicPayment = () => {
   const [checkingCaptcha, setCheckingCaptcha] = useState(true);
   const [ipBlocked, setIpBlocked] = useState(false);
   const [blockRetryAfter, setBlockRetryAfter] = useState(0);
+  const [paymentSubmitted, setPaymentSubmitted] = useState(false);
+  const [submittedPaymentDetails, setSubmittedPaymentDetails] = useState(null);
 
   // Bank details for bank transfer
   const bankDetails = {
@@ -369,8 +372,8 @@ const PublicPayment = () => {
           }
         }
       } else {
-        // Record payment intent for other methods
-        await fetch(`${API_BASE}/api/razorpay/public/record-payment-intent`, {
+        // Record payment intent for offline methods (cash, cheque, bank_transfer)
+        const response = await fetch(`${API_BASE}/api/razorpay/public/record-payment-intent`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -379,8 +382,17 @@ const PublicPayment = () => {
             paymentMethod: selectedMethod
           })
         });
-        // Show success message
-        alert(`Payment method selected: ${selectedMethod}. Our team will verify and update the payment status.`);
+        const result = await response.json();
+        
+        // Show success screen for verification pending payments
+        setSubmittedPaymentDetails({
+          referenceId: result.data?.referenceId || `REF-${Date.now()}`,
+          amount: invoice.balanceAmount || invoice.totalAmount,
+          invoiceId: invoice.invoiceId,
+          method: selectedMethod,
+          instructions: result.data?.instructions
+        });
+        setPaymentSubmitted(true);
       }
     } catch (err) {
       alert('Failed to process payment');
@@ -511,6 +523,77 @@ const PublicPayment = () => {
           <h2 className="text-xl font-bold text-gray-900 mb-2">Payment Link Invalid</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <p className="text-sm text-gray-500">Please contact XLAND INFRA for a new payment link.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show success screen for offline payment submissions (verification pending)
+  if (paymentSubmitted && submittedPaymentDetails) {
+    const methodLabels = {
+      'cash': 'Cash',
+      'cheque': 'Cheque',
+      'bank_transfer': 'Bank Transfer',
+      'bank': 'Bank Transfer'
+    };
+    
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full">
+          <div className="text-center">
+            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Clock className="w-10 h-10 text-blue-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Intent Submitted!</h2>
+            <p className="text-gray-600 mb-6">
+              Your payment details have been recorded. Our team will verify the payment within 24-48 hours.
+            </p>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+              <div className="flex items-center gap-2 text-blue-700 text-sm font-medium mb-2">
+                <AlertCircle className="w-4 h-4" />
+                Status: Verification Pending
+              </div>
+              <p className="text-xs text-blue-600">
+                {submittedPaymentDetails.method === 'bank_transfer' || submittedPaymentDetails.method === 'bank'
+                  ? 'Please complete the bank transfer using the details provided earlier. Include the reference ID in your payment remarks.'
+                  : submittedPaymentDetails.method === 'cash'
+                  ? 'Please visit our office to complete the cash payment. Carry the reference ID shown below.'
+                  : 'Please submit the cheque at our office. Write the reference ID on the back of the cheque.'}
+              </p>
+            </div>
+            
+            <div className="bg-gray-50 rounded-xl p-4 text-left space-y-3">
+              <div className="flex justify-between">
+                <span className="text-gray-500 text-sm">Invoice ID</span>
+                <span className="font-semibold text-gray-900">{submittedPaymentDetails.invoiceId}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 text-sm">Amount</span>
+                <span className="font-semibold text-gray-900">{formatCurrency(submittedPaymentDetails.amount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 text-sm">Payment Method</span>
+                <span className="font-semibold text-gray-900">{methodLabels[submittedPaymentDetails.method] || submittedPaymentDetails.method}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                <span className="text-gray-500 text-sm">Reference ID</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-semibold text-blue-600">{submittedPaymentDetails.referenceId}</span>
+                  <button 
+                    onClick={() => copyToClipboard(submittedPaymentDetails.referenceId, 'ref')}
+                    className="p-1 hover:bg-gray-200 rounded"
+                  >
+                    {copied === 'ref' ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-400" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <p className="text-xs text-gray-400 mt-6">
+              You will receive a confirmation once your payment is verified.
+            </p>
+          </div>
         </div>
       </div>
     );
