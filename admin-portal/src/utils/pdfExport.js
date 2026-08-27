@@ -414,6 +414,18 @@ const generatePDF = (data, type, filename) => {
       y += descBoxH + 4;
     }
 
+    // ===== BILLING DURATION (left side, just above services) =====
+    const billingValue = data.billing_duration || data.billingDuration || 'Yearly';
+    const formattedBilling = billingValue.charAt(0).toUpperCase() + billingValue.slice(1).replace('-', ' ');
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...mediumText);
+    doc.text('Billing:', margin, y);
+    doc.setTextColor(...darkText);
+    doc.setFont('helvetica', 'bold');
+    doc.text(formattedBilling, margin + 18, y);
+    y += 8;
+
     // ===== SERVICES TABLE (Skip for Work Order Estimates) =====
     const isWorkOrder = data.isWorkOrderEstimate || data.estimate_type === 'work_order' || data.estimateType === 'work_order' || data.workOrderId;
     const services = data.services || data.packageServices || [];
@@ -505,24 +517,10 @@ const generatePDF = (data, type, filename) => {
       y = doc.lastAutoTable.finalY + 8;
     }
 
-    // ===== BILLING DURATION (right aligned, side by side) =====
-    const billingValue = data.billing_duration || data.billingDuration || 'Yearly';
-    const formattedBilling = billingValue.charAt(0).toUpperCase() + billingValue.slice(1).replace('-', ' ');
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...mediumText);
-    const billingText = 'Billing: ';
-    const billingTextWidth = doc.getTextWidth(billingText);
-    doc.text(billingText, pageWidth - margin - billingTextWidth - doc.getTextWidth(formattedBilling), y);
-    doc.setTextColor(...darkText);
-    doc.setFont('helvetica', 'bold');
-    doc.text(formattedBilling, pageWidth - margin, y, { align: 'right' });
-    y += 10;
-
-    // ===== PRICE SUMMARY BOX =====
+    // ===== PRICE SUMMARY (Plain, right-aligned) =====
     const subtotal = parseFloat(data.subtotal) || 0;
     
-    // Get discount values - try explicit values first, then calculate
+    // Get discount values
     let discountPercent = parseFloat(data.discountPercent || data.discount_percent || data.discount) || 0;
     let discountAmount = parseFloat(data.discountAmount || data.discount_amount) || 0;
     
@@ -543,100 +541,84 @@ const generatePDF = (data, type, filename) => {
       gstAmount = Math.round((afterDiscount * gstPercent) / 100);
     }
     
-    // Calculate final total: (Subtotal - Discount) + GST
+    // Calculate final total
     const total = Math.round(afterDiscount + gstAmount);
-    
-    const priceBoxW = 85;
-    const priceBoxX = pageWidth - margin - priceBoxW;
     const hasDiscount = discountAmount > 0;
-    const priceBoxH = 14 + (hasDiscount ? 7 : 0) + 7 + 12;
 
-    // Check for page break BEFORE drawing title (keep title and box together)
-    if (y + priceBoxH + 30 > pageHeight) {
+    // Check for page break
+    if (y + 50 > pageHeight) {
       doc.addPage();
       y = 20;
     }
 
-    // Price Summary Title - right aligned above the box
+    // Price Summary Title
     doc.setTextColor(...navy);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('PRICE SUMMARY', priceBoxX, y);
-    y += 6;
-
-    // Price Summary Card
-    doc.setFillColor(...cardBg);
-    doc.setDrawColor(...borderLight);
-    doc.roundedRect(priceBoxX, y, priceBoxW, priceBoxH, 2, 2, 'FD');
+    doc.text('PRICE SUMMARY', margin, y);
+    y += 8;
     
-    let py = y + 6;
+    // Price rows - plain text
+    const priceCol1 = margin;
+    const priceCol2 = margin + 60;
     
-    // Subtotal row
-    doc.setTextColor(...mediumText);
-    doc.setFontSize(8);
+    // Subtotal
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text('Subtotal:', priceBoxX + 6, py);
+    doc.setTextColor(...mediumText);
+    doc.text('Subtotal:', priceCol1, y);
     doc.setTextColor(...darkText);
     doc.setFont('helvetica', 'bold');
-    doc.text(formatCurrency(subtotal), priceBoxX + priceBoxW - 6, py, { align: 'right' });
-    py += 7;
+    doc.text(formatCurrency(subtotal), priceCol2, y);
+    y += 6;
     
-    // Discount row (if applicable)
+    // Discount (if applicable)
     if (hasDiscount) {
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...mediumText);
-      doc.text(`Discount (${discountPercent}%):`, priceBoxX + 6, py);
+      doc.text(`Discount (${discountPercent}%):`, priceCol1, y);
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
-      doc.text('-' + formatCurrency(discountAmount), priceBoxX + priceBoxW - 6, py, { align: 'right' });
-      py += 7;
+      doc.text('-' + formatCurrency(discountAmount), priceCol2, y);
+      y += 6;
     }
     
-    // GST row
+    // GST
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...mediumText);
-    doc.text(`GST (${gstPercent}%):`, priceBoxX + 6, py);
+    doc.text(`GST (${gstPercent}%):`, priceCol1, y);
     doc.setTextColor(...darkText);
     doc.setFont('helvetica', 'bold');
-    doc.text(formatCurrency(gstAmount), priceBoxX + priceBoxW - 6, py, { align: 'right' });
-    py += 8;
+    doc.text(formatCurrency(gstAmount), priceCol2, y);
+    y += 8;
     
-    // Total row with navy background
-    doc.setFillColor(...navy);
-    doc.roundedRect(priceBoxX + 3, py - 2, priceBoxW - 6, 11, 2, 2, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL:', priceBoxX + 8, py + 5);
+    // Total - bold and larger
     doc.setFontSize(10);
-    doc.text(formatCurrency(total), priceBoxX + priceBoxW - 8, py + 5, { align: 'right' });
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...navy);
+    doc.text('TOTAL:', priceCol1, y);
+    doc.text(formatCurrency(total), priceCol2, y);
+    y += 10;
 
-    y += priceBoxH + 10;
-
-    // ===== NOTES/DESCRIPTION (After Price Summary) =====
+    // ===== NOTES/DESCRIPTION (Plain) =====
     if (data.description && data.description.trim()) {
-      if (y + 30 > pageHeight - 25) {
+      if (y + 20 > pageHeight - 25) {
         doc.addPage();
         y = 20;
       }
       
       doc.setTextColor(...navy);
-      doc.setFontSize(9);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('NOTES / DESCRIPTION', margin, y);
-      y += 4;
+      y += 6;
       
-      doc.setFillColor(...cardBg);
-      doc.setDrawColor(...borderLight);
-      const noteLines = doc.splitTextToSize(decodeHtml(String(data.description)), pageWidth - margin * 2 - 8);
-      const noteBoxH = Math.min(Math.max(12, noteLines.length * 4 + 6), 40);
-      doc.roundedRect(margin, y, pageWidth - margin * 2, noteBoxH, 2, 2, 'FD');
-      
-      doc.setTextColor(...mediumText);
-      doc.setFontSize(7);
+      const noteLines = doc.splitTextToSize(decodeHtml(String(data.description)), pageWidth - margin * 2);
+      doc.setTextColor(...darkText);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
-      doc.text(noteLines.slice(0, 8), margin + 4, y + 5);
-      y += noteBoxH + 6;
+      doc.text(noteLines.slice(0, 8), margin, y);
+      y += noteLines.length * 4 + 6;
     }
 
     // ===== FOOTER =====
