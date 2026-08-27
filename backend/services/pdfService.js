@@ -138,23 +138,17 @@ const generateEstimatePDF = async (estimate) => {
       // ===== HEADER - Use shared function =====
       let y = drawPDFHeader(doc, 50);
 
-      // Add ESTIMATE badge in header (top right) - filled gold with black text (not bold)
-      doc.roundedRect(465, 12, 90, 24, 4).fill('#D4A84B');
-      doc.fontSize(12).fillColor('#1a1a1a').font('Helvetica').text('ESTIMATE', 480, 18);
-      doc.font('Helvetica');
-
-      // Estimate Info - styled like invoice
-      // ID label
-      doc.fontSize(10).fillColor('#666666').font('Helvetica-Bold').text('ID:', 60, y);
-      // ID value in larger bold font
-      doc.fontSize(14).fillColor(black).text(estimateId || 'N/A', 85, y - 2);
+      // Estimate Info - Plain layout
+      // Estimate ID
+      doc.fontSize(7).fillColor('#666666').font('Helvetica').text('ESTIMATE NO.', 50, y);
+      doc.fontSize(10).fillColor(black).font('Helvetica-Bold').text(estimateId || 'N/A', 50, y + 10);
       
-      // Date on right side
-      doc.fontSize(10).fillColor('#666666').font('Helvetica-Bold').text('Date:', 400, y);
+      // Date
+      doc.fontSize(7).fillColor('#666666').font('Helvetica').text('DATE', 180, y);
       const dateStr = createdAt ? new Date(createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
-      doc.fontSize(12).fillColor(black).text(dateStr, 435, y - 1);
-      doc.font('Helvetica'); // Reset font
-      y += 30;
+      doc.fontSize(10).fillColor(black).font('Helvetica-Bold').text(dateStr, 180, y + 10);
+      doc.font('Helvetica');
+      y += 25;
 
       
 
@@ -405,12 +399,15 @@ const generateEstimatePDF = async (estimate) => {
         y = 50;
       }
 
-      // Billing Duration - just before Price Summary
+      // Billing Duration - right aligned, side by side
       const billingValue = billingDuration || billing_duration || 'Yearly';
       const formattedBilling = billingValue.charAt(0).toUpperCase() + billingValue.slice(1).replace('-', ' ');
-      doc.fontSize(9).fillColor('#666666').text('Billing:', 50, y);
-      doc.fillColor('#333333').text(formattedBilling, 500, y, { align: 'right' });
-      y += 20;
+      const billingLabelWidth = doc.widthOfString('Billing: ');
+      const billingValueWidth = doc.widthOfString(formattedBilling);
+      doc.fontSize(9).fillColor('#666666').text('Billing:', 550 - billingLabelWidth - billingValueWidth - 5, y, { lineBreak: false });
+      doc.fillColor('#333333').font('Helvetica-Bold').text(formattedBilling, 550 - billingValueWidth, y, { lineBreak: false });
+      doc.font('Helvetica');
+      y += 15;
       
       // Price Summary - use safe values
       doc.fontSize(10).fillColor(navy).text('PRICE SUMMARY', 50, y, { continued: false });
