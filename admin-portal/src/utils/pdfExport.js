@@ -114,7 +114,7 @@ const safeStr = (val, fallback = '-') => {
 const drawPDFHeader = (doc, margin) => {
   const pageWidth = doc.internal.pageSize.getWidth();
   const gold = [201, 162, 39];
-  const headerHeight = 14; // Thin header strip
+  const headerHeight = 18; // Thin header strip
   
   // Black header background
   doc.setFillColor(26, 26, 26);
@@ -125,7 +125,7 @@ const drawPDFHeader = (doc, margin) => {
   doc.rect(0, headerHeight, pageWidth, 2, 'F');
   
   // Logo - small size
-  const logoSize = 10;
+  const logoSize = 14;
   try {
     doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 2, 2, logoSize, logoSize);
   } catch (e) {
@@ -133,30 +133,35 @@ const drawPDFHeader = (doc, margin) => {
     doc.roundedRect(margin + 2, 2, logoSize, logoSize, 1, 1, 'F');
   }
   
-  // Company name
+  // Company name - XLAND INFRA
   const textX = margin + logoSize + 5;
   doc.setTextColor(...gold);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('XLAND INFRA', textX, 8);
+  doc.text('XLAND INFRA', textX, 7);
   
-  // PVT LTD with decorative lines - on same line
+  // Get XLAND INFRA width to center PVT LTD below it
+  const xlandWidth = doc.getTextWidth('XLAND INFRA');
+  const xlandCenterX = textX + (xlandWidth / 2);
+  
+  // PVT LTD with decorative lines - centered below XLAND INFRA
   doc.setFontSize(4);
   doc.setFont('helvetica', 'normal');
   const pvtLtdText = 'PVT LTD';
   const pvtLtdWidth = doc.getTextWidth(pvtLtdText);
   const lineLen = 4;
   const gap = 0.3;
-  const pvtX = textX + 32; // Position after XLAND INFRA
-  const lineY = 7.5;
+  const totalWidth = lineLen + gap + pvtLtdWidth + gap + lineLen;
+  const pvtStartX = xlandCenterX - (totalWidth / 2);
+  const lineY = 13;
   doc.setDrawColor(...gold);
   doc.setLineWidth(0.25);
   // Left line
-  doc.line(pvtX, lineY, pvtX + lineLen, lineY);
+  doc.line(pvtStartX, lineY, pvtStartX + lineLen, lineY);
   // PVT LTD text
-  doc.text(pvtLtdText, pvtX + lineLen + gap, lineY + 0.6);
+  doc.text(pvtLtdText, pvtStartX + lineLen + gap, lineY + 0.6);
   // Right line
-  doc.line(pvtX + lineLen + gap + pvtLtdWidth + gap, lineY, pvtX + lineLen + gap + pvtLtdWidth + gap + lineLen, lineY);
+  doc.line(pvtStartX + lineLen + gap + pvtLtdWidth + gap, lineY, pvtStartX + lineLen + gap + pvtLtdWidth + gap + lineLen, lineY);
   
   return headerHeight + 8; // Return starting Y position for content
 };
