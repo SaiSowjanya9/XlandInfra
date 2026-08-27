@@ -63,28 +63,23 @@ const drawPDFHeader = (doc, margin) => {
   
   // Company name - XLAND INFRA
   const textX = margin + 24;
-  doc.fontSize(10).fillColor(gold).font('Helvetica-Bold').text('XLAND INFRA', textX, 4);
+  doc.fontSize(10).fillColor(gold).font('Helvetica-Bold').text('XLAND INFRA', textX, 3);
   
-  // Get XLAND INFRA width to center PVT LTD below it
-  const xlandWidth = doc.widthOfString('XLAND INFRA');
-  const xlandCenterX = textX + (xlandWidth / 2);
-  
-  // PVT LTD with decorative lines - centered below XLAND INFRA
+  // PVT LTD with decorative lines - positioned below XLAND INFRA, slightly left
   doc.fontSize(4).fillColor(gold).font('Helvetica');
   doc.strokeColor(gold).lineWidth(0.25);
   
   const pvtLtdWidth = doc.widthOfString('PVT LTD');
   const lineLen = 4;
   const gap = 0.5;
-  const totalWidth = lineLen + gap + pvtLtdWidth + gap + lineLen;
-  const pvtStartX = xlandCenterX - (totalWidth / 2);
-  const lineY = 16;
+  const pvtStartX = textX; // Start at same X as XLAND INFRA
+  const lineY = 14; // Closer to XLAND INFRA
   
   // Left line
   doc.moveTo(pvtStartX, lineY).lineTo(pvtStartX + lineLen, lineY).stroke();
   
   // PVT LTD text
-  doc.text('PVT LTD', pvtStartX + lineLen + gap, 13.5, { lineBreak: false });
+  doc.text('PVT LTD', pvtStartX + lineLen + gap, 11.5, { lineBreak: false });
   
   // Right line
   const rightLineStart = pvtStartX + lineLen + gap + pvtLtdWidth + gap;
@@ -163,38 +158,64 @@ const generateEstimatePDF = async (estimate) => {
 
       
 
-      // Property & Customer Details (side by side)
-      const cardWidth = 235;
+      // Property Details (Plain, stacked vertically)
+      const col1 = 50, col2 = 150, col3 = 300, col4 = 400;
       
-      // Property Details Card - same blue background as Customer Details
-      doc.rect(50, y, cardWidth, 100).fill('#e8f4fc').stroke('#cce7f7');
-      doc.fontSize(10).fillColor(navy).text('Property Details', 60, y + 10);
-      doc.fontSize(8).fillColor('#666666');
-      let py = y + 28;
-      if (propertyCode) { doc.text(`Property ID: ${propertyCode}`, 60, py, { width: cardWidth - 20 }); py += 12; }
-      if (propertyName) { doc.text(`Name: ${decodeHtml(propertyName)}`, 60, py, { width: cardWidth - 20 }); py += 12; }
+      doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('Property Details', col1, y);
+      y += 14;
+      
+      doc.fontSize(8).font('Helvetica');
       const propTypeLabel = { 'GC': 'Gated Community', 'APT': 'Apartment', 'VILLA': 'Villa', 'PLOT': 'Plot' }[propertyType] || propertyType;
-      if (propTypeLabel) { doc.text(`Type: ${propTypeLabel}`, 60, py, { width: cardWidth - 20 }); py += 12; }
-      if (zone) { doc.text(`Zone: ${zone}`, 60, py, { width: cardWidth - 20 }); py += 12; }
-      if (division) { doc.text(`Division: ${division}`, 60, py, { width: cardWidth - 20 }); py += 12; }
+      
+      // Row 1: Name & Type
+      doc.fillColor('#666666').text('Name:', col1, y);
+      doc.fillColor('#666666').text('Type:', col3, y);
+      y += 10;
+      doc.fillColor('#333333').font('Helvetica-Bold');
+      if (propertyName) doc.text(decodeHtml(propertyName), col1, y);
+      if (propTypeLabel) doc.text(propTypeLabel, col3, y);
+      y += 12;
+      
+      // Row 2: Zone & Division
+      doc.font('Helvetica').fillColor('#666666').text('Zone:', col1, y);
+      if (division) doc.text('Division:', col3, y);
+      y += 10;
+      doc.fillColor('#333333').font('Helvetica-Bold');
+      if (zone) doc.text(zone, col1, y);
+      if (division) doc.text(division, col3, y);
+      y += 14;
 
-      // Customer Details Card
-      doc.rect(305, y, cardWidth, 100).fill('#e8f4fc').stroke('#cce7f7');
-      doc.fontSize(10).fillColor(navy).text('Customer Details', 315, y + 10);
-      doc.fontSize(8).fillColor('#666666');
-      let cy = y + 28;
-      if (customerName) { doc.text(`Name: ${decodeHtml(customerName)}`, 315, cy, { width: cardWidth - 20 }); cy += 12; }
-      if (customerPhone) { doc.text(`Phone: ${customerPhone}`, 315, cy, { width: cardWidth - 20 }); cy += 12; }
-      if (customerEmail) { 
-        // Use smaller font for long emails to ensure they fit
-        const emailFontSize = customerEmail.length > 25 ? 7 : 8;
-        doc.fontSize(emailFontSize).text(`Email: ${customerEmail}`, 315, cy, { width: cardWidth - 20 }); 
-        cy += (customerEmail.length > 35 ? 20 : 12); // Extra space if email wraps
-        doc.fontSize(8); // Reset font size
+      // Customer Details
+      doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('Customer Details', col1, y);
+      y += 14;
+      
+      doc.fontSize(8).font('Helvetica');
+      
+      // Row 1: Name & Phone
+      doc.fillColor('#666666').text('Name:', col1, y);
+      doc.fillColor('#666666').text('Phone:', col3, y);
+      y += 10;
+      doc.fillColor('#333333').font('Helvetica-Bold');
+      if (customerName) doc.text(decodeHtml(customerName), col1, y);
+      if (customerPhone) doc.text(customerPhone, col3, y);
+      y += 12;
+      
+      // Row 2: Email
+      doc.font('Helvetica').fillColor('#666666').text('Email:', col1, y);
+      y += 10;
+      doc.fillColor('#333333').font('Helvetica-Bold');
+      if (customerEmail) doc.text(customerEmail, col1, y);
+      y += 12;
+      
+      // Row 3: City
+      if (city) {
+        doc.font('Helvetica').fillColor('#666666').text('City:', col1, y);
+        y += 10;
+        doc.fillColor('#333333').font('Helvetica-Bold').text(city, col1, y);
+        y += 12;
       }
-      if (city) { doc.text(`City: ${city}`, 315, cy, { width: cardWidth - 20 }); cy += 12; }
-
-      y += 115;
+      
+      y += 10;
 
       // Work Order Details (only for work order estimates) - 2x2 Grid layout
       if (isWorkOrderEstimate && workOrderId) {
