@@ -70,15 +70,15 @@ const drawPDFHeader = (doc, margin) => {
   doc.strokeColor(gold).lineWidth(0.5);
   
   // Fixed positions for perfect symmetry
-  const lineY = 31; // Y position for lines
-  const lineLen = 10; // Line length
-  const gap = 1; // Very tight gap
-  const pvtLtdWidth = doc.widthOfString('PVT LTD'); // Get actual text width
+  const lineY = 31;
+  const lineLen = 8; // Short lines
+  const gap = 0.5; // Almost no gap
+  const pvtLtdWidth = doc.widthOfString('PVT LTD');
   
   // Left line
   doc.moveTo(textX, lineY).lineTo(textX + lineLen, lineY).stroke();
   
-  // PVT LTD text (Y adjusted to align with lines)
+  // PVT LTD text
   doc.text('PVT LTD', textX + lineLen + gap, 28, { lineBreak: false });
   
   // Right line

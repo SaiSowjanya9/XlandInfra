@@ -145,14 +145,14 @@ const drawPDFHeader = (doc, margin) => {
   doc.setFont('helvetica', 'normal');
   const pvtLtdText = 'PVT LTD';
   const pvtLtdWidth = doc.getTextWidth(pvtLtdText);
-  const lineLen = 10;
-  const gap = 0.5; // Very tight gap
-  const lineY = 31; // Y position for lines and text alignment
+  const lineLen = 8;
+  const gap = 0.3; // Almost no gap
+  const lineY = 31;
   doc.setDrawColor(...gold);
   doc.setLineWidth(0.5);
   // Left line
   doc.line(textX, lineY, textX + lineLen, lineY);
-  // PVT LTD text (same Y as lines for alignment)
+  // PVT LTD text
   doc.text(pvtLtdText, textX + lineLen + gap, lineY + 1);
   // Right line
   doc.line(textX + lineLen + gap + pvtLtdWidth + gap, lineY, textX + lineLen + gap + pvtLtdWidth + gap + lineLen, lineY);
