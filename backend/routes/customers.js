@@ -1765,11 +1765,13 @@ router.get('/invoices/:id', async (req, res) => {
 
     const inv = invoices[0];
 
-    // Verify the invoice belongs to this customer's property
+    // Verify the invoice belongs to this customer
     const invoicePropertyId = inv.property_id;
     const invoicePropertyCode = inv.property_code;
+    const invoiceCustomerEmail = inv.customer_email?.toLowerCase();
+    const custEmail = customerEmail?.toLowerCase();
 
-    // Check access - compare by property_id OR property_code (flexible matching)
+    // Check access - flexible matching by property OR email
     let hasAccess = false;
     
     // Match by numeric property ID
@@ -1782,28 +1784,29 @@ router.get('/invoices/:id', async (req, res) => {
       if (propertyCode === invoicePropertyCode) hasAccess = true;
     }
     
-    // Cross-match: customer's property_code might equal invoice's property_id (stored as string)
+    // Cross-match: customer's property_code might equal invoice's property_id
     if (!hasAccess && propertyCode && invoicePropertyId) {
       if (propertyCode === String(invoicePropertyId)) hasAccess = true;
     }
     
-    // Cross-match: invoice's property_code might equal customer's numeric property_id
+    // Cross-match: invoice's property_code might equal customer's property_id
     if (!hasAccess && numericPropertyId && invoicePropertyCode) {
       if (String(numericPropertyId) === invoicePropertyCode) hasAccess = true;
     }
+    
+    // Email matching - allow if customer email matches invoice email
+    if (!hasAccess && custEmail && invoiceCustomerEmail && custEmail === invoiceCustomerEmail) {
+      hasAccess = true;
+    }
 
-    // Fallback: If customer has no property assigned, allow email-based access (legacy support)
-    const hasEmailFallback = !numericPropertyId && !propertyCode && customerEmail && 
-      inv.customer_email?.toLowerCase() === customerEmail.toLowerCase();
-
-    if (!hasAccess && !hasEmailFallback) {
+    if (!hasAccess) {
       console.log('[Invoice Access Denied]', { 
         customerId, 
         customerPropertyId: numericPropertyId, 
         customerPropertyCode: propertyCode, 
         invoicePropertyId, 
         invoicePropertyCode,
-        customerEmail: customerEmail?.substring(0, 5) + '...'
+        emailMatch: custEmail === invoiceCustomerEmail
       });
       return res.status(403).json({ success: false, message: 'Access denied to this invoice' });
     }
@@ -2101,20 +2104,21 @@ router.post('/invoices/:id/create-order', async (req, res) => {
 
     const inv = invoices[0];
 
-    // Verify the invoice belongs to this customer's property
+    // Verify the invoice belongs to this customer
     const invoicePropertyId = inv.property_id;
     const invoicePropertyCode = inv.property_code;
-
-    const hasAccess = 
-      (numericPropertyId && invoicePropertyId && String(numericPropertyId) === String(invoicePropertyId)) ||
-      (propertyCode && invoicePropertyCode && propertyCode === invoicePropertyCode);
-
-    // Fallback for legacy customers without property assigned
+    const invoiceCustomerEmail = inv.customer_email?.toLowerCase();
     const custEmail = customerEmail?.toLowerCase();
-    const hasEmailFallback = !numericPropertyId && !propertyCode && custEmail && 
-      inv.customer_email?.toLowerCase() === custEmail;
 
-    if (!hasAccess && !hasEmailFallback) {
+    // Flexible access check - property OR email matching
+    let hasAccess = false;
+    if (numericPropertyId && invoicePropertyId && String(numericPropertyId) === String(invoicePropertyId)) hasAccess = true;
+    if (!hasAccess && propertyCode && invoicePropertyCode && propertyCode === invoicePropertyCode) hasAccess = true;
+    if (!hasAccess && propertyCode && invoicePropertyId && propertyCode === String(invoicePropertyId)) hasAccess = true;
+    if (!hasAccess && numericPropertyId && invoicePropertyCode && String(numericPropertyId) === invoicePropertyCode) hasAccess = true;
+    if (!hasAccess && custEmail && invoiceCustomerEmail && custEmail === invoiceCustomerEmail) hasAccess = true;
+
+    if (!hasAccess) {
       return res.status(403).json({ success: false, message: 'Access denied to this invoice' });
     }
 
@@ -2335,21 +2339,21 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
 
     const inv = invoices[0];
 
-    // Verify the invoice belongs to this customer's property
-    // ONLY match by property_id or property_code - NOT by email
+    // Verify the invoice belongs to this customer
     const invoicePropertyId = inv.property_id;
     const invoicePropertyCode = inv.property_code;
-
-    const hasAccess = 
-      (numericPropertyId && invoicePropertyId && String(numericPropertyId) === String(invoicePropertyId)) ||
-      (propertyCode && invoicePropertyCode && propertyCode === invoicePropertyCode);
-
-    // Fallback for legacy customers without property assigned
+    const invoiceCustomerEmail = inv.customer_email?.toLowerCase();
     const custEmail = customerData.email?.toLowerCase();
-    const hasEmailFallback = !numericPropertyId && !propertyCode && custEmail && 
-      inv.customer_email?.toLowerCase() === custEmail;
 
-    if (!hasAccess && !hasEmailFallback) {
+    // Flexible access check - property OR email matching
+    let hasAccess = false;
+    if (numericPropertyId && invoicePropertyId && String(numericPropertyId) === String(invoicePropertyId)) hasAccess = true;
+    if (!hasAccess && propertyCode && invoicePropertyCode && propertyCode === invoicePropertyCode) hasAccess = true;
+    if (!hasAccess && propertyCode && invoicePropertyId && propertyCode === String(invoicePropertyId)) hasAccess = true;
+    if (!hasAccess && numericPropertyId && invoicePropertyCode && String(numericPropertyId) === invoicePropertyCode) hasAccess = true;
+    if (!hasAccess && custEmail && invoiceCustomerEmail && custEmail === invoiceCustomerEmail) hasAccess = true;
+
+    if (!hasAccess) {
       return res.status(403).json({ success: false, message: 'Access denied to this invoice' });
     }
 
