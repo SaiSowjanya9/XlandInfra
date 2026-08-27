@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock, Clock, CheckCircle, AlertCircle, Loader2, Eye, ChevronRight, Wrench, User, Phone, Mail, MapPin, Paperclip, Image, FileText, X, Truck, RefreshCw } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 const UPLOADS_BASE_URL = '';
@@ -109,17 +108,6 @@ const Dashboard = ({ user }) => {
 
   const recentWorkOrders = dashboardData?.recentWorkOrders || [];
   const stats = dashboardData?.stats || { pending: 0, completed: 0, total: 0, byStatus: {} };
-  
-  // Pie chart data
-  const workOrdersByStatus = stats?.byStatus || {};
-  const pieData = [
-    { name: 'Pending', value: workOrdersByStatus.pending || 0, color: '#F59E0B' },
-    { name: 'In Progress', value: workOrdersByStatus.in_progress || 0, color: '#3B82F6' },
-    { name: 'Completed', value: (workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0), color: '#10B981' },
-  ].filter(item => item.value > 0);
-
-  const totalWorkOrders = stats?.total || 0;
-  const totalForPercentage = pieData.reduce((sum, item) => sum + item.value, 0) || 1;
 
   if (loading) {
     return (
@@ -204,83 +192,6 @@ const Dashboard = ({ user }) => {
             </div>
           </div>
         </button>
-      </div>
-
-      {/* Work Orders Overview - Full Width */}
-      <div className="bg-dark-800/50 border border-dark-600/50 rounded-2xl p-6 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">Work Orders Overview</h2>
-          <button onClick={() => navigate('/dashboard/work-order')} className="text-sm text-gold-400 hover:text-gold-300 font-medium flex items-center gap-1">
-            View All <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-        
-        <div className="flex items-center justify-center lg:justify-start gap-12 flex-wrap">
-          {/* Pie Chart */}
-          <div className="relative w-48 h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#374151' }]}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={80}
-                  paddingAngle={pieData.length > 1 ? 3 : 0}
-                  dataKey="value"
-                >
-                  {(pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#374151' }]).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <p className="text-3xl font-bold text-white">{totalWorkOrders}</p>
-              <p className="text-sm text-dark-400">Total</p>
-            </div>
-          </div>
-
-          {/* Legend */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between min-w-[200px]">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-amber-500"></span>
-                <span className="text-sm text-dark-300">Pending</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-white">{workOrdersByStatus.pending || 0}</span>
-                <span className="text-sm text-dark-400 w-12 text-right">
-                  {totalForPercentage > 0 ? Math.round(((workOrdersByStatus.pending || 0) / totalForPercentage) * 100) : 0}%
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between min-w-[200px]">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                <span className="text-sm text-dark-300">In Progress</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-white">{workOrdersByStatus.in_progress || 0}</span>
-                <span className="text-sm text-dark-400 w-12 text-right">
-                  {totalForPercentage > 0 ? Math.round(((workOrdersByStatus.in_progress || 0) / totalForPercentage) * 100) : 0}%
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between min-w-[200px]">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                <span className="text-sm text-dark-300">Completed</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-white">{(workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0)}</span>
-                <span className="text-sm text-dark-400 w-12 text-right">
-                  {totalForPercentage > 0 ? Math.round((((workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0)) / totalForPercentage) * 100) : 0}%
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Quick Access Cards */}
