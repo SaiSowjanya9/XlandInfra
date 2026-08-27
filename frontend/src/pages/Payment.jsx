@@ -420,74 +420,68 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                         {method.badges && (
                           <div className="flex flex-wrap items-center gap-2 mt-2">
                             {method.badges.map((badge, idx) => (
-                              <div key={idx} className="flex items-center justify-center h-7">
-                                {/* VISA Logo */}
+                              <div key={idx} className="flex items-center justify-center">
+                                {/* VISA */}
                                 {badge === 'VISA' && (
-                                  <svg viewBox="0 0 48 16" className="h-5 w-auto">
-                                    <rect width="48" height="16" rx="2" fill="#1A1F71"/>
-                                    <path d="M19.5 4.5L17 11.5H15L13.5 6C13.4 5.6 13.3 5.4 13 5.2C12.5 5 11.7 4.7 11 4.5L11.1 4H14.3C14.7 4 15.1 4.3 15.2 4.8L16 8.8L18 4H19.5V4.5ZM25 11.5H23.5L22 4H23.8L25 11.5ZM30.5 4C30.2 4 29.9 4.2 29.8 4.4L27 11.5H28.8L29.2 10.3H31.4L31.6 11.5H33.2L31.8 4H30.5ZM29.7 9L30.5 6L31 9H29.7ZM22 7.5C22 6.3 23.3 6.2 24.2 6.5L24.5 4.7C23.8 4.5 22.5 4.5 21.8 5C20.7 5.7 20.3 7 20.8 8.2C21.5 10 24.2 10 24.2 11C24.2 11.5 23.5 11.7 23 11.6C22.2 11.5 21.5 11.2 21 10.8L20.7 12.7C21.5 13 22.5 13 23.2 12.9C25 12.7 26 11.5 26 10C26 7.8 22 7.8 22 7.5Z" fill="white"/>
-                                  </svg>
+                                  <div className="bg-[#1A1F71] text-white px-2.5 py-1 rounded text-[11px] font-bold italic">
+                                    VISA
+                                  </div>
                                 )}
-                                {/* Mastercard Logo */}
+                                {/* Mastercard */}
                                 {badge === 'MC' && (
-                                  <svg viewBox="0 0 32 20" className="h-5 w-auto">
-                                    <circle cx="11" cy="10" r="9" fill="#EB001B"/>
-                                    <circle cx="21" cy="10" r="9" fill="#F79E1B"/>
-                                    <path d="M16 3.5C17.8 5 19 7.3 19 10C19 12.7 17.8 15 16 16.5C14.2 15 13 12.7 13 10C13 7.3 14.2 5 16 3.5Z" fill="#FF5F00"/>
-                                  </svg>
+                                  <div className="flex items-center -space-x-2">
+                                    <div className="w-5 h-5 rounded-full bg-[#EB001B]"></div>
+                                    <div className="w-5 h-5 rounded-full bg-[#F79E1B]"></div>
+                                  </div>
                                 )}
-                                {/* RuPay Logo */}
+                                {/* RuPay */}
                                 {badge === 'RuPay' && (
-                                  <svg viewBox="0 0 50 18" className="h-5 w-auto">
-                                    <rect width="50" height="18" rx="2" fill="#097969"/>
-                                    <text x="8" y="13" fill="white" fontSize="10" fontWeight="bold" fontFamily="Arial">RuPay</text>
-                                  </svg>
+                                  <div className="bg-[#097969] text-white px-2 py-1 rounded text-[10px] font-semibold">
+                                    RuPay
+                                  </div>
                                 )}
-                                {/* Maestro Logo */}
+                                {/* Maestro */}
                                 {badge === 'maestro' && (
-                                  <svg viewBox="0 0 32 20" className="h-5 w-auto">
-                                    <circle cx="11" cy="10" r="9" fill="#0066A1"/>
-                                    <circle cx="21" cy="10" r="9" fill="#00A1DF"/>
-                                    <path d="M16 3.5C17.8 5 19 7.3 19 10C19 12.7 17.8 15 16 16.5C14.2 15 13 12.7 13 10C13 7.3 14.2 5 16 3.5Z" fill="#007AB5"/>
-                                  </svg>
+                                  <div className="bg-[#0066A1] text-white px-2 py-1 rounded text-[10px] font-medium">
+                                    maestro
+                                  </div>
                                 )}
                                 {/* Net Banking */}
                                 {badge === 'Net Banking' && (
-                                  <div className="flex items-center gap-1 bg-dark-600 border border-dark-500 px-2 py-1 rounded">
-                                    <Landmark className="w-3.5 h-3.5 text-dark-300" />
-                                    <span className="text-[10px] text-dark-200">Net Banking</span>
+                                  <div className="flex items-center gap-1.5 bg-white border border-gray-300 px-2.5 py-1 rounded text-[11px] text-gray-700">
+                                    <Landmark className="w-3.5 h-3.5" />
+                                    <span>Net Banking</span>
                                   </div>
                                 )}
-                                {/* Google Pay Logo */}
+                                {/* Google Pay */}
                                 {badge === 'GPay' && (
-                                  <svg viewBox="0 0 40 16" className="h-5 w-auto">
-                                    <rect width="40" height="16" rx="2" fill="white" stroke="#E0E0E0"/>
-                                    <text x="4" y="12" fontSize="10" fontWeight="500">
-                                      <tspan fill="#4285F4">G</tspan>
-                                      <tspan fill="#5F6368"> Pay</tspan>
-                                    </text>
-                                  </svg>
+                                  <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1 shadow-sm">
+                                    <svg viewBox="0 0 24 24" className="w-4 h-4 mr-1">
+                                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                                    </svg>
+                                    <span className="text-[11px] text-gray-600 font-medium">Pay</span>
+                                  </div>
                                 )}
-                                {/* PhonePe Logo */}
+                                {/* PhonePe */}
                                 {badge === 'PhonePe' && (
-                                  <svg viewBox="0 0 24 24" className="h-6 w-6">
-                                    <circle cx="12" cy="12" r="12" fill="#5F259F"/>
-                                    <path d="M8 7H11C13.2 7 15 8.8 15 11C15 13.2 13.2 15 11 15H10V18H8V7ZM10 9V13H11C12.1 13 13 12.1 13 11C13 9.9 12.1 9 11 9H10Z" fill="white"/>
-                                  </svg>
+                                  <div className="w-7 h-7 rounded-full bg-[#5F259F] flex items-center justify-center">
+                                    <span className="text-white text-sm font-bold">₹</span>
+                                  </div>
                                 )}
-                                {/* Paytm Logo */}
+                                {/* Paytm */}
                                 {badge === 'Paytm' && (
-                                  <svg viewBox="0 0 45 18" className="h-5 w-auto">
-                                    <rect width="45" height="18" rx="2" fill="#00B9F5"/>
-                                    <text x="6" y="13" fill="white" fontSize="10" fontWeight="500" fontFamily="Arial">paytm</text>
-                                  </svg>
+                                  <div className="border border-[#00B9F5] rounded-full px-2.5 py-0.5">
+                                    <span className="text-[#00B9F5] text-[11px] font-medium">paytm</span>
+                                  </div>
                                 )}
-                                {/* BHIM Logo */}
+                                {/* BHIM */}
                                 {badge === 'BHIM' && (
-                                  <svg viewBox="0 0 40 18" className="h-5 w-auto">
-                                    <rect width="40" height="18" rx="2" fill="#EF6C00"/>
-                                    <text x="6" y="13" fill="white" fontSize="10" fontWeight="bold" fontFamily="Arial">BHIM</text>
-                                  </svg>
+                                  <div className="bg-[#EF6C00] text-white px-2.5 py-1 rounded text-[10px] font-bold">
+                                    BHIM
+                                  </div>
                                 )}
                               </div>
                             ))}
