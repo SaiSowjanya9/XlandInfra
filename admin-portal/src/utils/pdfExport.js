@@ -138,22 +138,17 @@ const drawPDFHeader = (doc, margin) => {
   doc.setTextColor(...gold);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('XLAND INFRA', textX, 7);
+  doc.text('XLAND INFRA', textX, 6);
   
-  // Get XLAND INFRA width to center PVT LTD below it
-  const xlandWidth = doc.getTextWidth('XLAND INFRA');
-  const xlandCenterX = textX + (xlandWidth / 2);
-  
-  // PVT LTD with decorative lines - centered below XLAND INFRA
+  // PVT LTD with decorative lines - positioned below XLAND INFRA, slightly left
   doc.setFontSize(4);
   doc.setFont('helvetica', 'normal');
   const pvtLtdText = 'PVT LTD';
   const pvtLtdWidth = doc.getTextWidth(pvtLtdText);
   const lineLen = 4;
   const gap = 0.3;
-  const totalWidth = lineLen + gap + pvtLtdWidth + gap + lineLen;
-  const pvtStartX = xlandCenterX - (totalWidth / 2);
-  const lineY = 13;
+  const pvtStartX = textX; // Start at same X as XLAND INFRA
+  const lineY = 11; // Closer to XLAND INFRA
   doc.setDrawColor(...gold);
   doc.setLineWidth(0.25);
   // Left line
@@ -245,179 +240,148 @@ const generatePDF = (data, type, filename) => {
     
     y += 30;
 
-    // ===== SIDE-BY-SIDE CARDS: Property + Customer =====
+    // ===== PROPERTY DETAILS (Plain, stacked vertically) =====
     if (type !== 'package') {
-      const gap = 6;
-      const cardWidth = (pageWidth - margin * 2 - gap) / 2;
-      
-      // Determine card height based on property type - need extra rows for GC/Apartment
       const propType = String(data.propertyType || '').toUpperCase();
       const isGC = ['GC', 'GATED COMMUNITY', 'GATED_COMMUNITY'].includes(propType);
       const isApt = ['APT', 'APARTMENT'].includes(propType);
       const isVilla = ['VILLA', 'VL'].includes(propType);
       const isFlat = ['FLAT', 'FL'].includes(propType);
       const isPlot = ['PLOT', 'PL'].includes(propType);
-      // APT has 4 rows (Name/Type, Zone, Tower/Block, Units) - needs more height than GC (3 rows)
-      const cardHeight = isApt ? 56 : (isGC ? 46 : ((isVilla || isFlat || isPlot) ? 40 : 34));
       
-      // Property Details Card - ensure same blue background as Customer Details
-      doc.setFillColor(239, 246, 255); // cardBgBlue - explicit RGB
-      doc.setDrawColor(229, 231, 235); // borderLight - explicit RGB
-      doc.roundedRect(margin, y, cardWidth, cardHeight, 2, 2, 'FD');
-      
+      // Property Details Header
       doc.setTextColor(...navy);
-      doc.setFontSize(9);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('Property Details', margin + 6, y + 6);
+      doc.text('Property Details', margin, y);
+      y += 6;
       
-      let py = y + 12;
+      // Property info in rows
       doc.setFontSize(8);
+      const col1 = margin;
+      const col2 = margin + 45;
+      const col3 = margin + 100;
+      const col4 = margin + 145;
       
-      // Row 1: Property ID | Property Type
+      // Row 1: Name & Type
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
-      doc.text('Name', margin + 6, py);
-      doc.text('Type', margin + cardWidth/2 + 6, py);
-      py += 5;
+      doc.text('Name:', col1, y);
+      doc.text('Type:', col3, y);
+      y += 4;
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
       const propName = decodeHtml(String(data.propertyName || data.communityName || '-'));
-      doc.text(propName.length > 16 ? propName.substring(0, 16) + '...' : propName, margin + 6, py);
+      doc.text(propName.length > 25 ? propName.substring(0, 25) + '...' : propName, col1, y);
       const typeLabel = isGC ? 'Gated Community' : isApt ? 'Apartment' : isVilla ? 'Villa' : isFlat ? 'Flat' : isPlot ? 'Plot' : String(data.propertyType || '-');
-      doc.text(typeLabel, margin + cardWidth/2 + 6, py);
-      py += 7;
+      doc.text(typeLabel, col3, y);
+      y += 5;
       
-      // Row 2: Zone | Division (Division only for property-based estimates)
+      // Row 2: Zone & Division
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
-      doc.text('Zone', margin + 6, py);
-      // Show Division label only for property-based estimates with division value
+      doc.text('Zone:', col1, y);
       const isPropertyBased = data.estimateType === 'property_based' || data.estimate_type === 'property_based' || data.propertyId || data.property_id;
       const hasDivision = isPropertyBased && (data.division || data.divisionName || data.division_name);
-      if (hasDivision) {
-        doc.text('Division', margin + cardWidth/2 + 6, py);
-      }
-      py += 5;
+      if (hasDivision) doc.text('Division:', col3, y);
+      y += 4;
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
-      doc.text(String(data.zone || '-'), margin + 6, py);
-      if (hasDivision) {
-        doc.text(String(data.division || data.divisionName || data.division_name), margin + cardWidth/2 + 6, py);
-      }
+      doc.text(String(data.zone || '-'), col1, y);
+      if (hasDivision) doc.text(String(data.division || data.divisionName || data.division_name), col3, y);
+      y += 5;
       
-      // Property-type specific fields - use consistent x-coordinates (margin + 6 for left, margin + cardWidth/2 + 6 for right)
-      const leftCol = margin + 6;
-      const rightCol = margin + cardWidth/2 + 6;
-      
+      // Property-type specific fields
       if (isGC) {
-        py += 6;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...lightText);
-        doc.text('No. of Blocks', leftCol, py);
-        doc.text('Total Units', rightCol, py);
-        py += 5;
+        doc.text('No. of Blocks:', col1, y);
+        doc.text('Total Units:', col3, y);
+        y += 4;
         doc.setTextColor(...darkText);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.numberOfBlocks || data.number_of_blocks || '-'), leftCol, py);
-        doc.text(String(data.totalUnits || data.total_units || '-'), rightCol, py);
+        doc.text(String(data.numberOfBlocks || data.number_of_blocks || '-'), col1, y);
+        doc.text(String(data.totalUnits || data.total_units || '-'), col3, y);
+        y += 5;
       } else if (isApt) {
-        py += 6;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...lightText);
-        doc.text('Tower/Building', leftCol, py);
-        doc.text('Block No.', rightCol, py);
-        py += 5;
+        doc.text('Tower:', col1, y);
+        doc.text('Block No.:', col3, y);
+        y += 4;
         doc.setTextColor(...darkText);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.towerName || data.tower_name || '-'), leftCol, py);
-        doc.text(String(data.blockNumber || data.block_number || '-'), rightCol, py);
-        py += 7;
+        doc.text(String(data.towerName || data.tower_name || '-'), col1, y);
+        doc.text(String(data.blockNumber || data.block_number || '-'), col3, y);
+        y += 5;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...lightText);
-        doc.text('No. of Units', leftCol, py);
-        py += 5;
+        doc.text('No. of Units:', col1, y);
+        y += 4;
         doc.setTextColor(...darkText);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.totalUnits || data.total_units || '-'), leftCol, py);
-      } else if (isVilla) {
-        py += 6;
+        doc.text(String(data.totalUnits || data.total_units || '-'), col1, y);
+        y += 5;
+      } else if (isVilla || isFlat || isPlot) {
+        const label = isVilla ? 'Villa Number:' : isFlat ? 'Flat Number:' : 'Plot Number:';
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...lightText);
-        doc.text('Villa Number', leftCol, py);
-        py += 5;
+        doc.text(label, col1, y);
+        y += 4;
         doc.setTextColor(...darkText);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.villaPlotNumber || data.villa_plot_number || data.villa_number || '-'), leftCol, py);
-      } else if (isFlat) {
-        py += 6;
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...lightText);
-        doc.text('Flat Number', leftCol, py);
-        py += 5;
-        doc.setTextColor(...darkText);
-        doc.setFont('helvetica', 'bold');
-        doc.text(String(data.villaPlotNumber || data.villa_plot_number || data.flat_number || '-'), leftCol, py);
-      } else if (isPlot) {
-        py += 6;
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...lightText);
-        doc.text('Plot Number', leftCol, py);
-        py += 5;
-        doc.setTextColor(...darkText);
-        doc.setFont('helvetica', 'bold');
-        doc.text(String(data.villaPlotNumber || data.villa_plot_number || data.plot_number || '-'), leftCol, py);
+        doc.text(String(data.villaPlotNumber || data.villa_plot_number || '-'), col1, y);
+        y += 5;
       }
       
-      // Customer Details Card - same blue background as Property Details
-      const cx = margin + cardWidth + gap;
-      doc.setFillColor(239, 246, 255); // cardBgBlue - explicit RGB
-      doc.setDrawColor(229, 231, 235); // borderLight - explicit RGB  
-      doc.roundedRect(cx, y, cardWidth, cardHeight, 2, 2, 'FD');
+      y += 4;
       
+      // ===== CUSTOMER DETAILS =====
       doc.setTextColor(...navy);
-      doc.setFontSize(9);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('Customer Details', cx + 6, y + 6);
+      doc.text('Customer Details', margin, y);
+      y += 6;
       
-      let cy = y + 12;
       doc.setFontSize(8);
       
-      // Row 1: Name
+      // Row 1: Name & Phone
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
-      doc.text('Name', cx + 6, cy);
-      doc.text('Phone', cx + cardWidth/2 + 4, cy);
-      cy += 5;
+      doc.text('Name:', col1, y);
+      doc.text('Phone:', col3, y);
+      y += 4;
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
       const custName = decodeHtml(String(data.customerName || '-'));
-      doc.text(custName.length > 14 ? custName.substring(0, 14) + '...' : custName, cx + 6, cy);
-      doc.text(String(data.customerPhone || '-'), cx + cardWidth/2 + 4, cy);
-      cy += 7;
+      doc.text(custName.length > 25 ? custName.substring(0, 25) + '...' : custName, col1, y);
+      doc.text(String(data.customerPhone || '-'), col3, y);
+      y += 5;
       
       // Row 2: Email
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
-      doc.text('Email', cx + 6, cy);
-      cy += 5;
+      doc.text('Email:', col1, y);
+      y += 4;
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
       const email = String(data.customerEmail || '-');
-      doc.text(email.length > 30 ? email.substring(0, 30) + '...' : email, cx + 6, cy);
-      cy += 7;
+      doc.text(email.length > 45 ? email.substring(0, 45) + '...' : email, col1, y);
+      y += 5;
       
-      // Row 3: City (if available)
+      // Row 3: City
       if (data.city) {
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...lightText);
-        doc.text('City', cx + 6, cy);
-        cy += 5;
+        doc.text('City:', col1, y);
+        y += 4;
         doc.setTextColor(...darkText);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.city || '-'), cx + 6, cy);
+        doc.text(String(data.city || '-'), col1, y);
+        y += 5;
       }
       
-      y += cardHeight + 8;
+      y += 6;
     }
 
     // ===== WORK ORDER DETAILS (only for work order estimates) - Compact 4-column layout =====
