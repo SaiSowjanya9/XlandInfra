@@ -184,16 +184,10 @@ const generatePDF = (data, type, filename) => {
     let y = drawPDFHeader(doc, margin);
     // y is already set by drawPDFHeader return value
 
-    // ===== DOCUMENT INFO ROW - Gray background =====
-    doc.setFillColor(248, 250, 252); // gray-50
-    doc.rect(0, y, pageWidth, 24, 'F');
-    doc.setDrawColor(229, 231, 235); // gray-200
-    doc.line(0, y + 24, pageWidth, y + 24);
+    // ===== DOCUMENT INFO ROW - Plain =====
+    const metaY = y + 4;
     
-    const metaY = y + 8;
-    const colWidth = (pageWidth - margin * 2) / 3;
-    
-    // Column 1: Estimate/Package ID
+    // Estimate/Package ID
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
     doc.setFontSize(7);
     doc.setTextColor(107, 114, 128); // gray-500
@@ -202,43 +196,20 @@ const generatePDF = (data, type, filename) => {
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(17, 24, 39); // gray-900
     const estId = String(data.estimateId || data.packageId || 'N/A');
-    doc.text(estId.length > 20 ? estId.substring(0, 20) + '...' : estId, margin, metaY + 6);
+    doc.text(estId.length > 25 ? estId.substring(0, 25) + '...' : estId, margin, metaY + 5);
     
-    // Column 2: Date
-    const col2X = margin + colWidth;
+    // Date
+    const col2X = margin + 80;
     doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(107, 114, 128);
     doc.text('DATE', col2X, metaY);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(17, 24, 39);
-    doc.text(formatDate(data.createdAt), col2X, metaY + 6);
+    doc.text(formatDate(data.createdAt), col2X, metaY + 5);
     
-    // Column 3: Status Badge (for estimates)
-    if (type === 'estimate' && data.status) {
-      const col3X = margin + colWidth * 2;
-      const status = String(data.status).toLowerCase();
-      const statusText = status.charAt(0).toUpperCase() + status.slice(1);
-      const statusColors = {
-        'draft': { bg: [229, 231, 235], text: [75, 85, 99] },      // gray
-        'sent': { bg: [219, 234, 254], text: [29, 78, 216] },       // blue
-        'approved': { bg: [220, 252, 231], text: [21, 128, 61] },   // green
-        'rejected': { bg: [254, 226, 226], text: [185, 28, 28] },   // red
-        'expired': { bg: [255, 237, 213], text: [194, 65, 12] }     // orange
-      };
-      const statusStyle = statusColors[status] || statusColors.draft;
-      
-      const badgeWidth = 35;
-      const badgeHeight = 10;
-      doc.setFillColor(...statusStyle.bg);
-      doc.roundedRect(col3X, metaY - 2, badgeWidth, badgeHeight, 3, 3, 'F');
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...statusStyle.text);
-      doc.text(statusText.toUpperCase(), col3X + badgeWidth/2, metaY + 4, { align: 'center' });
-    }
-    
-    y += 30;
+    y += 18;
 
     // ===== PROPERTY DETAILS (Plain, stacked vertically) =====
     if (type !== 'package') {
@@ -534,16 +505,19 @@ const generatePDF = (data, type, filename) => {
       y = doc.lastAutoTable.finalY + 8;
     }
 
-    // ===== BILLING DURATION (just before Price Summary) =====
+    // ===== BILLING DURATION (right aligned, side by side) =====
     const billingValue = data.billing_duration || data.billingDuration || 'Yearly';
     const formattedBilling = billingValue.charAt(0).toUpperCase() + billingValue.slice(1).replace('-', ' ');
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...mediumText);
-    doc.text('Billing:', margin, y);
+    const billingText = 'Billing: ';
+    const billingTextWidth = doc.getTextWidth(billingText);
+    doc.text(billingText, pageWidth - margin - billingTextWidth - doc.getTextWidth(formattedBilling), y);
     doc.setTextColor(...darkText);
+    doc.setFont('helvetica', 'bold');
     doc.text(formattedBilling, pageWidth - margin, y, { align: 'right' });
-    y += 12;
+    y += 10;
 
     // ===== PRICE SUMMARY BOX =====
     const subtotal = parseFloat(data.subtotal) || 0;
