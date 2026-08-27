@@ -758,7 +758,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-gray-900">
-                {activeTab === 'offline' ? 'Offline Payments' : 'Online Payments'}
+                Payments
               </h1>
               <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
                 <Home className="w-3.5 h-3.5" />
@@ -767,7 +767,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 <span>Billing & Payments</span>
                 <ChevronRightIcon className="w-3.5 h-3.5" />
                 <span className="text-gray-700">
-                  {activeTab === 'offline' ? 'Offline Payments' : 'Online Payments'}
+                  Payments
                 </span>
               </div>
             </div>
@@ -843,35 +843,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
           </div>
         </div>
 
-        {/* Tabs - Below Header */}
-        <div className="flex items-center gap-3 mb-4">
-          <button
-            onClick={() => setActiveTab('online')}
-            className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-              activeTab === 'online' 
-                ? 'bg-blue-100 text-blue-800 border border-blue-200' 
-                : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
-            }`}
-          >
-            <CreditCard className="w-4 h-4" />
-            Online Payments
-          </button>
-          <button
-            onClick={() => setActiveTab('offline')}
-            className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-              activeTab === 'offline' 
-                ? 'bg-green-100 text-green-800 border border-green-200' 
-                : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
-            }`}
-          >
-            <Receipt className="w-4 h-4" />
-            Offline Payments
-          </button>
-        </div>
-
-        {/* Offline Payments Tab - Cash, Cheque, Bank Transfer */}
-        {activeTab === 'offline' && (
-          <>
+        {/* All Payments Content */}
         {/* Stats Cards */}
         <div className="grid grid-cols-5 gap-4 mb-6">
           <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-start gap-3 shadow-sm">
@@ -956,10 +928,11 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 className="appearance-none pl-4 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               >
                 <option value="all">All Payment Methods</option>
-                {/* Offline tab: Cash, Cheque, Bank Transfer */}
+                <option value="debit_credit_card">Debit/Credit Card</option>
+                <option value="upi">UPI</option>
+                <option value="bank_transfer">Bank Transfer</option>
                 <option value="cash">Cash</option>
                 <option value="check">Cheque</option>
-                <option value="bank_transfer">Bank Transfer</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
@@ -1279,11 +1252,8 @@ const Payments = ({ user, portalType = 'admin' }) => {
             </>
           )}
         </div>
-          </>
-        )}
-
-        {/* Online Payments Tab - Card, Net Banking, UPI */}
-        {activeTab === 'online' && (
+        {/* End of Payments Content - Online section removed, unified interface */}
+        {false && (
           <>
           {/* Filters Row for Online Payments */}
           <div className="bg-white rounded-xl border border-gray-200 mb-4 p-4">
