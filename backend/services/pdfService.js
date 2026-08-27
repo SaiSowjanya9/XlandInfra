@@ -46,46 +46,46 @@ const decodeHtml = (html) => {
 const drawPDFHeader = (doc, margin) => {
   const gold = '#C9A227';
   const headerBlack = '#1a1a1a';
-  const headerHeight = 45; // Increased from 28
+  const headerHeight = 38; // Compact header
   
   // Black header background
   doc.rect(0, 0, 595, headerHeight).fill(headerBlack);
   
   // Gold bar at bottom
-  doc.rect(0, headerHeight, 595, 5).fill(gold);
+  doc.rect(0, headerHeight, 595, 4).fill(gold);
   
-  // Logo - larger size
+  // Logo - compact size
   try {
-    doc.image(LOGO_PATH, margin + 5, 5, { width: 35, height: 35 }); // Increased from 22x22
+    doc.image(LOGO_PATH, margin + 5, 4, { width: 30, height: 30 });
   } catch (logoErr) {
-    doc.roundedRect(margin + 5, 5, 35, 35, 3).fill(gold);
+    doc.roundedRect(margin + 5, 4, 30, 30, 3).fill(gold);
   }
   
-  // Company name - larger
-  const textX = margin + 50; // Adjusted for larger logo
-  doc.fontSize(16).fillColor(gold).font('Helvetica-Bold').text('XLAND INFRA', textX, 10);
+  // Company name
+  const textX = margin + 45;
+  doc.fontSize(14).fillColor(gold).font('Helvetica-Bold').text('XLAND INFRA', textX, 10);
   
   // PVT LTD with decorative lines - format: — PVT LTD —
-  doc.fontSize(7).fillColor(gold).font('Helvetica');
-  doc.strokeColor(gold).lineWidth(0.5);
+  doc.fontSize(6).fillColor(gold).font('Helvetica');
+  doc.strokeColor(gold).lineWidth(0.4);
   
-  // Fixed positions for perfect symmetry
-  const lineY = 31;
-  const lineLen = 8; // Short lines
-  const gap = 0.5; // Almost no gap
+  // Fixed positions
+  const lineY = 26;
+  const lineLen = 7;
+  const gap = 0.5;
   const pvtLtdWidth = doc.widthOfString('PVT LTD');
   
   // Left line
   doc.moveTo(textX, lineY).lineTo(textX + lineLen, lineY).stroke();
   
   // PVT LTD text
-  doc.text('PVT LTD', textX + lineLen + gap, 28, { lineBreak: false });
+  doc.text('PVT LTD', textX + lineLen + gap, 23, { lineBreak: false });
   
   // Right line
   const rightLineStart = textX + lineLen + gap + pvtLtdWidth + gap;
   doc.moveTo(rightLineStart, lineY).lineTo(rightLineStart + lineLen, lineY).stroke();
   
-  return headerHeight + 22; // Return starting Y position for content (added more spacing below gold bar)
+  return headerHeight + 15; // Return starting Y position for content
 };
 
 // Generate estimate PDF and return as buffer

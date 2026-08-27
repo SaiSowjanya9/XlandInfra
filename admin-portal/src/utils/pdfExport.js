@@ -114,7 +114,7 @@ const safeStr = (val, fallback = '-') => {
 const drawPDFHeader = (doc, margin) => {
   const pageWidth = doc.internal.pageSize.getWidth();
   const gold = [201, 162, 39];
-  const headerHeight = 45; // Increased to match backend
+  const headerHeight = 32; // Compact header
   
   // Black header background
   doc.setFillColor(26, 26, 26);
@@ -122,34 +122,34 @@ const drawPDFHeader = (doc, margin) => {
   
   // Gold bar at bottom
   doc.setFillColor(201, 162, 39);
-  doc.rect(0, headerHeight, pageWidth, 5, 'F');
+  doc.rect(0, headerHeight, pageWidth, 4, 'F');
   
-  // Logo - larger size to match backend
-  const logoSize = 35;
+  // Logo - compact size
+  const logoSize = 26;
   try {
-    doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 5, 5, logoSize, logoSize);
+    doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 5, 3, logoSize, logoSize);
   } catch (e) {
     doc.setFillColor(...gold);
-    doc.roundedRect(margin + 5, 5, logoSize, logoSize, 3, 3, 'F');
+    doc.roundedRect(margin + 5, 3, logoSize, logoSize, 3, 3, 'F');
   }
   
-  // Company name - larger to match backend
-  const textX = margin + logoSize + 15;
+  // Company name
+  const textX = margin + logoSize + 12;
   doc.setTextColor(...gold);
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('XLAND INFRA', textX, 18);
+  doc.text('XLAND INFRA', textX, 13);
   
   // PVT LTD with decorative lines - format: — PVT LTD —
-  doc.setFontSize(7);
+  doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
   const pvtLtdText = 'PVT LTD';
   const pvtLtdWidth = doc.getTextWidth(pvtLtdText);
-  const lineLen = 8;
-  const gap = 0.3; // Almost no gap
-  const lineY = 31;
+  const lineLen = 7;
+  const gap = 0.3;
+  const lineY = 22;
   doc.setDrawColor(...gold);
-  doc.setLineWidth(0.5);
+  doc.setLineWidth(0.4);
   // Left line
   doc.line(textX, lineY, textX + lineLen, lineY);
   // PVT LTD text
@@ -157,7 +157,7 @@ const drawPDFHeader = (doc, margin) => {
   // Right line
   doc.line(textX + lineLen + gap + pvtLtdWidth + gap, lineY, textX + lineLen + gap + pvtLtdWidth + gap + lineLen, lineY);
   
-  return headerHeight + 22; // Return starting Y position for content (more spacing)
+  return headerHeight + 15; // Return starting Y position for content
 };
 
 // Generate Premium PDF with professional design
