@@ -1018,7 +1018,10 @@ const Payment = () => {
   const fetchInvoiceDetails = async (invoiceId) => {
     try {
       const token = localStorage.getItem('customerToken');
-      if (!token) return;
+      if (!token) {
+        setError('Please login to view invoice details');
+        return;
+      }
 
       const response = await fetch(`${API_BASE}/api/customers/invoices/${invoiceId}`, {
         headers: {
@@ -1031,9 +1034,13 @@ const Payment = () => {
       
       if (result.success) {
         setSelectedInvoice(result.data);
+      } else {
+        console.error('Invoice fetch failed:', result.message);
+        setError(result.message || 'Failed to load invoice details');
       }
     } catch (err) {
       console.error('Error fetching invoice details:', err);
+      setError('Failed to load invoice details. Please try again.');
     }
   };
 
