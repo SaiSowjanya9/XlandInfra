@@ -32,6 +32,8 @@ import {
   User,
   Send,
   Info,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import * as XLSX from 'xlsx';
@@ -124,7 +126,2039 @@ const formatDateTime = (dateStr) => {
   return { date: dateFormatted, time: timeFormatted };
 };
 
-// Verify Payment Modal
+// Cash Payment Verification Modal - Detailed form for verifying cash payments
+const CashPaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) => {
+  const [currentStep, setCurrentStep] = useState(1); // 1: Payment Details, 2: Review & Confirm
+  const [formData, setFormData] = useState({
+    amountReceived: '',
+    receivedDate: new Date().toISOString().split('T')[0],
+    receivedById: '',
+    receivedBy: '',
+    paymentLocation: 'office',
+    receiptNumber: '',
+    notes: '',
+    verificationNotes: '',
+    rejectionReason: '',
+    action: 'verify' // 'verify' or 'reject'
+  });
+  const [employees, setEmployees] = useState([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const token = getAuthToken();
+
+  // Fetch employees on mount
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        setLoadingEmployees(true);
+        const response = await fetch(`${API_BASE}/api/staff`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+          setEmployees((result.data || []).filter(emp => emp.status === 'active'));
+        }
+      } catch (err) {
+        console.error('Error fetching employees:', err);
+      } finally {
+        setLoadingEmployees(false);
+      }
+    };
+    if (isOpen) fetchEmployees();
+  }, [isOpen, token]);
+
+  // Initialize form data when payment changes
+  useEffect(() => {
+    if (payment) {
+      setFormData(prev => ({
+        ...prev,
+        amountReceived: (parseFloat(payment.amount) || 0).toFixed(2),
+        receivedDate: payment.paymentDate ? new Date(payment.paymentDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        receiptNumber: payment.transactionId || payment.referenceNumber || '',
+        receivedBy: payment.receivedByName || '',
+        action: 'verify'
+      }));
+      setCurrentStep(1);
+      setError('');
+    }
+  }, [payment]);
+
+  const handleNextStep = () => {
+    // Validate step 1
+    if (!formData.amountReceived || parseFloat(formData.amountReceived) <= 0) {
+      setError('Please enter the amount received');
+      return;
+    }
+    if (!formData.receivedDate) {
+      setError('Please select the date when payment was received');
+      return;
+    }
+    if (!formData.receivedById && !formData.receivedBy) {
+      setError('Please select or enter who received the payment');
+      return;
+    }
+    setError('');
+    setCurrentStep(2);
+  };
+
+  const handleSubmit = async () => {
+    if (formData.action === 'reject' && !formData.rejectionReason) {
+      setError('Please provide a reason for rejection');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_BASE}/api/payments/${payment.id}/verify`, {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: formData.action === 'verify' ? 'paid' : 'failed',
+          amountReceived: formData.amountReceived,
+          receivedDate: formData.receivedDate,
+          receivedById: formData.receivedById,
+          receivedBy: formData.receivedBy,
+          paymentLocation: formData.paymentLocation,
+          receiptNumber: formData.receiptNumber,
+          verificationNotes: formData.notes || formData.verificationNotes,
+          rejectionReason: formData.rejectionReason
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        onSuccess();
+        onClose();
+      } else {
+        setError(result.message || 'Failed to update payment');
+      }
+    } catch (err) {
+      setError('Failed to update payment status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen || !payment) return null;
+
+  const method = PAYMENT_METHODS[payment.paymentMethod] || PAYMENT_METHODS.other;
+  const MethodIcon = method.icon;
+  
+  // Calculate days until due
+  const getDaysInfo = () => {
+    if (!payment.dueDate) return null;
+    const today = new Date();
+    const due = new Date(payment.dueDate);
+    const diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+    return { days: Math.abs(diffDays), isOverdue: diffDays < 0 };
+  };
+  const daysInfo = getDaysInfo();
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
+          <div className="flex items-center gap-3">
+            <button onClick={currentStep > 1 ? () => setCurrentStep(1) : onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Cash Payment</h2>
+              <p className="text-sm text-gray-500">Provide cash payment details and mark as complete</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+
+        {/* Invoice Summary Bar */}
+        <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="grid grid-cols-4 gap-8">
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice ID</p>
+                <p className="font-semibold text-blue-600 mt-1">{payment.invoiceId || payment.paymentId}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Customer</p>
+                <p className="font-medium text-gray-900 mt-1">{payment.customerName || payment.propertyName || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice Date</p>
+                <p className="font-medium text-gray-900 mt-1">{formatDateDisplay(payment.invoiceDate || payment.createdAt)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Due Date</p>
+                <p className={`font-medium mt-1 ${daysInfo?.isOverdue ? 'text-red-600' : 'text-green-600'}`}>
+                  {formatDateDisplay(payment.dueDate) || '-'}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Amount Payable</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrencyShort(payment.amount)}</p>
+              {daysInfo && (
+                <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs mt-1 ${daysInfo.isOverdue ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                  <Clock className="w-3 h-3" />
+                  {daysInfo.isOverdue ? `Overdue by ${daysInfo.days} days` : `Due in ${daysInfo.days} days`}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Step Progress */}
+        <div className="flex items-center justify-center gap-4 py-4 bg-white border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-900">Select Payment Method</p>
+              <p className="text-xs text-gray-500">{method.label}</p>
+            </div>
+          </div>
+          <div className={`w-12 h-0.5 ${currentStep >= 1 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+          <div className="flex items-center gap-2">
+            {currentStep > 1 ? (
+              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-white" />
+              </div>
+            ) : (
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${currentStep === 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>2</div>
+            )}
+            <div>
+              <p className={`text-sm font-medium ${currentStep >= 1 ? 'text-gray-900' : 'text-gray-400'}`}>Payment Details</p>
+              <p className="text-xs text-gray-500">Enter payment information</p>
+            </div>
+          </div>
+          <div className={`w-12 h-0.5 ${currentStep > 1 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${currentStep === 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>3</div>
+            <div>
+              <p className={`text-sm font-medium ${currentStep === 2 ? 'text-gray-900' : 'text-gray-400'}`}>Review & Confirm</p>
+              <p className="text-xs text-gray-500">Review and complete payment</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto max-h-[calc(95vh-320px)]">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+              <p className="text-red-700 text-sm">{error}</p>
+              <button onClick={() => setError('')} className="ml-auto"><X className="w-4 h-4 text-red-600" /></button>
+            </div>
+          )}
+
+          {/* Step 1: Payment Details */}
+          {currentStep === 1 && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Cash Payment Details</h3>
+              <p className="text-sm text-gray-500 mb-6">Enter the cash payment information below</p>
+              
+              <div className="grid grid-cols-3 gap-6">
+                {/* Left Column - Form Fields */}
+                <div className="col-span-2 space-y-5">
+                  {/* Amount Received & Received Date Row */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount Received <span className="text-red-500">*</span></label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
+                        <input 
+                          type="text" 
+                          value={formData.amountReceived} 
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/[^0-9.]/g, '');
+                            setFormData(prev => ({ ...prev, amountReceived: value }));
+                          }}
+                          className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                          placeholder="15,000.00" 
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Received Date <span className="text-red-500">*</span></label>
+                      <input 
+                        type="date" 
+                        value={formData.receivedDate} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, receivedDate: e.target.value }))}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Received By & Payment Location Row */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Received By <span className="text-red-500">*</span></label>
+                      <div className="relative">
+                        <select
+                          value={formData.receivedById}
+                          onChange={(e) => {
+                            const selectedEmp = employees.find(emp => emp.id === parseInt(e.target.value));
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              receivedById: e.target.value,
+                              receivedBy: selectedEmp ? `${selectedEmp.firstName || ''} ${selectedEmp.lastName || ''}`.trim() : ''
+                            }));
+                          }}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+                        >
+                          <option value="">Select Staff / Employee</option>
+                          {loadingEmployees ? (
+                            <option disabled>Loading employees...</option>
+                          ) : (
+                            employees.map(emp => (
+                              <option key={emp.id} value={emp.id}>
+                                {emp.firstName || ''} {emp.lastName || ''} ({emp.userId || emp.role || 'Staff'})
+                              </option>
+                            ))
+                          )}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Payment Location <span className="text-red-500">*</span></label>
+                      <div className="space-y-2 mt-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name="paymentLocation" 
+                            value="office" 
+                            checked={formData.paymentLocation === 'office'} 
+                            onChange={(e) => setFormData(prev => ({ ...prev, paymentLocation: e.target.value }))}
+                            className="w-4 h-4 text-blue-600"
+                          />
+                          <span className="text-sm text-gray-700">Office / Collection Point</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name="paymentLocation" 
+                            value="property_site" 
+                            checked={formData.paymentLocation === 'property_site'} 
+                            onChange={(e) => setFormData(prev => ({ ...prev, paymentLocation: e.target.value }))}
+                            className="w-4 h-4 text-blue-600"
+                          />
+                          <span className="text-sm text-gray-700">At Property Site</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Receipt / Reference No. */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Receipt / Reference No.</label>
+                    <input 
+                      type="text" 
+                      value={formData.receiptNumber} 
+                      onChange={(e) => setFormData(prev => ({ ...prev, receiptNumber: e.target.value }))}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                      placeholder="Enter receipt or reference number" 
+                    />
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Notes (Optional)</label>
+                    <textarea 
+                      value={formData.notes} 
+                      onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none" 
+                      rows={3} 
+                      placeholder="Add any additional notes about this payment..." 
+                    />
+                  </div>
+                </div>
+
+                {/* Right Column - Info Cards */}
+                <div className="space-y-4">
+                  {/* Cash Payment Info Card */}
+                  <div className="border border-green-200 rounded-xl p-5 bg-green-50/50">
+                    <div className="flex items-start gap-3">
+                      <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <Banknote className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Cash Payment</h4>
+                        <p className="text-sm text-green-600 font-medium">No Additional Charges</p>
+                        <p className="text-xs text-gray-500 mt-2">Collect cash from the customer and record the payment details.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Important Reminders Card */}
+                  <div className="border border-amber-200 rounded-xl p-5 bg-amber-50/50">
+                    <h4 className="font-semibold text-amber-800 mb-3">Important Reminders</h4>
+                    <ul className="space-y-2.5">
+                      <li className="flex items-start gap-2 text-sm text-gray-700">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Count and verify the cash amount before saving</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-700">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Provide a receipt to the customer</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-700">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Keep the cash in the safe / cash box</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-700">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Update the payment status after collection</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Notice */}
+              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-3">
+                <Info className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                <p className="text-sm text-blue-700">After saving, the payment will be marked as "Verification Pending".</p>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Review & Confirm */}
+          {currentStep === 2 && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Review Payment Information</h3>
+                <button onClick={() => setCurrentStep(1)} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50">
+                  <Edit className="w-4 h-4" /> Edit
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                {/* Payment Details Card */}
+                <div className="bg-white rounded-xl border border-gray-200 p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Receipt className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900">Payment Details</h4>
+                  </div>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Amount Received</span>
+                      <span className="font-semibold text-gray-900">{formatCurrencyShort(formData.amountReceived)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Received Date</span>
+                      <span className="font-medium text-gray-900">{formatDateDisplay(formData.receivedDate)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Received By</span>
+                      <span className="font-medium text-gray-900">{formData.receivedBy || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Payment Location</span>
+                      <span className="font-medium text-gray-900">{formData.paymentLocation === 'office' ? 'Office / Collection Point' : 'At Property Site'}</span>
+                    </div>
+                    {formData.receiptNumber && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Receipt / Ref No.</span>
+                        <span className="font-medium text-gray-900 font-mono">{formData.receiptNumber}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Verification Action Card */}
+                <div className="bg-white rounded-xl border border-gray-200 p-5">
+                  <h4 className="font-semibold text-gray-900 mb-4">Verification Action</h4>
+                  <div className="space-y-3">
+                    <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      formData.action === 'verify' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}>
+                      <input type="radio" name="action" value="verify" checked={formData.action === 'verify'} onChange={(e) => setFormData(prev => ({ ...prev, action: e.target.value }))} className="sr-only" />
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.action === 'verify' ? 'border-green-500' : 'border-gray-300'}`}>
+                        {formData.action === 'verify' && <div className="w-2.5 h-2.5 rounded-full bg-green-500" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">Verify & Mark as Paid</p>
+                        <p className="text-xs text-gray-500">Payment verified successfully</p>
+                      </div>
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                    </label>
+
+                    <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      formData.action === 'reject' ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}>
+                      <input type="radio" name="action" value="reject" checked={formData.action === 'reject'} onChange={(e) => setFormData(prev => ({ ...prev, action: e.target.value }))} className="sr-only" />
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.action === 'reject' ? 'border-red-500' : 'border-gray-300'}`}>
+                        {formData.action === 'reject' && <div className="w-2.5 h-2.5 rounded-full bg-red-500" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">Reject Payment</p>
+                        <p className="text-xs text-gray-500">Payment could not be verified</p>
+                      </div>
+                      <XCircle className="w-5 h-5 text-red-500" />
+                    </label>
+
+                    {formData.action === 'reject' && (
+                      <div className="mt-3">
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Rejection Reason *</label>
+                        <textarea
+                          value={formData.rejectionReason}
+                          onChange={(e) => setFormData(prev => ({ ...prev, rejectionReason: e.target.value }))}
+                          rows={2}
+                          placeholder="Please provide a reason..."
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {formData.notes && (
+                <div className="mt-4 bg-gray-50 rounded-xl p-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Notes</h4>
+                  <p className="text-sm text-gray-600">{formData.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t bg-gray-50 flex items-center justify-between">
+          <button 
+            onClick={currentStep > 1 ? () => setCurrentStep(1) : onClose} 
+            className="flex items-center gap-2 px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-white"
+          >
+            <ChevronLeft className="w-4 h-4" /> Back
+          </button>
+          
+          {currentStep === 1 ? (
+            <button 
+              onClick={handleNextStep}
+              className="flex items-center gap-4 px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow-lg shadow-blue-600/20"
+            >
+              <div className="text-left">
+                <p className="font-semibold">Review Payment</p>
+                <p className="text-xs text-blue-100">Review and confirm payment details</p>
+              </div>
+              <ChevronRightIcon className="w-5 h-5" />
+            </button>
+          ) : (
+            <button 
+              onClick={handleSubmit}
+              disabled={loading}
+              className={`flex items-center gap-2 px-8 py-2.5 rounded-lg font-medium shadow-lg ${
+                formData.action === 'verify' 
+                  ? 'bg-green-600 text-white hover:bg-green-700 shadow-green-600/20' 
+                  : 'bg-red-600 text-white hover:bg-red-700 shadow-red-600/20'
+              }`}
+            >
+              {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : (formData.action === 'verify' ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />)}
+              {formData.action === 'verify' ? 'Verify & Complete Payment' : 'Reject Payment'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Cheque Payment Verification Modal - Detailed form for verifying cheque payments
+const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) => {
+  const [currentStep, setCurrentStep] = useState(1); // 1: Payment Details, 2: Review & Confirm
+  const [formData, setFormData] = useState({
+    checkNumber: '',
+    checkDate: new Date().toISOString().split('T')[0],
+    bankName: '',
+    branchName: '',
+    payeeName: 'XLAND INFRA PM SERVICES PVT LTD',
+    amountReceived: '',
+    receivedById: '',
+    receivedBy: '',
+    paymentLocation: 'office',
+    notes: '',
+    verificationNotes: '',
+    rejectionReason: '',
+    action: 'verify' // 'verify' or 'reject'
+  });
+  const [employees, setEmployees] = useState([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const token = getAuthToken();
+
+  // Bank list for dropdown
+  const banks = [
+    'State Bank of India',
+    'HDFC Bank',
+    'ICICI Bank',
+    'Axis Bank',
+    'Punjab National Bank',
+    'Bank of Baroda',
+    'Canara Bank',
+    'Union Bank of India',
+    'Indian Bank',
+    'Bank of India',
+    'Central Bank of India',
+    'Indian Overseas Bank',
+    'UCO Bank',
+    'IDBI Bank',
+    'Kotak Mahindra Bank',
+    'IndusInd Bank',
+    'Yes Bank',
+    'Federal Bank',
+    'South Indian Bank',
+    'Karur Vysya Bank',
+    'Other'
+  ];
+
+  // Fetch employees on mount
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        setLoadingEmployees(true);
+        const response = await fetch(`${API_BASE}/api/staff`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+          setEmployees((result.data || []).filter(emp => emp.status === 'active'));
+        }
+      } catch (err) {
+        console.error('Error fetching employees:', err);
+      } finally {
+        setLoadingEmployees(false);
+      }
+    };
+    if (isOpen) fetchEmployees();
+  }, [isOpen, token]);
+
+  // Initialize form data when payment changes
+  useEffect(() => {
+    if (payment) {
+      setFormData(prev => ({
+        ...prev,
+        amountReceived: (parseFloat(payment.amount) || 0).toFixed(2),
+        checkDate: payment.paymentDate ? new Date(payment.paymentDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        checkNumber: payment.transactionId || payment.referenceNumber || '',
+        receivedBy: payment.receivedByName || '',
+        action: 'verify'
+      }));
+      setCurrentStep(1);
+      setError('');
+    }
+  }, [payment]);
+
+  const handleNextStep = () => {
+    // Validate step 1
+    if (!formData.checkNumber) {
+      setError('Please enter the cheque number');
+      return;
+    }
+    if (!formData.checkDate) {
+      setError('Please select the cheque date');
+      return;
+    }
+    if (!formData.bankName) {
+      setError('Please select the bank name');
+      return;
+    }
+    if (!formData.payeeName) {
+      setError('Please enter the payee name');
+      return;
+    }
+    if (!formData.amountReceived || parseFloat(formData.amountReceived) <= 0) {
+      setError('Please enter the cheque amount');
+      return;
+    }
+    if (!formData.receivedById && !formData.receivedBy) {
+      setError('Please select who received the cheque');
+      return;
+    }
+    setError('');
+    setCurrentStep(2);
+  };
+
+  const handleSubmit = async () => {
+    if (formData.action === 'reject' && !formData.rejectionReason) {
+      setError('Please provide a reason for rejection');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_BASE}/api/payments/${payment.id}/verify`, {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: formData.action === 'verify' ? 'paid' : 'failed',
+          paymentMethod: 'cheque',
+          checkNumber: formData.checkNumber,
+          checkDate: formData.checkDate,
+          bankName: formData.bankName,
+          branchName: formData.branchName,
+          payeeName: formData.payeeName,
+          amountReceived: formData.amountReceived,
+          receivedById: formData.receivedById,
+          receivedBy: formData.receivedBy,
+          paymentLocation: formData.paymentLocation,
+          verificationNotes: formData.notes || formData.verificationNotes,
+          rejectionReason: formData.rejectionReason
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        onSuccess();
+        onClose();
+      } else {
+        setError(result.message || 'Failed to update payment');
+      }
+    } catch (err) {
+      setError('Failed to update payment status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen || !payment) return null;
+
+  const method = PAYMENT_METHODS[payment.paymentMethod] || PAYMENT_METHODS.check;
+  
+  // Calculate days until due
+  const getDaysInfo = () => {
+    if (!payment.dueDate) return null;
+    const today = new Date();
+    const due = new Date(payment.dueDate);
+    const diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+    return { days: Math.abs(diffDays), isOverdue: diffDays < 0 };
+  };
+  const daysInfo = getDaysInfo();
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
+          <div className="flex items-center gap-3">
+            <button onClick={currentStep > 1 ? () => setCurrentStep(1) : onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Cheque Payment</h2>
+              <p className="text-sm text-gray-500">Provide check payment details and mark as complete</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+
+        {/* Invoice Summary Bar */}
+        <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="grid grid-cols-4 gap-8">
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice ID</p>
+                <p className="font-semibold text-blue-600 mt-1">{payment.invoiceId || payment.paymentId}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Customer</p>
+                <p className="font-medium text-gray-900 mt-1">{payment.customerName || payment.propertyName || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice Date</p>
+                <p className="font-medium text-gray-900 mt-1">{formatDateDisplay(payment.invoiceDate || payment.createdAt)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Due Date</p>
+                <p className={`font-medium mt-1 ${daysInfo?.isOverdue ? 'text-red-600' : 'text-green-600'}`}>
+                  {formatDateDisplay(payment.dueDate) || '-'}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Amount Payable</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrencyShort(payment.amount)}</p>
+              {daysInfo && (
+                <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs mt-1 ${daysInfo.isOverdue ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                  <Clock className="w-3 h-3" />
+                  {daysInfo.isOverdue ? `Overdue by ${daysInfo.days} days` : `Due in ${daysInfo.days} days`}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Step Progress */}
+        <div className="flex items-center justify-center gap-4 py-4 bg-white border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-900">Select Payment Method</p>
+              <p className="text-xs text-gray-500">Cheque</p>
+            </div>
+          </div>
+          <div className={`w-12 h-0.5 ${currentStep >= 1 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+          <div className="flex items-center gap-2">
+            {currentStep > 1 ? (
+              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-white" />
+              </div>
+            ) : (
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${currentStep === 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>2</div>
+            )}
+            <div>
+              <p className={`text-sm font-medium ${currentStep >= 1 ? 'text-gray-900' : 'text-gray-400'}`}>Payment Details</p>
+              <p className="text-xs text-gray-500">Enter check information</p>
+            </div>
+          </div>
+          <div className={`w-12 h-0.5 ${currentStep > 1 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${currentStep === 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>3</div>
+            <div>
+              <p className={`text-sm font-medium ${currentStep === 2 ? 'text-gray-900' : 'text-gray-400'}`}>Review & Confirm</p>
+              <p className="text-xs text-gray-500">Review and complete payment</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto max-h-[calc(95vh-320px)]">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+              <p className="text-red-700 text-sm">{error}</p>
+              <button onClick={() => setError('')} className="ml-auto"><X className="w-4 h-4 text-red-600" /></button>
+            </div>
+          )}
+
+          {/* Step 1: Cheque Payment Details */}
+          {currentStep === 1 && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Cheque Payment Details</h3>
+              <p className="text-sm text-gray-500 mb-6">Enter the check payment information below</p>
+              
+              <div className="grid grid-cols-3 gap-6">
+                {/* Left Column - Form Fields */}
+                <div className="col-span-2 space-y-5">
+                  {/* Cheque Number & Cheque Date Row */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Cheque Number <span className="text-red-500">*</span></label>
+                      <input 
+                        type="text" 
+                        value={formData.checkNumber} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, checkNumber: e.target.value }))}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                        placeholder="Enter check number" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Cheque Date <span className="text-red-500">*</span></label>
+                      <input 
+                        type="date" 
+                        value={formData.checkDate} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, checkDate: e.target.value }))}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Bank Name & Branch Name Row */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Bank Name <span className="text-red-500">*</span></label>
+                      <div className="relative">
+                        <select
+                          value={formData.bankName}
+                          onChange={(e) => setFormData(prev => ({ ...prev, bankName: e.target.value }))}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+                        >
+                          <option value="">Select Bank</option>
+                          {banks.map(bank => (
+                            <option key={bank} value={bank}>{bank}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Branch Name</label>
+                      <input 
+                        type="text" 
+                        value={formData.branchName} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, branchName: e.target.value }))}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                        placeholder="Enter branch name" 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Payee Name & Amount Row */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Payee Name <span className="text-red-500">*</span></label>
+                      <input 
+                        type="text" 
+                        value={formData.payeeName} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, payeeName: e.target.value }))}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                        placeholder="Enter payee name" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount (₹) <span className="text-red-500">*</span></label>
+                      <input 
+                        type="text" 
+                        value={formData.amountReceived} 
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^0-9.]/g, '');
+                          setFormData(prev => ({ ...prev, amountReceived: value }));
+                        }}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                        placeholder="15,000.00" 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Received By & Payment Location Row */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Received By <span className="text-red-500">*</span></label>
+                      <div className="relative">
+                        <select
+                          value={formData.receivedById}
+                          onChange={(e) => {
+                            const selectedEmp = employees.find(emp => emp.id === parseInt(e.target.value));
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              receivedById: e.target.value,
+                              receivedBy: selectedEmp ? `${selectedEmp.firstName || ''} ${selectedEmp.lastName || ''}`.trim() : ''
+                            }));
+                          }}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+                        >
+                          <option value="">Select Staff / Employee</option>
+                          {loadingEmployees ? (
+                            <option disabled>Loading employees...</option>
+                          ) : (
+                            employees.map(emp => (
+                              <option key={emp.id} value={emp.id}>
+                                {emp.firstName || ''} {emp.lastName || ''} ({emp.userId || emp.role || 'Staff'})
+                              </option>
+                            ))
+                          )}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Payment Location <span className="text-red-500">*</span></label>
+                      <div className="space-y-2 mt-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name="chequePaymentLocation" 
+                            value="office" 
+                            checked={formData.paymentLocation === 'office'} 
+                            onChange={(e) => setFormData(prev => ({ ...prev, paymentLocation: e.target.value }))}
+                            className="w-4 h-4 text-blue-600"
+                          />
+                          <span className="text-sm text-gray-700">Office / Collection Point</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name="chequePaymentLocation" 
+                            value="property_site" 
+                            checked={formData.paymentLocation === 'property_site'} 
+                            onChange={(e) => setFormData(prev => ({ ...prev, paymentLocation: e.target.value }))}
+                            className="w-4 h-4 text-blue-600"
+                          />
+                          <span className="text-sm text-gray-700">At Property Site</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Notes (Optional)</label>
+                    <textarea 
+                      value={formData.notes} 
+                      onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none" 
+                      rows={3} 
+                      placeholder="Add any additional notes about this payment..." 
+                    />
+                  </div>
+                </div>
+
+                {/* Right Column - Info Cards */}
+                <div className="space-y-4">
+                  {/* Cheque Payment Info Card */}
+                  <div className="border border-purple-200 rounded-xl p-5 bg-purple-50/50">
+                    <div className="flex items-start gap-3">
+                      <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <FileCheck className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Cheque Payment</h4>
+                        <p className="text-sm text-purple-600 font-medium">No Additional Charges</p>
+                        <p className="text-xs text-gray-500 mt-2">We will deposit the check and update the payment status once it is cleared.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Important Reminders Card */}
+                  <div className="border border-amber-200 rounded-xl p-5 bg-amber-50/50">
+                    <h4 className="font-semibold text-amber-800 mb-3">Important Reminders</h4>
+                    <ul className="space-y-2.5">
+                      <li className="flex items-start gap-2 text-sm text-gray-700">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Ensure the check is valid and not expired</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-700">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Write the correct payee name</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-700">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Post-dated checks will be cleared on the given date</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-700">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Payment status will be updated after check clearance</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Notice */}
+              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-3">
+                <Info className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                <p className="text-sm text-blue-700">After saving, the payment will be marked as "Verification Pending" until the check is cleared.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Review & Confirm */}
+          {currentStep === 2 && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Review Cheque Payment Information</h3>
+                <button onClick={() => setCurrentStep(1)} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50">
+                  <Edit className="w-4 h-4" /> Edit
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                {/* Check Details Card */}
+                <div className="bg-white rounded-xl border border-gray-200 p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <FileCheck className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900">Check Details</h4>
+                  </div>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Cheque Number</span>
+                      <span className="font-semibold text-gray-900 font-mono">{formData.checkNumber}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Cheque Date</span>
+                      <span className="font-medium text-gray-900">{formatDateDisplay(formData.checkDate)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Bank Name</span>
+                      <span className="font-medium text-gray-900">{formData.bankName}</span>
+                    </div>
+                    {formData.branchName && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Branch Name</span>
+                        <span className="font-medium text-gray-900">{formData.branchName}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Payee Name</span>
+                      <span className="font-medium text-gray-900">{formData.payeeName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Amount</span>
+                      <span className="font-semibold text-gray-900">{formatCurrencyShort(formData.amountReceived)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Collection Details & Action Card */}
+                <div className="space-y-4">
+                  <div className="bg-white rounded-xl border border-gray-200 p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Receipt className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">Collection Details</h4>
+                    </div>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Received By</span>
+                        <span className="font-medium text-gray-900">{formData.receivedBy || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Payment Location</span>
+                        <span className="font-medium text-gray-900">{formData.paymentLocation === 'office' ? 'Office / Collection Point' : 'At Property Site'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Verification Action */}
+                  <div className="bg-white rounded-xl border border-gray-200 p-5">
+                    <h4 className="font-semibold text-gray-900 mb-4">Verification Action</h4>
+                    <div className="space-y-3">
+                      <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        formData.action === 'verify' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
+                      }`}>
+                        <input type="radio" name="chequeAction" value="verify" checked={formData.action === 'verify'} onChange={(e) => setFormData(prev => ({ ...prev, action: e.target.value }))} className="sr-only" />
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.action === 'verify' ? 'border-green-500' : 'border-gray-300'}`}>
+                          {formData.action === 'verify' && <div className="w-2.5 h-2.5 rounded-full bg-green-500" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">Verify & Mark as Paid</p>
+                          <p className="text-xs text-gray-500">Check cleared successfully</p>
+                        </div>
+                        <CheckCircle className="w-5 h-5 text-green-500" />
+                      </label>
+
+                      <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        formData.action === 'reject' ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                      }`}>
+                        <input type="radio" name="chequeAction" value="reject" checked={formData.action === 'reject'} onChange={(e) => setFormData(prev => ({ ...prev, action: e.target.value }))} className="sr-only" />
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.action === 'reject' ? 'border-red-500' : 'border-gray-300'}`}>
+                          {formData.action === 'reject' && <div className="w-2.5 h-2.5 rounded-full bg-red-500" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">Reject / Check Bounced</p>
+                          <p className="text-xs text-gray-500">Check could not be cleared</p>
+                        </div>
+                        <XCircle className="w-5 h-5 text-red-500" />
+                      </label>
+
+                      {formData.action === 'reject' && (
+                        <div className="mt-3">
+                          <label className="block text-sm font-medium text-gray-700 mb-1.5">Rejection Reason *</label>
+                          <textarea
+                            value={formData.rejectionReason}
+                            onChange={(e) => setFormData(prev => ({ ...prev, rejectionReason: e.target.value }))}
+                            rows={2}
+                            placeholder="Please provide a reason (e.g., Cheque bounced, signature mismatch)..."
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {formData.notes && (
+                <div className="mt-4 bg-gray-50 rounded-xl p-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Notes</h4>
+                  <p className="text-sm text-gray-600">{formData.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t bg-gray-50 flex items-center justify-between">
+          <button 
+            onClick={currentStep > 1 ? () => setCurrentStep(1) : onClose} 
+            className="flex items-center gap-2 px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-white"
+          >
+            <ChevronLeft className="w-4 h-4" /> Back
+          </button>
+          
+          {currentStep === 1 ? (
+            <button 
+              onClick={handleNextStep}
+              className="flex items-center gap-2 px-8 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow-lg shadow-blue-600/20"
+            >
+              Review Payment <ChevronRightIcon className="w-4 h-4" />
+            </button>
+          ) : (
+            <button 
+              onClick={handleSubmit}
+              disabled={loading}
+              className={`flex items-center gap-2 px-8 py-2.5 rounded-lg font-medium shadow-lg ${
+                formData.action === 'verify' 
+                  ? 'bg-green-600 text-white hover:bg-green-700 shadow-green-600/20' 
+                  : 'bg-red-600 text-white hover:bg-red-700 shadow-red-600/20'
+              }`}
+            >
+              {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : (formData.action === 'verify' ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />)}
+              {formData.action === 'verify' ? 'Verify & Complete Payment' : 'Reject Payment'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Bank Transfer Payment Verification Modal - Detailed form for verifying bank transfer payments
+const BankTransferVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) => {
+  const [currentStep, setCurrentStep] = useState(1); // 1: Payment Details, 2: Review & Confirm
+  const [formData, setFormData] = useState({
+    amountReceived: '',
+    transferDate: new Date().toISOString().split('T')[0],
+    utrNumber: '',
+    senderBankName: '',
+    senderAccountNumber: '',
+    receivedById: '',
+    receivedBy: '',
+    paymentProof: null,
+    paymentProofPreview: null,
+    notes: '',
+    verificationNotes: '',
+    rejectionReason: '',
+    action: 'verify' // 'verify' or 'reject'
+  });
+  const [employees, setEmployees] = useState([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [copied, setCopied] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+  const token = getAuthToken();
+
+  // Bank account details (company's receiving account)
+  const bankDetails = {
+    accountHolderName: 'XLAND INFRA PM SERVICES PVT LTD',
+    bankName: 'HDFC Bank',
+    accountNumber: '50200012345678',
+    ifscCode: 'HDFC0001234',
+    accountType: 'Current Account',
+    branch: 'Gachibowli, Hyderabad'
+  };
+
+  // Generate reference number
+  const generateReferenceNumber = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `XLAND${year}${month}${day}${random}`;
+  };
+
+  const [referenceNumber] = useState(generateReferenceNumber);
+
+  // Fetch employees on mount
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        setLoadingEmployees(true);
+        const response = await fetch(`${API_BASE}/api/staff`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+          setEmployees((result.data || []).filter(emp => emp.status === 'active'));
+        }
+      } catch (err) {
+        console.error('Error fetching employees:', err);
+      } finally {
+        setLoadingEmployees(false);
+      }
+    };
+    if (isOpen) fetchEmployees();
+  }, [isOpen, token]);
+
+  // Initialize form data when payment changes
+  useEffect(() => {
+    if (payment) {
+      setFormData(prev => ({
+        ...prev,
+        amountReceived: (parseFloat(payment.amount) || 0).toFixed(2),
+        transferDate: payment.paymentDate ? new Date(payment.paymentDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        utrNumber: payment.transactionId || payment.referenceNumber || '',
+        receivedBy: payment.receivedByName || '',
+        action: 'verify',
+        paymentProof: null,
+        paymentProofPreview: null
+      }));
+      setCurrentStep(1);
+      setError('');
+    }
+  }, [payment]);
+
+  const copyToClipboard = (text, field) => {
+    navigator.clipboard.writeText(text);
+    setCopied(field);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Invalid file type. Please upload JPG, PNG, or PDF.');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File size too large. Maximum 5MB allowed.');
+      return;
+    }
+
+    setError('');
+    
+    // Create preview for images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setFormData(prev => ({
+          ...prev,
+          paymentProof: file,
+          paymentProofPreview: e.target.result
+        }));
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        paymentProof: file,
+        paymentProofPreview: 'pdf'
+      }));
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      const input = fileInputRef.current;
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      input.files = dataTransfer.files;
+      handleFileSelect({ target: { files: [file] } });
+    }
+  };
+
+  const handleNextStep = () => {
+    // Validate step 1
+    if (!formData.amountReceived || parseFloat(formData.amountReceived) <= 0) {
+      setError('Please enter the transfer amount');
+      return;
+    }
+    if (!formData.transferDate) {
+      setError('Please select the transfer date');
+      return;
+    }
+    if (!formData.utrNumber) {
+      setError('Please enter the UTR/Transaction number');
+      return;
+    }
+    if (!formData.receivedById && !formData.receivedBy) {
+      setError('Please select who verified this transfer');
+      return;
+    }
+    setError('');
+    setCurrentStep(2);
+  };
+
+  const handleSubmit = async () => {
+    if (formData.action === 'reject' && !formData.rejectionReason) {
+      setError('Please provide a reason for rejection');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      // If there's a payment proof, upload it first
+      let paymentProofUrl = null;
+      if (formData.paymentProof) {
+        setUploading(true);
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', formData.paymentProof);
+        uploadFormData.append('type', 'payment_proof');
+        
+        const uploadResponse = await fetch(`${API_BASE}/api/upload`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: uploadFormData
+        });
+        
+        const uploadResult = await uploadResponse.json();
+        if (uploadResult.success) {
+          paymentProofUrl = uploadResult.url || uploadResult.data?.url;
+        }
+        setUploading(false);
+      }
+
+      const response = await fetch(`${API_BASE}/api/payments/${payment.id}/verify`, {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: formData.action === 'verify' ? 'paid' : 'failed',
+          paymentMethod: 'bank_transfer',
+          amountReceived: formData.amountReceived,
+          receivedDate: formData.transferDate,
+          receivedById: formData.receivedById,
+          receivedBy: formData.receivedBy,
+          utrNumber: formData.utrNumber,
+          senderBankName: formData.senderBankName,
+          senderAccountNumber: formData.senderAccountNumber,
+          referenceNumber: referenceNumber,
+          paymentProof: paymentProofUrl,
+          verificationNotes: formData.notes || formData.verificationNotes,
+          rejectionReason: formData.rejectionReason
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        onSuccess();
+        onClose();
+      } else {
+        setError(result.message || 'Failed to update payment');
+      }
+    } catch (err) {
+      setError('Failed to update payment status');
+    } finally {
+      setLoading(false);
+      setUploading(false);
+    }
+  };
+
+  if (!isOpen || !payment) return null;
+
+  const method = PAYMENT_METHODS[payment.paymentMethod] || PAYMENT_METHODS.bank_transfer;
+  
+  // Calculate days until due
+  const getDaysInfo = () => {
+    if (!payment.dueDate) return null;
+    const today = new Date();
+    const due = new Date(payment.dueDate);
+    const diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+    return { days: Math.abs(diffDays), isOverdue: diffDays < 0 };
+  };
+  const daysInfo = getDaysInfo();
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
+          <div className="flex items-center gap-3">
+            <button onClick={currentStep > 1 ? () => setCurrentStep(1) : onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Bank Transfer Payment</h2>
+              <p className="text-sm text-gray-500">Verify bank transfer and complete payment</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+
+        {/* Invoice Summary Bar */}
+        <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="grid grid-cols-4 gap-8">
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice ID</p>
+                <p className="font-semibold text-blue-600 mt-1">{payment.invoiceId || payment.paymentId}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Customer</p>
+                <p className="font-medium text-gray-900 mt-1">{payment.customerName || payment.propertyName || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Invoice Date</p>
+                <p className="font-medium text-gray-900 mt-1">{formatDateDisplay(payment.invoiceDate || payment.createdAt)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Due Date</p>
+                <p className={`font-medium mt-1 ${daysInfo?.isOverdue ? 'text-red-600' : 'text-green-600'}`}>
+                  {formatDateDisplay(payment.dueDate) || '-'}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Amount Payable</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrencyShort(payment.amount)}</p>
+              {daysInfo && (
+                <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs mt-1 ${daysInfo.isOverdue ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                  <Clock className="w-3 h-3" />
+                  {daysInfo.isOverdue ? `Overdue by ${daysInfo.days} days` : `Due in ${daysInfo.days} days`}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Step Progress */}
+        <div className="flex items-center justify-center gap-4 py-4 bg-white border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-900">Select Payment Method</p>
+              <p className="text-xs text-gray-500">Bank Transfer</p>
+            </div>
+          </div>
+          <div className={`w-12 h-0.5 ${currentStep >= 1 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+          <div className="flex items-center gap-2">
+            {currentStep > 1 ? (
+              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-white" />
+              </div>
+            ) : (
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${currentStep === 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>2</div>
+            )}
+            <div>
+              <p className={`text-sm font-medium ${currentStep >= 1 ? 'text-gray-900' : 'text-gray-400'}`}>Payment Details</p>
+              <p className="text-xs text-gray-500">Enter bank transfer details</p>
+            </div>
+          </div>
+          <div className={`w-12 h-0.5 ${currentStep > 1 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${currentStep === 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>3</div>
+            <div>
+              <p className={`text-sm font-medium ${currentStep === 2 ? 'text-gray-900' : 'text-gray-400'}`}>Review & Confirm</p>
+              <p className="text-xs text-gray-500">Verify and complete payment</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto max-h-[calc(95vh-320px)]">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+              <p className="text-red-700 text-sm">{error}</p>
+              <button onClick={() => setError('')} className="ml-auto"><X className="w-4 h-4 text-red-600" /></button>
+            </div>
+          )}
+
+          {/* Step 1: Bank Transfer Details */}
+          {currentStep === 1 && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Bank Transfer Details</h3>
+              <p className="text-sm text-gray-500 mb-6">Verify the bank transfer information below</p>
+              
+              <div className="grid grid-cols-2 gap-6">
+                {/* Left Column - How it works + Bank Details */}
+                <div className="space-y-5">
+                  {/* How it works */}
+                  <div className="border border-blue-200 rounded-xl p-5 bg-blue-50/50">
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <Building2 className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">How it works?</h4>
+                      </div>
+                    </div>
+                    <ol className="space-y-2 text-sm text-gray-700 ml-2">
+                      <li className="flex items-start gap-2">
+                        <span className="font-semibold text-blue-600">1.</span>
+                        <span>Customer transfers amount to bank account</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-semibold text-blue-600">2.</span>
+                        <span>Verify the UTR/reference number in bank statement</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-semibold text-blue-600">3.</span>
+                        <span>Upload payment proof for records</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-semibold text-blue-600">4.</span>
+                        <span>Confirm and update payment status</span>
+                      </li>
+                    </ol>
+                    <div className="mt-4 pt-3 border-t border-blue-200 flex items-center gap-2 text-blue-700">
+                      <Info className="w-4 h-4" />
+                      <span className="text-sm font-medium">No additional charges for Bank Transfer</span>
+                    </div>
+                  </div>
+
+                  {/* Our Bank Account Details */}
+                  <div className="border border-gray-200 rounded-xl p-5 bg-white">
+                    <h4 className="font-semibold text-blue-700 mb-4">Our Bank Account Details</h4>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-start gap-3">
+                        <User className="w-4 h-4 text-gray-400 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-gray-500">Account Holder Name</p>
+                          <p className="font-semibold text-gray-900">{bankDetails.accountHolderName}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Building2 className="w-4 h-4 text-gray-400 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-gray-500">Bank Name</p>
+                          <p className="font-semibold text-gray-900">{bankDetails.bankName}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <CreditCard className="w-4 h-4 text-gray-400 mt-0.5" />
+                        <div className="flex-1 flex items-center justify-between">
+                          <div>
+                            <p className="text-gray-500">Account Number</p>
+                            <p className="font-semibold text-gray-900 font-mono">{bankDetails.accountNumber}</p>
+                          </div>
+                          <button onClick={() => copyToClipboard(bankDetails.accountNumber, 'account')} className="p-1 hover:bg-gray-100 rounded">
+                            {copied === 'account' ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-400" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <FileCheck className="w-4 h-4 text-gray-400 mt-0.5" />
+                        <div className="flex-1 flex items-center justify-between">
+                          <div>
+                            <p className="text-gray-500">IFSC Code</p>
+                            <p className="font-semibold text-gray-900 font-mono">{bankDetails.ifscCode}</p>
+                          </div>
+                          <button onClick={() => copyToClipboard(bankDetails.ifscCode, 'ifsc')} className="p-1 hover:bg-gray-100 rounded">
+                            {copied === 'ifsc' ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-400" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Receipt className="w-4 h-4 text-gray-400 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-gray-500">Account Type</p>
+                          <p className="font-semibold text-gray-900">{bankDetails.accountType}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Home className="w-4 h-4 text-gray-400 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-gray-500">Branch</p>
+                          <p className="font-semibold text-gray-900">{bankDetails.branch}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 pt-2 border-t border-gray-100">
+                        <FileText className="w-4 h-4 text-blue-500 mt-0.5" />
+                        <div className="flex-1 flex items-center justify-between">
+                          <div>
+                            <p className="text-gray-500">Reference / UTR Number</p>
+                            <p className="font-semibold text-blue-600 font-mono">{referenceNumber}</p>
+                          </div>
+                          <button onClick={() => copyToClipboard(referenceNumber, 'ref')} className="p-1 hover:bg-gray-100 rounded">
+                            {copied === 'ref' ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-400" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-700">Verify the UTR number matches the customer's bank transfer</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column - Transfer Details Form + Upload */}
+                <div className="space-y-5">
+                  {/* Transfer Details Form */}
+                  <div className="space-y-4">
+                    {/* Amount & Date Row */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount Received (₹) <span className="text-red-500">*</span></label>
+                        <input 
+                          type="text" 
+                          value={formData.amountReceived} 
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/[^0-9.]/g, '');
+                            setFormData(prev => ({ ...prev, amountReceived: value }));
+                          }}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                          placeholder="15,000.00" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Transfer Date <span className="text-red-500">*</span></label>
+                        <input 
+                          type="date" 
+                          value={formData.transferDate} 
+                          onChange={(e) => setFormData(prev => ({ ...prev, transferDate: e.target.value }))}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                        />
+                      </div>
+                    </div>
+
+                    {/* UTR Number */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">UTR / Transaction Number <span className="text-red-500">*</span></label>
+                      <input 
+                        type="text" 
+                        value={formData.utrNumber} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, utrNumber: e.target.value }))}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                        placeholder="Enter UTR or transaction reference number" 
+                      />
+                    </div>
+
+                    {/* Sender Bank Details */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Sender's Bank Name</label>
+                        <input 
+                          type="text" 
+                          value={formData.senderBankName} 
+                          onChange={(e) => setFormData(prev => ({ ...prev, senderBankName: e.target.value }))}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                          placeholder="E.g., HDFC Bank" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Sender's Account (Last 4 digits)</label>
+                        <input 
+                          type="text" 
+                          value={formData.senderAccountNumber} 
+                          onChange={(e) => setFormData(prev => ({ ...prev, senderAccountNumber: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) }))}
+                          maxLength={4}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                          placeholder="XXXX" 
+                        />
+                      </div>
+                    </div>
+
+                    {/* Verified By */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Verified By <span className="text-red-500">*</span></label>
+                      <div className="relative">
+                        <select
+                          value={formData.receivedById}
+                          onChange={(e) => {
+                            const selectedEmp = employees.find(emp => emp.id === parseInt(e.target.value));
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              receivedById: e.target.value,
+                              receivedBy: selectedEmp ? `${selectedEmp.firstName || ''} ${selectedEmp.lastName || ''}`.trim() : ''
+                            }));
+                          }}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+                        >
+                          <option value="">Select Staff / Employee</option>
+                          {loadingEmployees ? (
+                            <option disabled>Loading employees...</option>
+                          ) : (
+                            employees.map(emp => (
+                              <option key={emp.id} value={emp.id}>
+                                {emp.firstName || ''} {emp.lastName || ''} ({emp.userId || emp.role || 'Staff'})
+                              </option>
+                            ))
+                          )}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Upload Payment Proof */}
+                  <div className="border border-gray-200 rounded-xl p-5">
+                    <h4 className="font-semibold text-gray-900 mb-2">Upload Payment Proof</h4>
+                    <p className="text-xs text-gray-500 mb-4">Please upload the screenshot or receipt of the bank transfer</p>
+                    
+                    <div 
+                      className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <input 
+                        ref={fileInputRef}
+                        type="file" 
+                        accept=".jpg,.jpeg,.png,.pdf"
+                        onChange={handleFileSelect}
+                        className="hidden" 
+                      />
+                      
+                      {formData.paymentProofPreview ? (
+                        <div className="space-y-3">
+                          {formData.paymentProofPreview === 'pdf' ? (
+                            <div className="flex items-center justify-center gap-2 text-blue-600">
+                              <FileText className="w-8 h-8" />
+                              <span className="font-medium">{formData.paymentProof?.name}</span>
+                            </div>
+                          ) : (
+                            <img src={formData.paymentProofPreview} alt="Payment Proof" className="max-h-32 mx-auto rounded-lg border" />
+                          )}
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFormData(prev => ({ ...prev, paymentProof: null, paymentProofPreview: null }));
+                            }}
+                            className="text-sm text-red-600 hover:underline"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <Download className="w-8 h-8 text-gray-400 mx-auto mb-2 rotate-180" />
+                          <p className="text-sm text-gray-600 mb-2">Drag & drop your file here or</p>
+                          <span className="inline-block px-4 py-2 border border-blue-600 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50">
+                            Choose File
+                          </span>
+                          <p className="text-xs text-gray-400 mt-3">Supports: JPG, PNG, PDF (Max size: 5MB)</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Important Notes */}
+                  <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/50">
+                    <h4 className="font-semibold text-amber-800 mb-2">Important Notes</h4>
+                    <ul className="space-y-1.5 text-sm text-gray-700">
+                      <li className="flex items-start gap-2">
+                        <span className="text-amber-600">•</span>
+                        <span>Verify the exact amount matches the transfer</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-amber-600">•</span>
+                        <span>Cross-check UTR number with bank statement</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-amber-600">•</span>
+                        <span>Upload clear payment proof for records</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-amber-600">•</span>
+                        <span>Customer will receive confirmation once verified</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Notes (Optional)</label>
+                    <textarea 
+                      value={formData.notes} 
+                      onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none" 
+                      rows={2} 
+                      placeholder="Add any additional notes..." 
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Review & Confirm */}
+          {currentStep === 2 && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Review Bank Transfer Payment</h3>
+                <button onClick={() => setCurrentStep(1)} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50">
+                  <Edit className="w-4 h-4" /> Edit
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                {/* Transfer Details Card */}
+                <div className="bg-white rounded-xl border border-gray-200 p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <Building2 className="w-5 h-5 text-green-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900">Transfer Details</h4>
+                  </div>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Amount Received</span>
+                      <span className="font-semibold text-gray-900">{formatCurrencyShort(formData.amountReceived)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Transfer Date</span>
+                      <span className="font-medium text-gray-900">{formatDateDisplay(formData.transferDate)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">UTR / Transaction No.</span>
+                      <span className="font-semibold text-gray-900 font-mono">{formData.utrNumber}</span>
+                    </div>
+                    {formData.senderBankName && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Sender's Bank</span>
+                        <span className="font-medium text-gray-900">{formData.senderBankName}</span>
+                      </div>
+                    )}
+                    {formData.senderAccountNumber && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Sender's Account</span>
+                        <span className="font-medium text-gray-900">XXXX{formData.senderAccountNumber}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Verified By</span>
+                      <span className="font-medium text-gray-900">{formData.receivedBy || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Reference Number</span>
+                      <span className="font-medium text-blue-600 font-mono">{referenceNumber}</span>
+                    </div>
+                  </div>
+                  
+                  {formData.paymentProofPreview && (
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <p className="text-xs text-gray-500 mb-2">Payment Proof</p>
+                      {formData.paymentProofPreview === 'pdf' ? (
+                        <div className="flex items-center gap-2 text-blue-600 text-sm">
+                          <FileText className="w-5 h-5" />
+                          <span>{formData.paymentProof?.name}</span>
+                        </div>
+                      ) : (
+                        <img src={formData.paymentProofPreview} alt="Payment Proof" className="max-h-24 rounded-lg border" />
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Verification Action Card */}
+                <div className="space-y-4">
+                  <div className="bg-white rounded-xl border border-gray-200 p-5">
+                    <h4 className="font-semibold text-gray-900 mb-4">Verification Action</h4>
+                    <div className="space-y-3">
+                      <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        formData.action === 'verify' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
+                      }`}>
+                        <input type="radio" name="bankAction" value="verify" checked={formData.action === 'verify'} onChange={(e) => setFormData(prev => ({ ...prev, action: e.target.value }))} className="sr-only" />
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.action === 'verify' ? 'border-green-500' : 'border-gray-300'}`}>
+                          {formData.action === 'verify' && <div className="w-2.5 h-2.5 rounded-full bg-green-500" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">Verify & Mark as Paid</p>
+                          <p className="text-xs text-gray-500">Transfer verified successfully</p>
+                        </div>
+                        <CheckCircle className="w-5 h-5 text-green-500" />
+                      </label>
+
+                      <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        formData.action === 'reject' ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                      }`}>
+                        <input type="radio" name="bankAction" value="reject" checked={formData.action === 'reject'} onChange={(e) => setFormData(prev => ({ ...prev, action: e.target.value }))} className="sr-only" />
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.action === 'reject' ? 'border-red-500' : 'border-gray-300'}`}>
+                          {formData.action === 'reject' && <div className="w-2.5 h-2.5 rounded-full bg-red-500" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">Reject Payment</p>
+                          <p className="text-xs text-gray-500">Transfer could not be verified</p>
+                        </div>
+                        <XCircle className="w-5 h-5 text-red-500" />
+                      </label>
+
+                      {formData.action === 'reject' && (
+                        <div className="mt-3">
+                          <label className="block text-sm font-medium text-gray-700 mb-1.5">Rejection Reason *</label>
+                          <textarea
+                            value={formData.rejectionReason}
+                            onChange={(e) => setFormData(prev => ({ ...prev, rejectionReason: e.target.value }))}
+                            rows={2}
+                            placeholder="Please provide a reason (e.g., UTR not found, amount mismatch)..."
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {formData.notes && (
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Notes</h4>
+                      <p className="text-sm text-gray-600">{formData.notes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t bg-gray-50 flex items-center justify-between">
+          <button 
+            onClick={currentStep > 1 ? () => setCurrentStep(1) : onClose} 
+            className="flex items-center gap-2 px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-white"
+          >
+            <ChevronLeft className="w-4 h-4" /> Back
+          </button>
+          
+          {currentStep === 1 ? (
+            <button 
+              onClick={handleNextStep}
+              className="flex items-center gap-2 px-8 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow-lg shadow-blue-600/20"
+            >
+              Review Payment <ChevronRightIcon className="w-4 h-4" />
+            </button>
+          ) : (
+            <button 
+              onClick={handleSubmit}
+              disabled={loading || uploading}
+              className={`flex items-center gap-2 px-8 py-2.5 rounded-lg font-medium shadow-lg ${
+                formData.action === 'verify' 
+                  ? 'bg-green-600 text-white hover:bg-green-700 shadow-green-600/20' 
+                  : 'bg-red-600 text-white hover:bg-red-700 shadow-red-600/20'
+              }`}
+            >
+              {(loading || uploading) ? <RefreshCw className="w-4 h-4 animate-spin" /> : (formData.action === 'verify' ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />)}
+              {uploading ? 'Uploading...' : formData.action === 'verify' ? 'Verify & Complete Payment' : 'Reject Payment'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Simple Verify Payment Modal (for non-cash/non-cheque/non-bank-transfer payments)
 const VerifyPaymentModal = ({ isOpen, onClose, onSuccess, payment }) => {
   const [formData, setFormData] = useState({
     status: 'paid',
@@ -1442,18 +3476,63 @@ const Payments = ({ user, portalType = 'admin' }) => {
         )}
       </div>
 
-      <VerifyPaymentModal
-        isOpen={showVerifyModal}
-        onClose={() => {
-          setShowVerifyModal(false);
-          setSelectedPaymentForVerify(null);
-        }}
-        onSuccess={() => {
-          fetchPayments();
-          showToast('Payment status updated successfully!');
-        }}
-        payment={selectedPaymentForVerify}
-      />
+      {/* Use appropriate modal based on payment method */}
+      {selectedPaymentForVerify?.paymentMethod === 'cash' ? (
+        <CashPaymentVerifyModal
+          isOpen={showVerifyModal}
+          onClose={() => {
+            setShowVerifyModal(false);
+            setSelectedPaymentForVerify(null);
+          }}
+          onSuccess={() => {
+            fetchPayments();
+            showToast('Payment verified and marked as paid successfully!');
+          }}
+          payment={selectedPaymentForVerify}
+          user={user}
+        />
+      ) : ['check', 'cheque'].includes(selectedPaymentForVerify?.paymentMethod) ? (
+        <ChequePaymentVerifyModal
+          isOpen={showVerifyModal}
+          onClose={() => {
+            setShowVerifyModal(false);
+            setSelectedPaymentForVerify(null);
+          }}
+          onSuccess={() => {
+            fetchPayments();
+            showToast('Cheque payment verified successfully!');
+          }}
+          payment={selectedPaymentForVerify}
+          user={user}
+        />
+      ) : ['bank_transfer', 'bank'].includes(selectedPaymentForVerify?.paymentMethod) ? (
+        <BankTransferVerifyModal
+          isOpen={showVerifyModal}
+          onClose={() => {
+            setShowVerifyModal(false);
+            setSelectedPaymentForVerify(null);
+          }}
+          onSuccess={() => {
+            fetchPayments();
+            showToast('Bank transfer verified successfully!');
+          }}
+          payment={selectedPaymentForVerify}
+          user={user}
+        />
+      ) : (
+        <VerifyPaymentModal
+          isOpen={showVerifyModal}
+          onClose={() => {
+            setShowVerifyModal(false);
+            setSelectedPaymentForVerify(null);
+          }}
+          onSuccess={() => {
+            fetchPayments();
+            showToast('Payment status updated successfully!');
+          }}
+          payment={selectedPaymentForVerify}
+        />
+      )}
 
       <ReceiptModal
         isOpen={showReceiptModal}

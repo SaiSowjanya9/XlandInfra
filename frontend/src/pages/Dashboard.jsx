@@ -61,7 +61,7 @@ const Dashboard = ({ user }) => {
   const menuItems = [
     { path: '/dashboard/work-order', icon: ClipboardList, title: 'Work Order', description: 'Submit a new maintenance or repair request' },
     { path: '/dashboard/schedule', icon: Calendar, title: 'Schedules', description: 'View and manage your appointments', locked: true },
-    { path: '/dashboard/payment', icon: CreditCard, title: 'Payment', description: 'Make payments and view billing history', locked: true },
+    { path: '/dashboard/payment', icon: CreditCard, title: 'Payment', description: 'Make payments and view billing history' },
     { path: '/dashboard/contact', icon: HelpCircle, title: 'Contact / Help', description: 'Get support and contact information' },
   ];
 
@@ -138,6 +138,9 @@ const Dashboard = ({ user }) => {
             Welcome, <span className="text-gold-gradient">{user?.firstName}!</span>
           </h1>
           <p className="text-dark-300">Here's what's happening with your property today.</p>
+          {user?.propertyCode && (
+            <p className="text-dark-400 text-sm mt-1">Property ID: <span className="text-gold-400 font-medium">{user.propertyCode}</span></p>
+          )}
         </div>
         <button
           onClick={fetchDashboard}
@@ -170,7 +173,7 @@ const Dashboard = ({ user }) => {
             </div>
             <div>
               <p className="text-sm text-dark-300">Pending</p>
-              <p className="text-2xl font-bold text-white">{stats?.pending || 0}</p>
+              <p className="text-2xl font-bold text-white">{Number(stats?.pending) || 0}</p>
               <p className="text-xs text-dark-400">Awaiting Action</p>
             </div>
           </div>

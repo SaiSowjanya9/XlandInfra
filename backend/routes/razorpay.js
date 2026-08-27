@@ -1485,24 +1485,63 @@ router.post('/public/record-payment-intent', ipBlacklistMiddleware, async (req, 
     // Clear failed attempts on successful access
     req.ipBlacklist.clearFailed();
 
+    const invoice = invoices[0];
+
     // Log the payment intent
     console.log(`[Payment Intent] Invoice: ${invoiceId}, Method: ${paymentMethod}, Time: ${new Date().toISOString()}`);
 
-    // You could also create a record in a payment_intents table here
+    // For offline payments (cash, cheque, bank_transfer), create a payment record with verification_pending status
+    const offlineMethods = ['cash', 'cheque', 'check', 'bank_transfer', 'bank'];
+    const isOfflinePayment = offlineMethods.includes(paymentMethod?.toLowerCase());
+    
+    let referenceId = `OFF-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    let paymentRecordId = null;
+
+    if (isOfflinePayment) {
+      // Get full invoice details for property_id and amount
+      const [fullInvoice] = await pool.execute(
+        'SELECT id, property_id, total_amount, balance_amount FROM invoices WHERE id = ?',
+        [invoice.id]
+      );
+
+      if (fullInvoice.length > 0) {
+        const inv = fullInvoice[0];
+        const paymentAmount = parseFloat(inv.balance_amount) || parseFloat(inv.total_amount) || 0;
+
+        // Normalize payment method name
+        let normalizedMethod = paymentMethod.toLowerCase();
+        if (normalizedMethod === 'bank') normalizedMethod = 'bank_transfer';
+        if (normalizedMethod === 'check') normalizedMethod = 'cheque';
+
+        // Create payment record with verification_pending status
+        const [paymentResult] = await pool.execute(
+          `INSERT INTO payments (
+            invoice_id, property_id, amount, payment_method, payment_date,
+            transaction_id, status, remarks, created_at
+          ) VALUES (?, ?, ?, ?, NOW(), ?, 'verification_pending', 'Payment intent from Public Payment Link - Awaiting verification', NOW())`,
+          [inv.id, inv.property_id, paymentAmount, normalizedMethod, referenceId]
+        );
+        paymentRecordId = paymentResult.insertId;
+        console.log(`[Payment Record Created] ID: ${paymentRecordId}, Invoice: ${invoiceId}, Method: ${normalizedMethod}, Status: verification_pending`);
+      }
+    }
 
     res.json({
       success: true,
-      message: `Payment method ${paymentMethod} selected. Please complete the payment and our team will verify it.`,
+      message: `Payment intent recorded successfully. Your payment will be verified by our team within 24-48 hours.`,
       data: {
         invoiceId,
         paymentMethod,
-        instructions: paymentMethod === 'bank' 
-          ? 'Please transfer to our bank account and share the transaction reference.'
+        referenceId,
+        paymentId: paymentRecordId,
+        status: 'verification_pending',
+        instructions: paymentMethod === 'bank' || paymentMethod === 'bank_transfer'
+          ? 'Please transfer to our bank account using the details provided. Include the reference ID in payment remarks.'
           : paymentMethod === 'upi'
           ? 'Please pay via UPI and share the transaction ID.'
           : paymentMethod === 'cash'
-          ? 'Please visit our office to make the cash payment.'
-          : 'Please submit the cheque at our office.'
+          ? 'Please visit our office to make the cash payment. Carry this reference ID.'
+          : 'Please submit the cheque at our office. Write the reference ID on the back of the cheque.'
       }
     });
 

@@ -2293,6 +2293,10 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
     // Determine received by name - use provided value or default to current user
     const receivedByName = receivedBy || `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.username;
 
+    // Determine payment status - use verification_pending for offline payments, or whatever was sent
+    const finalPaymentStatus = paymentStatus || 'completed';
+    const isVerificationPending = finalPaymentStatus === 'verification_pending';
+
     // Insert payment record with full linkage
     const [result] = await connection.execute(`
       INSERT INTO payments (
@@ -2320,62 +2324,70 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
       transactionReference || null,
       paymentDate,
       paymentProofUrl,
-      'completed',
+      finalPaymentStatus, // Use the requested status (verification_pending for offline payments)
       req.user.id,
       receivedByName,
       req.user.role,
       remarks || null
     ]);
 
-    // Update invoice amounts
-    const newAmountPaid = parseFloat(invoice.amount_paid) + paymentAmount;
-    const newBalance = parseFloat(invoice.total_amount) - newAmountPaid;
+    // Only update invoice amounts if payment is NOT verification_pending
+    // For verification_pending payments, invoice will be updated when payment is verified
+    if (!isVerificationPending) {
+      // Update invoice amounts
+      const newAmountPaid = parseFloat(invoice.amount_paid) + paymentAmount;
+      const newBalance = parseFloat(invoice.total_amount) - newAmountPaid;
 
-    // Determine new payment status
-    let newPaymentStatus = 'pending';
-    let newStatus = invoice.status;
-    if (newBalance <= 0) {
-      newPaymentStatus = 'paid';
-      newStatus = 'paid';
-    } else if (newAmountPaid > 0) {
-      newPaymentStatus = 'partially_paid';
-    }
+      // Determine new payment status
+      let newPaymentStatus = 'pending';
+      let newStatus = invoice.status;
+      if (newBalance <= 0) {
+        newPaymentStatus = 'paid';
+        newStatus = 'paid';
+      } else if (newAmountPaid > 0) {
+        newPaymentStatus = 'partially_paid';
+      }
 
-    await connection.execute(`
-      UPDATE invoices SET
-        amount_paid = ?,
-        balance_amount = ?,
+      await connection.execute(`
+        UPDATE invoices SET
+          amount_paid = ?,
+          balance_amount = ?,
         payment_status = ?,
         status = ?
       WHERE id = ?
-    `, [newAmountPaid, Math.max(0, newBalance), newPaymentStatus, newStatus, invoiceId]);
+      `, [newAmountPaid, Math.max(0, newBalance), newPaymentStatus, newStatus, invoiceId]);
 
-    // If invoice is fully paid and linked to a work order, auto-close the work order
-    if (newPaymentStatus === 'paid' && invoice.work_order_id) {
-      console.log(`[Payment] Invoice ${invoiceId} fully paid, auto-closing linked work order ${invoice.work_order_id}`);
-      
-      // Update work order status to 'closed'
-      await connection.execute(`
-        UPDATE work_orders SET
-          status = 'closed',
-          admin_notes = CONCAT(IFNULL(admin_notes, ''), '\nPayment verified and closed on ', DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s')),
-          updated_at = NOW()
-        WHERE id = ? AND status = 'completed'
-      `, [invoice.work_order_id]);
-      
-      // Log the status change in work order history
-      try {
+      // If invoice is fully paid and linked to a work order, auto-close the work order
+      if (newPaymentStatus === 'paid' && invoice.work_order_id) {
+        console.log(`[Payment] Invoice ${invoiceId} fully paid, auto-closing linked work order ${invoice.work_order_id}`);
+        
+        // Update work order status to 'closed'
         await connection.execute(`
-          INSERT INTO work_order_status_history (work_order_id, to_status, changed_by, changed_by_role, notes)
-          VALUES (?, 'closed', ?, ?, 'Auto-closed after invoice payment verified')
-        `, [invoice.work_order_id, req.user.id, req.user.role]);
-      } catch (historyErr) {
-        // Ignore if history table doesn't exist
-        console.log('[Payment] Work order status history logging skipped:', historyErr.message);
+          UPDATE work_orders SET
+            status = 'closed',
+            admin_notes = CONCAT(IFNULL(admin_notes, ''), '\nPayment verified and closed on ', DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s')),
+            updated_at = NOW()
+          WHERE id = ? AND status = 'completed'
+        `, [invoice.work_order_id]);
+        
+        // Log the status change in work order history
+        try {
+          await connection.execute(`
+            INSERT INTO work_order_status_history (work_order_id, to_status, changed_by, changed_by_role, notes)
+            VALUES (?, 'closed', ?, ?, 'Auto-closed after invoice payment verified')
+          `, [invoice.work_order_id, req.user.id, req.user.role]);
+        } catch (historyErr) {
+          // Ignore if history table doesn't exist
+          console.log('[Payment] Work order status history logging skipped:', historyErr.message);
+        }
       }
-    }
+    } // End of !isVerificationPending block
 
     // Record in payment history
+    const historyDescription = isVerificationPending 
+      ? `Payment recorded via ${paymentMethod} - Awaiting verification${transactionReference ? ` (Ref: ${transactionReference})` : ''}`
+      : `Manual payment recorded via ${paymentMethod}${transactionReference ? ` (Ref: ${transactionReference})` : ''}`;
+    
     await connection.execute(`
       INSERT INTO payment_history (
         payment_id, invoice_id, action, new_status, amount,
@@ -2385,9 +2397,9 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
       result.insertId,
       invoiceId,
       'created',
-      'completed',
+      finalPaymentStatus,
       paymentAmount,
-      `Manual payment recorded via ${paymentMethod}${transactionReference ? ` (Ref: ${transactionReference})` : ''}`,
+      historyDescription,
       req.user.id,
       `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim(),
       req.user.role
@@ -2395,14 +2407,24 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
 
     await connection.commit();
 
+    // Calculate response values
+    const responseBalance = isVerificationPending 
+      ? parseFloat(invoice.balance_amount) // No change for pending
+      : Math.max(0, parseFloat(invoice.total_amount) - (parseFloat(invoice.amount_paid) + paymentAmount));
+    
+    const responseStatus = isVerificationPending ? 'verification_pending' : 
+      (responseBalance <= 0 ? 'paid' : (parseFloat(invoice.amount_paid) + paymentAmount > 0 ? 'partially_paid' : 'pending'));
+
     res.status(201).json({
       success: true,
-      message: 'Payment recorded successfully',
+      message: isVerificationPending 
+        ? 'Payment recorded successfully. It will be verified shortly.' 
+        : 'Payment recorded successfully',
       data: {
         id: result.insertId,
         paymentId,
-        newBalance: Math.max(0, newBalance),
-        paymentStatus: newPaymentStatus
+        newBalance: responseBalance,
+        paymentStatus: responseStatus
       }
     });
   } catch (error) {
@@ -2566,7 +2588,31 @@ router.put('/payments/:id/verify', authenticate, canEditPayments, async (req, re
   try {
     const { id } = req.params;
     const fpId = getFPScope(req);
-    const { status, verificationNotes, rejectionReason } = req.body;
+    const { 
+      status, 
+      verificationNotes, 
+      rejectionReason,
+      // Additional fields for cash/cheque/bank transfer payment verification
+      amountReceived,
+      receivedDate,
+      receivedById,
+      receivedBy,
+      paymentLocation,
+      receiptNumber,
+      // Cheque-specific fields
+      paymentMethod,
+      checkNumber,
+      checkDate,
+      bankName,
+      branchName,
+      payeeName,
+      // Bank transfer-specific fields
+      utrNumber,
+      senderBankName,
+      senderAccountNumber,
+      referenceNumber,
+      paymentProof
+    } = req.body;
     const userId = req.user?.id;
     const userName = req.user?.firstName ? `${req.user.firstName} ${req.user.lastName || ''}`.trim() : 'Admin';
     
@@ -2600,17 +2646,59 @@ router.put('/payments/:id/verify', authenticate, canEditPayments, async (req, re
 
     const p = payments[0];
 
-    // Update payment status
+    // Update payment status with additional cash/cheque/bank transfer fields
     const remarks = status === 'paid' ? verificationNotes : rejectionReason;
+    const verifierName = receivedBy || userName;
+    const verifierId = receivedById || userId;
+    const finalAmount = amountReceived ? parseFloat(amountReceived) : p.amount;
+    const paymentDateValue = receivedDate || checkDate || p.payment_date;
+    
+    // Build the transaction reference based on payment type
+    // Priority: UTR number (bank transfer) > Check number (cheque) > Receipt number (cash)
+    const transactionRef = utrNumber || checkNumber || receiptNumber || referenceNumber;
+    
+    // Build remarks with payment details
+    let fullRemarks = remarks || '';
+    
+    // Cheque details
+    if (checkNumber || (bankName && !utrNumber)) {
+      const chequeDetails = [];
+      if (checkNumber) chequeDetails.push(`Cheque No: ${checkNumber}`);
+      if (bankName) chequeDetails.push(`Bank: ${bankName}`);
+      if (branchName) chequeDetails.push(`Branch: ${branchName}`);
+      if (payeeName) chequeDetails.push(`Payee: ${payeeName}`);
+      if (chequeDetails.length > 0) {
+        fullRemarks = fullRemarks ? `${fullRemarks} | ${chequeDetails.join(', ')}` : chequeDetails.join(', ');
+      }
+    }
+    
+    // Bank transfer details
+    if (utrNumber || senderBankName) {
+      const bankDetails = [];
+      if (utrNumber) bankDetails.push(`UTR: ${utrNumber}`);
+      if (senderBankName) bankDetails.push(`Sender Bank: ${senderBankName}`);
+      if (senderAccountNumber) bankDetails.push(`Account: XXXX${senderAccountNumber}`);
+      if (referenceNumber) bankDetails.push(`Ref: ${referenceNumber}`);
+      if (bankDetails.length > 0) {
+        fullRemarks = fullRemarks ? `${fullRemarks} | ${bankDetails.join(', ')}` : bankDetails.join(', ');
+      }
+    }
+    
     await pool.execute(`
       UPDATE payments SET 
         status = ?,
+        amount = ?,
+        payment_date = ?,
         verified_by = ?,
+        verified_by_id = ?,
         verified_at = NOW(),
+        transaction_id = COALESCE(?, transaction_id),
+        payment_location = ?,
+        payment_proof = COALESCE(?, payment_proof),
         remarks = COALESCE(?, remarks),
         updated_at = NOW()
       WHERE id = ?
-    `, [status, userName, remarks, id]);
+    `, [status, finalAmount, paymentDateValue, verifierName, verifierId, transactionRef, paymentLocation, paymentProof, fullRemarks, id]);
 
     // If payment is marked as paid, update invoice and send receipt
     if (status === 'paid') {
