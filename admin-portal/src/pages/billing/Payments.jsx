@@ -928,7 +928,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 className="appearance-none pl-4 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               >
                 <option value="all">All Payment Methods</option>
-                <option value="debit_credit_card">Debit/Credit Card</option>
+                <option value="debit_credit_card">Debit/Credit Card/Net Banking</option>
                 <option value="upi">UPI</option>
                 <option value="bank_transfer">Bank Transfer</option>
                 <option value="cash">Cash</option>
