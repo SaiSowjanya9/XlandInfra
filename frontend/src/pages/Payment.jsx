@@ -39,23 +39,46 @@ const STATUS_CONFIG = {
   cancelled: { label: 'Cancelled', color: 'bg-gray-500/20 text-gray-500 border-gray-500/30', icon: X }
 };
 
-// Online Payment methods (via Razorpay)
-const ONLINE_PAYMENT_METHODS = [
-  { id: 'upi', label: 'UPI', description: 'Pay using any UPI app', icon: Smartphone, color: 'from-purple-500/20 to-purple-600/20', borderColor: 'border-purple-500/30', type: 'online' },
-  { id: 'card', label: 'Card', description: 'Credit or Debit Card', icon: CreditCard, color: 'from-blue-500/20 to-blue-600/20', borderColor: 'border-blue-500/30', type: 'online' },
-  { id: 'netbanking', label: 'Net Banking', description: 'All major banks supported', icon: Landmark, color: 'from-green-500/20 to-green-600/20', borderColor: 'border-green-500/30', type: 'online' },
-  { id: 'wallet', label: 'Wallet', description: 'Paytm, PhonePe, etc.', icon: Wallet, color: 'from-amber-500/20 to-amber-600/20', borderColor: 'border-amber-500/30', type: 'online' }
+// All Payment methods - unified list (no online/offline separation in UI)
+const ALL_PAYMENT_METHODS = [
+  { 
+    id: 'card', 
+    label: 'Debit / Card Payments & Net Banking', 
+    description: 'Pay securely using your debit card, credit card or net banking.', 
+    icon: CreditCard, 
+    type: 'online',
+    badges: ['VISA', 'MC', 'RuPay', 'maestro', 'Net Banking']
+  },
+  { 
+    id: 'upi', 
+    label: 'UPI (QR / UPI ID)', 
+    description: 'Scan QR code or pay using any UPI app.', 
+    icon: Smartphone, 
+    type: 'online',
+    badges: ['GPay', 'PhonePe', 'Paytm', 'BHIM']
+  },
+  { 
+    id: 'bank_transfer', 
+    label: 'Bank Transfer', 
+    description: 'Transfer directly from your bank account.', 
+    icon: Landmark, 
+    type: 'offline'
+  },
+  { 
+    id: 'cash', 
+    label: 'Cash', 
+    description: 'Pay with cash at our office / collection point.', 
+    icon: Banknote, 
+    type: 'offline'
+  },
+  { 
+    id: 'cheque', 
+    label: 'Cheque', 
+    description: 'Pay using cheque.', 
+    icon: FileCheck, 
+    type: 'offline'
+  }
 ];
-
-// Offline Payment methods (manual)
-const OFFLINE_PAYMENT_METHODS = [
-  { id: 'cash', label: 'Cash', description: 'Pay at office', icon: Banknote, color: 'from-orange-500/20 to-orange-600/20', borderColor: 'border-orange-500/30', type: 'offline' },
-  { id: 'cheque', label: 'Cheque', description: 'Issue a cheque', icon: FileCheck, color: 'from-teal-500/20 to-teal-600/20', borderColor: 'border-teal-500/30', type: 'offline' },
-  { id: 'bank_transfer', label: 'Bank Transfer', description: 'NEFT / IMPS / RTGS', icon: Building2, color: 'from-cyan-500/20 to-cyan-600/20', borderColor: 'border-cyan-500/30', type: 'offline' }
-];
-
-// All payment methods combined
-const ALL_PAYMENT_METHODS = [...ONLINE_PAYMENT_METHODS, ...OFFLINE_PAYMENT_METHODS];
 
 // Bank details for bank transfer
 const BANK_DETAILS = {
@@ -351,74 +374,72 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
           {/* Step 1: Select Payment Method */}
           {step === 1 && (
             <div className="p-6">
-              {/* Online Payment Methods */}
-              <p className="text-gold-400 text-xs font-semibold uppercase tracking-wider mb-3">Pay Online (Instant)</p>
-              <div className="space-y-2 mb-6">
-                {ONLINE_PAYMENT_METHODS.map((method) => {
-                  const Icon = method.icon;
-                  const isSelected = selectedMethod === method.id;
-                  return (
-                    <button
-                      key={method.id}
-                      onClick={() => setSelectedMethod(method.id)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${
-                        isSelected 
-                          ? `bg-gradient-to-r ${method.color} ${method.borderColor} border-2` 
-                          : 'bg-dark-700/50 border-dark-600 hover:border-dark-500'
-                      }`}
-                    >
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        isSelected ? `bg-gradient-to-br ${method.color}` : 'bg-dark-600'
-                      }`}>
-                        <Icon className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-dark-300'}`} />
-                      </div>
-                      <div className="flex-1 text-left">
-                        <p className={`font-medium text-sm ${isSelected ? 'text-white' : 'text-dark-200'}`}>
-                          {method.label}
-                        </p>
-                        <p className="text-xs text-dark-400">{method.description}</p>
-                      </div>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        isSelected ? 'border-gold-400 bg-gold-400' : 'border-dark-500'
-                      }`}>
-                        {isSelected && <Check className="w-3 h-3 text-dark-900" />}
-                      </div>
-                    </button>
-                  );
-                })}
+              {/* Header */}
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-white">Choose Payment Method</h3>
+                <p className="text-dark-400 text-sm">Select any one payment method to proceed</p>
               </div>
 
-              {/* Offline Payment Methods */}
-              <p className="text-dark-400 text-xs font-semibold uppercase tracking-wider mb-3">Pay Offline</p>
-              <div className="space-y-2">
-                {OFFLINE_PAYMENT_METHODS.map((method) => {
+              {/* Payment Methods List */}
+              <div className="space-y-3">
+                {ALL_PAYMENT_METHODS.map((method) => {
                   const Icon = method.icon;
                   const isSelected = selectedMethod === method.id;
                   return (
                     <button
                       key={method.id}
                       onClick={() => setSelectedMethod(method.id)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                      className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
                         isSelected 
-                          ? `bg-gradient-to-r ${method.color} ${method.borderColor} border-2` 
-                          : 'bg-dark-700/50 border-dark-600 hover:border-dark-500'
+                          ? 'bg-gold-500/10 border-gold-500/50' 
+                          : 'bg-dark-700/30 border-dark-600 hover:border-dark-500'
                       }`}
                     >
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        isSelected ? `bg-gradient-to-br ${method.color}` : 'bg-dark-600'
+                      {/* Radio Button */}
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                        isSelected ? 'border-gold-500 bg-gold-500' : 'border-dark-400'
                       }`}>
-                        <Icon className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-dark-300'}`} />
+                        {isSelected && <div className="w-2 h-2 rounded-full bg-dark-900" />}
                       </div>
+
+                      {/* Icon */}
+                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        isSelected ? 'bg-gold-500/20' : 'bg-dark-600/50'
+                      }`}>
+                        <Icon className={`w-6 h-6 ${isSelected ? 'text-gold-400' : 'text-dark-300'}`} />
+                      </div>
+
+                      {/* Content */}
                       <div className="flex-1 text-left">
-                        <p className={`font-medium text-sm ${isSelected ? 'text-white' : 'text-dark-200'}`}>
+                        <p className={`font-semibold ${isSelected ? 'text-white' : 'text-dark-200'}`}>
                           {method.label}
                         </p>
-                        <p className="text-xs text-dark-400">{method.description}</p>
-                      </div>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        isSelected ? 'border-gold-400 bg-gold-400' : 'border-dark-500'
-                      }`}>
-                        {isSelected && <Check className="w-3 h-3 text-dark-900" />}
+                        <p className="text-xs text-dark-400 mt-0.5">{method.description}</p>
+                        
+                        {/* Payment Badges */}
+                        {method.badges && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {method.badges.map((badge, idx) => (
+                              <span 
+                                key={idx} 
+                                className={`px-2 py-0.5 text-xs rounded font-medium ${
+                                  badge === 'VISA' ? 'bg-blue-600 text-white' :
+                                  badge === 'MC' ? 'bg-red-500 text-white' :
+                                  badge === 'RuPay' ? 'bg-green-600 text-white' :
+                                  badge === 'maestro' ? 'bg-blue-500 text-white' :
+                                  badge === 'Net Banking' ? 'bg-dark-600 text-dark-200 border border-dark-500' :
+                                  badge === 'GPay' ? 'bg-white text-dark-800 border border-dark-300' :
+                                  badge === 'PhonePe' ? 'bg-purple-600 text-white' :
+                                  badge === 'Paytm' ? 'bg-blue-400 text-white' :
+                                  badge === 'BHIM' ? 'bg-green-500 text-white' :
+                                  'bg-dark-600 text-dark-300'
+                                }`}
+                              >
+                                {badge}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </button>
                   );
@@ -798,48 +819,45 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
             </div>
           </div>
 
-          {/* Property & Customer Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Property Card */}
-            <div className="bg-dark-700/50 rounded-xl p-4 border border-dark-600">
-              <h3 className="text-sm font-semibold text-gold-400 mb-3 flex items-center gap-2">
-                <Building2 className="w-4 h-4" /> Property Details
-              </h3>
-              <div className="space-y-2 text-sm">
+          {/* Customer & Property Info - Combined */}
+          <div className="bg-dark-700/50 rounded-xl p-4 border border-dark-600">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              {invoice.customerName && (
+                <div className="flex justify-between">
+                  <span className="text-dark-400">Customer:</span>
+                  <span className="text-white">{invoice.customerName}</span>
+                </div>
+              )}
+              {invoice.propertyCode && (
                 <div className="flex justify-between">
                   <span className="text-dark-400">Property ID:</span>
-                  <span className="text-white">{invoice.propertyCode || '-'}</span>
+                  <span className="text-white">{invoice.propertyCode}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-dark-400">Name:</span>
-                  <span className="text-white">{invoice.propertyName || '-'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-dark-400">Type:</span>
-                  <span className="text-white">{invoice.propertyType || '-'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Customer Card */}
-            <div className="bg-dark-700/50 rounded-xl p-4 border border-dark-600">
-              <h3 className="text-sm font-semibold text-gold-400 mb-3 flex items-center gap-2">
-                <User className="w-4 h-4" /> Customer Details
-              </h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-dark-400">Name:</span>
-                  <span className="text-white">{invoice.customerName || '-'}</span>
-                </div>
+              )}
+              {invoice.customerEmail && (
                 <div className="flex justify-between">
                   <span className="text-dark-400">Email:</span>
-                  <span className="text-white truncate ml-2">{invoice.customerEmail || '-'}</span>
+                  <span className="text-white truncate">{invoice.customerEmail}</span>
                 </div>
+              )}
+              {invoice.propertyName && (
+                <div className="flex justify-between">
+                  <span className="text-dark-400">Property:</span>
+                  <span className="text-white">{invoice.propertyName}</span>
+                </div>
+              )}
+              {invoice.customerPhone && (
                 <div className="flex justify-between">
                   <span className="text-dark-400">Phone:</span>
-                  <span className="text-white">{invoice.customerPhone || '-'}</span>
+                  <span className="text-white">{invoice.customerPhone}</span>
                 </div>
-              </div>
+              )}
+              {invoice.propertyType && (
+                <div className="flex justify-between">
+                  <span className="text-dark-400">Type:</span>
+                  <span className="text-white">{invoice.propertyType}</span>
+                </div>
+              )}
             </div>
           </div>
 
