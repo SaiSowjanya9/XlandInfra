@@ -1765,49 +1765,32 @@ router.get('/invoices/:id', async (req, res) => {
 
     const inv = invoices[0];
 
-    // Verify the invoice belongs to this customer
-    const invoicePropertyId = inv.property_id;
-    const invoicePropertyCode = inv.property_code;
-    const invoiceCustomerEmail = inv.customer_email?.toLowerCase();
-    const custEmail = customerEmail?.toLowerCase();
+    // Simplified access check - allow if ANY of these match:
+    // 1. Property ID matches (any form)
+    // 2. Property code matches
+    // 3. Customer email matches invoice email
+    const invoicePropertyId = String(inv.property_id || '');
+    const invoicePropertyCode = String(inv.property_code || '');
+    const invoiceEmail = String(inv.customer_email || '').toLowerCase();
+    const custPropertyId = String(numericPropertyId || '');
+    const custPropertyCode = String(propertyCode || '');
+    const custEmail = String(customerEmail || '').toLowerCase();
 
-    // Check access - flexible matching by property OR email
-    let hasAccess = false;
-    
-    // Match by numeric property ID
-    if (numericPropertyId && invoicePropertyId) {
-      if (String(numericPropertyId) === String(invoicePropertyId)) hasAccess = true;
-    }
-    
-    // Match by property code string
-    if (!hasAccess && propertyCode && invoicePropertyCode) {
-      if (propertyCode === invoicePropertyCode) hasAccess = true;
-    }
-    
-    // Cross-match: customer's property_code might equal invoice's property_id
-    if (!hasAccess && propertyCode && invoicePropertyId) {
-      if (propertyCode === String(invoicePropertyId)) hasAccess = true;
-    }
-    
-    // Cross-match: invoice's property_code might equal customer's property_id
-    if (!hasAccess && numericPropertyId && invoicePropertyCode) {
-      if (String(numericPropertyId) === invoicePropertyCode) hasAccess = true;
-    }
-    
-    // Email matching - allow if customer email matches invoice email
-    if (!hasAccess && custEmail && invoiceCustomerEmail && custEmail === invoiceCustomerEmail) {
-      hasAccess = true;
-    }
+    const hasAccess = 
+      (custPropertyId && invoicePropertyId && custPropertyId === invoicePropertyId) ||
+      (custPropertyId && invoicePropertyCode && custPropertyId === invoicePropertyCode) ||
+      (custPropertyCode && invoicePropertyId && custPropertyCode === invoicePropertyId) ||
+      (custPropertyCode && invoicePropertyCode && custPropertyCode === invoicePropertyCode) ||
+      (custEmail && invoiceEmail && custEmail === invoiceEmail);
+
+    console.log('[Invoice Access Check]', { 
+      invoiceId: id,
+      custPropertyId, custPropertyCode, custEmail,
+      invoicePropertyId, invoicePropertyCode, invoiceEmail,
+      hasAccess
+    });
 
     if (!hasAccess) {
-      console.log('[Invoice Access Denied]', { 
-        customerId, 
-        customerPropertyId: numericPropertyId, 
-        customerPropertyCode: propertyCode, 
-        invoicePropertyId, 
-        invoicePropertyCode,
-        emailMatch: custEmail === invoiceCustomerEmail
-      });
       return res.status(403).json({ success: false, message: 'Access denied to this invoice' });
     }
 
@@ -2104,19 +2087,20 @@ router.post('/invoices/:id/create-order', async (req, res) => {
 
     const inv = invoices[0];
 
-    // Verify the invoice belongs to this customer
-    const invoicePropertyId = inv.property_id;
-    const invoicePropertyCode = inv.property_code;
-    const invoiceCustomerEmail = inv.customer_email?.toLowerCase();
-    const custEmail = customerEmail?.toLowerCase();
+    // Simplified access check
+    const invoicePropertyId = String(inv.property_id || '');
+    const invoicePropertyCode = String(inv.property_code || '');
+    const invoiceEmail = String(inv.customer_email || '').toLowerCase();
+    const custPropertyId = String(numericPropertyId || '');
+    const custPropertyCode = String(propertyCode || '');
+    const custEmail = String(customerEmail || '').toLowerCase();
 
-    // Flexible access check - property OR email matching
-    let hasAccess = false;
-    if (numericPropertyId && invoicePropertyId && String(numericPropertyId) === String(invoicePropertyId)) hasAccess = true;
-    if (!hasAccess && propertyCode && invoicePropertyCode && propertyCode === invoicePropertyCode) hasAccess = true;
-    if (!hasAccess && propertyCode && invoicePropertyId && propertyCode === String(invoicePropertyId)) hasAccess = true;
-    if (!hasAccess && numericPropertyId && invoicePropertyCode && String(numericPropertyId) === invoicePropertyCode) hasAccess = true;
-    if (!hasAccess && custEmail && invoiceCustomerEmail && custEmail === invoiceCustomerEmail) hasAccess = true;
+    const hasAccess = 
+      (custPropertyId && invoicePropertyId && custPropertyId === invoicePropertyId) ||
+      (custPropertyId && invoicePropertyCode && custPropertyId === invoicePropertyCode) ||
+      (custPropertyCode && invoicePropertyId && custPropertyCode === invoicePropertyId) ||
+      (custPropertyCode && invoicePropertyCode && custPropertyCode === invoicePropertyCode) ||
+      (custEmail && invoiceEmail && custEmail === invoiceEmail);
 
     if (!hasAccess) {
       return res.status(403).json({ success: false, message: 'Access denied to this invoice' });
@@ -2339,19 +2323,20 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
 
     const inv = invoices[0];
 
-    // Verify the invoice belongs to this customer
-    const invoicePropertyId = inv.property_id;
-    const invoicePropertyCode = inv.property_code;
-    const invoiceCustomerEmail = inv.customer_email?.toLowerCase();
-    const custEmail = customerData.email?.toLowerCase();
+    // Simplified access check
+    const invoicePropertyId = String(inv.property_id || '');
+    const invoicePropertyCode = String(inv.property_code || '');
+    const invoiceEmail = String(inv.customer_email || '').toLowerCase();
+    const custPropertyId = String(numericPropertyId || '');
+    const custPropertyCode = String(propertyCode || '');
+    const custEmail = String(customerData.email || '').toLowerCase();
 
-    // Flexible access check - property OR email matching
-    let hasAccess = false;
-    if (numericPropertyId && invoicePropertyId && String(numericPropertyId) === String(invoicePropertyId)) hasAccess = true;
-    if (!hasAccess && propertyCode && invoicePropertyCode && propertyCode === invoicePropertyCode) hasAccess = true;
-    if (!hasAccess && propertyCode && invoicePropertyId && propertyCode === String(invoicePropertyId)) hasAccess = true;
-    if (!hasAccess && numericPropertyId && invoicePropertyCode && String(numericPropertyId) === invoicePropertyCode) hasAccess = true;
-    if (!hasAccess && custEmail && invoiceCustomerEmail && custEmail === invoiceCustomerEmail) hasAccess = true;
+    const hasAccess = 
+      (custPropertyId && invoicePropertyId && custPropertyId === invoicePropertyId) ||
+      (custPropertyId && invoicePropertyCode && custPropertyId === invoicePropertyCode) ||
+      (custPropertyCode && invoicePropertyId && custPropertyCode === invoicePropertyId) ||
+      (custPropertyCode && invoicePropertyCode && custPropertyCode === invoicePropertyCode) ||
+      (custEmail && invoiceEmail && custEmail === invoiceEmail);
 
     if (!hasAccess) {
       return res.status(403).json({ success: false, message: 'Access denied to this invoice' });
