@@ -440,7 +440,7 @@ const generateEstimatePDF = async (estimate) => {
           doc.addPage();
           y = 50;
         }
-        doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('NOTES / DESCRIPTION', 50, y, { continued: false });
+        doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('NOTES', 50, y, { continued: false });
         y += 12;
         doc.fontSize(9).fillColor('#333333').font('Helvetica').text(decodeHtml(description), 50, y, { width: 500, lineGap: 3, continued: false });
         y += 30;

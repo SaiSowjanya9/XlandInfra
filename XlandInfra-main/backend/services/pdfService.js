@@ -6,10 +6,12 @@ const LOGO_PATH = path.join(__dirname, '../assets/logo-icon-optimized.png');
 
 /**
  * Decode HTML entities (e.g., &amp; -> &, &#x2F; -> /)
+ * Handles double-encoded entities like &amp;amp; -> &
  */
 const decodeHtml = (html) => {
   if (!html || typeof html !== 'string') return html || '';
   const entities = {
+    '&amp;amp;': '&',  // Double-encoded ampersand
     '&amp;': '&',
     '&lt;': '<',
     '&gt;': '>',
@@ -21,13 +23,69 @@ const decodeHtml = (html) => {
     '&#x26;': '&'
   };
   let decoded = html;
-  for (const [entity, char] of Object.entries(entities)) {
-    decoded = decoded.replace(new RegExp(entity, 'gi'), char);
+  // Run multiple passes to handle double-encoding
+  for (let i = 0; i < 3; i++) {
+    let changed = false;
+    for (const [entity, char] of Object.entries(entities)) {
+      const before = decoded;
+      decoded = decoded.replace(new RegExp(entity, 'gi'), char);
+      if (decoded !== before) changed = true;
+    }
+    // Handle numeric entities
+    const before = decoded;
+    decoded = decoded.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
+    decoded = decoded.replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    if (decoded !== before) changed = true;
+    if (!changed) break;
   }
-  // Handle numeric entities
-  decoded = decoded.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
-  decoded = decoded.replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
   return decoded;
+};
+
+// ===== SHARED PDF HEADER FUNCTION =====
+// Used by all PDF exports for consistent branding
+const drawPDFHeader = (doc, margin) => {
+  const gold = '#C9A227';
+  const headerBlack = '#1a1a1a';
+  const headerHeight = 22; // Thin header strip
+  
+  // Black header background
+  doc.rect(0, 0, 595, headerHeight).fill(headerBlack);
+  
+  // Gold bar at bottom
+  doc.rect(0, headerHeight, 595, 2).fill(gold);
+  
+  // Logo - small size
+  try {
+    doc.image(LOGO_PATH, margin + 3, 3, { width: 16, height: 16 });
+  } catch (logoErr) {
+    doc.roundedRect(margin + 3, 3, 16, 16, 1).fill(gold);
+  }
+  
+  // Company name - XLAND INFRA
+  const textX = margin + 24;
+  doc.fontSize(10).fillColor(gold).font('Helvetica-Bold').text('XLAND INFRA', textX, 3);
+  
+  // PVT LTD with decorative lines - positioned below XLAND INFRA, slightly left
+  doc.fontSize(4).fillColor(gold).font('Helvetica');
+  doc.strokeColor(gold).lineWidth(0.25);
+  
+  const pvtLtdWidth = doc.widthOfString('PVT LTD');
+  const lineLen = 4;
+  const gap = 0.5;
+  const pvtStartX = textX; // Start at same X as XLAND INFRA
+  const lineY = 14; // Closer to XLAND INFRA
+  
+  // Left line
+  doc.moveTo(pvtStartX, lineY).lineTo(pvtStartX + lineLen, lineY).stroke();
+  
+  // PVT LTD text
+  doc.text('PVT LTD', pvtStartX + lineLen + gap, 11.5, { lineBreak: false });
+  
+  // Right line
+  const rightLineStart = pvtStartX + lineLen + gap + pvtLtdWidth + gap;
+  doc.moveTo(rightLineStart, lineY).lineTo(rightLineStart + lineLen, lineY).stroke();
+  
+  return headerHeight + 8; // Return starting Y position for content
 };
 
 // Generate estimate PDF and return as buffer
@@ -47,6 +105,7 @@ const generateEstimatePDF = async (estimate) => {
         numberOfBlocks, totalUnits, towerName, blockNumber, villaPlotNumber,
         packageName, packagePrice, amcPackageDescription, services, addons,
         subtotal, discount, discountAmount, tax, gstPercent, total, description, createdAt,
+        billingDuration, billing_duration,
         // Work Order Estimate fields
         isWorkOrderEstimate, workOrderId, workOrderCategory, workOrderSubcategory,
         workOrderDescription, workOrderPriority, workOrderStatus
@@ -76,120 +135,111 @@ const generateEstimatePDF = async (estimate) => {
       const navy = '#1e3a5f';
       const lightGray = '#f8f9fa';
 
-      // Header - Black background with clean layout
-      doc.rect(0, 0, 612, 55).fill(black);
-      
-      // Logo Icon (symbol only - left side)
-      try {
-        doc.image(LOGO_PATH, 50, 8, { width: 38, height: 38 });
-      } catch (logoErr) {
-        console.log('Logo load error:', logoErr.message);
-        // Fallback to gold square
-        doc.rect(50, 8, 38, 38).fill(gold);
-      }
-      
-      // Company Name text beside logo (vertically centered with logo)
-      doc.fontSize(16).fillColor(gold).text('XLAND INFRA', 95, 20);
-      const mainTextWidth = doc.widthOfString('XLAND INFRA');
-      doc.fontSize(7);
-      const pvtLtdText = 'PVT LTD';
-      const pvtLtdWidth = doc.widthOfString(pvtLtdText);
-      const pvtLtdX = 95 + (mainTextWidth - pvtLtdWidth) / 2;
-      doc.fillColor(gold).text(pvtLtdText, pvtLtdX, 38);
-      // Draw equal-length lines on both sides
-      const lineY = 43;
-      const lineGap = 4;
-      doc.strokeColor(gold).lineWidth(0.5);
-      doc.moveTo(95, lineY).lineTo(pvtLtdX - lineGap, lineY).stroke();
-      doc.moveTo(pvtLtdX + pvtLtdWidth + lineGap, lineY).lineTo(95 + mainTextWidth, lineY).stroke();
-      
-      // ESTIMATE badge on the right (rounded corners to match frontend)
-      doc.roundedRect(455, 12, 100, 26, 4).fill(gold);
-      doc.fontSize(11).fillColor(black).text('ESTIMATE', 455, 19, { width: 100, align: 'center', lineBreak: false });
+      // ===== HEADER - Use shared function =====
+      let y = drawPDFHeader(doc, 50);
 
-      let y = 75;
-
-      // Estimate Info - styled like invoice
-      // ID label
-      doc.fontSize(10).fillColor('#666666').font('Helvetica-Bold').text('ID:', 60, y);
-      // ID value in larger bold font
-      doc.fontSize(14).fillColor(black).text(estimateId || 'N/A', 85, y - 2);
+      // Estimate Info - Plain layout
+      // Estimate ID
+      doc.fontSize(7).fillColor('#666666').font('Helvetica').text('ESTIMATE NO.', 50, y);
+      doc.fontSize(10).fillColor(black).font('Helvetica-Bold').text(estimateId || 'N/A', 50, y + 10);
       
-      // Date on right side
-      doc.fontSize(10).fillColor('#666666').font('Helvetica-Bold').text('Date:', 400, y);
+      // Date
+      doc.fontSize(7).fillColor('#666666').font('Helvetica').text('DATE', 180, y);
       const dateStr = createdAt ? new Date(createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
-      doc.fontSize(12).fillColor(black).text(dateStr, 435, y - 1);
-      doc.font('Helvetica'); // Reset font
-      y += 30;
+      doc.fontSize(10).fillColor(black).font('Helvetica-Bold').text(dateStr, 180, y + 10);
+      doc.font('Helvetica');
+      y += 25;
 
-      // Package Price Bar (NO package name - per requirement)
-      if (packagePrice) {
-        doc.rect(50, y, 500, 25).fill(lightGray).stroke('#e0e0e0');
-        doc.fontSize(10).fillColor(navy).text(`Package Price: Rs. ${Math.round(Number(packagePrice)).toLocaleString()}`, 60, y + 8);
-        doc.fontSize(10).fillColor(navy).text('Billing: Yearly', 400, y + 8);
-        y += 35;
-      }
-
-      // Property & Customer Details (side by side)
-      const cardWidth = 235;
       
-      // Property Details Card - same blue background as Customer Details
-      doc.rect(50, y, cardWidth, 100).fill('#e8f4fc').stroke('#cce7f7');
-      doc.fontSize(10).fillColor(navy).text('Property Details', 60, y + 10);
-      doc.fontSize(8).fillColor('#666666');
-      let py = y + 28;
-      if (propertyCode) { doc.text(`Property ID: ${propertyCode}`, 60, py, { width: cardWidth - 20 }); py += 12; }
-      if (propertyName) { doc.text(`Name: ${decodeHtml(propertyName)}`, 60, py, { width: cardWidth - 20 }); py += 12; }
+
+      // Property Details (Plain, stacked vertically)
+      const col1 = 50, col2 = 150, col3 = 300, col4 = 400;
+      
+      doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('Property Details', col1, y);
+      y += 14;
+      
+      doc.fontSize(8).font('Helvetica');
       const propTypeLabel = { 'GC': 'Gated Community', 'APT': 'Apartment', 'VILLA': 'Villa', 'PLOT': 'Plot' }[propertyType] || propertyType;
-      if (propTypeLabel) { doc.text(`Type: ${propTypeLabel}`, 60, py, { width: cardWidth - 20 }); py += 12; }
-      if (zone) { doc.text(`Zone: ${zone}`, 60, py, { width: cardWidth - 20 }); py += 12; }
-      if (division) { doc.text(`Division: ${division}`, 60, py, { width: cardWidth - 20 }); py += 12; }
+      
+      // Row 1: Name & Type
+      doc.fillColor('#666666').text('Name:', col1, y);
+      doc.fillColor('#666666').text('Type:', col3, y);
+      y += 10;
+      doc.fillColor('#333333').font('Helvetica-Bold');
+      if (propertyName) doc.text(decodeHtml(propertyName), col1, y);
+      if (propTypeLabel) doc.text(propTypeLabel, col3, y);
+      y += 12;
+      
+      // Row 2: Zone & Division
+      doc.font('Helvetica').fillColor('#666666').text('Zone:', col1, y);
+      if (division) doc.text('Division:', col3, y);
+      y += 10;
+      doc.fillColor('#333333').font('Helvetica-Bold');
+      if (zone) doc.text(zone, col1, y);
+      if (division) doc.text(division, col3, y);
+      y += 14;
 
-      // Customer Details Card
-      doc.rect(305, y, cardWidth, 100).fill('#e8f4fc').stroke('#cce7f7');
-      doc.fontSize(10).fillColor(navy).text('Customer Details', 315, y + 10);
-      doc.fontSize(8).fillColor('#666666');
-      let cy = y + 28;
-      if (customerName) { doc.text(`Name: ${decodeHtml(customerName)}`, 315, cy, { width: cardWidth - 20 }); cy += 12; }
-      if (customerPhone) { doc.text(`Phone: ${customerPhone}`, 315, cy, { width: cardWidth - 20 }); cy += 12; }
-      if (customerEmail) { 
-        // Use smaller font for long emails to ensure they fit
-        const emailFontSize = customerEmail.length > 25 ? 7 : 8;
-        doc.fontSize(emailFontSize).text(`Email: ${customerEmail}`, 315, cy, { width: cardWidth - 20 }); 
-        cy += (customerEmail.length > 35 ? 20 : 12); // Extra space if email wraps
-        doc.fontSize(8); // Reset font size
+      // Customer Details
+      doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('Customer Details', col1, y);
+      y += 14;
+      
+      doc.fontSize(8).font('Helvetica');
+      
+      // Row 1: Name & Phone
+      doc.fillColor('#666666').text('Name:', col1, y);
+      doc.fillColor('#666666').text('Phone:', col3, y);
+      y += 10;
+      doc.fillColor('#333333').font('Helvetica-Bold');
+      if (customerName) doc.text(decodeHtml(customerName), col1, y);
+      if (customerPhone) doc.text(customerPhone, col3, y);
+      y += 12;
+      
+      // Row 2: Email
+      doc.font('Helvetica').fillColor('#666666').text('Email:', col1, y);
+      y += 10;
+      doc.fillColor('#333333').font('Helvetica-Bold');
+      if (customerEmail) doc.text(customerEmail, col1, y);
+      y += 12;
+      
+      // Row 3: City
+      if (city) {
+        doc.font('Helvetica').fillColor('#666666').text('City:', col1, y);
+        y += 10;
+        doc.fillColor('#333333').font('Helvetica-Bold').text(city, col1, y);
+        y += 12;
       }
-      if (city) { doc.text(`City: ${city}`, 315, cy, { width: cardWidth - 20 }); cy += 12; }
+      
+      y += 10;
 
-      y += 115;
-
-      // Work Order Details (only for work order estimates) - same style as Property & Customer cards
+      // Work Order Details (only for work order estimates) - 2x2 Grid layout
       if (isWorkOrderEstimate && workOrderId) {
-        doc.rect(50, y, 500, 60).fill('#e8f4fc').stroke('#cce7f7'); // Same blue as other cards
-        doc.fontSize(10).fillColor(navy).text('Work Order Details', 60, y + 10);
+        doc.rect(50, y, 500, 55).fill('#e8f4fc').stroke('#cce7f7');
+        doc.fontSize(10).fillColor(navy).text('Work Order Details', 60, y + 8);
+        
+        // 2x2 grid layout - labels and values inline
+        const leftCol = 60, rightCol = 300;
+        const row1Y = y + 25;
+        const row2Y = y + 40;
+        
+        // Row 1: Work Order ID | Category - all values in black
         doc.fontSize(8).fillColor('#666666');
-        let wy = y + 28;
+        doc.text('Work Order ID:', leftCol, row1Y);
+        doc.fillColor('#333333').text(String(workOrderId || '-'), leftCol + 75, row1Y);
         
-        // Row 1: Work Order ID & Category
-        doc.text('Work Order ID:', 60, wy);
-        doc.fillColor('#333333').text(workOrderId, 130, wy);
-        if (workOrderCategory) { 
-          doc.fillColor('#666666').text('Category:', 280, wy); 
-          doc.fillColor('#333333').text(workOrderCategory, 330, wy);
-        }
-        wy += 14;
-        
-        // Row 2: Subcategory & Priority
         doc.fillColor('#666666');
-        if (workOrderSubcategory) { 
-          doc.text('Subcategory:', 60, wy); 
-          doc.fillColor('#333333').text(workOrderSubcategory, 130, wy);
-        }
-        if (workOrderPriority) { 
-          doc.fillColor('#666666').text('Priority:', 280, wy); 
-          doc.fillColor('#333333').text(workOrderPriority.toUpperCase(), 330, wy);
-        }
-        y += 70;
+        doc.text('Category:', rightCol, row1Y);
+        doc.fillColor('#333333').text(String(workOrderCategory || '-'), rightCol + 55, row1Y);
+        
+        // Row 2: Subcategory | Priority
+        doc.fillColor('#666666');
+        doc.text('Subcategory:', leftCol, row2Y);
+        doc.fillColor('#333333').text(String(workOrderSubcategory || '-'), leftCol + 75, row2Y);
+        
+        doc.fillColor('#666666');
+        doc.text('Priority:', rightCol, row2Y);
+        doc.fillColor('#333333').text(String(workOrderPriority || '-').toUpperCase(), rightCol + 55, row2Y);
+        
+        y += 63;
       }
 
       // Package Description - dynamic height based on content
@@ -218,11 +268,16 @@ const generateEstimatePDF = async (estimate) => {
       const pageHeight = 780; // A4 usable height
       
       // Only show Services Table for NON-work order estimates
-      // Work Order Estimates: SKIP services table entirely - they show work order details instead
-      // IMPORTANT: If workOrderId exists, this is a work order estimate - DO NOT show services
       const hasWorkOrderId = workOrderId && String(workOrderId).length > 0;
       const isWOEstimate = isWorkOrderEstimate || hasWorkOrderId || estimateType === 'work_order';
-      console.log('🔴 [PDF Service] SERVICES CHECK v2 - isWorkOrderEstimate:', isWorkOrderEstimate, 'workOrderId:', workOrderId, 'hasWorkOrderId:', hasWorkOrderId, 'estimateType:', estimateType, 'isWOEstimate:', isWOEstimate, 'WILL SHOW SERVICES:', !isWOEstimate && svcList.length > 0);
+      
+      // Billing Duration - left side, before services
+      const billingValue = billingDuration || billing_duration || 'Yearly';
+      const formattedBilling = billingValue.charAt(0).toUpperCase() + billingValue.slice(1).replace('-', ' ');
+      doc.fontSize(9).fillColor('#666666').text('Billing:', 50, y, { lineBreak: false });
+      doc.fillColor('#333333').font('Helvetica-Bold').text(formattedBilling, 85, y, { lineBreak: false });
+      doc.font('Helvetica');
+      y += 12;
       
       if (!isWOEstimate && svcList.length > 0) {
         doc.fontSize(10).fillColor(navy).text('SERVICES INCLUDED', 50, y, { continued: false });
@@ -232,16 +287,18 @@ const generateEstimatePDF = async (estimate) => {
         doc.rect(50, y, 500, 20).fill('#1e3a5f');
         doc.fontSize(8).fillColor('#ffffff');
         doc.text('#', 55, y + 6, { continued: false });
-        doc.text('Service', 75, y + 6, { continued: false });
-        doc.text('Description', 260, y + 6, { width: 130, align: 'center', continued: false });
-        doc.text('Frequency', 400, y + 6, { continued: false });
-        doc.text('Visits', 480, y + 6, { continued: false });
+        doc.text('Service', 72, y + 6, { continued: false });
+        doc.text('Description', 155, y + 6, { continued: false });
+        doc.text('Frequency', 420, y + 6, { continued: false });
+        doc.text('Visits', 500, y + 6, { continued: false });
         y += 20;
 
+        const descColWidthEst = 255; // Increased width for description
         svcList.forEach((s, idx) => {
-          const svcDesc = decodeHtml(s.description) || '-';
-          // Calculate row height based on description length (approx 40 chars per line)
-          const descLines = Math.ceil(svcDesc.length / 40);
+          // Use s.details as fallback for full description (backend stores it separately)
+          const svcDesc = decodeHtml(s.details || s.description || s.service_description) || '-';
+          // Calculate row height based on description length (approx 50 chars per line with new width)
+          const descLines = Math.ceil(svcDesc.length / 50);
           const rowHeight = Math.max(22, descLines * 11);
           
           // Check if we need a new page
@@ -255,14 +312,14 @@ const generateEstimatePDF = async (estimate) => {
           doc.fontSize(8).fillColor('#333333');
           doc.text(String(idx + 1), 55, y + 6, { continued: false });
           const svcName = decodeHtml(s.name || s.service || 'Service');
-          doc.text(svcName, 75, y + 6, { width: 110, continued: false });
-          // Full description with height constraint to prevent page overflow
-          doc.text(svcDesc, 190, y + 6, { width: 200, height: rowHeight - 8, align: 'center', continued: false });
+          doc.text(svcName, 72, y + 6, { width: 78, continued: false });
+          // Full description with proper width for wrapping
+          doc.text(svcDesc, 155, y + 6, { width: descColWidthEst, height: rowHeight - 8, continued: false });
           const freqCount = s.frequencyCount ?? s.frequency_count ?? 1;
           let freqType = s.frequencyType || s.frequency_type || 'Monthly';
           freqType = freqType.replace(/^\d+x\s*/i, '');
-          doc.text(freqType, 400, y + 6, { continued: false });
-          doc.text(String(freqCount), 490, y + 6, { continued: false });
+          doc.text(freqType, 420, y + 6, { continued: false });
+          doc.text(String(freqCount), 500, y + 6, { continued: false });
           y += rowHeight;
         });
 
@@ -302,13 +359,14 @@ const generateEstimatePDF = async (estimate) => {
         doc.fontSize(8).fillColor('#ffffff');
         doc.text('#', 55, y + 6, { continued: false });
         doc.text('Add-on Service', 75, y + 6, { continued: false });
-        doc.text('Description', 260, y + 6, { width: 130, align: 'center', continued: false });
+        doc.text('Description', 190, y + 6, { width: 200, align: 'center', continued: false });
         doc.text('Frequency', 400, y + 6, { continued: false });
-        doc.text('Visits', 480, y + 6, { continued: false });
+        doc.text('Visits', 490, y + 6, { continued: false });
         y += 20;
 
         addonList.forEach((a, idx) => {
-          const addonDesc = decodeHtml(a.description) || '-';
+          // Use a.details as fallback for full description (backend stores it separately)
+          const addonDesc = decodeHtml(a.details || a.description || a.service_description) || '-';
           // Calculate row height based on description length (approx 40 chars per line)
           const descLines = Math.ceil(addonDesc.length / 40);
           const rowHeight = Math.max(22, descLines * 11);
@@ -341,46 +399,51 @@ const generateEstimatePDF = async (estimate) => {
       }
 
       // Check if Price Summary needs new page
-      if (y + 100 > pageHeight) {
+      if (y + 60 > pageHeight) {
         doc.addPage();
         y = 50;
       }
       
-      // Price Summary - use safe values
-      doc.fontSize(10).fillColor(navy).text('PRICE SUMMARY', 50, y, { continued: false });
-      y += 15;
-      doc.rect(50, y, 500, 80).fill(lightGray).stroke('#e0e0e0');
+      // Price Summary - Plain layout
+      doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('PRICE SUMMARY', 50, y, { continued: false });
+      y += 12;
       
-      doc.fontSize(9).fillColor('#666666');
-      doc.text('Subtotal:', 60, y + 10, { continued: false });
-      doc.fillColor('#333333').text(`Rs. ${safeSubtotal.toLocaleString()}`, 450, y + 10, { continued: false });
+      const priceCol1 = 50;
+      const priceCol2 = 130;
       
+      // Subtotal
+      doc.fontSize(9).fillColor('#666666').font('Helvetica').text('Subtotal:', priceCol1, y);
+      doc.fillColor('#333333').font('Helvetica-Bold').text(`Rs. ${safeSubtotal.toLocaleString()}`, priceCol2, y);
+      y += 10;
+      
+      // Discount
       if (safeDiscount > 0 || safeDiscountAmount > 0) {
-        doc.fillColor('#666666').text(`Discount (${safeDiscount}%):`, 60, y + 25, { continued: false });
-        doc.fillColor('#333333').text(`-Rs. ${safeDiscountAmount.toLocaleString()}`, 450, y + 25, { continued: false });
+        doc.fillColor('#666666').font('Helvetica').text(`Discount (${safeDiscount}%):`, priceCol1, y);
+        doc.fillColor('#333333').font('Helvetica-Bold').text(`-Rs. ${safeDiscountAmount.toLocaleString()}`, priceCol2, y);
+        y += 10;
       }
       
-      doc.fillColor('#666666').text(`GST (${safeGstPercent}%):`, 60, y + 40, { continued: false });
-      doc.fillColor('#333333').text(`Rs. ${safeTax.toLocaleString()}`, 450, y + 40, { continued: false });
+      // GST
+      doc.fillColor('#666666').font('Helvetica').text(`GST (${safeGstPercent}%):`, priceCol1, y);
+      doc.fillColor('#333333').font('Helvetica-Bold').text(`Rs. ${safeTax.toLocaleString()}`, priceCol2, y);
+      y += 12;
       
-      // Total line
-      doc.rect(60, y + 55, 480, 1).fill('#e0e0e0');
-      doc.fontSize(12).fillColor(navy).text('TOTAL:', 60, y + 62, { continued: false });
-      doc.font('Helvetica-Bold').fontSize(12).fillColor('#000000').text(`Rs. ${safeTotal.toLocaleString()}`, 450, y + 62, { continued: false });
+      // Total
+      doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('TOTAL:', priceCol1, y);
+      doc.text(`Rs. ${safeTotal.toLocaleString()}`, priceCol2, y);
       doc.font('Helvetica');
-      y += 90;
+      y += 15;
 
-      // Notes/Description (after Price Summary)
+      // Notes/Description - Plain
       if (description) {
-        // Check if notes need new page
-        if (y + 70 > pageHeight) {
+        if (y + 30 > pageHeight) {
           doc.addPage();
           y = 50;
         }
-        doc.fontSize(10).fillColor(navy).text('NOTES / DESCRIPTION', 50, y, { continued: false });
-        y += 18;
-        doc.fontSize(9).fillColor('#333333').text(description, 50, y, { width: 500, lineGap: 4, continued: false });
-        y += 50;
+        doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('NOTES', 50, y, { continued: false });
+        y += 12;
+        doc.fontSize(9).fillColor('#333333').font('Helvetica').text(decodeHtml(description), 50, y, { width: 500, lineGap: 3, continued: false });
+        y += 30;
       }
 
       doc.end();
@@ -390,7 +453,7 @@ const generateEstimatePDF = async (estimate) => {
   });
 };
 
-// Generate invoice PDF and return as buffer - Premium Design
+// Generate invoice PDF and return as buffer - Compact Single Page Design (Image 2)
 const generateInvoicePDF = async (invoice) => {
   return new Promise((resolve, reject) => {
     try {
@@ -406,11 +469,13 @@ const generateInvoicePDF = async (invoice) => {
         propertyName, propertyCode, propertyType, zone, city,
         invoiceDate, dueDate, billingDuration,
         lineItems, subtotal, discountAmount, discountPercentage, taxAmount, taxPercentage, totalAmount, balanceAmount,
-        workOrderId
+        workOrderId, workOrderCategory, workOrderSubcategory, workOrderDescription
       } = invoice;
       
-      const isWorkOrderInvoice = invoiceType === 'work_order';
+      // Check if work order invoice - by invoiceType OR presence of workOrderId
+      const isWorkOrderInvoice = invoiceType === 'work_order' || (workOrderId && workOrderId.length > 0);
       const pageWidth = 595;
+      const pageHeight = 842;
       const margin = 40;
       const contentWidth = pageWidth - (margin * 2);
 
@@ -424,217 +489,601 @@ const generateInvoicePDF = async (invoice) => {
       const safeTotal = safeNum(totalAmount);
       const safeTaxPercent = safeNum(taxPercentage) || 18;
 
-      // Colors
-      const black = '#1a1a1a';
-      const gold = '#d4a84b';
-      const navy = '#1e3a5f';
-      const lightGray = '#f5f5f5';
+      // Colors per design spec (Image 2)
+      const headerBlack = '#151515';
+      const gold = '#C9A227';
+      const lightGold = '#E8C66A';
+      const primaryText = '#171717';
+      const secondaryText = '#555555';
+      const borderGray = '#E5E5E5';
+      const cardBg = '#FBF7EE';
       const white = '#ffffff';
 
-      // ===== PREMIUM HEADER - Black with Logo and Centered Text =====
-      // Black header background
-      doc.rect(0, 0, pageWidth, 75).fill(black);
-      
-      // Logo on left
-      try {
-        doc.image(LOGO_PATH, margin + 15, 12, { width: 50, height: 50 });
-      } catch (logoErr) {
-        doc.rect(margin + 15, 12, 50, 50).fill(gold);
-      }
-      
-      // Company name - "XLAND INFRA" in gold
-      doc.fontSize(22).fillColor(gold).text('XLAND INFRA', margin + 75, 20);
-      
-      // "PVT LTD" with decorative lines on both sides
-      const pvtLtdText = 'PVT LTD';
-      doc.fontSize(9).fillColor(gold);
-      const pvtLtdWidth = doc.widthOfString(pvtLtdText);
-      const pvtLtdX = margin + 75;
-      const mainTextWidth = doc.fontSize(22).widthOfString('XLAND INFRA');
-      const pvtLtdCenterX = pvtLtdX + (mainTextWidth / 2);
-      const actualPvtX = pvtLtdCenterX - (pvtLtdWidth / 2);
-      
-      // Draw the decorative lines
-      const lineY = 48;
-      const lineLength = 30;
-      const lineGap = 8;
-      doc.strokeColor(gold).lineWidth(0.8);
-      doc.moveTo(actualPvtX - lineGap - lineLength, lineY).lineTo(actualPvtX - lineGap, lineY).stroke();
-      doc.moveTo(actualPvtX + pvtLtdWidth + lineGap, lineY).lineTo(actualPvtX + pvtLtdWidth + lineGap + lineLength, lineY).stroke();
-      
-      // Draw PVT LTD text
-      doc.fontSize(9).fillColor(gold).text(pvtLtdText, actualPvtX, 43);
-
-      let y = 90;
-
-      // ===== INVOICE ID & DATES ROW =====
-      doc.fontSize(9).fillColor('#666666').text('ID:', margin, y);
-      doc.fontSize(12).fillColor(black).font('Helvetica-Bold').text(invoiceId || 'N/A', margin + 20, y - 1);
-      
-      if (estimateId) {
-        doc.fontSize(8).fillColor('#888888').font('Helvetica').text(`Estimate: ${estimateId}`, margin, y + 14);
-      }
-      
-      // Right side dates
-      const dateX = pageWidth - margin - 120;
-      doc.fontSize(9).fillColor('#666666').font('Helvetica').text('Date:', dateX, y);
-      const invDateStr = invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-      doc.fontSize(11).fillColor(black).font('Helvetica-Bold').text(invDateStr, dateX + 35, y - 1);
-      
-      doc.fontSize(9).fillColor('#666666').font('Helvetica').text('Due:', dateX, y + 16);
-      const dueDateStr = dueDate ? new Date(dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-      doc.fontSize(11).fillColor(black).font('Helvetica-Bold').text(dueDateStr, dateX + 35, y + 15);
-      
-      doc.font('Helvetica');
-      y += 45;
-
-      // ===== TOTAL AMOUNT DUE BANNER =====
-      // Gradient effect with two rectangles
-      doc.rect(margin, y, contentWidth / 2, 45).fill('#2d4a5f');
-      doc.rect(margin + contentWidth / 2, y, contentWidth / 2, 45).fill(navy);
-      
-      doc.fontSize(10).fillColor(gold).text('TOTAL AMOUNT DUE', margin + 15, y + 10);
-      doc.fontSize(20).fillColor(white).font('Helvetica-Bold').text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, margin + 15, y + 24);
-      doc.font('Helvetica');
-      y += 55;
-
-      // ===== PROPERTY & CUSTOMER DETAILS (SIDE BY SIDE) =====
-      const cardWidth = (contentWidth - 15) / 2;
-      const cardHeight = 85;
-      
-      // Property Details Card
-      doc.rect(margin, y, cardWidth, cardHeight).lineWidth(1).stroke('#e0e0e0');
-      doc.rect(margin, y, cardWidth, 20).fill(lightGray);
-      doc.fontSize(9).fillColor(navy).font('Helvetica-Bold').text('PROPERTY DETAILS', margin + 10, y + 6);
-      doc.font('Helvetica');
-      
-      let py = y + 26;
-      doc.fontSize(8).fillColor('#666666');
-      doc.text(`Property ID: ${propertyCode || '-'}`, margin + 10, py); py += 12;
-      doc.text(`Name: ${decodeHtml(propertyName) || '-'}`, margin + 10, py); py += 12;
-      doc.text(`Type: ${propertyType || '-'}`, margin + 10, py); py += 12;
-      doc.text(`Zone: ${zone || '-'}`, margin + 10, py); py += 12;
-      doc.text(`City: ${city || '-'}`, margin + 10, py);
-
-      // Customer Details Card
-      const custX = margin + cardWidth + 15;
-      doc.rect(custX, y, cardWidth, cardHeight).lineWidth(1).stroke('#e0e0e0');
-      doc.rect(custX, y, cardWidth, 20).fill(lightGray);
-      doc.fontSize(9).fillColor(navy).font('Helvetica-Bold').text('CUSTOMER DETAILS', custX + 10, y + 6);
-      doc.font('Helvetica');
-      
-      let cy = y + 26;
-      doc.fontSize(8).fillColor('#666666');
-      doc.text(`Name: ${decodeHtml(customerName) || '-'}`, custX + 10, cy); cy += 12;
-      doc.text(`Phone: ${customerPhone || '-'}`, custX + 10, cy); cy += 12;
-      doc.text(`Email: ${customerEmail || '-'}`, custX + 10, cy, { width: cardWidth - 20 }); cy += 12;
-      doc.text(`City: ${city || '-'}`, custX + 10, cy);
-      if (workOrderId) {
-        cy += 12;
-        doc.text(`Work Order: ${workOrderId}`, custX + 10, cy);
-      }
-
-      y += cardHeight + 15;
-
-      // Parse line items
+      // Parse line items first to calculate dynamic sizing
       let items = [];
       try {
         items = typeof lineItems === 'string' ? JSON.parse(lineItems) : (lineItems || []);
       } catch (e) { items = []; }
+      
+      // Calculate if we need compact mode (many items)
+      const itemCount = items.length;
+      const isCompact = itemCount > 4;
 
-      const pageHeight = 780;
+      // ===== HEADER - Use shared function =====
+      let y = drawPDFHeader(doc, margin);
 
-      // ===== SERVICES INCLUDED TABLE (Skip for Work Order Invoices) =====
-      if (!isWorkOrderInvoice && items.length > 0) {
-        doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('SERVICES INCLUDED', margin, y);
-        doc.font('Helvetica');
-        y += 15;
+      // ===== ID / DATE / DUE ROW (Compact) =====
+      doc.fontSize(8).fillColor(secondaryText).text('ID:', margin, y);
+      doc.fontSize(10).fillColor(primaryText).font('Helvetica-Bold').text(invoiceId || 'N/A', margin + 12, y);
+      
+      const dateX = pageWidth - margin - 100;
+      doc.fontSize(8).fillColor(secondaryText).font('Helvetica').text('Date:', dateX, y);
+      const invDateStr = invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text(invDateStr, dateX + 28, y);
+      
+      // Estimate and Due on same line (y + 12)
+      if (estimateId) {
+        doc.fontSize(7).fillColor(gold).font('Helvetica').text(`Estimate: ${estimateId}`, margin, y + 12);
+      }
+      doc.fontSize(8).fillColor(secondaryText).font('Helvetica').text('Due:', dateX, y + 12);
+      const dueDateStr = dueDate ? new Date(dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text(dueDateStr, dateX + 28, y + 12);
+      
+      doc.font('Helvetica');
+      y += 28;
+
+      // ===== TOTAL AMOUNT DUE BANNER (Compact) =====
+      const bannerHeight = 22;
+      doc.roundedRect(margin, y, contentWidth, bannerHeight, 4).fill(gold);
+      doc.fontSize(6).fillColor(white).text('TOTAL AMOUNT DUE', pageWidth / 2 - 28, y + 4);
+      doc.fontSize(11).fillColor(white).font('Helvetica-Bold').text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, pageWidth / 2 - 30, y + 12);
+      doc.font('Helvetica');
+      y += bannerHeight + 8;
+
+      // ===== PROPERTY & CUSTOMER DETAILS (cream bg, compact) =====
+      const cardWidth = (contentWidth - 10) / 2;
+      const cardHeight = 80;
+      
+      // Property Details Card
+      doc.roundedRect(margin, y, cardWidth, cardHeight, 5).fill(cardBg);
+      
+      doc.fontSize(8).fillColor(primaryText).font('Helvetica-Bold').text('PROPERTY DETAILS', margin + 10, y + 8);
+      doc.font('Helvetica');
+      
+      let py = y + 20;
+      const lineH = 11;
+      doc.fontSize(7).fillColor(secondaryText);
+      doc.text(`Property ID: ${propertyCode || '-'}`, margin + 10, py); py += lineH;
+      doc.text(`Name: ${decodeHtml(propertyName) || '-'}`, margin + 10, py); py += lineH;
+      doc.text(`Type: ${propertyType || '-'}`, margin + 10, py); py += lineH;
+      doc.text(`Zone: ${zone || '-'}`, margin + 10, py); py += lineH;
+      doc.text(`City: ${city || '-'}`, margin + 10, py);
+
+      // Customer Details Card
+      const custX = margin + cardWidth + 10;
+      doc.roundedRect(custX, y, cardWidth, cardHeight, 5).fill(cardBg);
+      
+      doc.fontSize(8).fillColor(primaryText).font('Helvetica-Bold').text('CUSTOMER DETAILS', custX + 10, y + 8);
+      doc.font('Helvetica');
+      
+      let cy = y + 20;
+      doc.fontSize(7).fillColor(secondaryText);
+      doc.text(`Name: ${decodeHtml(customerName) || '-'}`, custX + 10, cy); cy += lineH;
+      doc.text(`Phone: ${customerPhone || '-'}`, custX + 10, cy); cy += lineH;
+      const emailStr = customerEmail || '-';
+      doc.text(`Email: ${emailStr.length > 30 ? emailStr.substring(0, 30) + '...' : emailStr}`, custX + 10, cy); cy += lineH;
+      doc.text(`City: ${city || '-'}`, custX + 10, cy);
+
+      y += cardHeight + 10;
+
+      // ===== WORK ORDER DETAILS (for work order invoices) =====
+      if (isWorkOrderInvoice) {
+        // Get work order details from invoice data or first line item
+        const woItem = items[0] || {};
+        const category = workOrderCategory || woItem.category || woItem.serviceCategory || '-';
+        const subcategory = workOrderSubcategory || woItem.subcategory || woItem.serviceSubcategory || '-';
+        const woDescription = decodeHtml(workOrderDescription || woItem.description || woItem.details || '');
         
-        // Table header
-        doc.rect(margin, y, contentWidth, 22).fill(navy);
-        doc.fontSize(8).fillColor(white);
-        doc.text('#', margin + 8, y + 7);
-        doc.text('Service', margin + 35, y + 7);
-        doc.text('Description', margin + 140, y + 7);
-        doc.text('Frequency', margin + 320, y + 7);
-        doc.text('Visits', margin + 420, y + 7);
-        y += 22;
+        // Section header - no decorative line
+        doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('WORK ORDER DETAILS', margin, y + 3, { lineBreak: false });
+        doc.font('Helvetica');
+        y += 16;
+        
+        // Work order details box - orange tinted
+        const hasDescription = woDescription && woDescription.length > 0;
+        const woBoxHeight = hasDescription && woDescription.length > 50 ? 70 : (hasDescription ? 60 : 45);
+        doc.roundedRect(margin, y, contentWidth, woBoxHeight, 4).fill('#FFF7ED').stroke('#FDBA74');
+        
+        // Three columns: Work Order ID, Category, Subcategory
+        const col1 = margin + 12;
+        const col2 = margin + 180;
+        const col3 = margin + 340;
+        
+        doc.fontSize(7).fillColor('#9A3412');
+        doc.text('Work Order ID', col1, y + 10);
+        doc.text('Category', col2, y + 10);
+        doc.text('Subcategory', col3, y + 10);
+        
+        doc.fontSize(9).fillColor('#EA580C').font('Helvetica-Bold');
+        doc.text(workOrderId || '-', col1, y + 22);
+        doc.font('Helvetica').fillColor(primaryText);
+        doc.text(category, col2, y + 22);
+        doc.text(subcategory, col3, y + 22);
+        
+        // Description row if exists - centered
+        if (hasDescription) {
+          doc.fontSize(7).fillColor('#9A3412').text('Description', margin, y + 38, { width: contentWidth, align: 'center' });
+          doc.fontSize(8).fillColor(primaryText).text(woDescription.substring(0, 100), margin, y + 50, { width: contentWidth, align: 'center' });
+        }
+        
+        y += woBoxHeight + 15;
+      }
 
-        items.forEach((item, idx) => {
-          const fullDesc = decodeHtml(item.description || item.name || 'Service');
-          const parts = fullDesc.split(' - ');
-          const serviceName = parts[0] || 'Service';
-          const serviceDesc = parts.slice(1).join(' - ') || '-';
+      // ===== SERVICES INCLUDED TABLE =====
+      // Filter to only include services (exclude addons)
+      const serviceItems = items.filter(item => {
+        const desc = String(item.description || item.name || '').toLowerCase();
+        const isAddon = item.type === 'addon' || desc.includes('add-on') || desc.includes('addon');
+        return !isAddon;
+      });
+      
+      // Filter addon items
+      const addonItems = items.filter(item => {
+        if (item.type === 'addon') return true;
+        const desc = String(item.description || item.name || '').toLowerCase();
+        return desc.includes('add-on') || desc.includes('addon');
+      });
+      
+      if (!isWorkOrderInvoice && serviceItems.length > 0) {
+        // Section header - no decorative line
+        doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES INCLUDED', margin, y + 3, { lineBreak: false });
+        doc.font('Helvetica');
+        y += 18;
+        
+        // Table header - Gold background
+        // Column positions: # | Service | Description (centered header) | Frequency | Visits
+        const tableHeaderH = 20;
+        const colNum = margin + 8;
+        const colService = margin + 28;
+        const colServiceW = 70;
+        const colDesc = margin + 100;
+        const colDescW = 280; // Wide description column
+        const colFreq = margin + 390;
+        const colVisits = margin + 460;
+        
+        doc.rect(margin, y, contentWidth, tableHeaderH).fill(gold);
+        doc.fontSize(8).fillColor(white);
+        doc.text('#', colNum, y + 6);
+        doc.text('Service', colService, y + 6);
+        doc.text('Description', colDesc + (colDescW / 2) - 25, y + 6); // Centered header
+        doc.text('Frequency', colFreq, y + 6);
+        doc.text('Visits', colVisits, y + 6);
+        y += tableHeaderH;
+
+        // Helper function to manually wrap text into lines
+        const wrapText = (text, maxCharsPerLine) => {
+          const words = text.split(' ');
+          const lines = [];
+          let currentLine = '';
+          
+          words.forEach(word => {
+            if ((currentLine + ' ' + word).trim().length <= maxCharsPerLine) {
+              currentLine = (currentLine + ' ' + word).trim();
+            } else {
+              if (currentLine) lines.push(currentLine);
+              currentLine = word;
+            }
+          });
+          if (currentLine) lines.push(currentLine);
+          return lines;
+        };
+
+        // Table rows - with full description wrapping to multiple lines
+        // Check for page break and add new page if needed
+        const checkPageBreak = (neededHeight) => {
+          const reservedForSummary = 150; // Space for price summary + footer
+          if (y + neededHeight > pageHeight - reservedForSummary) {
+            doc.addPage();
+            y = margin;
+            // Redraw table header on new page
+            doc.rect(margin, y, contentWidth, tableHeaderH).fill(gold);
+            doc.fontSize(8).fillColor(white);
+            doc.text('#', colNum, y + 6);
+            doc.text('Service', colService, y + 6);
+            doc.text('Description', colDesc + (colDescW / 2) - 25, y + 6);
+            doc.text('Frequency', colFreq, y + 6);
+            doc.text('Visits', colVisits, y + 6);
+            y += tableHeaderH;
+          }
+        };
+
+        serviceItems.forEach((item, idx) => {
+          // Get service name from dedicated name field first
+          const serviceName = decodeHtml(item.name || item.serviceName || item.service_name || 'Service');
+          
+          // Get description from all possible fields - prioritize dedicated description fields
+          let serviceDesc = decodeHtml(
+            item.details || 
+            item.service_description || 
+            item.serviceDescription || 
+            item.itemDescription ||
+            ''
+          );
+          
+          // If no dedicated description field, check the main description field
+          if (!serviceDesc && item.description) {
+            const fullDesc = decodeHtml(String(item.description));
+            // Only split if description starts with service name followed by " - "
+            if (fullDesc.toLowerCase().startsWith(serviceName.toLowerCase() + ' - ')) {
+              serviceDesc = fullDesc.substring(serviceName.length + 3); // Remove "ServiceName - "
+            } else if (fullDesc.toLowerCase() !== serviceName.toLowerCase()) {
+              // Use full description if it's different from the name
+              serviceDesc = fullDesc;
+            }
+          }
+          
+          if (!serviceDesc) serviceDesc = '-';
+          
           const freq = item.frequency || item.frequencyType || item.billingDuration || '-';
           const visits = item.visits || item.frequencyCount || item.quantity || 1;
           
-          const rowHeight = 20;
+          console.log(`[PDF-v3] Row ${idx + 1}: name="${serviceName}", desc="${serviceDesc}"`);
           
-          if (y + rowHeight > pageHeight) {
-            doc.addPage();
-            y = 50;
-          }
+          // Manually wrap description text into lines (45 chars per line)
+          const descLines = wrapText(serviceDesc, 50);
+          const lineHeight = 9;
+          const rowH = Math.max(22, (descLines.length * lineHeight) + 10);
           
-          doc.rect(margin, y, contentWidth, rowHeight).lineWidth(0.5).stroke('#e0e0e0');
-          doc.fontSize(8).fillColor('#333333');
-          doc.text(`${idx + 1}`, margin + 10, y + 6);
-          doc.fillColor(navy).text(serviceName.substring(0, 25), margin + 35, y + 6);
-          doc.fillColor('#666666').text(serviceDesc.substring(0, 40), margin + 140, y + 6);
-          doc.text(freq, margin + 320, y + 6);
-          doc.text(`${visits}`, margin + 430, y + 6);
-          y += rowHeight;
+          // Check if we need a page break before this row
+          checkPageBreak(rowH);
+          
+          // Draw row background
+          const rowColor = idx % 2 === 0 ? '#FAFAFA' : white;
+          doc.rect(margin, y, contentWidth, rowH).fill(rowColor);
+          doc.rect(margin, y, contentWidth, rowH).lineWidth(0.3).stroke(borderGray);
+          
+          // Draw # column
+          doc.fontSize(7).fillColor(primaryText);
+          doc.text(`${idx + 1}`, colNum, y + 6, { lineBreak: false });
+          
+          // Draw Service name
+          doc.text(serviceName, colService, y + 6, { width: colServiceW, lineBreak: false });
+          
+          // Draw Description - each line manually, centered in the description column
+          doc.fillColor(secondaryText);
+          let descY = y + 6;
+          descLines.forEach((line, lineIdx) => {
+            doc.text(line, colDesc, descY + (lineIdx * lineHeight), { width: colDescW, align: 'center', lineBreak: false });
+          });
+          
+          // Draw Frequency and Visits (top-aligned)
+          doc.fillColor(primaryText);
+          doc.text(freq, colFreq, y + 6, { lineBreak: false });
+          doc.text(`${visits}`, colVisits, y + 6, { lineBreak: false });
+          
+          y += rowH;
         });
 
-        y += 20;
+        y += 15;
       }
 
-      // ===== PRICE SUMMARY BOX (Right-aligned) =====
-      if (y + 110 > pageHeight) {
-        doc.addPage();
-        y = 50;
+      // ===== ADD-ONS TABLE =====
+      if (!isWorkOrderInvoice && addonItems.length > 0) {
+        // Section header
+        doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('ADD-ONS', margin, y + 3, { lineBreak: false });
+        doc.font('Helvetica');
+        y += 18;
+        
+        // Table header - Purple background for addons
+        const tableHeaderH = 20;
+        const colNum = margin + 8;
+        const colAddon = margin + 28;
+        const colAddonW = 70;
+        const colDesc = margin + 100;
+        const colDescW = 220; // Description column
+        const colFreq = margin + 330;
+        const colVisits = margin + 400;
+        const colPrice = margin + 450;
+        
+        const addonGold = '#c9a227';
+        doc.rect(margin, y, contentWidth, tableHeaderH).fill(addonGold);
+        doc.fontSize(8).fillColor(white);
+        doc.text('#', colNum, y + 6);
+        doc.text('Add-on', colAddon, y + 6);
+        doc.text('Description', colDesc + (colDescW / 2) - 25, y + 6);
+        doc.text('Frequency', colFreq, y + 6);
+        doc.text('Visits', colVisits, y + 6);
+        doc.text('Price', colPrice, y + 6);
+        y += tableHeaderH;
+
+        // Helper function to wrap text
+        const wrapAddonText = (text, maxCharsPerLine) => {
+          const words = text.split(' ');
+          const lines = [];
+          let currentLine = '';
+          
+          words.forEach(word => {
+            if ((currentLine + ' ' + word).trim().length <= maxCharsPerLine) {
+              currentLine = (currentLine + ' ' + word).trim();
+            } else {
+              if (currentLine) lines.push(currentLine);
+              currentLine = word;
+            }
+          });
+          if (currentLine) lines.push(currentLine);
+          return lines;
+        };
+
+        // Check page break function for addons
+        const checkAddonPageBreak = (neededHeight) => {
+          const reservedForSummary = 150;
+          if (y + neededHeight > pageHeight - reservedForSummary) {
+            doc.addPage();
+            y = margin;
+            doc.rect(margin, y, contentWidth, tableHeaderH).fill(addonGold);
+            doc.fontSize(8).fillColor(white);
+            doc.text('#', colNum, y + 6);
+            doc.text('Add-on', colAddon, y + 6);
+            doc.text('Description', colDesc + (colDescW / 2) - 25, y + 6);
+            doc.text('Frequency', colFreq, y + 6);
+            doc.text('Visits', colVisits, y + 6);
+            doc.text('Price', colPrice, y + 6);
+            y += tableHeaderH;
+          }
+        };
+
+        addonItems.forEach((item, idx) => {
+          // Parse addon name and description
+          const fullDesc = decodeHtml(item.description || item.name || 'Add-on');
+          let addonName = fullDesc;
+          let addonDesc = '-';
+          
+          if (fullDesc.includes(' - ')) {
+            const parts = fullDesc.split(' - ');
+            addonName = parts[0];
+            addonDesc = parts.slice(1).join(' - ') || '-';
+          }
+          
+          const freq = item.frequency || item.frequencyType || item.billingDuration || '-';
+          const visits = item.visits || item.frequencyCount || item.quantity || 1;
+          const price = parseFloat(item.totalPrice || item.total_price || item.unitPrice || item.unit_price || 0);
+          
+          const descLines = wrapAddonText(addonDesc, 40);
+          const lineHeight = 9;
+          const rowH = Math.max(22, (descLines.length * lineHeight) + 10);
+          
+          checkAddonPageBreak(rowH);
+          
+          const rowColor = idx % 2 === 0 ? '#FAFAFA' : white;
+          doc.rect(margin, y, contentWidth, rowH).fill(rowColor);
+          doc.rect(margin, y, contentWidth, rowH).lineWidth(0.3).stroke(borderGray);
+          
+          doc.fontSize(7).fillColor(primaryText);
+          doc.text(`${idx + 1}`, colNum, y + 6, { lineBreak: false });
+          doc.text(addonName.substring(0, 15), colAddon, y + 6, { width: colAddonW, lineBreak: false });
+          
+          doc.fillColor(secondaryText);
+          let descY = y + 6;
+          descLines.forEach((line, lineIdx) => {
+            doc.text(line, colDesc, descY + (lineIdx * lineHeight), { width: colDescW, align: 'center', lineBreak: false });
+          });
+          
+          doc.fillColor(primaryText);
+          doc.text(freq, colFreq, y + 6, { lineBreak: false });
+          doc.text(`${visits}`, colVisits, y + 6, { lineBreak: false });
+          doc.text(`Rs.${price.toLocaleString('en-IN')}`, colPrice, y + 6, { lineBreak: false });
+          
+          y += rowH;
+        });
+
+        y += 15;
       }
 
-      const summaryWidth = 200;
+      // ===== PRICE SUMMARY - Right aligned (no icon) =====
+      const summaryWidth = 170;
       const summaryX = pageWidth - margin - summaryWidth;
       
-      doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX, y);
+      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX, y + 2, { lineBreak: false });
       doc.font('Helvetica');
-      y += 15;
+      y += 20;
       
-      // Summary box with border
-      const summaryHeight = safeDiscount > 0 ? 85 : 70;
-      doc.rect(summaryX, y, summaryWidth, summaryHeight).lineWidth(1).stroke('#e0e0e0');
+      // Summary box
+      const summaryHeight = safeDiscount > 0 ? 70 : 58;
+      doc.roundedRect(summaryX, y, summaryWidth, summaryHeight, 4).lineWidth(0.5).stroke(borderGray);
       
       let sy = y + 12;
-      doc.fontSize(9).fillColor('#666666');
+      doc.fontSize(8).fillColor(secondaryText);
       doc.text('Subtotal:', summaryX + 12, sy);
-      doc.fillColor('#333333').text(`Rs. ${safeSubtotal.toLocaleString('en-IN')}`, summaryX + 130, sy);
-      sy += 16;
+      doc.fillColor(primaryText).text(`Rs. ${safeSubtotal.toLocaleString('en-IN')}`, summaryX + 100, sy);
+      sy += 12;
       
       if (safeDiscount > 0) {
         doc.fillColor('#059669').text(`Discount:`, summaryX + 12, sy);
-        doc.text(`-Rs. ${safeDiscount.toLocaleString('en-IN')}`, summaryX + 130, sy);
-        sy += 16;
+        doc.text(`-Rs. ${safeDiscount.toLocaleString('en-IN')}`, summaryX + 100, sy);
+        sy += 12;
       }
       
-      doc.fillColor('#666666').text(`GST (${safeTaxPercent}%):`, summaryX + 12, sy);
-      doc.fillColor('#333333').text(`Rs. ${safeTax.toLocaleString('en-IN')}`, summaryX + 130, sy);
-      sy += 16;
+      doc.fillColor(secondaryText).text(`GST (${safeTaxPercent}.00%):`, summaryX + 12, sy);
+      doc.fillColor(primaryText).text(`Rs. ${safeTax.toLocaleString('en-IN')}`, summaryX + 100, sy);
+      sy += 12;
       
-      // Divider line
-      doc.strokeColor('#333333').lineWidth(0.5).moveTo(summaryX + 10, sy).lineTo(summaryX + summaryWidth - 10, sy).stroke();
+      doc.strokeColor(borderGray).lineWidth(0.5).moveTo(summaryX + 8, sy).lineTo(summaryX + summaryWidth - 8, sy).stroke();
       sy += 10;
       
-      // Total in gold
-      doc.fontSize(11).fillColor(gold).font('Helvetica-Bold').text('Total:', summaryX + 12, sy);
-      doc.text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, summaryX + 120, sy);
+      doc.fontSize(9).fillColor(gold).font('Helvetica-Bold').text('Total:', summaryX + 12, sy);
+      doc.text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, summaryX + 100, sy);
       doc.font('Helvetica');
 
+      y = y + summaryHeight + 20;
+
       // ===== FOOTER =====
-      doc.fontSize(9).fillColor('#666666').text(
+      // Ensure footer is at bottom of page
+      const footerY = Math.max(y, pageHeight - 50);
+      doc.strokeColor(borderGray).lineWidth(0.5).moveTo(margin, footerY).lineTo(pageWidth - margin, footerY).stroke();
+      
+      // Heart icon (outlined)
+      doc.circle(margin + 8, footerY + 12, 5).lineWidth(0.5).stroke(borderGray);
+      
+      doc.fontSize(8).fillColor(secondaryText).text(
         'We appreciate your trust in our services.',
-        margin, 780, { align: 'left', width: contentWidth, italic: true }
+        margin + 18, footerY + 9
       );
+
+      doc.end();
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+// Generate Payment Receipt PDF - Simple clean design
+const generateReceiptPDF = async (payment) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      const chunks = [];
+
+      doc.on('data', chunk => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      const {
+        paymentId,
+        invoiceId,
+        customerName,
+        propertyName,
+        amount,          // Amount paid in this transaction
+        invoiceAmount,   // Total invoice amount
+        balanceAmount,   // Remaining balance after this payment
+        paymentMethod,
+        paymentDate,
+        transactionReference,
+        referenceNumber,
+        status
+      } = payment;
+
+      const margin = 50;
+      const green = '#22c55e';
+      const darkGray = '#1f2937';
+      const lightGray = '#6b7280';
+      const blue = '#3b82f6';
+
+      // Calculate values
+      const amountPaid = parseFloat(amount) || 0;
+      const totalInvoice = parseFloat(invoiceAmount) || amountPaid;
+      const remaining = parseFloat(balanceAmount) || 0;
+
+      // Format date
+      const paymentDateFormatted = paymentDate ? new Date(paymentDate).toLocaleDateString('en-IN', {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+      }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+      // Payment method labels
+      const methodLabels = {
+        razorpay: 'Card/Net Banking',
+        cash: 'Cash',
+        bank_transfer: 'Bank Transfer',
+        upi: 'UPI',
+        check: 'Cheque'
+      };
+
+      let yPos = margin;
+
+      // ========== HEADER SECTION ==========
+      // Green checkmark circle
+      doc.circle(margin + 20, yPos + 20, 18).fill(green);
+      doc.fillColor('#ffffff').fontSize(20).font('Helvetica-Bold')
+         .text('✓', margin + 12, yPos + 10);
+
+      // "You paid ₹X,XXX" heading
+      doc.fillColor(darkGray).fontSize(22).font('Helvetica-Bold')
+         .text(`You paid ₹${amountPaid.toLocaleString('en-IN')}`, margin + 50, yPos + 8);
+
+      // "to Company Name on Date"
+      doc.fillColor(lightGray).fontSize(12).font('Helvetica')
+         .text(`to XLAND INFRA on ${paymentDateFormatted}`, margin + 50, yPos + 35);
+
+      yPos += 80;
+
+      // Divider line
+      doc.strokeColor('#e5e7eb').lineWidth(1).moveTo(margin, yPos).lineTo(545, yPos).stroke();
+      yPos += 30;
+
+      // ========== PAYMENT DETAILS SECTION ==========
+      doc.fillColor(darkGray).fontSize(16).font('Helvetica-Bold')
+         .text('Payment details', margin, yPos);
+      yPos += 35;
+
+      // Helper function for detail rows
+      const addDetailRow = (label, value, valueColor = darkGray, isBold = false) => {
+        doc.fillColor(lightGray).fontSize(11).font('Helvetica').text(label, margin, yPos);
+        doc.fillColor(valueColor).font(isBold ? 'Helvetica-Bold' : 'Helvetica')
+           .text(value, 350, yPos, { width: 195, align: 'right' });
+        yPos += 28;
+      };
+
+      // Invoice no.
+      addDetailRow('Invoice no.', invoiceId || paymentId, blue);
+
+      // Invoice amount (total)
+      addDetailRow('Invoice amount', `₹${totalInvoice.toLocaleString('en-IN')}`);
+
+      // Amount paid
+      addDetailRow('Amount paid', `₹${amountPaid.toLocaleString('en-IN')}`, darkGray, true);
+
+      // Remaining balance
+      const balanceText = remaining <= 0 ? '₹0' : `₹${remaining.toLocaleString('en-IN')}`;
+      const balanceColor = remaining <= 0 ? green : '#ef4444';
+      addDetailRow('Remaining balance', balanceText, balanceColor, true);
+
+      yPos += 10;
+
+      // Divider line
+      doc.strokeColor('#e5e7eb').lineWidth(1).moveTo(margin, yPos).lineTo(545, yPos).stroke();
+      yPos += 25;
+
+      // Status
+      const statusText = remaining <= 0 ? 'Fully Paid' : 'Partially Paid';
+      addDetailRow('Status', statusText, remaining <= 0 ? green : '#f59e0b', true);
+
+      // Payment method
+      addDetailRow('Payment method', methodLabels[paymentMethod] || paymentMethod || '-');
+
+      // Reference/Transaction ID
+      if (transactionReference || referenceNumber) {
+        addDetailRow('Reference ID', transactionReference || referenceNumber);
+      }
+
+      // Receipt ID
+      addDetailRow('Receipt ID', paymentId);
+
+      // Customer/Property
+      if (customerName || propertyName) {
+        addDetailRow('Customer', customerName || propertyName);
+      }
+
+      yPos += 30;
+
+      // ========== FOOTER NOTE ==========
+      doc.fillColor(lightGray).fontSize(10).font('Helvetica')
+         .text("Please don't reply to this email, if you need any help regarding this message, please contact the business directly.", margin, yPos, { width: 495 });
+      
+      yPos += 50;
+
+      doc.fillColor(darkGray).fontSize(11).font('Helvetica')
+         .text('Thank you,', margin, yPos);
+      yPos += 18;
+      doc.fillColor(darkGray).fontSize(11).font('Helvetica-Bold')
+         .text('XLAND INFRA PM SERVICES PVT LTD', margin, yPos);
+
+      // ========== COMPANY FOOTER ==========
+      yPos = 750;
+      doc.strokeColor('#e5e7eb').lineWidth(1).moveTo(margin, yPos).lineTo(545, yPos).stroke();
+      yPos += 15;
+      doc.fillColor('#9ca3af').fontSize(8).font('Helvetica')
+         .text('Gachibowli, Hyderabad, Telangana - 500032 | GST: 36AADCX1234A1Z5', margin, yPos, { align: 'center' });
+      yPos += 12;
+      doc.text('support@xlandinfra.com | www.xlandinfra.com', margin, yPos, { align: 'center' });
 
       doc.end();
     } catch (error) {
@@ -645,5 +1094,6 @@ const generateInvoicePDF = async (invoice) => {
 
 module.exports = {
   generateEstimatePDF,
-  generateInvoicePDF
+  generateInvoicePDF,
+  generateReceiptPDF
 };

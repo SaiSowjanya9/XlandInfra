@@ -8,27 +8,41 @@ const isDev = import.meta.env.DEV;
 const debug = (...args) => isDev && console.log(...args);
 
 // Decode HTML entities (e.g., &amp; -> &, &#x2F; -> /)
+// Runs multiple times to handle multiple levels of encoding (e.g., &amp;amp;amp; -> &)
 const decodeHtml = (html) => {
   if (!html || typeof html !== 'string') return html || '';
-  // Use a more comprehensive decoding for Node/browser environments
-  const entities = {
-    '&amp;': '&',
-    '&lt;': '<',
-    '&gt;': '>',
-    '&quot;': '"',
-    '&#39;': "'",
-    '&#x27;': "'",
-    '&#x2F;': '/',
-    '&nbsp;': ' ',
-    '&#x26;': '&'
+  
+  const decodeOnce = (str) => {
+    const entities = {
+      '&amp;': '&',
+      '&lt;': '<',
+      '&gt;': '>',
+      '&quot;': '"',
+      '&#39;': "'",
+      '&#x27;': "'",
+      '&#x2F;': '/',
+      '&nbsp;': ' ',
+      '&#x26;': '&'
+    };
+    let decoded = str;
+    for (const [entity, char] of Object.entries(entities)) {
+      decoded = decoded.replace(new RegExp(entity, 'gi'), char);
+    }
+    // Handle numeric entities
+    decoded = decoded.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
+    decoded = decoded.replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    return decoded;
   };
+  
+  // Decode multiple times to handle nested encoding (max 5 iterations)
   let decoded = html;
-  for (const [entity, char] of Object.entries(entities)) {
-    decoded = decoded.replace(new RegExp(entity, 'gi'), char);
+  let prev = '';
+  let iterations = 0;
+  while (decoded !== prev && iterations < 5) {
+    prev = decoded;
+    decoded = decodeOnce(decoded);
+    iterations++;
   }
-  // Handle numeric entities
-  decoded = decoded.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
-  decoded = decoded.replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
   return decoded;
 };
 
@@ -95,6 +109,58 @@ const safeStr = (val, fallback = '-') => {
   return String(val);
 };
 
+// ===== SHARED PDF HEADER FUNCTION =====
+// Used by all PDF exports for consistent branding
+const drawPDFHeader = (doc, margin) => {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const gold = [201, 162, 39];
+  const headerHeight = 18; // Thin header strip
+  
+  // Black header background
+  doc.setFillColor(26, 26, 26);
+  doc.rect(0, 0, pageWidth, headerHeight, 'F');
+  
+  // Gold bar at bottom
+  doc.setFillColor(201, 162, 39);
+  doc.rect(0, headerHeight, pageWidth, 2, 'F');
+  
+  // Logo - small size
+  const logoSize = 14;
+  try {
+    doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 2, 2, logoSize, logoSize);
+  } catch (e) {
+    doc.setFillColor(...gold);
+    doc.roundedRect(margin + 2, 2, logoSize, logoSize, 1, 1, 'F');
+  }
+  
+  // Company name - XLAND INFRA
+  const textX = margin + logoSize + 5;
+  doc.setTextColor(...gold);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('XLAND INFRA', textX, 6);
+  
+  // PVT LTD with decorative lines - positioned below XLAND INFRA, slightly left
+  doc.setFontSize(4);
+  doc.setFont('helvetica', 'normal');
+  const pvtLtdText = 'PVT LTD';
+  const pvtLtdWidth = doc.getTextWidth(pvtLtdText);
+  const lineLen = 4;
+  const gap = 0.3;
+  const pvtStartX = textX; // Start at same X as XLAND INFRA
+  const lineY = 11; // Closer to XLAND INFRA
+  doc.setDrawColor(...gold);
+  doc.setLineWidth(0.25);
+  // Left line
+  doc.line(pvtStartX, lineY, pvtStartX + lineLen, lineY);
+  // PVT LTD text
+  doc.text(pvtLtdText, pvtStartX + lineLen + gap, lineY + 0.6);
+  // Right line
+  doc.line(pvtStartX + lineLen + gap + pvtLtdWidth + gap, lineY, pvtStartX + lineLen + gap + pvtLtdWidth + gap + lineLen, lineY);
+  
+  return headerHeight + 8; // Return starting Y position for content
+};
+
 // Generate Premium PDF with professional design
 const generatePDF = (data, type, filename) => {
   try {
@@ -102,7 +168,6 @@ const generatePDF = (data, type, filename) => {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
-    let y = 12;
 
     // Professional Color Palette
     const navy = [30, 41, 59];               // Dark navy
@@ -115,337 +180,216 @@ const generatePDF = (data, type, filename) => {
     const borderLight = [229, 231, 235];     // Gray-200
     const gold = [180, 144, 52];             // Professional gold
 
-    // ===== HEADER with Dark Background =====
-    const headerHeight = 24;
-    doc.setFillColor(20, 20, 20); // Near black
-    doc.rect(0, 0, pageWidth, headerHeight, 'F');
-    
-    // Logo Icon (symbol only - left side)
-    const logoSize = 18;
-    try {
-      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin, 3, logoSize, logoSize);
-    } catch (e) {
-      // Fallback to gold square
-      doc.setFillColor(...gold);
-      doc.roundedRect(margin, 4, 16, 16, 2, 2, 'F');
-    }
-    
-    // Company Name text beside logo (vertically centered with logo)
-    const textX = margin + logoSize + 4;
-    doc.setTextColor(...gold);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', textX, 12);
-    const mainTextWidth = doc.getTextWidth('XLAND INFRA');
-    doc.setFontSize(5);
-    doc.setFont('helvetica', 'normal');
-    const pvtLtdText = 'PVT LTD';
-    const pvtLtdWidth = doc.getTextWidth(pvtLtdText);
-    const pvtLtdX = textX + (mainTextWidth - pvtLtdWidth) / 2;
-    doc.text(pvtLtdText, pvtLtdX, 17);
-    // Draw equal-length lines on both sides
-    const lineY = 16;
-    const lineGap = 1.5;
-    doc.setDrawColor(...gold);
-    doc.setLineWidth(0.2);
-    doc.line(textX, lineY, pvtLtdX - lineGap, lineY); // Left line
-    doc.line(pvtLtdX + pvtLtdWidth + lineGap, lineY, textX + mainTextWidth, lineY); // Right line
+    // ===== HEADER - Use shared function =====
+    let y = drawPDFHeader(doc, margin);
+    // y is already set by drawPDFHeader return value
 
-    // Document Badge (right side)
+    // ===== DOCUMENT INFO ROW - Plain =====
+    const metaY = y + 4;
+    
+    // Estimate/Package ID
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
-    const badgeWidth = 38;
-    const badgeHeight = 10;
-    const badgeX = pageWidth - margin - badgeWidth;
-    const badgeY = 7;
-    doc.setFillColor(...gold);
-    doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 1.5, 1.5, 'F');
-    doc.setTextColor(20, 20, 20);
-    doc.setFontSize(8);
+    doc.setFontSize(7);
+    doc.setTextColor(107, 114, 128); // gray-500
+    doc.text(docType + ' NO.', margin, metaY);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text(docType, badgeX + badgeWidth/2, badgeY + badgeHeight/2 + 1, { align: 'center' });
-
-    y = headerHeight + 8;
-
-    // ===== DOCUMENT INFO ROW =====
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...navy);
-    doc.text('ID:', margin, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...darkText);
+    doc.setTextColor(17, 24, 39); // gray-900
     const estId = String(data.estimateId || data.packageId || 'N/A');
-    doc.text(estId.length > 25 ? estId.substring(0, 25) + '...' : estId, margin + 8, y);
+    doc.text(estId.length > 25 ? estId.substring(0, 25) + '...' : estId, margin, metaY + 5);
     
-    // Status badge (for estimates)
-    if (type === 'estimate' && data.status) {
-      const status = String(data.status).toLowerCase();
-      const statusColors = {
-        'draft': [107, 114, 128],     // gray
-        'sent': [59, 130, 246],       // blue
-        'approved': [34, 197, 94],    // green
-        'rejected': [239, 68, 68],    // red
-        'expired': [249, 115, 22]     // orange
-      };
-      const statusColor = statusColors[status] || [107, 114, 128];
-      const statusText = status.charAt(0).toUpperCase() + status.slice(1);
-      
-      const statusX = pageWidth / 2 - 10;
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...mediumText);
-      doc.text('Status:', statusX, y);
-      doc.setFillColor(...statusColor);
-      doc.roundedRect(statusX + 12, y - 3, 18, 5, 1, 1, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(6);
-      doc.text(statusText, statusX + 12 + 9, y, { align: 'center' });
-      doc.setFontSize(8);
-    }
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...navy);
-    doc.text('Date:', pageWidth - margin - 38, y);
+    // Date
+    const col2X = margin + 80;
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...darkText);
-    doc.text(formatDate(data.createdAt), pageWidth - margin - 25, y);
-    y += 8;
+    doc.setTextColor(107, 114, 128);
+    doc.text('DATE', col2X, metaY);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(17, 24, 39);
+    doc.text(formatDate(data.createdAt), col2X, metaY + 5);
+    
+    y += 18;
 
-    // ===== PACKAGE PRICE BAR =====
-    if (data.packagePrice || data.package_price) {
-      doc.setFillColor(...cardBgBlue);
-      doc.setDrawColor(...borderLight);
-      doc.roundedRect(margin, y, pageWidth - margin * 2, 12, 2, 2, 'FD');
-      
-      doc.setTextColor(...navy);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Package Price: ' + formatCurrency(data.packagePrice || data.package_price), margin + 6, y + 8);
-      
-      doc.setTextColor(...slate);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      const billingLabel = (data.billing_duration || data.billingDuration || 'yearly').charAt(0).toUpperCase() + (data.billing_duration || data.billingDuration || 'yearly').slice(1).replace('-', ' ') + ' Billing';
-      doc.text(billingLabel, pageWidth - margin - 6, y + 8, { align: 'right' });
-      y += 16;
-    }
-
-    // ===== SIDE-BY-SIDE CARDS: Property + Customer =====
+    // ===== PROPERTY DETAILS (Plain, stacked vertically) =====
     if (type !== 'package') {
-      const gap = 6;
-      const cardWidth = (pageWidth - margin * 2 - gap) / 2;
-      
-      // Determine card height based on property type - need extra rows for GC/Apartment
       const propType = String(data.propertyType || '').toUpperCase();
       const isGC = ['GC', 'GATED COMMUNITY', 'GATED_COMMUNITY'].includes(propType);
       const isApt = ['APT', 'APARTMENT'].includes(propType);
       const isVilla = ['VILLA', 'VL'].includes(propType);
       const isFlat = ['FLAT', 'FL'].includes(propType);
       const isPlot = ['PLOT', 'PL'].includes(propType);
-      // APT has 4 rows (Name/Type, Zone, Tower/Block, Units) - needs more height than GC (3 rows)
-      const cardHeight = isApt ? 56 : (isGC ? 46 : ((isVilla || isFlat || isPlot) ? 40 : 34));
       
-      // Property Details Card - ensure same blue background as Customer Details
-      doc.setFillColor(239, 246, 255); // cardBgBlue - explicit RGB
-      doc.setDrawColor(229, 231, 235); // borderLight - explicit RGB
-      doc.roundedRect(margin, y, cardWidth, cardHeight, 2, 2, 'FD');
-      
+      // Property Details Header
       doc.setTextColor(...navy);
-      doc.setFontSize(9);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('Property Details', margin + 6, y + 6);
+      doc.text('Property Details', margin, y);
+      y += 6;
       
-      let py = y + 12;
+      // Property info in rows
       doc.setFontSize(8);
+      const col1 = margin;
+      const col2 = margin + 45;
+      const col3 = margin + 100;
+      const col4 = margin + 145;
       
-      // Row 1: Property ID | Property Type
+      // Row 1: Name & Type
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
-      doc.text('Name', margin + 6, py);
-      doc.text('Type', margin + cardWidth/2 + 6, py);
-      py += 5;
+      doc.text('Name:', col1, y);
+      doc.text('Type:', col3, y);
+      y += 4;
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
       const propName = decodeHtml(String(data.propertyName || data.communityName || '-'));
-      doc.text(propName.length > 16 ? propName.substring(0, 16) + '...' : propName, margin + 6, py);
+      doc.text(propName.length > 25 ? propName.substring(0, 25) + '...' : propName, col1, y);
       const typeLabel = isGC ? 'Gated Community' : isApt ? 'Apartment' : isVilla ? 'Villa' : isFlat ? 'Flat' : isPlot ? 'Plot' : String(data.propertyType || '-');
-      doc.text(typeLabel, margin + cardWidth/2 + 6, py);
-      py += 7;
+      doc.text(typeLabel, col3, y);
+      y += 5;
       
-      // Row 2: Zone | Division (Division only for property-based estimates)
+      // Row 2: Zone & Division
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
-      doc.text('Zone', margin + 6, py);
-      // Show Division label only for property-based estimates with division value
+      doc.text('Zone:', col1, y);
       const isPropertyBased = data.estimateType === 'property_based' || data.estimate_type === 'property_based' || data.propertyId || data.property_id;
       const hasDivision = isPropertyBased && (data.division || data.divisionName || data.division_name);
-      if (hasDivision) {
-        doc.text('Division', margin + cardWidth/2 + 6, py);
-      }
-      py += 5;
+      if (hasDivision) doc.text('Division:', col3, y);
+      y += 4;
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
-      doc.text(String(data.zone || '-'), margin + 6, py);
-      if (hasDivision) {
-        doc.text(String(data.division || data.divisionName || data.division_name), margin + cardWidth/2 + 6, py);
-      }
+      doc.text(String(data.zone || '-'), col1, y);
+      if (hasDivision) doc.text(String(data.division || data.divisionName || data.division_name), col3, y);
+      y += 5;
       
-      // Property-type specific fields - use consistent x-coordinates (margin + 6 for left, margin + cardWidth/2 + 6 for right)
-      const leftCol = margin + 6;
-      const rightCol = margin + cardWidth/2 + 6;
-      
+      // Property-type specific fields
       if (isGC) {
-        py += 6;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...lightText);
-        doc.text('No. of Blocks', leftCol, py);
-        doc.text('Total Units', rightCol, py);
-        py += 5;
+        doc.text('No. of Blocks:', col1, y);
+        doc.text('Total Units:', col3, y);
+        y += 4;
         doc.setTextColor(...darkText);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.numberOfBlocks || data.number_of_blocks || '-'), leftCol, py);
-        doc.text(String(data.totalUnits || data.total_units || '-'), rightCol, py);
+        doc.text(String(data.numberOfBlocks || data.number_of_blocks || '-'), col1, y);
+        doc.text(String(data.totalUnits || data.total_units || '-'), col3, y);
+        y += 5;
       } else if (isApt) {
-        py += 6;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...lightText);
-        doc.text('Tower/Building', leftCol, py);
-        doc.text('Block No.', rightCol, py);
-        py += 5;
+        doc.text('Tower:', col1, y);
+        doc.text('Block No.:', col3, y);
+        y += 4;
         doc.setTextColor(...darkText);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.towerName || data.tower_name || '-'), leftCol, py);
-        doc.text(String(data.blockNumber || data.block_number || '-'), rightCol, py);
-        py += 7;
+        doc.text(String(data.towerName || data.tower_name || '-'), col1, y);
+        doc.text(String(data.blockNumber || data.block_number || '-'), col3, y);
+        y += 5;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...lightText);
-        doc.text('No. of Units', leftCol, py);
-        py += 5;
+        doc.text('No. of Units:', col1, y);
+        y += 4;
         doc.setTextColor(...darkText);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.totalUnits || data.total_units || '-'), leftCol, py);
-      } else if (isVilla) {
-        py += 6;
+        doc.text(String(data.totalUnits || data.total_units || '-'), col1, y);
+        y += 5;
+      } else if (isVilla || isFlat || isPlot) {
+        const label = isVilla ? 'Villa Number:' : isFlat ? 'Flat Number:' : 'Plot Number:';
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...lightText);
-        doc.text('Villa Number', leftCol, py);
-        py += 5;
+        doc.text(label, col1, y);
+        y += 4;
         doc.setTextColor(...darkText);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.villaPlotNumber || data.villa_plot_number || data.villa_number || '-'), leftCol, py);
-      } else if (isFlat) {
-        py += 6;
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...lightText);
-        doc.text('Flat Number', leftCol, py);
-        py += 5;
-        doc.setTextColor(...darkText);
-        doc.setFont('helvetica', 'bold');
-        doc.text(String(data.villaPlotNumber || data.villa_plot_number || data.flat_number || '-'), leftCol, py);
-      } else if (isPlot) {
-        py += 6;
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...lightText);
-        doc.text('Plot Number', leftCol, py);
-        py += 5;
-        doc.setTextColor(...darkText);
-        doc.setFont('helvetica', 'bold');
-        doc.text(String(data.villaPlotNumber || data.villa_plot_number || data.plot_number || '-'), leftCol, py);
+        doc.text(String(data.villaPlotNumber || data.villa_plot_number || '-'), col1, y);
+        y += 5;
       }
       
-      // Customer Details Card - same blue background as Property Details
-      const cx = margin + cardWidth + gap;
-      doc.setFillColor(239, 246, 255); // cardBgBlue - explicit RGB
-      doc.setDrawColor(229, 231, 235); // borderLight - explicit RGB  
-      doc.roundedRect(cx, y, cardWidth, cardHeight, 2, 2, 'FD');
+      y += 4;
       
+      // ===== CUSTOMER DETAILS =====
       doc.setTextColor(...navy);
-      doc.setFontSize(9);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('Customer Details', cx + 6, y + 6);
+      doc.text('Customer Details', margin, y);
+      y += 6;
       
-      let cy = y + 12;
       doc.setFontSize(8);
       
-      // Row 1: Name
+      // Row 1: Name & Phone
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
-      doc.text('Name', cx + 6, cy);
-      doc.text('Phone', cx + cardWidth/2 + 4, cy);
-      cy += 5;
+      doc.text('Name:', col1, y);
+      doc.text('Phone:', col3, y);
+      y += 4;
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
       const custName = decodeHtml(String(data.customerName || '-'));
-      doc.text(custName.length > 14 ? custName.substring(0, 14) + '...' : custName, cx + 6, cy);
-      doc.text(String(data.customerPhone || '-'), cx + cardWidth/2 + 4, cy);
-      cy += 7;
+      doc.text(custName.length > 25 ? custName.substring(0, 25) + '...' : custName, col1, y);
+      doc.text(String(data.customerPhone || '-'), col3, y);
+      y += 5;
       
       // Row 2: Email
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
-      doc.text('Email', cx + 6, cy);
-      cy += 5;
+      doc.text('Email:', col1, y);
+      y += 4;
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
       const email = String(data.customerEmail || '-');
-      doc.text(email.length > 30 ? email.substring(0, 30) + '...' : email, cx + 6, cy);
-      cy += 7;
+      doc.text(email.length > 45 ? email.substring(0, 45) + '...' : email, col1, y);
+      y += 5;
       
-      // Row 3: City (if available)
+      // Row 3: City
       if (data.city) {
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...lightText);
-        doc.text('City', cx + 6, cy);
-        cy += 5;
+        doc.text('City:', col1, y);
+        y += 4;
         doc.setTextColor(...darkText);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.city || '-'), cx + 6, cy);
+        doc.text(String(data.city || '-'), col1, y);
+        y += 5;
       }
       
-      y += cardHeight + 8;
+      y += 6;
     }
 
-    // ===== WORK ORDER DETAILS (only for work order estimates) =====
+    // ===== WORK ORDER DETAILS (only for work order estimates) - Compact 4-column layout =====
     if (data.isWorkOrderEstimate && data.workOrderId) {
-      // Use same blue card style as Property & Customer Details for consistency
-      const woBoxHeight = 32; // Increased height for better spacing
-      doc.setFillColor(239, 246, 255); // cardBgBlue - same as other cards
-      doc.setDrawColor(229, 231, 235); // borderLight - same as other cards
+      const woBoxHeight = 22;
+      doc.setFillColor(239, 246, 255);
+      doc.setDrawColor(229, 231, 235);
       doc.roundedRect(margin, y, pageWidth - margin * 2, woBoxHeight, 2, 2, 'FD');
       
       doc.setTextColor(...navy);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('Work Order Details', margin + 6, y + 6);
+      doc.text('Work Order Details', margin + 6, y + 5);
       
-      let wy = y + 13;
-      doc.setFontSize(8);
+      // 4-column layout on single row
+      const col1 = margin + 6;
+      const col2 = margin + 55;
+      const col3 = margin + 105;
+      const col4 = margin + 150;
+      const wy = y + 13;
       
-      // Row 1: Work Order ID & Category (using same layout as Property/Customer cards)
-      const leftCol = margin + 6;
-      const midCol = margin + 95;
-      
+      doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
-      doc.text('Work Order ID', leftCol, wy);
-      doc.text('Category', midCol, wy);
-      wy += 5;
+      doc.text('Work Order ID', col1, wy);
+      doc.text('Category', col2, wy);
+      doc.text('Subcategory', col3, wy);
+      doc.text('Priority', col4, wy);
+      
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
-      doc.text(String(data.workOrderId || '-'), leftCol, wy);
-      doc.text(String(data.workOrderCategory || '-'), midCol, wy);
-      wy += 7;
+      doc.text(String(data.workOrderId || '-').substring(0, 18), col1, wy + 5);
+      doc.text(String(data.workOrderCategory || '-').substring(0, 15), col2, wy + 5);
+      doc.text(String(data.workOrderSubcategory || '-').substring(0, 15), col3, wy + 5);
+      doc.text(String(data.workOrderPriority || '-').toUpperCase(), col4, wy + 5);
       
-      // Row 2: Subcategory & Priority
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...lightText);
-      doc.text('Subcategory', leftCol, wy);
-      doc.text('Priority', midCol, wy);
-      wy += 5;
-      doc.setTextColor(...darkText);
-      doc.setFont('helvetica', 'bold');
-      doc.text(String(data.workOrderSubcategory || '-'), leftCol, wy);
-      doc.text(String(data.workOrderPriority || '-').toUpperCase(), midCol, wy);
-      
-      y += woBoxHeight + 10; // Add proper spacing after the box
+      y += woBoxHeight + 8;
     }
 
     // ===== AMC PACKAGE DESCRIPTION =====
@@ -469,6 +413,18 @@ const generatePDF = (data, type, filename) => {
       doc.text(descLines.slice(0, 20), margin + 4, y + 4);
       y += descBoxH + 4;
     }
+
+    // ===== BILLING DURATION (left side, just above services) =====
+    const billingValue = data.billing_duration || data.billingDuration || 'Yearly';
+    const formattedBilling = billingValue.charAt(0).toUpperCase() + billingValue.slice(1).replace('-', ' ');
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...mediumText);
+    doc.text('Billing:', margin, y);
+    doc.setTextColor(...darkText);
+    doc.setFont('helvetica', 'bold');
+    doc.text(formattedBilling, margin + 18, y);
+    y += 8;
 
     // ===== SERVICES TABLE (Skip for Work Order Estimates) =====
     const isWorkOrder = data.isWorkOrderEstimate || data.estimate_type === 'work_order' || data.estimateType === 'work_order' || data.workOrderId;
@@ -504,11 +460,11 @@ const generatePDF = (data, type, filename) => {
       headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50], halign: 'center' },
       bodyStyles: { textColor: darkText, lineColor: [100, 100, 100], minCellHeight: 8 },
       columnStyles: {
-        0: { cellWidth: 10, halign: 'center' },
-        1: { cellWidth: 35, halign: 'left' },
-        2: { cellWidth: 75, halign: 'left' },
-        3: { cellWidth: 30, halign: 'center' },
-        4: { cellWidth: 15, halign: 'center' }
+        0: { cellWidth: 12, halign: 'center' },
+        1: { cellWidth: 38, halign: 'left' },
+        2: { cellWidth: 82, halign: 'left' },
+        3: { cellWidth: 32, halign: 'center' },
+        4: { cellWidth: 16, halign: 'center' }
       },
       alternateRowStyles: { fillColor: [252, 252, 253] },
       rowPageBreak: 'avoid'
@@ -548,11 +504,11 @@ const generatePDF = (data, type, filename) => {
         headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50], halign: 'center' },
         bodyStyles: { textColor: darkText, lineColor: [100, 100, 100], minCellHeight: 8 },
         columnStyles: {
-          0: { cellWidth: 10, halign: 'center' },
-          1: { cellWidth: 35, halign: 'left' },
-          2: { cellWidth: 75, halign: 'left' },
-          3: { cellWidth: 30, halign: 'center' },
-          4: { cellWidth: 15, halign: 'center' }
+          0: { cellWidth: 12, halign: 'center' },
+          1: { cellWidth: 38, halign: 'left' },
+          2: { cellWidth: 82, halign: 'left' },
+          3: { cellWidth: 32, halign: 'center' },
+          4: { cellWidth: 16, halign: 'center' }
         },
         alternateRowStyles: { fillColor: [252, 252, 253] },
         rowPageBreak: 'avoid'
@@ -561,10 +517,10 @@ const generatePDF = (data, type, filename) => {
       y = doc.lastAutoTable.finalY + 8;
     }
 
-    // ===== PRICE SUMMARY BOX =====
+    // ===== PRICE SUMMARY (Plain, right-aligned) =====
     const subtotal = parseFloat(data.subtotal) || 0;
     
-    // Get discount values - try explicit values first, then calculate
+    // Get discount values
     let discountPercent = parseFloat(data.discountPercent || data.discount_percent || data.discount) || 0;
     let discountAmount = parseFloat(data.discountAmount || data.discount_amount) || 0;
     
@@ -585,100 +541,84 @@ const generatePDF = (data, type, filename) => {
       gstAmount = Math.round((afterDiscount * gstPercent) / 100);
     }
     
-    // Calculate final total: (Subtotal - Discount) + GST
+    // Calculate final total
     const total = Math.round(afterDiscount + gstAmount);
-    
-    const priceBoxW = 85;
-    const priceBoxX = pageWidth - margin - priceBoxW;
     const hasDiscount = discountAmount > 0;
-    const priceBoxH = 14 + (hasDiscount ? 7 : 0) + 7 + 12;
 
-    // Check for page break BEFORE drawing title (keep title and box together)
-    if (y + priceBoxH + 30 > pageHeight) {
+    // Check for page break
+    if (y + 50 > pageHeight) {
       doc.addPage();
       y = 20;
     }
 
-    // Price Summary Title - right aligned above the box
+    // Price Summary Title
     doc.setTextColor(...navy);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('PRICE SUMMARY', priceBoxX, y);
-    y += 6;
-
-    // Price Summary Card
-    doc.setFillColor(...cardBg);
-    doc.setDrawColor(...borderLight);
-    doc.roundedRect(priceBoxX, y, priceBoxW, priceBoxH, 2, 2, 'FD');
+    doc.text('PRICE SUMMARY', margin, y);
+    y += 8;
     
-    let py = y + 6;
+    // Price rows - plain text
+    const priceCol1 = margin;
+    const priceCol2 = margin + 60;
     
-    // Subtotal row
-    doc.setTextColor(...mediumText);
-    doc.setFontSize(8);
+    // Subtotal
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text('Subtotal:', priceBoxX + 6, py);
+    doc.setTextColor(...mediumText);
+    doc.text('Subtotal:', priceCol1, y);
     doc.setTextColor(...darkText);
     doc.setFont('helvetica', 'bold');
-    doc.text(formatCurrency(subtotal), priceBoxX + priceBoxW - 6, py, { align: 'right' });
-    py += 7;
+    doc.text(formatCurrency(subtotal), priceCol2, y);
+    y += 6;
     
-    // Discount row (if applicable)
+    // Discount (if applicable)
     if (hasDiscount) {
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...mediumText);
-      doc.text(`Discount (${discountPercent}%):`, priceBoxX + 6, py);
+      doc.text(`Discount (${discountPercent}%):`, priceCol1, y);
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
-      doc.text('-' + formatCurrency(discountAmount), priceBoxX + priceBoxW - 6, py, { align: 'right' });
-      py += 7;
+      doc.text('-' + formatCurrency(discountAmount), priceCol2, y);
+      y += 6;
     }
     
-    // GST row
+    // GST
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...mediumText);
-    doc.text(`GST (${gstPercent}%):`, priceBoxX + 6, py);
+    doc.text(`GST (${gstPercent}%):`, priceCol1, y);
     doc.setTextColor(...darkText);
     doc.setFont('helvetica', 'bold');
-    doc.text(formatCurrency(gstAmount), priceBoxX + priceBoxW - 6, py, { align: 'right' });
-    py += 8;
+    doc.text(formatCurrency(gstAmount), priceCol2, y);
+    y += 8;
     
-    // Total row with navy background
-    doc.setFillColor(...navy);
-    doc.roundedRect(priceBoxX + 3, py - 2, priceBoxW - 6, 11, 2, 2, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL:', priceBoxX + 8, py + 5);
+    // Total - bold and larger
     doc.setFontSize(10);
-    doc.text(formatCurrency(total), priceBoxX + priceBoxW - 8, py + 5, { align: 'right' });
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...navy);
+    doc.text('TOTAL:', priceCol1, y);
+    doc.text(formatCurrency(total), priceCol2, y);
+    y += 10;
 
-    y += priceBoxH + 10;
-
-    // ===== NOTES/DESCRIPTION (After Price Summary) =====
+    // ===== NOTES/DESCRIPTION (Plain) =====
     if (data.description && data.description.trim()) {
-      if (y + 30 > pageHeight - 25) {
+      if (y + 20 > pageHeight - 25) {
         doc.addPage();
         y = 20;
       }
       
       doc.setTextColor(...navy);
-      doc.setFontSize(9);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('NOTES / DESCRIPTION', margin, y);
-      y += 4;
+      doc.text('NOTES', margin, y);
+      y += 6;
       
-      doc.setFillColor(...cardBg);
-      doc.setDrawColor(...borderLight);
-      const noteLines = doc.splitTextToSize(decodeHtml(String(data.description)), pageWidth - margin * 2 - 8);
-      const noteBoxH = Math.min(Math.max(12, noteLines.length * 4 + 6), 40);
-      doc.roundedRect(margin, y, pageWidth - margin * 2, noteBoxH, 2, 2, 'FD');
-      
-      doc.setTextColor(...mediumText);
-      doc.setFontSize(7);
+      const noteLines = doc.splitTextToSize(decodeHtml(String(data.description)), pageWidth - margin * 2);
+      doc.setTextColor(...darkText);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
-      doc.text(noteLines.slice(0, 8), margin + 4, y + 5);
-      y += noteBoxH + 6;
+      doc.text(noteLines.slice(0, 8), margin, y);
+      y += noteLines.length * 4 + 6;
     }
 
     // ===== FOOTER =====
@@ -995,7 +935,7 @@ export const exportPackageToPDF = (pkg) => {
   }
 };
 
-// Export Invoice to PDF (matching Estimate format)
+// Export Invoice to PDF - Matching Image 2 design exactly
 export const exportInvoiceToPDF = (invoice) => {
   try {
     if (!invoice) {
@@ -1013,318 +953,392 @@ export const exportInvoiceToPDF = (invoice) => {
 
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 15;
-    let y = 12;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 12;
+    let y = 0;
 
-    // Colors
-    const navy = [30, 41, 59];
-    const darkText = [31, 41, 55];
-    const mediumText = [75, 85, 99];
-    const lightText = [107, 114, 128];
-    const cardBgBlue = [239, 246, 255];
-    const borderLight = [229, 231, 235];
-    const gold = [180, 144, 52];
-    const green = [34, 197, 94];
-    const red = [239, 68, 68];
+    // Colors per design spec (Image 2)
+    const headerBlack = [21, 21, 21];
+    const gold = [201, 162, 39];          // #C9A227
+    const lightGold = [232, 198, 106];
+    const primaryText = [23, 23, 23];
+    const secondaryText = [85, 85, 85];
+    const borderGray = [229, 229, 229];
+    const cardBg = [251, 247, 238];
+    const white = [255, 255, 255];
 
-    // Header
-    const headerHeight = 24;
-    doc.setFillColor(20, 20, 20);
-    doc.rect(0, 0, pageWidth, headerHeight, 'F');
-    
-    const logoSize = 18;
-    try {
-      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin, 3, logoSize, logoSize);
-    } catch (e) {
-      doc.setFillColor(...gold);
-      doc.roundedRect(margin, 4, 16, 16, 2, 2, 'F');
-    }
-    
-    const textX = margin + logoSize + 4;
-    doc.setTextColor(...gold);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', textX, 12);
-    doc.setFontSize(5);
-    doc.setFont('helvetica', 'normal');
-    doc.text('PVT LTD', textX + 8, 17);
+    // Calculate if compact mode needed
+    const itemCount = lineItems.length;
+    const isCompact = itemCount > 4;
 
-    // INVOICE Badge
-    const badgeWidth = 38;
-    const badgeX = pageWidth - margin - badgeWidth;
-    doc.setFillColor(...gold);
-    doc.roundedRect(badgeX, 7, badgeWidth, 10, 1.5, 1.5, 'F');
-    doc.setTextColor(20, 20, 20);
+    // ===== HEADER - Use shared function =====
+    y = drawPDFHeader(doc, margin);
+
+    // ===== ID / DATE / DUE ROW (Compact) =====
     doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.text('INVOICE', badgeX + badgeWidth/2, 13.5, { align: 'center' });
-
-    y = headerHeight + 8;
-
-    // Invoice ID and Date row
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...navy);
+    doc.setTextColor(...secondaryText);
     doc.text('ID:', margin, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...darkText);
-    doc.text(String(invoice.invoiceId || 'N/A'), margin + 8, y);
-    
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...navy);
-    doc.text('Date:', pageWidth - margin - 40, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...darkText);
-    doc.text(formatDate(invoice.invoiceDate), pageWidth - margin - 25, y);
-    y += 6;
-
-    // Due Date
+    doc.setFontSize(10);
+    doc.setTextColor(...primaryText);
+    doc.text(String(invoice.invoiceId || 'N/A'), margin + 12, y);
+    
     if (invoice.sourceEstimateId) {
       doc.setFontSize(7);
-      doc.setTextColor(...mediumText);
-      doc.text('Estimate: ' + invoice.sourceEstimateId, margin, y);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...gold);
+      doc.text('Estimate: ' + invoice.sourceEstimateId, margin, y + 10);
     }
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...navy);
-    doc.text('Due:', pageWidth - margin - 40, y);
+    
+    // Date and Due on right - aligned to right edge
+    const dateLabel = pageWidth - margin - 60;
+    const dateValue = pageWidth - margin - 32;
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...darkText);
-    doc.text(formatDate(invoice.dueDate), pageWidth - margin - 25, y);
-    y += 8;
+    doc.setTextColor(...secondaryText);
+    doc.text('Date:', dateLabel, y);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...primaryText);
+    doc.text(formatDate(invoice.invoiceDate), dateValue, y);
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...secondaryText);
+    doc.text('Due:', dateLabel, y + 12);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...primaryText);
+    doc.text(formatDate(invoice.dueDate), dateValue, y + 12);
+    
+    y += 28;
 
-    // Amount Bar
-    doc.setFillColor(...cardBgBlue);
-    doc.setDrawColor(...borderLight);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, 12, 2, 2, 'FD');
-    doc.setTextColor(...navy);
+    // ===== TOTAL AMOUNT DUE BANNER (Compact & Elegant) =====
+    const bannerHeight = 18;
+    doc.setFillColor(...gold);
+    doc.roundedRect(margin, y, pageWidth - margin * 2, bannerHeight, 3, 3, 'F');
+    
+    doc.setTextColor(...white);
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
+    doc.text('TOTAL AMOUNT DUE', pageWidth / 2, y + 5, { align: 'center' });
+    
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('Total Amount: ' + formatCurrency(invoice.totalAmount || 0), margin + 6, y + 8);
-    y += 16;
+    doc.text('Rs. ' + Math.round(invoice.totalAmount || 0).toLocaleString('en-IN'), pageWidth / 2, y + 13, { align: 'center' });
+    
+    y += bannerHeight + 8;
 
-    // Property & Customer Cards
-    const gap = 6;
-    const cardWidth = (pageWidth - margin * 2 - gap) / 2;
-    const cardHeight = 38;
+    // ===== PROPERTY & CUSTOMER DETAILS (Compact) =====
+    const cardGap = 6;
+    const cardWidth = (pageWidth - margin * 2 - cardGap) / 2;
+    const cardHeight = isCompact ? 42 : 48;
+    const lineH = isCompact ? 5 : 5.5;
     
-    doc.setFillColor(...cardBgBlue);
-    doc.setDrawColor(...borderLight);
-    doc.roundedRect(margin, y, cardWidth, cardHeight, 2, 2, 'FD');
-    doc.setTextColor(...navy);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Property Details', margin + 6, y + 6);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...lightText);
-    doc.text('Property ID:', margin + 6, y + 14);
-    doc.setTextColor(...darkText);
-    doc.text(String(invoice.propertyCode || '-'), margin + 30, y + 14);
-    doc.setTextColor(...lightText);
-    doc.text('Name:', margin + 6, y + 22);
-    doc.setTextColor(...darkText);
-    const propName = String(invoice.propertyName || '-');
-    doc.text(propName.length > 20 ? propName.substring(0, 20) + '...' : propName, margin + 20, y + 22);
+    // Property Details Card
+    doc.setFillColor(...cardBg);
+    doc.roundedRect(margin, y, cardWidth, cardHeight, 3, 3, 'F');
     
-    const custX = margin + cardWidth + gap;
-    doc.setFillColor(...cardBgBlue);
-    doc.roundedRect(custX, y, cardWidth, cardHeight, 2, 2, 'FD');
-    doc.setTextColor(...navy);
-    doc.setFontSize(9);
+    doc.setTextColor(...primaryText);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.text('Customer Details', custX + 6, y + 6);
-    doc.setFontSize(8);
+    doc.text('PROPERTY DETAILS', margin + 6, y + 12);
+    
+    doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...lightText);
-    doc.text('Name:', custX + 6, y + 14);
-    doc.setTextColor(...darkText);
-    doc.text(String(invoice.customerName || '-'), custX + 20, y + 14);
-    doc.setTextColor(...lightText);
-    doc.text('Phone:', custX + 6, y + 22);
-    doc.setTextColor(...darkText);
-    doc.text(String(invoice.customerPhone || '-'), custX + 20, y + 22);
-    doc.setTextColor(...lightText);
-    doc.text('Email:', custX + 6, y + 30);
-    doc.setTextColor(...darkText);
+    let py = y + 20;
+    doc.setTextColor(...secondaryText);
+    doc.text('Property ID: ' + String(invoice.propertyCode || '-'), margin + 6, py); py += lineH;
+    doc.text('Name: ' + String(invoice.propertyName || '-').substring(0, 20), margin + 6, py); py += lineH;
+    doc.text('Type: ' + String(invoice.propertyType || '-'), margin + 6, py); py += lineH;
+    doc.text('Zone: ' + String(invoice.zone || '-'), margin + 6, py); py += lineH;
+    doc.text('City: ' + String(invoice.city || '-'), margin + 6, py);
+    
+    // Customer Details Card
+    const custCardX = margin + cardWidth + cardGap;
+    doc.setFillColor(...cardBg);
+    doc.roundedRect(custCardX, y, cardWidth, cardHeight, 3, 3, 'F');
+    
+    doc.setTextColor(...primaryText);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CUSTOMER DETAILS', custCardX + 6, y + 12);
+    
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
+    let cy = y + 20;
+    doc.setTextColor(...secondaryText);
+    doc.text('Name: ' + String(invoice.customerName || '-'), custCardX + 6, cy); cy += lineH;
+    doc.text('Phone: ' + String(invoice.customerPhone || '-'), custCardX + 6, cy); cy += lineH;
     const email = String(invoice.customerEmail || '-');
-    doc.text(email.length > 22 ? email.substring(0, 22) + '...' : email, custX + 18, y + 30);
+    doc.text('Email: ' + (email.length > 25 ? email.substring(0, 25) + '...' : email), custCardX + 6, cy); cy += lineH;
+    doc.text('City: ' + String(invoice.city || '-'), custCardX + 6, cy);
     
     y += cardHeight + 8;
 
-    // Separate services and add-ons
+    // ===== SERVICES INCLUDED - Gold themed table =====
+    // Parse services
     const allItems = lineItems.filter(item => {
       const desc = String(item.description || item.name || '').toLowerCase();
       return !desc.includes('amc package:') && !desc.includes('amc services');
     });
 
-    // Helper to check if item is an addon
     const isAddon = (item) => {
       const typeStr = String(item.type || '').toLowerCase();
-      return typeStr === 'addon' || typeStr === 'add-on' || typeStr === 'add_on';
+      if (typeStr === 'addon' || typeStr === 'add-on' || typeStr === 'add_on') return true;
+      const desc = String(item.description || item.name || '').toLowerCase();
+      return desc.includes('add-on') || desc.includes('addon');
     };
 
-    // Services (type = 'service' or items not marked as addon)
-    const services = allItems
-      .filter(item => !isAddon(item))
-      .map(item => {
-        const fullDesc = String(item.description || item.name || 'Service');
-        const parts = fullDesc.split(' - ');
-        return {
-          name: parts[0] || 'Service',
-          description: parts.slice(1).join(' - ') || '-',
-          frequency: item.frequency || item.frequencyType || item.frequency_type || '-',
-          visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
-        };
-      });
+    const services = allItems.filter(item => !isAddon(item)).map(item => {
+      const itemName = decodeHtml(item.name || '');
+      const itemDetails = decodeHtml(item.details || '');
+      const fullDesc = decodeHtml(String(item.description || item.name || 'Service'));
+      const parts = fullDesc.split(' - ');
+      return {
+        name: itemName || parts[0] || 'Service',
+        description: itemDetails || parts.slice(1).join(' - ') || '-',
+        frequency: item.frequency || item.frequencyType || item.frequency_type || '-',
+        visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
+      };
+    });
 
-    // Add-ons (type contains 'addon')
-    const addons = allItems
-      .filter(item => isAddon(item))
-      .map(item => {
-        const fullDesc = String(item.description || item.name || 'Add-on');
+    // Extract addons
+    const addons = allItems.filter(item => isAddon(item)).map(item => {
+      const fullDesc = decodeHtml(String(item.description || item.name || 'Add-on'));
+      let addonName = fullDesc;
+      let addonDesc = '-';
+      
+      if (fullDesc.includes(' - ')) {
         const parts = fullDesc.split(' - ');
-        return {
-          name: parts[0] || 'Add-on',
-          description: parts.slice(1).join(' - ') || '-',
-          frequency: item.frequency || item.frequencyType || item.frequency_type || '-',
-          visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
-        };
-      });
+        addonName = parts[0];
+        addonDesc = parts.slice(1).join(' - ') || '-';
+      }
+      
+      return {
+        name: addonName,
+        description: addonDesc,
+        frequency: item.frequency || item.frequencyType || item.frequency_type || '-',
+        visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1,
+        price: parseFloat(item.totalPrice || item.total_price || item.unitPrice || item.unit_price || 0)
+      };
+    });
 
-    // Check if this is a work order invoice (skip services for work order invoices)
     const isWorkOrderInvoice = invoice.invoiceType === 'work_order' || invoice.invoice_type === 'work_order';
-    
-    // Services Included Table (Skip for Work Order Invoices)
-    if (!isWorkOrderInvoice && services.length > 0) {
-      doc.setTextColor(...navy);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('SERVICES INCLUDED', margin, y);
-      y += 4;
 
+    // ===== WORK ORDER DETAILS (for work order invoices) =====
+    if (isWorkOrderInvoice) {
+      const woItem = services[0] || {};
+      const category = invoice.workOrderCategory || invoice.work_order_category || woItem.category || '-';
+      const subcategory = invoice.workOrderSubcategory || invoice.work_order_subcategory || woItem.subcategory || '-';
+      const woDescription = decodeHtml(invoice.workOrderDescription || invoice.work_order_description || woItem.description || '');
+      const woId = invoice.workOrderId || invoice.work_order_id || '-';
+      
+      // Section header - line starts AFTER text
+      doc.setTextColor(...primaryText);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.text('WORK ORDER DETAILS', margin, y + 5);
+      doc.setDrawColor(249, 115, 22); // Orange
+      doc.setLineWidth(0.3);
+      // Orange line AFTER text (~50px wide at fontSize 7)
+      doc.line(margin + 52, y + 4, margin + 82, y + 4);
+      y += 10;
+      
+      // Work order details box - orange tinted
+      const woBoxHeight = woDescription && woDescription.length > 50 ? 28 : 22;
+      doc.setFillColor(255, 247, 237); // #FFF7ED
+      doc.setDrawColor(253, 186, 116); // #FDBA74
+      doc.roundedRect(margin, y, pageWidth - margin * 2, woBoxHeight, 2, 2, 'FD');
+      
+      // Three columns
+      const col1 = margin + 6;
+      const col2 = margin + 75;
+      const col3 = margin + 155;
+      
+      doc.setFontSize(5);
+      doc.setTextColor(154, 52, 18); // #9A3412
+      doc.setFont('helvetica', 'normal');
+      doc.text('Work Order ID', col1, y + 5);
+      doc.text('Category', col2, y + 5);
+      doc.text('Subcategory', col3, y + 5);
+      
+      doc.setFontSize(7);
+      doc.setTextColor(234, 88, 12); // #EA580C
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(woId), col1, y + 11);
+      doc.setTextColor(...primaryText);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(category).substring(0, 20), col2, y + 11);
+      doc.text(String(subcategory).substring(0, 20), col3, y + 11);
+      
+      // Description if exists
+      if (woDescription && woDescription !== '-') {
+        doc.setFontSize(5);
+        doc.setTextColor(154, 52, 18);
+        doc.text('Description', col1, y + 17);
+        doc.setFontSize(6);
+        doc.setTextColor(...primaryText);
+        doc.text(woDescription.substring(0, 80), col1, y + 22);
+      }
+      
+      y += woBoxHeight + 8;
+    }
+
+    if (!isWorkOrderInvoice && services.length > 0) {
+      // Section header - text only (no decorative line)
+      doc.setTextColor(...primaryText);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text('SERVICES INCLUDED', margin, y + 5);
+      
+      y += 10;
+
+      // Services table - with full descriptions and text wrapping
       autoTable(doc, {
         startY: y,
         head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
         body: services.map((item, idx) => [
           String(idx + 1),
-          String(item.name).substring(0, 40),
-          String(item.description) || '-',
-          String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1),
+          decodeHtml(String(item.name)),
+          decodeHtml(String(item.description)) || '-',
+          String(item.frequency),
           String(item.visits)
         ]),
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 3, valign: 'middle' },
-        headStyles: { fillColor: navy, textColor: [255,255,255], fontStyle: 'bold', fontSize: 7 },
-        columnStyles: { 
-          0: { cellWidth: 10, halign: 'center' }, 
-          1: { cellWidth: 35 }, 
-          2: { cellWidth: 'auto', halign: 'center' }, 
-          3: { cellWidth: 25, halign: 'center' }, 
-          4: { cellWidth: 18, halign: 'center' } 
+        styles: { 
+          fontSize: 6.5, 
+          cellPadding: 3, 
+          valign: 'middle', 
+          overflow: 'linebreak',
+          cellWidth: 'wrap'
         },
-        margin: { left: margin, right: margin }
+        headStyles: { fillColor: gold, textColor: white, fontStyle: 'bold', fontSize: 7, halign: 'center' },
+        bodyStyles: { textColor: primaryText, minCellHeight: 10, lineColor: [220, 220, 220] },
+        alternateRowStyles: { fillColor: [252, 252, 252] },
+        columnStyles: { 
+          0: { cellWidth: 8, halign: 'center' }, 
+          1: { cellWidth: 30, halign: 'left' }, 
+          2: { cellWidth: 'auto', halign: 'left' }, 
+          3: { cellWidth: 25, halign: 'center' }, 
+          4: { cellWidth: 15, halign: 'center' } 
+        },
+        margin: { left: margin, right: margin },
+        tableLineColor: [200, 200, 200],
+        tableLineWidth: 0.2
       });
-      y = doc.lastAutoTable.finalY + 8;
+      y = doc.lastAutoTable.finalY + 10;
     }
 
-    // Add-ons Table (Skip for Work Order Invoices)
+    // ===== ADDONS SECTION =====
     if (!isWorkOrderInvoice && addons.length > 0) {
-      doc.setTextColor(...navy);
-      doc.setFontSize(10);
+      // Section header
+      doc.setTextColor(...primaryText);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
-      doc.text('ADD-ONS', margin, y);
-      y += 4;
+      doc.text('ADD-ONS', margin, y + 5);
+      
+      y += 10;
 
+      // Addons table - purple themed
+      const addonGold = [201, 162, 39]; // #c9a227 - same as services for consistency
       autoTable(doc, {
         startY: y,
-        head: [['#', 'Add-on Service', 'Description', 'Frequency', 'Visits']],
+        head: [['#', 'Add-on', 'Description', 'Frequency', 'Visits', 'Price']],
         body: addons.map((item, idx) => [
           String(idx + 1),
-          String(item.name).substring(0, 40),
-          String(item.description) || '-',
-          String(item.frequency).charAt(0).toUpperCase() + String(item.frequency).slice(1),
-          String(item.visits)
+          decodeHtml(String(item.name)),
+          decodeHtml(String(item.description)) || '-',
+          String(item.frequency),
+          String(item.visits),
+          `Rs. ${Math.round(item.price).toLocaleString('en-IN')}`
         ]),
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 3, valign: 'middle' },
-        headStyles: { fillColor: navy, textColor: [255,255,255], fontStyle: 'bold', fontSize: 7 },
-        columnStyles: { 
-          0: { cellWidth: 10, halign: 'center' }, 
-          1: { cellWidth: 35 }, 
-          2: { cellWidth: 'auto', halign: 'center' }, 
-          3: { cellWidth: 25, halign: 'center' }, 
-          4: { cellWidth: 18, halign: 'center' } 
+        styles: { 
+          fontSize: 6.5, 
+          cellPadding: 3, 
+          valign: 'middle', 
+          overflow: 'linebreak',
+          cellWidth: 'wrap'
         },
-        margin: { left: margin, right: margin }
+        headStyles: { fillColor: addonGold, textColor: white, fontStyle: 'bold', fontSize: 7, halign: 'center' },
+        bodyStyles: { textColor: primaryText, minCellHeight: 10, lineColor: [220, 220, 220] },
+        alternateRowStyles: { fillColor: [252, 252, 252] },
+        columnStyles: { 
+          0: { cellWidth: 8, halign: 'center' }, 
+          1: { cellWidth: 28, halign: 'left' }, 
+          2: { cellWidth: 'auto', halign: 'left' }, 
+          3: { cellWidth: 22, halign: 'center' }, 
+          4: { cellWidth: 12, halign: 'center' },
+          5: { cellWidth: 25, halign: 'right' } 
+        },
+        margin: { left: margin, right: margin },
+        tableLineColor: [200, 200, 200],
+        tableLineWidth: 0.2
       });
-      y = doc.lastAutoTable.finalY + 8;
+      y = doc.lastAutoTable.finalY + 10;
     }
 
-    // If no services or add-ons
-    if (services.length === 0 && addons.length === 0) {
-      doc.setFontSize(8);
-      doc.setTextColor(...mediumText);
-      doc.text('No services included', margin, y + 6);
-      y += 14;
-    }
-
-    // Price Summary
-    doc.setTextColor(...navy);
-    doc.setFontSize(10);
+    // ===== PRICE SUMMARY - Right aligned (Compact) =====
+    const summaryWidth = 90;
+    const summaryX = pageWidth - margin - summaryWidth;
+    
+    // Section header - text only (no decorative line)
+    doc.setTextColor(...primaryText);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.text('PRICE SUMMARY', margin, y);
-    y += 4;
+    doc.text('PRICE SUMMARY', summaryX, y + 5);
+    
+    y += 10;
 
-    const summaryX = pageWidth - margin - 80;
-    const valueX = pageWidth - margin - 6;
-    doc.setFillColor(249, 250, 251);
-    doc.roundedRect(summaryX - 6, y, 86, 44, 2, 2, 'FD');
-    y += 8;
-
-    doc.setFontSize(8);
+    // Price summary box
+    doc.setDrawColor(...borderGray);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(summaryX, y, summaryWidth, 36, 3, 3, 'S');
+    
+    let sy = y + 9;
+    const labelX = summaryX + 6;
+    const valueX = summaryX + summaryWidth - 6;
+    
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...mediumText);
-    doc.text('Subtotal:', summaryX, y);
-    doc.setTextColor(...darkText);
-    doc.text(formatCurrency(invoice.subtotal || 0), valueX, y, { align: 'right' });
-    y += 7;
-
-    if (invoice.discountAmount > 0) {
-      doc.setTextColor(...mediumText);
-      doc.text('Discount:', summaryX, y);
-      doc.setTextColor(...red);
-      doc.text('-' + formatCurrency(invoice.discountAmount), valueX, y, { align: 'right' });
-      y += 7;
-    }
-
-    doc.setTextColor(...mediumText);
-    doc.text('GST (' + (invoice.taxPercentage || 18) + '%):', summaryX, y);
-    doc.setTextColor(...darkText);
-    doc.text(formatCurrency(invoice.taxAmount || 0), valueX, y, { align: 'right' });
-    y += 8;
-
+    doc.setTextColor(...secondaryText);
+    doc.text('Subtotal:', labelX, sy);
+    doc.setTextColor(...primaryText);
+    doc.text('Rs. ' + Math.round(invoice.subtotal || 0).toLocaleString('en-IN'), valueX, sy, { align: 'right' });
+    sy += 7;
+    
+    doc.setTextColor(...secondaryText);
+    doc.text('GST (' + (invoice.taxPercentage || 18).toFixed(2) + '%):', labelX, sy);
+    doc.setTextColor(...primaryText);
+    doc.text('Rs. ' + Math.round(invoice.taxAmount || 0).toLocaleString('en-IN'), valueX, sy, { align: 'right' });
+    sy += 8;
+    
+    doc.setDrawColor(...borderGray);
+    doc.line(summaryX + 4, sy - 3, summaryX + summaryWidth - 4, sy - 3);
+    
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(...navy);
-    doc.text('TOTAL:', summaryX, y);
-    doc.text(formatCurrency(invoice.totalAmount || 0), valueX, y, { align: 'right' });
-    y += 8;
-
     doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...mediumText);
-    doc.text('Amount Paid:', summaryX, y);
-    doc.setTextColor(...green);
-    doc.text(formatCurrency(invoice.amountPaid || 0), valueX, y, { align: 'right' });
-    y += 6;
+    doc.setTextColor(...primaryText);
+    doc.text('Grand Total:', labelX, sy + 2);
+    doc.setTextColor(...gold);
+    doc.text('Rs. ' + Math.round(invoice.totalAmount || 0).toLocaleString('en-IN'), valueX, sy + 2, { align: 'right' });
+    
+    y += 42;
 
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...navy);
-    doc.text('Balance Due:', summaryX, y);
-    const balance = invoice.balanceAmount || invoice.totalAmount || 0;
-    doc.setTextColor(balance > 0 ? red[0] : green[0], balance > 0 ? red[1] : green[1], balance > 0 ? red[2] : green[2]);
-    doc.text(formatCurrency(balance), valueX, y, { align: 'right' });
+    // ===== FOOTER =====
+    const footerY = Math.max(y, pageHeight - 15);
+    doc.setDrawColor(...borderGray);
+    doc.setLineWidth(0.3);
+    doc.line(margin, footerY, pageWidth - margin, footerY);
+    
+    doc.setDrawColor(...borderGray);
+    doc.circle(margin + 5, footerY + 5, 3, 'S');
+    
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...secondaryText);
+    doc.text('We appreciate your trust in our services.', margin + 12, footerY + 6);
 
     // Save
     savePDFCrossPlatform(doc, `Invoice-${invoice.invoiceId || 'INV'}.pdf`);
