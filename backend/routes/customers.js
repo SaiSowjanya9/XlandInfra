@@ -1806,7 +1806,7 @@ router.get('/invoices/:id', async (req, res) => {
 
     // Get payment history for this invoice
     const [payments] = await pool.execute(
-      `SELECT id, amount, payment_method, payment_date, transaction_id, status, remarks, created_at
+      `SELECT id, amount, payment_method, payment_date, transaction_reference, status, remarks, created_at
        FROM payments WHERE invoice_id = ? ORDER BY payment_date DESC`,
       [id]
     );
