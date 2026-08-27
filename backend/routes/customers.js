@@ -1579,6 +1579,36 @@ router.get('/invoices', async (req, res) => {
       }
     }
 
+    // Build WHERE conditions - prioritize property identifiers over email
+    // Only use email if no property identifiers are available
+    const whereConditions = [];
+    const whereParams = [];
+    
+    // Primary: Match by numeric property ID
+    if (numericPropertyId) {
+      whereConditions.push('i.property_id = ?');
+      whereParams.push(numericPropertyId);
+    }
+    
+    // Secondary: Match by property code (unique string like "GC-1782597489323")
+    if (propertyCode && propertyCode !== String(numericPropertyId)) {
+      whereConditions.push('i.property_code = ?');
+      whereParams.push(propertyCode);
+    }
+    
+    // Only use email as fallback if NO property identifiers found
+    // Email matching is too broad and can show invoices from other properties
+    if (whereConditions.length === 0 && customerEmail) {
+      whereConditions.push('LOWER(i.customer_email) = LOWER(?)');
+      whereParams.push(customerEmail);
+    }
+    
+    const whereClause = whereConditions.length > 0 
+      ? `WHERE (${whereConditions.join(' OR ')})` 
+      : 'WHERE 1=0';
+
+    console.log('[Customer Invoices] Query conditions:', { numericPropertyId, propertyCode, customerEmail, whereConditions });
+
     // Get all invoices for this property
     const [invoices] = await pool.execute(
       `SELECT i.*,
@@ -1587,11 +1617,9 @@ router.get('/invoices', async (req, res) => {
                 0
               ) as amount_paid
        FROM invoices i
-       WHERE i.property_id = ? 
-          OR i.property_code = ?
-          OR LOWER(i.customer_email) = LOWER(?)
+       ${whereClause}
        ORDER BY i.created_at DESC`,
-      [numericPropertyId, propertyCode, customerEmail]
+      whereParams
     );
 
     // Parse line items and calculate balance
@@ -1688,7 +1716,33 @@ router.get('/invoices/:id', async (req, res) => {
 
     const customerData = customer[0];
     const customerEmail = customerData.email;
+    const storedPropertyId = customerData.property_id;
     const storedPropertyCode = customerData.property_code;
+
+    // Resolve property to get numeric ID
+    let numericPropertyId = storedPropertyId;
+    let propertyCode = storedPropertyCode;
+
+    const lookupId = storedPropertyId || storedPropertyCode;
+    if (lookupId) {
+      const [opData] = await pool.execute(
+        `SELECT id, property_id FROM onboarded_properties WHERE id = ? OR property_id = ?`,
+        [lookupId, lookupId]
+      );
+      if (opData.length > 0) {
+        numericPropertyId = opData[0].id;
+        propertyCode = propertyCode || opData[0].property_id;
+      } else {
+        const [pData] = await pool.execute(
+          `SELECT id, property_id FROM properties WHERE id = ? OR property_id = ?`,
+          [lookupId, lookupId]
+        );
+        if (pData.length > 0) {
+          numericPropertyId = pData[0].id;
+          propertyCode = propertyCode || pData[0].property_id;
+        }
+      }
+    }
 
     // Get invoice
     const [invoices] = await pool.execute(
@@ -1709,15 +1763,24 @@ router.get('/invoices/:id', async (req, res) => {
     const inv = invoices[0];
 
     // Verify the invoice belongs to this customer's property
+    // ONLY match by property_id or property_code - NOT by email (email is not unique across properties)
+    const invoicePropertyId = inv.property_id;
     const invoicePropertyCode = inv.property_code;
-    const invoiceCustomerEmail = inv.customer_email?.toLowerCase();
-    const custPropertyCode = storedPropertyCode;
-    const custEmail = customerEmail?.toLowerCase();
 
-    const hasAccess = (invoicePropertyCode && custPropertyCode && invoicePropertyCode === custPropertyCode) ||
-                      (invoiceCustomerEmail && custEmail && invoiceCustomerEmail === custEmail);
+    const hasAccess = 
+      (numericPropertyId && invoicePropertyId && String(numericPropertyId) === String(invoicePropertyId)) ||
+      (propertyCode && invoicePropertyCode && propertyCode === invoicePropertyCode);
 
-    if (!hasAccess) {
+    // Fallback: If customer has no property assigned, allow email-based access (legacy support)
+    const hasEmailFallback = !numericPropertyId && !propertyCode && customerEmail && 
+      inv.customer_email?.toLowerCase() === customerEmail.toLowerCase();
+
+    if (!hasAccess && !hasEmailFallback) {
+      console.log('[Invoice Access Denied]', { 
+        customerId, numericPropertyId, propertyCode, 
+        invoicePropertyId, invoicePropertyCode,
+        customerEmail: customerEmail?.substring(0, 5) + '...'
+      });
       return res.status(403).json({ success: false, message: 'Access denied to this invoice' });
     }
 
@@ -2178,7 +2241,33 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
     }
 
     const customerData = customer[0];
+    const storedPropertyId = customerData.property_id;
     const storedPropertyCode = customerData.property_code;
+
+    // Resolve property to get numeric ID
+    let numericPropertyId = storedPropertyId;
+    let propertyCode = storedPropertyCode;
+
+    const lookupId = storedPropertyId || storedPropertyCode;
+    if (lookupId) {
+      const [opData] = await pool.execute(
+        `SELECT id, property_id FROM onboarded_properties WHERE id = ? OR property_id = ?`,
+        [lookupId, lookupId]
+      );
+      if (opData.length > 0) {
+        numericPropertyId = opData[0].id;
+        propertyCode = propertyCode || opData[0].property_id;
+      } else {
+        const [pData] = await pool.execute(
+          `SELECT id, property_id FROM properties WHERE id = ? OR property_id = ?`,
+          [lookupId, lookupId]
+        );
+        if (pData.length > 0) {
+          numericPropertyId = pData[0].id;
+          propertyCode = propertyCode || pData[0].property_id;
+        }
+      }
+    }
 
     // Get invoice
     const [invoices] = await pool.execute(
@@ -2192,16 +2281,21 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
 
     const inv = invoices[0];
 
-    // Verify the invoice belongs to this customer
+    // Verify the invoice belongs to this customer's property
+    // ONLY match by property_id or property_code - NOT by email
+    const invoicePropertyId = inv.property_id;
     const invoicePropertyCode = inv.property_code;
-    const invoiceCustomerEmail = inv.customer_email?.toLowerCase();
-    const custPropertyCode = storedPropertyCode;
+
+    const hasAccess = 
+      (numericPropertyId && invoicePropertyId && String(numericPropertyId) === String(invoicePropertyId)) ||
+      (propertyCode && invoicePropertyCode && propertyCode === invoicePropertyCode);
+
+    // Fallback for legacy customers without property assigned
     const custEmail = customerData.email?.toLowerCase();
+    const hasEmailFallback = !numericPropertyId && !propertyCode && custEmail && 
+      inv.customer_email?.toLowerCase() === custEmail;
 
-    const hasAccess = (invoicePropertyCode && custPropertyCode && invoicePropertyCode === custPropertyCode) ||
-                      (invoiceCustomerEmail && custEmail && invoiceCustomerEmail === custEmail);
-
-    if (!hasAccess) {
+    if (!hasAccess && !hasEmailFallback) {
       return res.status(403).json({ success: false, message: 'Access denied to this invoice' });
     }
 
