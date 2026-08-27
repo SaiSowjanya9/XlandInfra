@@ -140,19 +140,19 @@ const drawPDFHeader = (doc, margin) => {
   doc.setFont('helvetica', 'bold');
   doc.text('XLAND INFRA', textX, 18);
   
-  // PVT LTD with decorative lines - format: -- PVT LTD --
-  const lineLen = 18;
-  const gap = 3; // Small gap between line and text
-  const pvtLtdWidth = 20; // Approximate width of "PVT LTD" text
+  // PVT LTD with decorative lines - format: — PVT LTD —
+  const lineLen = 12;
+  const gap = 1; // Minimal gap between line and text
+  const pvtLtdWidth = 13; // Width of "PVT LTD" text at 7pt
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setDrawColor(...gold);
-  doc.setLineWidth(0.6);
+  doc.setLineWidth(0.5);
   // Left line
   doc.line(textX, 30, textX + lineLen, 30);
-  // PVT LTD text (closer to lines)
+  // PVT LTD text
   doc.text('PVT LTD', textX + lineLen + gap, 32);
-  // Right line (same length, symmetric spacing)
+  // Right line
   doc.line(textX + lineLen + gap + pvtLtdWidth + gap, 30, textX + lineLen + gap + pvtLtdWidth + gap + lineLen, 30);
   
   return headerHeight + 22; // Return starting Y position for content (more spacing)
