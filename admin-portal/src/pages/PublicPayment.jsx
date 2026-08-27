@@ -211,12 +211,21 @@ const UPIAppLogos = () => (
       </svg>
     </div>
     {/* Paytm */}
-    <div className="px-2 py-1.5 bg-blue-50 rounded-lg border border-blue-100">
-      <span className="text-sm font-bold text-blue-600">pay<span className="text-blue-800">tm</span></span>
+    {/* Paytm - Official Logo */}
+    <div className="px-2 py-1.5 bg-white rounded-lg border border-gray-200">
+      <span className="text-sm font-bold">
+        <span className="text-[#002E6E]">Pay</span>
+        <span className="text-[#00BAF2]">tm</span>
+      </span>
     </div>
-    {/* BHIM */}
-    <div className="px-2 py-1.5 bg-orange-50 rounded-lg border border-orange-100">
-      <span className="text-sm font-bold text-orange-600">BHIM</span>
+    {/* BHIM - Official Logo */}
+    <div className="flex items-center px-2 py-1.5 bg-white rounded-lg border border-gray-200">
+      <span className="text-sm font-bold text-[#4A4A4A] tracking-tight">BHIM</span>
+      <svg viewBox="0 0 20 20" className="w-4 h-4 ml-0.5">
+        <path d="M10 2L18 10L14 10L14 18L10 14" fill="#FF9933"/>
+        <path d="M10 6L14 10L10 10L10 14L6 10L10 10L10 6" fill="white"/>
+        <path d="M10 10L6 10L2 10L10 18L10 14L10 10" fill="#138808"/>
+      </svg>
     </div>
     {/* More */}
     <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200">

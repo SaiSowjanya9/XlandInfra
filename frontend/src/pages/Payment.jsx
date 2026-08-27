@@ -471,16 +471,24 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                                     <span className="text-white text-sm font-bold">₹</span>
                                   </div>
                                 )}
-                                {/* Paytm */}
+                                {/* Paytm - Official Logo */}
                                 {badge === 'Paytm' && (
-                                  <div className="border border-[#00B9F5] rounded-full px-2.5 py-0.5">
-                                    <span className="text-[#00B9F5] text-[11px] font-medium">paytm</span>
+                                  <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
+                                    <span className="text-[12px] font-bold">
+                                      <span className="text-[#002E6E]">Pay</span>
+                                      <span className="text-[#00BAF2]">tm</span>
+                                    </span>
                                   </div>
                                 )}
-                                {/* BHIM */}
+                                {/* BHIM - Official Logo */}
                                 {badge === 'BHIM' && (
-                                  <div className="bg-[#EF6C00] text-white px-2.5 py-1 rounded text-[10px] font-bold">
-                                    BHIM
+                                  <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
+                                    <span className="text-[#4A4A4A] text-[11px] font-bold tracking-tight">BHIM</span>
+                                    <svg viewBox="0 0 20 20" className="w-4 h-4 ml-0.5">
+                                      <path d="M10 2L18 10L14 10L14 18L10 14" fill="#FF9933"/>
+                                      <path d="M10 6L14 10L10 10L10 14L6 10L10 10L10 6" fill="white"/>
+                                      <path d="M10 10L6 10L2 10L10 18L10 14L10 10" fill="#138808"/>
+                                    </svg>
                                   </div>
                                 )}
                               </div>
