@@ -140,18 +140,20 @@ const drawPDFHeader = (doc, margin) => {
   doc.setFont('helvetica', 'bold');
   doc.text('XLAND INFRA', textX, 18);
   
-  // PVT LTD with decorative lines - centered below XLAND INFRA
-  const lineLen = 20;
+  // PVT LTD with decorative lines - format: -- PVT LTD --
+  const lineLen = 18;
+  const gap = 3; // Small gap between line and text
+  const pvtLtdWidth = 20; // Approximate width of "PVT LTD" text
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setDrawColor(...gold);
   doc.setLineWidth(0.6);
   // Left line
   doc.line(textX, 30, textX + lineLen, 30);
-  // PVT LTD text
-  doc.text('PVT LTD', textX + lineLen + 8, 32);
-  // Right line (same length)
-  doc.line(textX + lineLen + 8 + 38, 30, textX + lineLen + 8 + 38 + lineLen, 30);
+  // PVT LTD text (closer to lines)
+  doc.text('PVT LTD', textX + lineLen + gap, 32);
+  // Right line (same length, symmetric spacing)
+  doc.line(textX + lineLen + gap + pvtLtdWidth + gap, 30, textX + lineLen + gap + pvtLtdWidth + gap + lineLen, 30);
   
   return headerHeight + 22; // Return starting Y position for content (more spacing)
 };
@@ -503,11 +505,11 @@ const generatePDF = (data, type, filename) => {
       headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50], halign: 'center' },
       bodyStyles: { textColor: darkText, lineColor: [100, 100, 100], minCellHeight: 8 },
       columnStyles: {
-        0: { cellWidth: 10, halign: 'center' },
-        1: { cellWidth: 35, halign: 'left' },
-        2: { cellWidth: 75, halign: 'left' },
-        3: { cellWidth: 30, halign: 'center' },
-        4: { cellWidth: 15, halign: 'center' }
+        0: { cellWidth: 12, halign: 'center' },
+        1: { cellWidth: 38, halign: 'left' },
+        2: { cellWidth: 82, halign: 'left' },
+        3: { cellWidth: 32, halign: 'center' },
+        4: { cellWidth: 16, halign: 'center' }
       },
       alternateRowStyles: { fillColor: [252, 252, 253] },
       rowPageBreak: 'avoid'
@@ -547,11 +549,11 @@ const generatePDF = (data, type, filename) => {
         headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50], halign: 'center' },
         bodyStyles: { textColor: darkText, lineColor: [100, 100, 100], minCellHeight: 8 },
         columnStyles: {
-          0: { cellWidth: 10, halign: 'center' },
-          1: { cellWidth: 35, halign: 'left' },
-          2: { cellWidth: 75, halign: 'left' },
-          3: { cellWidth: 30, halign: 'center' },
-          4: { cellWidth: 15, halign: 'center' }
+          0: { cellWidth: 12, halign: 'center' },
+          1: { cellWidth: 38, halign: 'left' },
+          2: { cellWidth: 82, halign: 'left' },
+          3: { cellWidth: 32, halign: 'center' },
+          4: { cellWidth: 16, halign: 'center' }
         },
         alternateRowStyles: { fillColor: [252, 252, 253] },
         rowPageBreak: 'avoid'

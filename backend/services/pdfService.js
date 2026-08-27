@@ -65,22 +65,24 @@ const drawPDFHeader = (doc, margin) => {
   const textX = margin + 50; // Adjusted for larger logo
   doc.fontSize(16).fillColor(gold).font('Helvetica-Bold').text('XLAND INFRA', textX, 10);
   
-  // PVT LTD with decorative lines - centered below XLAND INFRA
+  // PVT LTD with decorative lines - format: -- PVT LTD --
   doc.fontSize(7).fillColor(gold).font('Helvetica');
   doc.strokeColor(gold).lineWidth(0.6);
   
   // Fixed positions for perfect symmetry
   const lineY = 30;
-  const lineLen = 20; // Same length for both lines
+  const lineLen = 18; // Line length
+  const gap = 4; // Small gap between line and text
+  const pvtLtdWidth = 28; // Approximate width of "PVT LTD" text at 7pt
   
-  // Left line: starts at textX, goes 20px right
+  // Left line
   doc.moveTo(textX, lineY).lineTo(textX + lineLen, lineY).stroke();
   
-  // PVT LTD text in the middle
-  doc.text('PVT LTD', textX + lineLen + 8, 26, { lineBreak: false });
+  // PVT LTD text (closer to lines)
+  doc.text('PVT LTD', textX + lineLen + gap, 26, { lineBreak: false });
   
-  // Right line: starts after text, same 20px length as left
-  const rightLineStart = textX + lineLen + 8 + 38; // 38px is PVT LTD text width
+  // Right line (symmetric spacing)
+  const rightLineStart = textX + lineLen + gap + pvtLtdWidth + gap;
   doc.moveTo(rightLineStart, lineY).lineTo(rightLineStart + lineLen, lineY).stroke();
   
   return headerHeight + 22; // Return starting Y position for content (added more spacing below gold bar)
