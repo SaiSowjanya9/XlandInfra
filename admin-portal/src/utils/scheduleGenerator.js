@@ -180,7 +180,150 @@ export const generateScheduleDates = (
 };
 
 /**
- * Adjust schedule date based on vendor availability
+ * Smart Recommended Date Generation
+ * 1. Generate target date based on frequency (recurrence anchor)
+ * 2. Search vendor availability within ±3 days window
+ * 3. Score and rank options based on multiple factors
+ * 
+ * Scoring factors:
+ * - Same Zone jobs already scheduled (better routing)
+ * - Vendor availability
+ * - Available capacity
+ * - Closest date to recurrence target
+ * - Customer preferred days/time
+ * - No scheduling conflicts
+ */
+
+const RECOMMENDATION_WEIGHTS = {
+  sameZoneJobs: 30,        // Vendor has other jobs in same zone
+  exactTargetDate: 25,     // Exact match with target date
+  closestToTarget: 20,     // Proximity to target date
+  highAvailability: 15,    // More available slots
+  customerPreferred: 10    // Customer's preferred day/time
+};
+
+/**
+ * Generate recommended dates around a target date
+ * @param {Date} targetDate - The ideal recurrence date
+ * @param {Array} vendorAvailability - Vendor's available slots with zone info
+ * @param {number} searchWindow - Days to search before/after target (default: 3)
+ * @param {object} options - Additional options (zone, customerPrefs, etc.)
+ * @returns {Array} Scored and ranked recommended dates
+ */
+export const generateRecommendedDates = (
+  targetDate,
+  vendorAvailability = [],
+  searchWindow = 3,
+  options = {}
+) => {
+  const target = new Date(targetDate);
+  const targetDateStr = target.toISOString().split('T')[0];
+  const { zone, customerPreferredDays = [], customerPreferredTime } = options;
+  
+  // Generate search window dates: Target ± 3 days
+  const searchDates = [];
+  for (let i = -searchWindow; i <= searchWindow; i++) {
+    const searchDate = new Date(target);
+    searchDate.setDate(searchDate.getDate() + i);
+    searchDates.push({
+      date: searchDate,
+      dateStr: searchDate.toISOString().split('T')[0],
+      daysFromTarget: i,
+      dayOfWeek: searchDate.getDay(),
+      dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][searchDate.getDay()]
+    });
+  }
+  
+  // Score each date in the search window
+  const scoredDates = searchDates.map(searchDate => {
+    let score = 0;
+    const reasons = [];
+    
+    // Find matching availability slot
+    const availSlot = vendorAvailability.find(slot => 
+      new Date(slot.date).toISOString().split('T')[0] === searchDate.dateStr
+    );
+    
+    // Check if vendor is available on this date
+    const isAvailable = availSlot && (availSlot.availableSlots > 0 || availSlot.isAvailable);
+    
+    if (!isAvailable) {
+      return {
+        ...searchDate,
+        score: -1,
+        isAvailable: false,
+        reasons: ['Vendor not available'],
+        recommendation: 'unavailable'
+      };
+    }
+    
+    // 1. Exact target date match
+    if (searchDate.daysFromTarget === 0) {
+      score += RECOMMENDATION_WEIGHTS.exactTargetDate;
+      reasons.push('Exact recurrence date');
+    }
+    
+    // 2. Closest to target (inverse of distance)
+    const proximityScore = RECOMMENDATION_WEIGHTS.closestToTarget * (1 - Math.abs(searchDate.daysFromTarget) / searchWindow);
+    score += proximityScore;
+    
+    // 3. Same zone jobs (better routing)
+    if (availSlot?.sameZoneJobs > 0) {
+      score += RECOMMENDATION_WEIGHTS.sameZoneJobs;
+      reasons.push(`${availSlot.sameZoneJobs} other ${zone || 'zone'} jobs scheduled`);
+    }
+    
+    // 4. High availability (more capacity = more flexibility)
+    if (availSlot?.availableSlots >= 3) {
+      score += RECOMMENDATION_WEIGHTS.highAvailability;
+      reasons.push('High availability');
+    } else if (availSlot?.availableSlots >= 1) {
+      score += RECOMMENDATION_WEIGHTS.highAvailability * 0.5;
+      reasons.push('Limited availability');
+    }
+    
+    // 5. Customer preferred day
+    if (customerPreferredDays.includes(searchDate.dayName) || 
+        customerPreferredDays.includes(searchDate.dayOfWeek)) {
+      score += RECOMMENDATION_WEIGHTS.customerPreferred;
+      reasons.push('Customer preferred day');
+    }
+    
+    // Determine recommendation level
+    let recommendation = 'available';
+    if (score >= 60) recommendation = 'highly_recommended';
+    else if (score >= 40) recommendation = 'recommended';
+    else if (score >= 20) recommendation = 'available';
+    else recommendation = 'limited';
+    
+    return {
+      ...searchDate,
+      score: Math.round(score),
+      isAvailable: true,
+      availableSlots: availSlot?.availableSlots || 0,
+      sameZoneJobs: availSlot?.sameZoneJobs || 0,
+      reasons,
+      recommendation
+    };
+  });
+  
+  // Sort by score (highest first), filter out unavailable
+  const rankedDates = scoredDates
+    .filter(d => d.isAvailable)
+    .sort((a, b) => b.score - a.score);
+  
+  // Return top recommendations
+  return {
+    targetDate: targetDateStr,
+    searchWindow: `${searchWindow} days`,
+    recommendations: rankedDates,
+    bestOption: rankedDates[0] || null,
+    hasAvailability: rankedDates.length > 0
+  };
+};
+
+/**
+ * Adjust schedule date based on vendor availability (legacy support)
  * @param {Date} originalDate - The original scheduled date
  * @param {Array} availableSlots - Array of available time slots
  * @param {number} maxDaysShift - Maximum days to shift from original date
@@ -191,71 +334,24 @@ export const adjustForVendorAvailability = (
   availableSlots = [],
   maxDaysShift = 3
 ) => {
-  const original = new Date(originalDate);
+  // Use the new smart recommendation system
+  const recommendations = generateRecommendedDates(originalDate, availableSlots, maxDaysShift);
   
-  // If no available slots provided, return original
-  if (!availableSlots || availableSlots.length === 0) {
+  if (recommendations.bestOption) {
     return {
-      date: original,
-      adjusted: false,
-      daysShifted: 0,
-      reason: null
+      date: recommendations.bestOption.date,
+      adjusted: recommendations.bestOption.daysFromTarget !== 0,
+      daysShifted: recommendations.bestOption.daysFromTarget,
+      reason: recommendations.bestOption.reasons.join(', '),
+      recommendation: recommendations.bestOption.recommendation,
+      score: recommendations.bestOption.score,
+      alternatives: recommendations.recommendations.slice(1, 4)
     };
   }
   
-  // Check if original date is available
-  const originalDateStr = original.toISOString().split('T')[0];
-  const isOriginalAvailable = availableSlots.some(slot => 
-    new Date(slot.date).toISOString().split('T')[0] === originalDateStr
-  );
-  
-  if (isOriginalAvailable) {
-    return {
-      date: original,
-      adjusted: false,
-      daysShifted: 0,
-      reason: null
-    };
-  }
-  
-  // Find nearest available date within maxDaysShift
-  for (let shift = 1; shift <= maxDaysShift; shift++) {
-    // Check forward
-    const forwardDate = new Date(original);
-    forwardDate.setDate(forwardDate.getDate() + shift);
-    const forwardDateStr = forwardDate.toISOString().split('T')[0];
-    
-    if (availableSlots.some(slot => 
-      new Date(slot.date).toISOString().split('T')[0] === forwardDateStr
-    )) {
-      return {
-        date: forwardDate,
-        adjusted: true,
-        daysShifted: shift,
-        reason: 'Moved forward due to vendor availability'
-      };
-    }
-    
-    // Check backward
-    const backwardDate = new Date(original);
-    backwardDate.setDate(backwardDate.getDate() - shift);
-    const backwardDateStr = backwardDate.toISOString().split('T')[0];
-    
-    if (availableSlots.some(slot => 
-      new Date(slot.date).toISOString().split('T')[0] === backwardDateStr
-    )) {
-      return {
-        date: backwardDate,
-        adjusted: true,
-        daysShifted: -shift,
-        reason: 'Moved backward due to vendor availability'
-      };
-    }
-  }
-  
-  // No available slot found within range, return original with warning
+  // No available slot found
   return {
-    date: original,
+    date: new Date(originalDate),
     adjusted: false,
     daysShifted: 0,
     reason: 'No available vendor slots within range - requires manual adjustment'
@@ -372,8 +468,10 @@ export const calculateNextServiceDate = (lastServiceDate, frequencyType) => {
 
 export default {
   FREQUENCY_CONFIG,
+  RECOMMENDATION_WEIGHTS,
   getFrequencyConfig,
   generateScheduleDates,
+  generateRecommendedDates,
   adjustForVendorAvailability,
   formatSchedulesForDisplay,
   generateScheduleSummary,

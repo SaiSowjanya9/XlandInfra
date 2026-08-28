@@ -509,9 +509,15 @@ router.get('/r/:slug', async (req, res) => {
       console.error('[QR Scan] Error logging scan:', e.message);
     }
     
-    // Set cookies for visitor tracking
-    res.cookie('qr_visitor', visitorId, { maxAge: 365 * 24 * 60 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
-    res.cookie('qr_session', sessionId, { maxAge: 30 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
+    // Set cookies for visitor tracking with security options
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieOptions = {
+      httpOnly: true,
+      sameSite: 'strict', // SECURITY: Prevents CSRF
+      secure: isProduction // SECURITY: HTTPS only in production
+    };
+    res.cookie('qr_visitor', visitorId, { ...cookieOptions, maxAge: 365 * 24 * 60 * 60 * 1000 });
+    res.cookie('qr_session', sessionId, { ...cookieOptions, maxAge: 30 * 60 * 1000 });
     
     // Redirect to destination
     res.redirect(302, qr.current_url);

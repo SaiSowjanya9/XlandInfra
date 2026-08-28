@@ -8,46 +8,14 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../config/database');
-// Rate limiting disabled
-// const { loginRateLimiter } = require('../middleware/security');
+// Rate limiting for login endpoints
+const { loginRateLimiter } = require('../middleware/security');
 
-// Use JWT_SECRET from auth middleware (secure handling)
-const { JWT_SECRET } = require('../middleware/auth');
+// Use shared generateToken from auth middleware (secure - doesn't expose JWT_SECRET)
+const { generateToken } = require('../middleware/auth');
 
-// Generate JWT token
-const generateToken = (user) => {
-  const payload = { 
-    id: user.id, 
-    username: user.username, 
-    email: user.email, 
-    role: user.role
-  };
-  
-  // Include franchise_partner_id if present
-  if (user.franchise_partner_id) {
-    payload.franchisePartnerId = user.franchise_partner_id;
-    payload.fpId = user.franchise_partner_id;
-  }
-  
-  // Include role-specific IDs
-  if (user.role === 'supervisor' || user.role === 'fp_supervisor') {
-    payload.supervisorId = user.id;
-  }
-  if (user.role === 'manager' || user.role === 'fp_manager') {
-    payload.managerId = user.id;
-  }
-  if (user.role === 'coordinator') {
-    payload.coordinatorId = user.id;
-  }
-  if (user.role === 'executive' || user.role === 'fp_executive') {
-    payload.executiveId = user.id;
-  }
-  
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
-};
-
-// Unified Employee Login - Auto detects role
-router.post('/login', async (req, res) => {
+// Unified Employee Login - Auto detects role (rate limited)
+router.post('/login', loginRateLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -318,11 +286,11 @@ router.post('/set-password', async (req, res) => {
     // Hash new password
     const newPasswordHash = await bcrypt.hash(newPassword, 10);
     
-    // Update password in users table with visible_password for admin visibility
+    // Update password in users table (no plaintext storage for security)
     if (user.id && !user.fp_employee_id) {
       await pool.query(
-        `UPDATE users SET password_hash = ?, must_change_password = FALSE, visible_password = ? WHERE id = ?`,
-        [newPasswordHash, newPassword, user.id]
+        `UPDATE users SET password_hash = ?, must_change_password = FALSE WHERE id = ?`,
+        [newPasswordHash, user.id]
       );
       console.log(`[Employee Set-Password] Updated users table for id: ${user.id}`);
     }
@@ -336,11 +304,11 @@ router.post('/set-password', async (req, res) => {
       );
       console.log(`[Employee Set-Password] Updated fp_employees table`);
       
-      // Also update users table via user_id link with visible_password
+      // Also update users table via user_id link
       if (user.id) {
         await pool.query(
-          `UPDATE users SET password_hash = ?, must_change_password = FALSE, visible_password = ? WHERE id = ?`,
-          [newPasswordHash, newPassword, user.id]
+          `UPDATE users SET password_hash = ?, must_change_password = FALSE WHERE id = ?`,
+          [newPasswordHash, user.id]
         );
       }
     }

@@ -28,17 +28,34 @@ const {
 } = require('../utils/paymentSecurity');
 const { generateInvoicePDF } = require('../services/pdfService');
 
-// Configure multer for payment proof uploads
+// Secure file upload configuration for payment proofs
+// SECURITY: Whitelist both MIME types AND file extensions
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+const MIME_TO_EXT = {
+  'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 
+  'image/webp': '.webp', 'application/pdf': '.pdf'
+};
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/payments/'),
-  filename: (req, file, cb) => cb(null, `payment-${Date.now()}-${uuidv4()}${path.extname(file.originalname)}`)
+  destination: (req, file, cb) => cb(null, path.join(__dirname, '..', 'uploads', 'payments')),
+  filename: (req, file, cb) => {
+    const safeExt = MIME_TO_EXT[file.mimetype] || '.bin';
+    cb(null, `payment-${Date.now()}-${uuidv4()}${safeExt}`);
+  }
 });
 const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
   fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
-    cb(null, allowed.includes(file.mimetype));
+    const ext = path.extname(file.originalname).toLowerCase();
+    const isValidMime = ALLOWED_MIME_TYPES.includes(file.mimetype);
+    const isValidExt = ALLOWED_EXTENSIONS.includes(ext);
+    if (isValidMime && isValidExt) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only images and PDFs allowed.'), false);
+    }
   }
 });
 

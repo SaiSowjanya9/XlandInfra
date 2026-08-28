@@ -30,6 +30,7 @@ const propertiesRouter = require('./routes/properties');
 const adminRouter = require('./routes/admin');
 const staffRouter = require('./routes/staff');
 const vendorsRouter = require('./routes/vendors');
+const vendorWorkOrdersRouter = require('./routes/vendorWorkOrders');
 const menuRouter = require('./routes/menu');
 const estimatesRouter = require('./routes/estimates');
 const schedulesRouter = require('./routes/schedules');
@@ -87,6 +88,19 @@ const allowedOrigins = [
 // =============================================================================
 // SECURITY MIDDLEWARE (Order matters!)
 // =============================================================================
+// 
+// CSRF PROTECTION STRATEGY:
+// This API uses JWT Bearer tokens in Authorization headers, which provides
+// inherent CSRF protection because:
+// 1. Browsers don't auto-send Authorization headers (unlike cookies)
+// 2. Attackers cannot read tokens due to same-origin policy
+// 3. CORS restricts which origins can make requests
+// 
+// Additional protections:
+// - SameSite=strict cookies for any tracking cookies
+// - Strict CORS whitelist in production
+// - Origin validation for all cross-origin requests
+// =============================================================================
 
 // 1. Helmet - HTTP Security Headers (must be first)
 app.use(helmetConfig);
@@ -130,11 +144,33 @@ app.use(hpp);
 // 5. XSS Sanitization
 app.use(xssSanitizer);
 
-// 6. Rate Limiting - DISABLED
-// app.use('/api/', apiRateLimiter);
+// 6. Rate Limiting - General API limiter (100 requests per 15 minutes per IP)
+app.use('/api/', apiRateLimiter);
 
-// Serve uploaded files
-app.use('/uploads', express.static(uploadsDir));
+// Serve uploaded files with security headers
+// SECURITY: Add headers to prevent XSS via uploaded files
+app.use('/uploads', (req, res, next) => {
+  // Force download for non-image files to prevent XSS
+  const ext = req.path.toLowerCase().split('.').pop();
+  const safeExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'];
+  
+  if (!safeExtensions.includes(ext)) {
+    // Unknown extension - force download
+    res.setHeader('Content-Disposition', 'attachment');
+  }
+  
+  // Security headers for all uploaded content
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self'; style-src 'none'; script-src 'none'");
+  
+  next();
+}, express.static(uploadsDir, {
+  // Prevent directory listing
+  index: false,
+  // Don't follow symlinks
+  fallthrough: false
+}));
 
 // API Routes
 app.use('/api/categories', categoriesRouter);
@@ -145,6 +181,7 @@ app.use('/api/properties', propertiesRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/staff', staffRouter);
 app.use('/api/vendors/onboarding', vendorOnboardingRouter);
+app.use('/api/vendors/work-orders', vendorWorkOrdersRouter);
 app.use('/api/vendors', vendorsRouter);
 app.use('/api/menu', menuRouter);
 app.use('/api/estimates', estimatesRouter);

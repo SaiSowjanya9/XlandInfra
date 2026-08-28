@@ -15,9 +15,14 @@ const dbConfig = isProduction ? {
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  // SECURITY: SSL configuration for production
+  // Set DB_SSL=true to enable SSL (recommended for remote databases)
+  // Set DB_SSL_REJECT_UNAUTHORIZED=false only if using self-signed certs
+  ...(process.env.DB_SSL === 'true' ? {
+    ssl: {
+      rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
+    }
+  } : {})
 } : {
   // Local Development Database
   host: process.env.LOCAL_DB_HOST || 'localhost',

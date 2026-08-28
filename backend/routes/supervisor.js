@@ -13,23 +13,36 @@ const multer = require('multer');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const { sendCustomerActivationEmail } = require('../services/emailService');
-// Rate limiting disabled
-// const { loginRateLimiter } = require('../middleware/security');
+// Rate limiting for login endpoints
+const { loginRateLimiter } = require('../middleware/security');
 
-// Configure multer for file uploads
+// Secure file upload configuration
+// SECURITY: Whitelist both MIME types AND file extensions
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+const MIME_TO_EXT = {
+  'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 
+  'image/webp': '.webp', 'application/pdf': '.pdf'
+};
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => cb(null, `${Date.now()}-${uuidv4()}${path.extname(file.originalname)}`)
+  destination: (req, file, cb) => cb(null, path.join(__dirname, '..', 'uploads')),
+  filename: (req, file, cb) => {
+    const safeExt = MIME_TO_EXT[file.mimetype] || '.bin';
+    cb(null, `${Date.now()}-${uuidv4()}${safeExt}`);
+  }
 });
 const upload = multer({ 
   storage,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
-    if (allowedTypes.includes(file.mimetype)) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const isValidMime = ALLOWED_MIME_TYPES.includes(file.mimetype);
+    const isValidExt = ALLOWED_EXTENSIONS.includes(ext);
+    if (isValidMime && isValidExt) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type'), false);
+      cb(new Error('Invalid file type. Only images and PDFs allowed.'), false);
     }
   }
 });
@@ -73,10 +86,10 @@ const {
 } = require('../middleware/zoneHelper');
 
 // =====================================================
-// SUPERVISOR LOGIN (No auth required)
+// SUPERVISOR LOGIN (No auth required - rate limited)
 // Handles both standalone supervisors and FP-created supervisors
 // =====================================================
-router.post('/login', async (req, res) => {
+router.post('/login', loginRateLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 

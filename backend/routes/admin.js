@@ -3,8 +3,8 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
 const { authenticate, generateToken } = require('../middleware/auth');
-// Rate limiting disabled
-// const { loginRateLimiter } = require('../middleware/security');
+// Rate limiting for login endpoints (5 attempts per 15 minutes)
+const { loginRateLimiter } = require('../middleware/security');
 const { 
   adminOnly, 
   managerOrAdmin, 
@@ -21,8 +21,8 @@ const {
 // ADMIN AUTH
 // ============================================
 
-// Admin login
-router.post('/login', async (req, res) => {
+// Admin login - rate limited to prevent brute force attacks
+router.post('/login', loginRateLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -2541,13 +2541,14 @@ router.get('/all-employees', authenticate, adminOnly, async (req, res) => {
 
     // Get employees from users table (Admin-created employees: manager, coordinator, supervisor, executive)
     // EXCLUDE those already in fp_employees to avoid duplicates
+    // Note: visible_password removed for security - never return plaintext passwords
     const [userEmployees] = await pool.execute(
       `SELECT u.id, u.user_id as employee_id, u.user_id as employee_code,
               u.username, u.email, u.phone, u.first_name, u.last_name,
               CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')) as name,
               u.role, u.is_active,
               CASE WHEN u.is_active = 1 THEN 'active' ELSE 'inactive' END as status,
-              u.visible_password, u.created_at, u.updated_at,
+              u.created_at, u.updated_at,
               NULL as fp_code, 'Admin Portal' as fp_name,
               NULL as franchise_partner_id, NULL as aadhaar, NULL as country_code,
               'users' as source
