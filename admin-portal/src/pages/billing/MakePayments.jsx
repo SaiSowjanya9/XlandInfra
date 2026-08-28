@@ -1681,6 +1681,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   <p className="text-xs text-gray-500 mt-0.5">Pay securely using your debit card, credit card or net banking.</p>
                   <CardLogos />
                 </div>
+                <FeeIndicator />
               </label>
 
               {/* UPI */}
@@ -1711,6 +1712,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   <p className="text-xs text-gray-500 mt-0.5">Scan QR code or pay using any UPI app.</p>
                   <UPIAppLogos />
                 </div>
+                <NoFeesIndicator />
               </label>
 
               {/* Bank Transfer */}
@@ -1745,6 +1747,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   <h4 className="font-semibold text-gray-900 text-sm">Bank Transfer</h4>
                   <p className="text-xs text-gray-500 mt-0.5">Transfer directly from your bank account.</p>
                 </div>
+                <NoFeesIndicator />
               </label>
 
               {/* Cash */}
@@ -1776,6 +1779,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   <h4 className="font-semibold text-gray-900 text-sm">Cash</h4>
                   <p className="text-xs text-gray-500 mt-0.5">Pay with cash at our office / collection point.</p>
                 </div>
+                <NoFeesIndicator />
               </label>
 
               {/* Cheque */}
@@ -1806,6 +1810,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   <h4 className="font-semibold text-gray-900 text-sm">Cheque</h4>
                   <p className="text-xs text-gray-500 mt-0.5">Pay using cheque.</p>
                 </div>
+                <NoFeesIndicator />
               </label>
             </div>
           </div>
