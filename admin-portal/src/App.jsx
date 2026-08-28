@@ -105,6 +105,7 @@ import PropertySchedulingScreen from './pages/schedules/PropertySchedulingScreen
 import ScheduleCalendar from './pages/schedules/ScheduleCalendar';
 import AllSchedulesPage from './pages/schedules/AllSchedulesPage';
 import RescheduleServicePage from './pages/schedules/RescheduleServicePage';
+import CancelledSchedulesPage from './pages/schedules/CancelledSchedulesPage';
 import ScheduleCalendarView from './pages/schedules/ScheduleCalendarView';
 import { FPProvider } from './contexts/FPContext';
 
@@ -397,8 +398,8 @@ function App() {
                     <Route path="schedules/reschedule" element={<RescheduleServicePage user={user} portalType="admin" />} />
                     <Route path="schedules/calendar-view" element={<ScheduleCalendarView user={user} portalType="admin" />} />
                     <Route path="schedules" element={<ScheduleService user={user} portalType="admin" />} />
-                    <Route path="schedules/reschedule-requests" element={<ScheduleService user={user} portalType="admin" />} />
-                    <Route path="schedules/cancelled" element={<ScheduleService user={user} portalType="admin" />} />
+                    <Route path="schedules/reschedule-requests" element={<RescheduleServicePage user={user} portalType="admin" />} />
+                    <Route path="schedules/cancelled" element={<CancelledSchedulesPage user={user} portalType="admin" />} />
                     <Route path="schedules/schedule-service" element={<ScheduleService user={user} portalType="admin" />} />
                     <Route path="*" element={<Navigate to="/employee" replace />} />
                   </Routes>
@@ -489,8 +490,8 @@ function App() {
                     <Route path="schedules/reschedule" element={<RescheduleServicePage user={user} portalType="franchise" />} />
                     <Route path="schedules/calendar-view" element={<ScheduleCalendarView user={user} portalType="franchise" />} />
                     <Route path="schedules" element={<ScheduleService user={user} portalType="franchise" />} />
-                    <Route path="schedules/reschedule-requests" element={<ScheduleService user={user} portalType="franchise" />} />
-                    <Route path="schedules/cancelled" element={<ScheduleService user={user} portalType="franchise" />} />
+                    <Route path="schedules/reschedule-requests" element={<RescheduleServicePage user={user} portalType="franchise" />} />
+                    <Route path="schedules/cancelled" element={<CancelledSchedulesPage user={user} portalType="franchise" />} />
                     <Route path="schedules/schedule-service" element={<ScheduleService user={user} portalType="franchise" />} />
                     <Route path="*" element={<Navigate to="/fp" replace />} />
                   </Routes>
@@ -550,8 +551,8 @@ function App() {
                     <Route path="schedules/reschedule" element={<RescheduleServicePage user={user} portalType="manager" />} />
                     <Route path="schedules/calendar-view" element={<ScheduleCalendarView user={user} portalType="manager" />} />
                     <Route path="schedules" element={<ScheduleService user={user} portalType="manager" />} />
-                    <Route path="schedules/reschedule-requests" element={<ScheduleService user={user} portalType="manager" />} />
-                    <Route path="schedules/cancelled" element={<ScheduleService user={user} portalType="manager" />} />
+                    <Route path="schedules/reschedule-requests" element={<RescheduleServicePage user={user} portalType="manager" />} />
+                    <Route path="schedules/cancelled" element={<CancelledSchedulesPage user={user} portalType="manager" />} />
                     <Route path="schedules/schedule-service" element={<ScheduleService user={user} portalType="manager" />} />
                     <Route path="*" element={<Navigate to="/manager" replace />} />
                   </Routes>
@@ -603,8 +604,8 @@ function App() {
                     <Route path="schedules/reschedule" element={<RescheduleServicePage user={user} portalType="coordinator" />} />
                     <Route path="schedules/calendar-view" element={<ScheduleCalendarView user={user} portalType="coordinator" />} />
                     <Route path="schedules" element={<ScheduleService user={user} portalType="coordinator" />} />
-                    <Route path="schedules/reschedule-requests" element={<ScheduleService user={user} portalType="coordinator" />} />
-                    <Route path="schedules/cancelled" element={<ScheduleService user={user} portalType="coordinator" />} />
+                    <Route path="schedules/reschedule-requests" element={<RescheduleServicePage user={user} portalType="coordinator" />} />
+                    <Route path="schedules/cancelled" element={<CancelledSchedulesPage user={user} portalType="coordinator" />} />
                     <Route path="schedules/schedule-service" element={<ScheduleService user={user} portalType="coordinator" />} />
                     <Route path="*" element={<Navigate to="/coordinator" replace />} />
                   </Routes>
@@ -656,8 +657,8 @@ function App() {
                     <Route path="schedules/reschedule" element={<RescheduleServicePage user={user} portalType="supervisor" />} />
                     <Route path="schedules/calendar-view" element={<ScheduleCalendarView user={user} portalType="supervisor" />} />
                     <Route path="schedules" element={<ScheduleService user={user} portalType="supervisor" />} />
-                    <Route path="schedules/reschedule-requests" element={<ScheduleService user={user} portalType="supervisor" />} />
-                    <Route path="schedules/cancelled" element={<ScheduleService user={user} portalType="supervisor" />} />
+                    <Route path="schedules/reschedule-requests" element={<RescheduleServicePage user={user} portalType="supervisor" />} />
+                    <Route path="schedules/cancelled" element={<CancelledSchedulesPage user={user} portalType="supervisor" />} />
                     <Route path="schedules/schedule-service" element={<ScheduleService user={user} portalType="supervisor" />} />
                     <Route path="*" element={<Navigate to="/supervisor" replace />} />
                   </Routes>
