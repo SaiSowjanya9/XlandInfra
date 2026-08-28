@@ -617,8 +617,12 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           {/* New Schedule Button */}
           <button
             onClick={() => {
-              const basePath = portalType === 'franchise' ? '/fp' : portalType === 'manager' ? '/manager' : '';
-              navigate(`${basePath}/schedules/create`);
+              const basePath = portalType === 'franchise' ? '/fp' : 
+                              portalType === 'manager' ? '/manager' : 
+                              portalType === 'coordinator' ? '/coordinator' : 
+                              portalType === 'supervisor' ? '/supervisor' : 
+                              '/employee';
+              navigate(`${basePath}/schedules/calendar`);
             }}
             className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
           >
@@ -941,10 +945,10 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                     
                     {/* Added On */}
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-700">
+                      <div className="text-sm text-gray-700 whitespace-nowrap">
                         {new Date(property.addedOn).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </div>
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-gray-400 whitespace-nowrap">
                         {new Date(property.addedOn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
                       </div>
                     </td>
