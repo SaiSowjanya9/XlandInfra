@@ -15,7 +15,6 @@ import {
   MapPin,
   User,
   Building2,
-  Filter,
   Eye,
   ArrowRight,
   AlertCircle,
@@ -166,7 +165,6 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
   const itemsPerPage = 10;
   
   // Modal states
-  const [showFilters, setShowFilters] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
@@ -611,20 +609,6 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
             onEndDateChange={setEndDate}
           />
           
-          {/* Filter Button */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors relative"
-          >
-            <Filter className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Filter</span>
-            {(statusFilter !== 'all' || propertyTypeFilter !== 'all' || zoneFilter !== 'all') && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                !
-              </span>
-            )}
-          </button>
-          
           {/* Notification Bell */}
           <button className="relative p-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
             <Bell className="w-5 h-5 text-gray-500" />
@@ -738,85 +722,100 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           {/* Filter Dropdowns */}
           <div className="flex flex-wrap items-center gap-3">
             {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-            >
-              <option value="all">All Status</option>
-              <option value="ready">Ready to Schedule</option>
-              <option value="pending_vendor">Pending Vendor</option>
-            </select>
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                className="appearance-none pl-4 pr-10 py-2.5 border-2 border-gray-200 rounded-full text-sm bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-0 outline-none cursor-pointer font-medium text-gray-700 min-w-[140px]"
+              >
+                <option value="all">All Status</option>
+                <option value="ready">Ready to Schedule</option>
+                <option value="pending_vendor">Pending Vendor</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
 
             {/* Property Type Filter */}
-            <select
-              value={propertyTypeFilter}
-              onChange={(e) => { setPropertyTypeFilter(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-            >
-              <option value="all">All Property Types</option>
-              <option value="Apartment">Apartment</option>
-              <option value="Villa">Villa</option>
-              <option value="Gated Community">Gated Community</option>
-              <option value="Plot">Plot</option>
-              <option value="Flat">Flat</option>
-            </select>
+            <div className="relative">
+              <select
+                value={propertyTypeFilter}
+                onChange={(e) => { setPropertyTypeFilter(e.target.value); setCurrentPage(1); }}
+                className="appearance-none pl-4 pr-10 py-2.5 border-2 border-gray-200 rounded-full text-sm bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-0 outline-none cursor-pointer font-medium text-gray-700 min-w-[160px]"
+              >
+                <option value="all">All Property Types</option>
+                <option value="Apartment">Apartment</option>
+                <option value="Villa">Villa</option>
+                <option value="Gated Community">Gated Community</option>
+                <option value="Plot">Plot</option>
+                <option value="Flat">Flat</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
 
             {/* Zone Filter */}
-            <select
-              value={zoneFilter}
-              onChange={(e) => { setZoneFilter(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-            >
-              <option value="all">All Zones</option>
-              {zones.map(zone => (
-                <option key={zone} value={zone}>{zone}</option>
-              ))}
-              {zones.length === 0 && (
-                <>
-                  <option value="Zone A">Zone A</option>
-                  <option value="Zone B">Zone B</option>
-                  <option value="Zone C">Zone C</option>
-                  <option value="Zone D">Zone D</option>
-                </>
-              )}
-            </select>
+            <div className="relative">
+              <select
+                value={zoneFilter}
+                onChange={(e) => { setZoneFilter(e.target.value); setCurrentPage(1); }}
+                className="appearance-none pl-4 pr-10 py-2.5 border-2 border-gray-200 rounded-full text-sm bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-0 outline-none cursor-pointer font-medium text-gray-700 min-w-[130px]"
+              >
+                <option value="all">All Zones</option>
+                {zones.map(zone => (
+                  <option key={zone} value={zone}>{zone}</option>
+                ))}
+                {zones.length === 0 && (
+                  <>
+                    <option value="Zone A">Zone A</option>
+                    <option value="Zone B">Zone B</option>
+                    <option value="Zone C">Zone C</option>
+                    <option value="Zone D">Zone D</option>
+                  </>
+                )}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
 
             {/* Package Filter */}
-            <select
-              value={packageFilter}
-              onChange={(e) => { setPackageFilter(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-            >
-              <option value="all">All Packages</option>
-              {packages.map(pkg => (
-                <option key={pkg.id || pkg.packageName} value={pkg.packageName}>{pkg.packageName}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={packageFilter}
+                onChange={(e) => { setPackageFilter(e.target.value); setCurrentPage(1); }}
+                className="appearance-none pl-4 pr-10 py-2.5 border-2 border-gray-200 rounded-full text-sm bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-0 outline-none cursor-pointer font-medium text-gray-700 min-w-[140px]"
+              >
+                <option value="all">All Packages</option>
+                {packages.map(pkg => (
+                  <option key={pkg.id || pkg.packageName} value={pkg.packageName}>{pkg.packageName}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
 
             {/* Vendor Filter */}
-            <select
-              value={vendorFilter}
-              onChange={(e) => { setVendorFilter(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-            >
-              <option value="all">All Vendors</option>
-              {vendors.map(v => (
-                <option key={v.id || v.vendorId} value={v.vendorId}>{v.ownerName || v.companyName}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={vendorFilter}
+                onChange={(e) => { setVendorFilter(e.target.value); setCurrentPage(1); }}
+                className="appearance-none pl-4 pr-10 py-2.5 border-2 border-gray-200 rounded-full text-sm bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-0 outline-none cursor-pointer font-medium text-gray-700 min-w-[140px]"
+              >
+                <option value="all">All Vendors</option>
+                {vendors.map(v => (
+                  <option key={v.id || v.vendorId} value={v.vendorId}>{v.ownerName || v.companyName}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
 
             {/* Clear Filters */}
             <button
               onClick={clearFilters}
-              className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors border border-gray-200"
             >
               <RefreshCw className="w-4 h-4" />
               <span>Clear</span>
             </button>
 
             {/* Export */}
-            <button className="flex items-center gap-2 px-3 py-2.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors">
+            <button className="flex items-center gap-2 px-4 py-2.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-full transition-colors border border-blue-200">
               <Download className="w-4 h-4" />
               <span>Export</span>
             </button>
@@ -851,17 +850,21 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
               <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
                 <th className="text-left px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Property ID</th>
                 <th className="text-left px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Property Name</th>
+                <th className="text-left px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Property Type</th>
+                <th className="text-left px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Zone</th>
                 <th className="text-left px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Package</th>
                 <th className="text-center px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Services</th>
                 <th className="text-center px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Vendors Assigned</th>
+                <th className="text-center px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Pending Services</th>
                 <th className="text-center px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Payment</th>
+                <th className="text-left px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Added On</th>
                 <th className="text-center px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {paginatedProperties.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-16 text-center">
+                  <td colSpan="11" className="px-6 py-16 text-center">
                     <div className="flex flex-col items-center">
                       <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                         <CalendarClock className="w-8 h-8 text-gray-400" />
@@ -879,10 +882,10 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                   >
                     {/* Property ID */}
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-1">
                         <span className="text-sm font-bold text-blue-600 font-mono">{property.propertyId}</span>
                         {property.isNew && (
-                          <span className="px-2 py-0.5 text-[10px] font-bold bg-green-500 text-white rounded-full uppercase">
+                          <span className="inline-flex w-fit px-2 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full uppercase">
                             New
                           </span>
                         )}
@@ -892,6 +895,19 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                     {/* Property Name */}
                     <td className="px-6 py-4">
                       <p className="text-sm font-semibold text-gray-900">{property.propertyName}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{property.customerName || 'N/A'}</p>
+                    </td>
+                    
+                    {/* Property Type */}
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-gray-700">{property.propertyType}</span>
+                    </td>
+                    
+                    {/* Zone */}
+                    <td className="px-6 py-4">
+                      <span className="inline-flex px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 rounded-full">
+                        {property.zone}
+                      </span>
                     </td>
                     
                     {/* Package */}
@@ -926,6 +942,18 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                       </div>
                     </td>
                     
+                    {/* Pending Services */}
+                    <td className="px-6 py-4 text-center">
+                      {property.pendingServices > 0 ? (
+                        <div className="flex flex-col items-center">
+                          <span className="text-red-600 font-bold">{property.pendingServices}</span>
+                          <span className="text-xs text-red-500">Assign Vendor</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    
                     {/* Payment */}
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold uppercase ${
@@ -935,6 +963,16 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                       }`}>
                         {property.paymentStatus || 'Pending'}
                       </span>
+                    </td>
+                    
+                    {/* Added On */}
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-700">
+                        {new Date(property.addedOn).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {new Date(property.addedOn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                      </div>
                     </td>
                     
                     {/* Actions */}
