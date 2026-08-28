@@ -1052,6 +1052,42 @@ router.delete('/properties/:id/permanent', requireFPScope, async (req, res) => {
       }
     } catch (e) { console.log('fp_estimates archive skipped:', e.message); }
 
+    // Unlink invoices from property (preserve payment history)
+    try {
+      const [invResult] = await pool.execute(
+        'UPDATE invoices SET property_id = NULL WHERE property_id = ? AND franchise_partner_id = ?',
+        [id, req.fpId]
+      );
+      if (invResult.affectedRows > 0) {
+        console.log('📋 [FP] Unlinked', invResult.affectedRows, 'invoices from property_id:', id);
+      }
+    } catch (e) { console.log('invoices unlink skipped:', e.message); }
+
+    // Unlink payments from property (preserve payment history)
+    try {
+      const [payResult] = await pool.execute(
+        'UPDATE payments SET property_id = NULL WHERE property_id = ? AND franchise_partner_id = ?',
+        [id, req.fpId]
+      );
+      if (payResult.affectedRows > 0) {
+        console.log('📋 [FP] Unlinked', payResult.affectedRows, 'payments from property_id:', id);
+      }
+    } catch (e) { console.log('payments unlink skipped:', e.message); }
+
+    // Unlink work orders from property (preserve work order history)
+    try {
+      const [woResult] = await pool.execute(
+        'UPDATE work_orders SET property_id = NULL WHERE property_id = ? AND franchise_partner_id = ?',
+        [id, req.fpId]
+      );
+      if (woResult.affectedRows > 0) {
+        console.log('📋 [FP] Unlinked', woResult.affectedRows, 'work_orders from property_id:', id);
+      }
+    } catch (e) { console.log('work_orders unlink skipped:', e.message); }
+
+    // Note: schedule_series, schedule_occurrences, property_service_schedules, 
+    // and scheduled_visits are automatically deleted via ON DELETE CASCADE
+
     console.log('📋 [FP] Permanently deleted property:', id);
     res.json({ success: true, message: 'Customer permanently deleted. This action cannot be undone.' });
   } catch (error) {
