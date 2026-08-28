@@ -474,11 +474,11 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
               />
             </div>
 
-            {/* Totals - Gold Theme */}
-            <div className="bg-[#fffbeb] border border-[#fde68a] rounded-lg p-4 space-y-2">
+            {/* Totals */}
+            <div className="border border-gray-200 rounded-lg p-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Subtotal</span>
-                <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
+                <span className="text-gray-700">Subtotal</span>
+                <span className="font-medium text-gray-900">{formatCurrency(totals.subtotal)}</span>
               </div>
               {discountPercent > 0 && (
                 <div className="flex justify-between text-sm">
@@ -487,12 +487,12 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
                 </div>
               )}
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">GST ({gstPercent}%)</span>
-                <span className="font-medium">{formatCurrency(totals.gstAmount)}</span>
+                <span className="text-gray-700">GST ({gstPercent}%)</span>
+                <span className="font-medium text-gray-900">{formatCurrency(totals.gstAmount)}</span>
               </div>
-              <div className="flex justify-between text-lg font-semibold border-t border-[#c9a227]/30 pt-2">
-                <span className="text-[#c9a227]">Grand Total</span>
-                <span className="text-[#c9a227]">{formatCurrency(totals.total)}</span>
+              <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-2">
+                <span className="text-gray-900">Grand Total</span>
+                <span className="text-gray-900">{formatCurrency(totals.total)}</span>
               </div>
             </div>
           </div>
@@ -505,7 +505,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 font-medium"
             >
               {loading && <RefreshCw className="w-5 h-5 animate-spin" />}
-              Create & Send Invoice
+              Create
             </button>
           </div>
         </form>
