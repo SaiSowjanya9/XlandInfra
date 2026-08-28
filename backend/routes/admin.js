@@ -4280,7 +4280,7 @@ router.get('/work-orders/approaching-deletion/count', authenticate, adminOnly, a
 
 // Get pending properties for scheduling (Admin - all properties)
 // Returns properties that are paid and have vendors assigned but not yet scheduled
-router.get('/schedules/pending-properties', authenticateToken, async (req, res) => {
+router.get('/schedules/pending-properties', authenticate, async (req, res) => {
   try {
     const { fpId } = req.query;
     
