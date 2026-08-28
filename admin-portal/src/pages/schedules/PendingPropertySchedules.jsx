@@ -47,7 +47,9 @@ const getApiPath = (portalType) => {
     'franchise': 'fp',
     'manager': 'manager',
     'admin': 'admin',
-    'employee': 'admin'
+    'employee': 'admin',
+    'coordinator': 'coordinator',
+    'supervisor': 'supervisor'
   };
   return portalMap[portalType] || 'fp';
 };
@@ -226,10 +228,31 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
     }
   }, [token]);
 
-  // Fetch packages
+  // Fetch packages - use correct endpoint for each portal
   const fetchPackages = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/${apiPath}/estimates/amc-packages`, {
+      let endpoint;
+      switch (apiPath) {
+        case 'admin':
+          endpoint = `${API_BASE}/api/admin/all-amc-packages`;
+          break;
+        case 'fp':
+          endpoint = `${API_BASE}/api/fp/amc-packages`;
+          break;
+        case 'manager':
+          endpoint = `${API_BASE}/api/manager/amc-packages`;
+          break;
+        case 'coordinator':
+          endpoint = `${API_BASE}/api/coordinator/amc-packages`;
+          break;
+        case 'supervisor':
+          endpoint = `${API_BASE}/api/supervisor/amc-packages`;
+          break;
+        default:
+          endpoint = `${API_BASE}/api/fp/amc-packages`;
+      }
+      
+      const response = await fetch(endpoint, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -768,20 +791,11 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
             >
               <option value="all">All Packages</option>
-              {packages.length > 0 ? (
-                packages.map(pkg => (
-                  <option key={pkg.id || pkg.packageName} value={pkg.packageName}>{pkg.packageName}</option>
-                ))
-              ) : (
-                <>
-                  <option value="Apartment Basic">Apartment Basic</option>
-                  <option value="Apartment Premium">Apartment Premium</option>
-                  <option value="Villa Basic">Villa Basic</option>
-                  <option value="Villa Premium">Villa Premium</option>
-                  <option value="Gated Community Basic">Gated Community Basic</option>
-                  <option value="Gated Community Premium">Gated Community Premium</option>
-                </>
-              )}
+              {packages.map(pkg => (
+                <option key={pkg.id || pkg.packageId || pkg.packageName} value={pkg.name || pkg.packageName}>
+                  {pkg.name || pkg.packageName}
+                </option>
+              ))}
             </select>
 
             <select
