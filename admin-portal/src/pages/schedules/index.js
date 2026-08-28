@@ -4,6 +4,7 @@
 export { default as AllSchedulesPage } from './AllSchedulesPage';
 export { default as ScheduleCalendarView } from './ScheduleCalendarView';
 export { default as RescheduleServicePage } from './RescheduleServicePage';
+export { default as CancelledSchedulesPage } from './CancelledSchedulesPage';
 export { default as PropertySchedulingScreen } from './PropertySchedulingScreen';
 export { default as PendingPropertySchedules } from './PendingPropertySchedules';
 export { default as SchedulesDashboard } from './SchedulesDashboard';
