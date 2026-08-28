@@ -733,30 +733,30 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
 
       {/* Filters & Search - Single Row */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex items-center gap-3 flex-nowrap overflow-x-auto">
+        <div className="flex items-center gap-2">
           {/* Search */}
-          <div className="relative flex-shrink-0">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder="Search..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="w-40 pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="w-32 pl-9 pr-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             />
           </div>
           
           {/* Divider */}
-          <div className="h-8 w-px bg-gray-200 flex-shrink-0"></div>
+          <div className="h-8 w-px bg-gray-200"></div>
           
           {/* Status Filter */}
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-            className="flex-shrink-0 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
+            className="px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700"
           >
             <option value="all">All Status</option>
-            <option value="ready">Ready to Schedule</option>
+            <option value="ready">Ready</option>
             <option value="pending_vendor">Pending Vendor</option>
           </select>
 
@@ -764,7 +764,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           <select
             value={propertyTypeFilter}
             onChange={(e) => { setPropertyTypeFilter(e.target.value); setCurrentPage(1); }}
-            className="flex-shrink-0 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
+            className="px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700"
           >
             <option value="all">All Property Types</option>
             <option value="Apartment">Apartment</option>
@@ -778,7 +778,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           <select
             value={zoneFilter}
             onChange={(e) => { setZoneFilter(e.target.value); setCurrentPage(1); }}
-            className="flex-shrink-0 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
+            className="px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700"
           >
             <option value="all">All Zones</option>
             {zones.map(zone => (
@@ -790,7 +790,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           <select
             value={packageFilter}
             onChange={(e) => { setPackageFilter(e.target.value); setCurrentPage(1); }}
-            className="flex-shrink-0 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
+            className="px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700"
           >
             <option value="all">All Packages</option>
             {packages.map(pkg => (
@@ -804,7 +804,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           <select
             value={vendorFilter}
             onChange={(e) => { setVendorFilter(e.target.value); setCurrentPage(1); }}
-            className="flex-shrink-0 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
+            className="px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700"
           >
             <option value="all">All Vendors</option>
             {vendors.map(v => (
@@ -815,14 +815,14 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           {/* Clear Button */}
           <button
             onClick={clearFilters}
-            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors whitespace-nowrap"
+            className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
             Clear
           </button>
           
           {/* Export Button */}
-          <button className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200 whitespace-nowrap">
+          <button className="flex items-center gap-1 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200">
             <Download className="w-4 h-4" />
             Export
           </button>
