@@ -63,6 +63,61 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   const [pendingProperties, setPendingProperties] = useState([]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  
+  // Chart filter states
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [serviceFilter, setServiceFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
+
+  // Period filter helper function
+  const applyPeriodFilter = (data, period) => {
+    if (period === 'all') return data;
+    
+    const now = new Date();
+    let filterDate = new Date();
+    
+    switch (period) {
+      case 'week':
+        filterDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        filterDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case 'quarter':
+        filterDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+        break;
+      case '6months':
+        filterDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+        break;
+      case 'year':
+        filterDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      default:
+        return data;
+    }
+    
+    return data.filter(item => {
+      const itemDate = new Date(item.startDate || item.start_date || item.createdAt);
+      return itemDate >= filterDate && itemDate <= now;
+    });
+  };
+
+  // Period Filter Dropdown Component
+  const PeriodFilter = ({ value, onChange }) => (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+    >
+      <option value="all">All Time</option>
+      <option value="week">This Week</option>
+      <option value="month">This Month</option>
+      <option value="quarter">This Quarter</option>
+      <option value="6months">Last 6 Months</option>
+      <option value="year">This Year</option>
+    </select>
+  );
 
   const getBasePath = () => {
     const map = { 'franchise': '/fp', 'manager': '/manager', 'admin': '/admin', 'coordinator': '/coordinator', 'supervisor': '/supervisor' };
@@ -147,18 +202,21 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     return d < today && !['completed', 'cancelled'].includes(getStatus(s));
   });
 
-  // Chart data - Status
+  // Chart data - Status (with filter)
+  const statusFilteredData = applyPeriodFilter(schedules, statusFilter);
   const statusData = [
-    { name: 'Pending', value: schedules.filter(s => getStatus(s) === 'pending').length, color: STATUS_COLORS.pending },
-    { name: 'Scheduled', value: schedules.filter(s => ['scheduled', 'upcoming'].includes(getStatus(s))).length, color: STATUS_COLORS.scheduled },
-    { name: 'In Progress', value: schedules.filter(s => getStatus(s) === 'in_progress').length, color: STATUS_COLORS.in_progress },
-    { name: 'Completed', value: schedules.filter(s => getStatus(s) === 'completed').length, color: STATUS_COLORS.completed },
-    { name: 'Cancelled', value: schedules.filter(s => getStatus(s) === 'cancelled').length, color: STATUS_COLORS.cancelled }
+    { name: 'Scheduled', value: statusFilteredData.filter(s => ['scheduled', 'upcoming'].includes(getStatus(s))).length, color: STATUS_COLORS.scheduled },
+    { name: 'In Progress', value: statusFilteredData.filter(s => getStatus(s) === 'in_progress').length, color: STATUS_COLORS.in_progress },
+    { name: 'Completed', value: statusFilteredData.filter(s => getStatus(s) === 'completed').length, color: STATUS_COLORS.completed },
+    { name: 'Cancelled', value: statusFilteredData.filter(s => getStatus(s) === 'cancelled').length, color: STATUS_COLORS.cancelled },
+    { name: 'Pending', value: statusFilteredData.filter(s => getStatus(s) === 'pending').length, color: STATUS_COLORS.pending }
   ].filter(d => d.value > 0);
+  const statusTotal = statusData.reduce((sum, d) => sum + d.value, 0);
 
-  // Chart data - Service
+  // Chart data - Service (with filter)
+  const serviceFilteredData = applyPeriodFilter(schedules, serviceFilter);
   const serviceCounts = {};
-  schedules.forEach(s => {
+  serviceFilteredData.forEach(s => {
     const svc = s.service || s.serviceCategory || 'General';
     serviceCounts[svc] = (serviceCounts[svc] || 0) + 1;
   });
@@ -166,22 +224,26 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     .map(([name, value], i) => ({ name, value, color: SERVICE_COLORS[i % SERVICE_COLORS.length] }))
     .sort((a, b) => b.value - a.value);
 
-  // Chart data - Priority
+  // Chart data - Priority (with filter)
+  const priorityFilteredData = applyPeriodFilter(schedules, priorityFilter);
   const priorityData = [
-    { name: 'High', value: schedules.filter(s => (s.priority || '').toLowerCase() === 'high').length, color: PRIORITY_COLORS.high },
-    { name: 'Medium', value: schedules.filter(s => (s.priority || '').toLowerCase() === 'medium').length, color: PRIORITY_COLORS.medium },
-    { name: 'Low', value: schedules.filter(s => (s.priority || '').toLowerCase() === 'low').length, color: PRIORITY_COLORS.low }
+    { name: 'High', value: priorityFilteredData.filter(s => (s.priority || '').toLowerCase() === 'high').length, color: PRIORITY_COLORS.high },
+    { name: 'Medium', value: priorityFilteredData.filter(s => (s.priority || '').toLowerCase() === 'medium').length, color: PRIORITY_COLORS.medium },
+    { name: 'Low', value: priorityFilteredData.filter(s => (s.priority || '').toLowerCase() === 'low').length, color: PRIORITY_COLORS.low }
   ].filter(d => d.value > 0);
+  const priorityTotal = priorityData.reduce((sum, d) => sum + d.value, 0);
 
-  // Chart data - Property Type
+  // Chart data - Property Type (with filter)
+  const propertyTypeFilteredData = applyPeriodFilter(schedules, propertyTypeFilter);
   const propTypeCounts = {};
-  schedules.forEach(s => {
+  propertyTypeFilteredData.forEach(s => {
     const pt = s.property_type || s.propertyType || 'Others';
     propTypeCounts[pt] = (propTypeCounts[pt] || 0) + 1;
   });
   const propertyTypeData = Object.entries(propTypeCounts)
     .map(([name, value]) => ({ name, value, color: PROPERTY_TYPE_COLORS[name] || '#6B7280' }))
     .sort((a, b) => b.value - a.value);
+  const propertyTypeTotal = propertyTypeData.reduce((sum, d) => sum + d.value, 0);
 
   // Trend data (mock)
   const trendData = [
@@ -293,9 +355,12 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       <div className="grid grid-cols-4 gap-4">
         {/* Status Donut */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Schedules by Status</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-gray-900">Schedules by Status</h3>
+            <PeriodFilter value={statusFilter} onChange={setStatusFilter} />
+          </div>
           <div className="flex items-center gap-4">
-            <DonutChart data={statusData} size={120} strokeWidth={20} centerValue={schedules.length} centerLabel="Total" />
+            <DonutChart data={statusData} size={120} strokeWidth={20} centerValue={statusTotal} centerLabel="Total" />
             <div className="space-y-1.5 text-xs">
               {statusData.map((d, i) => (
                 <div key={i} className="flex items-center gap-2">
@@ -312,34 +377,37 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Schedules by Service</h3>
-            <select className="text-xs border border-gray-200 rounded px-2 py-1">
-              <option>This Month</option>
-            </select>
+            <PeriodFilter value={serviceFilter} onChange={setServiceFilter} />
           </div>
           <div className="space-y-2">
-            {serviceData.slice(0, 6).map((d, i) => (
+            {serviceData.length > 0 ? serviceData.slice(0, 6).map((d, i) => (
               <div key={i} className="flex items-center gap-2">
                 <span className="w-20 text-xs text-gray-600 truncate">{d.name}</span>
                 <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${(d.value / Math.max(...serviceData.map(x => x.value))) * 100}%`, backgroundColor: d.color }} />
+                  <div className="h-full rounded-full" style={{ width: `${(d.value / Math.max(...serviceData.map(x => x.value), 1)) * 100}%`, backgroundColor: d.color }} />
                 </div>
                 <span className="text-xs font-medium w-6 text-right">{d.value}</span>
               </div>
-            ))}
+            )) : (
+              <p className="text-xs text-gray-400 text-center py-4">No data</p>
+            )}
           </div>
         </div>
 
         {/* Priority Donut */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Schedules by Priority</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-gray-900">Schedules by Priority</h3>
+            <PeriodFilter value={priorityFilter} onChange={setPriorityFilter} />
+          </div>
           <div className="flex items-center gap-4">
-            <DonutChart data={priorityData} size={120} strokeWidth={20} centerValue={schedules.length} centerLabel="Total" />
+            <DonutChart data={priorityData} size={120} strokeWidth={20} centerValue={priorityTotal} centerLabel="Total" />
             <div className="space-y-1.5 text-xs">
               {priorityData.map((d, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
                   <span className="text-gray-600">{d.name}</span>
-                  <span className="font-medium text-gray-900">{d.value} ({schedules.length ? Math.round((d.value / schedules.length) * 100) : 0}%)</span>
+                  <span className="font-medium text-gray-900">{d.value} ({priorityTotal ? Math.round((d.value / priorityTotal) * 100) : 0}%)</span>
                 </div>
               ))}
             </div>
@@ -348,15 +416,18 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* Property Type Donut */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Schedules by Property Type</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-gray-900">Schedules by Property Type</h3>
+            <PeriodFilter value={propertyTypeFilter} onChange={setPropertyTypeFilter} />
+          </div>
           <div className="flex items-center gap-4">
-            <DonutChart data={propertyTypeData} size={120} strokeWidth={20} centerValue={schedules.length} centerLabel="Total" />
+            <DonutChart data={propertyTypeData} size={120} strokeWidth={20} centerValue={propertyTypeTotal} centerLabel="Total" />
             <div className="space-y-1.5 text-xs">
               {propertyTypeData.slice(0, 4).map((d, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
                   <span className="text-gray-600">{d.name}</span>
-                  <span className="font-medium text-gray-900">{d.value}</span>
+                  <span className="font-medium text-gray-900">{d.value} ({propertyTypeTotal ? Math.round((d.value / propertyTypeTotal) * 100) : 0}%)</span>
                 </div>
               ))}
             </div>
