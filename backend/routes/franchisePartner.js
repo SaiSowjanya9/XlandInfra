@@ -6091,7 +6091,7 @@ router.get('/work-orders/approaching-deletion/count', requireFPScope, async (req
 
 // Get pending properties for scheduling
 // Returns properties that are paid and have vendors assigned but not yet scheduled
-router.get('/schedules/pending-properties', requireFPAuth, async (req, res) => {
+router.get('/schedules/pending-properties', authenticate, attachFPScope, async (req, res) => {
   try {
     const franchisePartnerId = req.user?.franchisePartnerId || req.user?.id;
     
