@@ -12,8 +12,8 @@ const { authenticate, generateToken } = require('../middleware/auth');
 const { adminOnly, managerOrAdmin, requireRole, ROLES } = require('../middleware/rbac');
 const { ROLE_NAMES } = require('../config/roles');
 const { sendEmployeeWelcomeEmail, sendPasswordResetEmail, sendPasswordResetSuccess, sendPasswordUpdatedByAdminEmail } = require('../services/emailService');
-// Rate limiting disabled
-// const { loginRateLimiter } = require('../middleware/security');
+// Rate limiting for login and password reset endpoints
+const { loginRateLimiter, passwordResetLimiter } = require('../middleware/security');
 
 // Password reset expiry (48 hours)
 const PASSWORD_RESET_EXPIRY_HOURS = 48;
@@ -133,9 +133,10 @@ const generateTempPassword = () => {
 // STAFF LOGIN
 // ============================================
 
-// Demo mode configuration - credentials loaded from environment variables
-const DEMO_MODE_ENABLED = process.env.DEMO_MODE === 'true';
-const DEMO_PASSWORD_HASH = process.env.DEMO_PASSWORD_HASH || '';
+// SECURITY: Demo mode configuration - ONLY allowed in non-production
+// Never enable demo mode in production environments!
+const DEMO_MODE_ENABLED = process.env.DEMO_MODE === 'true' && process.env.NODE_ENV !== 'production';
+const DEMO_PASSWORD_HASH = DEMO_MODE_ENABLED ? (process.env.DEMO_PASSWORD_HASH || '') : '';
 
 // Demo users for when database is unavailable (role-based, no passwords stored)
 // NOTE: Passwords are NOT stored here - they must be set via environment variables
@@ -146,8 +147,8 @@ const DEMO_USERS = DEMO_MODE_ENABLED ? [
   { id: 4, username: 'demo_executive', email: 'demo.executive@pmportal.com', firstName: 'Demo', lastName: 'Executive', role: 'executive' }
 ] : [];
 
-// Staff Login
-router.post('/login', async (req, res) => {
+// Staff Login - rate limited to prevent brute force attacks
+router.post('/login', loginRateLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -420,17 +421,16 @@ router.post('/forgot-password', async (req, res) => {
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetExpires = new Date(Date.now() + PASSWORD_RESET_EXPIRY_HOURS * 60 * 60 * 1000);
 
-    // Store reset token, temp password, and update visible_password for admin
+    // Store reset token and temp password hash (no plaintext password storage for security)
     if (userType === 'user') {
       await pool.execute(
         `UPDATE users 
          SET reset_token = ?, 
              reset_token_expires = ?,
              reset_temp_password_hash = ?,
-             visible_password = ?,
              updated_at = NOW()
          WHERE id = ?`,
-        [resetToken, resetExpires, tempPasswordHash, tempPassword, user.id]
+        [resetToken, resetExpires, tempPasswordHash, user.id]
       );
     } else {
       await pool.execute(
@@ -438,10 +438,9 @@ router.post('/forgot-password', async (req, res) => {
          SET reset_token = ?, 
              reset_token_expires = ?,
              reset_temp_password_hash = ?,
-             visible_password = ?,
              updated_at = NOW()
          WHERE id = ?`,
-        [resetToken, resetExpires, tempPasswordHash, tempPassword, user.id]
+        [resetToken, resetExpires, tempPasswordHash, user.id]
       );
     }
 
@@ -665,10 +664,9 @@ router.post('/reset-password', async (req, res) => {
            reset_token_expires = NULL,
            reset_temp_password_hash = NULL,
            must_change_password = FALSE,
-           visible_password = ?,
            updated_at = NOW()
        WHERE id = ?`,
-      [newPasswordHash, newPassword, user.id]
+      [newPasswordHash, user.id]
     );
 
     await conn.commit();
@@ -795,18 +793,18 @@ router.post('/set-password', async (req, res) => {
     const newPasswordHash = await bcrypt.hash(newPassword, 10);
     
     if (userType === 'user') {
-      // Store new password in visible_password for admin visibility
+      // Update password hash only (no plaintext storage for security)
       await pool.execute(
-        `UPDATE users SET password_hash = ?, must_change_password = FALSE, visible_password = ? WHERE id = ?`,
-        [newPasswordHash, newPassword, user.id]
+        `UPDATE users SET password_hash = ?, must_change_password = FALSE WHERE id = ?`,
+        [newPasswordHash, user.id]
       );
       
       // Also update franchise_partners table if this is an FP user
       if (user.role === 'franchise_partner' || user.role === 'franchise') {
         try {
           await pool.execute(
-            `UPDATE franchise_partners SET password_hash = ?, must_change_password = FALSE, visible_password = ? WHERE email = ?`,
-            [newPasswordHash, newPassword, user.email]
+            `UPDATE franchise_partners SET password_hash = ?, must_change_password = FALSE WHERE email = ?`,
+            [newPasswordHash, user.email]
           );
         } catch (e) {
           // FP record may not exist - ignore
@@ -843,17 +841,17 @@ router.post('/set-password', async (req, res) => {
         }
       });
     } else {
-      // userType === 'franchise_partner' - Store new password for admin visibility
+      // userType === 'franchise_partner' - Update password hash only (no plaintext storage)
       await pool.execute(
-        `UPDATE franchise_partners SET password_hash = ?, must_change_password = FALSE, visible_password = ? WHERE id = ?`,
-        [newPasswordHash, newPassword, user.id]
+        `UPDATE franchise_partners SET password_hash = ?, must_change_password = FALSE WHERE id = ?`,
+        [newPasswordHash, user.id]
       );
       
       // Also update users table if exists
       try {
         await pool.execute(
-          `UPDATE users SET password_hash = ?, must_change_password = FALSE, visible_password = ? WHERE email = ?`,
-          [newPasswordHash, newPassword, user.email]
+          `UPDATE users SET password_hash = ?, must_change_password = FALSE WHERE email = ?`,
+          [newPasswordHash, user.email]
         );
       } catch (e) {
         // User record may not exist - ignore
@@ -949,7 +947,7 @@ router.get('/', authenticate, adminOnly, async (req, res) => {
         phone: s.phone,
         role: s.role,
         roleName: ROLE_NAMES[s.role],
-        visiblePassword: s.visible_password,
+        // visiblePassword removed for security - passwords should never be stored or returned in plaintext
         franchiseName: s.franchise_name || '',
         ownerName: s.owner_name || '',
         companyName: s.franchise_name || '',
@@ -1125,18 +1123,18 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
     const tempPassword = generateTempPassword();
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
-    // Insert new user with must_change_password flag and visible_password for admin
+    // Insert new user with must_change_password flag (no plaintext password storage)
     const [result] = await pool.execute(
       `INSERT INTO users (
         user_id, username, email, password_hash, first_name, last_name, phone, role,
         can_view, can_create, can_edit, can_delete, can_approve, can_assign, can_close,
-        must_change_password, visible_password, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?, ?)`,
+        must_change_password, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)`,
       [
         userId, username, email, passwordHash, firstName, lastName, phone || null, role,
         canView ?? null, canCreate ?? null, canEdit ?? null, canDelete ?? null,
         canApprove ?? null, canAssign ?? null, canClose ?? null,
-        tempPassword, req.user.id
+        req.user.id
       ]
     );
 
@@ -1151,14 +1149,14 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
         const [fpResult] = await pool.execute(
           `INSERT INTO franchise_partners (
             fp_code, username, email, password_hash, company_name, owner_name, phone,
-            address, city, state, zip_code, gst_number, pan_number, visible_password, created_by
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            address, city, state, zip_code, gst_number, pan_number, created_by
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             fpCode, username, email, passwordHash, 
             companyName || franchiseName || `${firstName} ${lastName}`,
             `${firstName} ${lastName}`, phone || null,
             address || null, city || null, state || null, pincode || null,
-            gstNumber || null, panNumber || null, tempPassword, req.user.id
+            gstNumber || null, panNumber || null, req.user.id
           ]
         );
         
@@ -1301,8 +1299,6 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
       const passwordHash = await bcrypt.hash(tempPassword, 10);
       updateFields.push('password_hash = ?');
       params.push(passwordHash);
-      updateFields.push('visible_password = ?');
-      params.push(tempPassword);
       updateFields.push('must_change_password = ?');
       params.push(true);
       // Also update username to new email if they match
@@ -1311,12 +1307,10 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
         params.push(email);
       }
     } else if (password) {
-      // Update password if provided (also store visible_password for admin)
+      // Update password if provided (no plaintext storage for security)
       const passwordHash = await bcrypt.hash(password, 10);
       updateFields.push('password_hash = ?');
       params.push(passwordHash);
-      updateFields.push('visible_password = ?');
-      params.push(password);
     }
 
     if (updateFields.length === 0) {
@@ -1338,8 +1332,8 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
       try {
         const fpPasswordHash = await bcrypt.hash(tempPassword, 10);
         await pool.execute(
-          `UPDATE franchise_partners SET email = ?, username = ?, password_hash = ?, visible_password = ?, must_change_password = TRUE WHERE email = ?`,
-          [email, email, fpPasswordHash, tempPassword, currentUser.email]
+          `UPDATE franchise_partners SET email = ?, username = ?, password_hash = ?, must_change_password = TRUE WHERE email = ?`,
+          [email, email, fpPasswordHash, currentUser.email]
         );
         console.log(`📧 Franchise partner email updated from ${currentUser.email} to ${email}`);
       } catch (fpError) {

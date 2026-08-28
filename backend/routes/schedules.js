@@ -972,10 +972,13 @@ router.get('/service/:serviceScheduleId/visits', authenticate, canSeeSchedule, a
 });
 
 // Reschedule a visit
+// Scope options:
+// - 'this_visit_only' (default): Only affect the selected occurrence
+// - 'this_and_future': Shift this and all future visits
 router.put('/visits/:visitId/reschedule', authenticate, canMakeSchedule, async (req, res) => {
   try {
     const { visitId } = req.params;
-    const { newDate, newTimeStart, newTimeEnd, reason } = req.body;
+    const { newDate, newTimeStart, newTimeEnd, reason, scope = 'this_visit_only' } = req.body;
 
     if (!newDate) {
       return res.status(400).json({
@@ -984,11 +987,16 @@ router.put('/visits/:visitId/reschedule', authenticate, canMakeSchedule, async (
       });
     }
 
-    // Get current visit
-    const [visit] = await pool.execute(
-      `SELECT scheduled_date FROM scheduled_visits WHERE id = ? OR visit_id = ?`,
+    // Get current visit with schedule info
+    const [visits] = await pool.execute(
+      `SELECT sv.*, pss.service_name 
+       FROM scheduled_visits sv
+       LEFT JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+       WHERE sv.id = ? OR sv.visit_id = ?`,
       [visitId, visitId]
     );
+    
+    const visit = visits;
 
     if (visit.length === 0) {
       return res.status(404).json({
@@ -997,25 +1005,81 @@ router.put('/visits/:visitId/reschedule', authenticate, canMakeSchedule, async (
       });
     }
 
-    await pool.execute(
-      `UPDATE scheduled_visits 
-       SET scheduled_date = ?, 
-           scheduled_time_start = ?,
-           scheduled_time_end = ?,
-           original_date = COALESCE(original_date, ?),
-           rescheduled_by = ?,
-           rescheduled_at = NOW(),
-           reschedule_reason = ?,
-           status = 'rescheduled'
-       WHERE id = ? OR visit_id = ?`,
-      [newDate, newTimeStart || null, newTimeEnd || null, visit[0].scheduled_date,
-       req.user.id, reason || null, visitId, visitId]
-    );
+    const currentVisit = visit[0];
+    const originalDate = new Date(currentVisit.scheduled_date);
+    const newDateObj = new Date(newDate);
+    const daysDiff = Math.round((newDateObj - originalDate) / (1000 * 60 * 60 * 24));
 
-    res.json({
-      success: true,
-      message: 'Visit rescheduled successfully'
-    });
+    if (scope === 'this_visit_only') {
+      // Only affect this specific visit - DEFAULT behavior
+      await pool.execute(
+        `UPDATE scheduled_visits 
+         SET scheduled_date = ?, 
+             scheduled_time_start = ?,
+             scheduled_time_end = ?,
+             original_date = COALESCE(original_date, ?),
+             rescheduled_by = ?,
+             rescheduled_at = NOW(),
+             reschedule_reason = ?,
+             status = 'rescheduled'
+         WHERE id = ? OR visit_id = ?`,
+        [newDate, newTimeStart || null, newTimeEnd || null, currentVisit.scheduled_date,
+         req.user.id, reason || null, visitId, visitId]
+      );
+
+      res.json({
+        success: true,
+        message: 'Visit rescheduled successfully (this visit only)',
+        data: { scope: 'this_visit_only', affectedVisits: 1 }
+      });
+    } else if (scope === 'this_and_future') {
+      // Affect this and all future visits - shift pattern
+      // Get all future visits in the same series
+      const [futureVisits] = await pool.execute(
+        `SELECT id, scheduled_date FROM scheduled_visits 
+         WHERE service_schedule_id = ? 
+           AND visit_number >= ?
+           AND status NOT IN ('completed', 'cancelled')
+         ORDER BY visit_number`,
+        [currentVisit.service_schedule_id, currentVisit.visit_number]
+      );
+
+      // Update each future visit by shifting the date
+      for (const futureVisit of futureVisits) {
+        const shiftedDate = new Date(futureVisit.scheduled_date);
+        shiftedDate.setDate(shiftedDate.getDate() + daysDiff);
+        
+        await pool.execute(
+          `UPDATE scheduled_visits 
+           SET scheduled_date = ?,
+               original_date = COALESCE(original_date, scheduled_date),
+               rescheduled_by = ?,
+               rescheduled_at = NOW(),
+               reschedule_reason = ?
+           WHERE id = ?`,
+          [shiftedDate.toISOString().split('T')[0], req.user.id, 
+           futureVisit.id === currentVisit.id ? reason : `Series shifted: ${reason || 'Pattern change'}`,
+           futureVisit.id]
+        );
+      }
+
+      // Mark the original visit as rescheduled
+      await pool.execute(
+        `UPDATE scheduled_visits SET status = 'rescheduled' WHERE id = ?`,
+        [currentVisit.id]
+      );
+
+      res.json({
+        success: true,
+        message: `Rescheduled ${futureVisits.length} visits (this and future)`,
+        data: { scope: 'this_and_future', affectedVisits: futureVisits.length, daysDiff }
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid scope. Use "this_visit_only" or "this_and_future"'
+      });
+    }
   } catch (error) {
     console.error('Error rescheduling visit:', error);
     res.status(500).json({
@@ -1085,6 +1149,84 @@ router.put('/service/:serviceScheduleId/cancel-future', authenticate, canMakeSch
     res.status(500).json({
       success: false,
       message: 'Error cancelling future visits',
+      error: error.message
+    });
+  }
+});
+
+// Cancel entire property schedule (all future services)
+// Used when customer cancels AMC/property contract
+router.put('/property/:propertyId/cancel-all', authenticate, canMakeSchedule, async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+    const { reason } = req.body;
+
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cancellation reason is required'
+      });
+    }
+
+    const cancelFromDate = new Date().toISOString().split('T')[0];
+
+    // Cancel all future visits for this property (DO NOT DELETE - keep for audit)
+    const [visitResult] = await pool.execute(
+      `UPDATE scheduled_visits 
+       SET status = 'cancelled',
+           cancelled_by = ?,
+           cancelled_at = NOW(),
+           cancellation_note = ?
+       WHERE property_id = ? 
+         AND scheduled_date >= ?
+         AND status IN ('scheduled', 'confirmed', 'upcoming')`,
+      [req.user.id, `Property contract cancelled: ${reason}`, propertyId, cancelFromDate]
+    );
+
+    // Update all service schedules to cancelled
+    const [scheduleResult] = await pool.execute(
+      `UPDATE property_service_schedules 
+       SET status = 'cancelled',
+           schedule_notes = CONCAT(COALESCE(schedule_notes, ''), ' | Cancelled: ', ?)
+       WHERE property_id = ? 
+         AND status NOT IN ('completed', 'cancelled')`,
+      [reason, propertyId]
+    );
+
+    // Update pending property schedule status
+    await pool.execute(
+      `UPDATE pending_property_schedules 
+       SET scheduling_status = 'cancelled',
+           updated_at = NOW()
+       WHERE property_id = ?`,
+      [propertyId]
+    );
+
+    // Get property details for response
+    const [[property]] = await pool.execute(
+      `SELECT property_id, community_name FROM onboarded_properties WHERE id = ?`,
+      [propertyId]
+    );
+
+    res.json({
+      success: true,
+      message: `Cancelled all future schedules for property ${property?.property_id || propertyId}`,
+      data: {
+        propertyId,
+        propertyCode: property?.property_id,
+        propertyName: property?.community_name,
+        cancelledVisits: visitResult.affectedRows,
+        cancelledSchedules: scheduleResult.affectedRows,
+        reason,
+        cancelledAt: new Date().toISOString(),
+        cancelledBy: req.user.id
+      }
+    });
+  } catch (error) {
+    console.error('Error cancelling property schedules:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error cancelling property schedules',
       error: error.message
     });
   }
@@ -1273,11 +1415,24 @@ const FREQ_CONFIG = {
   'annual': { intervalMonths: 12, intervalDays: 0 }
 };
 
-// Get recommended dates for a service based on vendor availability
-// Uses first service date as the recurrence anchor
+// Scoring weights for smart recommendation
+const RECOMMENDATION_WEIGHTS = {
+  sameZoneJobs: 30,        // Vendor has other jobs in same zone (better routing)
+  exactTargetDate: 25,     // Exact match with target date
+  closestToTarget: 20,     // Proximity to target date
+  highAvailability: 15,    // More available slots
+  customerPreferred: 10    // Customer's preferred day/time
+};
+
+/**
+ * Smart Recommended Date Generation
+ * 1. Generate target date based on frequency (recurrence anchor)
+ * 2. Search vendor availability within ±3 days window
+ * 3. Score and rank options based on multiple factors
+ */
 router.get('/recommended-dates', authenticate, canSeeSchedule, async (req, res) => {
   try {
-    const { vendorId, frequency, startDate, count = 5, totalVisits } = req.query;
+    const { vendorId, frequency, startDate, count = 5, totalVisits, zone, searchWindow = 3, customerPreferredDays } = req.query;
 
     if (!vendorId) {
       return res.status(400).json({
@@ -1292,63 +1447,156 @@ router.get('/recommended-dates', authenticate, canSeeSchedule, async (req, res) 
     
     const firstServiceDate = startDate ? new Date(startDate) : new Date();
     const numVisits = parseInt(totalVisits) || parseInt(count) || 5;
-    const recommendedDates = [];
+    const windowDays = parseInt(searchWindow) || 3;
+    const preferredDays = customerPreferredDays ? customerPreferredDays.split(',') : [];
 
-    // Get vendor's existing bookings
+    // Get vendor's existing bookings with zone info
     const [bookings] = await pool.execute(
-      `SELECT scheduled_date, COUNT(*) as count
-       FROM scheduled_visits
-       WHERE vendor_id = ? AND status NOT IN ('cancelled', 'completed')
-       AND scheduled_date >= CURDATE()
-       GROUP BY scheduled_date`,
-      [vendorId]
+      `SELECT sv.scheduled_date, COUNT(*) as count,
+              SUM(CASE WHEN op.zone = ? THEN 1 ELSE 0 END) as same_zone_jobs
+       FROM scheduled_visits sv
+       LEFT JOIN onboarded_properties op ON op.id = sv.property_id
+       WHERE sv.vendor_id = ? AND sv.status NOT IN ('cancelled', 'completed')
+       AND sv.scheduled_date >= CURDATE()
+       GROUP BY sv.scheduled_date`,
+      [zone || '', vendorId]
     );
 
     const bookingMap = {};
     bookings.forEach(b => {
-      bookingMap[b.scheduled_date.toISOString().split('T')[0]] = b.count;
+      const dateStr = b.scheduled_date.toISOString().split('T')[0];
+      bookingMap[dateStr] = {
+        count: b.count,
+        sameZoneJobs: b.same_zone_jobs || 0
+      };
     });
 
     // Get vendor max daily visits
     const [[vendor]] = await pool.execute(
-      `SELECT max_daily_visits FROM onboarded_vendors WHERE id = ?`,
+      `SELECT max_daily_visits, zone as vendor_zone FROM onboarded_vendors WHERE id = ?`,
       [vendorId]
     );
     const maxDaily = vendor?.max_daily_visits || 5;
 
-    // Generate recommended dates based on frequency using first service date as anchor
+    // Generate recommended dates for each visit
+    const allRecommendations = [];
+
     for (let visitNum = 0; visitNum < numVisits; visitNum++) {
-      const visitDate = new Date(firstServiceDate);
+      // Calculate target date based on frequency
+      const targetDate = new Date(firstServiceDate);
       
       if (config.intervalMonths > 0) {
-        // Month-based frequency (Monthly, Quarterly, etc.)
-        visitDate.setMonth(visitDate.getMonth() + (visitNum * config.intervalMonths));
-        
-        // Handle month overflow (e.g., Jan 31 + 1 month = Feb 28/29)
+        targetDate.setMonth(targetDate.getMonth() + (visitNum * config.intervalMonths));
         const targetDay = firstServiceDate.getDate();
-        if (visitDate.getDate() !== targetDay) {
-          visitDate.setDate(0); // Last day of previous month
+        if (targetDate.getDate() !== targetDay) {
+          targetDate.setDate(0);
         }
       } else if (config.intervalDays > 0) {
-        // Day-based frequency (Daily, Weekly)
-        visitDate.setDate(visitDate.getDate() + (visitNum * config.intervalDays));
+        targetDate.setDate(targetDate.getDate() + (visitNum * config.intervalDays));
+      }
+
+      const targetDateStr = targetDate.toISOString().split('T')[0];
+      
+      // Search window: Target ± windowDays
+      const searchDates = [];
+      for (let dayOffset = -windowDays; dayOffset <= windowDays; dayOffset++) {
+        const searchDate = new Date(targetDate);
+        searchDate.setDate(searchDate.getDate() + dayOffset);
+        
+        const dateStr = searchDate.toISOString().split('T')[0];
+        const dayOfWeek = searchDate.getDay();
+        const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek];
+        
+        const booking = bookingMap[dateStr] || { count: 0, sameZoneJobs: 0 };
+        const availableSlots = Math.max(0, maxDaily - booking.count);
+        const isAvailable = availableSlots > 0;
+        
+        // Calculate score
+        let score = 0;
+        const reasons = [];
+        
+        if (!isAvailable) {
+          searchDates.push({
+            date: dateStr,
+            dayOfWeek,
+            dayName,
+            daysFromTarget: dayOffset,
+            score: -1,
+            isAvailable: false,
+            reasons: ['Vendor fully booked'],
+            recommendation: 'unavailable'
+          });
+          continue;
+        }
+        
+        // 1. Exact target date
+        if (dayOffset === 0) {
+          score += RECOMMENDATION_WEIGHTS.exactTargetDate;
+          reasons.push('Exact recurrence date');
+        }
+        
+        // 2. Closest to target
+        const proximityScore = RECOMMENDATION_WEIGHTS.closestToTarget * (1 - Math.abs(dayOffset) / windowDays);
+        score += proximityScore;
+        
+        // 3. Same zone jobs (better routing)
+        if (booking.sameZoneJobs > 0) {
+          score += RECOMMENDATION_WEIGHTS.sameZoneJobs;
+          reasons.push(`${booking.sameZoneJobs} other ${zone || 'zone'} jobs`);
+        }
+        
+        // 4. High availability
+        if (availableSlots >= 3) {
+          score += RECOMMENDATION_WEIGHTS.highAvailability;
+          reasons.push('High availability');
+        } else if (availableSlots >= 1) {
+          score += RECOMMENDATION_WEIGHTS.highAvailability * 0.5;
+          reasons.push('Limited availability');
+        }
+        
+        // 5. Customer preferred day
+        if (preferredDays.includes(dayName) || preferredDays.includes(String(dayOfWeek))) {
+          score += RECOMMENDATION_WEIGHTS.customerPreferred;
+          reasons.push('Customer preferred');
+        }
+        
+        // Determine recommendation level
+        let recommendation = 'available';
+        if (score >= 60) recommendation = 'highly_recommended';
+        else if (score >= 40) recommendation = 'recommended';
+        else if (score >= 20) recommendation = 'available';
+        else recommendation = 'limited';
+        
+        searchDates.push({
+          date: dateStr,
+          dayOfWeek,
+          dayName,
+          daysFromTarget: dayOffset,
+          score: Math.round(score),
+          isAvailable: true,
+          availableSlots,
+          sameZoneJobs: booking.sameZoneJobs,
+          reasons,
+          recommendation
+        });
       }
       
-      const dateStr = visitDate.toISOString().split('T')[0];
-      const dayOfWeek = visitDate.getDay();
-      const currentBookings = bookingMap[dateStr] || 0;
-      const availableSlots = maxDaily - currentBookings;
+      // Sort by score (highest first)
+      const rankedDates = searchDates
+        .filter(d => d.isAvailable)
+        .sort((a, b) => b.score - a.score);
       
-      recommendedDates.push({
+      allRecommendations.push({
         visitNumber: visitNum + 1,
-        date: dateStr,
-        dayOfMonth: visitDate.getDate(),
-        month: visitDate.toLocaleString('en-US', { month: 'short' }),
-        year: visitDate.getFullYear(),
-        dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek],
-        availableSlots: Math.max(0, availableSlots),
-        isAvailable: availableSlots > 0,
-        needsAdjustment: availableSlots <= 0
+        targetDate: targetDateStr,
+        targetDayOfMonth: targetDate.getDate(),
+        targetMonth: targetDate.toLocaleString('en-US', { month: 'short' }),
+        targetYear: targetDate.getFullYear(),
+        searchWindow: `±${windowDays} days`,
+        bestOption: rankedDates[0] || null,
+        alternatives: rankedDates.slice(1, 4),
+        allOptions: rankedDates,
+        hasAvailability: rankedDates.length > 0
       });
     }
 
@@ -1359,7 +1607,10 @@ router.get('/recommended-dates', authenticate, canSeeSchedule, async (req, res) 
         firstServiceDate: firstServiceDate.toISOString().split('T')[0],
         anchorDay: firstServiceDate.getDate(),
         totalVisits: numVisits,
-        recommendedDates
+        zone: zone || null,
+        searchWindow: windowDays,
+        recommendations: allRecommendations,
+        scoringWeights: RECOMMENDATION_WEIGHTS
       }
     });
   } catch (error) {
@@ -1367,6 +1618,209 @@ router.get('/recommended-dates', authenticate, canSeeSchedule, async (req, res) 
     res.status(500).json({
       success: false,
       message: 'Error fetching recommended dates',
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// WORK ORDER AUTO-GENERATION
+// ============================================
+
+// Trigger work order generation (can be called by cron or manually)
+// Creates work orders 7 days before scheduled visits
+router.post('/generate-work-orders', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { daysAhead = 7 } = req.body;
+    
+    const generatedOrders = await schedulingService.generateWorkOrdersForUpcomingVisits(daysAhead);
+    
+    res.json({
+      success: true,
+      message: `Generated ${generatedOrders.length} work orders`,
+      data: {
+        count: generatedOrders.length,
+        workOrders: generatedOrders
+      }
+    });
+  } catch (error) {
+    console.error('Error generating work orders:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error generating work orders',
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// RESCHEDULE REQUESTS
+// ============================================
+
+// Get pending reschedule requests
+router.get('/reschedule-requests', authenticate, canSeeSchedule, async (req, res) => {
+  try {
+    const userFpId = req.user?.franchisePartnerId || req.user?.fpId;
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin';
+    const { status = 'pending' } = req.query;
+
+    let query = `
+      SELECT sv.*, 
+             pss.service_name, pss.service_category,
+             op.community_name as property_name, op.property_id as property_code, op.zone,
+             ov.id as vendor_id, COALESCE(ov.company_name, ov.owner_name) as vendor_name,
+             pc.name as customer_name, pc.phone as customer_phone
+      FROM scheduled_visits sv
+      JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+      JOIN onboarded_properties op ON op.id = sv.property_id
+      LEFT JOIN onboarded_vendors ov ON ov.id = sv.vendor_id
+      LEFT JOIN property_contacts pc ON pc.property_id = op.id
+      WHERE sv.customer_requested = TRUE
+    `;
+    const params = [];
+
+    if (status === 'pending') {
+      query += ` AND sv.status IN ('scheduled', 'confirmed')`;
+    }
+
+    if (userFpId && !isAdmin) {
+      query += ` AND op.franchise_partner_id = ?`;
+      params.push(userFpId);
+    }
+
+    query += ` ORDER BY sv.customer_preferred_date ASC, sv.scheduled_date ASC`;
+
+    const [requests] = await pool.execute(query, params);
+
+    res.json({
+      success: true,
+      data: requests.map(r => ({
+        id: r.id,
+        visitId: r.visit_id,
+        serviceName: r.service_name,
+        serviceCategory: r.service_category,
+        propertyId: r.property_id,
+        propertyCode: r.property_code,
+        propertyName: r.property_name,
+        zone: r.zone,
+        vendorId: r.vendor_id,
+        vendorName: r.vendor_name,
+        customerName: r.customer_name,
+        customerPhone: r.customer_phone,
+        scheduledDate: r.scheduled_date,
+        scheduledDateStr: new Date(r.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        scheduledTime: r.scheduled_time_start,
+        requestedDate: r.customer_preferred_date,
+        requestedTime: r.customer_preferred_time,
+        requestReason: r.customer_notes,
+        status: r.status,
+        visitNumber: r.visit_number,
+        totalVisits: r.total_visits
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching reschedule requests:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching reschedule requests',
+      error: error.message
+    });
+  }
+});
+
+// Submit reschedule request (customer/employee)
+router.post('/visits/:visitId/request-reschedule', authenticate, async (req, res) => {
+  try {
+    const { visitId } = req.params;
+    const { preferredDate, preferredTime, reason } = req.body;
+
+    if (!preferredDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Preferred date is required'
+      });
+    }
+
+    await pool.execute(
+      `UPDATE scheduled_visits 
+       SET customer_requested = TRUE,
+           customer_preferred_date = ?,
+           customer_preferred_time = ?,
+           customer_notes = ?
+       WHERE id = ? OR visit_id = ?`,
+      [preferredDate, preferredTime || null, reason || null, visitId, visitId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Reschedule request submitted successfully',
+      data: { status: 'reschedule_requested' }
+    });
+  } catch (error) {
+    console.error('Error submitting reschedule request:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error submitting reschedule request',
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// SCHEDULE STATUS TRACKING
+// ============================================
+
+// Schedule Status Flow:
+// Pending Schedule → Scheduled → Upcoming → Work Order Created → In Progress → Completed
+// Exception statuses: Rescheduled, Cancelled
+
+// Get schedule status summary
+router.get('/status-summary', authenticate, canSeeSchedule, async (req, res) => {
+  try {
+    const userFpId = req.user?.franchisePartnerId || req.user?.fpId;
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin';
+
+    let fpFilter = '';
+    const params = [];
+
+    if (userFpId && !isAdmin) {
+      fpFilter = `AND op.franchise_partner_id = ?`;
+      params.push(userFpId);
+    }
+
+    const [statusCounts] = await pool.execute(
+      `SELECT sv.status, COUNT(*) as count
+       FROM scheduled_visits sv
+       JOIN onboarded_properties op ON op.id = sv.property_id
+       WHERE 1=1 ${fpFilter}
+       GROUP BY sv.status`,
+      params
+    );
+
+    const statusMap = {
+      pending_schedule: 0,
+      scheduled: 0,
+      upcoming: 0,
+      work_order_created: 0,
+      in_progress: 0,
+      completed: 0,
+      rescheduled: 0,
+      cancelled: 0
+    };
+
+    statusCounts.forEach(s => {
+      statusMap[s.status] = s.count;
+    });
+
+    res.json({
+      success: true,
+      data: statusMap
+    });
+  } catch (error) {
+    console.error('Error fetching status summary:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching status summary',
       error: error.message
     });
   }

@@ -1,9 +1,14 @@
 /**
  * Authentication Middleware
  * Handles JWT token verification and user authentication
+ * 
+ * SECURITY: JWT_SECRET must be set via environment variable
+ * - Production: Will not start without JWT_SECRET
+ * - Development: Generates cryptographically random secret (per-session)
  */
 
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { pool } = require('../config/database');
 const { ROLES } = require('../config/roles');
 
@@ -11,18 +16,30 @@ const { ROLES } = require('../config/roles');
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
-// Validate JWT_SECRET is set (critical for security)
+// SECURITY: Generate secure random secret for development
+// This ensures tokens are invalid between server restarts in dev (safer behavior)
+let EFFECTIVE_JWT_SECRET;
+
 if (!JWT_SECRET) {
   if (process.env.NODE_ENV === 'production') {
     console.error('FATAL: JWT_SECRET environment variable is not set!');
+    console.error('Please set a secure random string (at least 64 characters) in your environment.');
+    console.error('Generate one with: node -e "console.log(require(\'crypto\').randomBytes(64).toString(\'hex\'))"');
     process.exit(1);
   } else {
-    console.warn('WARNING: JWT_SECRET not set. Using insecure default for development only.');
+    // Development: Generate random secret per server instance
+    // This invalidates tokens on restart, which is safer for development
+    EFFECTIVE_JWT_SECRET = crypto.randomBytes(64).toString('hex');
+    console.warn('⚠️  WARNING: No JWT_SECRET set. Generated random development secret.');
+    console.warn('⚠️  Tokens will be invalidated on server restart.');
   }
+} else {
+  // Validate JWT_SECRET strength
+  if (JWT_SECRET.length < 32) {
+    console.warn('⚠️  WARNING: JWT_SECRET is too short. Use at least 64 characters for production.');
+  }
+  EFFECTIVE_JWT_SECRET = JWT_SECRET;
 }
-
-// Use a development fallback ONLY in non-production
-const EFFECTIVE_JWT_SECRET = JWT_SECRET || 'dev-only-insecure-secret-do-not-use-in-production';
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -225,6 +242,7 @@ module.exports = {
   authenticate,
   optionalAuth,
   isAuthenticated,
-  JWT_SECRET: EFFECTIVE_JWT_SECRET,
+  // SECURITY: JWT_SECRET is NOT exported - use verifyToken() instead
+  // Only expose token expiry for informational purposes
   JWT_EXPIRES_IN
 };

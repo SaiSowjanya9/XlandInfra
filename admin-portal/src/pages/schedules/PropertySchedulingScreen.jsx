@@ -30,6 +30,17 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   const [recommendedDates, setRecommendedDates] = useState([]);
   const [plannedVisits, setPlannedVisits] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
+  
+  // Schedule confirmation state
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmationSchedule, setConfirmationSchedule] = useState([]);
+  const [editingVisitIndex, setEditingVisitIndex] = useState(null);
+  const [confirmingSchedule, setConfirmingSchedule] = useState(false);
+  
+  // Reschedule state
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [rescheduleVisit, setRescheduleVisit] = useState(null);
+  const [rescheduleScope, setRescheduleScope] = useState('this_visit_only'); // Default: This Visit Only
 
   function getNextMonday() {
     const today = new Date();
@@ -209,10 +220,123 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     }
   };
 
-  const handleConfirmSchedule = () => {
-    // Update service status and navigate back
-    alert('Schedule confirmed! Redirecting...');
-    navigate(-1);
+  // Prepare schedule for confirmation
+  const handlePrepareConfirmation = () => {
+    if (!selectedSlot || !selectedService) return;
+    
+    // Generate confirmation schedule with target dates and recommended dates
+    const schedule = plannedVisits.map((visit, index) => ({
+      visitNumber: visit.visitNumber,
+      targetDate: visit.date,
+      targetDateStr: visit.dateStr || visit.shortDateStr,
+      scheduledDate: visit.date, // Can be adjusted
+      scheduledDateStr: visit.dateStr || visit.shortDateStr,
+      time: index === 0 ? selectedSlot.time : '10:00 AM',
+      status: 'pending_schedule',
+      isEdited: false,
+      isManual: visit.isManual || false
+    }));
+    
+    setConfirmationSchedule(schedule);
+    setShowConfirmation(true);
+  };
+
+  // Accept all recommended dates
+  const handleAcceptAllRecommended = () => {
+    // Keep all dates as-is (already set to recommended)
+    setConfirmationSchedule(prev => prev.map(v => ({
+      ...v,
+      status: 'scheduled'
+    })));
+  };
+
+  // Edit individual visit date
+  const handleEditVisitDate = (index, newDate, newTime) => {
+    setConfirmationSchedule(prev => prev.map((v, i) => 
+      i === index ? {
+        ...v,
+        scheduledDate: newDate,
+        scheduledDateStr: new Date(newDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        time: newTime || v.time,
+        isEdited: true
+      } : v
+    ));
+    setEditingVisitIndex(null);
+  };
+
+  // Confirm final schedule
+  const handleConfirmSchedule = async () => {
+    setConfirmingSchedule(true);
+    try {
+      // API call to save schedule
+      // await saveSchedule(confirmationSchedule);
+      
+      // For now, simulate success
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      alert('Schedule confirmed successfully!');
+      setShowConfirmation(false);
+      navigate(-1);
+    } catch (error) {
+      console.error('Error confirming schedule:', error);
+      alert('Error confirming schedule. Please try again.');
+    } finally {
+      setConfirmingSchedule(false);
+    }
+  };
+
+  // Reschedule handlers
+  const handleOpenReschedule = (visit) => {
+    setRescheduleVisit(visit);
+    setRescheduleScope('this_visit_only'); // Always default to This Visit Only
+    setShowRescheduleModal(true);
+  };
+
+  const handleReschedule = async (newDate, newTime, reason) => {
+    if (!rescheduleVisit) return;
+    
+    try {
+      if (rescheduleScope === 'this_visit_only') {
+        // Only affect this specific visit
+        setConfirmationSchedule(prev => prev.map(v => 
+          v.visitNumber === rescheduleVisit.visitNumber ? {
+            ...v,
+            scheduledDate: newDate,
+            scheduledDateStr: new Date(newDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            time: newTime || v.time,
+            status: 'rescheduled',
+            originalDate: v.scheduledDate,
+            rescheduleReason: reason,
+            isEdited: true
+          } : v
+        ));
+      } else {
+        // Affect this and all future visits (shift pattern)
+        const visitIndex = confirmationSchedule.findIndex(v => v.visitNumber === rescheduleVisit.visitNumber);
+        const daysDiff = Math.round((new Date(newDate) - new Date(rescheduleVisit.scheduledDate)) / (1000 * 60 * 60 * 24));
+        
+        setConfirmationSchedule(prev => prev.map((v, i) => {
+          if (i >= visitIndex) {
+            const shiftedDate = new Date(v.scheduledDate);
+            shiftedDate.setDate(shiftedDate.getDate() + daysDiff);
+            return {
+              ...v,
+              scheduledDate: shiftedDate,
+              scheduledDateStr: shiftedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              time: i === visitIndex ? (newTime || v.time) : v.time,
+              status: i === visitIndex ? 'rescheduled' : v.status,
+              isEdited: true
+            };
+          }
+          return v;
+        }));
+      }
+      
+      setShowRescheduleModal(false);
+      setRescheduleVisit(null);
+    } catch (error) {
+      console.error('Error rescheduling:', error);
+    }
   };
 
   const navigateWeek = (direction) => {
@@ -222,6 +346,21 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   };
 
   const goBack = () => navigate(-1);
+  
+  // Schedule status colors
+  const getStatusColor = (status) => {
+    const colors = {
+      'pending_schedule': 'bg-gray-100 text-gray-700',
+      'scheduled': 'bg-blue-100 text-blue-700',
+      'upcoming': 'bg-indigo-100 text-indigo-700',
+      'work_order_created': 'bg-purple-100 text-purple-700',
+      'in_progress': 'bg-amber-100 text-amber-700',
+      'completed': 'bg-green-100 text-green-700',
+      'rescheduled': 'bg-orange-100 text-orange-700',
+      'cancelled': 'bg-red-100 text-red-700'
+    };
+    return colors[status] || 'bg-gray-100 text-gray-700';
+  };
 
   if (loading) {
     return (
@@ -597,8 +736,279 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               : 'Manual scheduling required. Select dates for each visit individually.'
             }
           </p>
+          
+          {/* Confirm Schedule Button */}
+          {selectedSlot && plannedVisits.length > 0 && !selectedService?.frequency?.toLowerCase().includes('request') && (
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={handlePrepareConfirmation}
+                className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <Check className="w-4 h-4" />
+                Review & Confirm Schedule
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Schedule Confirmation Modal */}
+      {showConfirmation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white">Confirm Schedule</h2>
+                  <p className="text-blue-100 text-sm mt-1">
+                    {selectedService?.name} – {selectedService?.vendorName}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setShowConfirmation(false)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Schedule Table */}
+            <div className="p-6 overflow-auto max-h-[60vh]">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  Review the scheduled dates below. You can edit individual dates or accept all recommendations.
+                </p>
+                <button
+                  onClick={handleAcceptAllRecommended}
+                  className="px-4 py-2 text-sm bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
+                >
+                  <CheckCircle className="w-4 h-4 inline mr-1" />
+                  Accept All Recommended
+                </button>
+              </div>
+
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Visit</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Target Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Scheduled Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Time</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {confirmationSchedule.map((visit, index) => (
+                    <tr key={index} className={`hover:bg-gray-50 ${visit.isEdited ? 'bg-amber-50' : ''}`}>
+                      <td className="px-4 py-3">
+                        <span className="font-medium text-gray-900">{visit.visitNumber}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-gray-700">{visit.targetDateStr}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {editingVisitIndex === index ? (
+                          <input
+                            type="date"
+                            defaultValue={visit.scheduledDate ? new Date(visit.scheduledDate).toISOString().split('T')[0] : ''}
+                            onChange={(e) => handleEditVisitDate(index, e.target.value, visit.time)}
+                            className="px-2 py-1 border border-gray-300 rounded text-sm"
+                            autoFocus
+                          />
+                        ) : (
+                          <span className={`font-medium ${visit.isEdited ? 'text-amber-700' : 'text-gray-900'}`}>
+                            {visit.scheduledDateStr}
+                            {visit.isEdited && visit.status === 'rescheduled' && (
+                              <span className="text-xs text-gray-500 ml-1">(was {new Date(visit.originalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})</span>
+                            )}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-gray-700">{visit.time}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(visit.status)}`}>
+                          {visit.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => setEditingVisitIndex(index)}
+                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Edit Date"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleOpenReschedule(visit)}
+                            className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors"
+                            title="Reschedule"
+                          >
+                            <Calendar className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+              <p className="text-sm text-gray-500">
+                {confirmationSchedule.filter(v => v.isEdited).length} of {confirmationSchedule.length} visits modified
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowConfirmation(false)}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmSchedule}
+                  disabled={confirmingSchedule}
+                  className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {confirmingSchedule ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Confirming...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Confirm Schedule
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reschedule Modal */}
+      {showRescheduleModal && rescheduleVisit && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Reschedule Visit {rescheduleVisit.visitNumber}</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Current: {rescheduleVisit.scheduledDateStr} at {rescheduleVisit.time}
+              </p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* New Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">New Date</label>
+                <input
+                  type="date"
+                  id="reschedule-date"
+                  defaultValue={rescheduleVisit.scheduledDate ? new Date(rescheduleVisit.scheduledDate).toISOString().split('T')[0] : ''}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* New Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">New Time</label>
+                <select
+                  id="reschedule-time"
+                  defaultValue={rescheduleVisit.time}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {['8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', 
+                    '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM', 
+                    '4:00 PM', '4:30 PM', '5:00 PM'].map(time => (
+                    <option key={time} value={time}>{time}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Reason */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reason (Optional)</label>
+                <input
+                  type="text"
+                  id="reschedule-reason"
+                  placeholder="Customer requested change..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Reschedule Scope */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Reschedule Scope</label>
+                <div className="space-y-2">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="reschedule-scope"
+                      value="this_visit_only"
+                      checked={rescheduleScope === 'this_visit_only'}
+                      onChange={(e) => setRescheduleScope(e.target.value)}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">This Visit Only</p>
+                      <p className="text-xs text-gray-500">Only this occurrence will be changed. Future visits remain unchanged.</p>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="reschedule-scope"
+                      value="this_and_future"
+                      checked={rescheduleScope === 'this_and_future'}
+                      onChange={(e) => setRescheduleScope(e.target.value)}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">This and Future Visits</p>
+                      <p className="text-xs text-gray-500">Shift this and all future visits by the same amount.</p>
+                    </div>
+                  </label>
+                </div>
+                <p className="text-xs text-amber-600 mt-3 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Default: "This Visit Only" - recommended for customer requests
+                </p>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowRescheduleModal(false);
+                  setRescheduleVisit(null);
+                }}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const newDate = document.getElementById('reschedule-date').value;
+                  const newTime = document.getElementById('reschedule-time').value;
+                  const reason = document.getElementById('reschedule-reason').value;
+                  handleReschedule(newDate, newTime, reason);
+                }}
+                className="px-4 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                Reschedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

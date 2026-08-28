@@ -22,23 +22,42 @@ const {
 } = require('../middleware/rbac');
 const { WORK_ORDER_STATUS } = require('../config/roles');
 
-// Configure multer for file uploads
+// Secure file upload configuration
+// SECURITY: Whitelist both MIME types AND file extensions to prevent upload attacks
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+
+// Map MIME types to safe extensions (prevents extension spoofing)
+const MIME_TO_EXT = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+  'application/pdf': '.pdf'
+};
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+    cb(null, path.join(__dirname, '..', 'uploads'));
   },
   filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${uuidv4()}${path.extname(file.originalname)}`;
+    // SECURITY: Use safe extension from MIME type, not from user-provided filename
+    const safeExt = MIME_TO_EXT[file.mimetype] || '.bin';
+    const uniqueName = `${Date.now()}-${uuidv4()}${safeExt}`;
     cb(null, uniqueName);
   }
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
-  if (allowedTypes.includes(file.mimetype)) {
+  // SECURITY: Validate both MIME type AND original extension
+  const ext = path.extname(file.originalname).toLowerCase();
+  const isValidMime = ALLOWED_MIME_TYPES.includes(file.mimetype);
+  const isValidExt = ALLOWED_EXTENSIONS.includes(ext);
+  
+  if (isValidMime && isValidExt) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only images and PDFs are allowed.'), false);
+    cb(new Error('Invalid file type. Only images (jpg, png, gif, webp) and PDFs are allowed.'), false);
   }
 };
 
@@ -1002,6 +1021,187 @@ router.get('/:id/history', async (req, res) => {
   } catch (error) {
     console.error('Error fetching history:', error);
     res.status(500).json({ success: false, message: 'Error fetching history' });
+  }
+});
+
+// ============================================
+// VERIFY AND CLOSE WORK ORDER (Manager/FP Only)
+// Vendor cannot close - only Manager/FP can close after verification
+// ============================================
+router.post('/:id/verify', authenticate, managerOrAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { verificationNotes, rating, qualityScore } = req.body;
+    const managerId = req.user?.id;
+
+    // Verify work order exists and is in work_completed status
+    const [[workOrder]] = await pool.execute(
+      `SELECT * FROM work_orders WHERE id = ? AND status = 'work_completed'`,
+      [id]
+    );
+
+    if (!workOrder) {
+      return res.status(400).json({
+        success: false,
+        message: 'Work order not found or not ready for verification'
+      });
+    }
+
+    // Update work order to verified
+    await pool.execute(
+      `UPDATE work_orders 
+       SET status = 'verified',
+           verified_by = ?,
+           verified_at = NOW(),
+           verification_notes = ?,
+           vendor_rating = ?,
+           quality_score = ?
+       WHERE id = ?`,
+      [managerId, verificationNotes || null, rating || null, qualityScore || null, id]
+    );
+
+    // Add to history
+    await pool.execute(
+      `INSERT INTO work_order_history 
+       (work_order_id, from_status, to_status, changed_by_id, changed_by_type, notes)
+       VALUES (?, 'work_completed', 'verified', ?, 'manager', ?)`,
+      [id, managerId, verificationNotes || 'Work verified by manager']
+    );
+
+    res.json({
+      success: true,
+      message: 'Work order verified successfully',
+      data: { status: 'verified', verifiedAt: new Date().toISOString() }
+    });
+  } catch (error) {
+    console.error('Error verifying work order:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error verifying work order',
+      error: error.message
+    });
+  }
+});
+
+// Close work order (after verification)
+router.post('/:id/close', authenticate, managerOrAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { closingNotes, customerFeedback } = req.body;
+    const managerId = req.user?.id;
+
+    // Get current status
+    const [[workOrder]] = await pool.execute(
+      `SELECT * FROM work_orders WHERE id = ?`,
+      [id]
+    );
+
+    if (!workOrder) {
+      return res.status(404).json({
+        success: false,
+        message: 'Work order not found'
+      });
+    }
+
+    // Allow closing from verified or work_completed status
+    if (!['verified', 'work_completed'].includes(workOrder.status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Work order must be verified or completed before closing'
+      });
+    }
+
+    // Update work order to closed
+    await pool.execute(
+      `UPDATE work_orders 
+       SET status = 'closed',
+           closed_by = ?,
+           closed_at = NOW(),
+           closing_notes = ?,
+           customer_feedback = ?
+       WHERE id = ?`,
+      [managerId, closingNotes || null, customerFeedback || null, id]
+    );
+
+    // Update scheduled visit if exists
+    await pool.execute(
+      `UPDATE scheduled_visits SET status = 'completed' WHERE work_order_id = ?`,
+      [id]
+    );
+
+    // Add to history
+    await pool.execute(
+      `INSERT INTO work_order_history 
+       (work_order_id, from_status, to_status, changed_by_id, changed_by_type, notes)
+       VALUES (?, ?, 'closed', ?, 'manager', ?)`,
+      [id, workOrder.status, managerId, closingNotes || 'Work order closed']
+    );
+
+    res.json({
+      success: true,
+      message: 'Work order closed successfully',
+      data: { status: 'closed', closedAt: new Date().toISOString() }
+    });
+  } catch (error) {
+    console.error('Error closing work order:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error closing work order',
+      error: error.message
+    });
+  }
+});
+
+// Get work orders pending verification (for Manager dashboard)
+router.get('/pending-verification', authenticate, managerOrAdmin, async (req, res) => {
+  try {
+    const userFpId = req.user?.franchisePartnerId || req.user?.fpId;
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin';
+
+    let query = `
+      SELECT wo.*, 
+             op.community_name as property_name, op.property_id as property_code,
+             ov.company_name as vendor_company, ov.owner_name as vendor_name
+      FROM work_orders wo
+      JOIN onboarded_properties op ON op.id = wo.property_id
+      LEFT JOIN onboarded_vendors ov ON ov.id = wo.assigned_vendor_id
+      WHERE wo.status = 'work_completed'
+    `;
+    const params = [];
+
+    if (userFpId && !isAdmin) {
+      query += ` AND op.franchise_partner_id = ?`;
+      params.push(userFpId);
+    }
+
+    query += ` ORDER BY wo.work_completed_at ASC`;
+
+    const [workOrders] = await pool.execute(query, params);
+
+    res.json({
+      success: true,
+      data: workOrders.map(wo => ({
+        id: wo.id,
+        workOrderId: wo.work_order_id,
+        title: wo.title,
+        categoryName: wo.category_name,
+        propertyId: wo.property_id,
+        propertyCode: wo.property_code,
+        propertyName: wo.property_name,
+        vendorName: wo.vendor_company || wo.vendor_name,
+        scheduledDate: wo.scheduled_date,
+        workCompletedAt: wo.work_completed_at,
+        photos: wo.photos ? JSON.parse(wo.photos) : [],
+        vendorNotes: wo.vendor_notes
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching pending verifications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching pending verifications',
+      error: error.message
+    });
   }
 });
 

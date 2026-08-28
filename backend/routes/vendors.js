@@ -18,29 +18,33 @@ const {
 } = require('../middleware/rbac');
 const { ROLE_NAMES, WORK_ORDER_STATUS } = require('../config/roles');
 const { sendVendorAssignmentEmail } = require('../services/emailService');
-// Rate limiting disabled
-// const { loginRateLimiter } = require('../middleware/security');
+// Rate limiting for login endpoints
+const { loginRateLimiter } = require('../middleware/security');
 
 // ============================================
 // VENDOR LOGIN
 // ============================================
 
-// Demo vendors
-const DEMO_VENDORS = [
+// SECURITY: Demo mode disabled by default
+// Only enable in development by setting DEMO_MODE=true in .env
+// WARNING: Never enable demo mode in production!
+const DEMO_MODE = process.env.DEMO_MODE === 'true' && process.env.NODE_ENV !== 'production';
+const DEMO_VENDORS = DEMO_MODE ? [
   { 
     id: 1, 
     vendorId: 'VEN-001',
-    username: 'vendor1', 
-    email: 'vendor1@example.com', 
-    companyName: 'ABC Services', 
-    contactPerson: 'Mike Vendor',
+    username: 'demo_vendor', 
+    email: 'demo@example.com', 
+    companyName: 'Demo Services', 
+    contactPerson: 'Demo Vendor',
     role: 'vendor', 
-    password: 'vendor123' 
+    // SECURITY: Demo password is hashed, not stored in plaintext
+    passwordHash: '$2a$10$demo.hashed.password.for.development.only'
   }
-];
+] : [];
 
-// Vendor Login
-router.post('/login', async (req, res) => {
+// Vendor Login - rate limited to prevent brute force attacks
+router.post('/login', loginRateLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 

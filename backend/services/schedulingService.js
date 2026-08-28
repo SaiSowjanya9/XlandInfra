@@ -632,62 +632,187 @@ async function generateScheduledVisits(serviceScheduleId, startDate, endDate, fr
 /**
  * Auto-generate work orders for upcoming scheduled visits
  * Should be called by a cron job (e.g., daily)
+ * 
+ * Architecture:
+ * - Schedule exists for entire contract period
+ * - 7 days before scheduled service date → Auto-Create Work Order
+ * 
+ * Work order includes:
+ * - Property ID, Schedule ID, Service, Vendor
+ * - Scheduled Date/Time, Property Location, Customer Contact
+ * - Service Description, Priority, Frequency/Visit Number (e.g., "Visit 3 of 12")
  */
-async function generateWorkOrdersForUpcomingVisits(daysAhead = 2) {
+async function generateWorkOrdersForUpcomingVisits(daysAhead = 7) {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
 
-    // Get upcoming visits that don't have work orders yet
+    // Get upcoming visits that don't have work orders yet (7 days ahead)
     const [visits] = await connection.execute(
-      `SELECT sv.*, pss.service_name, pss.service_category,
+      `SELECT sv.*, 
+              pss.service_name, pss.service_category, pss.schedule_id,
+              pss.frequency_type, pss.frequency_count,
               op.community_name as property_name, op.property_id as property_code,
-              ov.owner_name as vendor_name
+              op.address_line1, op.address_line2, op.city, op.state, op.pincode,
+              op.zone as property_zone,
+              pc.name as customer_name, pc.phone as customer_phone, pc.email as customer_email,
+              ov.owner_name as vendor_name, ov.owner_mobile as vendor_phone,
+              ov.company_name as vendor_company
        FROM scheduled_visits sv
        JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
        JOIN onboarded_properties op ON op.id = sv.property_id
+       LEFT JOIN property_contacts pc ON pc.property_id = op.id
        LEFT JOIN onboarded_vendors ov ON ov.id = sv.vendor_id
        WHERE sv.work_order_id IS NULL
-         AND sv.status = 'scheduled'
+         AND sv.status IN ('scheduled', 'confirmed')
          AND sv.scheduled_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
-         AND sv.scheduled_date >= CURDATE()`,
+         AND sv.scheduled_date >= CURDATE()
+       ORDER BY sv.scheduled_date ASC`,
       [daysAhead]
     );
 
     const generatedWorkOrders = [];
 
     for (const visit of visits) {
-      // Generate work order
+      // Generate unique work order ID
       const workOrderId = `WO-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 4).toUpperCase()}`;
+      
+      // Build comprehensive work order description
+      const description = `
+Scheduled Service Visit - Auto-Generated
+
+Service: ${visit.service_name}
+Visit: ${visit.visit_number} of ${visit.total_visits}
+Frequency: ${visit.frequency_type || 'Monthly'}
+
+Property: ${visit.property_name} (${visit.property_code})
+Location: ${[visit.address_line1, visit.address_line2, visit.city, visit.state, visit.pincode].filter(Boolean).join(', ')}
+Zone: ${visit.property_zone || 'N/A'}
+
+Customer Contact: ${visit.customer_name || 'N/A'} | ${visit.customer_phone || 'N/A'}
+
+Vendor: ${visit.vendor_company || visit.vendor_name}
+Vendor Contact: ${visit.vendor_phone || 'N/A'}
+
+Schedule Reference: ${visit.schedule_id || 'N/A'}
+      `.trim();
+
+      // Determine priority based on visit number
+      let priority = 'medium';
+      if (visit.visit_number === 1) priority = 'high'; // First visit is high priority
+      if (visit.visit_number === visit.total_visits) priority = 'high'; // Last visit is high priority
       
       const [result] = await connection.execute(
         `INSERT INTO work_orders 
-         (work_order_id, property_id, category_name, title, description, 
-          scheduled_date, assigned_vendor_id, status, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'assigned', 1)`,
-        [workOrderId, visit.property_id, visit.service_category || visit.service_name,
-         `Scheduled ${visit.service_name} Service - Visit ${visit.visit_number}/${visit.total_visits}`,
-         `Automatically generated work order for scheduled service visit.`,
-         visit.scheduled_date, visit.vendor_id]
+         (work_order_id, property_id, category_name, subcategory_name, title, description, 
+          scheduled_date, scheduled_time, assigned_vendor_id, priority, status, 
+          visit_number, total_visits, schedule_reference, created_by, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'assigned', ?, ?, ?, 1, NOW())`,
+        [
+          workOrderId, 
+          visit.property_id, 
+          visit.service_category || visit.service_name,
+          visit.service_name,
+          `${visit.service_name} Service - Visit ${visit.visit_number}/${visit.total_visits}`,
+          description,
+          visit.scheduled_date, 
+          visit.scheduled_time_start || '10:00:00',
+          visit.vendor_id,
+          priority,
+          visit.visit_number,
+          visit.total_visits,
+          visit.schedule_id || `PSS-${visit.service_schedule_id}`
+        ]
       );
 
-      // Update scheduled visit with work order reference
+      // Update scheduled visit with work order reference and status
       await connection.execute(
         `UPDATE scheduled_visits 
-         SET work_order_id = ?, work_order_generated_at = NOW()
+         SET work_order_id = ?, 
+             work_order_generated_at = NOW(),
+             status = 'work_order_created'
          WHERE id = ?`,
         [result.insertId, visit.id]
       );
 
+      // Create vendor notification for the new work order
+      if (visit.vendor_id) {
+        const notificationId = generateNotificationId();
+        const scheduledDateStr = new Date(visit.scheduled_date).toLocaleDateString('en-US', { 
+          month: 'short', day: 'numeric', year: 'numeric' 
+        });
+        const scheduledTime = visit.scheduled_time_start 
+          ? new Date(`2000-01-01T${visit.scheduled_time_start}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+          : '10:00 AM';
+        
+        await connection.execute(
+          `INSERT INTO portal_notifications 
+           (notification_id, user_id, franchise_partner_id, role_type, type, title, message,
+            reference_type, reference_id, reference_data, action_url, action_label, priority)
+           VALUES (?, ?, ?, 'vendor', 'work_order', ?, ?, 'work_order', ?, ?, ?, 'View Details', ?)`,
+          [
+            notificationId,
+            null, // Will be linked to vendor user if exists
+            null,
+            'New Work Order Available',
+            `${workOrderId}\n${visit.service_name} Service\n${visit.property_name}\n${scheduledDateStr}, ${scheduledTime}`,
+            result.insertId,
+            JSON.stringify({
+              workOrderId,
+              workOrderDbId: result.insertId,
+              serviceName: visit.service_name,
+              propertyName: visit.property_name,
+              propertyCode: visit.property_code,
+              scheduledDate: visit.scheduled_date,
+              scheduledTime,
+              vendorId: visit.vendor_id,
+              visitNumber: visit.visit_number,
+              totalVisits: visit.total_visits
+            }),
+            `/vendor/work-orders/${result.insertId}`,
+            priority === 'high' ? 'high' : 'normal'
+          ]
+        );
+
+        // Also insert into vendor_notifications table if it exists
+        try {
+          await connection.execute(
+            `INSERT INTO vendor_notifications 
+             (vendor_id, notification_type, title, message, work_order_id, is_read, created_at)
+             VALUES (?, 'work_order', ?, ?, ?, FALSE, NOW())`,
+            [
+              visit.vendor_id,
+              'New Work Order Available',
+              `${workOrderId} - ${visit.service_name} Service at ${visit.property_name} on ${scheduledDateStr}, ${scheduledTime}`,
+              result.insertId
+            ]
+          );
+        } catch (e) {
+          // Table might not exist, ignore
+          console.log('vendor_notifications table not available');
+        }
+      }
+
       generatedWorkOrders.push({
         workOrderId,
+        workOrderDbId: result.insertId,
         visitId: visit.visit_id,
         scheduledDate: visit.scheduled_date,
-        serviceName: visit.service_name
+        serviceName: visit.service_name,
+        visitNumber: visit.visit_number,
+        totalVisits: visit.total_visits,
+        propertyCode: visit.property_code,
+        propertyName: visit.property_name,
+        vendorName: visit.vendor_name,
+        vendorId: visit.vendor_id,
+        priority,
+        notificationSent: !!visit.vendor_id
       });
     }
 
     await connection.commit();
+    
+    console.log(`Generated ${generatedWorkOrders.length} work orders for upcoming visits`);
     return generatedWorkOrders;
   } catch (error) {
     await connection.rollback();

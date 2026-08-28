@@ -5,9 +5,10 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { sendCustomerActivationEmail, sendPasswordResetConfirmation, sendPasswordResetEmail, sendPasswordResetSuccess } = require('../services/emailService');
-// Rate limiting disabled
-// const { loginRateLimiter, passwordResetLimiter } = require('../middleware/security');
-const { JWT_SECRET } = require('../middleware/auth');
+// Rate limiting for login and password reset endpoints
+const { loginRateLimiter, passwordResetLimiter } = require('../middleware/security');
+// SECURITY: Use verifyToken instead of direct JWT_SECRET access
+const { verifyToken, generateToken: authGenerateToken } = require('../middleware/auth');
 
 // Constants
 const ACTIVATION_EXPIRY_HOURS = 72; // 72 hours
@@ -470,9 +471,9 @@ router.post('/set-password', async (req, res) => {
 });
 
 // ============================================
-// POST /api/customers/login - Customer login
+// POST /api/customers/login - Customer login (rate limited)
 // ============================================
-router.post('/login', async (req, res) => {
+router.post('/login', loginRateLimiter, async (req, res) => {
   try {
     // Ensure customer_activity_log table exists
     try {
@@ -595,17 +596,14 @@ router.post('/login', async (req, res) => {
       console.log('Activity log insert failed (table may not exist):', logErr.message);
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      {
-        id: customer.id,
-        customerId: customer.customer_id,
-        email: customer.email,
-        type: 'customer'
-      },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
+    // Generate JWT token using shared auth function
+    const token = authGenerateToken({
+      id: customer.id,
+      username: customer.customer_id, // Use customer_id as username
+      email: customer.email,
+      role: 'customer', // Set role as customer
+      customerId: customer.customer_id
+    });
 
     // Determine the actual property code - only use real property codes
     const actualPropertyCode = customer.op_property_id || customer.property_code || null;
@@ -1037,7 +1035,7 @@ router.get('/profile', async (req, res) => {
     // Verify token
     let decoded;
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
+      decoded = verifyToken(token);
     } catch (err) {
       return res.status(401).json({
         success: false,
@@ -1204,7 +1202,7 @@ router.get('/dashboard', async (req, res) => {
     const token = authHeader.split(' ')[1];
     let decoded;
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
+      decoded = verifyToken(token);
     } catch (err) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
@@ -1403,7 +1401,7 @@ router.get('/work-orders', async (req, res) => {
     const token = authHeader.split(' ')[1];
     let decoded;
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
+      decoded = verifyToken(token);
     } catch (err) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
@@ -1532,7 +1530,7 @@ router.get('/invoices', async (req, res) => {
     const token = authHeader.split(' ')[1];
     let decoded;
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
+      decoded = verifyToken(token);
     } catch (err) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
@@ -1700,7 +1698,7 @@ router.get('/invoices/:id', async (req, res) => {
     const token = authHeader.split(' ')[1];
     let decoded;
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
+      decoded = verifyToken(token);
     } catch (err) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
@@ -1875,7 +1873,7 @@ router.post('/invoices/:id/initiate-payment', async (req, res) => {
     const token = authHeader.split(' ')[1];
     let decoded;
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
+      decoded = verifyToken(token);
     } catch (err) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
@@ -2022,7 +2020,7 @@ router.post('/invoices/:id/create-order', async (req, res) => {
     const token = authHeader.split(' ')[1];
     let decoded;
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
+      decoded = verifyToken(token);
     } catch (err) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
@@ -2174,7 +2172,7 @@ router.post('/invoices/:id/verify-payment', async (req, res) => {
     const token = authHeader.split(' ')[1];
     let decoded;
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
+      decoded = verifyToken(token);
     } catch (err) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
@@ -2265,7 +2263,7 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
     const token = authHeader.split(' ')[1];
     let decoded;
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
+      decoded = verifyToken(token);
     } catch (err) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }

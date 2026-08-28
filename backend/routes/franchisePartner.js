@@ -21,8 +21,8 @@ const {
   buildScopedQuery 
 } = require('../middleware/fpScope');
 const { sendFPEmployeeWelcomeEmail, sendVendorAssignmentEmail, sendCustomerActivationEmail } = require('../services/emailService');
-// Rate limiting disabled
-// const { loginRateLimiter } = require('../middleware/security');
+// Rate limiting for login endpoints (5 attempts per 15 minutes)
+const { loginRateLimiter } = require('../middleware/security');
 
 // Constants for customer activation
 const ACTIVATION_EXPIRY_HOURS = 72;
@@ -43,17 +43,34 @@ const generateActivationToken = () => {
   return crypto.randomBytes(32).toString('hex');
 };
 
-// Configure multer for file uploads
+// Secure file upload configuration
+// SECURITY: Whitelist both MIME types AND file extensions
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+const MIME_TO_EXT = {
+  'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 
+  'image/webp': '.webp', 'application/pdf': '.pdf'
+};
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => cb(null, `${Date.now()}-${uuidv4()}${path.extname(file.originalname)}`)
+  destination: (req, file, cb) => cb(null, path.join(__dirname, '..', 'uploads')),
+  filename: (req, file, cb) => {
+    const safeExt = MIME_TO_EXT[file.mimetype] || '.bin';
+    cb(null, `${Date.now()}-${uuidv4()}${safeExt}`);
+  }
 });
 const upload = multer({ 
   storage,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
-    cb(null, allowed.includes(file.mimetype));
+    const ext = path.extname(file.originalname).toLowerCase();
+    const isValidMime = ALLOWED_MIME_TYPES.includes(file.mimetype);
+    const isValidExt = ALLOWED_EXTENSIONS.includes(ext);
+    if (isValidMime && isValidExt) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only images and PDFs allowed.'), false);
+    }
   }
 });
 
@@ -61,8 +78,8 @@ const upload = multer({
 // FP AUTHENTICATION (Public - No Auth Required)
 // ============================================
 
-// FP Login
-router.post('/login', async (req, res) => {
+// FP Login - rate limited to prevent brute force attacks
+router.post('/login', loginRateLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -3282,23 +3299,23 @@ router.put('/employees/:id', requireFPScope, async (req, res) => {
       tempPassword = generateTempPassword();
       const passwordHash = await bcrypt.hash(tempPassword, 10);
       
-      // Update fp_employees table with new email and password
+      // Update fp_employees table with new email and password (no plaintext storage)
       await pool.execute(
         `UPDATE fp_employees SET 
           first_name = ?, last_name = ?, email = ?, phone = ?, 
           country_code = ?, aadhaar = ?, role = ?, password_hash = ?, 
-          visible_password = ?, must_change_password = TRUE, updated_at = NOW()
+          must_change_password = TRUE, updated_at = NOW()
          WHERE id = ? AND franchise_partner_id = ?`,
-        [firstName, lastName, email, phone, countryCode || '+91', aadhaar || null, role || 'field_staff', passwordHash, tempPassword, id, req.fpId]
+        [firstName, lastName, email, phone, countryCode || '+91', aadhaar || null, role || 'field_staff', passwordHash, id, req.fpId]
       );
       
       // Also update linked user account if exists
       if (currentEmployee.user_id) {
         await pool.execute(
           `UPDATE users SET first_name = ?, last_name = ?, email = ?, phone = ?, 
-           password_hash = ?, visible_password = ?, must_change_password = TRUE,
+           password_hash = ?, must_change_password = TRUE,
            username = ? WHERE id = ?`,
-          [firstName, lastName, email, phone, passwordHash, tempPassword, email, currentEmployee.user_id]
+          [firstName, lastName, email, phone, passwordHash, email, currentEmployee.user_id]
         );
       }
       
