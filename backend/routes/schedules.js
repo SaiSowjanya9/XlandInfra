@@ -1258,10 +1258,26 @@ router.get('/vendor/:vendorId/availability', authenticate, canSeeSchedule, async
   }
 });
 
+// Frequency configuration for recommended dates (uses first service date as anchor)
+const FREQ_CONFIG = {
+  'daily': { intervalMonths: 0, intervalDays: 1 },
+  'weekly': { intervalMonths: 0, intervalDays: 7 },
+  'bi_weekly': { intervalMonths: 0, intervalDays: 14 },
+  'monthly': { intervalMonths: 1, intervalDays: 0 },
+  'every_2_months': { intervalMonths: 2, intervalDays: 0 },
+  'bi_monthly': { intervalMonths: 2, intervalDays: 0 },
+  'quarterly': { intervalMonths: 3, intervalDays: 0 },
+  'half_yearly': { intervalMonths: 6, intervalDays: 0 },
+  'half-yearly': { intervalMonths: 6, intervalDays: 0 },
+  'yearly': { intervalMonths: 12, intervalDays: 0 },
+  'annual': { intervalMonths: 12, intervalDays: 0 }
+};
+
 // Get recommended dates for a service based on vendor availability
+// Uses first service date as the recurrence anchor
 router.get('/recommended-dates', authenticate, canSeeSchedule, async (req, res) => {
   try {
-    const { vendorId, frequency, startDate, count = 5 } = req.query;
+    const { vendorId, frequency, startDate, count = 5, totalVisits } = req.query;
 
     if (!vendorId) {
       return res.status(400).json({
@@ -1270,19 +1286,12 @@ router.get('/recommended-dates', authenticate, canSeeSchedule, async (req, res) 
       });
     }
 
-    const frequencyDays = {
-      'daily': 1,
-      'weekly': 7,
-      'bi_weekly': 14,
-      'monthly': 30,
-      'every_2_months': 60,
-      'quarterly': 91,
-      'half_yearly': 182,
-      'yearly': 365
-    };
-
-    const intervalDays = frequencyDays[frequency] || 30;
-    const start = startDate ? new Date(startDate) : new Date();
+    // Normalize frequency
+    const normalizedFreq = (frequency || 'monthly').toLowerCase().replace(/[\s-]/g, '_');
+    const config = FREQ_CONFIG[normalizedFreq] || FREQ_CONFIG['monthly'];
+    
+    const firstServiceDate = startDate ? new Date(startDate) : new Date();
+    const numVisits = parseInt(totalVisits) || parseInt(count) || 5;
     const recommendedDates = [];
 
     // Get vendor's existing bookings
@@ -1307,33 +1316,51 @@ router.get('/recommended-dates', authenticate, canSeeSchedule, async (req, res) 
     );
     const maxDaily = vendor?.max_daily_visits || 5;
 
-    let currentDate = new Date(start);
-    let attempts = 0;
-    const maxAttempts = 100;
-
-    while (recommendedDates.length < parseInt(count) && attempts < maxAttempts) {
-      const dateStr = currentDate.toISOString().split('T')[0];
-      const dayOfWeek = currentDate.getDay();
-
-      // Skip weekends (optional, configurable)
-      if (dayOfWeek !== 0) { // Skip Sundays
-        const currentBookings = bookingMap[dateStr] || 0;
-        if (currentBookings < maxDaily) {
-          recommendedDates.push({
-            date: dateStr,
-            dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek],
-            availableSlots: maxDaily - currentBookings
-          });
+    // Generate recommended dates based on frequency using first service date as anchor
+    for (let visitNum = 0; visitNum < numVisits; visitNum++) {
+      const visitDate = new Date(firstServiceDate);
+      
+      if (config.intervalMonths > 0) {
+        // Month-based frequency (Monthly, Quarterly, etc.)
+        visitDate.setMonth(visitDate.getMonth() + (visitNum * config.intervalMonths));
+        
+        // Handle month overflow (e.g., Jan 31 + 1 month = Feb 28/29)
+        const targetDay = firstServiceDate.getDate();
+        if (visitDate.getDate() !== targetDay) {
+          visitDate.setDate(0); // Last day of previous month
         }
+      } else if (config.intervalDays > 0) {
+        // Day-based frequency (Daily, Weekly)
+        visitDate.setDate(visitDate.getDate() + (visitNum * config.intervalDays));
       }
-
-      currentDate.setDate(currentDate.getDate() + intervalDays);
-      attempts++;
+      
+      const dateStr = visitDate.toISOString().split('T')[0];
+      const dayOfWeek = visitDate.getDay();
+      const currentBookings = bookingMap[dateStr] || 0;
+      const availableSlots = maxDaily - currentBookings;
+      
+      recommendedDates.push({
+        visitNumber: visitNum + 1,
+        date: dateStr,
+        dayOfMonth: visitDate.getDate(),
+        month: visitDate.toLocaleString('en-US', { month: 'short' }),
+        year: visitDate.getFullYear(),
+        dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek],
+        availableSlots: Math.max(0, availableSlots),
+        isAvailable: availableSlots > 0,
+        needsAdjustment: availableSlots <= 0
+      });
     }
 
     res.json({
       success: true,
-      data: recommendedDates
+      data: {
+        frequency: normalizedFreq,
+        firstServiceDate: firstServiceDate.toISOString().split('T')[0],
+        anchorDay: firstServiceDate.getDate(),
+        totalVisits: numVisits,
+        recommendedDates
+      }
     });
   } catch (error) {
     console.error('Error fetching recommended dates:', error);
