@@ -27,20 +27,29 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
     generateMockSchedules();
   }, [currentDate]);
 
+  // Available filter options
+  const vendorOptions = [
+    'ABC Cleaning', 'PowerFix Solutions', 'Pipe Masters', 'Elevate Engineers',
+    'PestFree Services', 'Cool Breeze', 'GenCare Services', 'Drain Pro'
+  ];
+  const zoneOptions = ['Zone A', 'Zone B', 'Zone C', 'Zone D'];
+  const propertyTypeOptions = ['Apartment', 'Villa', 'Gated Community', 'Plot'];
+  const serviceOptions = ['Water Tank Cleaning', 'Electrical Repair', 'Plumbing Repair', 'Lift Maintenance', 'Pest Control', 'AC Service', 'Generator Checkup', 'Drainage Cleaning'];
+
   const generateMockSchedules = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const mockData = [];
     
     const services = [
-      { name: 'Water Tank Cleaning', property: 'Green Valley Apts', vendor: 'ABC Cleaning', color: 'blue' },
-      { name: 'Electrical Repair', property: 'Palm Meadows', vendor: 'PowerFix Solutions', color: 'amber' },
-      { name: 'Plumbing Repair', property: 'Urban Nest', vendor: 'Pipe Masters', color: 'green' },
-      { name: 'Lift Maintenance', property: 'Elite Enclave', vendor: 'Elevate Engineers', color: 'purple' },
-      { name: 'Pest Control', property: 'Sunrise Villas', vendor: 'PestFree Services', color: 'red' },
-      { name: 'AC Service', property: 'Lake View Residency', vendor: 'Cool Breeze', color: 'cyan' },
-      { name: 'Generator Checkup', property: 'Golden Heights', vendor: 'GenCare Services', color: 'orange' },
-      { name: 'Drainage Cleaning', property: 'Skyline Towers', vendor: 'Drain Pro', color: 'teal' }
+      { name: 'Water Tank Cleaning', property: 'Green Valley Apts', vendor: 'ABC Cleaning', zone: 'Zone A', propertyType: 'Apartment', color: 'blue' },
+      { name: 'Electrical Repair', property: 'Palm Meadows', vendor: 'PowerFix Solutions', zone: 'Zone A', propertyType: 'Villa', color: 'amber' },
+      { name: 'Plumbing Repair', property: 'Urban Nest', vendor: 'Pipe Masters', zone: 'Zone D', propertyType: 'Villa', color: 'green' },
+      { name: 'Lift Maintenance', property: 'Elite Enclave', vendor: 'Elevate Engineers', zone: 'Zone A', propertyType: 'Apartment', color: 'purple' },
+      { name: 'Pest Control', property: 'Sunrise Villas', vendor: 'PestFree Services', zone: 'Zone B', propertyType: 'Villa', color: 'red' },
+      { name: 'AC Service', property: 'Lake View Residency', vendor: 'Cool Breeze', zone: 'Zone C', propertyType: 'Apartment', color: 'cyan' },
+      { name: 'Generator Checkup', property: 'Golden Heights', vendor: 'GenCare Services', zone: 'Zone B', propertyType: 'Apartment', color: 'orange' },
+      { name: 'Drainage Cleaning', property: 'Skyline Towers', vendor: 'Drain Pro', zone: 'Zone C', propertyType: 'Gated Community', color: 'teal' }
     ];
 
     // Generate random schedules for the month
@@ -61,6 +70,8 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
           service: service.name,
           property: service.property,
           vendor: service.vendor,
+          zone: service.zone,
+          propertyType: service.propertyType,
           color: service.color,
           status: ['scheduled', 'in_progress', 'completed', 'pending'][Math.floor(Math.random() * 4)]
         });
@@ -68,6 +79,17 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
     }
     
     setSchedules(mockData);
+  };
+
+  // Filter schedules based on current filters
+  const getFilteredSchedules = () => {
+    return schedules.filter(s => {
+      if (filters.service !== 'All Services' && s.service !== filters.service) return false;
+      if (filters.vendor !== 'All Vendors' && s.vendor !== filters.vendor) return false;
+      if (filters.zone !== 'All Zones' && s.zone !== filters.zone) return false;
+      if (filters.propertyType !== 'All Property Types' && s.propertyType !== filters.propertyType) return false;
+      return true;
+    });
   };
 
   const getDaysInMonth = () => {
@@ -99,7 +121,8 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
   };
 
   const getSchedulesForDate = (date) => {
-    return schedules.filter(s => 
+    const filtered = getFilteredSchedules();
+    return filtered.filter(s => 
       s.date.getDate() === date.getDate() && 
       s.date.getMonth() === date.getMonth() &&
       s.date.getFullYear() === date.getFullYear()
@@ -178,27 +201,40 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
             <span className="text-sm font-medium">01 Aug 2025 - 07 Aug 2025</span>
           </div>
           
-          <select className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
-            <option>All Services</option>
-            <option>HVAC</option>
-            <option>Plumbing</option>
-            <option>Electrical</option>
+          <select 
+            value={filters.service}
+            onChange={(e) => setFilters({...filters, service: e.target.value})}
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white"
+          >
+            <option value="All Services">All Services</option>
+            {serviceOptions.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
           
-          <select className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
-            <option>All Vendors</option>
+          <select 
+            value={filters.vendor}
+            onChange={(e) => setFilters({...filters, vendor: e.target.value})}
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white"
+          >
+            <option value="All Vendors">All Vendors</option>
+            {vendorOptions.map(v => <option key={v} value={v}>{v}</option>)}
           </select>
           
-          <select className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
-            <option>All Zones</option>
-            <option>Zone A</option>
-            <option>Zone B</option>
+          <select 
+            value={filters.zone}
+            onChange={(e) => setFilters({...filters, zone: e.target.value})}
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white"
+          >
+            <option value="All Zones">All Zones</option>
+            {zoneOptions.map(z => <option key={z} value={z}>{z}</option>)}
           </select>
           
-          <select className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
-            <option>All Property Types</option>
-            <option>Apartment</option>
-            <option>Villa</option>
+          <select 
+            value={filters.propertyType}
+            onChange={(e) => setFilters({...filters, propertyType: e.target.value})}
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white"
+          >
+            <option value="All Property Types">All Property Types</option>
+            {propertyTypeOptions.map(pt => <option key={pt} value={pt}>{pt}</option>)}
           </select>
           
           <button className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
@@ -306,7 +342,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
         <div className="w-72 flex-shrink-0 space-y-4">
           {/* Mini Calendar */}
           <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <h3 className="font-semibold text-gray-900 mb-3">Mini Calendar</h3>
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Calendar</h3>
             <div className="flex items-center justify-between mb-2">
               <button onClick={() => navigateMonth(-1)} className="p-1 hover:bg-gray-100 rounded">
                 <ChevronLeft className="w-4 h-4" />
