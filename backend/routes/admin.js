@@ -798,6 +798,42 @@ router.delete('/properties/:id/permanent', authenticate, adminOnly, async (req, 
       }
     } catch (e) { console.log('fp_estimates archive skipped:', e.message); }
 
+    // Unlink invoices from property (preserve payment history)
+    try {
+      const [invResult] = await pool.execute(
+        'UPDATE invoices SET property_id = NULL WHERE property_id = ?',
+        [id]
+      );
+      if (invResult.affectedRows > 0) {
+        console.log('📋 [Admin] Unlinked', invResult.affectedRows, 'invoices from property_id:', id);
+      }
+    } catch (e) { console.log('invoices unlink skipped:', e.message); }
+
+    // Unlink payments from property (preserve payment history)
+    try {
+      const [payResult] = await pool.execute(
+        'UPDATE payments SET property_id = NULL WHERE property_id = ?',
+        [id]
+      );
+      if (payResult.affectedRows > 0) {
+        console.log('📋 [Admin] Unlinked', payResult.affectedRows, 'payments from property_id:', id);
+      }
+    } catch (e) { console.log('payments unlink skipped:', e.message); }
+
+    // Unlink work orders from property (preserve work order history)
+    try {
+      const [woResult] = await pool.execute(
+        'UPDATE work_orders SET property_id = NULL WHERE property_id = ?',
+        [id]
+      );
+      if (woResult.affectedRows > 0) {
+        console.log('📋 [Admin] Unlinked', woResult.affectedRows, 'work_orders from property_id:', id);
+      }
+    } catch (e) { console.log('work_orders unlink skipped:', e.message); }
+
+    // Note: schedule_series, schedule_occurrences, property_service_schedules, 
+    // and scheduled_visits are automatically deleted via ON DELETE CASCADE
+
     console.log('📋 [Admin] Permanently deleted property:', id);
 
     res.json({
