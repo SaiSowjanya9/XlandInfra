@@ -350,8 +350,16 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   const completedSchedules = mainFilteredSchedules.filter(s => getStatus(s) === 'completed').length;
   const rescheduledSchedules = mainFilteredSchedules.filter(s => getStatus(s) === 'rescheduled').length;
   const cancelledSchedules = mainFilteredSchedules.filter(s => getStatus(s) === 'cancelled').length;
+  const overdueSchedules = mainFilteredSchedules.filter(s => {
+    const sDate = new Date(s.startDate || s.start_date);
+    sDate.setHours(0, 0, 0, 0);
+    return sDate < today && !['completed', 'cancelled'].includes(getStatus(s));
+  }).length;
 
-  // Stat cards configuration
+  // Get pending property count (properties awaiting schedule setup)
+  const [pendingPropertyCount, setPendingPropertyCount] = useState(0);
+
+  // Stat cards configuration - matching the image design
   const statCards = [
     {
       label: 'Total Schedules',
@@ -361,7 +369,8 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       iconBg: '#DBEAFE',
       iconColor: '#3B82F6',
       borderColor: '#3B82F6',
-      link: 'View All'
+      link: 'View All',
+      linkAction: () => navigate(`/${portalType === 'franchise' ? 'fp' : portalType}/schedules/calendar`)
     },
     {
       label: 'Upcoming Today',
@@ -371,7 +380,8 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       iconBg: '#FEF3C7',
       iconColor: '#F59E0B',
       borderColor: '#F59E0B',
-      link: 'View Today'
+      link: 'View Today',
+      linkAction: () => {}
     },
     {
       label: 'This Week',
@@ -381,17 +391,19 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       iconBg: '#DBEAFE',
       iconColor: '#3B82F6',
       borderColor: '#3B82F6',
-      link: 'View This Week'
+      link: 'View This Week',
+      linkAction: () => {}
     },
     {
       label: 'This Month',
       value: thisMonth,
       percentage: totalSchedules ? `${((thisMonth / totalSchedules) * 100).toFixed(1)}% of total` : '0% of total',
       icon: CalendarDays,
-      iconBg: '#DBEAFE',
-      iconColor: '#3B82F6',
-      borderColor: '#3B82F6',
-      link: 'View This Month'
+      iconBg: '#D1FAE5',
+      iconColor: '#10B981',
+      borderColor: '#10B981',
+      link: 'View This Month',
+      linkAction: () => {}
     },
     {
       label: 'Completed',
@@ -401,7 +413,8 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       iconBg: '#D1FAE5',
       iconColor: '#10B981',
       borderColor: '#10B981',
-      link: 'View Completed'
+      link: 'View Completed',
+      linkAction: () => {}
     },
     {
       label: 'Rescheduled',
@@ -411,7 +424,8 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       iconBg: '#DBEAFE',
       iconColor: '#3B82F6',
       borderColor: '#3B82F6',
-      link: 'View Rescheduled'
+      link: 'View Rescheduled',
+      linkAction: () => navigate(`/${portalType === 'franchise' ? 'fp' : portalType}/schedules/reschedule-requests`)
     },
     {
       label: 'Cancelled',
@@ -421,7 +435,8 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       iconBg: '#FEE2E2',
       iconColor: '#EF4444',
       borderColor: '#EF4444',
-      link: 'View Cancelled'
+      link: 'View Cancelled',
+      linkAction: () => navigate(`/${portalType === 'franchise' ? 'fp' : portalType}/schedules/cancelled`)
     }
   ];
 
@@ -717,6 +732,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
               <p className="text-xl font-bold text-gray-900 mb-1">{card.value}</p>
               <button 
                 className="text-xs font-medium text-blue-600 hover:underline flex items-center gap-0.5"
+                onClick={(e) => { e.stopPropagation(); card.linkAction?.(); }}
               >
                 {card.link} <ArrowRight className="w-3 h-3" />
               </button>
@@ -1003,6 +1019,115 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Recent Schedules Table */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+        <div className="p-6 border-b border-gray-100">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <h3 className="text-lg font-semibold text-gray-900">Recent Schedules</h3>
+            <div className="flex flex-wrap items-center gap-3">
+              <select className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm">
+                <option>All Status</option>
+                <option>Upcoming</option>
+                <option>In Progress</option>
+                <option>Completed</option>
+                <option>Rescheduled</option>
+                <option>Cancelled</option>
+              </select>
+              <select className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm">
+                <option>All Property Types</option>
+                <option>Apartment</option>
+                <option>Villa</option>
+                <option>Gated Community</option>
+              </select>
+              <select className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm">
+                <option>All Service Categories</option>
+              </select>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by Schedule ID, Property, Customer..."
+                  className="pl-10 pr-4 py-1.5 w-64 border border-gray-200 rounded-lg text-sm"
+                />
+              </div>
+              <button className="text-sm font-medium text-blue-600 hover:underline flex items-center gap-1">
+                View All Schedules <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Schedule ID</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Service / Issue</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Property / Customer</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Property Type</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Scheduled Date & Time</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Technician / Vendor</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {mainFilteredSchedules.slice(0, 5).length > 0 ? (
+                mainFilteredSchedules.slice(0, 5).map((schedule, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm font-medium text-blue-600">{schedule.scheduleId || schedule.schedule_id || `SCH-${String(idx + 1).padStart(6, '0')}`}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{schedule.title || schedule.service_name || 'General Service'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{schedule.propertyName || schedule.property_name || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{normalizePropertyType(schedule.propertyType || schedule.property_type)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {formatDate(schedule.startDate || schedule.start_date)}, {formatTime(schedule.startDate || schedule.start_date) || '09:00 AM'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{schedule.vendorName || schedule.vendor_name || schedule.assignedTo || '-'}</td>
+                    <td className="px-6 py-4"><StatusBadge status={schedule.status} /></td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => { setSelectedSchedule(schedule); setShowScheduleModal(true); }}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                          title="View"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg" title="More">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                    <CalendarDays className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                    <p>No schedules found</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {mainFilteredSchedules.length > 5 && (
+          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+            <p className="text-sm text-gray-500">Showing 1 to 5 of {mainFilteredSchedules.length} entries</p>
+            <div className="flex items-center gap-1">
+              <button className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">&lt;</button>
+              <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg">1</button>
+              <button className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">2</button>
+              <button className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">3</button>
+              <span className="px-2 text-gray-400">...</span>
+              <button className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">{Math.ceil(mainFilteredSchedules.length / 5)}</button>
+              <button className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">&gt;</button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Create Schedule Modal */}
