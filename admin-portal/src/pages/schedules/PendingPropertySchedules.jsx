@@ -163,7 +163,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const itemsPerPage = 10;
   
   // Modal states
   const [showFilters, setShowFilters] = useState(false);
@@ -1007,16 +1007,6 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
-              
-              <select
-                value={itemsPerPage}
-                onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                className="ml-2 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
-              >
-                <option value={10}>10 per page</option>
-                <option value={25}>25 per page</option>
-                <option value={50}>50 per page</option>
-              </select>
             </div>
           </div>
         )}
