@@ -26,6 +26,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
     groupByVendor: false,
     groupByProperty: false
   });
+  const [activeQuickFilter, setActiveQuickFilter] = useState(null);
 
   // Dynamic filter options from API
   const [zones, setZones] = useState([]);
@@ -120,6 +121,12 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
 
   // Filter schedules based on current filters and view options
   const getFilteredSchedules = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const sevenDaysLater = new Date(today);
+    sevenDaysLater.setDate(today.getDate() + 7);
+    
     return schedules.filter(s => {
       // Apply dropdown filters
       if (filters.service !== 'All Services' && s.service !== filters.service) return false;
@@ -130,6 +137,30 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
       // Apply view options filters
       if (!viewOptions.showUnscheduled && s.type === 'unscheduled') return false;
       if (!viewOptions.showWorkOrders && s.type === 'work_order') return false;
+      
+      // Apply quick filter
+      if (activeQuickFilter) {
+        const scheduleDate = new Date(s.date);
+        scheduleDate.setHours(0, 0, 0, 0);
+        
+        switch (activeQuickFilter) {
+          case 'today':
+            if (scheduleDate.getTime() !== today.getTime()) return false;
+            break;
+          case 'upcoming':
+            if (scheduleDate < today || scheduleDate > sevenDaysLater) return false;
+            break;
+          case 'overdue':
+            if (scheduleDate >= today || (s.status !== 'pending' && s.status !== 'scheduled')) return false;
+            break;
+          case 'rescheduled':
+            if (s.status !== 'rescheduled') return false;
+            break;
+          case 'cancelled':
+            if (s.status !== 'cancelled') return false;
+            break;
+        }
+      }
       
       return true;
     });
@@ -289,11 +320,11 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
   const quickFilterCounts = getQuickFilterCounts();
   
   const quickFilters = [
-    { label: "Today's Schedules", count: quickFilterCounts.todaysSchedules },
-    { label: "Upcoming (7 Days)", count: quickFilterCounts.upcoming7Days },
-    { label: "Overdue", count: quickFilterCounts.overdue },
-    { label: "Reschedule Requests", count: quickFilterCounts.rescheduleRequests },
-    { label: "Cancelled", count: quickFilterCounts.cancelled }
+    { key: 'today', label: "Today's Schedules", count: quickFilterCounts.todaysSchedules },
+    { key: 'upcoming', label: "Upcoming (7 Days)", count: quickFilterCounts.upcoming7Days },
+    { key: 'overdue', label: "Overdue", count: quickFilterCounts.overdue },
+    { key: 'rescheduled', label: "Reschedule Requests", count: quickFilterCounts.rescheduleRequests },
+    { key: 'cancelled', label: "Cancelled", count: quickFilterCounts.cancelled }
   ];
 
   const days = getDaysInMonth();
@@ -639,12 +670,37 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
 
           {/* Quick Filters */}
           <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <h3 className="font-semibold text-gray-900 mb-3">Quick Filters</h3>
-            <div className="space-y-2">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-gray-900">Quick Filters</h3>
+              {activeQuickFilter && (
+                <button 
+                  onClick={() => setActiveQuickFilter(null)}
+                  className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <div className="space-y-1">
               {quickFilters.map(filter => (
-                <div key={filter.label} className="flex items-center justify-between py-1 px-2 hover:bg-gray-50 rounded cursor-pointer">
-                  <span className="text-sm text-gray-600">{filter.label}</span>
-                  <span className="text-sm font-medium text-blue-600">{filter.count}</span>
+                <div 
+                  key={filter.key} 
+                  onClick={() => setActiveQuickFilter(activeQuickFilter === filter.key ? null : filter.key)}
+                  className={`flex items-center justify-between py-2 px-3 rounded-lg cursor-pointer transition-colors ${
+                    activeQuickFilter === filter.key 
+                      ? 'bg-blue-100 border border-blue-300' 
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <span className={`text-sm ${activeQuickFilter === filter.key ? 'text-blue-700 font-medium' : 'text-gray-600'}`}>
+                    {filter.label}
+                  </span>
+                  <span className={`text-sm font-semibold ${
+                    activeQuickFilter === filter.key ? 'text-blue-700' : 
+                    filter.key === 'overdue' && filter.count > 0 ? 'text-red-600' : 'text-blue-600'
+                  }`}>
+                    {filter.count}
+                  </span>
                 </div>
               ))}
             </div>
