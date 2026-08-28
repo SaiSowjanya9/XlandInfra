@@ -3,11 +3,59 @@ const router = express.Router();
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 
+// Authentication middleware for admin endpoints
+const { authenticate } = require('../middleware/auth');
+// Rate limiting for scan endpoint
+const rateLimit = require('express-rate-limit');
+
 // Database pool will be passed from server.js
 let pool;
 
 const initializePool = (dbPool) => {
   pool = dbPool;
+};
+
+// SECURITY: Rate limiter for QR scan endpoint (prevent DoS)
+const scanRateLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 60, // 60 scans per minute per IP
+  message: { success: false, message: 'Too many requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// SECURITY: Validate URL to prevent open redirect attacks
+const isValidUrl = (url) => {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    // Only allow http and https protocols
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return false;
+    }
+    // Block localhost and internal IPs in production
+    if (process.env.NODE_ENV === 'production') {
+      const hostname = parsed.hostname.toLowerCase();
+      if (hostname === 'localhost' || 
+          hostname === '127.0.0.1' || 
+          hostname.startsWith('192.168.') ||
+          hostname.startsWith('10.') ||
+          hostname.startsWith('172.')) {
+        return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// Admin-only middleware (checks for admin role)
+const adminOnly = (req, res, next) => {
+  if (!req.user || !['admin', 'super_admin'].includes(req.user.role)) {
+    return res.status(403).json({ success: false, message: 'Admin access required' });
+  }
+  next();
 };
 
 // ============================================
@@ -318,9 +366,10 @@ const getGeoLocation = async (ip) => {
 
 // ============================================
 // QR REDIRECT ENDPOINT (Public - Main redirect service)
+// SECURITY: Rate limited to prevent DoS attacks
 // ============================================
 
-router.get('/r/:slug', async (req, res) => {
+router.get('/r/:slug', scanRateLimiter, async (req, res) => {
   const startTime = Date.now();
   const { slug } = req.params;
   
@@ -533,7 +582,7 @@ router.get('/r/:slug', async (req, res) => {
 // ============================================
 
 // Get all QR codes
-router.get('/codes', async (req, res) => {
+router.get('/codes', authenticate, adminOnly, async (req, res) => {
   try {
     const [qrCodes] = await pool.execute(`
       SELECT q.*, 
@@ -552,7 +601,7 @@ router.get('/codes', async (req, res) => {
 });
 
 // Get single QR code with full details
-router.get('/codes/:id', async (req, res) => {
+router.get('/codes/:id', authenticate, adminOnly, async (req, res) => {
   try {
     const [[qr]] = await pool.execute('SELECT * FROM qr_codes WHERE id = ? OR qr_id = ? OR slug = ?', 
       [req.params.id, req.params.id, req.params.id]);
@@ -574,12 +623,17 @@ router.get('/codes/:id', async (req, res) => {
 });
 
 // Create new QR code
-router.post('/codes', async (req, res) => {
+router.post('/codes', authenticate, adminOnly, async (req, res) => {
   try {
     const { label, slug, url, description, qr_type, foreground_color, background_color, error_correction } = req.body;
     
     if (!label || !slug || !url) {
       return res.status(400).json({ success: false, message: 'Label, slug, and URL are required' });
+    }
+    
+    // SECURITY: Validate URL to prevent open redirect attacks
+    if (!isValidUrl(url)) {
+      return res.status(400).json({ success: false, message: 'Invalid URL. Must be a valid http/https URL.' });
     }
     
     // Validate slug format
@@ -611,9 +665,14 @@ router.post('/codes', async (req, res) => {
 });
 
 // Update QR code
-router.put('/codes/:id', async (req, res) => {
+router.put('/codes/:id', authenticate, adminOnly, async (req, res) => {
   try {
     const { label, current_url, description, is_active, foreground_color, background_color, change_reason } = req.body;
+    
+    // SECURITY: Validate URL if provided
+    if (current_url && !isValidUrl(current_url)) {
+      return res.status(400).json({ success: false, message: 'Invalid URL. Must be a valid http/https URL.' });
+    }
     
     const [[qr]] = await pool.execute('SELECT * FROM qr_codes WHERE id = ?', [req.params.id]);
     if (!qr) {
@@ -650,7 +709,7 @@ router.put('/codes/:id', async (req, res) => {
 });
 
 // Delete QR code
-router.delete('/codes/:id', async (req, res) => {
+router.delete('/codes/:id', authenticate, adminOnly, async (req, res) => {
   try {
     const [[qr]] = await pool.execute('SELECT * FROM qr_codes WHERE id = ?', [req.params.id]);
     if (!qr) {
@@ -671,7 +730,7 @@ router.delete('/codes/:id', async (req, res) => {
 // ============================================
 
 // Get analytics overview for all QR codes
-router.get('/analytics/overview', async (req, res) => {
+router.get('/analytics/overview', authenticate, adminOnly, async (req, res) => {
   try {
     // Total stats - includes verified_scans (mobile/tablet only - real QR users)
     const [[totals]] = await pool.execute(`
@@ -728,7 +787,7 @@ router.get('/analytics/overview', async (req, res) => {
 });
 
 // Get analytics for specific QR code
-router.get('/analytics/:qrId', async (req, res) => {
+router.get('/analytics/:qrId', authenticate, adminOnly, async (req, res) => {
   try {
     const { qrId } = req.params;
     const { period = '7d' } = req.query;
@@ -869,7 +928,7 @@ router.get('/analytics/:qrId', async (req, res) => {
 });
 
 // Get real-time active users
-router.get('/analytics/:qrId/realtime', async (req, res) => {
+router.get('/analytics/:qrId/realtime', authenticate, adminOnly, async (req, res) => {
   try {
     const { qrId } = req.params;
     
@@ -910,7 +969,7 @@ router.get('/analytics/:qrId/realtime', async (req, res) => {
 });
 
 // Export analytics data
-router.get('/analytics/:qrId/export', async (req, res) => {
+router.get('/analytics/:qrId/export', authenticate, adminOnly, async (req, res) => {
   try {
     const { qrId } = req.params;
     const { format = 'json', period = '30d' } = req.query;
@@ -950,7 +1009,7 @@ router.get('/analytics/:qrId/export', async (req, res) => {
 });
 
 // Page visit tracking (for printed QR codes that go directly to pages)
-router.post('/track-visit', async (req, res) => {
+router.post('/track-visit', authenticate, async (req, res) => {
   try {
     const { page, source, timezone, language, screenWidth, screenHeight } = req.body;
     const userAgent = req.headers['user-agent'] || '';
@@ -1058,7 +1117,7 @@ router.post('/track-visit', async (req, res) => {
 });
 
 // Clean up old sessions
-router.post('/maintenance/cleanup-sessions', async (req, res) => {
+router.post('/maintenance/cleanup-sessions', authenticate, adminOnly, async (req, res) => {
   try {
     // Mark inactive sessions
     await pool.execute(`
