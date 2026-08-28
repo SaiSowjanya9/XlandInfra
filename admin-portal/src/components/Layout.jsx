@@ -28,6 +28,10 @@ import {
   Wallet,
   History,
   Calendar,
+  CalendarDays,
+  CalendarClock,
+  RefreshCcw,
+  Ban,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -84,7 +88,11 @@ const Layout = ({ admin, onLogout, children }) => {
   // Schedules sub-items
   const schedulesSubItems = [
     { path: '/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
-    { path: '/schedules/schedule-service', icon: Calendar, label: 'Schedule Service' },
+    { path: '/schedules/pending', icon: CalendarClock, label: 'Pending Property Schedules' },
+    { path: '/schedules/calendar', icon: CalendarDays, label: 'Calendar' },
+    { path: '/schedules', icon: List, label: 'All Schedules' },
+    { path: '/schedules/reschedule-requests', icon: RefreshCcw, label: 'Reschedule Requests' },
+    { path: '/schedules/cancelled', icon: Ban, label: 'Cancelled Schedules' },
   ];
 
   const isWorkOrdersSectionActive = workOrdersSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/work-orders');

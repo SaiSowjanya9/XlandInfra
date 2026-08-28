@@ -32,9 +32,13 @@ import {
   Wallet,
   History,
   Calendar,
+  CalendarDays,
+  CalendarClock,
   Bell,
   AlertTriangle,
   RefreshCw,
+  RefreshCcw,
+  Ban,
 } from 'lucide-react';
 import { getAuthToken } from '../utils/safeStorage';
 
@@ -203,7 +207,11 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
   // Schedules sub-items
   const schedulesSubItems = [
     { path: '/manager/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
-    { path: '/manager/schedules/schedule-service', icon: Calendar, label: 'Schedule Service' },
+    { path: '/manager/schedules/pending', icon: CalendarClock, label: 'Pending Property', subLabel: 'Schedules' },
+    { path: '/manager/schedules/calendar', icon: CalendarDays, label: 'Calendar' },
+    { path: '/manager/schedules', icon: List, label: 'All Schedules' },
+    { path: '/manager/schedules/reschedule-requests', icon: RefreshCcw, label: 'Reschedule Requests' },
+    { path: '/manager/schedules/cancelled', icon: Ban, label: 'Cancelled Schedules' },
   ];
 
   const isWorkOrdersActive = workOrdersSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/manager/work-orders');
@@ -782,8 +790,15 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
                         onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }}
                         onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
                       >
-                        <Icon className="w-4 h-4" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
-                        <span>{item.label}</span>
+                        <Icon className="w-4 h-4 flex-shrink-0" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
+                        {item.subLabel ? (
+                          <span className="flex flex-col leading-tight">
+                            <span>{item.label}</span>
+                            <span className="text-xs opacity-80">{item.subLabel}</span>
+                          </span>
+                        ) : (
+                          <span>{item.label}</span>
+                        )}
                       </Link>
                     );
                   })}
