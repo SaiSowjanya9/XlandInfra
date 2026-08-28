@@ -768,9 +768,20 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
             >
               <option value="all">All Packages</option>
-              {packages.map(pkg => (
-                <option key={pkg.id || pkg.packageName} value={pkg.packageName}>{pkg.packageName}</option>
-              ))}
+              {packages.length > 0 ? (
+                packages.map(pkg => (
+                  <option key={pkg.id || pkg.packageName} value={pkg.packageName}>{pkg.packageName}</option>
+                ))
+              ) : (
+                <>
+                  <option value="Apartment Basic">Apartment Basic</option>
+                  <option value="Apartment Premium">Apartment Premium</option>
+                  <option value="Villa Basic">Villa Basic</option>
+                  <option value="Villa Premium">Villa Premium</option>
+                  <option value="Gated Community Basic">Gated Community Basic</option>
+                  <option value="Gated Community Premium">Gated Community Premium</option>
+                </>
+              )}
             </select>
 
             <select
