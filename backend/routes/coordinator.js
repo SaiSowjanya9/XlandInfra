@@ -8,10 +8,11 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
 const { sendCustomerActivationEmail } = require('../services/emailService');
 // Rate limiting for login endpoints
 const { loginRateLimiter } = require('../middleware/security');
+// Use shared generateToken from auth middleware (secure - doesn't expose JWT_SECRET)
+const { generateToken } = require('../middleware/auth');
 
 // Constants for customer activation
 const ACTIVATION_EXPIRY_HOURS = 72;
@@ -118,20 +119,16 @@ router.post('/login', loginRateLimiter, async (req, res) => {
     
     console.log('[Coordinator Login] fpEmployeeId:', fpEmployeeId, 'franchisePartnerId:', franchisePartnerId);
 
-    // Generate JWT token (include fpEmployeeId for zone lookup)
-    const token = jwt.sign(
-      {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        coordinatorId: user.id,
-        fpEmployeeId: fpEmployeeId,
-        franchisePartnerId: franchisePartnerId
-      },
-      process.env.JWT_SECRET || 'dev-only-insecure-secret-do-not-use-in-production',
-      { expiresIn: '24h' }
-    );
+    // Generate JWT token using shared auth function (secure)
+    const token = generateToken({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      coordinatorId: user.id,
+      fpEmployeeId: fpEmployeeId,
+      franchisePartnerId: franchisePartnerId
+    });
 
     res.json({
       success: true,

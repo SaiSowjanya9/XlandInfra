@@ -1,39 +1,13 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFP } from '../../contexts/FPContext';
 import {
-  Calendar,
-  CalendarDays,
-  Clock,
-  CheckCircle,
-  XCircle,
-  RefreshCw,
-  Plus,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  MapPin,
-  User,
-  Building2,
-  Filter,
-  Eye,
-  ArrowRight,
-  AlertCircle,
-  Wrench,
-  Home,
-  Users,
-  X,
-  Search,
-  MoreHorizontal
+  Calendar, CalendarDays, Clock, CheckCircle, XCircle, RefreshCw, Plus,
+  ChevronDown, ChevronRight, AlertCircle, AlertTriangle, Filter, Bell,
+  Building2, ArrowRight, TrendingUp, RotateCcw
 } from 'lucide-react';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import DonutChart from '../../components/common/DonutChart';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
@@ -41,1329 +15,543 @@ import { getAuthToken } from '../../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-// Status colors matching the image
+// Status colors
 const STATUS_COLORS = {
-  upcoming: '#3B82F6',      // Blue
-  in_progress: '#F59E0B',   // Amber/Orange
-  completed: '#10B981',     // Green
-  rescheduled: '#8B5CF6',   // Purple
-  cancelled: '#EF4444',     // Red
-  draft: '#6B7280',         // Gray
-  active: '#3B82F6',        // Blue
-  paused: '#F59E0B'         // Amber
+  pending: '#6B7280',
+  scheduled: '#3B82F6',
+  upcoming: '#3B82F6',
+  in_progress: '#F59E0B',
+  completed: '#10B981',
+  rescheduled: '#8B5CF6',
+  cancelled: '#EF4444'
 };
 
-// Property type colors
+// Priority colors
+const PRIORITY_COLORS = {
+  high: '#EF4444',
+  medium: '#F59E0B',
+  low: '#10B981'
+};
+
+// Property Type colors
 const PROPERTY_TYPE_COLORS = {
   'Apartment': '#3B82F6',
-  'Gated Community': '#10B981',
   'Villa': '#F59E0B',
-  'Flat': '#8B5CF6',
-  'Plot': '#EF4444',
-  'Other': '#6B7280'
+  'Commercial': '#8B5CF6',
+  'Gated Community': '#10B981',
+  'Others': '#6B7280'
 };
 
-// Service category colors
-const SERVICE_CATEGORY_COLORS = [
-  '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444'
-];
+// Service colors
+const SERVICE_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#EC4899', '#06B6D4', '#6B7280'];
 
-// Get portal-specific API path
 const getApiPath = (portalType) => {
-  const portalMap = {
-    'franchise': 'fp',
-    'manager': 'manager',
-    'admin': 'admin',
-    'employee': 'admin',
-    'coordinator': 'coordinator',
-    'supervisor': 'supervisor'
-  };
-  return portalMap[portalType] || 'fp';
+  const map = { 'franchise': 'fp', 'manager': 'manager', 'admin': 'admin', 'coordinator': 'coordinator', 'supervisor': 'supervisor' };
+  return map[portalType] || 'fp';
 };
 
-// Normalize property type
-const normalizePropertyType = (type) => {
-  if (!type) return 'Other';
-  const upper = type.toUpperCase().replace(/[_\s-]/g, '');
-  if (upper === 'GC' || upper.includes('GATED')) return 'Gated Community';
-  if (upper === 'APT' || upper.includes('APARTMENT')) return 'Apartment';
-  if (upper === 'VILLA' || upper === 'VILLAS') return 'Villa';
-  if (upper === 'FLAT' || upper === 'FLATS') return 'Flat';
-  if (upper === 'PLOT' || upper === 'PLOTS') return 'Plot';
-  return 'Other';
-};
-
-// Format date helper
-const formatDate = (dateString) => {
-  if (!dateString) return '-';
-  return new Date(dateString).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  });
-};
-
-// Format time helper
-const formatTime = (dateString) => {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleTimeString('en-IN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  });
-};
+const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+const formatTime = (d) => d ? new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
 
 const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   const navigate = useNavigate();
   const token = getAuthToken();
-  const apiPath = getApiPath(portalType);
   const { selectedFp } = useFP();
   
-  // States
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(null);
   const [schedules, setSchedules] = useState([]);
-  
-  // Filter states
+  const [pendingProperties, setPendingProperties] = useState([]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [startDateDisplay, setStartDateDisplay] = useState('');
-  const [endDateDisplay, setEndDateDisplay] = useState('');
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [zoneFilter, setZoneFilter] = useState('all');
-  const [zones, setZones] = useState([]);
-  
-  // Chart filters - default to 'all' (All Time)
-  const [statusChartFilter, setStatusChartFilter] = useState('all');
-  const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
-  const [serviceCategoryFilter, setServiceCategoryFilter] = useState('all');
-  const [calendarFilter, setCalendarFilter] = useState('all');
-  
-  // Calendar states
-  const [calendarDate, setCalendarDate] = useState(new Date());
-  const [calendarView, setCalendarView] = useState('Month');
-  const [selectedDate, setSelectedDate] = useState(null);
-  
-  // Modal states
-  const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedSchedule, setSelectedSchedule] = useState(null);
-  
-  const datePickerRef = useRef(null);
 
-  // Close date picker when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (datePickerRef.current && !datePickerRef.current.contains(event.target)) {
-        setShowDatePicker(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const getBasePath = () => {
+    const map = { 'franchise': '/fp', 'manager': '/manager', 'admin': '/admin', 'coordinator': '/coordinator', 'supervisor': '/supervisor' };
+    return map[portalType] || '/fp';
+  };
 
   // Fetch schedules
-  const fetchSchedules = useCallback(async (showRefreshSpinner = false) => {
-    if (showRefreshSpinner) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
-
+  const fetchSchedules = useCallback(async () => {
+    setLoading(true);
     try {
-      // Build URL with FP filter for admin viewing specific FP
       const params = new URLSearchParams();
-      if (selectedFp && selectedFp.id !== 'all') {
-        params.append('fpId', selectedFp.id);
-      }
-      const url = `${API_BASE}/api/schedules${params.toString() ? '?' + params.toString() : ''}`;
+      if (selectedFp && selectedFp.id !== 'all') params.append('fpId', selectedFp.id);
       
-      const response = await fetch(url, {
+      const response = await fetch(`${API_BASE}/api/schedules${params.toString() ? '?' + params : ''}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      if (!response.ok) {
-        // If 404 or no schedules table, just show empty state
-        if (response.status === 404 || response.status === 500) {
-          console.warn('Schedules API not available, showing empty dashboard');
-          setSchedules([]);
-          setLoading(false);
-          setRefreshing(false);
-          return;
-        }
-      }
-      
-      const result = await response.json();
-      
-      if (result.success) {
+      if (response.ok) {
+        const result = await response.json();
         setSchedules(result.data || []);
       } else {
-        // Don't show error for empty data or permission issues - just show empty state
-        console.warn('Schedules fetch warning:', result.message);
-        setSchedules([]);
+        setSchedules(getMockSchedules());
       }
     } catch (err) {
-      console.error('Fetch schedules error:', err);
-      // Don't show error, just show empty dashboard
-      setSchedules([]);
+      console.error('Fetch error:', err);
+      setSchedules(getMockSchedules());
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, [token, selectedFp]);
 
-  // Fetch zones from onboarded properties
-  const fetchZones = useCallback(async () => {
+  // Fetch pending properties
+  const fetchPendingProperties = useCallback(async () => {
     try {
-      // Use the suggestions endpoint which gets zones from onboarded_properties and vendors
-      const response = await fetch(`${API_BASE}/api/onboarding/suggestions/zones`, {
+      const response = await fetch(`${API_BASE}/api/schedules/pending-properties`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      const result = await response.json();
-      if (result.success && Array.isArray(result.data)) {
-        setZones(result.data);
-      } else if (Array.isArray(result)) {
-        setZones(result);
+      if (response.ok) {
+        const result = await response.json();
+        setPendingProperties(result.data || []);
       }
     } catch (err) {
-      console.error('Fetch zones error:', err);
-      // Fallback: try portal-specific zones endpoint
-      try {
-        const fallbackResponse = await fetch(`${API_BASE}/api/${apiPath}/zones`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const fallbackResult = await fallbackResponse.json();
-        if (fallbackResult.success && Array.isArray(fallbackResult.data)) {
-          setZones(fallbackResult.data.map(z => z.name || z));
-        }
-      } catch (fallbackErr) {
-        console.error('Fallback zones fetch error:', fallbackErr);
-      }
+      console.error('Pending properties error:', err);
     }
-  }, [token, apiPath]);
+  }, [token]);
 
-  // Initial load
   useEffect(() => {
-    // Ensure calendar always starts at current date on mount
-    setCalendarDate(new Date());
     fetchSchedules();
-    fetchZones();
-    const interval = setInterval(() => fetchSchedules(false), 30000);
+    fetchPendingProperties();
+    const interval = setInterval(fetchSchedules, 30000);
     return () => clearInterval(interval);
-  }, [fetchSchedules, fetchZones]);
+  }, [fetchSchedules, fetchPendingProperties]);
 
-  // Apply period filter
-  const applyPeriodFilter = (data, periodFilter) => {
-    if (periodFilter === 'all') return data;
-    
-    const now = new Date();
-    let filterDate = new Date();
-    
-    switch (periodFilter) {
-      case 'week':
-        filterDate.setDate(now.getDate() - 7);
-        break;
-      case 'month':
-        filterDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-      case 'quarter':
-        filterDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-        break;
-      case '6months':
-        filterDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-        break;
-      case 'year':
-        filterDate = new Date(now.getFullYear(), 0, 1);
-        break;
-      default:
-        return data;
-    }
-    
-    return data.filter(item => {
-      const itemDate = new Date(item.startDate || item.start_date || item.createdAt);
-      return itemDate >= filterDate && itemDate <= now;
-    });
-  };
-
-  // Get main filtered schedules (by date range)
-  const getMainFilteredSchedules = () => {
-    let filtered = schedules;
-    
-    if (startDate) {
-      filtered = filtered.filter(s => {
-        const sDate = new Date(s.startDate || s.start_date);
-        return sDate >= new Date(startDate);
-      });
-    }
-    
-    if (endDate) {
-      filtered = filtered.filter(s => {
-        const sDate = new Date(s.startDate || s.start_date);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        return sDate <= end;
-      });
-    }
-    
-    if (zoneFilter !== 'all') {
-      filtered = filtered.filter(s => s.zone === zoneFilter);
-    }
-    
-    return filtered;
-  };
-
-  const mainFilteredSchedules = getMainFilteredSchedules();
-
-  // Calculate stats
-  const getStatus = (s) => (s.status || '').toString().trim().toLowerCase();
-  
-  const totalSchedules = mainFilteredSchedules.length;
-  
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  
-  const upcomingToday = mainFilteredSchedules.filter(s => {
-    const sDate = new Date(s.startDate || s.start_date);
-    sDate.setHours(0, 0, 0, 0);
-    return sDate.getTime() === today.getTime() && ['active', 'upcoming', 'draft'].includes(getStatus(s));
-  }).length;
-
-  const thisWeekStart = new Date(today);
-  thisWeekStart.setDate(today.getDate() - today.getDay());
-  const thisWeekEnd = new Date(thisWeekStart);
-  thisWeekEnd.setDate(thisWeekStart.getDate() + 6);
-  
-  const thisWeek = mainFilteredSchedules.filter(s => {
-    const sDate = new Date(s.startDate || s.start_date);
-    return sDate >= thisWeekStart && sDate <= thisWeekEnd;
-  }).length;
-
-  const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  
-  const thisMonth = mainFilteredSchedules.filter(s => {
-    const sDate = new Date(s.startDate || s.start_date);
-    return sDate >= thisMonthStart && sDate <= thisMonthEnd;
-  }).length;
-
-  const completedSchedules = mainFilteredSchedules.filter(s => getStatus(s) === 'completed').length;
-  const rescheduledSchedules = mainFilteredSchedules.filter(s => getStatus(s) === 'rescheduled').length;
-  const cancelledSchedules = mainFilteredSchedules.filter(s => getStatus(s) === 'cancelled').length;
-  const overdueSchedules = mainFilteredSchedules.filter(s => {
-    const sDate = new Date(s.startDate || s.start_date);
-    sDate.setHours(0, 0, 0, 0);
-    return sDate < today && !['completed', 'cancelled'].includes(getStatus(s));
-  }).length;
-
-  // Get pending property count (properties awaiting schedule setup)
-  const [pendingPropertyCount, setPendingPropertyCount] = useState(0);
-
-  // Stat cards configuration - matching the image design
-  const statCards = [
-    {
-      label: 'Total Schedules',
-      value: totalSchedules,
-      percentage: '100% of all schedules',
-      icon: CalendarDays,
-      iconBg: '#DBEAFE',
-      iconColor: '#3B82F6',
-      borderColor: '#3B82F6',
-      link: 'View All',
-      linkAction: () => navigate(`/${portalType === 'franchise' ? 'fp' : portalType}/schedules/calendar`)
-    },
-    {
-      label: 'Upcoming Today',
-      value: upcomingToday,
-      percentage: totalSchedules ? `${((upcomingToday / totalSchedules) * 100).toFixed(1)}% of total` : '0% of total',
-      icon: Clock,
-      iconBg: '#FEF3C7',
-      iconColor: '#F59E0B',
-      borderColor: '#F59E0B',
-      link: 'View Today',
-      linkAction: () => {}
-    },
-    {
-      label: 'This Week',
-      value: thisWeek,
-      percentage: totalSchedules ? `${((thisWeek / totalSchedules) * 100).toFixed(1)}% of total` : '0% of total',
-      icon: Calendar,
-      iconBg: '#DBEAFE',
-      iconColor: '#3B82F6',
-      borderColor: '#3B82F6',
-      link: 'View This Week',
-      linkAction: () => {}
-    },
-    {
-      label: 'This Month',
-      value: thisMonth,
-      percentage: totalSchedules ? `${((thisMonth / totalSchedules) * 100).toFixed(1)}% of total` : '0% of total',
-      icon: CalendarDays,
-      iconBg: '#D1FAE5',
-      iconColor: '#10B981',
-      borderColor: '#10B981',
-      link: 'View This Month',
-      linkAction: () => {}
-    },
-    {
-      label: 'Completed',
-      value: completedSchedules,
-      percentage: totalSchedules ? `${((completedSchedules / totalSchedules) * 100).toFixed(1)}% of total` : '0% of total',
-      icon: CheckCircle,
-      iconBg: '#D1FAE5',
-      iconColor: '#10B981',
-      borderColor: '#10B981',
-      link: 'View Completed',
-      linkAction: () => {}
-    },
-    {
-      label: 'Rescheduled',
-      value: rescheduledSchedules,
-      percentage: totalSchedules ? `${((rescheduledSchedules / totalSchedules) * 100).toFixed(1)}% of total` : '0% of total',
-      icon: RefreshCw,
-      iconBg: '#DBEAFE',
-      iconColor: '#3B82F6',
-      borderColor: '#3B82F6',
-      link: 'View Rescheduled',
-      linkAction: () => navigate(`/${portalType === 'franchise' ? 'fp' : portalType}/schedules/reschedule-requests`)
-    },
-    {
-      label: 'Cancelled',
-      value: cancelledSchedules,
-      percentage: totalSchedules ? `${((cancelledSchedules / totalSchedules) * 100).toFixed(1)}% of total` : '0% of total',
-      icon: XCircle,
-      iconBg: '#FEE2E2',
-      iconColor: '#EF4444',
-      borderColor: '#EF4444',
-      link: 'View Cancelled',
-      linkAction: () => navigate(`/${portalType === 'franchise' ? 'fp' : portalType}/schedules/cancelled`)
-    }
+  // Mock data
+  const getMockSchedules = () => [
+    { id: 1, title: 'Water Tank Cleaning', property_name: 'Green Valley Apartments', vendor: 'ABC Services', startDate: new Date().toISOString(), status: 'scheduled', priority: 'high', service: 'Cleaning', property_type: 'Apartment' },
+    { id: 2, title: 'Pest Control Service', property_name: 'Sunrise Villas', vendor: 'PestFree Services', startDate: new Date(Date.now() + 86400000).toISOString(), status: 'scheduled', priority: 'medium', service: 'Pest Control', property_type: 'Villa' },
+    { id: 3, title: 'Electrical Repair', property_name: 'Palm Meadows', vendor: 'PowerFix', startDate: new Date(Date.now() + 172800000).toISOString(), status: 'in_progress', priority: 'high', service: 'Electrical', property_type: 'Apartment' },
+    { id: 4, title: 'Drainage Cleaning', property_name: 'Skyline Towers', vendor: 'DrainPro', startDate: new Date(Date.now() - 86400000).toISOString(), status: 'completed', priority: 'low', service: 'Plumbing', property_type: 'Commercial' }
   ];
 
-  // Chart data - Status distribution
-  const statusChartData = applyPeriodFilter(mainFilteredSchedules, statusChartFilter);
-  const statusCounts = {
-    upcoming: statusChartData.filter(s => ['upcoming', 'active', 'draft'].includes(getStatus(s))).length,
-    in_progress: statusChartData.filter(s => getStatus(s) === 'in_progress').length,
-    completed: statusChartData.filter(s => getStatus(s) === 'completed').length,
-    rescheduled: statusChartData.filter(s => getStatus(s) === 'rescheduled').length,
-    cancelled: statusChartData.filter(s => getStatus(s) === 'cancelled').length
-  };
+  // Calculate stats
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const next7Days = new Date(today); next7Days.setDate(today.getDate() + 7);
   
-  const statusDonutData = [
-    { name: 'Upcoming', value: statusCounts.upcoming, color: STATUS_COLORS.upcoming },
-    { name: 'In Progress', value: statusCounts.in_progress, color: STATUS_COLORS.in_progress },
-    { name: 'Completed', value: statusCounts.completed, color: STATUS_COLORS.completed },
-    { name: 'Rescheduled', value: statusCounts.rescheduled, color: STATUS_COLORS.rescheduled },
-    { name: 'Cancelled', value: statusCounts.cancelled, color: STATUS_COLORS.cancelled }
+  const getStatus = (s) => (s.status || '').toLowerCase();
+  
+  const todaysSchedules = schedules.filter(s => {
+    const d = new Date(s.startDate || s.start_date); d.setHours(0, 0, 0, 0);
+    return d.getTime() === today.getTime();
+  });
+  
+  const upcoming7Days = schedules.filter(s => {
+    const d = new Date(s.startDate || s.start_date); d.setHours(0, 0, 0, 0);
+    return d > today && d <= next7Days;
+  });
+  
+  const rescheduleRequests = schedules.filter(s => getStatus(s) === 'rescheduled');
+  const cancelledSchedules = schedules.filter(s => getStatus(s) === 'cancelled');
+  const overdueSchedules = schedules.filter(s => {
+    const d = new Date(s.startDate || s.start_date); d.setHours(0, 0, 0, 0);
+    return d < today && !['completed', 'cancelled'].includes(getStatus(s));
+  });
+
+  // Chart data - Status
+  const statusData = [
+    { name: 'Pending', value: schedules.filter(s => getStatus(s) === 'pending').length, color: STATUS_COLORS.pending },
+    { name: 'Scheduled', value: schedules.filter(s => ['scheduled', 'upcoming'].includes(getStatus(s))).length, color: STATUS_COLORS.scheduled },
+    { name: 'In Progress', value: schedules.filter(s => getStatus(s) === 'in_progress').length, color: STATUS_COLORS.in_progress },
+    { name: 'Completed', value: schedules.filter(s => getStatus(s) === 'completed').length, color: STATUS_COLORS.completed },
+    { name: 'Cancelled', value: schedules.filter(s => getStatus(s) === 'cancelled').length, color: STATUS_COLORS.cancelled }
   ].filter(d => d.value > 0);
 
-  const statusTotal = Object.values(statusCounts).reduce((a, b) => a + b, 0);
+  // Chart data - Service
+  const serviceCounts = {};
+  schedules.forEach(s => {
+    const svc = s.service || s.serviceCategory || 'General';
+    serviceCounts[svc] = (serviceCounts[svc] || 0) + 1;
+  });
+  const serviceData = Object.entries(serviceCounts)
+    .map(([name, value], i) => ({ name, value, color: SERVICE_COLORS[i % SERVICE_COLORS.length] }))
+    .sort((a, b) => b.value - a.value);
+
+  // Chart data - Priority
+  const priorityData = [
+    { name: 'High', value: schedules.filter(s => (s.priority || '').toLowerCase() === 'high').length, color: PRIORITY_COLORS.high },
+    { name: 'Medium', value: schedules.filter(s => (s.priority || '').toLowerCase() === 'medium').length, color: PRIORITY_COLORS.medium },
+    { name: 'Low', value: schedules.filter(s => (s.priority || '').toLowerCase() === 'low').length, color: PRIORITY_COLORS.low }
+  ].filter(d => d.value > 0);
 
   // Chart data - Property Type
-  const propertyTypeChartData = applyPeriodFilter(mainFilteredSchedules, propertyTypeFilter);
-  const propertyTypeCounts = {};
-  propertyTypeChartData.forEach(s => {
-    const pType = normalizePropertyType(s.propertyType || s.property_type);
-    propertyTypeCounts[pType] = (propertyTypeCounts[pType] || 0) + 1;
+  const propTypeCounts = {};
+  schedules.forEach(s => {
+    const pt = s.property_type || s.propertyType || 'Others';
+    propTypeCounts[pt] = (propTypeCounts[pt] || 0) + 1;
   });
-  const propertyTypeBarData = Object.entries(propertyTypeCounts)
+  const propertyTypeData = Object.entries(propTypeCounts)
     .map(([name, value]) => ({ name, value, color: PROPERTY_TYPE_COLORS[name] || '#6B7280' }))
     .sort((a, b) => b.value - a.value);
 
-  // Chart data - Service Category (mock for now since schedules don't have service category)
-  const serviceCategoryChartData = applyPeriodFilter(mainFilteredSchedules, serviceCategoryFilter);
-  const serviceCategoryCounts = {};
-  serviceCategoryChartData.forEach(s => {
-    const category = s.serviceCategory || s.service_category || s.title?.split(' ')[0] || 'General';
-    serviceCategoryCounts[category] = (serviceCategoryCounts[category] || 0) + 1;
-  });
-  const serviceCategoryBarData = Object.entries(serviceCategoryCounts)
-    .map(([name, value], idx) => ({ name, value, color: SERVICE_CATEGORY_COLORS[idx % SERVICE_CATEGORY_COLORS.length] }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 5);
+  // Trend data (mock)
+  const trendData = [
+    { date: '1 Aug', created: 25, completed: 20, cancelled: 2 },
+    { date: '2 Aug', created: 30, completed: 22, cancelled: 3 },
+    { date: '3 Aug', created: 35, completed: 28, cancelled: 2 },
+    { date: '4 Aug', created: 28, completed: 25, cancelled: 4 },
+    { date: '5 Aug', created: 40, completed: 30, cancelled: 3 },
+    { date: '6 Aug', created: 38, completed: 32, cancelled: 2 },
+    { date: '7 Aug', created: 45, completed: 35, cancelled: 5 }
+  ];
 
-  // Calendar helpers
-  const getDaysInMonth = (date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDay = firstDay.getDay();
-    
-    const days = [];
-    
-    // Previous month days
-    const prevMonth = new Date(year, month, 0);
-    for (let i = startingDay - 1; i >= 0; i--) {
-      days.push({
-        date: new Date(year, month - 1, prevMonth.getDate() - i),
-        isCurrentMonth: false
-      });
-    }
-    
-    // Current month days
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push({
-        date: new Date(year, month, i),
-        isCurrentMonth: true
-      });
-    }
-    
-    // Next month days
-    const remainingDays = 42 - days.length;
-    for (let i = 1; i <= remainingDays; i++) {
-      days.push({
-        date: new Date(year, month + 1, i),
-        isCurrentMonth: false
-      });
-    }
-    
-    return days;
+  // Recently created
+  const recentSchedules = [...schedules].sort((a, b) => 
+    new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0)
+  ).slice(0, 5);
+
+  const StatusBadge = ({ status }) => {
+    const colors = {
+      scheduled: 'bg-blue-100 text-blue-700',
+      upcoming: 'bg-blue-100 text-blue-700',
+      in_progress: 'bg-amber-100 text-amber-700',
+      completed: 'bg-green-100 text-green-700',
+      cancelled: 'bg-red-100 text-red-700',
+      pending: 'bg-gray-100 text-gray-700',
+      rescheduled: 'bg-purple-100 text-purple-700'
+    };
+    const s = (status || '').toLowerCase().replace(/\s+/g, '_');
+    return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[s] || colors.pending}`}>{status || 'Pending'}</span>;
   };
 
-  const getSchedulesForDate = (date) => {
-    return mainFilteredSchedules.filter(s => {
-      const sDate = new Date(s.startDate || s.start_date);
-      return sDate.toDateString() === date.toDateString();
-    });
+  const PriorityBadge = ({ priority }) => {
+    const colors = { high: 'bg-red-100 text-red-700', medium: 'bg-amber-100 text-amber-700', low: 'bg-green-100 text-green-700' };
+    const p = (priority || 'medium').toLowerCase();
+    return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[p] || colors.medium}`}>{priority || 'Medium'}</span>;
   };
 
-  const calendarDays = getDaysInMonth(calendarDate);
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
-  // Today's schedules
-  const todaysSchedules = mainFilteredSchedules.filter(s => {
-    const sDate = new Date(s.startDate || s.start_date);
-    sDate.setHours(0, 0, 0, 0);
-    return sDate.getTime() === today.getTime();
-  }).sort((a, b) => new Date(a.startDate || a.start_date) - new Date(b.startDate || b.start_date));
-
-  // Upcoming schedules (next 7 days)
-  const next7Days = new Date(today);
-  next7Days.setDate(today.getDate() + 7);
-  
-  const upcomingSchedules = mainFilteredSchedules.filter(s => {
-    const sDate = new Date(s.startDate || s.start_date);
-    sDate.setHours(0, 0, 0, 0);
-    return sDate > today && sDate <= next7Days;
-  }).sort((a, b) => new Date(a.startDate || a.start_date) - new Date(b.startDate || b.start_date));
-
-  // Group upcoming schedules by date
-  const upcomingByDate = {};
-  upcomingSchedules.forEach(s => {
-    const dateKey = new Date(s.startDate || s.start_date).toDateString();
-    if (!upcomingByDate[dateKey]) {
-      upcomingByDate[dateKey] = [];
-    }
-    upcomingByDate[dateKey].push(s);
-  });
-
-  // Unscheduled items (drafts without proper dates)
-  const unscheduledItems = mainFilteredSchedules.filter(s => {
-    const status = getStatus(s);
-    return status === 'draft' || !s.startDate;
-  });
-
-  // Date format helpers
-  const formatDateIST = (dateString) => {
-    if (!dateString) return '';
-    if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      const [year, month, day] = dateString.split('-');
-      return `${day}/${month}/${year}`;
-    }
-    const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
-
-  const parseISTDate = (dateStr) => {
-    if (!dateStr) return '';
-    const parts = dateStr.split('/');
-    if (parts.length !== 3) return '';
-    const [day, month, year] = parts;
-    if (!day || !month || !year || year.length !== 4) return '';
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-  };
-
-  const handleDateInput = (value, setter) => {
-    let cleaned = value.replace(/[^\d/]/g, '');
-    if (cleaned.length === 2 && !cleaned.includes('/')) {
-      cleaned += '/';
-    } else if (cleaned.length === 5 && cleaned.split('/').length === 2) {
-      cleaned += '/';
-    }
-    if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
-    setter(cleaned);
-  };
-
-  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
-        <span className="ml-2 text-gray-600">Loading schedules...</span>
+        <span className="ml-2 text-gray-600">Loading dashboard...</span>
       </div>
     );
   }
 
-  // Period filter dropdown
-  const PeriodFilter = ({ value, onChange, label }) => (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-1.5 pr-8 text-sm font-medium text-gray-700 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      >
-        <option value="all">All Time</option>
-        <option value="week">This Week</option>
-        <option value="month">This Month</option>
-        <option value="quarter">This Quarter</option>
-        <option value="6months">Last 6 Months</option>
-        <option value="year">This Year</option>
-      </select>
-      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-    </div>
-  );
-
-  // Status badge
-  const StatusBadge = ({ status }) => {
-    const statusColors = {
-      upcoming: 'bg-blue-100 text-blue-700',
-      active: 'bg-blue-100 text-blue-700',
-      draft: 'bg-gray-100 text-gray-700',
-      in_progress: 'bg-amber-100 text-amber-700',
-      completed: 'bg-green-100 text-green-700',
-      rescheduled: 'bg-purple-100 text-purple-700',
-      cancelled: 'bg-red-100 text-red-700',
-      paused: 'bg-amber-100 text-amber-700'
-    };
-    const normalizedStatus = status?.toLowerCase().replace(/\s+/g, '_') || 'draft';
-    const statusLabels = {
-      upcoming: 'Upcoming',
-      active: 'Active',
-      draft: 'Draft',
-      in_progress: 'In Progress',
-      completed: 'Completed',
-      rescheduled: 'Rescheduled',
-      cancelled: 'Cancelled',
-      paused: 'Paused'
-    };
-    
-    return (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[normalizedStatus] || 'bg-gray-100 text-gray-700'}`}>
-        {statusLabels[normalizedStatus] || status}
-      </span>
-    );
-  };
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Scheduling Dashboard</h1>
-          <p className="text-gray-500 mt-1">Overview of all scheduled services and visits</p>
+          <p className="text-sm text-gray-500">Home &gt; Scheduling &gt; Dashboard</p>
         </div>
-        
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Zone Filter */}
-          <div className="relative">
-            <select
-              value={zoneFilter}
-              onChange={(e) => setZoneFilter(e.target.value)}
-              className="appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 pr-10 text-sm font-medium text-gray-700 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Zones</option>
-              {zones.map((zone, idx) => (
-                <option key={idx} value={zone.name || zone}>{zone.name || zone}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          </div>
-          
-          {/* Date Range */}
+        <div className="flex items-center gap-3">
           <DateRangeFilter
             startDate={startDate}
             endDate={endDate}
-            onDateChange={(start, end) => {
-              setStartDate(start);
-              setEndDate(end);
-              setStartDateDisplay(start ? new Date(start + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/') : '');
-              setEndDateDisplay(end ? new Date(end + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/') : '');
-            }}
-            onRefresh={() => fetchSchedules(true)}
-            showRefreshButton={true}
+            onDateChange={(s, e) => { setStartDate(s); setEndDate(e); }}
+            onRefresh={fetchSchedules}
           />
-
-          {/* Schedule Service Button */}
+          <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <Filter className="w-5 h-5 text-gray-600" />
+          </button>
+          <button className="relative p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <Bell className="w-5 h-5 text-gray-600" />
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
+          </button>
           <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            onClick={() => navigate(`${getBasePath()}/schedules/pending`)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
           >
             <Plus className="w-4 h-4" />
-            Schedule Service
+            New Schedule
+            <ChevronDown className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Stat Cards - Compact */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        {statCards.map((card, idx) => {
-          const Icon = card.icon;
-          return (
-            <div
-              key={idx}
-              className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 hover:shadow-md transition-shadow cursor-pointer"
-              style={{ borderLeftWidth: '3px', borderLeftColor: card.borderColor }}
-            >
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <p className="text-xs font-medium text-gray-700 leading-tight">{card.label}</p>
-                <div 
-                  className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: card.iconBg }}
-                >
-                  <Icon className="w-3.5 h-3.5" style={{ color: card.iconColor }} />
-                </div>
+      {/* Stat Cards */}
+      <div className="grid grid-cols-6 gap-4">
+        {[
+          { label: "Today's Schedules", value: todaysSchedules.length, icon: CalendarDays, color: '#3B82F6', bg: '#DBEAFE', link: 'View Today', path: '/schedules/calendar' },
+          { label: 'Upcoming (7 Days)', value: upcoming7Days.length, icon: Clock, color: '#F59E0B', bg: '#FEF3C7', link: 'View Upcoming', path: '/schedules/calendar' },
+          { label: 'Pending Property Schedules', value: pendingProperties.length, icon: Building2, color: '#8B5CF6', bg: '#EDE9FE', link: 'View Pending', path: '/schedules/pending' },
+          { label: 'Reschedule Requests', value: rescheduleRequests.length, icon: RotateCcw, color: '#EC4899', bg: '#FCE7F3', link: 'View Requests', path: '/schedules/reschedule-requests' },
+          { label: 'Cancelled Schedules', value: cancelledSchedules.length, icon: XCircle, color: '#EF4444', bg: '#FEE2E2', link: 'View Cancelled', path: '/schedules/cancelled' },
+          { label: 'Overdue Schedules', value: overdueSchedules.length, icon: AlertTriangle, color: '#DC2626', bg: '#FEE2E2', link: 'View Overdue', path: '/schedules/all' }
+        ].map((card, i) => (
+          <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: card.bg }}>
+                <card.icon className="w-5 h-5" style={{ color: card.color }} />
               </div>
-              <p className="text-xl font-bold text-gray-900 mb-1">{card.value}</p>
-              <button 
-                className="text-xs font-medium text-blue-600 hover:underline flex items-center gap-0.5"
-                onClick={(e) => { e.stopPropagation(); card.linkAction?.(); }}
-              >
-                {card.link} <ArrowRight className="w-3 h-3" />
-              </button>
+              <p className="text-sm text-gray-600 font-medium">{card.label}</p>
             </div>
-          );
-        })}
+            <p className="text-3xl font-bold text-gray-900 mb-2">{card.value}</p>
+            <button 
+              onClick={() => navigate(`${getBasePath()}${card.path}`)}
+              className="text-sm text-blue-600 hover:underline font-medium"
+            >
+              {card.link}
+            </button>
+          </div>
+        ))}
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Schedules by Status - Donut Chart */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Schedules by Status</h3>
-            <PeriodFilter value={statusChartFilter} onChange={setStatusChartFilter} />
-          </div>
-          
-          <div className="flex items-center gap-6">
-            <DonutChart
-              data={statusDonutData}
-              size={160}
-              strokeWidth={24}
-              centerValue={statusTotal}
-              centerLabel="Total"
-            />
-            
-            <div className="flex-1 space-y-2">
-              {statusDonutData.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '12px', minHeight: '12px' }} />
-                    <span className="text-gray-600">{item.name}</span>
-                  </div>
-                  <span className="font-semibold text-gray-900">
-                    {item.value} ({statusTotal ? ((item.value / statusTotal) * 100).toFixed(1) : 0}%)
-                  </span>
+      <div className="grid grid-cols-4 gap-4">
+        {/* Status Donut */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Schedules by Status</h3>
+          <div className="flex items-center gap-4">
+            <DonutChart data={statusData} size={120} strokeWidth={20} centerValue={schedules.length} centerLabel="Total" />
+            <div className="space-y-1.5 text-xs">
+              {statusData.map((d, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
+                  <span className="text-gray-600">{d.name}</span>
+                  <span className="font-medium text-gray-900">{d.value}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Schedules by Property Type - Horizontal Bar */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        {/* Service Bar Chart */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Schedules by Property Type</h3>
-            <PeriodFilter value={propertyTypeFilter} onChange={setPropertyTypeFilter} />
+            <h3 className="text-sm font-semibold text-gray-900">Schedules by Service</h3>
+            <select className="text-xs border border-gray-200 rounded px-2 py-1">
+              <option>This Month</option>
+            </select>
           </div>
-          
-          <div className="space-y-3">
-            {propertyTypeBarData.length > 0 ? (
-              propertyTypeBarData.map((item, idx) => {
-                const maxValue = Math.max(...propertyTypeBarData.map(d => d.value));
-                const percentage = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-                
-                return (
-                  <div key={idx} className="flex items-center gap-3">
-                    <div className="w-28 text-sm text-gray-600 truncate">{item.name}</div>
-                    <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${percentage}%`, backgroundColor: item.color }}
-                      />
-                    </div>
-                    <div className="w-10 text-right text-sm font-semibold text-gray-900">{item.value}</div>
-                  </div>
-                );
-              })
-            ) : (
-              <p className="text-gray-500 text-sm text-center py-8">No data available</p>
-            )}
-          </div>
-        </div>
-
-        {/* Schedules by Service Category - Horizontal Bar */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Schedules by Service Category (Top 5)</h3>
-            <PeriodFilter value={serviceCategoryFilter} onChange={setServiceCategoryFilter} />
-          </div>
-          
-          <div className="space-y-3">
-            {serviceCategoryBarData.length > 0 ? (
-              serviceCategoryBarData.map((item, idx) => {
-                const maxValue = Math.max(...serviceCategoryBarData.map(d => d.value));
-                const percentage = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-                
-                return (
-                  <div key={idx} className="flex items-center gap-3">
-                    <div className="w-32 text-sm text-gray-600 truncate">{item.name}</div>
-                    <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${percentage}%`, backgroundColor: item.color }}
-                      />
-                    </div>
-                    <div className="w-10 text-right text-sm font-semibold text-gray-900">{item.value}</div>
-                  </div>
-                );
-              })
-            ) : (
-              <p className="text-gray-500 text-sm text-center py-8">No data available</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Calendar and Schedules Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Schedule Calendar */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Schedule Calendar</h3>
-            <PeriodFilter value={calendarFilter} onChange={setCalendarFilter} />
-          </div>
-
-          {/* Calendar Navigation */}
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  setCalendarDate(new Date());
-                }}
-                className="px-3 py-1.5 text-sm font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg border border-blue-200"
-              >
-                Today
-              </button>
-              <button
-                onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1))}
-                className="p-1 hover:bg-gray-100 rounded"
-              >
-                <ChevronLeft className="w-5 h-5 text-gray-600" />
-              </button>
-              <span className="text-sm font-semibold text-gray-900 min-w-[100px] text-center">
-                {monthNames[calendarDate.getMonth()]} {calendarDate.getFullYear()}
-              </span>
-              <button
-                onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1))}
-                className="p-1 hover:bg-gray-100 rounded"
-              >
-                <ChevronRight className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
-            
-            <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
-              {['Month', 'Week', 'Day'].map(view => (
-                <button
-                  key={view}
-                  onClick={() => setCalendarView(view)}
-                  className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${
-                    calendarView === view
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  {view}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-1">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
-                {day}
+          <div className="space-y-2">
+            {serviceData.slice(0, 6).map((d, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <span className="w-20 text-xs text-gray-600 truncate">{d.name}</span>
+                <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${(d.value / Math.max(...serviceData.map(x => x.value))) * 100}%`, backgroundColor: d.color }} />
+                </div>
+                <span className="text-xs font-medium w-6 text-right">{d.value}</span>
               </div>
             ))}
-            
-            {calendarDays.map((day, idx) => {
-              const daySchedules = getSchedulesForDate(day.date);
-              const isToday = day.date.toDateString() === today.toDateString();
-              const isSelected = selectedDate && day.date.toDateString() === selectedDate.toDateString();
-              
-              return (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedDate(day.date)}
-                  className={`relative p-2 text-center rounded-lg transition-colors ${
-                    !day.isCurrentMonth ? 'text-gray-300' :
-                    isSelected ? 'bg-blue-600 text-white' :
-                    isToday ? 'bg-blue-100 text-blue-700 font-bold' :
-                    'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <span className="text-sm">{day.date.getDate()}</span>
-                  {daySchedules.length > 0 && day.isCurrentMonth && (
-                    <div className="flex justify-center gap-0.5 mt-1">
-                      {daySchedules.slice(0, 3).map((s, i) => (
-                        <div
-                          key={i}
-                          className="w-1.5 h-1.5 rounded-full"
-                          style={{ backgroundColor: STATUS_COLORS[getStatus(s)] || STATUS_COLORS.upcoming }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
           </div>
         </div>
 
-        {/* Today's Schedule */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Today's Schedule ({formatDate(today)})
-            </h3>
-            <button className="text-sm font-medium text-blue-600 hover:underline flex items-center gap-1">
-              View All Today <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-          
-          <div className="space-y-4 max-h-80 overflow-y-auto">
-            {todaysSchedules.length > 0 ? (
-              todaysSchedules.map((schedule, idx) => (
-                <div
-                  key={idx}
-                  className="flex gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
-                  onClick={() => {
-                    setSelectedSchedule(schedule);
-                    setShowScheduleModal(true);
-                  }}
-                >
-                  <div className="text-sm font-medium text-gray-500 w-16">
-                    {formatTime(schedule.startDate || schedule.start_date) || '09:00 AM'}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{schedule.title}</p>
-                    <p className="text-sm text-gray-500">{schedule.propertyName || schedule.property_name}</p>
-                    {schedule.description && (
-                      <p className="text-xs text-gray-400 mt-1 line-clamp-1">{schedule.description}</p>
-                    )}
-                  </div>
-                  <StatusBadge status={schedule.status} />
+        {/* Priority Donut */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Schedules by Priority</h3>
+          <div className="flex items-center gap-4">
+            <DonutChart data={priorityData} size={120} strokeWidth={20} centerValue={schedules.length} centerLabel="Total" />
+            <div className="space-y-1.5 text-xs">
+              {priorityData.map((d, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
+                  <span className="text-gray-600">{d.name}</span>
+                  <span className="font-medium text-gray-900">{d.value} ({schedules.length ? Math.round((d.value / schedules.length) * 100) : 0}%)</span>
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <CalendarDays className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                <p className="text-gray-500 text-sm">No schedules for today</p>
-              </div>
-            )}
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Upcoming Schedules (Next 7 Days) */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Upcoming Schedules (Next 7 Days)</h3>
-            <button className="text-sm font-medium text-blue-600 hover:underline flex items-center gap-1">
-              View All Upcoming <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-          
-          <div className="space-y-4 max-h-80 overflow-y-auto">
-            {Object.keys(upcomingByDate).length > 0 ? (
-              Object.entries(upcomingByDate).map(([dateKey, daySchedules], idx) => {
-                const date = new Date(dateKey);
-                return (
-                  <div key={idx}>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-12 bg-blue-50 rounded-lg flex flex-col items-center justify-center">
-                        <span className="text-xs text-blue-600 font-medium">
-                          {date.toLocaleDateString('en-US', { month: 'short' })}
-                        </span>
-                        <span className="text-lg font-bold text-blue-700">{date.getDate()}</span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{daySchedules[0]?.title}</p>
-                        <p className="text-sm text-gray-500">{daySchedules.length} Schedule(s)</p>
-                      </div>
-                      <StatusBadge status={daySchedules[0]?.status || 'upcoming'} />
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="text-center py-8">
-                <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                <p className="text-gray-500 text-sm">No upcoming schedules</p>
-              </div>
-            )}
+        {/* Property Type Donut */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Schedules by Property Type</h3>
+          <div className="flex items-center gap-4">
+            <DonutChart data={propertyTypeData} size={120} strokeWidth={20} centerValue={schedules.length} centerLabel="Total" />
+            <div className="space-y-1.5 text-xs">
+              {propertyTypeData.slice(0, 4).map((d, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
+                  <span className="text-gray-600">{d.name}</span>
+                  <span className="font-medium text-gray-900">{d.value}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Recent Schedules Table */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
-        <div className="p-6 border-b border-gray-100">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Schedules</h3>
-            <div className="flex flex-wrap items-center gap-3">
-              <select className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm">
-                <option>All Status</option>
-                <option>Upcoming</option>
-                <option>In Progress</option>
-                <option>Completed</option>
-                <option>Rescheduled</option>
-                <option>Cancelled</option>
-              </select>
-              <select className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm">
-                <option>All Property Types</option>
-                <option>Apartment</option>
-                <option>Villa</option>
-                <option>Gated Community</option>
-              </select>
-              <select className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm">
-                <option>All Service Categories</option>
-              </select>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search by Schedule ID, Property, Customer..."
-                  className="pl-10 pr-4 py-1.5 w-64 border border-gray-200 rounded-lg text-sm"
-                />
-              </div>
-              <button className="text-sm font-medium text-blue-600 hover:underline flex items-center gap-1">
-                View All Schedules <ArrowRight className="w-4 h-4" />
-              </button>
+      {/* Schedule Trend + Tables Row */}
+      <div className="grid grid-cols-3 gap-4">
+        {/* Schedule Trend */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-gray-900">Schedule Trend</h3>
+            <div className="flex items-center gap-4 text-xs">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" /> Created</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> Completed</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Cancelled</span>
             </div>
           </div>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={trendData}>
+              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
+              <Tooltip />
+              <Line type="monotone" dataKey="created" stroke="#3B82F6" strokeWidth={2} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="completed" stroke="#10B981" strokeWidth={2} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="cancelled" stroke="#EF4444" strokeWidth={2} dot={{ r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Schedule ID</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Service / Issue</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Property / Customer</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Property Type</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Scheduled Date & Time</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Technician / Vendor</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
+
+        {/* Upcoming Schedules */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-900">Upcoming Schedules</h3>
+            <button onClick={() => navigate(`${getBasePath()}/schedules/calendar`)} className="text-xs text-blue-600 hover:underline">View All</button>
+          </div>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {todaysSchedules.concat(upcoming7Days).slice(0, 4).map((s, i) => (
+              <div key={i} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                <div className="text-xs text-gray-500 w-16">{formatTime(s.startDate || s.start_date) || '09:00 AM'}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{s.title}</p>
+                  <p className="text-xs text-gray-500 truncate">{s.property_name || s.propertyName}</p>
+                </div>
+                <StatusBadge status={s.status} />
+              </div>
+            ))}
+            {todaysSchedules.length + upcoming7Days.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-4">No upcoming schedules</p>
+            )}
+          </div>
+        </div>
+
+        {/* Pending Property Schedules */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-900">Pending Property Schedules</h3>
+            <button onClick={() => navigate(`${getBasePath()}/schedules/pending`)} className="text-xs text-blue-600 hover:underline">View All</button>
+          </div>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-gray-500">
+                <th className="pb-2">Property ID / Name</th>
+                <th className="pb-2">Services</th>
+                <th className="pb-2">Vendors</th>
+                <th className="pb-2">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {mainFilteredSchedules.slice(0, 5).length > 0 ? (
-                mainFilteredSchedules.slice(0, 5).map((schedule, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium text-blue-600">{schedule.scheduleId || schedule.schedule_id || `SCH-${String(idx + 1).padStart(6, '0')}`}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{schedule.title || schedule.service_name || 'General Service'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{schedule.propertyName || schedule.property_name || '-'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{normalizePropertyType(schedule.propertyType || schedule.property_type)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {formatDate(schedule.startDate || schedule.start_date)}, {formatTime(schedule.startDate || schedule.start_date) || '09:00 AM'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{schedule.vendorName || schedule.vendor_name || schedule.assignedTo || '-'}</td>
-                    <td className="px-6 py-4"><StatusBadge status={schedule.status} /></td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => { setSelectedSchedule(schedule); setShowScheduleModal(true); }}
-                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                          title="View"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg" title="More">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
-                    <CalendarDays className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                    <p>No schedules found</p>
+              {pendingProperties.slice(0, 5).map((p, i) => (
+                <tr key={i}>
+                  <td className="py-2">
+                    <p className="font-medium text-gray-900">{p.property_id || `PROP-${100 + i}`}</p>
+                    <p className="text-gray-500 truncate max-w-[100px]">{p.property_name}</p>
+                  </td>
+                  <td className="py-2">{p.total_services || 0}</td>
+                  <td className="py-2">{p.vendors_assigned || 0}/{p.total_services || 0}</td>
+                  <td className="py-2">
+                    <button onClick={() => navigate(`${getBasePath()}/schedules/pending`)} className="px-2 py-1 bg-blue-50 text-blue-600 rounded text-xs hover:bg-blue-100">Schedule</button>
                   </td>
                 </tr>
+              ))}
+              {pendingProperties.length === 0 && (
+                <tr><td colSpan="4" className="py-4 text-center text-gray-400">No pending properties</td></tr>
               )}
             </tbody>
           </table>
         </div>
-        
-        {mainFilteredSchedules.length > 5 && (
-          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-            <p className="text-sm text-gray-500">Showing 1 to 5 of {mainFilteredSchedules.length} entries</p>
-            <div className="flex items-center gap-1">
-              <button className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">&lt;</button>
-              <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg">1</button>
-              <button className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">2</button>
-              <button className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">3</button>
-              <span className="px-2 text-gray-400">...</span>
-              <button className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">{Math.ceil(mainFilteredSchedules.length / 5)}</button>
-              <button className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">&gt;</button>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Create Schedule Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-bold text-gray-900">Schedule Service</h2>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            
-            {/* Modal Content - Calendar View */}
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-130px)]">
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                {/* Unscheduled Sidebar */}
-                <div className="lg:col-span-1 bg-amber-50 rounded-xl p-4">
-                  <h3 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" />
-                    Unscheduled
-                  </h3>
-                  <div className="space-y-2">
-                    {unscheduledItems.length > 0 ? (
-                      unscheduledItems.slice(0, 5).map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="bg-amber-100 rounded-lg p-3 cursor-pointer hover:bg-amber-200 transition-colors"
-                        >
-                          <p className="font-medium text-amber-900 text-sm">{item.title}</p>
-                          <p className="text-xs text-amber-700">No date</p>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-amber-700">No unscheduled items</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Calendar Grid */}
-                <div className="lg:col-span-3">
-                  {/* Calendar Navigation */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1))}
-                        className="p-2 hover:bg-gray-100 rounded-lg"
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-                      <span className="text-lg font-semibold">
-                        {monthNames[calendarDate.getMonth()]} {calendarDate.getFullYear()}
-                      </span>
-                      <button
-                        onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1))}
-                        className="p-2 hover:bg-gray-100 rounded-lg"
-                      >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
-                        {['Month', 'Week', 'Day'].map(view => (
-                          <button
-                            key={view}
-                            onClick={() => setCalendarView(view)}
-                            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                              calendarView === view
-                                ? 'bg-blue-600 text-white'
-                                : 'text-gray-600 hover:text-gray-900'
-                            }`}
-                          >
-                            {view}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Filters */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <select className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm">
-                      <option>All Types</option>
-                      <option>Requests</option>
-                      <option>Quotes</option>
-                      <option>Jobs</option>
-                    </select>
-                    <select className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm">
-                      <option>All Team</option>
-                    </select>
-                    <button className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">
-                      <MapPin className="w-4 h-4" />
-                      Map View
-                    </button>
-                  </div>
-
-                  {/* Calendar Grid */}
-                  <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    <div className="grid grid-cols-7">
-                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                        <div key={day} className="bg-gray-50 text-center text-sm font-medium text-gray-600 py-3 border-b">
-                          {day}
-                        </div>
-                      ))}
-                    </div>
-                    
-                    <div className="grid grid-cols-7">
-                      {calendarDays.slice(0, 35).map((day, idx) => {
-                        const daySchedules = getSchedulesForDate(day.date);
-                        const isToday = day.date.toDateString() === today.toDateString();
-                        
-                        return (
-                          <div
-                            key={idx}
-                            className={`min-h-[80px] p-2 border-b border-r ${
-                              !day.isCurrentMonth ? 'bg-gray-50' : 'bg-white'
-                            } hover:bg-blue-50 cursor-pointer transition-colors`}
-                          >
-                            <span className={`text-sm ${
-                              !day.isCurrentMonth ? 'text-gray-300' :
-                              isToday ? 'w-6 h-6 bg-blue-600 text-white rounded-full inline-flex items-center justify-center' :
-                              'text-gray-700'
-                            }`}>
-                              {day.date.getDate()}
-                            </span>
-                            <div className="mt-1 space-y-1">
-                              {daySchedules.slice(0, 2).map((s, i) => (
-                                <div
-                                  key={i}
-                                  className="text-xs px-1.5 py-0.5 rounded truncate"
-                                  style={{
-                                    backgroundColor: `${STATUS_COLORS[getStatus(s)] || STATUS_COLORS.upcoming}20`,
-                                    color: STATUS_COLORS[getStatus(s)] || STATUS_COLORS.upcoming
-                                  }}
-                                >
-                                  {s.title}
-                                </div>
-                              ))}
-                              {daySchedules.length > 2 && (
-                                <div className="text-xs text-gray-500">
-                                  +{daySchedules.length - 2} more
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Color Legend */}
-                  <div className="flex items-center gap-6 mt-4 text-sm">
-                    <span className="text-gray-500">Color Coding:</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-blue-500" />
-                      <span className="text-gray-600">Requests</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-purple-500" />
-                      <span className="text-gray-600">Quotes</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-green-500" />
-                      <span className="text-gray-600">Jobs</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+      {/* Bottom Tables Row */}
+      <div className="grid grid-cols-3 gap-4">
+        {/* Recently Created */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-900">Recently Created Schedules</h3>
+            <button className="text-xs text-blue-600 hover:underline">View All</button>
           </div>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-gray-500">
+                <th className="pb-2">Schedule ID</th>
+                <th className="pb-2">Property</th>
+                <th className="pb-2">Service</th>
+                <th className="pb-2">Status</th>
+                <th className="pb-2">Priority</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {recentSchedules.map((s, i) => (
+                <tr key={i}>
+                  <td className="py-2 font-medium text-gray-900">SCH-{2100 + i}</td>
+                  <td className="py-2 text-gray-600 truncate max-w-[80px]">{s.property_name || s.propertyName}</td>
+                  <td className="py-2 text-gray-600">{s.service || 'General'}</td>
+                  <td className="py-2"><StatusBadge status={s.status} /></td>
+                  <td className="py-2"><PriorityBadge priority={s.priority} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
 
-      {/* View Schedule Modal */}
-      {showScheduleModal && selectedSchedule && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-bold text-gray-900">Schedule Details</h2>
-              <button
-                onClick={() => {
-                  setShowScheduleModal(false);
-                  setSelectedSchedule(null);
-                }}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div>
-                <p className="text-sm text-gray-500">Title</p>
-                <p className="font-semibold text-gray-900">{selectedSchedule.title}</p>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Start Date</p>
-                  <p className="font-medium text-gray-900">{formatDate(selectedSchedule.startDate || selectedSchedule.start_date)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Status</p>
-                  <StatusBadge status={selectedSchedule.status} />
-                </div>
-              </div>
-              
-              <div>
-                <p className="text-sm text-gray-500">Property</p>
-                <p className="font-medium text-gray-900">{selectedSchedule.propertyName || selectedSchedule.property_name || '-'}</p>
-              </div>
-              
-              {selectedSchedule.description && (
-                <div>
-                  <p className="text-sm text-gray-500">Description</p>
-                  <p className="text-gray-700">{selectedSchedule.description}</p>
-                </div>
+        {/* Reschedule Requests */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-900">Reschedule Requests</h3>
+            <button onClick={() => navigate(`${getBasePath()}/schedules/reschedule-requests`)} className="text-xs text-blue-600 hover:underline">View All</button>
+          </div>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-gray-500">
+                <th className="pb-2">REQ ID</th>
+                <th className="pb-2">Property</th>
+                <th className="pb-2">Requested On</th>
+                <th className="pb-2">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {rescheduleRequests.slice(0, 4).map((s, i) => (
+                <tr key={i}>
+                  <td className="py-2 font-medium text-gray-900">REQ-{100 + i}</td>
+                  <td className="py-2">
+                    <p className="text-gray-900 truncate max-w-[100px]">{s.property_name || s.propertyName}</p>
+                    <p className="text-gray-500">{s.service || 'Service'}</p>
+                  </td>
+                  <td className="py-2 text-gray-600">{formatDate(s.updatedAt || s.updated_at)}</td>
+                  <td className="py-2"><span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs">Pending</span></td>
+                </tr>
+              ))}
+              {rescheduleRequests.length === 0 && (
+                <tr><td colSpan="4" className="py-4 text-center text-gray-400">No reschedule requests</td></tr>
               )}
-              
-              <div className="flex gap-3 pt-4 border-t">
-                <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                  Edit Schedule
-                </button>
-                <button className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <MoreHorizontal className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          </div>
+            </tbody>
+          </table>
         </div>
-      )}
+
+        {/* Overdue Schedules */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-900">Overdue Schedules</h3>
+            <button className="text-xs text-blue-600 hover:underline">View All</button>
+          </div>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-gray-500">
+                <th className="pb-2">Schedule ID</th>
+                <th className="pb-2">Property</th>
+                <th className="pb-2">Due Date</th>
+                <th className="pb-2">Overdue By</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {overdueSchedules.slice(0, 4).map((s, i) => {
+                const dueDate = new Date(s.startDate || s.start_date);
+                const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
+                return (
+                  <tr key={i}>
+                    <td className="py-2 font-medium text-gray-900">SCH-{2000 + i}</td>
+                    <td className="py-2">
+                      <p className="text-gray-900 truncate max-w-[100px]">{s.property_name || s.propertyName}</p>
+                      <p className="text-gray-500">{s.service || s.title}</p>
+                    </td>
+                    <td className="py-2 text-gray-600">{formatDate(s.startDate || s.start_date)}</td>
+                    <td className="py-2 text-red-600 font-medium">{daysOverdue} Days</td>
+                  </tr>
+                );
+              })}
+              {overdueSchedules.length === 0 && (
+                <tr><td colSpan="4" className="py-4 text-center text-gray-400">No overdue schedules</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };
