@@ -69,6 +69,14 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   const [serviceFilter, setServiceFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
+  
+  // Table filter states
+  const [trendFilter, setTrendFilter] = useState('all');
+  const [upcomingFilter, setUpcomingFilter] = useState('all');
+  const [recentFilter, setRecentFilter] = useState('all');
+  const [rescheduleFilter, setRescheduleFilter] = useState('all');
+  const [overdueFilter, setOverdueFilter] = useState('all');
+  const [pendingFilter, setPendingFilter] = useState('all');
 
   // Period filter helper function
   const applyPeriodFilter = (data, period) => {
@@ -245,21 +253,47 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     .sort((a, b) => b.value - a.value);
   const propertyTypeTotal = propertyTypeData.reduce((sum, d) => sum + d.value, 0);
 
-  // Trend data (mock)
-  const trendData = [
-    { date: '1 Aug', created: 25, completed: 20, cancelled: 2 },
-    { date: '2 Aug', created: 30, completed: 22, cancelled: 3 },
-    { date: '3 Aug', created: 35, completed: 28, cancelled: 2 },
-    { date: '4 Aug', created: 28, completed: 25, cancelled: 4 },
-    { date: '5 Aug', created: 40, completed: 30, cancelled: 3 },
-    { date: '6 Aug', created: 38, completed: 32, cancelled: 2 },
-    { date: '7 Aug', created: 45, completed: 35, cancelled: 5 }
-  ];
+  // Trend data (filtered)
+  const trendFilteredData = applyPeriodFilter(schedules, trendFilter);
+  const generateTrendData = () => {
+    const days = trendFilter === 'week' ? 7 : trendFilter === 'month' ? 30 : 7;
+    const data = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+      const daySchedules = trendFilteredData.filter(s => {
+        const sDate = new Date(s.startDate || s.start_date || s.createdAt);
+        return sDate.toDateString() === date.toDateString();
+      });
+      data.push({
+        date: dateStr,
+        created: daySchedules.length,
+        completed: daySchedules.filter(s => getStatus(s) === 'completed').length,
+        cancelled: daySchedules.filter(s => getStatus(s) === 'cancelled').length
+      });
+    }
+    return data;
+  };
+  const trendData = generateTrendData();
 
-  // Recently created
-  const recentSchedules = [...schedules].sort((a, b) => 
+  // Upcoming schedules (filtered)
+  const upcomingFilteredData = applyPeriodFilter(todaysSchedules.concat(upcoming7Days), upcomingFilter);
+
+  // Recently created (filtered)
+  const recentFilteredData = applyPeriodFilter(schedules, recentFilter);
+  const recentSchedules = [...recentFilteredData].sort((a, b) => 
     new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0)
   ).slice(0, 5);
+
+  // Reschedule requests (filtered)
+  const rescheduleFilteredData = applyPeriodFilter(rescheduleRequests, rescheduleFilter);
+
+  // Overdue schedules (filtered)
+  const overdueFilteredData = applyPeriodFilter(overdueSchedules, overdueFilter);
+
+  // Pending properties (filtered)
+  const pendingFilteredData = applyPeriodFilter(pendingProperties, pendingFilter);
 
   const StatusBadge = ({ status }) => {
     const colors = {
@@ -439,15 +473,16 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       <div className="grid grid-cols-3 gap-4">
         {/* Schedule Trend */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-gray-900">Schedule Trend</h3>
-            <div className="flex items-center gap-4 text-xs">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" /> Created</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> Completed</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Cancelled</span>
-            </div>
+            <PeriodFilter value={trendFilter} onChange={setTrendFilter} />
           </div>
-          <ResponsiveContainer width="100%" height={180}>
+          <div className="flex items-center gap-4 text-xs mb-2">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" /> Created</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> Completed</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Cancelled</span>
+          </div>
+          <ResponsiveContainer width="100%" height={160}>
             <LineChart data={trendData}>
               <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
@@ -461,12 +496,15 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* Upcoming Schedules */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-gray-900">Upcoming Schedules</h3>
-            <button onClick={() => navigate(`${getBasePath()}/schedules/calendar`)} className="text-xs text-blue-600 hover:underline">View All</button>
+            <div className="flex items-center gap-2">
+              <PeriodFilter value={upcomingFilter} onChange={setUpcomingFilter} />
+              <button onClick={() => navigate(`${getBasePath()}/schedules/calendar`)} className="text-xs text-blue-600 hover:underline">View All</button>
+            </div>
           </div>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {todaysSchedules.concat(upcoming7Days).slice(0, 4).map((s, i) => (
+          <div className="space-y-2 max-h-44 overflow-y-auto">
+            {upcomingFilteredData.slice(0, 4).map((s, i) => (
               <div key={i} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                 <div className="text-xs text-gray-500 w-16">{formatTime(s.startDate || s.start_date) || '09:00 AM'}</div>
                 <div className="flex-1 min-w-0">
@@ -476,7 +514,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
                 <StatusBadge status={s.status} />
               </div>
             ))}
-            {todaysSchedules.length + upcoming7Days.length === 0 && (
+            {upcomingFilteredData.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-4">No upcoming schedules</p>
             )}
           </div>
@@ -484,9 +522,12 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* Pending Property Schedules */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-gray-900">Pending Property Schedules</h3>
-            <button onClick={() => navigate(`${getBasePath()}/schedules/pending`)} className="text-xs text-blue-600 hover:underline">View All</button>
+            <div className="flex items-center gap-2">
+              <PeriodFilter value={pendingFilter} onChange={setPendingFilter} />
+              <button onClick={() => navigate(`${getBasePath()}/schedules/pending`)} className="text-xs text-blue-600 hover:underline">View All</button>
+            </div>
           </div>
           <table className="w-full text-xs">
             <thead>
@@ -498,7 +539,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {pendingProperties.slice(0, 5).map((p, i) => (
+              {pendingFilteredData.slice(0, 5).map((p, i) => (
                 <tr key={i}>
                   <td className="py-2">
                     <p className="font-medium text-gray-900">{p.property_id || `PROP-${100 + i}`}</p>
@@ -511,7 +552,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
                   </td>
                 </tr>
               ))}
-              {pendingProperties.length === 0 && (
+              {pendingFilteredData.length === 0 && (
                 <tr><td colSpan="4" className="py-4 text-center text-gray-400">No pending properties</td></tr>
               )}
             </tbody>
@@ -523,9 +564,12 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       <div className="grid grid-cols-3 gap-4">
         {/* Recently Created */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-gray-900">Recently Created Schedules</h3>
-            <button className="text-xs text-blue-600 hover:underline">View All</button>
+            <div className="flex items-center gap-2">
+              <PeriodFilter value={recentFilter} onChange={setRecentFilter} />
+              <button className="text-xs text-blue-600 hover:underline">View All</button>
+            </div>
           </div>
           <table className="w-full text-xs">
             <thead>
@@ -547,15 +591,21 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
                   <td className="py-2"><PriorityBadge priority={s.priority} /></td>
                 </tr>
               ))}
+              {recentSchedules.length === 0 && (
+                <tr><td colSpan="5" className="py-4 text-center text-gray-400">No recent schedules</td></tr>
+              )}
             </tbody>
           </table>
         </div>
 
         {/* Reschedule Requests */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-gray-900">Reschedule Requests</h3>
-            <button onClick={() => navigate(`${getBasePath()}/schedules/reschedule-requests`)} className="text-xs text-blue-600 hover:underline">View All</button>
+            <div className="flex items-center gap-2">
+              <PeriodFilter value={rescheduleFilter} onChange={setRescheduleFilter} />
+              <button onClick={() => navigate(`${getBasePath()}/schedules/reschedule-requests`)} className="text-xs text-blue-600 hover:underline">View All</button>
+            </div>
           </div>
           <table className="w-full text-xs">
             <thead>
@@ -567,7 +617,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {rescheduleRequests.slice(0, 4).map((s, i) => (
+              {rescheduleFilteredData.slice(0, 4).map((s, i) => (
                 <tr key={i}>
                   <td className="py-2 font-medium text-gray-900">REQ-{100 + i}</td>
                   <td className="py-2">
@@ -578,7 +628,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
                   <td className="py-2"><span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs">Pending</span></td>
                 </tr>
               ))}
-              {rescheduleRequests.length === 0 && (
+              {rescheduleFilteredData.length === 0 && (
                 <tr><td colSpan="4" className="py-4 text-center text-gray-400">No reschedule requests</td></tr>
               )}
             </tbody>
@@ -587,9 +637,12 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* Overdue Schedules */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-gray-900">Overdue Schedules</h3>
-            <button className="text-xs text-blue-600 hover:underline">View All</button>
+            <div className="flex items-center gap-2">
+              <PeriodFilter value={overdueFilter} onChange={setOverdueFilter} />
+              <button className="text-xs text-blue-600 hover:underline">View All</button>
+            </div>
           </div>
           <table className="w-full text-xs">
             <thead>
@@ -601,7 +654,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {overdueSchedules.slice(0, 4).map((s, i) => {
+              {overdueFilteredData.slice(0, 4).map((s, i) => {
                 const dueDate = new Date(s.startDate || s.start_date);
                 const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
                 return (
@@ -616,7 +669,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
                   </tr>
                 );
               })}
-              {overdueSchedules.length === 0 && (
+              {overdueFilteredData.length === 0 && (
                 <tr><td colSpan="4" className="py-4 text-center text-gray-400">No overdue schedules</td></tr>
               )}
             </tbody>
