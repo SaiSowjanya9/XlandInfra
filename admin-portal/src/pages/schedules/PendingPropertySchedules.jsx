@@ -731,95 +731,98 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
         </div>
       </div>
 
-      {/* Filters & Search */}
+      {/* Filters & Search - Single Row */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 flex-nowrap overflow-x-auto">
           {/* Search */}
-          <div className="relative w-72">
+          <div className="relative flex-shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search properties..."
+              placeholder="Search..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="w-40 pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             />
           </div>
           
           {/* Divider */}
-          <div className="h-8 w-px bg-gray-200"></div>
+          <div className="h-8 w-px bg-gray-200 flex-shrink-0"></div>
           
-          {/* Filter Dropdowns - All in one row */}
-          <div className="flex items-center gap-2 flex-1">
-            <select
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
-            >
-              <option value="all">All Status</option>
-              <option value="ready">Ready to Schedule</option>
-              <option value="pending_vendor">Pending Vendor</option>
-            </select>
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+            className="flex-shrink-0 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
+          >
+            <option value="all">All Status</option>
+            <option value="ready">Ready to Schedule</option>
+            <option value="pending_vendor">Pending Vendor</option>
+          </select>
 
-            <select
-              value={propertyTypeFilter}
-              onChange={(e) => { setPropertyTypeFilter(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
-            >
-              <option value="all">All Property Types</option>
-              <option value="Apartment">Apartment</option>
-              <option value="Villa">Villa</option>
-              <option value="Gated Community">Gated Community</option>
-              <option value="Plot">Plot</option>
-              <option value="Flat">Flat</option>
-            </select>
+          {/* Property Type Filter */}
+          <select
+            value={propertyTypeFilter}
+            onChange={(e) => { setPropertyTypeFilter(e.target.value); setCurrentPage(1); }}
+            className="flex-shrink-0 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
+          >
+            <option value="all">All Property Types</option>
+            <option value="Apartment">Apartment</option>
+            <option value="Villa">Villa</option>
+            <option value="Gated Community">Gated Community</option>
+            <option value="Plot">Plot</option>
+            <option value="Flat">Flat</option>
+          </select>
 
-            <select
-              value={zoneFilter}
-              onChange={(e) => { setZoneFilter(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
-            >
-              <option value="all">All Zones</option>
-              {zones.map(zone => (
-                <option key={zone} value={zone}>{zone}</option>
-              ))}
-            </select>
+          {/* Zone Filter */}
+          <select
+            value={zoneFilter}
+            onChange={(e) => { setZoneFilter(e.target.value); setCurrentPage(1); }}
+            className="flex-shrink-0 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
+          >
+            <option value="all">All Zones</option>
+            {zones.map(zone => (
+              <option key={zone} value={zone}>{zone}</option>
+            ))}
+          </select>
 
-            <select
-              value={packageFilter}
-              onChange={(e) => { setPackageFilter(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
-            >
-              <option value="all">All Packages</option>
-              {packages.map(pkg => (
-                <option key={pkg.id || pkg.packageId || pkg.packageName} value={pkg.name || pkg.packageName}>
-                  {pkg.name || pkg.packageName}
-                </option>
-              ))}
-            </select>
+          {/* Package Filter */}
+          <select
+            value={packageFilter}
+            onChange={(e) => { setPackageFilter(e.target.value); setCurrentPage(1); }}
+            className="flex-shrink-0 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
+          >
+            <option value="all">All Packages</option>
+            {packages.map(pkg => (
+              <option key={pkg.id || pkg.packageId || pkg.packageName} value={pkg.name || pkg.packageName}>
+                {pkg.name || pkg.packageName}
+              </option>
+            ))}
+          </select>
 
-            <select
-              value={vendorFilter}
-              onChange={(e) => { setVendorFilter(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
-            >
-              <option value="all">All Vendors</option>
-              {vendors.map(v => (
-                <option key={v.id || v.vendorId} value={v.vendorId}>{v.ownerName || v.companyName}</option>
-              ))}
-            </select>
+          {/* Vendor Filter */}
+          <select
+            value={vendorFilter}
+            onChange={(e) => { setVendorFilter(e.target.value); setCurrentPage(1); }}
+            className="flex-shrink-0 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
+          >
+            <option value="all">All Vendors</option>
+            {vendors.map(v => (
+              <option key={v.id || v.vendorId} value={v.vendorId}>{v.ownerName || v.companyName}</option>
+            ))}
+          </select>
 
-            <button
-              onClick={clearFilters}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors whitespace-nowrap"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Clear
-            </button>
-          </div>
+          {/* Clear Button */}
+          <button
+            onClick={clearFilters}
+            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors whitespace-nowrap"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Clear
+          </button>
           
           {/* Export Button */}
-          <button className="flex items-center gap-1.5 px-4 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200 whitespace-nowrap">
+          <button className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200 whitespace-nowrap">
             <Download className="w-4 h-4" />
             Export
           </button>
