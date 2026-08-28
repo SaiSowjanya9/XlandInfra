@@ -96,6 +96,9 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
         const hour = 9 + Math.floor(Math.random() * 8);
         const minute = Math.random() > 0.5 ? '00' : '30';
         
+        const types = ['scheduled', 'unscheduled', 'work_order'];
+        const statuses = ['scheduled', 'in_progress', 'completed', 'pending', 'rescheduled', 'cancelled'];
+        
         mockData.push({
           id: `${day}-${i}`,
           date: new Date(year, month, day),
@@ -106,7 +109,8 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
           zone: service.zone,
           propertyType: service.propertyType,
           color: service.color,
-          status: ['scheduled', 'in_progress', 'completed', 'pending'][Math.floor(Math.random() * 4)]
+          type: types[Math.floor(Math.random() * types.length)],
+          status: statuses[Math.floor(Math.random() * statuses.length)]
         });
       }
     }
@@ -114,15 +118,42 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
     setSchedules(mockData);
   };
 
-  // Filter schedules based on current filters
+  // Filter schedules based on current filters and view options
   const getFilteredSchedules = () => {
     return schedules.filter(s => {
+      // Apply dropdown filters
       if (filters.service !== 'All Services' && s.service !== filters.service) return false;
       if (filters.vendor !== 'All Vendors' && s.vendor !== filters.vendor) return false;
       if (filters.zone !== 'All Zones' && s.zone !== filters.zone) return false;
       if (filters.propertyType !== 'All Property Types' && s.propertyType !== filters.propertyType) return false;
+      
+      // Apply view options filters
+      if (!viewOptions.showUnscheduled && s.type === 'unscheduled') return false;
+      if (!viewOptions.showWorkOrders && s.type === 'work_order') return false;
+      
       return true;
     });
+  };
+  
+  // Group schedules by vendor or property if enabled
+  const getGroupedSchedules = (schedulesForDate) => {
+    if (viewOptions.groupByVendor) {
+      const grouped = {};
+      schedulesForDate.forEach(s => {
+        if (!grouped[s.vendor]) grouped[s.vendor] = [];
+        grouped[s.vendor].push(s);
+      });
+      return grouped;
+    }
+    if (viewOptions.groupByProperty) {
+      const grouped = {};
+      schedulesForDate.forEach(s => {
+        if (!grouped[s.property]) grouped[s.property] = [];
+        grouped[s.property].push(s);
+      });
+      return grouped;
+    }
+    return null;
   };
 
   const getDaysInMonth = () => {
