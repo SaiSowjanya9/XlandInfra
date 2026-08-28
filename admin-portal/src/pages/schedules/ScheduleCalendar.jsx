@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Calendar, ChevronLeft, ChevronRight, Search, Filter, Plus, Bell,
-  CheckCircle, Clock, AlertCircle, XCircle, RefreshCw, CalendarDays
+  Calendar, ChevronLeft, ChevronRight, Search, Plus, Bell,
+  CheckCircle, Clock, AlertCircle, XCircle, RefreshCw
 } from 'lucide-react';
 
 const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
@@ -234,60 +234,61 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
 
       {/* Filters Bar */}
       <div className="bg-white border-b border-gray-200 px-6 py-3">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium">01 Aug 2025 - 07 Aug 2025</span>
+        <div className="flex items-center justify-between">
+          {/* Left: Filters */}
+          <div className="flex items-center gap-3">
+            <select 
+              value={filters.service}
+              onChange={(e) => setFilters({...filters, service: e.target.value})}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white min-w-[140px]"
+            >
+              <option value="All Services">All Services</option>
+              {serviceOptions.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            
+            <select 
+              value={filters.vendor}
+              onChange={(e) => setFilters({...filters, vendor: e.target.value})}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white min-w-[140px]"
+            >
+              <option value="All Vendors">All Vendors</option>
+              {vendorOptions.map(v => <option key={v} value={v}>{v}</option>)}
+            </select>
+            
+            <select 
+              value={filters.zone}
+              onChange={(e) => setFilters({...filters, zone: e.target.value})}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white min-w-[120px]"
+            >
+              <option value="All Zones">All Zones</option>
+              {zoneOptions.map(z => <option key={z} value={z}>{z}</option>)}
+            </select>
+            
+            <select 
+              value={filters.propertyType}
+              onChange={(e) => setFilters({...filters, propertyType: e.target.value})}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white min-w-[150px]"
+            >
+              <option value="All Property Types">All Property Types</option>
+              {propertyTypeOptions.map(pt => <option key={pt} value={pt}>{pt}</option>)}
+            </select>
+            
+            <button 
+              onClick={() => setFilters({ service: 'All Services', vendor: 'All Vendors', zone: 'All Zones', propertyType: 'All Property Types' })}
+              className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Clear
+            </button>
           </div>
           
-          <select 
-            value={filters.service}
-            onChange={(e) => setFilters({...filters, service: e.target.value})}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white"
-          >
-            <option value="All Services">All Services</option>
-            {serviceOptions.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-          
-          <select 
-            value={filters.vendor}
-            onChange={(e) => setFilters({...filters, vendor: e.target.value})}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white"
-          >
-            <option value="All Vendors">All Vendors</option>
-            {vendorOptions.map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
-          
-          <select 
-            value={filters.zone}
-            onChange={(e) => setFilters({...filters, zone: e.target.value})}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white"
-          >
-            <option value="All Zones">All Zones</option>
-            {zoneOptions.map(z => <option key={z} value={z}>{z}</option>)}
-          </select>
-          
-          <select 
-            value={filters.propertyType}
-            onChange={(e) => setFilters({...filters, propertyType: e.target.value})}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white"
-          >
-            <option value="All Property Types">All Property Types</option>
-            {propertyTypeOptions.map(pt => <option key={pt} value={pt}>{pt}</option>)}
-          </select>
-          
-          <button className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-            <Filter className="w-4 h-4" />
-            Filters
-          </button>
-          
-          <div className="ml-auto flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          {/* Right: View Mode Tabs */}
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
             {['Month', 'Week', 'Day', 'Agenda'].map(mode => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                  viewMode === mode ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  viewMode === mode ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'
                 }`}
               >
                 {mode}
