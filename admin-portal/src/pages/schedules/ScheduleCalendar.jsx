@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar, ChevronLeft, ChevronRight, Search, Plus, Bell,
-  CheckCircle, Clock, AlertCircle, XCircle, RefreshCw
+  CheckCircle, Clock, AlertCircle, XCircle, RefreshCw, X,
+  MapPin, User, Building2, Wrench, Truck, Phone, Mail, FileText
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 
@@ -27,6 +28,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
     groupByProperty: false
   });
   const [activeQuickFilter, setActiveQuickFilter] = useState(null);
+  const [selectedSchedule, setSelectedSchedule] = useState(null);
 
   // Dynamic filter options from API
   const [zones, setZones] = useState([]);
@@ -484,7 +486,11 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                       </div>
                       <div className="space-y-0.5 mt-1">
                         {daySchedules.slice(0, 3).map((schedule, idx) => (
-                          <div key={idx} className={`px-1.5 py-0.5 text-[10px] rounded border-l-2 truncate cursor-pointer hover:opacity-80 ${getStatusColor(schedule.status)}`}>
+                          <div 
+                            key={idx} 
+                            onClick={() => setSelectedSchedule(schedule)}
+                            className={`px-1.5 py-0.5 text-[10px] rounded border-l-2 truncate cursor-pointer hover:opacity-80 hover:shadow-sm ${getStatusColor(schedule.status)}`}
+                          >
                             <span className="font-medium">{schedule.time}</span> - {schedule.service}
                           </div>
                         ))}
@@ -526,7 +532,11 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                       return (
                         <div key={i} className="p-1 min-h-[60px] border-r border-gray-100 hover:bg-gray-50">
                           {daySchedules.map((schedule, idx) => (
-                            <div key={idx} className={`px-2 py-1 text-xs rounded border-l-2 mb-1 ${getStatusColor(schedule.status)}`}>
+                            <div 
+                              key={idx} 
+                              onClick={() => setSelectedSchedule(schedule)}
+                              className={`px-2 py-1 text-xs rounded border-l-2 mb-1 cursor-pointer hover:shadow-sm ${getStatusColor(schedule.status)}`}
+                            >
                               <div className="font-medium truncate">{schedule.service}</div>
                               <div className="text-gray-500 truncate">{schedule.property}</div>
                             </div>
@@ -555,7 +565,11 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                     </div>
                     <div className="flex-1 p-2 min-h-[80px] hover:bg-gray-50">
                       {daySchedules.map((schedule, idx) => (
-                        <div key={idx} className={`px-3 py-2 rounded-lg border-l-4 mb-2 ${getStatusColor(schedule.status)}`}>
+                        <div 
+                          key={idx} 
+                          onClick={() => setSelectedSchedule(schedule)}
+                          className={`px-3 py-2 rounded-lg border-l-4 mb-2 cursor-pointer hover:shadow-md transition-shadow ${getStatusColor(schedule.status)}`}
+                        >
                           <div className="flex items-center justify-between">
                             <span className="font-semibold text-gray-900">{schedule.service}</span>
                             <span className="text-sm text-gray-500">{schedule.time}</span>
@@ -588,7 +602,10 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                           </span>
                         </div>
                       )}
-                      <div className={`flex items-start gap-4 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 ${getStatusColor(schedule.status)}`}>
+                      <div 
+                        onClick={() => setSelectedSchedule(schedule)}
+                        className={`flex items-start gap-4 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${getStatusColor(schedule.status)}`}
+                      >
                         <div className="w-16 text-sm font-medium text-gray-700">{schedule.time}</div>
                         <div className="flex-1">
                           <div className="font-semibold text-gray-900">{schedule.service}</div>
@@ -730,6 +747,124 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
           </div>
         </div>
       </div>
+
+      {/* Schedule Detail Modal */}
+      {selectedSchedule && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            {/* Modal Header */}
+            <div className={`px-6 py-4 border-b ${
+              selectedSchedule.status === 'completed' ? 'bg-green-50' :
+              selectedSchedule.status === 'in_progress' ? 'bg-purple-50' :
+              selectedSchedule.status === 'pending' ? 'bg-amber-50' :
+              selectedSchedule.status === 'cancelled' ? 'bg-red-50' :
+              selectedSchedule.status === 'rescheduled' ? 'bg-orange-50' :
+              'bg-blue-50'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">{selectedSchedule.service}</h2>
+                  <p className="text-sm text-gray-600 mt-0.5">
+                    {selectedSchedule.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setSelectedSchedule(null)}
+                  className="p-2 hover:bg-white/50 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              {/* Status Badge */}
+              <div className="flex items-center gap-3">
+                <span className={`px-3 py-1.5 text-sm font-semibold rounded-full capitalize ${
+                  selectedSchedule.status === 'completed' ? 'bg-green-100 text-green-700' :
+                  selectedSchedule.status === 'in_progress' ? 'bg-purple-100 text-purple-700' :
+                  selectedSchedule.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                  selectedSchedule.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                  selectedSchedule.status === 'rescheduled' ? 'bg-orange-100 text-orange-700' :
+                  'bg-blue-100 text-blue-700'
+                }`}>
+                  {selectedSchedule.status?.replace('_', ' ')}
+                </span>
+                <span className={`px-3 py-1.5 text-sm font-medium rounded-full capitalize ${
+                  selectedSchedule.type === 'work_order' ? 'bg-indigo-100 text-indigo-700' :
+                  selectedSchedule.type === 'unscheduled' ? 'bg-gray-100 text-gray-700' :
+                  'bg-blue-100 text-blue-700'
+                }`}>
+                  {selectedSchedule.type?.replace('_', ' ')}
+                </span>
+              </div>
+
+              {/* Schedule Details */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <Clock className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Scheduled Time</p>
+                    <p className="font-semibold text-gray-900">{selectedSchedule.time}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <Building2 className="w-5 h-5 text-purple-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Property</p>
+                    <p className="font-semibold text-gray-900">{selectedSchedule.property}</p>
+                    <p className="text-sm text-gray-500">{selectedSchedule.propertyType}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <MapPin className="w-5 h-5 text-green-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Zone</p>
+                    <p className="font-semibold text-gray-900">{selectedSchedule.zone}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <Truck className="w-5 h-5 text-orange-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Assigned Vendor</p>
+                    <p className="font-semibold text-gray-900">{selectedSchedule.vendor}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <Wrench className="w-5 h-5 text-red-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Service Type</p>
+                    <p className="font-semibold text-gray-900">{selectedSchedule.service}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-gray-50 border-t flex items-center justify-between">
+              <button 
+                onClick={() => setSelectedSchedule(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Close
+              </button>
+              <div className="flex items-center gap-2">
+                <button className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                  Reschedule
+                </button>
+                <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+                  View Work Order
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

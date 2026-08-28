@@ -706,120 +706,94 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
 
       {/* Filters & Search */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex flex-col lg:flex-row gap-4">
+        <div className="flex items-center gap-4">
           {/* Search */}
-          <div className="flex-1 relative">
+          <div className="relative w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by Property ID, Property Name, Customer..."
+              placeholder="Search properties..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             />
           </div>
           
-          {/* Filter Dropdowns */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Status Filter */}
-            <div className="relative">
-              <select
-                value={statusFilter}
-                onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                className="appearance-none pl-4 pr-10 py-2.5 border-2 border-gray-200 rounded-full text-sm bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-0 outline-none cursor-pointer font-medium text-gray-700 min-w-[140px]"
-              >
-                <option value="all">All Status</option>
-                <option value="ready">Ready to Schedule</option>
-                <option value="pending_vendor">Pending Vendor</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
+          {/* Divider */}
+          <div className="h-8 w-px bg-gray-200"></div>
+          
+          {/* Filter Dropdowns - All in one row */}
+          <div className="flex items-center gap-2 flex-1">
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
+            >
+              <option value="all">All Status</option>
+              <option value="ready">Ready to Schedule</option>
+              <option value="pending_vendor">Pending Vendor</option>
+            </select>
 
-            {/* Property Type Filter */}
-            <div className="relative">
-              <select
-                value={propertyTypeFilter}
-                onChange={(e) => { setPropertyTypeFilter(e.target.value); setCurrentPage(1); }}
-                className="appearance-none pl-4 pr-10 py-2.5 border-2 border-gray-200 rounded-full text-sm bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-0 outline-none cursor-pointer font-medium text-gray-700 min-w-[160px]"
-              >
-                <option value="all">All Property Types</option>
-                <option value="Apartment">Apartment</option>
-                <option value="Villa">Villa</option>
-                <option value="Gated Community">Gated Community</option>
-                <option value="Plot">Plot</option>
-                <option value="Flat">Flat</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
+            <select
+              value={propertyTypeFilter}
+              onChange={(e) => { setPropertyTypeFilter(e.target.value); setCurrentPage(1); }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
+            >
+              <option value="all">All Property Types</option>
+              <option value="Apartment">Apartment</option>
+              <option value="Villa">Villa</option>
+              <option value="Gated Community">Gated Community</option>
+              <option value="Plot">Plot</option>
+              <option value="Flat">Flat</option>
+            </select>
 
-            {/* Zone Filter */}
-            <div className="relative">
-              <select
-                value={zoneFilter}
-                onChange={(e) => { setZoneFilter(e.target.value); setCurrentPage(1); }}
-                className="appearance-none pl-4 pr-10 py-2.5 border-2 border-gray-200 rounded-full text-sm bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-0 outline-none cursor-pointer font-medium text-gray-700 min-w-[130px]"
-              >
-                <option value="all">All Zones</option>
-                {zones.map(zone => (
-                  <option key={zone} value={zone}>{zone}</option>
-                ))}
-                {zones.length === 0 && (
-                  <>
-                    <option value="Zone A">Zone A</option>
-                    <option value="Zone B">Zone B</option>
-                    <option value="Zone C">Zone C</option>
-                    <option value="Zone D">Zone D</option>
-                  </>
-                )}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
+            <select
+              value={zoneFilter}
+              onChange={(e) => { setZoneFilter(e.target.value); setCurrentPage(1); }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
+            >
+              <option value="all">All Zones</option>
+              {zones.map(zone => (
+                <option key={zone} value={zone}>{zone}</option>
+              ))}
+            </select>
 
-            {/* Package Filter */}
-            <div className="relative">
-              <select
-                value={packageFilter}
-                onChange={(e) => { setPackageFilter(e.target.value); setCurrentPage(1); }}
-                className="appearance-none pl-4 pr-10 py-2.5 border-2 border-gray-200 rounded-full text-sm bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-0 outline-none cursor-pointer font-medium text-gray-700 min-w-[140px]"
-              >
-                <option value="all">All Packages</option>
-                {packages.map(pkg => (
-                  <option key={pkg.id || pkg.packageName} value={pkg.packageName}>{pkg.packageName}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
+            <select
+              value={packageFilter}
+              onChange={(e) => { setPackageFilter(e.target.value); setCurrentPage(1); }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
+            >
+              <option value="all">All Packages</option>
+              {packages.map(pkg => (
+                <option key={pkg.id || pkg.packageName} value={pkg.packageName}>{pkg.packageName}</option>
+              ))}
+            </select>
 
-            {/* Vendor Filter */}
-            <div className="relative">
-              <select
-                value={vendorFilter}
-                onChange={(e) => { setVendorFilter(e.target.value); setCurrentPage(1); }}
-                className="appearance-none pl-4 pr-10 py-2.5 border-2 border-gray-200 rounded-full text-sm bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-0 outline-none cursor-pointer font-medium text-gray-700 min-w-[140px]"
-              >
-                <option value="all">All Vendors</option>
-                {vendors.map(v => (
-                  <option key={v.id || v.vendorId} value={v.vendorId}>{v.ownerName || v.companyName}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
+            <select
+              value={vendorFilter}
+              onChange={(e) => { setVendorFilter(e.target.value); setCurrentPage(1); }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
+            >
+              <option value="all">All Vendors</option>
+              {vendors.map(v => (
+                <option key={v.id || v.vendorId} value={v.vendorId}>{v.ownerName || v.companyName}</option>
+              ))}
+            </select>
 
-            {/* Clear Filters */}
             <button
               onClick={clearFilters}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors border border-gray-200"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors whitespace-nowrap"
             >
               <RefreshCw className="w-4 h-4" />
-              <span>Clear</span>
-            </button>
-
-            {/* Export */}
-            <button className="flex items-center gap-2 px-4 py-2.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-full transition-colors border border-blue-200">
-              <Download className="w-4 h-4" />
-              <span>Export</span>
+              Clear
             </button>
           </div>
+          
+          {/* Export Button */}
+          <button className="flex items-center gap-1.5 px-4 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200 whitespace-nowrap">
+            <Download className="w-4 h-4" />
+            Export
+          </button>
         </div>
       </div>
 
