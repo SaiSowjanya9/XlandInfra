@@ -1,12 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar, ChevronLeft, ChevronRight, Search, Plus, Bell,
   CheckCircle, Clock, AlertCircle, XCircle, RefreshCw
 } from 'lucide-react';
+import { getAuthToken } from '../../utils/safeStorage';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
   const navigate = useNavigate();
+  const token = getAuthToken();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('Month');
   const [schedules, setSchedules] = useState([]);
@@ -23,18 +27,47 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
     groupByProperty: false
   });
 
-  useEffect(() => {
-    generateMockSchedules();
-  }, [currentDate]);
+  // Dynamic filter options from API
+  const [zones, setZones] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const propertyTypeOptions = ['Apartment', 'Villa', 'Gated Community', 'Plot', 'Flat'];
+  const serviceOptions = ['Water Tank Cleaning', 'Electrical Repair', 'Plumbing Repair', 'Lift Maintenance', 'Pest Control', 'AC Service', 'Generator Checkup', 'Drainage Cleaning', 'HVAC', 'Landscaping'];
 
-  // Available filter options
-  const vendorOptions = [
-    'ABC Cleaning', 'PowerFix Solutions', 'Pipe Masters', 'Elevate Engineers',
-    'PestFree Services', 'Cool Breeze', 'GenCare Services', 'Drain Pro'
-  ];
-  const zoneOptions = ['Zone A', 'Zone B', 'Zone C', 'Zone D'];
-  const propertyTypeOptions = ['Apartment', 'Villa', 'Gated Community', 'Plot'];
-  const serviceOptions = ['Water Tank Cleaning', 'Electrical Repair', 'Plumbing Repair', 'Lift Maintenance', 'Pest Control', 'AC Service', 'Generator Checkup', 'Drainage Cleaning'];
+  // Fetch zones from API
+  const fetchZones = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/onboarding/suggestions/zones`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success && Array.isArray(result.data)) {
+        setZones(result.data);
+      }
+    } catch (err) {
+      console.error('Fetch zones error:', err);
+    }
+  }, [token]);
+
+  // Fetch vendors from API
+  const fetchVendors = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/vendors?status=active`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success && Array.isArray(result.data)) {
+        setVendors(result.data);
+      }
+    } catch (err) {
+      console.error('Fetch vendors error:', err);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    fetchZones();
+    fetchVendors();
+    generateMockSchedules();
+  }, [currentDate, fetchZones, fetchVendors]);
 
   const generateMockSchedules = () => {
     const year = currentDate.getFullYear();
@@ -252,7 +285,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white min-w-[140px]"
             >
               <option value="All Vendors">All Vendors</option>
-              {vendorOptions.map(v => <option key={v} value={v}>{v}</option>)}
+              {vendors.map(v => <option key={v.vendorId || v.id} value={v.ownerName || v.companyName}>{v.ownerName || v.companyName}</option>)}
             </select>
             
             <select 
@@ -261,7 +294,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white min-w-[120px]"
             >
               <option value="All Zones">All Zones</option>
-              {zoneOptions.map(z => <option key={z} value={z}>{z}</option>)}
+              {zones.map(z => <option key={z} value={z}>{z}</option>)}
             </select>
             
             <select 
