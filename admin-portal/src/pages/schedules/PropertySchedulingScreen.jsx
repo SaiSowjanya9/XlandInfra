@@ -6,6 +6,13 @@ import {
   Star, Info, Check, ChevronLeft, ChevronRight, Phone, Edit2, HelpCircle
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import { 
+  generateScheduleDates, 
+  formatSchedulesForDisplay, 
+  generateScheduleSummary,
+  getFrequencyConfig,
+  getFrequencyOptions
+} from '../../utils/scheduleGenerator';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -65,8 +72,10 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       { id: 1, name: 'HVAC', vendorName: 'ABC HVAC', vendorId: 1, frequency: 'Monthly', visits: 12, status: 'Schedule' },
       { id: 2, name: 'Plumbing', vendorName: 'XYZ Plumbing', vendorId: 2, frequency: 'Every 2 Months', visits: 6, status: 'Schedule' },
       { id: 3, name: 'Lift AMC', vendorName: 'Elevate Services', vendorId: 3, frequency: 'Quarterly', visits: 4, status: 'Schedule' },
-      { id: 4, name: 'Pest Control', vendorName: 'PestFree Experts', vendorId: 4, frequency: 'Half Yearly', visits: 2, status: 'Schedule' },
-      { id: 5, name: 'Water Tank Cleaning', vendorName: 'Aqua Clean Services', vendorId: 5, frequency: 'Yearly', visits: 1, status: 'Schedule' }
+      { id: 4, name: 'Pest Control', vendorName: 'PestFree Experts', vendorId: 4, frequency: 'Half-Yearly', visits: 2, status: 'Schedule' },
+      { id: 5, name: 'Water Tank Cleaning', vendorName: 'Aqua Clean Services', vendorId: 5, frequency: 'Yearly', visits: 1, status: 'Schedule' },
+      { id: 6, name: 'Deep Cleaning', vendorName: 'CleanPro Services', vendorId: 6, frequency: 'Customer Requirement', visits: 3, customVisits: 3, status: 'Schedule' },
+      { id: 7, name: 'Emergency Repairs', vendorName: 'QuickFix Team', vendorId: 7, frequency: 'On Request', visits: 0, status: 'On Request' }
     ];
   };
 
@@ -101,33 +110,53 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   };
 
   const generatePlannedVisits = (service) => {
-    const visits = [];
-    const firstDate = selectedSlot?.date || new Date(currentWeekStart);
-    firstDate.setDate(firstDate.getDate() + 5); // Default to Saturday
+    // Use selected slot date or default to next week
+    const firstServiceDate = selectedSlot?.date || (() => {
+      const defaultDate = new Date(currentWeekStart);
+      defaultDate.setDate(defaultDate.getDate() + 5); // Default to Saturday
+      return defaultDate;
+    })();
     
-    let intervalMonths = 1;
-    switch (service.frequency.toLowerCase()) {
-      case 'monthly': intervalMonths = 1; break;
-      case 'every 2 months': intervalMonths = 2; break;
-      case 'quarterly': intervalMonths = 3; break;
-      case 'half yearly': intervalMonths = 6; break;
-      case 'yearly': intervalMonths = 12; break;
-    }
+    const frequencyConfig = getFrequencyConfig(service.frequency);
     
-    for (let i = 0; i < service.visits; i++) {
-      const visitDate = new Date(firstDate);
-      visitDate.setMonth(visitDate.getMonth() + (i * intervalMonths));
+    // Check if this is a manual/customer requirement frequency
+    if (!frequencyConfig.autoGenerate) {
+      // For customer requirement / on request - create empty visits for manual selection
+      const manualVisits = [];
+      const numVisits = service.customVisits || service.visits || 0;
       
-      visits.push({
-        visitNumber: i + 1,
-        date: visitDate,
-        dateStr: formatDateShort(visitDate),
-        time: '10:00 AM',
-        status: i === 0 ? 'Scheduled' : 'Target'
-      });
+      for (let i = 0; i < numVisits; i++) {
+        manualVisits.push({
+          visitNumber: i + 1,
+          date: null,
+          dateStr: 'Select Date',
+          time: 'Select Time',
+          status: 'Pending Selection',
+          isManual: true
+        });
+      }
+      setPlannedVisits(manualVisits);
+      return;
     }
     
-    setPlannedVisits(visits);
+    // Generate automatic schedule based on frequency
+    const schedules = generateScheduleDates(
+      firstServiceDate,
+      service.frequency,
+      service.visits || frequencyConfig.visitsPerYear
+    );
+    
+    // Format for display
+    const formattedSchedules = formatSchedulesForDisplay(schedules);
+    
+    // Add time slots
+    const visitsWithTime = formattedSchedules.map((schedule, index) => ({
+      ...schedule,
+      time: selectedSlot?.time || '10:00 AM',
+      status: index === 0 ? 'Scheduled' : 'Target'
+    }));
+    
+    setPlannedVisits(visitsWithTime);
   };
 
   const formatDateFull = (date) => {
@@ -503,10 +532,18 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             <div>
               <h3 className="font-semibold text-gray-900">Planned Visit Series</h3>
               <p className="text-sm text-gray-500">
-                (Based on first visit: {selectedSlot ? formatDateFull(selectedSlot.date) : 'Not selected'} at {selectedSlot?.time || '-'})
+                {selectedSlot 
+                  ? generateScheduleSummary(selectedService?.frequency, selectedSlot.date)
+                  : `${selectedService?.frequency || 'Monthly'}: Select first service date to generate schedule`
+                }
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                {selectedService?.frequency} • {selectedService?.visits} visits total • Future visits follow the selected day & time and can be edited anytime.
+                {getFrequencyConfig(selectedService?.frequency)?.autoGenerate 
+                  ? `${selectedService?.visits || getFrequencyConfig(selectedService?.frequency)?.visitsPerYear} visits total • Dates can be adjusted based on vendor availability`
+                  : selectedService?.frequency?.toLowerCase() === 'on request'
+                    ? 'No automatic schedule - service requested when needed'
+                    : `${selectedService?.visits || selectedService?.customVisits || 0} visits to be manually scheduled`
+                }
               </p>
             </div>
             <button className="flex items-center gap-1 text-sm text-blue-600 hover:underline">
@@ -514,27 +551,51 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             </button>
           </div>
           
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {plannedVisits.map((visit, i) => (
-              <div 
-                key={i}
-                className={`flex-shrink-0 w-28 p-3 rounded-lg border text-center ${
-                  visit.status === 'Scheduled' ? 'border-green-300 bg-green-50' : 'border-gray-200'
-                }`}
-              >
-                <p className="text-xs text-gray-500">Visit {visit.visitNumber}</p>
-                <p className="font-semibold text-sm mt-1">{visit.dateStr}</p>
-                <p className="text-xs text-gray-500">{visit.time}</p>
-                <span className={`inline-block mt-2 px-2 py-0.5 text-xs rounded ${
-                  visit.status === 'Scheduled' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                }`}>{visit.status}</span>
-              </div>
-            ))}
-          </div>
+          {/* Show message for On Request services */}
+          {selectedService?.frequency?.toLowerCase() === 'on request' ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+              <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+              <p className="text-sm text-amber-800 font-medium">On Request Service</p>
+              <p className="text-xs text-amber-600 mt-1">
+                No automatic schedule is generated. Service will be scheduled when the customer requests it.
+              </p>
+            </div>
+          ) : (
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {plannedVisits.map((visit, i) => (
+                <div 
+                  key={i}
+                  className={`flex-shrink-0 w-28 p-3 rounded-lg border text-center ${
+                    visit.status === 'Scheduled' ? 'border-green-300 bg-green-50' : 
+                    visit.isManual ? 'border-amber-300 bg-amber-50' : 'border-gray-200'
+                  }`}
+                >
+                  <p className="text-xs text-gray-500">Visit {visit.visitNumber}</p>
+                  <p className="font-semibold text-sm mt-1">
+                    {visit.isManual ? (
+                      <button className="text-amber-600 hover:text-amber-700 underline">
+                        Select
+                      </button>
+                    ) : (
+                      visit.shortDateStr || visit.dateStr
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-500">{visit.time}</p>
+                  <span className={`inline-block mt-2 px-2 py-0.5 text-xs rounded ${
+                    visit.status === 'Scheduled' ? 'bg-green-100 text-green-700' : 
+                    visit.isManual ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'
+                  }`}>{visit.status}</span>
+                </div>
+              ))}
+            </div>
+          )}
           
           <p className="text-xs text-gray-400 mt-3 flex items-center gap-1">
             <AlertCircle className="w-3 h-3" />
-            The series is generated based on the first visit. You can modify any future visit date before confirming.
+            {getFrequencyConfig(selectedService?.frequency)?.autoGenerate 
+              ? 'The series is generated based on the first visit date. Dates may be adjusted slightly based on vendor availability.'
+              : 'Manual scheduling required. Select dates for each visit individually.'
+            }
           </p>
         </div>
       </div>

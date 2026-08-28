@@ -13,6 +13,9 @@ const {
   bodyParserLimits,
   securityErrorHandler,
   configureTrustProxy,
+  apiRateLimiter,
+  loginRateLimiter,
+  uploadRateLimiter,
 } = require('./middleware/security');
 
 // Real-time sync (WebSocket)

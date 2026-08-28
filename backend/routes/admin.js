@@ -1004,9 +1004,11 @@ router.get('/work-orders', async (req, res) => {
       } else if (status === 'completed' || status === 'completed,closed') {
         conditions.push(`wo.status IN ('completed', 'closed')`);
       } else if (status.includes(',')) {
-        // Handle comma-separated statuses
-        const statuses = status.split(',').map(s => `'${s.trim()}'`).join(',');
-        conditions.push(`wo.status IN (${statuses})`);
+        // Handle comma-separated statuses - use parameterized query to prevent SQL injection
+        const statusList = status.split(',').map(s => s.trim()).filter(Boolean);
+        const placeholders = statusList.map(() => '?').join(',');
+        conditions.push(`wo.status IN (${placeholders})`);
+        params.push(...statusList);
       } else {
         conditions.push(`wo.status = ?`);
         params.push(status);

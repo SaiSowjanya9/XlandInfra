@@ -465,9 +465,36 @@ async function getPendingPropertiesForScheduling(franchisePartnerId, filters = {
 }
 
 /**
- * Generate scheduled visits from a service schedule
+ * Frequency Configuration - uses First Service Date as recurrence anchor
+ * Monthly: 12 visits/year, same day each month
+ * Every 2 Months: 6 visits/year, every 2 months from first service date
+ * Quarterly: 4 visits/year, every 3 months
+ * Half-Yearly: 2 visits/year, every 6 months
+ * Yearly: 1 visit/year
+ * Customer Requirement / On Request: Manual - no auto generation
  */
-async function generateScheduledVisits(serviceScheduleId, startDate, endDate, frequency, totalVisits) {
+const FREQUENCY_CONFIG = {
+  'daily': { intervalMonths: 0, intervalDays: 1, visitsPerYear: 365 },
+  'weekly': { intervalMonths: 0, intervalDays: 7, visitsPerYear: 52 },
+  'bi_weekly': { intervalMonths: 0, intervalDays: 14, visitsPerYear: 26 },
+  'monthly': { intervalMonths: 1, intervalDays: 0, visitsPerYear: 12 },
+  'every_2_months': { intervalMonths: 2, intervalDays: 0, visitsPerYear: 6 },
+  'bi_monthly': { intervalMonths: 2, intervalDays: 0, visitsPerYear: 6 },
+  'quarterly': { intervalMonths: 3, intervalDays: 0, visitsPerYear: 4 },
+  'half_yearly': { intervalMonths: 6, intervalDays: 0, visitsPerYear: 2 },
+  'half-yearly': { intervalMonths: 6, intervalDays: 0, visitsPerYear: 2 },
+  'yearly': { intervalMonths: 12, intervalDays: 0, visitsPerYear: 1 },
+  'annual': { intervalMonths: 12, intervalDays: 0, visitsPerYear: 1 },
+  'one_time': { intervalMonths: 0, intervalDays: 0, visitsPerYear: 1 },
+  'customer_requirement': { intervalMonths: 0, intervalDays: 0, visitsPerYear: null, manual: true },
+  'on_request': { intervalMonths: 0, intervalDays: 0, visitsPerYear: null, manual: true }
+};
+
+/**
+ * Generate scheduled visits from a service schedule
+ * Uses first service date as the recurrence anchor
+ */
+async function generateScheduledVisits(serviceScheduleId, startDate, endDate, frequency, totalVisits, customVisitDates = null) {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -484,26 +511,81 @@ async function generateScheduledVisits(serviceScheduleId, startDate, endDate, fr
 
     const sched = schedule[0];
     const visits = [];
-    let currentDate = new Date(startDate);
+    const firstServiceDate = new Date(startDate);
     const endDateObj = new Date(endDate);
+    
+    // Normalize frequency
+    const normalizedFrequency = frequency?.toLowerCase()?.replace(/[\s-]/g, '_') || 'monthly';
+    const config = FREQUENCY_CONFIG[normalizedFrequency] || FREQUENCY_CONFIG['monthly'];
+    
+    // Handle manual/customer requirement frequencies
+    if (config.manual) {
+      if (customVisitDates && Array.isArray(customVisitDates)) {
+        // Use provided dates for manual scheduling
+        for (let i = 0; i < customVisitDates.length; i++) {
+          const visitId = generateVisitId();
+          const visitDate = new Date(customVisitDates[i]);
+          
+          await connection.execute(
+            `INSERT INTO scheduled_visits 
+             (visit_id, service_schedule_id, property_id, vendor_id, scheduled_date, 
+              visit_number, total_visits, status, customer_requested)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'scheduled', TRUE)`,
+            [visitId, serviceScheduleId, sched.property_id, sched.vendor_id, 
+             visitDate.toISOString().split('T')[0], i + 1, customVisitDates.length]
+          );
+
+          visits.push({
+            visitId,
+            scheduledDate: visitDate.toISOString().split('T')[0],
+            visitNumber: i + 1,
+            isManual: true
+          });
+        }
+      }
+      // For on_request, no visits are pre-generated
+      
+      // Update service schedule
+      await connection.execute(
+        `UPDATE property_service_schedules 
+         SET status = 'active', start_date = ?, scheduling_status = 'completed',
+             schedule_notes = 'Customer Requirement - visits scheduled manually'
+         WHERE id = ?`,
+        [startDate, serviceScheduleId]
+      );
+      
+      await connection.commit();
+      return visits;
+    }
+    
+    // Calculate number of visits
+    const numVisits = totalVisits || config.visitsPerYear || 12;
     let visitNumber = 1;
-
-    // Calculate visit dates based on frequency
-    const frequencyDays = {
-      'daily': 1,
-      'weekly': 7,
-      'bi_weekly': 14,
-      'monthly': 30,
-      'every_2_months': 60,
-      'quarterly': 91,
-      'half_yearly': 182,
-      'yearly': 365,
-      'one_time': 0
-    };
-
-    const intervalDays = frequencyDays[frequency] || 30;
-
-    while (currentDate <= endDateObj && visitNumber <= totalVisits) {
+    
+    // Generate visits based on frequency using monthly intervals (accurate recurrence)
+    while (visitNumber <= numVisits) {
+      const visitDate = new Date(firstServiceDate);
+      
+      if (config.intervalMonths > 0) {
+        // Use month-based calculation for accurate recurrence
+        visitDate.setMonth(visitDate.getMonth() + ((visitNumber - 1) * config.intervalMonths));
+        
+        // Handle month overflow (e.g., Jan 31 + 1 month = Feb 28/29)
+        const targetDay = firstServiceDate.getDate();
+        if (visitDate.getDate() !== targetDay) {
+          // Month overflow - set to last day of the intended month
+          visitDate.setDate(0);
+        }
+      } else if (config.intervalDays > 0) {
+        // Use day-based calculation for daily/weekly frequencies
+        visitDate.setDate(visitDate.getDate() + ((visitNumber - 1) * config.intervalDays));
+      }
+      
+      // Check if within contract period
+      if (visitDate > endDateObj) {
+        break;
+      }
+      
       const visitId = generateVisitId();
       
       await connection.execute(
@@ -512,17 +594,19 @@ async function generateScheduledVisits(serviceScheduleId, startDate, endDate, fr
           visit_number, total_visits, status)
          VALUES (?, ?, ?, ?, ?, ?, ?, 'scheduled')`,
         [visitId, serviceScheduleId, sched.property_id, sched.vendor_id, 
-         currentDate.toISOString().split('T')[0], visitNumber, totalVisits]
+         visitDate.toISOString().split('T')[0], visitNumber, numVisits]
       );
 
       visits.push({
         visitId,
-        scheduledDate: currentDate.toISOString().split('T')[0],
-        visitNumber
+        scheduledDate: visitDate.toISOString().split('T')[0],
+        visitNumber,
+        dayOfMonth: visitDate.getDate(),
+        month: visitDate.toLocaleString('en-US', { month: 'short' }),
+        year: visitDate.getFullYear()
       });
 
-      if (intervalDays === 0) break; // one_time
-      currentDate.setDate(currentDate.getDate() + intervalDays);
+      if (config.intervalMonths === 0 && config.intervalDays === 0) break; // one_time
       visitNumber++;
     }
 
