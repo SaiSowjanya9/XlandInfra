@@ -905,7 +905,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                     
                     {/* Zone */}
                     <td className="px-6 py-4">
-                      <span className="inline-flex px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 rounded-full">
+                      <span className="inline-flex px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 rounded-full whitespace-nowrap">
                         {property.zone}
                       </span>
                     </td>
@@ -921,10 +921,10 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                     <td className="px-6 py-4 text-center">
                       <button 
                         onClick={() => handleViewServices(property)}
-                        className="inline-flex items-center justify-center w-10 h-10 bg-blue-100 text-blue-700 font-bold text-lg rounded-full hover:bg-blue-200 transition-colors"
+                        className="text-blue-600 font-semibold underline hover:text-blue-800 transition-colors cursor-pointer"
                         title="View Services"
                       >
-                        {property.totalServices}
+                        {property.totalServices} <span className="text-xs font-normal">view</span>
                       </button>
                     </td>
                     
@@ -976,18 +976,18 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                     </td>
                     
                     {/* Actions */}
-                    <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => property.pendingServices === 0 ? handleSchedule(property) : handleAssignVendor(property)}
-                        className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 shadow-sm hover:shadow-md ${
-                          property.pendingServices === 0
-                            ? 'bg-blue-600 text-white hover:bg-blue-700'
-                            : 'bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600'
-                        }`}
-                      >
-                        <Calendar className="w-4 h-4" />
-                        {property.pendingServices === 0 ? 'Schedule Property' : 'Assign Vendors'}
-                      </button>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => property.pendingServices === 0 ? handleSchedule(property) : handleAssignVendor(property)}
+                          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                        >
+                          {property.pendingServices === 0 ? 'Schedule' : 'Assign Vendor'}
+                        </button>
+                        <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
