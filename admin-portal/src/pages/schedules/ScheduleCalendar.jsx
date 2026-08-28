@@ -223,12 +223,46 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
     }
   };
 
+  // Calculate dynamic quick filter counts
+  const getQuickFilterCounts = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const sevenDaysLater = new Date(today);
+    sevenDaysLater.setDate(today.getDate() + 7);
+    
+    const todaysSchedules = schedules.filter(s => {
+      const scheduleDate = new Date(s.date);
+      scheduleDate.setHours(0, 0, 0, 0);
+      return scheduleDate.getTime() === today.getTime();
+    }).length;
+    
+    const upcoming7Days = schedules.filter(s => {
+      const scheduleDate = new Date(s.date);
+      scheduleDate.setHours(0, 0, 0, 0);
+      return scheduleDate >= today && scheduleDate <= sevenDaysLater;
+    }).length;
+    
+    const overdue = schedules.filter(s => {
+      const scheduleDate = new Date(s.date);
+      scheduleDate.setHours(0, 0, 0, 0);
+      return scheduleDate < today && (s.status === 'pending' || s.status === 'scheduled');
+    }).length;
+    
+    const rescheduleRequests = schedules.filter(s => s.status === 'rescheduled').length;
+    const cancelled = schedules.filter(s => s.status === 'cancelled').length;
+    
+    return { todaysSchedules, upcoming7Days, overdue, rescheduleRequests, cancelled };
+  };
+  
+  const quickFilterCounts = getQuickFilterCounts();
+  
   const quickFilters = [
-    { label: "Today's Schedules", count: 18 },
-    { label: "Upcoming (7 Days)", count: 45 },
-    { label: "Overdue", count: 3 },
-    { label: "Reschedule Requests", count: 6 },
-    { label: "Cancelled", count: 4 }
+    { label: "Today's Schedules", count: quickFilterCounts.todaysSchedules },
+    { label: "Upcoming (7 Days)", count: quickFilterCounts.upcoming7Days },
+    { label: "Overdue", count: quickFilterCounts.overdue },
+    { label: "Reschedule Requests", count: quickFilterCounts.rescheduleRequests },
+    { label: "Cancelled", count: quickFilterCounts.cancelled }
   ];
 
   const days = getDaysInMonth();
@@ -419,7 +453,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
               <div className="overflow-y-auto max-h-[500px]">
                 {hourSlots.map(hour => (
                   <div key={hour} className="grid grid-cols-8 border-b border-gray-100">
-                    <div className="p-2 text-xs text-gray-500 border-r bg-gray-50 text-right pr-3">
+                    <div className="p-2 text-xs text-gray-500 border-r bg-gray-50 text-right pr-3 whitespace-nowrap">
                       {hour > 12 ? hour - 12 : hour}:00 {hour >= 12 ? 'PM' : 'AM'}
                     </div>
                     {getWeekDays().map((day, i) => {
@@ -454,7 +488,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                 });
                 return (
                   <div key={hour} className="flex border-b border-gray-100">
-                    <div className="w-20 p-3 text-sm text-gray-500 border-r bg-gray-50 text-right">
+                    <div className="w-24 p-3 text-sm text-gray-500 border-r bg-gray-50 text-right whitespace-nowrap">
                       {hour > 12 ? hour - 12 : hour}:00 {hour >= 12 ? 'PM' : 'AM'}
                     </div>
                     <div className="flex-1 p-2 min-h-[80px] hover:bg-gray-50">
