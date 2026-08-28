@@ -26,6 +26,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import EstimatesOverviewBlocks from '../components/EstimatesOverviewBlocks';
 import DonutChart from '../components/common/DonutChart';
 import DateRangeFilter from '../components/common/DateRangeFilter';
+import { PendingSchedulesBadge, usePendingSchedulesCount } from '../components/scheduling/PropertyScheduleNotificationCard';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -34,6 +35,9 @@ import { getAuthToken } from '../utils/safeStorage';
 const ManagerDashboard = ({ user }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Pending schedules count
+  const { count: pendingSchedulesCount } = usePendingSchedulesCount('manager');
   
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -575,6 +579,24 @@ const ManagerDashboard = ({ user }) => {
                 </div>
               </div>
             </Link>
+            {/* Pending Schedules Card */}
+            {pendingSchedulesCount > 0 && (
+              <Link to="/manager/schedules/pending" className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg border border-orange-200 px-3 py-2 hover:shadow-md hover:border-orange-300 transition-all duration-200 group relative">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Calendar className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-orange-600 font-medium">Pending Schedules</p>
+                    <p className="text-lg font-bold text-orange-700">{pendingSchedulesCount}</p>
+                  </div>
+                </div>
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+                </span>
+              </Link>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-3">

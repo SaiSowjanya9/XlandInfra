@@ -255,6 +255,124 @@ router.get('/dashboard/stats', authenticate, canSeeSchedule, async (req, res) =>
   }
 });
 
+// Get pending properties for scheduling - MUST be before /:id route
+// Returns properties that are paid and have vendors assigned but not yet scheduled
+router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res) => {
+  try {
+    const userFpId = req.user?.franchisePartnerId || req.user?.fpId;
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin' || req.user?.role === 'operations_manager';
+    
+    // Query to get properties with:
+    // 1. Approved/paid estimates (payment_status = 'paid')
+    // 2. Vendor assignments (from property_vendor_assignments)
+    // 3. Not yet scheduled (no active schedule exists)
+    let query = `
+      SELECT DISTINCT
+        op.id,
+        op.property_id as propertyId,
+        op.community_name as propertyName,
+        op.property_type as propertyType,
+        op.zone,
+        op.area_name as areaName,
+        op.created_at as addedOn,
+        fe.id as estimateId,
+        fe.estimate_id as estimateCode,
+        fe.package_name as packageName,
+        fe.total_price as totalPrice,
+        fe.status as estimateStatus,
+        fe.payment_status as paymentStatus,
+        fe.service_rows as serviceRows,
+        pc.name as customerName,
+        pc.phone as customerPhone,
+        pc.email as customerEmail,
+        (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = op.id AND pva.is_active = 1) as assignedVendors,
+        (SELECT COUNT(*) FROM schedules s WHERE s.property_id = op.id AND s.status IN ('active', 'draft')) as existingSchedules
+      FROM onboarded_properties op
+      LEFT JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
+      LEFT JOIN property_contacts pc ON pc.property_id = op.id
+      WHERE op.status = 'active'
+        AND fe.id IS NOT NULL
+        AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
+    `;
+    
+    const params = [];
+    
+    // Filter by FP for non-admin users
+    if (userFpId) {
+      query += ` AND op.franchise_partner_id = ?`;
+      params.push(userFpId);
+    }
+    
+    // Exclude properties that already have active schedules
+    query += ` HAVING existingSchedules = 0`;
+    query += ` ORDER BY op.created_at DESC`;
+
+    const [properties] = await pool.execute(query, params);
+
+    // Parse service rows and calculate service counts
+    const processedProperties = properties.map(p => {
+      let services = [];
+      let totalServices = 0;
+      
+      // Parse service_rows JSON
+      if (p.serviceRows) {
+        try {
+          services = typeof p.serviceRows === 'string' ? JSON.parse(p.serviceRows) : p.serviceRows;
+          totalServices = Array.isArray(services) ? services.length : 0;
+        } catch (e) {
+          console.warn('Error parsing service rows:', e);
+        }
+      }
+      
+      const assignedVendors = p.assignedVendors || 0;
+      const pendingServices = Math.max(0, totalServices - assignedVendors);
+      
+      return {
+        id: p.id,
+        propertyId: p.propertyId,
+        propertyName: p.propertyName,
+        customerName: p.customerName || 'N/A',
+        customerPhone: p.customerPhone || '',
+        customerEmail: p.customerEmail || '',
+        propertyType: p.propertyType || 'Apartment',
+        zone: p.zone || 'Zone A',
+        areaName: p.areaName,
+        packageName: p.packageName || 'Custom Package',
+        packageType: 'AMC',
+        estimateId: p.estimateId,
+        estimateCode: p.estimateCode,
+        totalPrice: p.totalPrice,
+        totalServices: totalServices,
+        assignedVendors: Math.min(assignedVendors, totalServices),
+        pendingServices: pendingServices,
+        paymentStatus: p.paymentStatus === 'paid' ? 'Paid' : 'Partial',
+        addedOn: p.addedOn,
+        isNew: true, // Mark as new for UI badge
+        services: services.map(s => ({
+          name: s.service || s.name || s.serviceType,
+          frequency: s.frequencyType || 'Monthly',
+          frequencyCount: s.frequencyCount || 1,
+          visits: s.frequencyCount || 1,
+          vendorAssigned: false,
+          vendorName: null
+        }))
+      };
+    });
+
+    res.json({
+      success: true,
+      data: processedProperties
+    });
+  } catch (error) {
+    console.error('Error fetching pending properties:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching pending properties',
+      error: error.message
+    });
+  }
+});
+
 // Get single schedule (Admin, Manager, Supervisor can view)
 router.get('/:id', authenticate, canSeeSchedule, async (req, res) => {
   try {
@@ -532,6 +650,696 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting schedule',
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// ENHANCED SCHEDULING ROUTES (V22)
+// ============================================
+
+const schedulingService = require('../services/schedulingService');
+
+// Get eligible vendors for a service (filtered by capability, zone, status)
+router.get('/eligible-vendors', authenticate, canSeeSchedule, async (req, res) => {
+  try {
+    const { serviceCategory, zone, propertyId } = req.query;
+    
+    const vendors = await schedulingService.getEligibleVendors({
+      serviceCategory,
+      zone,
+      propertyId
+    });
+
+    // If no vendors found, return appropriate message
+    if (vendors.length === 0) {
+      return res.json({
+        success: true,
+        data: [],
+        message: 'No Vendor Available'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: vendors.map(v => ({
+        id: v.id,
+        vendorId: v.vendor_id,
+        vendorName: v.vendor_name,
+        ownerName: v.owner_name,
+        ownerMobile: v.owner_mobile,
+        ownerEmail: v.owner_email,
+        serviceType: v.service_type,
+        serviceCapabilities: v.service_capabilities,
+        zone: v.zone,
+        areaName: v.area_name,
+        ratePerVisit: v.rate_per_visit,
+        rating: v.rating,
+        totalJobsCompleted: v.total_jobs_completed,
+        maxDailyVisits: v.max_daily_visits,
+        status: v.status
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching eligible vendors:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching eligible vendors',
+      error: error.message
+    });
+  }
+});
+
+// Assign vendor to a service for a property
+router.post('/assign-vendor', authenticate, canMakeSchedule, async (req, res) => {
+  try {
+    const {
+      propertyId,
+      vendorId,
+      serviceType,
+      serviceName,
+      frequency,
+      frequencyCount,
+      totalVisits,
+      estimateId
+    } = req.body;
+
+    if (!propertyId || !vendorId || !serviceName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Property ID, Vendor ID, and Service Name are required'
+      });
+    }
+
+    const userFpId = req.user?.franchisePartnerId || req.user?.fpId;
+
+    const result = await schedulingService.assignVendorToService({
+      propertyId,
+      vendorId,
+      serviceType: serviceType || serviceName,
+      serviceName,
+      frequency,
+      frequencyCount,
+      totalVisits,
+      estimateId,
+      assignedBy: req.user.id,
+      franchisePartnerId: userFpId
+    });
+
+    res.json({
+      success: true,
+      message: `Vendor ${result.vendorName} assigned to ${serviceName}`,
+      data: result
+    });
+  } catch (error) {
+    console.error('Error assigning vendor:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error assigning vendor to service',
+      error: error.message
+    });
+  }
+});
+
+// Get pending schedules count (for badge)
+router.get('/pending-count', authenticate, canSeeSchedule, async (req, res) => {
+  try {
+    const userFpId = req.user?.franchisePartnerId || req.user?.fpId;
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin' || req.user?.role === 'operations_manager';
+    
+    const count = await schedulingService.getPendingSchedulesCount(isAdmin ? null : userFpId);
+
+    res.json({
+      success: true,
+      data: { count }
+    });
+  } catch (error) {
+    console.error('Error fetching pending count:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching pending schedules count',
+      error: error.message
+    });
+  }
+});
+
+// Get pending properties with full details (enhanced version)
+router.get('/pending-properties-v2', authenticate, canSeeSchedule, async (req, res) => {
+  try {
+    const userFpId = req.user?.franchisePartnerId || req.user?.fpId;
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin' || req.user?.role === 'operations_manager';
+    
+    const { schedulingStatus, zone, propertyType } = req.query;
+    
+    const properties = await schedulingService.getPendingPropertiesForScheduling(
+      isAdmin ? null : userFpId,
+      { schedulingStatus, zone, propertyType }
+    );
+
+    res.json({
+      success: true,
+      data: properties
+    });
+  } catch (error) {
+    console.error('Error fetching pending properties v2:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching pending properties',
+      error: error.message
+    });
+  }
+});
+
+// Get service schedules for a property
+router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+
+    const [services] = await pool.execute(
+      `SELECT pss.*, 
+              ov.vendor_id as vendor_code, 
+              COALESCE(ov.company_name, ov.owner_name) as vendor_name,
+              ov.owner_mobile as vendor_phone
+       FROM property_service_schedules pss
+       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
+       WHERE pss.property_id = ?
+       ORDER BY pss.service_name`,
+      [propertyId]
+    );
+
+    res.json({
+      success: true,
+      data: services.map(s => ({
+        id: s.id,
+        scheduleId: s.schedule_id,
+        serviceName: s.service_name,
+        serviceCategory: s.service_category,
+        frequencyType: s.frequency_type,
+        frequencyCount: s.frequency_count,
+        totalVisits: s.total_visits,
+        vendorId: s.vendor_id,
+        vendorCode: s.vendor_code,
+        vendorName: s.vendor_name,
+        vendorPhone: s.vendor_phone,
+        vendorAssignedAt: s.vendor_assigned_at,
+        startDate: s.start_date,
+        endDate: s.end_date,
+        preferredDay: s.preferred_day,
+        preferredTimeSlot: s.preferred_time_slot,
+        recommendedDates: s.recommended_dates,
+        status: s.status,
+        schedulingStatus: s.scheduling_status
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching property services:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching property services',
+      error: error.message
+    });
+  }
+});
+
+// Schedule a service (create visits)
+router.post('/property/:propertyId/services/:serviceScheduleId/schedule', authenticate, canMakeSchedule, async (req, res) => {
+  try {
+    const { propertyId, serviceScheduleId } = req.params;
+    const { startDate, endDate, frequency, totalVisits, preferredDay, preferredTimeSlot } = req.body;
+
+    if (!startDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Start date is required'
+      });
+    }
+
+    // Update preferred schedule options
+    await pool.execute(
+      `UPDATE property_service_schedules 
+       SET preferred_day = ?, preferred_time_slot = ?
+       WHERE id = ?`,
+      [preferredDay || null, preferredTimeSlot || null, serviceScheduleId]
+    );
+
+    // Generate scheduled visits
+    const visits = await schedulingService.generateScheduledVisits(
+      serviceScheduleId,
+      startDate,
+      endDate || new Date(new Date(startDate).setFullYear(new Date(startDate).getFullYear() + 1)).toISOString().split('T')[0],
+      frequency || 'monthly',
+      totalVisits || 12
+    );
+
+    res.json({
+      success: true,
+      message: `Created ${visits.length} scheduled visits`,
+      data: { visits }
+    });
+  } catch (error) {
+    console.error('Error scheduling service:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error scheduling service',
+      error: error.message
+    });
+  }
+});
+
+// Get scheduled visits for a service
+router.get('/service/:serviceScheduleId/visits', authenticate, canSeeSchedule, async (req, res) => {
+  try {
+    const { serviceScheduleId } = req.params;
+    const { status, startDate, endDate } = req.query;
+
+    let query = `
+      SELECT sv.*, 
+             wo.work_order_id as work_order_code, wo.status as work_order_status
+      FROM scheduled_visits sv
+      LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
+      WHERE sv.service_schedule_id = ?
+    `;
+    const params = [serviceScheduleId];
+
+    if (status) {
+      query += ` AND sv.status = ?`;
+      params.push(status);
+    }
+
+    if (startDate) {
+      query += ` AND sv.scheduled_date >= ?`;
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      query += ` AND sv.scheduled_date <= ?`;
+      params.push(endDate);
+    }
+
+    query += ` ORDER BY sv.scheduled_date ASC`;
+
+    const [visits] = await pool.execute(query, params);
+
+    res.json({
+      success: true,
+      data: visits.map(v => ({
+        id: v.id,
+        visitId: v.visit_id,
+        scheduledDate: v.scheduled_date,
+        scheduledTimeStart: v.scheduled_time_start,
+        scheduledTimeEnd: v.scheduled_time_end,
+        visitNumber: v.visit_number,
+        totalVisits: v.total_visits,
+        status: v.status,
+        workOrderId: v.work_order_id,
+        workOrderCode: v.work_order_code,
+        workOrderStatus: v.work_order_status,
+        customerRequested: v.customer_requested,
+        customerPreferredDate: v.customer_preferred_date,
+        originalDate: v.original_date,
+        rescheduleReason: v.reschedule_reason
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching visits:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching scheduled visits',
+      error: error.message
+    });
+  }
+});
+
+// Reschedule a visit
+router.put('/visits/:visitId/reschedule', authenticate, canMakeSchedule, async (req, res) => {
+  try {
+    const { visitId } = req.params;
+    const { newDate, newTimeStart, newTimeEnd, reason } = req.body;
+
+    if (!newDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'New date is required'
+      });
+    }
+
+    // Get current visit
+    const [visit] = await pool.execute(
+      `SELECT scheduled_date FROM scheduled_visits WHERE id = ? OR visit_id = ?`,
+      [visitId, visitId]
+    );
+
+    if (visit.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Visit not found'
+      });
+    }
+
+    await pool.execute(
+      `UPDATE scheduled_visits 
+       SET scheduled_date = ?, 
+           scheduled_time_start = ?,
+           scheduled_time_end = ?,
+           original_date = COALESCE(original_date, ?),
+           rescheduled_by = ?,
+           rescheduled_at = NOW(),
+           reschedule_reason = ?,
+           status = 'rescheduled'
+       WHERE id = ? OR visit_id = ?`,
+      [newDate, newTimeStart || null, newTimeEnd || null, visit[0].scheduled_date,
+       req.user.id, reason || null, visitId, visitId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Visit rescheduled successfully'
+    });
+  } catch (error) {
+    console.error('Error rescheduling visit:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error rescheduling visit',
+      error: error.message
+    });
+  }
+});
+
+// Cancel a visit
+router.put('/visits/:visitId/cancel', authenticate, canMakeSchedule, async (req, res) => {
+  try {
+    const { visitId } = req.params;
+    const { reason } = req.body;
+
+    await pool.execute(
+      `UPDATE scheduled_visits 
+       SET status = 'cancelled',
+           cancelled_by = ?,
+           cancelled_at = NOW(),
+           cancellation_note = ?
+       WHERE id = ? OR visit_id = ?`,
+      [req.user.id, reason || null, visitId, visitId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Visit cancelled successfully'
+    });
+  } catch (error) {
+    console.error('Error cancelling visit:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error cancelling visit',
+      error: error.message
+    });
+  }
+});
+
+// Cancel future visits for a schedule series
+router.put('/service/:serviceScheduleId/cancel-future', authenticate, canMakeSchedule, async (req, res) => {
+  try {
+    const { serviceScheduleId } = req.params;
+    const { fromDate, reason } = req.body;
+
+    const cancelFromDate = fromDate || new Date().toISOString().split('T')[0];
+
+    const [result] = await pool.execute(
+      `UPDATE scheduled_visits 
+       SET status = 'cancelled',
+           cancelled_by = ?,
+           cancelled_at = NOW(),
+           cancellation_note = ?
+       WHERE service_schedule_id = ? 
+         AND scheduled_date >= ?
+         AND status IN ('scheduled', 'confirmed')`,
+      [req.user.id, reason || 'Future series cancelled', serviceScheduleId, cancelFromDate]
+    );
+
+    res.json({
+      success: true,
+      message: `Cancelled ${result.affectedRows} future visits`
+    });
+  } catch (error) {
+    console.error('Error cancelling future visits:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error cancelling future visits',
+      error: error.message
+    });
+  }
+});
+
+// Customer custom scheduling request
+router.post('/visits/:visitId/customer-request', authenticate, async (req, res) => {
+  try {
+    const { visitId } = req.params;
+    const { preferredDate, preferredTime, notes } = req.body;
+
+    await pool.execute(
+      `UPDATE scheduled_visits 
+       SET customer_requested = TRUE,
+           customer_preferred_date = ?,
+           customer_preferred_time = ?,
+           customer_notes = ?
+       WHERE id = ? OR visit_id = ?`,
+      [preferredDate || null, preferredTime || null, notes || null, visitId, visitId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Customer scheduling request submitted'
+    });
+  } catch (error) {
+    console.error('Error submitting customer request:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error submitting request',
+      error: error.message
+    });
+  }
+});
+
+// Get notifications
+router.get('/notifications', authenticate, canSeeSchedule, async (req, res) => {
+  try {
+    const userFpId = req.user?.franchisePartnerId || req.user?.fpId;
+    const userId = req.user?.id;
+    const role = req.user?.role;
+    const { limit = 10 } = req.query;
+
+    const notifications = await schedulingService.getUnreadNotifications(
+      userFpId,
+      userId,
+      role === 'manager' ? 'manager' : role === 'franchise_partner' ? 'fp' : role,
+      parseInt(limit)
+    );
+
+    res.json({
+      success: true,
+      data: notifications.map(n => ({
+        id: n.id,
+        notificationId: n.notification_id,
+        type: n.type,
+        title: n.title,
+        message: n.message,
+        referenceType: n.reference_type,
+        referenceId: n.reference_id,
+        referenceData: n.reference_data ? JSON.parse(n.reference_data) : null,
+        actionUrl: n.action_url,
+        actionLabel: n.action_label,
+        priority: n.priority,
+        isRead: n.is_read,
+        createdAt: n.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching notifications',
+      error: error.message
+    });
+  }
+});
+
+// Mark notification as read
+router.put('/notifications/:notificationId/read', authenticate, async (req, res) => {
+  try {
+    const { notificationId } = req.params;
+
+    await schedulingService.markNotificationRead(notificationId);
+
+    res.json({
+      success: true,
+      message: 'Notification marked as read'
+    });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error marking notification as read',
+      error: error.message
+    });
+  }
+});
+
+// Get vendor availability calendar
+router.get('/vendor/:vendorId/availability', authenticate, canSeeSchedule, async (req, res) => {
+  try {
+    const { vendorId } = req.params;
+    const { month, year } = req.query;
+
+    const currentMonth = month || new Date().getMonth() + 1;
+    const currentYear = year || new Date().getFullYear();
+
+    // Get vendor's existing bookings for the month
+    const [bookings] = await pool.execute(
+      `SELECT sv.scheduled_date, COUNT(*) as booking_count
+       FROM scheduled_visits sv
+       WHERE sv.vendor_id = ?
+         AND MONTH(sv.scheduled_date) = ?
+         AND YEAR(sv.scheduled_date) = ?
+         AND sv.status NOT IN ('cancelled', 'completed')
+       GROUP BY sv.scheduled_date`,
+      [vendorId, currentMonth, currentYear]
+    );
+
+    // Get vendor's availability settings
+    const [availability] = await pool.execute(
+      `SELECT * FROM vendor_availability 
+       WHERE vendor_id = ?
+       ORDER BY date, day_of_week`,
+      [vendorId]
+    );
+
+    // Get vendor's max daily visits
+    const [[vendor]] = await pool.execute(
+      `SELECT max_daily_visits FROM onboarded_vendors WHERE id = ?`,
+      [vendorId]
+    );
+
+    const maxDaily = vendor?.max_daily_visits || 5;
+
+    // Build availability calendar
+    const bookingMap = {};
+    bookings.forEach(b => {
+      bookingMap[b.scheduled_date] = b.booking_count;
+    });
+
+    res.json({
+      success: true,
+      data: {
+        vendorId,
+        month: currentMonth,
+        year: currentYear,
+        maxDailyVisits: maxDaily,
+        bookings: bookingMap,
+        availability: availability.map(a => ({
+          id: a.id,
+          date: a.date,
+          dayOfWeek: a.day_of_week,
+          type: a.availability_type,
+          timeStart: a.time_slot_start,
+          timeEnd: a.time_slot_end,
+          isRecurring: a.is_recurring,
+          maxVisits: a.max_visits_per_day,
+          currentBookings: a.current_bookings
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching vendor availability:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching vendor availability',
+      error: error.message
+    });
+  }
+});
+
+// Get recommended dates for a service based on vendor availability
+router.get('/recommended-dates', authenticate, canSeeSchedule, async (req, res) => {
+  try {
+    const { vendorId, frequency, startDate, count = 5 } = req.query;
+
+    if (!vendorId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vendor ID is required'
+      });
+    }
+
+    const frequencyDays = {
+      'daily': 1,
+      'weekly': 7,
+      'bi_weekly': 14,
+      'monthly': 30,
+      'every_2_months': 60,
+      'quarterly': 91,
+      'half_yearly': 182,
+      'yearly': 365
+    };
+
+    const intervalDays = frequencyDays[frequency] || 30;
+    const start = startDate ? new Date(startDate) : new Date();
+    const recommendedDates = [];
+
+    // Get vendor's existing bookings
+    const [bookings] = await pool.execute(
+      `SELECT scheduled_date, COUNT(*) as count
+       FROM scheduled_visits
+       WHERE vendor_id = ? AND status NOT IN ('cancelled', 'completed')
+       AND scheduled_date >= CURDATE()
+       GROUP BY scheduled_date`,
+      [vendorId]
+    );
+
+    const bookingMap = {};
+    bookings.forEach(b => {
+      bookingMap[b.scheduled_date.toISOString().split('T')[0]] = b.count;
+    });
+
+    // Get vendor max daily visits
+    const [[vendor]] = await pool.execute(
+      `SELECT max_daily_visits FROM onboarded_vendors WHERE id = ?`,
+      [vendorId]
+    );
+    const maxDaily = vendor?.max_daily_visits || 5;
+
+    let currentDate = new Date(start);
+    let attempts = 0;
+    const maxAttempts = 100;
+
+    while (recommendedDates.length < parseInt(count) && attempts < maxAttempts) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const dayOfWeek = currentDate.getDay();
+
+      // Skip weekends (optional, configurable)
+      if (dayOfWeek !== 0) { // Skip Sundays
+        const currentBookings = bookingMap[dateStr] || 0;
+        if (currentBookings < maxDaily) {
+          recommendedDates.push({
+            date: dateStr,
+            dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek],
+            availableSlots: maxDaily - currentBookings
+          });
+        }
+      }
+
+      currentDate.setDate(currentDate.getDate() + intervalDays);
+      attempts++;
+    }
+
+    res.json({
+      success: true,
+      data: recommendedDates
+    });
+  } catch (error) {
+    console.error('Error fetching recommended dates:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching recommended dates',
       error: error.message
     });
   }

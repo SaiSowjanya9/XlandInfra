@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   Trash2,
   RefreshCw,
+  RefreshCcw,
   BarChart3,
   Clock,
   CheckCircle,
@@ -35,6 +36,9 @@ import {
   Wallet,
   History,
   Calendar,
+  CalendarDays,
+  CalendarClock,
+  Ban,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
@@ -298,7 +302,11 @@ const FPLayout = ({ admin, onLogout, children }) => {
   // Schedules sub-items
   const schedulesSubItems = [
     { path: '/fp/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
-    { path: '/fp/schedules/schedule-service', icon: Calendar, label: 'Schedule Service' },
+    { path: '/fp/schedules/pending', icon: CalendarClock, label: 'Pending Property', subLabel: 'Schedules' },
+    { path: '/fp/schedules/calendar', icon: CalendarDays, label: 'Calendar' },
+    { path: '/fp/schedules', icon: List, label: 'All Schedules' },
+    { path: '/fp/schedules/reschedule-requests', icon: RefreshCcw, label: 'Reschedule Requests' },
+    { path: '/fp/schedules/cancelled', icon: Ban, label: 'Cancelled Schedules' },
   ];
 
   const isWorkOrdersSectionActive = workOrdersSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/fp/work-orders');

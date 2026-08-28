@@ -4276,4 +4276,123 @@ router.get('/work-orders/approaching-deletion/count', authenticate, adminOnly, a
   }
 });
 
+// ==================== SCHEDULING ROUTES ====================
+
+// Get pending properties for scheduling (Admin - all properties)
+// Returns properties that are paid and have vendors assigned but not yet scheduled
+router.get('/schedules/pending-properties', authenticateToken, async (req, res) => {
+  try {
+    const { fpId } = req.query;
+    
+    // Query to get properties with:
+    // 1. Approved/paid estimates (payment_status = 'paid')
+    // 2. Vendor assignments (from property_vendor_assignments)
+    // 3. Not yet scheduled (no active schedule exists)
+    let query = `
+      SELECT DISTINCT
+        op.id,
+        op.property_id as propertyId,
+        op.community_name as propertyName,
+        op.property_type as propertyType,
+        op.zone,
+        op.area_name as areaName,
+        op.created_at as addedOn,
+        op.franchise_partner_id as fpId,
+        fe.id as estimateId,
+        fe.estimate_id as estimateCode,
+        fe.package_name as packageName,
+        fe.total_price as totalPrice,
+        fe.status as estimateStatus,
+        fe.payment_status as paymentStatus,
+        fe.service_rows as serviceRows,
+        pc.name as customerName,
+        pc.phone as customerPhone,
+        pc.email as customerEmail,
+        (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = op.id AND pva.is_active = 1) as assignedVendors,
+        (SELECT COUNT(*) FROM schedules s WHERE s.property_id = op.id AND s.status IN ('active', 'draft')) as existingSchedules
+      FROM onboarded_properties op
+      LEFT JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
+      LEFT JOIN property_contacts pc ON pc.property_id = op.id
+      WHERE op.status = 'active'
+        AND fe.id IS NOT NULL
+        AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
+    `;
+    
+    const params = [];
+    
+    // Optionally filter by FP
+    if (fpId) {
+      query += ` AND op.franchise_partner_id = ?`;
+      params.push(fpId);
+    }
+    
+    query += ` HAVING existingSchedules = 0 ORDER BY op.created_at DESC`;
+
+    const [properties] = await pool.execute(query, params);
+
+    // Parse service rows and calculate service counts
+    const processedProperties = properties.map(p => {
+      let services = [];
+      let totalServices = 0;
+      
+      // Parse service_rows JSON
+      if (p.serviceRows) {
+        try {
+          services = typeof p.serviceRows === 'string' ? JSON.parse(p.serviceRows) : p.serviceRows;
+          totalServices = Array.isArray(services) ? services.length : 0;
+        } catch (e) {
+          console.warn('Error parsing service rows:', e);
+        }
+      }
+      
+      const assignedVendors = p.assignedVendors || 0;
+      const pendingServices = Math.max(0, totalServices - assignedVendors);
+      
+      return {
+        id: p.id,
+        propertyId: p.propertyId,
+        propertyName: p.propertyName,
+        customerName: p.customerName || 'N/A',
+        customerPhone: p.customerPhone || '',
+        customerEmail: p.customerEmail || '',
+        propertyType: p.propertyType || 'Apartment',
+        zone: p.zone || 'Zone A',
+        areaName: p.areaName,
+        packageName: p.packageName || 'Custom Package',
+        packageType: 'AMC',
+        estimateId: p.estimateId,
+        estimateCode: p.estimateCode,
+        totalPrice: p.totalPrice,
+        totalServices: totalServices,
+        assignedVendors: Math.min(assignedVendors, totalServices),
+        pendingServices: pendingServices,
+        paymentStatus: p.paymentStatus === 'paid' ? 'Paid' : 'Partial',
+        addedOn: p.addedOn,
+        fpId: p.fpId,
+        isNew: true,
+        services: services.map(s => ({
+          name: s.service || s.name || s.serviceType,
+          frequency: s.frequencyType || 'Monthly',
+          frequencyCount: s.frequencyCount || 1,
+          visits: s.frequencyCount || 1,
+          vendorAssigned: false,
+          vendorName: null
+        }))
+      };
+    });
+
+    res.json({
+      success: true,
+      data: processedProperties
+    });
+  } catch (error) {
+    console.error('Error fetching pending properties for scheduling:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching pending properties',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

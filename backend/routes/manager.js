@@ -3014,4 +3014,241 @@ router.get('/fp-portal-links', requireManagerScope, async (req, res) => {
   }
 });
 
+// ==================== SCHEDULING ROUTES ====================
+
+// Get pending properties for scheduling
+// Returns properties that are paid and have vendors assigned but not yet scheduled
+router.get('/schedules/pending-properties', requireManagerScope, async (req, res) => {
+  try {
+    const franchisePartnerId = req.franchisePartnerId;
+    
+    // Query to get properties with:
+    // 1. Approved/paid estimates (payment_status = 'paid')
+    // 2. Vendor assignments (from property_vendor_assignments)
+    // 3. Not yet scheduled (no active schedule exists)
+    const query = `
+      SELECT DISTINCT
+        op.id,
+        op.property_id as propertyId,
+        op.community_name as propertyName,
+        op.property_type as propertyType,
+        op.zone,
+        op.area_name as areaName,
+        op.created_at as addedOn,
+        fe.id as estimateId,
+        fe.estimate_id as estimateCode,
+        fe.package_name as packageName,
+        fe.total_price as totalPrice,
+        fe.status as estimateStatus,
+        fe.payment_status as paymentStatus,
+        fe.service_rows as serviceRows,
+        pc.name as customerName,
+        pc.phone as customerPhone,
+        pc.email as customerEmail,
+        (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = op.id AND pva.is_active = 1) as assignedVendors,
+        (SELECT COUNT(*) FROM schedules s WHERE s.property_id = op.id AND s.status IN ('active', 'draft')) as existingSchedules
+      FROM onboarded_properties op
+      LEFT JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
+      LEFT JOIN property_contacts pc ON pc.property_id = op.id
+      WHERE op.status = 'active'
+        AND fe.id IS NOT NULL
+        AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
+        AND op.franchise_partner_id = ?
+      HAVING existingSchedules = 0
+      ORDER BY op.created_at DESC
+    `;
+
+    const [properties] = await pool.execute(query, [franchisePartnerId]);
+
+    // Parse service rows and calculate service counts
+    const processedProperties = properties.map(p => {
+      let services = [];
+      let totalServices = 0;
+      
+      // Parse service_rows JSON
+      if (p.serviceRows) {
+        try {
+          services = typeof p.serviceRows === 'string' ? JSON.parse(p.serviceRows) : p.serviceRows;
+          totalServices = Array.isArray(services) ? services.length : 0;
+        } catch (e) {
+          console.warn('Error parsing service rows:', e);
+        }
+      }
+      
+      const assignedVendors = p.assignedVendors || 0;
+      const pendingServices = Math.max(0, totalServices - assignedVendors);
+      
+      return {
+        id: p.id,
+        propertyId: p.propertyId,
+        propertyName: p.propertyName,
+        customerName: p.customerName || 'N/A',
+        customerPhone: p.customerPhone || '',
+        customerEmail: p.customerEmail || '',
+        propertyType: p.propertyType || 'Apartment',
+        zone: p.zone || 'Zone A',
+        areaName: p.areaName,
+        packageName: p.packageName || 'Custom Package',
+        packageType: 'AMC',
+        estimateId: p.estimateId,
+        estimateCode: p.estimateCode,
+        totalPrice: p.totalPrice,
+        totalServices: totalServices,
+        assignedVendors: Math.min(assignedVendors, totalServices),
+        pendingServices: pendingServices,
+        paymentStatus: p.paymentStatus === 'paid' ? 'Paid' : 'Partial',
+        addedOn: p.addedOn,
+        isNew: true,
+        services: services.map(s => ({
+          name: s.service || s.name || s.serviceType,
+          frequency: s.frequencyType || 'Monthly',
+          frequencyCount: s.frequencyCount || 1,
+          visits: s.frequencyCount || 1,
+          vendorAssigned: false,
+          vendorName: null
+        }))
+      };
+    });
+
+    res.json({
+      success: true,
+      data: processedProperties
+    });
+  } catch (error) {
+    console.error('Error fetching pending properties for scheduling:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching pending properties',
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// ENHANCED SCHEDULING ROUTES (V22)
+// ============================================
+
+const schedulingService = require('../services/schedulingService');
+
+// Get pending schedules count (for badge)
+router.get('/schedules/pending-count', requireManagerScope, async (req, res) => {
+  try {
+    const franchisePartnerId = req.franchisePartnerId;
+    const count = await schedulingService.getPendingSchedulesCount(franchisePartnerId);
+    res.json({ success: true, data: { count } });
+  } catch (error) {
+    console.error('Error fetching pending count:', error);
+    res.status(500).json({ success: false, message: 'Error fetching pending schedules count', error: error.message });
+  }
+});
+
+// Get eligible vendors for a service
+router.get('/schedules/eligible-vendors', requireManagerScope, async (req, res) => {
+  try {
+    const { serviceCategory, zone, propertyId } = req.query;
+    const vendors = await schedulingService.getEligibleVendors({ serviceCategory, zone, propertyId });
+    
+    if (vendors.length === 0) {
+      return res.json({ success: true, data: [], message: 'No Vendor Available' });
+    }
+    
+    res.json({
+      success: true,
+      data: vendors.map(v => ({
+        id: v.id,
+        vendorId: v.vendor_id,
+        vendorName: v.vendor_name,
+        ownerName: v.owner_name,
+        ownerMobile: v.owner_mobile,
+        ownerEmail: v.owner_email,
+        serviceType: v.service_type,
+        zone: v.zone,
+        areaName: v.area_name,
+        ratePerVisit: v.rate_per_visit,
+        rating: v.rating,
+        totalJobsCompleted: v.total_jobs_completed,
+        status: v.status
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching eligible vendors:', error);
+    res.status(500).json({ success: false, message: 'Error fetching eligible vendors', error: error.message });
+  }
+});
+
+// Assign vendor to a service
+router.post('/schedules/assign-vendor', requireManagerScope, async (req, res) => {
+  try {
+    const { propertyId, vendorId, serviceType, serviceName, frequency, frequencyCount, totalVisits, estimateId } = req.body;
+    
+    if (!propertyId || !vendorId || !serviceName) {
+      return res.status(400).json({ success: false, message: 'Property ID, Vendor ID, and Service Name are required' });
+    }
+    
+    const result = await schedulingService.assignVendorToService({
+      propertyId,
+      vendorId,
+      serviceType: serviceType || serviceName,
+      serviceName,
+      frequency,
+      frequencyCount,
+      totalVisits,
+      estimateId,
+      assignedBy: req.user.id,
+      franchisePartnerId: req.franchisePartnerId
+    });
+    
+    res.json({ success: true, message: `Vendor ${result.vendorName} assigned to ${serviceName}`, data: result });
+  } catch (error) {
+    console.error('Error assigning vendor:', error);
+    res.status(500).json({ success: false, message: 'Error assigning vendor to service', error: error.message });
+  }
+});
+
+// Get scheduling notifications
+router.get('/schedules/notifications', requireManagerScope, async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    const notifications = await schedulingService.getUnreadNotifications(
+      req.franchisePartnerId,
+      req.user?.id,
+      'manager',
+      parseInt(limit)
+    );
+    
+    res.json({
+      success: true,
+      data: notifications.map(n => ({
+        id: n.id,
+        notificationId: n.notification_id,
+        type: n.type,
+        title: n.title,
+        message: n.message,
+        referenceType: n.reference_type,
+        referenceId: n.reference_id,
+        referenceData: n.reference_data ? JSON.parse(n.reference_data) : null,
+        actionUrl: n.action_url,
+        actionLabel: n.action_label,
+        priority: n.priority,
+        isRead: n.is_read,
+        createdAt: n.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ success: false, message: 'Error fetching notifications', error: error.message });
+  }
+});
+
+// Mark notification as read
+router.put('/schedules/notifications/:notificationId/read', requireManagerScope, async (req, res) => {
+  try {
+    await schedulingService.markNotificationRead(req.params.notificationId);
+    res.json({ success: true, message: 'Notification marked as read' });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({ success: false, message: 'Error marking notification as read', error: error.message });
+  }
+});
+
 module.exports = router;
