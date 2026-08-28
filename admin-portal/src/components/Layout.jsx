@@ -90,7 +90,6 @@ const Layout = ({ admin, onLogout, children }) => {
     { path: '/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
     { path: '/schedules/pending', icon: CalendarClock, label: 'Pending Property Schedules' },
     { path: '/schedules/calendar', icon: CalendarDays, label: 'Calendar' },
-    { path: '/schedules', icon: List, label: 'All Schedules' },
     { path: '/schedules/reschedule-requests', icon: RefreshCcw, label: 'Reschedule Requests' },
     { path: '/schedules/cancelled', icon: Ban, label: 'Cancelled Schedules' },
   ];
