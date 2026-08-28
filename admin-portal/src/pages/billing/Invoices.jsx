@@ -932,7 +932,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-gray-600">Type:</span>
                   <select
-                    className="px-3 py-1.5 bg-gray-700 text-white rounded-lg text-sm font-medium cursor-pointer"
+                    className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium cursor-pointer focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     defaultValue="all"
                   >
                     <option value="all">All Types</option>
