@@ -13,6 +13,18 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
   const navigate = useNavigate();
   const token = getAuthToken();
   const [currentDate, setCurrentDate] = useState(new Date());
+  
+  // Get base path based on portal type
+  const getBasePath = () => {
+    const pathMap = {
+      'franchise': '/fp',
+      'manager': '/manager',
+      'admin': '/admin',
+      'coordinator': '/coordinator',
+      'supervisor': '/supervisor'
+    };
+    return pathMap[portalType] || '/admin';
+  };
   const [viewMode, setViewMode] = useState('Month');
   const [schedules, setSchedules] = useState([]);
   const [filters, setFilters] = useState({
@@ -355,7 +367,10 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
               <Bell className="w-5 h-5 text-gray-600" />
               <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">12</span>
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <button 
+              onClick={() => navigate(`${getBasePath()}/schedules/pending`)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
               <Plus className="w-4 h-4" />
               New Schedule
             </button>
