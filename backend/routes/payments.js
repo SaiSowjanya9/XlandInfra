@@ -1841,6 +1841,57 @@ router.put('/invoices/:id/restore', authenticate, canEditPayments, async (req, r
   }
 });
 
+// Update invoice status manually (for admin tracking when customer doesn't respond via email)
+router.put('/invoices/:id/status', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const fpId = getFPScope(req);
+    
+    // Validate status (exclude 'draft' - invoices start as sent when created)
+    const validStatuses = ['sent', 'paid', 'partially_paid', 'overdue', 'cancelled'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` 
+      });
+    }
+    
+    // Build query with FP scope if applicable
+    let checkQuery = 'SELECT * FROM invoices WHERE id = ?';
+    const checkParams = [id];
+    if (fpId) {
+      checkQuery += ' AND franchise_partner_id = ?';
+      checkParams.push(fpId);
+    }
+    
+    const [existing] = await pool.execute(checkQuery, checkParams);
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+    
+    // Update status
+    let updateQuery = 'UPDATE invoices SET status = ?, updated_at = NOW() WHERE id = ?';
+    const updateParams = [status, id];
+    
+    if (fpId) {
+      updateQuery = 'UPDATE invoices SET status = ?, updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?';
+      updateParams.push(fpId);
+    }
+    
+    await pool.execute(updateQuery, updateParams);
+    
+    res.json({ 
+      success: true, 
+      message: 'Invoice status updated successfully',
+      newStatus: status
+    });
+  } catch (error) {
+    console.error('Error updating invoice status:', error);
+    res.status(500).json({ success: false, message: 'Error updating invoice status', error: error.message });
+  }
+});
+
 // Delete invoice permanently
 router.delete('/invoices/:id', authenticate, canEditPayments, async (req, res) => {
   try {

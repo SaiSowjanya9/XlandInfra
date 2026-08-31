@@ -72,7 +72,7 @@ const handleDateInput = (value, setter) => {
 
 const STATUS_CONFIG = {
   draft: { label: 'Draft', color: 'bg-gray-100 text-gray-600 border border-gray-300' },
-  sent: { label: 'Sent', color: 'bg-blue-50 text-blue-600 border border-blue-300' },
+  sent: { label: 'Invoice Sent', color: 'bg-blue-50 text-blue-600 border border-blue-300' },
   paid: { label: 'Paid', color: 'bg-green-100 text-green-700' },
   partially_paid: { label: 'Partially Paid', color: 'bg-orange-100 text-orange-700' },
   overdue: { label: 'Overdue', color: 'bg-red-100 text-red-600' },
@@ -145,6 +145,8 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
   const [actionLoading, setActionLoading] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [showStatusUpdate, setShowStatusUpdate] = useState(null); // Invoice being updated
+  const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
   const itemsPerPage = 10;
   
   // Get the current tab's filter value
@@ -207,6 +209,17 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
     }, 300);
     return () => clearTimeout(debounce);
   }, [searchTerm]);
+
+  // Close status dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (showStatusUpdate && !e.target.closest('.status-dropdown-container')) {
+        setShowStatusUpdate(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showStatusUpdate]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -337,6 +350,33 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
       showToast('Failed to restore invoice', 'error');
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  // Update invoice status manually
+  const handleUpdateStatus = async (invoiceId, newStatus) => {
+    try {
+      setStatusUpdateLoading(true);
+      const response = await fetch(`${API_BASE}/api/payments/invoices/${invoiceId}/status`, {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast(`Invoice status updated to ${STATUS_CONFIG[newStatus]?.label || newStatus}`);
+        setShowStatusUpdate(null);
+        fetchInvoices();
+      } else {
+        showToast(result.message || 'Failed to update status', 'error');
+      }
+    } catch (err) {
+      showToast('Failed to update invoice status', 'error');
+    } finally {
+      setStatusUpdateLoading(false);
     }
   };
 
@@ -1120,11 +1160,35 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                               {formatCurrency(invoice.balanceAmount)}
                             </span>
                           </td>
-                          <td className="px-4 py-3.5 text-center">
-                            <div className="flex flex-col items-center gap-1">
-                              <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${STATUS_CONFIG[invoice.status]?.color || 'bg-gray-100 text-gray-600'}`}>
+                          <td className="px-4 py-3.5 text-center status-dropdown-container" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex flex-col items-center gap-1 relative">
+                              <button
+                                onClick={() => setShowStatusUpdate(showStatusUpdate === invoice.id ? null : invoice.id)}
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full cursor-pointer hover:opacity-80 transition-opacity ${STATUS_CONFIG[invoice.status]?.color || 'bg-gray-100 text-gray-600'}`}
+                                title="Click to update status"
+                              >
                                 {STATUS_CONFIG[invoice.status]?.label || invoice.status}
-                              </span>
+                                <ChevronDown className="w-3 h-3" />
+                              </button>
+                              {/* Status Update Dropdown */}
+                              {showStatusUpdate === invoice.id && (
+                                <div className="absolute top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[140px]">
+                                  {Object.entries(STATUS_CONFIG)
+                                    .filter(([key]) => key !== 'draft') // Exclude draft - invoices start as sent
+                                    .map(([key, config]) => (
+                                    <button
+                                      key={key}
+                                      onClick={() => handleUpdateStatus(invoice.id, key)}
+                                      disabled={statusUpdateLoading || invoice.status === key}
+                                      className={`w-full px-3 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-2 ${invoice.status === key ? 'bg-gray-100 font-medium' : ''}`}
+                                    >
+                                      <span className={`w-2 h-2 rounded-full ${config.color.split(' ')[0]}`}></span>
+                                      {config.label}
+                                      {invoice.status === key && <CheckCircle className="w-3 h-3 ml-auto text-green-500" />}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                               {invoice.paymentLinkStatus && invoice.paymentLinkStatus !== 'paid' && (
                                 <span className={`inline-flex items-center gap-1 text-[10px] ${PAYMENT_LINK_STATUS_CONFIG[invoice.paymentLinkStatus]?.color || 'text-gray-500'}`}>
                                   <LinkIcon className="w-3 h-3" />
