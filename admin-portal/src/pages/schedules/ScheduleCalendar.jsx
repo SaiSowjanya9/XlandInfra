@@ -869,10 +869,27 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                 Close
               </button>
               <div className="flex items-center gap-2">
-                <button className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                <button 
+                  onClick={() => {
+                    setSelectedSchedule(null);
+                    navigate(`${getBasePath()}/schedules/reschedule?scheduleId=${selectedSchedule.id || selectedSchedule.scheduleId}`);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                >
                   Reschedule
                 </button>
-                <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+                <button 
+                  onClick={() => {
+                    setSelectedSchedule(null);
+                    const woId = selectedSchedule.workOrderId || selectedSchedule.work_order_id;
+                    if (woId) {
+                      navigate(`${getBasePath()}/work-orders/${woId}`);
+                    } else {
+                      navigate(`${getBasePath()}/work-orders`);
+                    }
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                >
                   View Work Order
                 </button>
               </div>
