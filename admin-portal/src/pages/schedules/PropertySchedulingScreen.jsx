@@ -400,23 +400,11 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               <CheckCircle className="w-4 h-4" />
               Confirm Schedule
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 border border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50">
-              <Sparkles className="w-4 h-4" />
-              Auto Recommend All Services
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Info Banner */}
-      <div className="bg-blue-50 border-b border-blue-100 px-6 py-3">
-        <div className="flex items-center gap-2 text-blue-700 text-sm">
-          <Info className="w-4 h-4" />
-          Select a vendor-recommended date for each service. Future visits will follow the service frequency and can be adjusted later.
-          <a href="#" className="text-blue-600 hover:underline ml-auto">Learn more</a>
-          <HelpCircle className="w-4 h-4" />
-        </div>
-      </div>
+      
 
       {/* Property Info Card */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
@@ -599,16 +587,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               </div>
             </div>
 
-            {/* Selected Info */}
-            {selectedSlot && (
-              <div className="p-4 bg-blue-50 border-t border-blue-100">
-                <div className="flex items-center gap-2 text-blue-700">
-                  <Star className="w-4 h-4" />
-                  <span className="font-medium">{formatDateFull(selectedSlot.date)}, {selectedSlot.time}</span>
-                  <span className="text-sm">- {selectedSlot.status === 'recommended' ? 'Recommended because vendor already has Zone A jobs on this date.' : 'Selected slot'}</span>
-                </div>
-              </div>
-            )}
+            
           </div>
         </div>
 

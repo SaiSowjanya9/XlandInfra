@@ -240,16 +240,6 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
         </div>
       </div>
 
-      {/* Info Banner */}
-      <div className="mx-6 mt-4">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-center gap-3">
-          <Info className="w-5 h-5 text-blue-600" />
-          <p className="text-sm text-blue-800">
-            Changing one visit will not affect future scheduled visits.
-          </p>
-        </div>
-      </div>
-
       <div className="p-6">
         <div className="flex gap-6">
           {/* Main Content */}
@@ -627,21 +617,7 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
                     </button>
                   </div>
 
-                  {/* Original Date Info */}
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-start gap-2">
-                      <Info className="w-4 h-4 text-blue-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-blue-800">
-                          Original Date: {formatDate(selectedSchedule.currentDate)}
-                        </p>
-                        <p className="text-xs text-blue-700 mt-1">
-                          Only this occurrence will be updated.<br />
-                          Future visits remain unchanged.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  
                 </div>
               </div>
             </div>
