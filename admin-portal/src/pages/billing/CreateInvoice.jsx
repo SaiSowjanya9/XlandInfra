@@ -7,6 +7,7 @@ import {
   AlertCircle,
   Trash2,
   Plus,
+  Calendar,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 
@@ -33,6 +34,40 @@ const formatCurrency = (amount) => {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(num);
+};
+
+// Format date to IST (dd/mm/yyyy)
+const formatDateIST = (dateStr) => {
+  if (!dateStr) return '';
+  if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+    const [year, month, day] = dateStr.split('T')[0].split('-');
+    return `${day}/${month}/${year}`;
+  }
+  const date = new Date(dateStr + 'T00:00:00');
+  if (isNaN(date)) return '';
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+// Parse IST date (dd/mm/yyyy) to yyyy-mm-dd
+const parseISTDate = (displayStr) => {
+  if (!displayStr || displayStr.length < 10) return null;
+  const parts = displayStr.split('/');
+  if (parts.length !== 3) return null;
+  const [day, month, year] = parts;
+  if (!day || !month || !year || year.length !== 4) return null;
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+};
+
+// Handle IST date input with auto-formatting
+const handleISTDateInput = (value) => {
+  let cleaned = value.replace(/[^\d/]/g, '');
+  if (cleaned.length === 2 && !cleaned.includes('/')) cleaned += '/';
+  else if (cleaned.length === 5 && cleaned.split('/').length === 2) cleaned += '/';
+  if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
+  return cleaned;
 };
 
 const CreateInvoice = ({ user, portalType = 'admin' }) => {
@@ -63,7 +98,9 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
     return `${year}-${month}-${day}`;
   };
   const [invoiceDate, setInvoiceDate] = useState(getLocalDateString());
+  const [invoiceDateDisplay, setInvoiceDateDisplay] = useState(formatDateIST(getLocalDateString()));
   const [dueDate, setDueDate] = useState('');
+  const [dueDateDisplay, setDueDateDisplay] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -95,7 +132,9 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
       const year = defaultDueDate.getFullYear();
       const month = String(defaultDueDate.getMonth() + 1).padStart(2, '0');
       const day = String(defaultDueDate.getDate()).padStart(2, '0');
-      setDueDate(`${year}-${month}-${day}`);
+      const dateStr = `${year}-${month}-${day}`;
+      setDueDate(dateStr);
+      setDueDateDisplay(formatDateIST(dateStr));
     }
   }, []);
 
@@ -420,22 +459,76 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Invoice Date</label>
-                <input
-                  type="date"
-                  value={invoiceDate}
-                  onChange={(e) => setInvoiceDate(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="dd/mm/yyyy"
+                    value={invoiceDateDisplay}
+                    onChange={(e) => {
+                      const formatted = handleISTDateInput(e.target.value);
+                      setInvoiceDateDisplay(formatted);
+                      const parsed = parseISTDate(formatted);
+                      if (parsed) setInvoiceDate(parsed);
+                    }}
+                    onBlur={() => {
+                      const parsed = parseISTDate(invoiceDateDisplay);
+                      if (parsed) setInvoiceDate(parsed);
+                      else if (invoiceDateDisplay && invoiceDateDisplay.length < 10) setInvoiceDateDisplay(formatDateIST(invoiceDate));
+                    }}
+                    className="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                  <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
+                    <input
+                      type="date"
+                      value={invoiceDate}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setInvoiceDate(e.target.value);
+                          setInvoiceDateDisplay(formatDateIST(e.target.value));
+                        }
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                    <Calendar className="w-4 h-4 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  min={invoiceDate}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="dd/mm/yyyy"
+                    value={dueDateDisplay}
+                    onChange={(e) => {
+                      const formatted = handleISTDateInput(e.target.value);
+                      setDueDateDisplay(formatted);
+                      const parsed = parseISTDate(formatted);
+                      if (parsed) setDueDate(parsed);
+                    }}
+                    onBlur={() => {
+                      const parsed = parseISTDate(dueDateDisplay);
+                      if (parsed) setDueDate(parsed);
+                      else if (dueDateDisplay && dueDateDisplay.length < 10) setDueDateDisplay(formatDateIST(dueDate));
+                    }}
+                    className="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                  <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
+                    <input
+                      type="date"
+                      value={dueDate}
+                      min={invoiceDate}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setDueDate(e.target.value);
+                          setDueDateDisplay(formatDateIST(e.target.value));
+                        }
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                    <Calendar className="w-4 h-4 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Discount (%)</label>
