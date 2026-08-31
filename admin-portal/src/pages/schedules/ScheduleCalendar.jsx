@@ -816,45 +816,45 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
               </div>
 
               {/* Schedule Details */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                  <Clock className="w-5 h-5 text-blue-600 mt-0.5" />
+              <div className="space-y-2 pt-2">
+                <div className="flex items-start gap-2.5 p-2.5 bg-gray-50 rounded-lg">
+                  <Clock className="w-4 h-4 text-blue-600 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-500">Scheduled Time</p>
-                    <p className="font-semibold text-gray-900">{selectedSchedule.time}</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Scheduled Time</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedSchedule.time}</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                  <Building2 className="w-5 h-5 text-purple-600 mt-0.5" />
+                <div className="flex items-start gap-2.5 p-2.5 bg-gray-50 rounded-lg">
+                  <Building2 className="w-4 h-4 text-purple-600 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-500">Property</p>
-                    <p className="font-semibold text-gray-900">{selectedSchedule.property}</p>
-                    <p className="text-sm text-gray-500">{selectedSchedule.propertyType}</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Property</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedSchedule.property}</p>
+                    <p className="text-xs text-gray-500">{selectedSchedule.propertyType}</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                  <MapPin className="w-5 h-5 text-green-600 mt-0.5" />
+                <div className="flex items-start gap-2.5 p-2.5 bg-gray-50 rounded-lg">
+                  <MapPin className="w-4 h-4 text-green-600 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-500">Zone</p>
-                    <p className="font-semibold text-gray-900">{selectedSchedule.zone}</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Zone</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedSchedule.zone}</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                  <Truck className="w-5 h-5 text-orange-600 mt-0.5" />
+                <div className="flex items-start gap-2.5 p-2.5 bg-gray-50 rounded-lg">
+                  <Truck className="w-4 h-4 text-orange-600 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-500">Assigned Vendor</p>
-                    <p className="font-semibold text-gray-900">{selectedSchedule.vendor}</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Assigned Vendor</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedSchedule.vendor}</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                  <Wrench className="w-5 h-5 text-red-600 mt-0.5" />
+                <div className="flex items-start gap-2.5 p-2.5 bg-gray-50 rounded-lg">
+                  <Wrench className="w-4 h-4 text-red-600 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-500">Service Type</p>
-                    <p className="font-semibold text-gray-900">{selectedSchedule.service}</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Service Type</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedSchedule.service}</p>
                   </div>
                 </div>
               </div>

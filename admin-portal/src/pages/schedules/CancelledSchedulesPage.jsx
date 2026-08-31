@@ -411,49 +411,49 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
               </button>
             </div>
             
-            <div className="p-6 space-y-4">
+            <div className="p-5 space-y-3">
               {/* Visit Info */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Visit ID</p>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Visit ID</p>
                   <p className="text-sm font-medium text-gray-900">{selectedSchedule.visit_id}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Service</p>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Service</p>
                   <p className="text-sm font-medium text-gray-900">{selectedSchedule.service}</p>
                 </div>
               </div>
 
               <div>
-                <p className="text-xs text-gray-500 mb-1">Property</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Property</p>
                 <p className="text-sm font-medium text-gray-900">{selectedSchedule.property_name}</p>
               </div>
 
               <div>
-                <p className="text-xs text-gray-500 mb-1">Vendor</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Vendor</p>
                 <p className="text-sm font-medium text-gray-900">{selectedSchedule.vendor}</p>
               </div>
 
               <hr className="border-gray-200" />
 
               {/* Original Schedule */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-xs text-gray-500 mb-2 uppercase font-semibold">Original Schedule</p>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-[10px] text-gray-500 mb-2 uppercase tracking-wide font-semibold">Original Schedule</p>
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    <span>{formatDate(selectedSchedule.scheduled_date)}</span>
+                  <div className="flex items-center gap-2 text-xs">
+                    <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="font-medium">{formatDate(selectedSchedule.scheduled_date)}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="w-4 h-4 text-gray-400" />
-                    <span>{selectedSchedule.scheduled_time}</span>
+                  <div className="flex items-center gap-2 text-xs">
+                    <Clock className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="font-medium">{selectedSchedule.scheduled_time}</span>
                   </div>
                 </div>
               </div>
 
               {/* Cancellation Info */}
-              <div className="bg-red-50 rounded-lg p-4 border border-red-100">
-                <p className="text-xs text-red-600 mb-2 uppercase font-semibold">Cancellation Information</p>
+              <div className="bg-red-50 rounded-lg p-3 border border-red-100">
+                <p className="text-[10px] text-red-600 mb-2 uppercase tracking-wide font-semibold">Cancellation Information</p>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Cancelled On</span>
