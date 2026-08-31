@@ -845,25 +845,6 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
         </div>
       </div>
 
-      {/* Info Banner */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-            <AlertCircle className="w-4 h-4 text-blue-600" />
-          </div>
-          <p className="text-sm text-blue-800">
-            These properties are paid and vendors are assigned. Please schedule the services to begin work orders.
-          </p>
-        </div>
-        <button 
-          onClick={() => setShowHelpModal(true)}
-          className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap"
-        >
-          How Scheduling Works?
-          <HelpCircle className="w-4 h-4" />
-        </button>
-      </div>
-
       {/* Properties Table */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
