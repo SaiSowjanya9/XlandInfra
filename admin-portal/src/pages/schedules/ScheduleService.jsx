@@ -1496,14 +1496,14 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
               )}
               
               <div>
-                <p className="text-sm text-gray-500">Property</p>
-                <p className="font-medium text-gray-900">{selectedSchedule.propertyName || selectedSchedule.property_name || '-'}</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide">Property</p>
+                <p className="text-sm font-medium text-gray-900">{selectedSchedule.propertyName || selectedSchedule.property_name || '-'}</p>
               </div>
               
               {selectedSchedule.description && (
                 <div>
-                  <p className="text-sm text-gray-500">Description</p>
-                  <p className="text-gray-700">{selectedSchedule.description}</p>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide">Description</p>
+                  <p className="text-xs text-gray-700">{selectedSchedule.description}</p>
                 </div>
               )}
               

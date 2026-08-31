@@ -49,6 +49,17 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     return new Date(today.setDate(diff));
   }
 
+  // Helper functions - defined before use
+  const formatDateFull = (date) => {
+    if (!date) return '';
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const formatDateShort = (date) => {
+    if (!date) return '';
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
   useEffect(() => {
     fetchPropertyDetails();
   }, [propertyId]);
@@ -170,14 +181,6 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     setPlannedVisits(visitsWithTime);
   };
 
-  const formatDateFull = (date) => {
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
-  const formatDateShort = (date) => {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
   const getWeekDays = () => {
     const days = [];
     for (let i = 0; i < 7; i++) {
@@ -217,7 +220,42 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     if (recommendedDates.length > 0) {
       const rec = recommendedDates[0];
       setSelectedSlot({ date: rec.date, time: rec.time, status: 'recommended' });
+      // Automatically prepare confirmation with recommended date
+      setTimeout(() => handlePrepareConfirmation(), 100);
     }
+  };
+
+  // Apply recommended date to all monthly visits
+  const handleApplyToAllMonthly = () => {
+    if (!selectedService || !recommendedDates.length) return;
+    
+    const rec = recommendedDates[0];
+    setSelectedSlot({ date: rec.date, time: rec.time, status: 'recommended' });
+    
+    // Update all planned visits with the same day-of-week pattern
+    const updatedVisits = plannedVisits.map((visit, index) => {
+      if (index === 0) {
+        return { ...visit, date: rec.date, dateStr: formatDateFull(rec.date), time: rec.time };
+      }
+      // For subsequent visits, maintain the same day of week
+      const newDate = new Date(rec.date);
+      newDate.setMonth(newDate.getMonth() + index);
+      return { ...visit, date: newDate, dateStr: formatDateFull(newDate), time: rec.time };
+    });
+    
+    setPlannedVisits(updatedVisits);
+    handlePrepareConfirmation();
+  };
+
+  // Show customize dates modal
+  const handleCustomizeDates = () => {
+    if (!selectedService) return;
+    // Set the first slot if not already selected
+    if (!selectedSlot && recommendedDates.length > 0) {
+      const rec = recommendedDates[0];
+      setSelectedSlot({ date: rec.date, time: rec.time, status: 'recommended' });
+    }
+    handlePrepareConfirmation();
   };
 
   // Prepare schedule for confirmation
@@ -407,43 +445,43 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       
 
       {/* Property Info Card */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center gap-8">
-          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-            <Building2 className="w-6 h-6 text-gray-400" />
+      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3">
+        <div className="flex flex-wrap items-center gap-4 sm:gap-6 lg:gap-8">
+          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <Building2 className="w-5 h-5 text-gray-400" />
           </div>
-          <div>
-            <p className="text-xs text-gray-500">Property ID</p>
-            <p className="font-semibold text-blue-600">{property?.propertyId || 'PROP-101'}</p>
+          <div className="min-w-0">
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Property ID</p>
+            <p className="text-sm font-semibold text-blue-600">{property?.propertyId || 'PROP-101'}</p>
           </div>
-          <div>
-            <p className="text-xs text-gray-500">Property Name</p>
-            <p className="font-semibold">{property?.propertyName || 'Green Valley Apartments'}</p>
+          <div className="min-w-0">
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Property Name</p>
+            <p className="text-sm font-semibold text-gray-900">{property?.propertyName || 'Green Valley Apartments'}</p>
           </div>
-          <div>
-            <p className="text-xs text-gray-500">Customer</p>
-            <p className="font-semibold">{property?.customerName || 'Mr. Ramesh Kumar'}</p>
-            <p className="text-xs text-gray-400 flex items-center gap-1"><Phone className="w-3 h-3" /> 98765 43210</p>
+          <div className="min-w-0">
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Customer</p>
+            <p className="text-sm font-semibold text-gray-900">{property?.customerName || 'Mr. Ramesh Kumar'}</p>
+            <p className="text-[10px] text-gray-400 flex items-center gap-1"><Phone className="w-3 h-3" /> 98765 43210</p>
           </div>
-          <div>
-            <p className="text-xs text-gray-500">Property Type</p>
-            <p className="font-semibold flex items-center gap-1"><Building2 className="w-4 h-4 text-gray-400" /> Apartment</p>
+          <div className="min-w-0">
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Property Type</p>
+            <p className="text-sm font-medium text-gray-700 flex items-center gap-1"><Building2 className="w-3.5 h-3.5 text-gray-400" /> Apartment</p>
           </div>
-          <div>
-            <p className="text-xs text-gray-500">Zone</p>
-            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">{property?.zone || 'Zone A'}</span>
+          <div className="min-w-0">
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Zone</p>
+            <span className="inline-flex px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-medium rounded border border-blue-200">{property?.zone || 'Zone A'}</span>
           </div>
-          <div>
-            <p className="text-xs text-gray-500">Package</p>
-            <p className="font-semibold text-purple-700">{property?.packageName || 'Apartment Basic AMC'}</p>
+          <div className="min-w-0">
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Package</p>
+            <p className="text-sm font-medium text-purple-700">{property?.packageName || 'Apartment Basic AMC'}</p>
           </div>
-          <div>
-            <p className="text-xs text-gray-500">Contract Period</p>
-            <p className="font-semibold">01 Sep 2026 - 31 Aug 2027</p>
+          <div className="min-w-0">
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Contract Period</p>
+            <p className="text-sm font-medium text-gray-900">01 Sep 2026 - 31 Aug 2027</p>
           </div>
-          <div>
-            <p className="text-xs text-gray-500">Status</p>
-            <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">Ready to Schedule</span>
+          <div className="min-w-0">
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Status</p>
+            <span className="inline-flex px-2.5 py-0.5 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full border border-blue-200">Ready to Schedule</span>
           </div>
         </div>
       </div>
@@ -628,14 +666,23 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             <div className="mt-4 space-y-2">
               <button 
                 onClick={handleUseRecommended}
-                className="w-full py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
+                disabled={!recommendedDates.length}
+                className="w-full py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                Use Recommended ({recommendedDates[0]?.dateStr})
+                Use Recommended {recommendedDates[0]?.dateStr ? `(${recommendedDates[0].dateStr})` : ''}
               </button>
-              <button className="w-full py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50">
+              <button 
+                onClick={handleApplyToAllMonthly}
+                disabled={!recommendedDates.length || !selectedService}
+                className="w-full py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
                 Apply to All Monthly Visits
               </button>
-              <button className="w-full py-2 text-blue-600 text-sm font-medium hover:underline flex items-center justify-center gap-1">
+              <button 
+                onClick={handleCustomizeDates}
+                disabled={!selectedService}
+                className="w-full py-2 text-blue-600 text-sm font-medium hover:underline flex items-center justify-center gap-1 disabled:text-gray-400 disabled:cursor-not-allowed"
+              >
                 <Edit2 className="w-3 h-3" /> Customize Dates
               </button>
             </div>

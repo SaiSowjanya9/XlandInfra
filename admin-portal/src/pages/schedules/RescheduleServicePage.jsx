@@ -245,17 +245,17 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
           {/* Main Content */}
           <div className="flex-1">
             {/* Property Selector */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
-              <div className="grid grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Property ID</label>
+                  <label className="block text-[10px] text-gray-400 uppercase tracking-wide mb-1">Property ID</label>
                   <select
                     value={selectedProperty?.id || ''}
                     onChange={(e) => {
                       const prop = properties.find(p => p.id === parseInt(e.target.value));
                       setSelectedProperty(prop || null);
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-medium"
                   >
                     <option value="">Select Property</option>
                     <option value="1">PROP-001</option>
@@ -264,20 +264,20 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Property Name</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                  <label className="block text-[10px] text-gray-400 uppercase tracking-wide mb-1">Property Name</label>
+                  <select className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-medium">
                     <option>Green Valley Apartments</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Package</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                  <label className="block text-[10px] text-gray-400 uppercase tracking-wide mb-1">Package</label>
+                  <select className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-medium">
                     <option>Apartment Basic AMC</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Zone</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                  <label className="block text-[10px] text-gray-400 uppercase tracking-wide mb-1">Zone</label>
+                  <select className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-medium">
                     <option>Zone A</option>
                   </select>
                 </div>
