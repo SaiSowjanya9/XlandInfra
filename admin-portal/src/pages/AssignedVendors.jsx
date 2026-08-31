@@ -737,7 +737,7 @@ const AssignedVendors = ({ user }) => {
               {(viewAssignment.manager_name || viewAssignment.manager_mobile) && (
                 <div>
                   <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Manager / Primary Contact</h3>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     <div>
                       <p className="text-xs text-gray-400">Name</p>
                       <p className="text-sm font-medium text-gray-900">{viewAssignment.manager_name || '-'}</p>
@@ -758,7 +758,7 @@ const AssignedVendors = ({ user }) => {
               {(viewAssignment.poc_name || viewAssignment.poc_mobile) && (
                 <div>
                   <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Point of Contact</h3>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     <div>
                       <p className="text-xs text-gray-400">Name</p>
                       <p className="text-sm font-medium text-gray-900">{viewAssignment.poc_name || '-'}</p>
@@ -786,7 +786,7 @@ const AssignedVendors = ({ user }) => {
                     </div>
                     <span className="text-xs font-mono bg-blue-100 text-blue-700 px-2 py-1 rounded">{viewAssignment.property_code || viewAssignment.propertyCode || viewAssignment.property_id || viewAssignment.propertyId || '-'}</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-3 mt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
                     <div>
                       <p className="text-xs text-gray-400">Property ID</p>
                       <p className="text-sm font-mono text-gray-700">{viewAssignment.property_code || viewAssignment.propertyCode || viewAssignment.property_id || viewAssignment.propertyId || '-'}</p>
@@ -804,7 +804,7 @@ const AssignedVendors = ({ user }) => {
               </div>
 
               {/* Assignment Info */}
-              <div className="grid grid-cols-3 gap-4 pt-3 border-t border-gray-100">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pt-3 border-t border-gray-100">
                 <div>
                   <p className="text-xs text-gray-400">Assigned Date</p>
                   <p className="text-sm font-medium text-gray-900">{formatDate(viewAssignment.assigned_at || viewAssignment.assignedDate)}</p>

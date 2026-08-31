@@ -713,7 +713,7 @@ const FPVendors = ({ user }) => {
               {/* Service & Location */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Service & Location</h3>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Service Type</label>
                     <select name="serviceType" defaultValue={editVendor.service_type || editVendor.serviceType} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none">
@@ -775,7 +775,7 @@ const FPVendors = ({ user }) => {
               {/* Manager Details */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Manager / Primary Contact</h3>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
                     <input name="managerName" defaultValue={editVendor.manager_name || editVendor.managerName} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
@@ -794,7 +794,7 @@ const FPVendors = ({ user }) => {
               {/* POC Details */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Point of Contact</h3>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
                     <input name="pocName" defaultValue={editVendor.poc_name || editVendor.pocName} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
