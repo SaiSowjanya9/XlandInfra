@@ -300,31 +300,33 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
                 <h3 className="font-semibold text-gray-900">Existing Schedule for Property</h3>
               </div>
 
-              {/* Filters */}
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search visits by service or vendor..."
-                      className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm"
-                    />
+              {/* Filters - Responsive */}
+              <div className="px-3 sm:px-4 py-3 border-b border-gray-100">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <div className="flex-1 min-w-[180px] max-w-[300px]">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search visits..."
+                        className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
                   </div>
+                  <select className="min-w-[110px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option>All Services</option>
+                  </select>
+                  <select className="min-w-[100px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option>All Status</option>
+                  </select>
+                  <select className="min-w-[105px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option>All Vendors</option>
+                  </select>
+                  <button className="px-3 py-2 border border-gray-300 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50 flex-shrink-0">
+                    <Filter className="w-4 h-4" />
+                    <span className="hidden sm:inline">Filters</span>
+                  </button>
                 </div>
-                <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                  <option>All Services</option>
-                </select>
-                <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                  <option>All Status</option>
-                </select>
-                <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                  <option>All Vendors</option>
-                </select>
-                <button className="px-3 py-2 border border-gray-300 rounded-lg text-sm flex items-center gap-2">
-                  <Filter className="w-4 h-4" />
-                  Filters
-                </button>
               </div>
 
               {/* Table */}

@@ -378,15 +378,15 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
         </div>
       </div>
 
-      {/* Filters Bar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3">
-        <div className="flex items-center justify-between">
+      {/* Filters Bar - Responsive */}
+      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           {/* Left: Filters */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <select 
               value={filters.service}
               onChange={(e) => setFilters({...filters, service: e.target.value})}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white min-w-[140px]"
+              className="min-w-[120px] max-w-[160px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
             >
               <option value="All Services">All Services</option>
               {serviceOptions.map(s => <option key={s} value={s}>{s}</option>)}
@@ -395,7 +395,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
             <select 
               value={filters.vendor}
               onChange={(e) => setFilters({...filters, vendor: e.target.value})}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white min-w-[140px]"
+              className="min-w-[110px] max-w-[160px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
             >
               <option value="All Vendors">All Vendors</option>
               {vendors.map(v => <option key={v.vendorId || v.id} value={v.ownerName || v.companyName}>{v.ownerName || v.companyName}</option>)}
@@ -404,7 +404,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
             <select 
               value={filters.zone}
               onChange={(e) => setFilters({...filters, zone: e.target.value})}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white min-w-[120px]"
+              className="min-w-[100px] max-w-[140px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
             >
               <option value="All Zones">All Zones</option>
               {zones.map(z => <option key={z} value={z}>{z}</option>)}
@@ -413,7 +413,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
             <select 
               value={filters.propertyType}
               onChange={(e) => setFilters({...filters, propertyType: e.target.value})}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white min-w-[150px]"
+              className="min-w-[130px] max-w-[170px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
             >
               <option value="All Property Types">All Property Types</option>
               {propertyTypeOptions.map(pt => <option key={pt} value={pt}>{pt}</option>)}
@@ -421,19 +421,19 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
             
             <button 
               onClick={() => setFilters({ service: 'All Services', vendor: 'All Vendors', zone: 'All Zones', propertyType: 'All Property Types' })}
-              className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
             >
               Clear
             </button>
           </div>
           
           {/* Right: View Mode Tabs */}
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 self-start lg:self-auto flex-shrink-0">
             {['Month', 'Week', 'Day', 'Agenda'].map(mode => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                className={`px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                   viewMode === mode ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'
                 }`}
               >

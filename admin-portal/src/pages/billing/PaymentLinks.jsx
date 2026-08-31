@@ -299,8 +299,8 @@ const PaymentLinks = ({ portalType = 'admin' }) => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-5 gap-4">
+      {/* Stats Cards - Responsive */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {[
           { label: 'Total Links', value: counts.all, icon: Link2, color: 'blue' },
           { label: 'Created', value: counts.created, icon: Clock, color: 'gray' },
@@ -308,36 +308,36 @@ const PaymentLinks = ({ portalType = 'admin' }) => {
           { label: 'Paid', value: counts.paid, icon: CheckCircle, color: 'green' },
           { label: 'Expired', value: counts.expired, icon: XCircle, color: 'red' }
         ].map((stat, idx) => (
-          <div key={idx} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-500 font-medium">{stat.label}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+          <div key={idx} className="bg-white rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm min-h-[70px] sm:min-h-[80px]">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">{stat.label}</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-0.5">{stat.value}</p>
               </div>
-              <div className={`w-10 h-10 rounded-lg bg-${stat.color}-50 flex items-center justify-center`}>
-                <stat.icon className={`w-5 h-5 text-${stat.color}-600`} />
+              <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-${stat.color}-50 flex items-center justify-center flex-shrink-0`}>
+                <stat.icon className={`w-4 h-4 sm:w-5 sm:h-5 text-${stat.color}-600`} />
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Tabs & Search */}
+      {/* Tabs & Search - Responsive */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <div className="flex gap-2">
+        <div className="p-3 sm:p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => { setActiveTab(tab.id); setCurrentPage(1); }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? 'bg-blue-50 text-blue-700'
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
                 {tab.label}
-                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                <span className={`ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs ${
                   activeTab === tab.id ? 'bg-blue-100' : 'bg-gray-100'
                 }`}>
                   {tab.count}
@@ -345,14 +345,14 @@ const PaymentLinks = ({ portalType = 'admin' }) => {
               </button>
             ))}
           </div>
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by invoice or customer..."
+              placeholder="Search..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-72 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-full sm:w-56 lg:w-72 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>

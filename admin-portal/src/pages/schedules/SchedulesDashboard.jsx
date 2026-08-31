@@ -77,6 +77,10 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   const [rescheduleFilter, setRescheduleFilter] = useState('all');
   const [overdueFilter, setOverdueFilter] = useState('all');
   const [pendingFilter, setPendingFilter] = useState('all');
+  
+  // UI states for header buttons
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
 
   // Period filter helper function
   const applyPeriodFilter = (data, period) => {
@@ -325,82 +329,230 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   }
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 bg-gray-50 min-h-screen">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Scheduling Dashboard</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Scheduling Dashboard</h1>
           <p className="text-sm text-gray-500">Home &gt; Scheduling &gt; Dashboard</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <DateRangeFilter
             startDate={startDate}
             endDate={endDate}
             onDateChange={(s, e) => { setStartDate(s); setEndDate(e); }}
             onRefresh={fetchSchedules}
           />
-          <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
-            <Filter className="w-5 h-5 text-gray-600" />
-          </button>
-          <button className="relative p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
-            <Bell className="w-5 h-5 text-gray-600" />
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
-          </button>
+          {/* Filter Button */}
+          <div className="relative">
+            <button 
+              onClick={() => { setShowFilterPanel(!showFilterPanel); setShowNotifications(false); }}
+              className={`p-2 border rounded-lg hover:bg-gray-50 bg-white ${showFilterPanel ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+            >
+              <Filter className={`w-5 h-5 ${showFilterPanel ? 'text-blue-600' : 'text-gray-600'}`} />
+            </button>
+            {/* Filter Dropdown */}
+            {showFilterPanel && (
+              <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl border border-gray-200 shadow-xl z-50 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-gray-900">Filters</h4>
+                  <button onClick={() => setShowFilterPanel(false)} className="text-gray-400 hover:text-gray-600">&times;</button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Status</label>
+                    <select 
+                      value={statusFilter} 
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="scheduled">Scheduled</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Priority</label>
+                    <select 
+                      value={priorityFilter} 
+                      onChange={(e) => setPriorityFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="all">All Priority</option>
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Property Type</label>
+                    <select 
+                      value={propertyTypeFilter} 
+                      onChange={(e) => setPropertyTypeFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="all">All Types</option>
+                      <option value="Apartment">Apartment</option>
+                      <option value="Villa">Villa</option>
+                      <option value="Commercial">Commercial</option>
+                      <option value="Gated Community">Gated Community</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <button 
+                      onClick={() => { setStatusFilter('all'); setPriorityFilter('all'); setPropertyTypeFilter('all'); }}
+                      className="flex-1 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    >
+                      Reset
+                    </button>
+                    <button 
+                      onClick={() => { setShowFilterPanel(false); fetchSchedules(); }}
+                      className="flex-1 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Notifications Button */}
+          <div className="relative">
+            <button 
+              onClick={() => { setShowNotifications(!showNotifications); setShowFilterPanel(false); }}
+              className={`relative p-2 border rounded-lg hover:bg-gray-50 bg-white ${showNotifications ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+            >
+              <Bell className={`w-5 h-5 ${showNotifications ? 'text-blue-600' : 'text-gray-600'}`} />
+              {(overdueSchedules.length + rescheduleRequests.length) > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {overdueSchedules.length + rescheduleRequests.length}
+                </span>
+              )}
+            </button>
+            {/* Notifications Dropdown */}
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl border border-gray-200 shadow-xl z-50 max-h-96 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                  <h4 className="font-semibold text-gray-900">Notifications</h4>
+                  <button onClick={() => setShowNotifications(false)} className="text-gray-400 hover:text-gray-600">&times;</button>
+                </div>
+                <div className="overflow-y-auto max-h-72">
+                  {overdueSchedules.length === 0 && rescheduleRequests.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                      No notifications
+                    </div>
+                  ) : (
+                    <>
+                      {overdueSchedules.slice(0, 3).map((s, i) => (
+                        <div key={`overdue-${i}`} className="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`${getBasePath()}/schedules/all`)}>
+                          <div className="flex items-start gap-3">
+                            <div className="p-1.5 bg-red-100 rounded-lg mt-0.5">
+                              <AlertTriangle className="w-4 h-4 text-red-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">{s.propertyName || s.property_name || 'Property'}</p>
+                              <p className="text-xs text-red-600">Overdue: {s.serviceName || s.service_name || 'Service'}</p>
+                              <p className="text-xs text-gray-400">{formatDate(s.scheduled_date)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {rescheduleRequests.slice(0, 3).map((s, i) => (
+                        <div key={`reschedule-${i}`} className="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`${getBasePath()}/schedules/reschedule-requests`)}>
+                          <div className="flex items-start gap-3">
+                            <div className="p-1.5 bg-pink-100 rounded-lg mt-0.5">
+                              <RotateCcw className="w-4 h-4 text-pink-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">{s.propertyName || s.property_name || 'Property'}</p>
+                              <p className="text-xs text-pink-600">Reschedule Request</p>
+                              <p className="text-xs text-gray-400">{s.serviceName || s.service_name || 'Service'}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+                {(overdueSchedules.length > 3 || rescheduleRequests.length > 3) && (
+                  <div className="px-4 py-2 border-t border-gray-100 bg-gray-50">
+                    <button 
+                      onClick={() => navigate(`${getBasePath()}/schedules/all`)}
+                      className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      View All Notifications
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <button
             onClick={() => navigate(`${getBasePath()}/schedules/pending`)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"
           >
             <Plus className="w-4 h-4" />
-            New Schedule
+            <span className="hidden sm:inline">New Schedule</span>
+            <span className="sm:hidden">New</span>
             <ChevronDown className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-6 gap-4">
+      {/* Stat Cards - Responsive grid with consistent heights */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         {[
-          { label: "Today's Schedules", value: todaysSchedules.length, icon: CalendarDays, color: '#3B82F6', bg: '#DBEAFE', link: 'View Today', path: '/schedules/calendar' },
-          { label: 'Upcoming (7 Days)', value: upcoming7Days.length, icon: Clock, color: '#F59E0B', bg: '#FEF3C7', link: 'View Upcoming', path: '/schedules/calendar' },
-          { label: 'Pending Property Schedules', value: pendingProperties.length, icon: Building2, color: '#8B5CF6', bg: '#EDE9FE', link: 'View Pending', path: '/schedules/pending' },
-          { label: 'Reschedule Requests', value: rescheduleRequests.length, icon: RotateCcw, color: '#EC4899', bg: '#FCE7F3', link: 'View Requests', path: '/schedules/reschedule-requests' },
-          { label: 'Cancelled Schedules', value: cancelledSchedules.length, icon: XCircle, color: '#EF4444', bg: '#FEE2E2', link: 'View Cancelled', path: '/schedules/cancelled' },
-          { label: 'Overdue Schedules', value: overdueSchedules.length, icon: AlertTriangle, color: '#DC2626', bg: '#FEE2E2', link: 'View Overdue', path: '/schedules/all' }
+          { label: "Today's", sublabel: "Schedules", value: todaysSchedules.length, icon: CalendarDays, color: '#3B82F6', bg: '#DBEAFE', link: 'View Today', path: '/schedules/calendar' },
+          { label: 'Upcoming', sublabel: '(7 Days)', value: upcoming7Days.length, icon: Clock, color: '#F59E0B', bg: '#FEF3C7', link: 'View Upcoming', path: '/schedules/calendar' },
+          { label: 'Pending', sublabel: 'Schedules', value: pendingProperties.length, icon: Building2, color: '#8B5CF6', bg: '#EDE9FE', link: 'View Pending', path: '/schedules/pending' },
+          { label: 'Reschedule', sublabel: 'Requests', value: rescheduleRequests.length, icon: RotateCcw, color: '#EC4899', bg: '#FCE7F3', link: 'View Requests', path: '/schedules/reschedule-requests' },
+          { label: 'Cancelled', sublabel: 'Schedules', value: cancelledSchedules.length, icon: XCircle, color: '#EF4444', bg: '#FEE2E2', link: 'View Cancelled', path: '/schedules/cancelled' },
+          { label: 'Overdue', sublabel: 'Schedules', value: overdueSchedules.length, icon: AlertTriangle, color: '#DC2626', bg: '#FEE2E2', link: 'View Overdue', path: '/schedules/all' }
         ].map((card, i) => (
-          <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: card.bg }}>
-                <card.icon className="w-5 h-5" style={{ color: card.color }} />
+          <div key={i} className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-shadow flex flex-col min-h-[120px] sm:min-h-[140px]">
+            <div className="flex items-start gap-2 mb-auto">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: card.bg }}>
+                <card.icon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: card.color }} />
               </div>
-              <p className="text-sm text-gray-600 font-medium">{card.label}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-gray-700 font-semibold leading-tight truncate">{card.label}</p>
+                <p className="text-[10px] sm:text-xs text-gray-500 leading-tight truncate">{card.sublabel}</p>
+              </div>
             </div>
-            <p className="text-3xl font-bold text-gray-900 mb-2">{card.value}</p>
-            <button 
-              onClick={() => navigate(`${getBasePath()}${card.path}`)}
-              className="text-sm text-blue-600 hover:underline font-medium"
-            >
-              {card.link}
-            </button>
+            <div className="mt-2">
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900">{card.value}</p>
+              <button 
+                onClick={() => navigate(`${getBasePath()}${card.path}`)}
+                className="text-xs text-blue-600 hover:underline font-medium mt-1"
+              >
+                {card.link}
+              </button>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-4 gap-4">
+      {/* Charts Row - Responsive grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         {/* Status Donut */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Schedules by Status</h3>
             <PeriodFilter value={statusFilter} onChange={setStatusFilter} />
           </div>
-          <div className="flex items-center gap-4">
-            <DonutChart data={statusData} size={120} strokeWidth={20} centerValue={statusTotal} centerLabel="Total" />
-            <div className="space-y-1.5 text-xs">
+          <div className="flex items-center justify-center gap-4 sm:gap-6">
+            <div className="flex-shrink-0">
+              <DonutChart data={statusData} size={100} strokeWidth={18} centerValue={statusTotal} centerLabel="Total" />
+            </div>
+            <div className="space-y-1.5 text-xs min-w-0">
               {statusData.map((d, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                  <span className="text-gray-600">{d.name}</span>
-                  <span className="font-medium text-gray-900">{d.value}</span>
+                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+                  <span className="text-gray-600 truncate">{d.name}</span>
+                  <span className="font-medium text-gray-900 flex-shrink-0">{d.value}</span>
                 </div>
               ))}
             </div>
@@ -413,14 +565,14 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             <h3 className="text-sm font-semibold text-gray-900">Schedules by Service</h3>
             <PeriodFilter value={serviceFilter} onChange={setServiceFilter} />
           </div>
-          <div className="space-y-2">
-            {serviceData.length > 0 ? serviceData.slice(0, 6).map((d, i) => (
+          <div className="space-y-2.5">
+            {serviceData.length > 0 ? serviceData.slice(0, 5).map((d, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className="w-20 text-xs text-gray-600 truncate">{d.name}</span>
-                <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${(d.value / Math.max(...serviceData.map(x => x.value), 1)) * 100}%`, backgroundColor: d.color }} />
+                <span className="w-16 sm:w-20 text-xs text-gray-600 truncate flex-shrink-0">{d.name}</span>
+                <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden min-w-0">
+                  <div className="h-full rounded-full transition-all" style={{ width: `${(d.value / Math.max(...serviceData.map(x => x.value), 1)) * 100}%`, backgroundColor: d.color }} />
                 </div>
-                <span className="text-xs font-medium w-6 text-right">{d.value}</span>
+                <span className="text-xs font-medium w-5 text-right flex-shrink-0">{d.value}</span>
               </div>
             )) : (
               <p className="text-xs text-gray-400 text-center py-4">No data</p>
@@ -434,14 +586,16 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             <h3 className="text-sm font-semibold text-gray-900">Schedules by Priority</h3>
             <PeriodFilter value={priorityFilter} onChange={setPriorityFilter} />
           </div>
-          <div className="flex items-center gap-4">
-            <DonutChart data={priorityData} size={120} strokeWidth={20} centerValue={priorityTotal} centerLabel="Total" />
-            <div className="space-y-1.5 text-xs">
+          <div className="flex items-center justify-center gap-4 sm:gap-6">
+            <div className="flex-shrink-0">
+              <DonutChart data={priorityData} size={100} strokeWidth={18} centerValue={priorityTotal} centerLabel="Total" />
+            </div>
+            <div className="space-y-2 text-xs min-w-0">
               {priorityData.map((d, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
+                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
                   <span className="text-gray-600">{d.name}</span>
-                  <span className="font-medium text-gray-900">{d.value} ({priorityTotal ? Math.round((d.value / priorityTotal) * 100) : 0}%)</span>
+                  <span className="font-medium text-gray-900 whitespace-nowrap">{d.value} ({priorityTotal ? Math.round((d.value / priorityTotal) * 100) : 0}%)</span>
                 </div>
               ))}
             </div>
@@ -454,14 +608,16 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             <h3 className="text-sm font-semibold text-gray-900">Schedules by Property Type</h3>
             <PeriodFilter value={propertyTypeFilter} onChange={setPropertyTypeFilter} />
           </div>
-          <div className="flex items-center gap-4">
-            <DonutChart data={propertyTypeData} size={120} strokeWidth={20} centerValue={propertyTypeTotal} centerLabel="Total" />
-            <div className="space-y-1.5 text-xs">
+          <div className="flex items-center justify-center gap-4 sm:gap-6">
+            <div className="flex-shrink-0">
+              <DonutChart data={propertyTypeData} size={100} strokeWidth={18} centerValue={propertyTypeTotal} centerLabel="Total" />
+            </div>
+            <div className="space-y-2 text-xs min-w-0">
               {propertyTypeData.slice(0, 4).map((d, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                  <span className="text-gray-600">{d.name}</span>
-                  <span className="font-medium text-gray-900">{d.value} ({propertyTypeTotal ? Math.round((d.value / propertyTypeTotal) * 100) : 0}%)</span>
+                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+                  <span className="text-gray-600 truncate max-w-[70px]">{d.name}</span>
+                  <span className="font-medium text-gray-900 whitespace-nowrap flex-shrink-0">{d.value} ({propertyTypeTotal ? Math.round((d.value / propertyTypeTotal) * 100) : 0}%)</span>
                 </div>
               ))}
             </div>
@@ -469,23 +625,23 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
       </div>
 
-      {/* Schedule Trend + Tables Row */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Schedule Trend + Tables Row - Responsive */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
         {/* Schedule Trend */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Schedule Trend</h3>
             <PeriodFilter value={trendFilter} onChange={setTrendFilter} />
           </div>
-          <div className="flex items-center gap-4 text-xs mb-2">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" /> Created</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> Completed</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Cancelled</span>
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs mb-3">
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Created</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500" /> Completed</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Cancelled</span>
           </div>
           <ResponsiveContainer width="100%" height={160}>
             <LineChart data={trendData}>
               <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} width={30} />
               <Tooltip />
               <Line type="monotone" dataKey="created" stroke="#3B82F6" strokeWidth={2} dot={{ r: 3 }} />
               <Line type="monotone" dataKey="completed" stroke="#10B981" strokeWidth={2} dot={{ r: 3 }} />
@@ -496,17 +652,17 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* Upcoming Schedules */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Upcoming Schedules</h3>
             <div className="flex items-center gap-2">
               <PeriodFilter value={upcomingFilter} onChange={setUpcomingFilter} />
-              <button onClick={() => navigate(`${getBasePath()}/schedules/calendar`)} className="text-xs text-blue-600 hover:underline">View All</button>
+              <button onClick={() => navigate(`${getBasePath()}/schedules/calendar`)} className="text-xs text-blue-600 hover:underline whitespace-nowrap">View All</button>
             </div>
           </div>
-          <div className="space-y-2 max-h-44 overflow-y-auto">
+          <div className="space-y-2 max-h-48 overflow-y-auto">
             {upcomingFilteredData.slice(0, 4).map((s, i) => (
-              <div key={i} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
-                <div className="text-xs text-gray-500 w-16">{formatTime(s.startDate || s.start_date) || '09:00 AM'}</div>
+              <div key={i} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg">
+                <div className="text-xs text-gray-500 w-16 flex-shrink-0">{formatTime(s.startDate || s.start_date) || '09:00 AM'}</div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{s.title}</p>
                   <p className="text-xs text-gray-500 truncate">{s.property_name || s.propertyName}</p>
@@ -515,165 +671,173 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
               </div>
             ))}
             {upcomingFilteredData.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-4">No upcoming schedules</p>
+              <p className="text-sm text-gray-400 text-center py-6">No upcoming schedules</p>
             )}
           </div>
         </div>
 
         {/* Pending Property Schedules */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Pending Property Schedules</h3>
             <div className="flex items-center gap-2">
               <PeriodFilter value={pendingFilter} onChange={setPendingFilter} />
-              <button onClick={() => navigate(`${getBasePath()}/schedules/pending`)} className="text-xs text-blue-600 hover:underline">View All</button>
+              <button onClick={() => navigate(`${getBasePath()}/schedules/pending`)} className="text-xs text-blue-600 hover:underline whitespace-nowrap">View All</button>
             </div>
           </div>
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-left text-gray-500">
-                <th className="pb-2">Property ID / Name</th>
-                <th className="pb-2">Services</th>
-                <th className="pb-2">Vendors</th>
-                <th className="pb-2">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {pendingFilteredData.slice(0, 5).map((p, i) => (
-                <tr key={i}>
-                  <td className="py-2">
-                    <p className="font-medium text-gray-900">{p.property_id || `PROP-${100 + i}`}</p>
-                    <p className="text-gray-500 truncate max-w-[100px]">{p.property_name}</p>
-                  </td>
-                  <td className="py-2">{p.total_services || 0}</td>
-                  <td className="py-2">{p.vendors_assigned || 0}/{p.total_services || 0}</td>
-                  <td className="py-2">
-                    <button onClick={() => navigate(`${getBasePath()}/schedules/pending`)} className="px-2 py-1 bg-blue-50 text-blue-600 rounded text-xs hover:bg-blue-100">Schedule</button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs min-w-[280px]">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-gray-100">
+                  <th className="pb-2 pr-2">Property ID / Name</th>
+                  <th className="pb-2 px-2 text-center">Services</th>
+                  <th className="pb-2 px-2 text-center">Vendors</th>
+                  <th className="pb-2 pl-2 text-right">Action</th>
                 </tr>
-              ))}
-              {pendingFilteredData.length === 0 && (
-                <tr><td colSpan="4" className="py-4 text-center text-gray-400">No pending properties</td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {pendingFilteredData.slice(0, 4).map((p, i) => (
+                  <tr key={i}>
+                    <td className="py-2 pr-2">
+                      <p className="font-medium text-gray-900">{p.property_id || `PROP-${100 + i}`}</p>
+                      <p className="text-gray-500 truncate max-w-[120px]">{p.property_name}</p>
+                    </td>
+                    <td className="py-2 px-2 text-center">{p.total_services || 0}</td>
+                    <td className="py-2 px-2 text-center">{p.vendors_assigned || 0}/{p.total_services || 0}</td>
+                    <td className="py-2 pl-2 text-right">
+                      <button onClick={() => navigate(`${getBasePath()}/schedules/pending`)} className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded text-xs hover:bg-blue-100 font-medium">Schedule</button>
+                    </td>
+                  </tr>
+                ))}
+                {pendingFilteredData.length === 0 && (
+                  <tr><td colSpan="4" className="py-6 text-center text-gray-400">No pending properties</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      {/* Bottom Tables Row */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Bottom Tables Row - Responsive */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
         {/* Recently Created */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-gray-900">Recently Created Schedules</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-900">Recently Created</h3>
             <div className="flex items-center gap-2">
               <PeriodFilter value={recentFilter} onChange={setRecentFilter} />
-              <button className="text-xs text-blue-600 hover:underline">View All</button>
+              <button className="text-xs text-blue-600 hover:underline whitespace-nowrap">View All</button>
             </div>
           </div>
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-left text-gray-500">
-                <th className="pb-2">Schedule ID</th>
-                <th className="pb-2">Property</th>
-                <th className="pb-2">Service</th>
-                <th className="pb-2">Status</th>
-                <th className="pb-2">Priority</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {recentSchedules.map((s, i) => (
-                <tr key={i}>
-                  <td className="py-2 font-medium text-gray-900">SCH-{2100 + i}</td>
-                  <td className="py-2 text-gray-600 truncate max-w-[80px]">{s.property_name || s.propertyName}</td>
-                  <td className="py-2 text-gray-600">{s.service || 'General'}</td>
-                  <td className="py-2"><StatusBadge status={s.status} /></td>
-                  <td className="py-2"><PriorityBadge priority={s.priority} /></td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs min-w-[320px]">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-gray-100">
+                  <th className="pb-2 pr-2">Schedule ID</th>
+                  <th className="pb-2 px-2">Property</th>
+                  <th className="pb-2 px-2">Service</th>
+                  <th className="pb-2 px-2">Status</th>
+                  <th className="pb-2 pl-2">Priority</th>
                 </tr>
-              ))}
-              {recentSchedules.length === 0 && (
-                <tr><td colSpan="5" className="py-4 text-center text-gray-400">No recent schedules</td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {recentSchedules.map((s, i) => (
+                  <tr key={i}>
+                    <td className="py-2.5 pr-2 font-medium text-gray-900 whitespace-nowrap">SCH-{2100 + i}</td>
+                    <td className="py-2.5 px-2 text-gray-600 truncate max-w-[80px]">{s.property_name || s.propertyName}</td>
+                    <td className="py-2.5 px-2 text-gray-600 whitespace-nowrap">{s.service || 'General'}</td>
+                    <td className="py-2.5 px-2"><StatusBadge status={s.status} /></td>
+                    <td className="py-2.5 pl-2"><PriorityBadge priority={s.priority} /></td>
+                  </tr>
+                ))}
+                {recentSchedules.length === 0 && (
+                  <tr><td colSpan="5" className="py-6 text-center text-gray-400">No recent schedules</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Reschedule Requests */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Reschedule Requests</h3>
             <div className="flex items-center gap-2">
               <PeriodFilter value={rescheduleFilter} onChange={setRescheduleFilter} />
-              <button onClick={() => navigate(`${getBasePath()}/schedules/reschedule-requests`)} className="text-xs text-blue-600 hover:underline">View All</button>
+              <button onClick={() => navigate(`${getBasePath()}/schedules/reschedule-requests`)} className="text-xs text-blue-600 hover:underline whitespace-nowrap">View All</button>
             </div>
           </div>
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-left text-gray-500">
-                <th className="pb-2">REQ ID</th>
-                <th className="pb-2">Property</th>
-                <th className="pb-2">Requested On</th>
-                <th className="pb-2">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {rescheduleFilteredData.slice(0, 4).map((s, i) => (
-                <tr key={i}>
-                  <td className="py-2 font-medium text-gray-900">REQ-{100 + i}</td>
-                  <td className="py-2">
-                    <p className="text-gray-900 truncate max-w-[100px]">{s.property_name || s.propertyName}</p>
-                    <p className="text-gray-500">{s.service || 'Service'}</p>
-                  </td>
-                  <td className="py-2 text-gray-600">{formatDate(s.updatedAt || s.updated_at)}</td>
-                  <td className="py-2"><span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs">Pending</span></td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs min-w-[280px]">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-gray-100">
+                  <th className="pb-2 pr-2">REQ ID</th>
+                  <th className="pb-2 px-2">Property</th>
+                  <th className="pb-2 px-2">Requested On</th>
+                  <th className="pb-2 pl-2">Status</th>
                 </tr>
-              ))}
-              {rescheduleFilteredData.length === 0 && (
-                <tr><td colSpan="4" className="py-4 text-center text-gray-400">No reschedule requests</td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {rescheduleFilteredData.slice(0, 4).map((s, i) => (
+                  <tr key={i}>
+                    <td className="py-2.5 pr-2 font-medium text-gray-900 whitespace-nowrap">REQ-{100 + i}</td>
+                    <td className="py-2.5 px-2">
+                      <p className="text-gray-900 truncate max-w-[100px]">{s.property_name || s.propertyName}</p>
+                      <p className="text-gray-500 truncate max-w-[100px]">{s.service || 'Service'}</p>
+                    </td>
+                    <td className="py-2.5 px-2 text-gray-600 whitespace-nowrap">{formatDate(s.updatedAt || s.updated_at)}</td>
+                    <td className="py-2.5 pl-2"><span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium whitespace-nowrap">Pending</span></td>
+                  </tr>
+                ))}
+                {rescheduleFilteredData.length === 0 && (
+                  <tr><td colSpan="4" className="py-6 text-center text-gray-400">No reschedule requests</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Overdue Schedules */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Overdue Schedules</h3>
             <div className="flex items-center gap-2">
               <PeriodFilter value={overdueFilter} onChange={setOverdueFilter} />
-              <button className="text-xs text-blue-600 hover:underline">View All</button>
+              <button className="text-xs text-blue-600 hover:underline whitespace-nowrap">View All</button>
             </div>
           </div>
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-left text-gray-500">
-                <th className="pb-2">Schedule ID</th>
-                <th className="pb-2">Property</th>
-                <th className="pb-2">Due Date</th>
-                <th className="pb-2">Overdue By</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {overdueFilteredData.slice(0, 4).map((s, i) => {
-                const dueDate = new Date(s.startDate || s.start_date);
-                const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
-                return (
-                  <tr key={i}>
-                    <td className="py-2 font-medium text-gray-900">SCH-{2000 + i}</td>
-                    <td className="py-2">
-                      <p className="text-gray-900 truncate max-w-[100px]">{s.property_name || s.propertyName}</p>
-                      <p className="text-gray-500">{s.service || s.title}</p>
-                    </td>
-                    <td className="py-2 text-gray-600">{formatDate(s.startDate || s.start_date)}</td>
-                    <td className="py-2 text-red-600 font-medium">{daysOverdue} Days</td>
-                  </tr>
-                );
-              })}
-              {overdueFilteredData.length === 0 && (
-                <tr><td colSpan="4" className="py-4 text-center text-gray-400">No overdue schedules</td></tr>
-              )}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs min-w-[280px]">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-gray-100">
+                  <th className="pb-2 pr-2">Schedule ID</th>
+                  <th className="pb-2 px-2">Property</th>
+                  <th className="pb-2 px-2">Due Date</th>
+                  <th className="pb-2 pl-2 text-right">Overdue By</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {overdueFilteredData.slice(0, 4).map((s, i) => {
+                  const dueDate = new Date(s.startDate || s.start_date);
+                  const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
+                  return (
+                    <tr key={i}>
+                      <td className="py-2.5 pr-2 font-medium text-gray-900 whitespace-nowrap">SCH-{2000 + i}</td>
+                      <td className="py-2.5 px-2">
+                        <p className="text-gray-900 truncate max-w-[100px]">{s.property_name || s.propertyName}</p>
+                        <p className="text-gray-500 truncate max-w-[100px]">{s.service || s.title}</p>
+                      </td>
+                      <td className="py-2.5 px-2 text-gray-600 whitespace-nowrap">{formatDate(s.startDate || s.start_date)}</td>
+                      <td className="py-2.5 pl-2 text-red-600 font-medium text-right whitespace-nowrap">{daysOverdue} Days</td>
+                    </tr>
+                  );
+                })}
+                {overdueFilteredData.length === 0 && (
+                  <tr><td colSpan="4" className="py-6 text-center text-gray-400">No overdue schedules</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

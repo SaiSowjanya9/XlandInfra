@@ -2418,7 +2418,7 @@ const FPProperties = ({ user }) => {
                           </button>
                         )}
                       </div>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                           <label className="block text-xs text-gray-500 mb-1">Name *</label>
                           <input type="text" value={contact.name || ''} onChange={(e) => updateEditContact(index, 'name', e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="Contact name" />
@@ -2488,7 +2488,7 @@ const FPProperties = ({ user }) => {
                               <input type="number" min="0" value={editFormData.unitsPerBlock?.[blockNum] || 0} readOnly className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 cursor-not-allowed" />
                             </div>
                           </div>
-                          <div className="grid grid-cols-5 gap-2">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                             <div>
                               <label className="block text-xs text-gray-500 mb-1">Studio</label>
                               <input type="number" min="0" value={getEditBlockUnitTypeValue(blockNum, 'studio')} onChange={(e) => updateEditBlockUnitType(blockNum, 'studio', e.target.value)} className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm focus:ring-2 focus:ring-blue-500" placeholder="0" />
@@ -2543,7 +2543,7 @@ const FPProperties = ({ user }) => {
                   {/* Unit Types for Apartment */}
                   <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <label className="block text-sm font-medium text-gray-700 mb-3">Unit Types</label>
-                    <div className="grid grid-cols-5 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Studio</label>
                         <input type="number" min="0" value={getEditBlockUnitTypeValue('apt', 'studio')} onChange={(e) => {
