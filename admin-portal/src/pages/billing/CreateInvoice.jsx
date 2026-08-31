@@ -417,14 +417,14 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Pricing & Details</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Invoice Date</label>
                 <input
                   type="date"
                   value={invoiceDate}
                   onChange={(e) => setInvoiceDate(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -434,19 +434,16 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                   min={invoiceDate}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Discount (%)</label>
                 <input
                   type="number"
                   value={discountPercent}
                   onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   min="0"
                   max="100"
                 />
@@ -457,7 +454,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
                   type="number"
                   value={gstPercent}
                   onChange={(e) => setGstPercent(parseFloat(e.target.value) || 0)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   min="0"
                 />
               </div>
