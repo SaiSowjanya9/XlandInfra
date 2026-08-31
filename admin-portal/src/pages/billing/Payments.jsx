@@ -2878,72 +2878,72 @@ const Payments = ({ user, portalType = 'admin' }) => {
         </div>
 
         {/* All Payments Content */}
-        {/* Stats Cards */}
-        <div className="grid grid-cols-5 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-start gap-3 shadow-sm">
-            <div className="p-2.5 bg-blue-100 rounded-xl">
-              <IndianRupee className="w-5 h-5 text-blue-600" />
+        {/* Stats Cards - Responsive */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 flex items-center gap-2 sm:gap-3 shadow-sm min-h-[80px] sm:min-h-[90px]">
+            <div className="p-2 sm:p-2.5 bg-blue-100 rounded-lg sm:rounded-xl flex-shrink-0">
+              <IndianRupee className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
             </div>
-            <div>
-              <p className="text-xs text-gray-500 font-medium">Total Payments</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              <p className="text-xs text-gray-400 mt-0.5">This Month</p>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-start gap-3 shadow-sm">
-            <div className="p-2.5 bg-green-100 rounded-xl">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 font-medium">Received (Paid)</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.paid}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{formatCurrencyShort(stats.paidAmount)}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">Total Payments</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-[9px] sm:text-xs text-gray-400">This Month</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-start gap-3 shadow-sm">
-            <div className="p-2.5 bg-orange-100 rounded-xl">
-              <Clock className="w-5 h-5 text-orange-600" />
+          <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 flex items-center gap-2 sm:gap-3 shadow-sm min-h-[80px] sm:min-h-[90px]">
+            <div className="p-2 sm:p-2.5 bg-green-100 rounded-lg sm:rounded-xl flex-shrink-0">
+              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
             </div>
-            <div>
-              <p className="text-xs text-gray-500 font-medium whitespace-nowrap">Verification Pending</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.verificationPending}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{formatCurrencyShort(stats.verificationAmount)}</p>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-start gap-3 shadow-sm">
-            <div className="p-2.5 bg-blue-100 rounded-xl">
-              <Clock className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 font-medium">Partially Paid</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.partiallyPaid}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{formatCurrencyShort(stats.partiallyPaidAmount)}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">Received</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.paid}</p>
+              <p className="text-[9px] sm:text-xs text-gray-400 truncate">{formatCurrencyShort(stats.paidAmount)}</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-start gap-3 shadow-sm">
-            <div className="p-2.5 bg-red-100 rounded-xl">
-              <XCircle className="w-5 h-5 text-red-600" />
+          <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 flex items-center gap-2 sm:gap-3 shadow-sm min-h-[80px] sm:min-h-[90px]">
+            <div className="p-2 sm:p-2.5 bg-orange-100 rounded-lg sm:rounded-xl flex-shrink-0">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
             </div>
-            <div>
-              <p className="text-xs text-gray-500 font-medium">Failed / Refunded</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.failed}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{formatCurrencyShort(stats.failedAmount)}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">Pending</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.verificationPending}</p>
+              <p className="text-[9px] sm:text-xs text-gray-400 truncate">{formatCurrencyShort(stats.verificationAmount)}</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 flex items-center gap-2 sm:gap-3 shadow-sm min-h-[80px] sm:min-h-[90px]">
+            <div className="p-2 sm:p-2.5 bg-blue-100 rounded-lg sm:rounded-xl flex-shrink-0">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">Partial</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.partiallyPaid}</p>
+              <p className="text-[9px] sm:text-xs text-gray-400 truncate">{formatCurrencyShort(stats.partiallyPaidAmount)}</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 flex items-center gap-2 sm:gap-3 shadow-sm min-h-[80px] sm:min-h-[90px]">
+            <div className="p-2 sm:p-2.5 bg-red-100 rounded-lg sm:rounded-xl flex-shrink-0">
+              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">Failed</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.failed}</p>
+              <p className="text-[9px] sm:text-xs text-gray-400 truncate">{formatCurrencyShort(stats.failedAmount)}</p>
             </div>
           </div>
         </div>
 
-        {/* Filters Row */}
-        <div className="bg-white rounded-xl border border-gray-200 mb-4 p-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative w-[140px]">
+        {/* Filters Row - Responsive */}
+        <div className="bg-white rounded-xl border border-gray-200 mb-3 sm:mb-4 p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="relative min-w-[100px] flex-shrink-0">
               <select
                 value={statusFilter}
                 onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                className="w-full appearance-none pl-3 pr-8 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                className="w-full appearance-none pl-2 sm:pl-3 pr-7 sm:pr-8 py-2 sm:py-2.5 border border-gray-200 rounded-lg text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:border-gray-300"
               >
                 <option value="all">All Status</option>
                 <option value="paid">Paid</option>
@@ -2952,16 +2952,16 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 <option value="failed">Failed</option>
                 <option value="refunded">Refunded</option>
               </select>
-              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
             </div>
 
-            <div className="relative">
+            <div className="relative min-w-[120px] flex-shrink-0">
               <select
                 value={methodFilter}
                 onChange={(e) => { setMethodFilter(e.target.value); setCurrentPage(1); }}
-                className="appearance-none pl-4 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                className="appearance-none pl-2 sm:pl-4 pr-8 sm:pr-10 py-2 sm:py-2.5 border border-gray-200 rounded-lg text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:border-gray-300"
               >
-                <option value="all">All Payment Methods</option>
+                <option value="all">All Methods</option>
                 <option value="debit_card">Debit Card</option>
                 <option value="credit_card">Credit Card</option>
                 <option value="net_banking">Net Banking</option>
@@ -2970,24 +2970,24 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 <option value="cash">Cash</option>
                 <option value="check">Cheque</option>
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <ChevronDown className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
             </div>
 
-            <div className="relative">
+            <div className="relative min-w-[110px] flex-shrink-0">
               <select
                 value={propertyTypeFilter}
                 onChange={(e) => { setPropertyTypeFilter(e.target.value); setCurrentPage(1); }}
-                className="appearance-none pl-4 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                className="appearance-none pl-2 sm:pl-4 pr-8 sm:pr-10 py-2 sm:py-2.5 border border-gray-200 rounded-lg text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:border-gray-300"
               >
-                <option value="all">All Property Types</option>
+                <option value="all">All Types</option>
                 <option value="apartment">Apartment</option>
                 <option value="villa">Villa</option>
                 <option value="commercial">Commercial</option>
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <ChevronDown className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
             </div>
 
-            <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
+            <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 bg-white flex-shrink-0">
               <Calendar 
                 className="w-4 h-4 text-gray-400 flex-shrink-0 cursor-pointer" 
                 onClick={() => offlineStartDateRef.current?.click()}

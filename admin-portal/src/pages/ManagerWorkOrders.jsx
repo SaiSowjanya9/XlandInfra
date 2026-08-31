@@ -1335,7 +1335,7 @@ const ManagerWorkOrders = ({ user }) => {
             {/* Priority */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Priority</label>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                 {priorityOptions.map((p) => (
                   <button
                     key={p.value}
@@ -1361,7 +1361,7 @@ const ManagerWorkOrders = ({ user }) => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Attachments <span className="text-gray-400">(Optional - max 5 files)</span>
               </label>
-              <div className="grid grid-cols-3 gap-4 mt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-2">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
@@ -1894,7 +1894,7 @@ const ManagerWorkOrders = ({ user }) => {
 
             <div className="p-6 space-y-4">
               {/* Customer Information */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
                   <input

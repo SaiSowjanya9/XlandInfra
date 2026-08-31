@@ -1327,7 +1327,7 @@ const FPWorkOrders = ({ user }) => {
                 className="hidden"
               />
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={() => galleryInputRef.current?.click()}
@@ -2081,7 +2081,7 @@ const FPWorkOrders = ({ user }) => {
               </div>
 
               {/* Customer Information */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
                   <input type="text" value={editFormData.customerName} onChange={(e) => setEditFormData({ ...editFormData, customerName: e.target.value })}

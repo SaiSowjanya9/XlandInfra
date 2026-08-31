@@ -1046,20 +1046,20 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                       </div>
                       {selectedProperty && (
                         <div className="mt-6 space-y-4">
-                          <div className="grid grid-cols-5 gap-4">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
                             <div><label className="block text-xs font-medium text-slate-500 mb-1">Contact Name</label><input type="text" value={selectedProperty.contact_person || selectedProperty.contact_name || selectedProperty.customer_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
                             <div><label className="block text-xs font-medium text-slate-500 mb-1">Property ID</label><input type="text" value={selectedProperty.property_id || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
                             <div><label className="block text-xs font-medium text-slate-500 mb-1">Entry Type</label><input type="text" value={selectedProperty.entry_type || selectedProperty.property_type?.substring(0,2).toUpperCase() || 'GC'} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
                             <div><label className="block text-xs font-medium text-slate-500 mb-1">Zone</label><input type="text" value={selectedProperty.zone_name || selectedProperty.zoneName || selectedProperty.zone || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
                             <div><label className="block text-xs font-medium text-slate-500 mb-1">Area</label><input type="text" value={selectedProperty.area || selectedProperty.area_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
                           </div>
-                          <div className="grid grid-cols-4 gap-4">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                             <div><label className="block text-xs font-medium text-slate-500 mb-1">Community Name</label><input type="text" value={selectedProperty.name || selectedProperty.community_name || selectedProperty.property_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
                             <div><label className="block text-xs font-medium text-slate-500 mb-1">Property Type</label><input type="text" value={selectedProperty.property_type || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
                             <div><label className="block text-xs font-medium text-slate-500 mb-1">Units</label><input type="text" value={selectedProperty.units || selectedProperty.total_units || selectedProperty.number_of_units || '1'} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
                             <div><label className="block text-xs font-medium text-slate-500 mb-1">City</label><input type="text" value={selectedProperty.city || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
                           </div>
-                          <div className="grid grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                             <div><label className="block text-xs font-medium text-slate-500 mb-1">Address</label><input type="text" value={selectedProperty.address || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
                             <div><label className="block text-xs font-medium text-slate-500 mb-1">Contact Phone</label><input type="text" value={selectedProperty.contact_phone || selectedProperty.phone || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
                             <div><label className="block text-xs font-medium text-slate-500 mb-1">Contact Email</label><input type="text" value={selectedProperty.contact_email || selectedProperty.email || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
@@ -1768,7 +1768,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
               </div>
 
               {/* Basic Info */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 <div className="bg-gray-50 p-4 rounded-xl">
                   <p className="text-xs text-gray-500 mb-1">Property Type</p>
                   <p className="font-semibold text-gray-900">{getPropertyTypeLabel(viewAmcPackage.propertyType)}</p>

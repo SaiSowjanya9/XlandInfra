@@ -193,77 +193,77 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <XCircle className="w-5 h-5 text-red-600" />
+      {/* Stats Cards - Responsive */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 min-h-[80px] sm:min-h-[90px]">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-2 bg-red-100 rounded-lg flex-shrink-0">
+              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{cancelledSchedules.length}</p>
-              <p className="text-sm text-gray-500">Total Cancelled</p>
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{cancelledSchedules.length}</p>
+              <p className="text-xs sm:text-sm text-gray-500 truncate">Total Cancelled</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <User className="w-5 h-5 text-blue-600" />
+        <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 min-h-[80px] sm:min-h-[90px]">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+              <User className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">
                 {cancelledSchedules.filter(s => s.cancelled_by_role === 'Manager' || s.cancelled_by_role === 'Admin').length}
               </p>
-              <p className="text-sm text-gray-500">By Staff</p>
+              <p className="text-xs sm:text-sm text-gray-500 truncate">By Staff</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <Building2 className="w-5 h-5 text-orange-600" />
+        <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 min-h-[80px] sm:min-h-[90px]">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-2 bg-orange-100 rounded-lg flex-shrink-0">
+              <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">
                 {cancelledSchedules.filter(s => s.cancelled_by_role === 'Vendor').length}
               </p>
-              <p className="text-sm text-gray-500">By Vendor</p>
+              <p className="text-xs sm:text-sm text-gray-500 truncate">By Vendor</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <User className="w-5 h-5 text-green-600" />
+        <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 min-h-[80px] sm:min-h-[90px]">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
+              <User className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">
                 {cancelledSchedules.filter(s => s.cancelled_by_role === 'Customer').length}
               </p>
-              <p className="text-sm text-gray-500">By Customer</p>
+              <p className="text-xs sm:text-sm text-gray-500 truncate">By Customer</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
-        <div className="flex items-center gap-4">
-          <div className="flex-1 relative">
+      {/* Filters - Responsive */}
+      <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 mb-4 sm:mb-6">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="flex-1 min-w-[200px] max-w-[400px] relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by ID, property, service, or vendor..."
+              placeholder="Search by ID, property, service..."
               value={filters.search}
               onChange={(e) => setFilters({...filters, search: e.target.value})}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
           <select
             value={filters.service}
             onChange={(e) => setFilters({...filters, service: e.target.value})}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="min-w-[110px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
           >
             <option value="all">All Services</option>
             {services.map(s => <option key={s} value={s}>{s}</option>)}
@@ -271,7 +271,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
           <select
             value={filters.cancelledBy}
             onChange={(e) => setFilters({...filters, cancelledBy: e.target.value})}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="min-w-[130px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
           >
             <option value="all">Cancelled By: All</option>
             {cancelledByRoles.map(r => <option key={r} value={r}>{r}</option>)}
@@ -279,7 +279,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
           <select
             value={filters.dateRange}
             onChange={(e) => setFilters({...filters, dateRange: e.target.value})}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="min-w-[100px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
           >
             <option value="all">All Time</option>
             <option value="week">Last 7 Days</option>

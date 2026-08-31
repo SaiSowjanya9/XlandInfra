@@ -656,104 +656,117 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      {/* Stats Cards - Responsive */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* Pending Properties */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between">
-            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-              <CalendarClock className="w-5 h-5 text-orange-600" />
+        <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-shadow min-h-[100px] sm:min-h-[120px]">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <CalendarClock className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-gray-500 truncate">Pending</p>
+              <p className="text-[10px] sm:text-xs text-gray-400">Properties</p>
             </div>
           </div>
-          <div className="mt-3">
-            <p className="text-2xl font-bold text-gray-900">{stats.pendingProperties}</p>
-            <p className="text-sm text-gray-500 mt-0.5">Pending Properties</p>
-            <p className="text-xs text-gray-400 mt-1">Ready to Schedule</p>
+          <div className="mt-2 sm:mt-3">
+            <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.pendingProperties}</p>
+            <p className="text-[10px] sm:text-xs text-gray-400">Ready to Schedule</p>
           </div>
         </div>
 
         {/* Services Pending */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between">
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-              <Wrench className="w-5 h-5 text-blue-600" />
+        <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-shadow min-h-[100px] sm:min-h-[120px]">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Wrench className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-gray-500 truncate">Services</p>
+              <p className="text-[10px] sm:text-xs text-gray-400">Pending</p>
             </div>
           </div>
-          <div className="mt-3">
-            <p className="text-2xl font-bold text-gray-900">{stats.totalServices}</p>
-            <p className="text-sm text-gray-500 mt-0.5">Services Pending</p>
-            <p className="text-xs text-gray-400 mt-1">Total Services</p>
+          <div className="mt-2 sm:mt-3">
+            <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalServices}</p>
+            <p className="text-[10px] sm:text-xs text-gray-400">Total Services</p>
           </div>
         </div>
 
         {/* Vendors Assigned */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between">
-            <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-              <UserCheck className="w-5 h-5 text-green-600" />
+        <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-shadow min-h-[100px] sm:min-h-[120px]">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-gray-500 truncate">Vendors</p>
+              <p className="text-[10px] sm:text-xs text-gray-400">Assigned</p>
             </div>
           </div>
-          <div className="mt-3">
-            <p className="text-2xl font-bold text-gray-900">
-              {stats.assignedVendors}/{stats.totalServices}
-            </p>
-            <p className="text-sm text-gray-500 mt-0.5">Vendors Assigned</p>
-            <p className="text-xs text-gray-400 mt-1">({vendorAssignmentPercent}%)</p>
+          <div className="mt-2 sm:mt-3">
+            <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.assignedVendors}/{stats.totalServices}</p>
+            <p className="text-[10px] sm:text-xs text-gray-400">({vendorAssignmentPercent}%)</p>
           </div>
         </div>
 
         {/* Without Vendor */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between">
-            <div className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center">
-              <UserX className="w-5 h-5 text-yellow-600" />
+        <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-shadow min-h-[100px] sm:min-h-[120px]">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <UserX className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-gray-500 truncate">Without</p>
+              <p className="text-[10px] sm:text-xs text-gray-400">Vendor</p>
             </div>
           </div>
-          <div className="mt-3">
-            <p className="text-2xl font-bold text-gray-900">{stats.withoutVendor}</p>
-            <p className="text-sm text-gray-500 mt-0.5">Without Vendor</p>
-            <p className="text-xs text-gray-400 mt-1">Services</p>
+          <div className="mt-2 sm:mt-3">
+            <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.withoutVendor}</p>
+            <p className="text-[10px] sm:text-xs text-gray-400">Services</p>
           </div>
         </div>
 
         {/* Overdue to Schedule */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between">
-            <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
+        <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-shadow min-h-[100px] sm:min-h-[120px]">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-gray-500 truncate">Overdue</p>
+              <p className="text-[10px] sm:text-xs text-gray-400">to Schedule</p>
             </div>
           </div>
-          <div className="mt-3">
-            <p className="text-2xl font-bold text-gray-900">{stats.overdue}</p>
-            <p className="text-sm text-gray-500 mt-0.5">Overdue to Schedule</p>
-            <p className="text-xs text-gray-400 mt-1">Properties</p>
+          <div className="mt-2 sm:mt-3">
+            <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.overdue}</p>
+            <p className="text-[10px] sm:text-xs text-gray-400">Properties</p>
           </div>
         </div>
       </div>
 
-      {/* Filters & Search - Single Row */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex items-center gap-2">
+      {/* Filters & Search - Responsive Row */}
+      <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Search */}
-          <div className="relative">
+          <div className="relative flex-shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder="Search..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="w-32 pl-9 pr-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="w-28 sm:w-32 pl-9 pr-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             />
           </div>
           
-          {/* Divider */}
-          <div className="h-8 w-px bg-gray-200"></div>
+          {/* Divider - hidden on mobile */}
+          <div className="hidden sm:block h-8 w-px bg-gray-200 flex-shrink-0"></div>
           
           {/* Status Filter */}
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-            className="px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700"
+            className="min-w-[100px] flex-shrink-0 px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700 hover:border-gray-400 focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Status</option>
             <option value="ready">Ready</option>
@@ -764,7 +777,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           <select
             value={propertyTypeFilter}
             onChange={(e) => { setPropertyTypeFilter(e.target.value); setCurrentPage(1); }}
-            className="px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700"
+            className="min-w-[130px] flex-shrink-0 px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700 hover:border-gray-400 focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Property Types</option>
             <option value="Apartment">Apartment</option>
@@ -778,7 +791,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           <select
             value={zoneFilter}
             onChange={(e) => { setZoneFilter(e.target.value); setCurrentPage(1); }}
-            className="px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700"
+            className="min-w-[95px] flex-shrink-0 px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700 hover:border-gray-400 focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Zones</option>
             {zones.map(zone => (
@@ -790,7 +803,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           <select
             value={packageFilter}
             onChange={(e) => { setPackageFilter(e.target.value); setCurrentPage(1); }}
-            className="px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700"
+            className="min-w-[110px] max-w-[180px] flex-shrink-0 px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700 hover:border-gray-400 focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Packages</option>
             {packages.map(pkg => (
@@ -804,7 +817,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           <select
             value={vendorFilter}
             onChange={(e) => { setVendorFilter(e.target.value); setCurrentPage(1); }}
-            className="px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700"
+            className="min-w-[105px] max-w-[160px] flex-shrink-0 px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700 hover:border-gray-400 focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Vendors</option>
             {vendors.map(v => (
@@ -812,19 +825,22 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
             ))}
           </select>
 
+          {/* Spacer to push buttons to the right on large screens */}
+          <div className="hidden lg:flex flex-1"></div>
+
           {/* Clear Button */}
           <button
             onClick={clearFilters}
-            className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
           >
             <RefreshCw className="w-4 h-4" />
-            Clear
+            <span className="hidden sm:inline">Clear</span>
           </button>
           
           {/* Export Button */}
-          <button className="flex items-center gap-1 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200">
+          <button className="flex items-center gap-1.5 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200 flex-shrink-0">
             <Download className="w-4 h-4" />
-            Export
+            <span className="hidden sm:inline">Export</span>
           </button>
         </div>
       </div>

@@ -776,103 +776,103 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
             );
           })}
         </div>
-        {/* Stats Cards - Hide for Archived tab */}
+        {/* Stats Cards - Hide for Archived tab - Responsive */}
         {activeTab !== 'archived' && (
-          <div className="grid grid-cols-6 gap-4 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-4 sm:mb-6">
             {/* Total Invoices */}
-            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 rounded-lg bg-blue-100">
-                  <FileText className="w-5 h-5 text-blue-600" />
+            <div className="bg-white rounded-xl p-3 sm:p-4 border border-gray-200 shadow-sm min-h-[80px] sm:min-h-[90px]">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-2 sm:p-2.5 rounded-lg bg-blue-100 flex-shrink-0">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Total Invoices</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.total}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">This Month</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">Total Invoices</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.total}</p>
+                  <p className="text-[9px] sm:text-xs text-gray-400">This Month</p>
                 </div>
               </div>
             </div>
             
             {/* Draft */}
-            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 rounded-lg bg-amber-100">
-                  <FileText className="w-5 h-5 text-amber-600" />
+            <div className="bg-white rounded-xl p-3 sm:p-4 border border-gray-200 shadow-sm min-h-[80px] sm:min-h-[90px]">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-2 sm:p-2.5 rounded-lg bg-amber-100 flex-shrink-0">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Draft</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.draft}</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">Draft</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.draft}</p>
                 </div>
               </div>
             </div>
 
             {/* Sent */}
-            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 rounded-lg bg-blue-100">
-                  <Send className="w-5 h-5 text-blue-600" />
+            <div className="bg-white rounded-xl p-3 sm:p-4 border border-gray-200 shadow-sm min-h-[80px] sm:min-h-[90px]">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-2 sm:p-2.5 rounded-lg bg-blue-100 flex-shrink-0">
+                  <Send className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Sent</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.sent}</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">Sent</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.sent}</p>
                 </div>
               </div>
             </div>
 
             {/* Partially Paid */}
-            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 rounded-lg bg-teal-100">
-                  <Receipt className="w-5 h-5 text-teal-600" />
+            <div className="bg-white rounded-xl p-3 sm:p-4 border border-gray-200 shadow-sm min-h-[80px] sm:min-h-[90px]">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-2 sm:p-2.5 rounded-lg bg-teal-100 flex-shrink-0">
+                  <Receipt className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600" />
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Partially Paid</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.partiallyPaid}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{formatCurrency(stats.partiallyPaidAmount)}</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">Partial</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.partiallyPaid}</p>
+                  <p className="text-[9px] sm:text-xs text-gray-500 truncate">{formatCurrency(stats.partiallyPaidAmount)}</p>
                 </div>
               </div>
             </div>
 
             {/* Paid */}
-            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 rounded-lg bg-green-100">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
+            <div className="bg-white rounded-xl p-3 sm:p-4 border border-gray-200 shadow-sm min-h-[80px] sm:min-h-[90px]">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-2 sm:p-2.5 rounded-lg bg-green-100 flex-shrink-0">
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Paid</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.paid}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{formatCurrency(stats.paidAmount)}</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">Paid</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.paid}</p>
+                  <p className="text-[9px] sm:text-xs text-gray-500 truncate">{formatCurrency(stats.paidAmount)}</p>
                 </div>
               </div>
             </div>
 
             {/* Overdue */}
-            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 rounded-lg bg-red-100">
-                  <AlertCircle className="w-5 h-5 text-red-500" />
+            <div className="bg-white rounded-xl p-3 sm:p-4 border border-gray-200 shadow-sm min-h-[80px] sm:min-h-[90px]">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-2 sm:p-2.5 rounded-lg bg-red-100 flex-shrink-0">
+                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Overdue</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.overdue}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{formatCurrency(stats.overdueAmount)}</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">Overdue</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.overdue}</p>
+                  <p className="text-[9px] sm:text-xs text-gray-500 truncate">{formatCurrency(stats.overdueAmount)}</p>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Filters - Hide for Archived tab */}
+        {/* Filters - Hide for Archived tab - Responsive */}
         {activeTab !== 'archived' && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6">
-          <div className="p-4 flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 sm:mb-6">
+          <div className="p-3 sm:p-4 flex flex-wrap items-center gap-2 sm:gap-3">
             {/* Status Filter */}
-            <div className="relative w-[140px]">
+            <div className="relative min-w-[100px] flex-shrink-0">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full appearance-none pl-3 pr-8 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-700 cursor-pointer"
+                className="w-full appearance-none pl-2 sm:pl-3 pr-7 sm:pr-8 py-2 sm:py-2.5 border border-gray-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-700 cursor-pointer hover:border-gray-300"
               >
                 <option value="all">All Status</option>
                 <option value="draft">Draft</option>
@@ -881,11 +881,11 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                 <option value="paid">Paid</option>
                 <option value="overdue">Overdue</option>
               </select>
-              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
             </div>
 
             {/* Date Range - IST Format (dd/mm/yyyy) */}
-            <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
+            <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 bg-white flex-shrink-0">
               <Calendar 
                 className="w-4 h-4 text-gray-400 flex-shrink-0 cursor-pointer" 
                 onClick={() => startDateRef.current?.click()}

@@ -1174,7 +1174,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       {!estimateType && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-2">Select Estimate Type</h2>
-          <div className="grid grid-cols-3 gap-4 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
             {/* Property-Based Estimate */}
             <button onClick={() => setEstimateType('property-based')} className="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group">
               <Building2 className="w-10 h-10 text-gray-400 group-hover:text-blue-500 mx-auto mb-3" />
@@ -1234,7 +1234,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               {/* Auto-populated fields */}
               {selectedProperty && (
                 <>
-                  <div className="grid grid-cols-5 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">Contact Name</label>
                       <input type="text" value={selectedProperty.contact_person || selectedProperty.contact_name || selectedProperty.customer_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
@@ -1257,7 +1257,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">Community Name</label>
                       <input type="text" value={selectedProperty.name || selectedProperty.community_name || selectedProperty.property_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
@@ -1276,7 +1276,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">Address</label>
                       <input type="text" value={selectedProperty.address || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
@@ -1629,7 +1629,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <h2 className="text-base font-semibold text-gray-900">Customer Information</h2>
             </div>
             <div className="p-6">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 <div className="min-w-0">
                   <label className="block text-sm font-medium text-slate-600 mb-1.5">Customer Name <span className="text-red-500">*</span></label>
                   <input type="text" placeholder="Enter customer name" value={estimateForm.customerName} onChange={(e) => setEstimateForm({...estimateForm, customerName: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
@@ -1657,7 +1657,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <h2 className="text-base font-semibold text-gray-900">Property Details</h2>
             </div>
             <div className="p-6 space-y-4">
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-600 mb-1.5">Property Type <span className="text-red-500">*</span></label>
                   <select value={estimateForm.propertyType} onChange={(e) => setEstimateForm({...estimateForm, propertyType: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white">
@@ -3171,7 +3171,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             <h2 className="text-base font-semibold text-gray-900 mb-2">Select Property Type</h2>
             <p className="text-sm text-gray-500 mb-4">Choose the property type this package will be configured for</p>
             
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
               {PROPERTY_TYPE_OPTIONS.map((type) => (
                 <button
                   key={type.id}
@@ -4339,7 +4339,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               </div>
 
               {/* Basic Info */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 <div className="bg-gray-50 p-4 rounded-xl">
                   <p className="text-xs text-gray-500 mb-1">Property Type</p>
                   <p className="font-semibold text-gray-900">{getPropertyTypeLabel(viewAmcPackage.propertyType)}</p>

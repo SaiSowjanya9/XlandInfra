@@ -77,16 +77,26 @@ const formatCurrencyShort = (amount) => {
 };
 
 // Donut Chart Component
-const DonutChart = ({ data, total, centerLabel, size = 160 }) => {
-  const radius = size / 2 - 20;
+const DonutChart = ({ data, total, centerLabel, size = 130 }) => {
+  const strokeWidth = size > 140 ? 24 : 20;
+  const radius = size / 2 - strokeWidth / 2 - 5;
   const circumference = 2 * Math.PI * radius;
   let currentOffset = 0;
 
   return (
-    <div className="relative" style={{ width: size, height: size }}>
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        {/* Background circle */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="#E5E7EB"
+          strokeWidth={strokeWidth}
+        />
         {data.map((item, index) => {
-          const percentage = (item.value / total) * 100;
+          const percentage = total > 0 ? (item.value / total) * 100 : 0;
           const strokeLength = (percentage / 100) * circumference;
           const offset = currentOffset;
           currentOffset += strokeLength;
@@ -99,33 +109,44 @@ const DonutChart = ({ data, total, centerLabel, size = 160 }) => {
               r={radius}
               fill="none"
               stroke={item.color}
-              strokeWidth="24"
+              strokeWidth={strokeWidth}
               strokeDasharray={`${strokeLength} ${circumference - strokeLength}`}
               strokeDashoffset={-offset}
               transform={`rotate(-90 ${size / 2} ${size / 2})`}
+              style={{ transition: 'stroke-dasharray 0.3s ease' }}
             />
           );
         })}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold text-gray-900">{formatCurrencyShort(total)}</span>
-        <span className="text-xs text-gray-500">{centerLabel}</span>
+        <span className="text-lg sm:text-xl font-bold text-gray-900">{formatCurrencyShort(total)}</span>
+        <span className="text-[10px] sm:text-xs text-gray-500">{centerLabel}</span>
       </div>
     </div>
   );
 };
 
 // Simple Donut for Invoice Status (with count instead of currency)
-const DonutChartCount = ({ data, total, size = 160 }) => {
-  const radius = size / 2 - 20;
+const DonutChartCount = ({ data, total, size = 130 }) => {
+  const strokeWidth = size > 140 ? 24 : 20;
+  const radius = size / 2 - strokeWidth / 2 - 5;
   const circumference = 2 * Math.PI * radius;
   let currentOffset = 0;
 
   return (
-    <div className="relative" style={{ width: size, height: size }}>
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        {/* Background circle */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="#E5E7EB"
+          strokeWidth={strokeWidth}
+        />
         {data.map((item, index) => {
-          const percentage = (item.value / total) * 100;
+          const percentage = total > 0 ? (item.value / total) * 100 : 0;
           const strokeLength = (percentage / 100) * circumference;
           const offset = currentOffset;
           currentOffset += strokeLength;
@@ -138,17 +159,18 @@ const DonutChartCount = ({ data, total, size = 160 }) => {
               r={radius}
               fill="none"
               stroke={item.color}
-              strokeWidth="24"
+              strokeWidth={strokeWidth}
               strokeDasharray={`${strokeLength} ${circumference - strokeLength}`}
               strokeDashoffset={-offset}
               transform={`rotate(-90 ${size / 2} ${size / 2})`}
+              style={{ transition: 'stroke-dasharray 0.3s ease' }}
             />
           );
         })}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-bold text-gray-900">{total}</span>
-        <span className="text-xs text-gray-500">Total</span>
+        <span className="text-xl sm:text-2xl font-bold text-gray-900">{total}</span>
+        <span className="text-[10px] sm:text-xs text-gray-500">Total</span>
       </div>
     </div>
   );
@@ -478,15 +500,15 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Payments Dashboard</h1>
-            <p className="text-sm text-gray-500">
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900">Payments Dashboard</h1>
+            <p className="text-xs sm:text-sm text-gray-500">
               {selectedFp ? `Viewing payments for ${selectedFp.name}` : 'Overview of all payments and collections'}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* FP Selector */}
             <div className="relative">
               <button
@@ -546,111 +568,135 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         </div>
       </div>
 
-      <div className="p-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-6 gap-3 mb-6">
+      <div className="p-4 sm:p-6">
+        {/* Stats Cards - Responsive grid with consistent heights */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4 sm:mb-6">
           {/* Total Invoice Amount */}
-          <div className="bg-white rounded-xl p-4 border-l-4 border-l-blue-500 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-md bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <FileText className="w-3 h-3 text-blue-600" />
+          <div className="bg-white rounded-xl p-3 sm:p-4 border-l-4 border-l-blue-500 shadow-sm flex flex-col min-h-[110px] sm:min-h-[125px]">
+            <div className="flex items-center gap-2 mb-auto">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" />
               </div>
-              <span className="text-[11px] font-medium text-gray-500 leading-tight">Total Invoice Amount</span>
+              <div className="min-w-0">
+                <span className="text-[11px] sm:text-xs font-semibold text-gray-700 block truncate">Total Invoice</span>
+                <span className="text-[9px] sm:text-[10px] text-gray-400">Amount</span>
+              </div>
             </div>
-            <p className="text-xl font-bold text-gray-900">{formatCurrencyShort(dashboardData.totalInvoiceAmount)}</p>
-            <p className="text-[10px] text-gray-400 mb-1">100% of all invoices</p>
-            <button onClick={() => navigate(`${basePath}/billing/invoices`)} className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 font-medium">
-              View All <ArrowRight className="w-3 h-3" />
-            </button>
+            <div className="mt-2">
+              <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">{formatCurrencyShort(dashboardData.totalInvoiceAmount)}</p>
+              <button onClick={() => navigate(`${basePath}/billing/invoices`)} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-blue-600 hover:text-blue-700 font-medium mt-1">
+                View All <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
 
           {/* Amount Collected */}
-          <div className="bg-white rounded-xl p-4 border-l-4 border-l-green-500 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-md bg-green-100 flex items-center justify-center flex-shrink-0">
-                <CheckCircle className="w-3 h-3 text-green-600" />
+          <div className="bg-white rounded-xl p-3 sm:p-4 border-l-4 border-l-green-500 shadow-sm flex flex-col min-h-[110px] sm:min-h-[125px]">
+            <div className="flex items-center gap-2 mb-auto">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-600" />
               </div>
-              <span className="text-[11px] font-medium text-gray-500 leading-tight">Amount Collected</span>
+              <div className="min-w-0">
+                <span className="text-[11px] sm:text-xs font-semibold text-gray-700 block truncate">Collected</span>
+                <span className="text-[9px] sm:text-[10px] text-gray-400">{dashboardData.collectedPercentage}%</span>
+              </div>
             </div>
-            <p className="text-xl font-bold text-gray-900">{formatCurrencyShort(dashboardData.amountCollected)}</p>
-            <p className="text-[10px] text-gray-400 mb-1">{dashboardData.collectedPercentage}% of total invoices</p>
-            <button onClick={() => navigateToPaymentsList('paid')} className="flex items-center gap-1 text-[11px] text-green-600 hover:text-green-700 font-medium">
-              View All <ArrowRight className="w-3 h-3" />
-            </button>
+            <div className="mt-2">
+              <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">{formatCurrencyShort(dashboardData.amountCollected)}</p>
+              <button onClick={() => navigateToPaymentsList('paid')} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-green-600 hover:text-green-700 font-medium mt-1">
+                View All <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
 
           {/* Pending Amount */}
-          <div className="bg-white rounded-xl p-4 border-l-4 border-l-amber-500 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-md bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <Clock className="w-3 h-3 text-amber-600" />
+          <div className="bg-white rounded-xl p-3 sm:p-4 border-l-4 border-l-amber-500 shadow-sm flex flex-col min-h-[110px] sm:min-h-[125px]">
+            <div className="flex items-center gap-2 mb-auto">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />
               </div>
-              <span className="text-[11px] font-medium text-gray-500 leading-tight">Pending Amount</span>
+              <div className="min-w-0">
+                <span className="text-[11px] sm:text-xs font-semibold text-gray-700 block truncate">Pending</span>
+                <span className="text-[9px] sm:text-[10px] text-gray-400">{dashboardData.pendingPercentage}%</span>
+              </div>
             </div>
-            <p className="text-xl font-bold text-gray-900">{formatCurrencyShort(dashboardData.pendingAmount)}</p>
-            <p className="text-[10px] text-gray-400 mb-1">{dashboardData.pendingPercentage}% of total invoices</p>
-            <button onClick={() => navigateToPaymentsList('verification_pending')} className="flex items-center gap-1 text-[11px] text-amber-600 hover:text-amber-700 font-medium">
-              View All <ArrowRight className="w-3 h-3" />
-            </button>
+            <div className="mt-2">
+              <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">{formatCurrencyShort(dashboardData.pendingAmount)}</p>
+              <button onClick={() => navigateToPaymentsList('verification_pending')} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-amber-600 hover:text-amber-700 font-medium mt-1">
+                View All <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
 
           {/* Overdue Amount */}
-          <div className="bg-white rounded-xl p-4 border-l-4 border-l-red-500 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-md bg-red-100 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="w-3 h-3 text-red-600" />
+          <div className="bg-white rounded-xl p-3 sm:p-4 border-l-4 border-l-red-500 shadow-sm flex flex-col min-h-[110px] sm:min-h-[125px]">
+            <div className="flex items-center gap-2 mb-auto">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-600" />
               </div>
-              <span className="text-[11px] font-medium text-gray-500 leading-tight">Overdue Amount</span>
+              <div className="min-w-0">
+                <span className="text-[11px] sm:text-xs font-semibold text-gray-700 block truncate">Overdue</span>
+                <span className="text-[9px] sm:text-[10px] text-gray-400">{dashboardData.overduePercentage}%</span>
+              </div>
             </div>
-            <p className="text-xl font-bold text-gray-900">{formatCurrencyShort(dashboardData.overdueAmount)}</p>
-            <p className="text-[10px] text-gray-400 mb-1">{dashboardData.overduePercentage}% of total invoices</p>
-            <button onClick={() => navigate(`${basePath}/billing/invoices?status=overdue`)} className="flex items-center gap-1 text-[11px] text-red-600 hover:text-red-700 font-medium">
-              View All <ArrowRight className="w-3 h-3" />
-            </button>
+            <div className="mt-2">
+              <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">{formatCurrencyShort(dashboardData.overdueAmount)}</p>
+              <button onClick={() => navigate(`${basePath}/billing/invoices?status=overdue`)} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-red-600 hover:text-red-700 font-medium mt-1">
+                View All <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
 
           {/* Today's Collections */}
-          <div className="bg-white rounded-xl p-4 border-l-4 border-l-purple-500 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-md bg-purple-100 flex items-center justify-center flex-shrink-0">
-                <TrendingUp className="w-3 h-3 text-purple-600" />
+          <div className="bg-white rounded-xl p-3 sm:p-4 border-l-4 border-l-purple-500 shadow-sm flex flex-col min-h-[110px] sm:min-h-[125px]">
+            <div className="flex items-center gap-2 mb-auto">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600" />
               </div>
-              <span className="text-[11px] font-medium text-gray-500 leading-tight">Today's Collections</span>
+              <div className="min-w-0">
+                <span className="text-[11px] sm:text-xs font-semibold text-gray-700 block truncate">Today's</span>
+                <span className="text-[9px] sm:text-[10px] text-gray-400">{dashboardData.todaysPaymentCount} Payments</span>
+              </div>
             </div>
-            <p className="text-xl font-bold text-gray-900">{formatCurrencyShort(dashboardData.todaysCollections)}</p>
-            <p className="text-[10px] text-gray-400 mb-1">{dashboardData.todaysPaymentCount} Payments</p>
-            <button onClick={() => navigateToPaymentsList('paid')} className="flex items-center gap-1 text-[11px] text-purple-600 hover:text-purple-700 font-medium">
-              View Details <ArrowRight className="w-3 h-3" />
-            </button>
+            <div className="mt-2">
+              <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">{formatCurrencyShort(dashboardData.todaysCollections)}</p>
+              <button onClick={() => navigateToPaymentsList('paid')} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-purple-600 hover:text-purple-700 font-medium mt-1">
+                View <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
 
           {/* Failed Payments */}
-          <div className="bg-white rounded-xl p-4 border-l-4 border-l-rose-500 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-md bg-rose-100 flex items-center justify-center flex-shrink-0">
-                <XCircle className="w-3 h-3 text-rose-600" />
+          <div className="bg-white rounded-xl p-3 sm:p-4 border-l-4 border-l-rose-500 shadow-sm flex flex-col min-h-[110px] sm:min-h-[125px]">
+            <div className="flex items-center gap-2 mb-auto">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0">
+                <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-600" />
               </div>
-              <span className="text-[11px] font-medium text-gray-500 leading-tight">Failed Payments</span>
+              <div className="min-w-0">
+                <span className="text-[11px] sm:text-xs font-semibold text-gray-700 block truncate">Failed</span>
+                <span className="text-[9px] sm:text-[10px] text-gray-400">{dashboardData.failedCount} Transactions</span>
+              </div>
             </div>
-            <p className="text-xl font-bold text-gray-900">{formatCurrencyShort(dashboardData.failedPayments)}</p>
-            <p className="text-[10px] text-gray-400 mb-1">{dashboardData.failedCount} Transactions</p>
-            <button onClick={() => navigateToPaymentsList('failed')} className="flex items-center gap-1 text-[11px] text-rose-600 hover:text-rose-700 font-medium">
-              View All <ArrowRight className="w-3 h-3" />
-            </button>
+            <div className="mt-2">
+              <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">{formatCurrencyShort(dashboardData.failedPayments)}</p>
+              <button onClick={() => navigateToPaymentsList('failed')} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-rose-600 hover:text-rose-700 font-medium mt-1">
+                View All <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Charts Row 1 */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        {/* Charts Row 1 - Responsive */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {/* Collection Trend */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-gray-900">Collection Trend</h3>
-                <Info className="w-4 h-4 text-gray-400" />
+                <h3 className="text-sm sm:text-base font-semibold text-gray-900">Collection Trend</h3>
+                <Info className="w-4 h-4 text-gray-400 hidden sm:block" />
               </div>
               <div className="relative">
-                <select className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                <select className="appearance-none text-xs sm:text-sm text-gray-700 border border-gray-200 rounded-lg pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   <option value="all">All Time</option>
                   <option value="week">This Week</option>
                   <option value="month">This Month</option>
@@ -658,23 +704,23 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   <option value="sixmonths">Last 6 Months</option>
                   <option value="year">This Year</option>
                 </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <ChevronDown className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-            <div className="flex items-center gap-4 mb-4 text-xs">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-0.5 bg-blue-500 rounded"></div>
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-3 sm:mb-4 text-xs">
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-1 bg-blue-500 rounded"></div>
                 <span className="text-gray-600">Invoice Amount</span>
               </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-0.5 bg-green-500 rounded"></div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-1 bg-green-500 rounded"></div>
                 <span className="text-gray-600">Collected Amount</span>
               </div>
             </div>
-            <div className="h-40 flex items-end gap-1">
+            <div className="h-36 sm:h-40 flex items-end gap-0.5 sm:gap-1 overflow-x-auto">
               {dashboardData.collectionTrend.slice(-15).map((day, idx) => (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full flex gap-0.5 items-end h-32">
+                <div key={idx} className="flex-1 min-w-[16px] flex flex-col items-center gap-1">
+                  <div className="w-full flex gap-0.5 items-end h-28 sm:h-32">
                     <div 
                       className="flex-1 bg-blue-200 rounded-t"
                       style={{ height: `${(day.invoiceAmount / maxTrendValue) * 100}%`, minHeight: day.invoiceAmount > 0 ? '4px' : '0' }}
@@ -684,18 +730,18 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                       style={{ height: `${(day.collectedAmount / maxTrendValue) * 100}%`, minHeight: day.collectedAmount > 0 ? '4px' : '0' }}
                     ></div>
                   </div>
-                  <span className="text-[8px] text-gray-400 truncate w-full text-center">{day.label.split(' ')[0]}</span>
+                  <span className="text-[7px] sm:text-[8px] text-gray-400 truncate w-full text-center">{day.label.split(' ')[0]}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Payments by Mode */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Payments by Mode</h3>
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900">Payments by Mode</h3>
               <div className="relative">
-                <select className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                <select className="appearance-none text-xs sm:text-sm text-gray-700 border border-gray-200 rounded-lg pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   <option value="all">All Time</option>
                   <option value="week">This Week</option>
                   <option value="month">This Month</option>
@@ -703,23 +749,26 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   <option value="sixmonths">Last 6 Months</option>
                   <option value="year">This Year</option>
                 </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <ChevronDown className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <DonutChart 
-                data={dashboardData.paymentsByMode}
-                total={dashboardData.amountCollected}
-                centerLabel="Total"
-              />
-              <div className="flex-1 ml-4 space-y-2">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+              <div className="flex-shrink-0">
+                <DonutChart 
+                  data={dashboardData.paymentsByMode}
+                  total={dashboardData.amountCollected}
+                  centerLabel="Total"
+                  size={130}
+                />
+              </div>
+              <div className="flex-1 space-y-2 min-w-0 w-full sm:w-auto">
                 {dashboardData.paymentsByMode.slice(0, 5).map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                      <span className="text-gray-700">{item.label}</span>
+                  <div key={idx} className="flex items-center justify-between text-xs sm:text-sm gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                      <span className="text-gray-700 truncate">{item.label}</span>
                     </div>
-                    <span className="text-gray-500 text-xs">{formatCurrencyShort(item.value)} ({item.percentage}%)</span>
+                    <span className="text-gray-500 text-[10px] sm:text-xs whitespace-nowrap flex-shrink-0">{formatCurrencyShort(item.value)} ({item.percentage}%)</span>
                   </div>
                 ))}
               </div>
@@ -727,11 +776,11 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
           </div>
 
           {/* Payments by Status */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Payments by Status</h3>
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900">Payments by Status</h3>
               <div className="relative">
-                <select className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                <select className="appearance-none text-xs sm:text-sm text-gray-700 border border-gray-200 rounded-lg pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   <option value="all">All Time</option>
                   <option value="week">This Week</option>
                   <option value="month">This Month</option>
@@ -739,23 +788,26 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   <option value="sixmonths">Last 6 Months</option>
                   <option value="year">This Year</option>
                 </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <ChevronDown className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <DonutChart 
-                data={dashboardData.paymentsByStatus}
-                total={dashboardData.paymentsByStatus.reduce((sum, s) => sum + s.value, 0)}
-                centerLabel="Total"
-              />
-              <div className="flex-1 ml-4 space-y-2">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+              <div className="flex-shrink-0">
+                <DonutChart 
+                  data={dashboardData.paymentsByStatus}
+                  total={dashboardData.paymentsByStatus.reduce((sum, s) => sum + s.value, 0)}
+                  centerLabel="Total"
+                  size={130}
+                />
+              </div>
+              <div className="flex-1 space-y-2 min-w-0 w-full sm:w-auto">
                 {dashboardData.paymentsByStatus.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                      <span className="text-gray-700">{item.label}</span>
+                  <div key={idx} className="flex items-center justify-between text-xs sm:text-sm gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                      <span className="text-gray-700 truncate">{item.label}</span>
                     </div>
-                    <span className="text-gray-500 text-xs">{formatCurrencyShort(item.value)} ({item.percentage}%)</span>
+                    <span className="text-gray-500 text-[10px] sm:text-xs whitespace-nowrap flex-shrink-0">{formatCurrencyShort(item.value)} ({item.percentage}%)</span>
                   </div>
                 ))}
               </div>
@@ -763,13 +815,13 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
           </div>
         </div>
 
-        {/* Charts Row 2 */}
-        <div className="grid grid-cols-3 gap-4">
+        {/* Charts Row 2 - Responsive */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
           {/* Outstanding by Aging */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
             <div className="flex items-center gap-2 mb-4">
-              <h3 className="font-semibold text-gray-900">Outstanding by Aging</h3>
-              <Info className="w-4 h-4 text-gray-400" />
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900">Outstanding by Aging</h3>
+              <Info className="w-4 h-4 text-gray-400 hidden sm:block" />
             </div>
             <div className="space-y-3">
               {dashboardData.outstandingByAging.map((bucket, idx) => (
@@ -778,7 +830,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                     <span className="text-xs text-gray-600">{bucket.label}</span>
                     <span className="text-xs font-medium text-gray-900">{formatCurrencyShort(bucket.amount)}</span>
                   </div>
-                  <div className="h-6 bg-gray-100 rounded-lg overflow-hidden">
+                  <div className="h-5 sm:h-6 bg-gray-100 rounded-lg overflow-hidden">
                     <div 
                       className="h-full rounded-lg transition-all"
                       style={{ 
@@ -794,11 +846,11 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
           </div>
 
           {/* Top 5 Customers by Collection */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Top 5 Customers by Collection</h3>
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900">Top 5 Customers</h3>
               <div className="relative">
-                <select className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                <select className="appearance-none text-xs sm:text-sm text-gray-700 border border-gray-200 rounded-lg pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   <option value="all">All Time</option>
                   <option value="week">This Week</option>
                   <option value="month">This Month</option>
@@ -806,17 +858,17 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   <option value="sixmonths">Last 6 Months</option>
                   <option value="year">This Year</option>
                 </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <ChevronDown className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
             <div className="space-y-3">
               {dashboardData.topCustomers.length > 0 ? dashboardData.topCustomers.map((customer, idx) => (
                 <div key={idx}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-gray-700 truncate max-w-[150px]">{customer.name}</span>
-                    <span className="text-sm font-medium text-gray-900">{formatCurrencyShort(customer.amount)}</span>
+                  <div className="flex items-center justify-between mb-1 gap-2">
+                    <span className="text-xs sm:text-sm text-gray-700 truncate flex-1 min-w-0">{customer.name}</span>
+                    <span className="text-xs sm:text-sm font-medium text-gray-900 flex-shrink-0">{formatCurrencyShort(customer.amount)}</span>
                   </div>
-                  <div className="h-4 bg-gray-100 rounded overflow-hidden">
+                  <div className="h-3 sm:h-4 bg-gray-100 rounded overflow-hidden">
                     <div 
                       className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded transition-all"
                       style={{ width: `${(customer.amount / maxCustomerValue) * 100}%` }}
@@ -830,11 +882,11 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
           </div>
 
           {/* Invoices by Payment Status */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Invoices by Payment Status</h3>
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900">Invoices by Status</h3>
               <div className="relative">
-                <select className="appearance-none text-sm text-gray-700 border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                <select className="appearance-none text-xs sm:text-sm text-gray-700 border border-gray-200 rounded-lg pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   <option value="all">All Time</option>
                   <option value="week">This Week</option>
                   <option value="month">This Month</option>
@@ -842,22 +894,25 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   <option value="sixmonths">Last 6 Months</option>
                   <option value="year">This Year</option>
                 </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <ChevronDown className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <DonutChartCount 
-                data={dashboardData.invoicesByStatus}
-                total={dashboardData.totalInvoices || 0}
-              />
-              <div className="flex-1 ml-4 space-y-2">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+              <div className="flex-shrink-0">
+                <DonutChartCount 
+                  data={dashboardData.invoicesByStatus}
+                  total={dashboardData.totalInvoices || 0}
+                  size={130}
+                />
+              </div>
+              <div className="flex-1 space-y-2 min-w-0 w-full sm:w-auto">
                 {dashboardData.invoicesByStatus.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                      <span className="text-gray-700">{item.label}</span>
+                  <div key={idx} className="flex items-center justify-between text-xs sm:text-sm gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                      <span className="text-gray-700 truncate">{item.label}</span>
                     </div>
-                    <span className="text-gray-500 text-xs">{item.value} ({item.percentage}%)</span>
+                    <span className="text-gray-500 text-[10px] sm:text-xs whitespace-nowrap flex-shrink-0">{item.value} ({item.percentage}%)</span>
                   </div>
                 ))}
               </div>
@@ -865,66 +920,66 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
           </div>
         </div>
 
-        {/* Quick Actions and Recent Payments Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        {/* Quick Actions and Recent Payments Row - Responsive */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-6">
           {/* Quick Actions */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-4">Quick Actions</h3>
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
               <button
                 onClick={() => navigate(`${basePath}/billing/invoices`)}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+                className="flex flex-col items-center gap-1.5 sm:gap-2 p-3 sm:p-4 rounded-xl border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
               >
-                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-indigo-600" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
                 </div>
-                <span className="text-sm font-medium text-gray-700">View All Invoices</span>
+                <span className="text-[10px] sm:text-sm font-medium text-gray-700 text-center leading-tight">View Invoices</span>
               </button>
               <button
                 onClick={() => navigate(`${basePath}/billing/payments`)}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-colors"
+                className="flex flex-col items-center gap-1.5 sm:gap-2 p-3 sm:p-4 rounded-xl border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-colors"
               >
-                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-green-600" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-100 flex items-center justify-center">
+                  <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                 </div>
-                <span className="text-sm font-medium text-gray-700">Payment History</span>
+                <span className="text-[10px] sm:text-sm font-medium text-gray-700 text-center leading-tight">Payment History</span>
               </button>
               <button
                 onClick={() => navigate(`${basePath}/billing/create-invoice`)}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                className="flex flex-col items-center gap-1.5 sm:gap-2 p-3 sm:p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors"
               >
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <Plus className="w-5 h-5 text-blue-600" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                 </div>
-                <span className="text-sm font-medium text-gray-700">Create Invoice</span>
+                <span className="text-[10px] sm:text-sm font-medium text-gray-700 text-center leading-tight">Create Invoice</span>
               </button>
             </div>
           </div>
 
           {/* Recent Payments */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Recent Payments</h3>
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900">Recent Payments</h3>
               <button 
                 onClick={() => navigate(`${basePath}/billing/payments`)}
-                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
+                className="text-xs sm:text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
               >
-                View All <ArrowRight className="w-4 h-4" />
+                View All <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {dashboardData.recentPayments && dashboardData.recentPayments.length > 0 ? (
                 dashboardData.recentPayments.map((payment, idx) => (
-                  <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{payment.customerName}</p>
-                      <p className="text-xs text-gray-500">
+                  <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{payment.customerName}</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500 truncate">
                         {payment.invoiceId} | {payment.paymentMethod?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-green-600">{formatCurrencyShort(payment.amount)}</p>
-                      <p className="text-xs text-gray-400">
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs sm:text-sm font-semibold text-green-600">{formatCurrencyShort(payment.amount)}</p>
+                      <p className="text-[10px] sm:text-xs text-gray-400">
                         {new Date(payment.paymentDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                       </p>
                     </div>

@@ -1120,7 +1120,7 @@ const CoordinatorWorkOrders = ({ user }) => {
             {/* Priority */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {['low', 'medium', 'high', 'urgent'].map(p => (
                   <button
                     key={p}
@@ -1143,7 +1143,7 @@ const CoordinatorWorkOrders = ({ user }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Attachments <span className="text-gray-400">(Optional - max 5 files)</span>
               </label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <label className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors cursor-pointer">
                   <input
                     type="file"
@@ -2078,7 +2078,7 @@ const CoordinatorWorkOrders = ({ user }) => {
 
             <div className="p-6 space-y-4">
               {/* Customer Information */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
                   <input
