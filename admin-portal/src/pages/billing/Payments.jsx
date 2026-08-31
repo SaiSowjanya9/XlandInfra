@@ -2962,7 +2962,9 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 className="appearance-none pl-4 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               >
                 <option value="all">All Payment Methods</option>
-                <option value="debit_credit_card">Debit/Credit Card/Net Banking</option>
+                <option value="debit_card">Debit Card</option>
+                <option value="credit_card">Credit Card</option>
+                <option value="net_banking">Net Banking</option>
                 <option value="upi">UPI</option>
                 <option value="bank_transfer">Bank Transfer</option>
                 <option value="cash">Cash</option>
@@ -3083,6 +3085,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
                       <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">Estimate ID</th>
                       <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
                       <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Property ID</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Property Type</th>
                       <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Method</th>
                       <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
                       <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Paid Date</th>
@@ -3123,6 +3126,9 @@ const Payments = ({ user, portalType = 'admin' }) => {
                           </td>
                           <td className="px-4 py-4">
                             <span className="text-sm text-gray-600">{payment.propertyCode || payment.propertyId || '-'}</span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className="text-sm text-gray-600 capitalize">{payment.propertyType || '-'}</span>
                           </td>
                           <td className="px-4 py-4">
                             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium ${method.bg} ${method.color} border ${method.border}`}>
@@ -3299,8 +3305,13 @@ const Payments = ({ user, portalType = 'admin' }) => {
                   className="appearance-none pl-4 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 >
                   <option value="all">All Payment Methods</option>
-                  <option value="card">Credit Card / Debit Card / Net Banking</option>
+                  <option value="debit_card">Debit Card</option>
+                  <option value="credit_card">Credit Card</option>
+                  <option value="net_banking">Net Banking</option>
                   <option value="upi">UPI</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="cash">Cash</option>
+                  <option value="check">Cheque</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
