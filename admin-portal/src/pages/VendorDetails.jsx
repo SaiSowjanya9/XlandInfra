@@ -925,7 +925,7 @@ const VendorDetails = () => {
               {(viewVendor.managerName || viewVendor.manager_name) && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-3">Manager / Primary Contact</h3>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     <div><span className="text-xs text-gray-400">Name</span><p className="text-sm font-medium text-gray-900">{viewVendor.managerName || viewVendor.manager_name || '-'}</p></div>
                     <div><span className="text-xs text-gray-400">Mobile</span><p className="text-sm font-medium text-gray-900">{viewVendor.managerMobile || viewVendor.manager_mobile || '-'}</p></div>
                     <div><span className="text-xs text-gray-400">Email</span><p className="text-sm font-medium text-gray-900">{viewVendor.managerEmail || viewVendor.manager_email || '-'}</p></div>
@@ -936,7 +936,7 @@ const VendorDetails = () => {
               {(viewVendor.pocName || viewVendor.poc_name) && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-3">Point of Contact</h3>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     <div><span className="text-xs text-gray-400">Name</span><p className="text-sm font-medium text-gray-900">{viewVendor.pocName || viewVendor.poc_name || '-'}</p></div>
                     <div><span className="text-xs text-gray-400">Mobile</span><p className="text-sm font-medium text-gray-900">{viewVendor.pocMobile || viewVendor.poc_mobile || '-'}</p></div>
                     <div><span className="text-xs text-gray-400">Email</span><p className="text-sm font-medium text-gray-900">{viewVendor.pocEmail || viewVendor.poc_email || '-'}</p></div>
@@ -946,7 +946,7 @@ const VendorDetails = () => {
               {/* Metadata */}
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-3">Metadata</h3>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                   <div>
                     <span className="text-xs text-gray-400">Created By</span>
                     <p className="text-sm font-medium text-gray-900">{viewVendor.created_by_name || viewVendor.createdBy || '-'}</p>

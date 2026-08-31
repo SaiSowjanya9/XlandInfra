@@ -1142,7 +1142,7 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
                           </div>
                           
                           {/* Unit Types Row */}
-                          <div className="grid grid-cols-5 gap-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                             {UNIT_TYPES.map(unitType => (
                               <div key={unitType.key}>
                                 <label className="block text-xs text-gray-500 mb-1">{unitType.label}</label>
@@ -1226,7 +1226,7 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
                 {/* Unit Types for Apartment */}
                 <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
                   <label className="block text-sm font-medium text-gray-700 mb-3">Unit Types</label>
-                  <div className="grid grid-cols-5 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
                     {UNIT_TYPES.map(unitType => (
                       <div key={unitType.key}>
                         <label className="block text-xs text-gray-500 mb-1">{unitType.label}</label>
