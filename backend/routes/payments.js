@@ -2406,7 +2406,7 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
       const newAmountPaid = parseFloat(invoice.amount_paid) + paymentAmount;
       const newBalance = parseFloat(invoice.total_amount) - newAmountPaid;
 
-      // Determine new payment status
+      // Determine new payment status and invoice status
       let newPaymentStatus = 'pending';
       let newStatus = invoice.status;
       if (newBalance <= 0) {
@@ -2414,6 +2414,7 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
         newStatus = 'paid';
       } else if (newAmountPaid > 0) {
         newPaymentStatus = 'partially_paid';
+        newStatus = 'partially_paid'; // Also update main status
       }
 
       await connection.execute(`

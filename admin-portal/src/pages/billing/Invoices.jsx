@@ -147,6 +147,9 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [showStatusUpdate, setShowStatusUpdate] = useState(null); // Invoice being updated
   const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
+  const [showPdfPreview, setShowPdfPreview] = useState(null); // Invoice for PDF preview
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const itemsPerPage = 10;
   
   // Get the current tab's filter value
@@ -451,6 +454,41 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  // Preview invoice PDF (same as customer sees)
+  const handlePreviewPDF = async (invoice) => {
+    try {
+      setPdfLoading(true);
+      setShowPdfPreview(invoice);
+      
+      const response = await fetch(`${API_BASE}/api/payments/invoices/${invoice.id}/pdf`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to load PDF');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      setPdfPreviewUrl(url);
+    } catch (err) {
+      console.error('PDF preview error:', err);
+      showToast('Failed to load invoice preview', 'error');
+      setShowPdfPreview(null);
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  // Close PDF preview and cleanup
+  const closePdfPreview = () => {
+    if (pdfPreviewUrl) {
+      window.URL.revokeObjectURL(pdfPreviewUrl);
+    }
+    setPdfPreviewUrl(null);
+    setShowPdfPreview(null);
   };
 
   // Comprehensive export with all page details
@@ -1021,8 +1059,9 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                         <tr key={invoice.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3.5">
                             <button
-                              onClick={() => openInvoiceDetail(invoice)}
+                              onClick={() => handlePreviewPDF(invoice)}
                               className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                              title="Click to view invoice"
                             >
                               {invoice.invoiceId}
                             </button>
@@ -1040,14 +1079,6 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                           </td>
                           <td className="px-4 py-3.5">
                             <div className="flex items-center justify-center gap-1">
-                              {/* View */}
-                              <button
-                                onClick={() => openInvoiceDetail(invoice)}
-                                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                                title="View Details"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
                               {/* Restore */}
                               <button
                                 onClick={() => handleRestoreInvoice(invoice)}
@@ -1105,6 +1136,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                       <tr className="border-b border-gray-100">
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice ID</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property Type</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Type</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Date</th>
@@ -1124,14 +1156,18 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                         >
                           <td className="px-4 py-3.5">
                             <button
-                              onClick={() => openInvoiceDetail(invoice)}
+                              onClick={() => handlePreviewPDF(invoice)}
                               className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                              title="Click to view invoice"
                             >
                               {invoice.invoiceId}
                             </button>
                           </td>
                           <td className="px-4 py-3.5">
                             <span className="text-sm text-gray-600">{invoice.propertyCode || '-'}</span>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span className="text-sm text-gray-600 capitalize">{invoice.propertyType || '-'}</span>
                           </td>
                           <td className="px-4 py-3.5">
                             <span className="text-sm text-gray-800">{invoice.customerName || invoice.propertyName || '-'}</span>
@@ -1194,14 +1230,6 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                           </td>
                           <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1">
-                              {/* View */}
-                              <button
-                                onClick={() => openInvoiceDetail(invoice)}
-                                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                                title="View Details"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
                               {/* Make Payment - only show if balance > 0 */}
                               {invoice.balanceAmount > 0 && invoice.status !== 'paid' && (
                                 <button
@@ -1306,6 +1334,57 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
         </div>
         )}
       </div>
+
+      {/* PDF Preview Modal - Shows invoice exactly as customer sees it */}
+      {showPdfPreview && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={closePdfPreview}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Invoice Preview</h3>
+                <p className="text-sm text-gray-500">{showPdfPreview.invoiceId} - {showPdfPreview.customerName}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleDownloadPDF(showPdfPreview)}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Download PDF
+                </button>
+                <button
+                  onClick={closePdfPreview}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            {/* PDF Viewer */}
+            <div className="flex-1 overflow-hidden bg-gray-100">
+              {pdfLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <RefreshCw className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-3" />
+                    <p className="text-gray-600">Loading invoice...</p>
+                  </div>
+                </div>
+              ) : pdfPreviewUrl ? (
+                <iframe
+                  src={pdfPreviewUrl}
+                  className="w-full h-full border-0"
+                  title="Invoice Preview"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-gray-500">Failed to load invoice preview</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Invoice Detail Modal/Lightbox */}
       {showDetailPanel && selectedInvoice && (
