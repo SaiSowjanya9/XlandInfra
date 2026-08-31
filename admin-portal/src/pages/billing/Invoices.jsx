@@ -1189,12 +1189,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                                   ))}
                                 </div>
                               )}
-                              {invoice.paymentLinkStatus && invoice.paymentLinkStatus !== 'paid' && (
-                                <span className={`inline-flex items-center gap-1 text-[10px] ${PAYMENT_LINK_STATUS_CONFIG[invoice.paymentLinkStatus]?.color || 'text-gray-500'}`}>
-                                  <LinkIcon className="w-3 h-3" />
-                                  {PAYMENT_LINK_STATUS_CONFIG[invoice.paymentLinkStatus]?.label || invoice.paymentLinkStatus}
-                                </span>
-                              )}
+                              
                             </div>
                           </td>
                           <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
