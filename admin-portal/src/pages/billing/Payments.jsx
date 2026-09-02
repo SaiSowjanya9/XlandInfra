@@ -82,6 +82,33 @@ const handleISTDateInput = (value, maxLength = 10) => {
   return cleaned;
 };
 
+// Normalize property type to consistent format
+const formatPropertyType = (type) => {
+  if (!type) return '-';
+  const normalized = type.toLowerCase().trim();
+  
+  if (normalized === 'gc' || normalized === 'gated community' || normalized === 'gatedcommunity') {
+    return 'Gated Community';
+  }
+  if (normalized === 'apt' || normalized === 'apartment' || normalized === 'flat' || normalized === 'flats') {
+    return 'Apartment';
+  }
+  if (normalized === 'villa' || normalized === 'villas' || normalized === 'independent house' || normalized === 'individual house') {
+    return 'Villa';
+  }
+  if (normalized === 'commercial' || normalized === 'comm' || normalized === 'office' || normalized === 'shop') {
+    return 'Commercial';
+  }
+  if (normalized === 'plot' || normalized === 'land') {
+    return 'Plot';
+  }
+  if (normalized === 'row house' || normalized === 'rowhouse' || normalized === 'townhouse') {
+    return 'Row House';
+  }
+  
+  return type.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+};
+
 // Payment method config with colors matching reference image
 const PAYMENT_METHODS = {
   razorpay: { label: 'Razorpay', icon: CreditCard, color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200' },
@@ -3128,7 +3155,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
                             <span className="text-sm text-gray-600">{payment.propertyCode || payment.propertyId || '-'}</span>
                           </td>
                           <td className="px-4 py-4">
-                            <span className="text-sm text-gray-600 capitalize">{payment.propertyType || '-'}</span>
+                            <span className="text-sm text-gray-600">{formatPropertyType(payment.propertyType)}</span>
                           </td>
                           <td className="px-4 py-4">
                             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium ${method.bg} ${method.color} border ${method.border}`}>
