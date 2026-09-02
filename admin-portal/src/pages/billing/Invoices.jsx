@@ -70,6 +70,35 @@ const handleDateInput = (value, setter) => {
   setter(cleaned);
 };
 
+// Normalize property type to consistent format
+const formatPropertyType = (type) => {
+  if (!type) return '-';
+  const normalized = type.toLowerCase().trim();
+  
+  // Map variations to consistent names
+  if (normalized === 'gc' || normalized === 'gated community' || normalized === 'gatedcommunity') {
+    return 'Gated Community';
+  }
+  if (normalized === 'apt' || normalized === 'apartment' || normalized === 'flat' || normalized === 'flats') {
+    return 'Apartment';
+  }
+  if (normalized === 'villa' || normalized === 'villas' || normalized === 'independent house' || normalized === 'individual house') {
+    return 'Villa';
+  }
+  if (normalized === 'commercial' || normalized === 'comm' || normalized === 'office' || normalized === 'shop') {
+    return 'Commercial';
+  }
+  if (normalized === 'plot' || normalized === 'land') {
+    return 'Plot';
+  }
+  if (normalized === 'row house' || normalized === 'rowhouse' || normalized === 'townhouse') {
+    return 'Row House';
+  }
+  
+  // Capitalize first letter of each word for unknown types
+  return type.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+};
+
 const STATUS_CONFIG = {
   draft: { label: 'Draft', color: 'bg-gray-100 text-gray-600 border border-gray-300' },
   sent: { label: 'Invoice Sent', color: 'bg-blue-50 text-blue-600 border border-blue-300' },
@@ -1167,7 +1196,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                             <span className="text-sm text-gray-600">{invoice.propertyCode || '-'}</span>
                           </td>
                           <td className="px-4 py-3.5">
-                            <span className="text-sm text-gray-600 capitalize">{invoice.propertyType || '-'}</span>
+                            <span className="text-sm text-gray-600">{formatPropertyType(invoice.propertyType)}</span>
                           </td>
                           <td className="px-4 py-3.5">
                             <span className="text-sm text-gray-800">{invoice.customerName || invoice.propertyName || '-'}</span>
@@ -1584,7 +1613,7 @@ const InvoiceDetailPanel = ({
               <div className="text-xs space-y-1">
                 <p className="text-gray-600">Property ID: <span className="text-gray-800">{invoice.propertyCode || '-'}</span></p>
                 <p className="text-gray-600">Name: <span className="text-gray-800">{invoice.propertyName || '-'}</span></p>
-                <p className="text-gray-600">Type: <span className="text-gray-800">{invoice.propertyType || '-'}</span></p>
+                <p className="text-gray-600">Type: <span className="text-gray-800">{formatPropertyType(invoice.propertyType)}</span></p>
                 <p className="text-gray-600">Zone: <span className="text-gray-800">{invoice.zone || '-'}</span></p>
                 <p className="text-gray-600">City: <span className="text-gray-800">{invoice.city || '-'}</span></p>
               </div>

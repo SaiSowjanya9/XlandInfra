@@ -108,6 +108,33 @@ const formatDateIST = (dateStr) => {
   return `${d}/${m}/${y}`;
 };
 
+// Normalize property type to consistent format
+const formatPropertyType = (type) => {
+  if (!type) return '-';
+  const normalized = type.toLowerCase().trim();
+  
+  if (normalized === 'gc' || normalized === 'gated community' || normalized === 'gatedcommunity') {
+    return 'Gated Community';
+  }
+  if (normalized === 'apt' || normalized === 'apartment' || normalized === 'flat' || normalized === 'flats') {
+    return 'Apartment';
+  }
+  if (normalized === 'villa' || normalized === 'villas' || normalized === 'independent house' || normalized === 'individual house') {
+    return 'Villa';
+  }
+  if (normalized === 'commercial' || normalized === 'comm' || normalized === 'office' || normalized === 'shop') {
+    return 'Commercial';
+  }
+  if (normalized === 'plot' || normalized === 'land') {
+    return 'Plot';
+  }
+  if (normalized === 'row house' || normalized === 'rowhouse' || normalized === 'townhouse') {
+    return 'Row House';
+  }
+  
+  return type.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+};
+
 // Parse IST date (dd/mm/yyyy) to yyyy-mm-dd
 const parseISTDate = (displayStr) => {
   if (!displayStr || displayStr.length < 10) return null;
@@ -1279,7 +1306,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                   <div className="text-xs space-y-1">
                     <p className="text-gray-600">Property ID: <span className="text-gray-800">{selectedInvoice.propertyCode || '-'}</span></p>
                     <p className="text-gray-600">Name: <span className="text-gray-800">{selectedInvoice.propertyName || '-'}</span></p>
-                    <p className="text-gray-600">Type: <span className="text-gray-800">{selectedInvoice.propertyType || '-'}</span></p>
+                    <p className="text-gray-600">Type: <span className="text-gray-800">{formatPropertyType(selectedInvoice.propertyType)}</span></p>
                     <p className="text-gray-600">Zone: <span className="text-gray-800">{selectedInvoice.zone || '-'}</span></p>
                     <p className="text-gray-600">City: <span className="text-gray-800">{selectedInvoice.city || '-'}</span></p>
                   </div>
