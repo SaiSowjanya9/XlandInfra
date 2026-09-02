@@ -538,21 +538,21 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       {/* Charts Row - Responsive grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         {/* Status Donut */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 overflow-hidden">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Schedules by Status</h3>
             <PeriodFilter value={statusFilter} onChange={setStatusFilter} />
           </div>
-          <div className="flex items-center justify-center gap-4 sm:gap-6">
+          <div className="flex items-center gap-3">
             <div className="flex-shrink-0">
-              <DonutChart data={statusData} size={100} strokeWidth={18} centerValue={statusTotal} centerLabel="Total" />
+              <DonutChart data={statusData} size={90} strokeWidth={16} centerValue={statusTotal} centerLabel="Total" />
             </div>
-            <div className="space-y-1.5 text-xs min-w-0">
+            <div className="space-y-1.5 text-xs min-w-0 flex-1">
               {statusData.map((d, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
-                  <span className="text-gray-600 truncate">{d.name}</span>
-                  <span className="font-medium text-gray-900 flex-shrink-0">{d.value}</span>
+                <div key={i} className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+                  <span className="text-gray-600 truncate flex-1">{d.name}</span>
+                  <span className="font-medium text-gray-900 text-[10px] flex-shrink-0">{d.value}</span>
                 </div>
               ))}
             </div>
@@ -560,19 +560,19 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
 
         {/* Service Bar Chart */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 overflow-hidden">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Schedules by Service</h3>
             <PeriodFilter value={serviceFilter} onChange={setServiceFilter} />
           </div>
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {serviceData.length > 0 ? serviceData.slice(0, 5).map((d, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className="w-16 sm:w-20 text-xs text-gray-600 truncate flex-shrink-0">{d.name}</span>
-                <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden min-w-0">
+                <span className="w-14 text-[10px] text-gray-600 truncate flex-shrink-0">{d.name}</span>
+                <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden min-w-0">
                   <div className="h-full rounded-full transition-all" style={{ width: `${(d.value / Math.max(...serviceData.map(x => x.value), 1)) * 100}%`, backgroundColor: d.color }} />
                 </div>
-                <span className="text-xs font-medium w-5 text-right flex-shrink-0">{d.value}</span>
+                <span className="text-[10px] font-medium w-4 text-right flex-shrink-0">{d.value}</span>
               </div>
             )) : (
               <p className="text-xs text-gray-400 text-center py-4">No data</p>
@@ -581,21 +581,21 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
 
         {/* Priority Donut */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 overflow-hidden">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Schedules by Priority</h3>
             <PeriodFilter value={priorityFilter} onChange={setPriorityFilter} />
           </div>
-          <div className="flex items-center justify-center gap-4 sm:gap-6">
+          <div className="flex items-center gap-3">
             <div className="flex-shrink-0">
-              <DonutChart data={priorityData} size={100} strokeWidth={18} centerValue={priorityTotal} centerLabel="Total" />
+              <DonutChart data={priorityData} size={90} strokeWidth={16} centerValue={priorityTotal} centerLabel="Total" />
             </div>
-            <div className="space-y-2 text-xs min-w-0">
+            <div className="space-y-1.5 text-xs min-w-0 flex-1">
               {priorityData.map((d, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
-                  <span className="text-gray-600">{d.name}</span>
-                  <span className="font-medium text-gray-900 whitespace-nowrap">{d.value} ({priorityTotal ? Math.round((d.value / priorityTotal) * 100) : 0}%)</span>
+                <div key={i} className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+                  <span className="text-gray-600 truncate">{d.name}</span>
+                  <span className="font-medium text-gray-900 text-[10px] flex-shrink-0 ml-auto">{d.value} ({priorityTotal ? Math.round((d.value / priorityTotal) * 100) : 0}%)</span>
                 </div>
               ))}
             </div>
@@ -603,21 +603,21 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
 
         {/* Property Type Donut */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 overflow-hidden">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Schedules by Property Type</h3>
             <PeriodFilter value={propertyTypeFilter} onChange={setPropertyTypeFilter} />
           </div>
-          <div className="flex items-center justify-center gap-4 sm:gap-6">
+          <div className="flex items-center gap-3">
             <div className="flex-shrink-0">
-              <DonutChart data={propertyTypeData} size={100} strokeWidth={18} centerValue={propertyTypeTotal} centerLabel="Total" />
+              <DonutChart data={propertyTypeData} size={90} strokeWidth={16} centerValue={propertyTypeTotal} centerLabel="Total" />
             </div>
-            <div className="space-y-2 text-xs min-w-0">
+            <div className="space-y-1.5 text-xs min-w-0 flex-1">
               {propertyTypeData.slice(0, 4).map((d, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
-                  <span className="text-gray-600 truncate max-w-[70px]">{d.name}</span>
-                  <span className="font-medium text-gray-900 whitespace-nowrap flex-shrink-0">{d.value} ({propertyTypeTotal ? Math.round((d.value / propertyTypeTotal) * 100) : 0}%)</span>
+                <div key={i} className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+                  <span className="text-gray-600 truncate flex-1">{d.name}</span>
+                  <span className="font-medium text-gray-900 text-[10px] flex-shrink-0">{d.value} ({propertyTypeTotal ? Math.round((d.value / propertyTypeTotal) * 100) : 0}%)</span>
                 </div>
               ))}
             </div>
