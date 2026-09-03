@@ -179,9 +179,13 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   useEffect(() => {
     fetchSchedules();
     fetchPendingProperties();
+  }, [token, selectedFp]);
+  
+  // Separate interval to avoid re-creating on every render
+  useEffect(() => {
     const interval = setInterval(fetchSchedules, 30000);
     return () => clearInterval(interval);
-  }, [fetchSchedules, fetchPendingProperties]);
+  }, []);
 
   // Mock data
   const getMockSchedules = () => [

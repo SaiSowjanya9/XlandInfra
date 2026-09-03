@@ -78,11 +78,16 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
     }
   }, [token]);
 
+  // Initial load
   useEffect(() => {
     fetchZones();
     fetchVendors();
+  }, []);
+  
+  // Regenerate schedules when date changes
+  useEffect(() => {
     generateMockSchedules();
-  }, [currentDate, fetchZones, fetchVendors]);
+  }, [currentDate]);
 
   const generateMockSchedules = () => {
     const year = currentDate.getFullYear();
