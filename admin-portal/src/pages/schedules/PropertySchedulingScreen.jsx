@@ -67,7 +67,9 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
 
   // Handle editing a planned visit date (in the visit series cards)
   const handleEditPlannedVisitDate = (index, newDateStr) => {
-    const newDate = new Date(newDateStr);
+    // Parse date string to avoid timezone issues (YYYY-MM-DD format)
+    const [year, month, day] = newDateStr.split('-').map(Number);
+    const newDate = new Date(year, month - 1, day); // month is 0-indexed
     if (isNaN(newDate.getTime())) return;
     
     setPlannedVisits(prev => prev.map((visit, i) => {
