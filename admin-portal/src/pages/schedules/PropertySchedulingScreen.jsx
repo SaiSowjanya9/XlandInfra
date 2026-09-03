@@ -683,13 +683,62 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                   <button onClick={() => navigateWeek(-1)} className="p-1 hover:bg-gray-100 rounded">
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <span className="text-sm font-medium px-3">
-                    {formatDateShort(weekDays[0])} - {formatDateShort(weekDays[6])}
-                  </span>
+                  
+                  {/* Flexible Date Selectors */}
+                  <div className="flex items-center gap-1">
+                    {/* Month Selector */}
+                    <select
+                      value={currentWeekStart.getMonth()}
+                      onChange={(e) => {
+                        const newDate = new Date(currentWeekStart);
+                        newDate.setMonth(parseInt(e.target.value));
+                        setCurrentWeekStart(newDate);
+                      }}
+                      className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, i) => (
+                        <option key={i} value={i}>{month}</option>
+                      ))}
+                    </select>
+                    
+                    {/* Day Selector */}
+                    <select
+                      value={currentWeekStart.getDate()}
+                      onChange={(e) => {
+                        const newDate = new Date(currentWeekStart);
+                        newDate.setDate(parseInt(e.target.value));
+                        setCurrentWeekStart(newDate);
+                      }}
+                      className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                        <option key={day} value={day}>{day}</option>
+                      ))}
+                    </select>
+                    
+                    {/* Year Selector */}
+                    <select
+                      value={currentWeekStart.getFullYear()}
+                      onChange={(e) => {
+                        const newDate = new Date(currentWeekStart);
+                        newDate.setFullYear(parseInt(e.target.value));
+                        setCurrentWeekStart(newDate);
+                      }}
+                      className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + i).map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
                   <button onClick={() => navigateWeek(1)} className="p-1 hover:bg-gray-100 rounded">
                     <ChevronRight className="w-5 h-5" />
                   </button>
-                  <button className="ml-4 px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                  <button 
+                    onClick={() => setCurrentWeekStart(getNextMonday())}
+                    className="ml-2 px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                  >
                     Today
                   </button>
                 </div>
