@@ -445,16 +445,19 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
     }
   ];
 
-  // Initial load
+  // Initial load - run once
   useEffect(() => {
     fetchPendingProperties();
     fetchZones();
     fetchPackages();
     fetchVendors();
-    // Refresh every 60 seconds
+  }, []);
+  
+  // Separate interval to avoid re-creating on every render
+  useEffect(() => {
     const interval = setInterval(() => fetchPendingProperties(false), 60000);
     return () => clearInterval(interval);
-  }, [fetchPendingProperties, fetchZones, fetchPackages, fetchVendors]);
+  }, []);
 
   // Filter properties
   const getFilteredProperties = () => {
@@ -744,9 +747,9 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
         </div>
       </div>
 
-      {/* Filters & Search - Responsive Row */}
-      <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      {/* Filters & Search - Single Row */}
+      <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 overflow-x-auto">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-max">
           {/* Search */}
           <div className="relative flex-shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -825,8 +828,11 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
             ))}
           </select>
 
-          {/* Spacer to push buttons to the right on large screens */}
-          <div className="hidden lg:flex flex-1"></div>
+          {/* Export Button */}
+          <button className="flex items-center gap-1.5 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200 flex-shrink-0">
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Export</span>
+          </button>
 
           {/* Clear Button */}
           <button
@@ -835,12 +841,6 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           >
             <RefreshCw className="w-4 h-4" />
             <span className="hidden sm:inline">Clear</span>
-          </button>
-          
-          {/* Export Button */}
-          <button className="flex items-center gap-1.5 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200 flex-shrink-0">
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Export</span>
           </button>
         </div>
       </div>

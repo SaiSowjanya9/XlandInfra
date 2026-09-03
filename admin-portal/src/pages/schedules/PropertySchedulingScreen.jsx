@@ -625,10 +625,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             <p className="text-[10px] text-gray-400 uppercase tracking-wide">Contract Period</p>
             <p className="text-sm font-medium text-gray-900">01 Sep 2026 - 31 Aug 2027</p>
           </div>
-          <div className="min-w-0">
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Status</p>
-            <span className="inline-flex px-2.5 py-0.5 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full border border-blue-200">Ready to Schedule</span>
-          </div>
+
         </div>
       </div>
 

@@ -245,10 +245,10 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
     ];
   };
 
-  // Initial load
+  // Fetch schedules when date changes
   useEffect(() => {
     fetchSchedules();
-  }, [fetchSchedules]);
+  }, [currentDate]);
 
   // Get schedules for a specific date
   const getSchedulesForDate = (date) => {
