@@ -730,13 +730,13 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               {plannedVisits.map((visit, i) => (
                 <div 
                   key={i}
-                  className={`flex-shrink-0 w-28 p-3 rounded-lg border text-center ${
+                  className={`flex-shrink-0 w-32 p-3 rounded-lg border text-center ${
                     visit.status === 'Scheduled' ? 'border-green-300 bg-green-50' : 
                     visit.isManual ? 'border-amber-300 bg-amber-50' : 'border-gray-200'
                   }`}
                 >
                   <p className="text-xs text-gray-500">Visit {visit.visitNumber}</p>
-                  <p className="font-semibold text-sm mt-1">
+                  <p className="font-semibold text-sm mt-1 whitespace-nowrap">
                     {visit.isManual ? (
                       <button className="text-amber-600 hover:text-amber-700 underline">
                         Select
