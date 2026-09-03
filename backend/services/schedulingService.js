@@ -223,14 +223,14 @@ async function updatePendingPropertySchedule(connection, propertyId, estimateId,
   // Upsert pending_property_schedules
   await connection.execute(
     `INSERT INTO pending_property_schedules 
-     (property_id, estimate_id, total_services, services_with_vendor, services_scheduled, 
-      status, franchise_partner_id)
+     (property_id, estimate_id, total_services, vendors_assigned, services_scheduled, 
+      scheduling_status, franchise_partner_id)
      VALUES (?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
        total_services = VALUES(total_services),
-       services_with_vendor = VALUES(services_with_vendor),
+       vendors_assigned = VALUES(vendors_assigned),
        services_scheduled = VALUES(services_scheduled),
-       status = VALUES(status),
+       scheduling_status = VALUES(scheduling_status),
        updated_at = NOW()`,
     [propertyId, estimateId, totalServices, assignedCount, scheduledCount, 
      schedulingStatus, franchisePartnerId]
@@ -305,7 +305,7 @@ async function getPendingSchedulesCount(franchisePartnerId) {
     let query = `
       SELECT COUNT(*) as count 
       FROM pending_property_schedules pps
-      WHERE pps.status IN ('pending_vendor_assignment', 'pending_scheduling', 'partial_vendor_assignment')
+      WHERE pps.scheduling_status IN ('pending_vendor', 'pending_schedule')
     `;
     const params = [];
 
@@ -346,10 +346,10 @@ async function getPendingPropertiesForScheduling(franchisePartnerId, filters = {
         pc.phone as customerPhone,
         pc.email as customerEmail,
         pps.total_services as totalServices,
-        pps.services_with_vendor as assignedVendors,
+        pps.vendors_assigned as assignedVendors,
         pps.services_scheduled as scheduledServices,
-        pps.status as schedulingStatus,
-        pps.notes as notificationNotes
+        pps.scheduling_status as schedulingStatus,
+        pps.notification_sent as notificationSent
       FROM onboarded_properties op
       INNER JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
       LEFT JOIN property_contacts pc ON pc.property_id = op.id
@@ -365,7 +365,7 @@ async function getPendingPropertiesForScheduling(franchisePartnerId, filters = {
     }
 
     if (filters.schedulingStatus) {
-      query += ` AND pps.status = ?`;
+      query += ` AND pps.scheduling_status = ?`;
       params.push(filters.schedulingStatus);
     }
 
@@ -548,7 +548,7 @@ async function generateScheduledVisits(serviceScheduleId, startDate, endDate, fr
       // Update service schedule
       await connection.execute(
         `UPDATE property_service_schedules 
-         SET status = 'active', start_date = ?,
+         SET status = 'active', start_date = ?, scheduling_status = 'completed',
              schedule_notes = 'Customer Requirement - visits scheduled manually'
          WHERE id = ?`,
         [startDate, serviceScheduleId]
@@ -613,7 +613,7 @@ async function generateScheduledVisits(serviceScheduleId, startDate, endDate, fr
     // Update service schedule status
     await connection.execute(
       `UPDATE property_service_schedules 
-       SET status = 'scheduled', start_date = ?, end_date = ?
+       SET status = 'scheduled', start_date = ?, end_date = ?, scheduling_status = 'completed'
        WHERE id = ?`,
       [startDate, endDate, serviceScheduleId]
     );
