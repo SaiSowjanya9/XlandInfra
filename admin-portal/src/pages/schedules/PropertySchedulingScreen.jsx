@@ -41,6 +41,11 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [rescheduleVisit, setRescheduleVisit] = useState(null);
   const [rescheduleScope, setRescheduleScope] = useState('this_visit_only'); // Default: This Visit Only
+  
+  // Edit recurrence modal state
+  const [showRecurrenceModal, setShowRecurrenceModal] = useState(false);
+  const [editFrequency, setEditFrequency] = useState('monthly');
+  const [editVisitCount, setEditVisitCount] = useState(12);
 
   function getNextMonday() {
     const today = new Date();
@@ -58,6 +63,65 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   const formatDateShort = (date) => {
     if (!date) return '';
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  // Handle editing a planned visit date (in the visit series cards)
+  const handleEditPlannedVisitDate = (index, newDateStr) => {
+    const newDate = new Date(newDateStr);
+    if (isNaN(newDate.getTime())) return;
+    
+    setPlannedVisits(prev => prev.map((visit, i) => {
+      if (i === index) {
+        return {
+          ...visit,
+          date: newDate,
+          shortDateStr: formatDateShort(newDate),
+          dateStr: formatDateFull(newDate),
+          isEdited: true
+        };
+      }
+      return visit;
+    }));
+    setEditingVisitIndex(null);
+  };
+
+  // Handle applying new recurrence settings
+  const handleApplyRecurrence = () => {
+    if (!selectedService || !selectedSlot) return;
+    
+    // Update service with new frequency and visit count
+    const updatedService = {
+      ...selectedService,
+      frequency: editFrequency,
+      visits: editVisitCount
+    };
+    
+    // Regenerate visits with new settings
+    const schedules = generateScheduleDates(
+      selectedSlot.date,
+      editFrequency,
+      editVisitCount
+    );
+    
+    const formattedSchedules = formatSchedulesForDisplay(schedules);
+    const visitsWithTime = formattedSchedules.map((schedule, index) => ({
+      ...schedule,
+      time: selectedSlot.time || '10:00 AM',
+      status: index === 0 ? 'Scheduled' : 'Target'
+    }));
+    
+    setPlannedVisits(visitsWithTime);
+    setSelectedService(updatedService);
+    setShowRecurrenceModal(false);
+  };
+
+  // Open recurrence modal with current values
+  const openRecurrenceModal = () => {
+    if (selectedService) {
+      setEditFrequency(selectedService.frequency || 'monthly');
+      setEditVisitCount(selectedService.visits || getFrequencyConfig(selectedService.frequency)?.visitsPerYear || 12);
+    }
+    setShowRecurrenceModal(true);
   };
 
   useEffect(() => {
@@ -711,7 +775,10 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 }
               </p>
             </div>
-            <button className="flex items-center gap-1 text-sm text-blue-600 hover:underline">
+            <button 
+              onClick={openRecurrenceModal}
+              className="flex items-center gap-1 text-sm text-blue-600 hover:underline"
+            >
               <Edit2 className="w-3 h-3" /> Edit Recurrence
             </button>
           </div>
@@ -730,26 +797,46 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               {plannedVisits.map((visit, i) => (
                 <div 
                   key={i}
-                  className={`flex-shrink-0 w-32 p-3 rounded-lg border text-center ${
+                  className={`flex-shrink-0 w-32 p-3 rounded-lg border text-center relative ${
                     visit.status === 'Scheduled' ? 'border-green-300 bg-green-50' : 
+                    visit.isEdited ? 'border-blue-300 bg-blue-50' :
                     visit.isManual ? 'border-amber-300 bg-amber-50' : 'border-gray-200'
-                  }`}
+                  } ${visit.status === 'Target' && !visit.isManual ? 'cursor-pointer hover:border-blue-400 hover:bg-blue-50/50' : ''}`}
+                  onClick={() => {
+                    if (visit.status === 'Target' && !visit.isManual && editingVisitIndex !== i) {
+                      setEditingVisitIndex(i);
+                    }
+                  }}
                 >
                   <p className="text-xs text-gray-500">Visit {visit.visitNumber}</p>
-                  <p className="font-semibold text-sm mt-1 whitespace-nowrap">
-                    {visit.isManual ? (
-                      <button className="text-amber-600 hover:text-amber-700 underline">
-                        Select
-                      </button>
-                    ) : (
-                      visit.shortDateStr || visit.dateStr
-                    )}
-                  </p>
+                  {editingVisitIndex === i ? (
+                    <div className="mt-1">
+                      <input
+                        type="date"
+                        defaultValue={visit.date ? visit.date.toISOString().split('T')[0] : ''}
+                        onChange={(e) => handleEditPlannedVisitDate(i, e.target.value)}
+                        onBlur={() => setEditingVisitIndex(null)}
+                        className="w-full px-1 py-0.5 text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        autoFocus
+                      />
+                    </div>
+                  ) : (
+                    <p className="font-semibold text-sm mt-1 whitespace-nowrap">
+                      {visit.isManual ? (
+                        <button className="text-amber-600 hover:text-amber-700 underline">
+                          Select
+                        </button>
+                      ) : (
+                        visit.shortDateStr || visit.dateStr
+                      )}
+                    </p>
+                  )}
                   <p className="text-xs text-gray-500">{visit.time}</p>
                   <span className={`inline-block mt-2 px-2 py-0.5 text-xs rounded ${
                     visit.status === 'Scheduled' ? 'bg-green-100 text-green-700' : 
+                    visit.isEdited ? 'bg-blue-100 text-blue-700' :
                     visit.isManual ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'
-                  }`}>{visit.status}</span>
+                  }`}>{visit.isEdited ? 'Edited' : visit.status}</span>
                 </div>
               ))}
             </div>
@@ -1030,6 +1117,91 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 className="px-4 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition-colors"
               >
                 Reschedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Recurrence Modal */}
+      {showRecurrenceModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Edit Recurrence</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Change the frequency and number of visits
+              </p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Frequency Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Frequency
+                </label>
+                <select
+                  value={editFrequency}
+                  onChange={(e) => {
+                    const newFreq = e.target.value;
+                    setEditFrequency(newFreq);
+                    // Auto-update visit count based on frequency
+                    const config = getFrequencyConfig(newFreq);
+                    if (config?.visitsPerYear) {
+                      setEditVisitCount(config.visitsPerYear);
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="monthly">Monthly (12 visits/year)</option>
+                  <option value="every 2 months">Every 2 Months (6 visits/year)</option>
+                  <option value="quarterly">Quarterly (4 visits/year)</option>
+                  <option value="half-yearly">Half-Yearly (2 visits/year)</option>
+                  <option value="yearly">Yearly (1 visit/year)</option>
+                </select>
+              </div>
+
+              {/* Number of Visits */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Number of Visits
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="52"
+                  value={editVisitCount}
+                  onChange={(e) => setEditVisitCount(parseInt(e.target.value) || 1)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Visits will be scheduled starting from the first service date
+                </p>
+              </div>
+
+              {/* Preview */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  <strong>Preview:</strong> {editVisitCount} visits, {editFrequency}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Starting from {selectedSlot ? formatDateShort(selectedSlot.date) : 'selected date'}
+                </p>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={() => setShowRecurrenceModal(false)}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApplyRecurrence}
+                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Apply Changes
               </button>
             </div>
           </div>
