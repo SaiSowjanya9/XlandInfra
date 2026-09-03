@@ -41,6 +41,9 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [rescheduleVisit, setRescheduleVisit] = useState(null);
   const [rescheduleScope, setRescheduleScope] = useState('this_visit_only'); // Default: This Visit Only
+  
+  // Inline editing state for planned visits
+  const [editingPlannedVisitIndex, setEditingPlannedVisitIndex] = useState(null);
 
   function getNextMonday() {
     const today = new Date();
@@ -300,6 +303,28 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       } : v
     ));
     setEditingVisitIndex(null);
+  };
+
+  // Handle inline edit of planned visit date (before confirmation modal)
+  const handlePlannedVisitDateChange = (index, newDateValue) => {
+    if (!newDateValue) return;
+    
+    const newDate = new Date(newDateValue);
+    const shortDateStr = newDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const fullDateStr = formatDateFull(newDate);
+    
+    setPlannedVisits(prev => prev.map((visit, i) => 
+      i === index ? {
+        ...visit,
+        date: newDate,
+        dateStr: fullDateStr,
+        shortDateStr: shortDateStr,
+        status: i === 0 ? 'Scheduled' : 'Modified', // Mark as modified instead of Target
+        isEdited: true
+      } : visit
+    ));
+    
+    setEditingPlannedVisitIndex(null);
   };
 
   // Confirm final schedule
@@ -730,26 +755,52 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               {plannedVisits.map((visit, i) => (
                 <div 
                   key={i}
-                  className={`flex-shrink-0 w-28 p-3 rounded-lg border text-center ${
+                  onClick={() => visit.status !== 'Scheduled' && !visit.isManual && setEditingPlannedVisitIndex(i)}
+                  className={`flex-shrink-0 w-28 p-3 rounded-lg border text-center transition-all ${
                     visit.status === 'Scheduled' ? 'border-green-300 bg-green-50' : 
-                    visit.isManual ? 'border-amber-300 bg-amber-50' : 'border-gray-200'
+                    visit.status === 'Modified' ? 'border-blue-300 bg-blue-50' :
+                    visit.isManual ? 'border-amber-300 bg-amber-50' : 
+                    'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer'
                   }`}
                 >
                   <p className="text-xs text-gray-500">Visit {visit.visitNumber}</p>
-                  <p className="font-semibold text-sm mt-1">
-                    {visit.isManual ? (
-                      <button className="text-amber-600 hover:text-amber-700 underline">
-                        Select
-                      </button>
-                    ) : (
-                      visit.shortDateStr || visit.dateStr
-                    )}
-                  </p>
+                  
+                  {/* Inline date picker when editing */}
+                  {editingPlannedVisitIndex === i ? (
+                    <div className="mt-1">
+                      <input
+                        type="date"
+                        defaultValue={visit.date ? new Date(visit.date).toISOString().split('T')[0] : ''}
+                        onChange={(e) => handlePlannedVisitDateChange(i, e.target.value)}
+                        onBlur={() => setEditingPlannedVisitIndex(null)}
+                        className="w-full px-1 py-1 text-xs border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  ) : (
+                    <p className="font-semibold text-sm mt-1">
+                      {visit.isManual ? (
+                        <button className="text-amber-600 hover:text-amber-700 underline">
+                          Select
+                        </button>
+                      ) : (
+                        visit.shortDateStr || visit.dateStr
+                      )}
+                    </p>
+                  )}
+                  
                   <p className="text-xs text-gray-500">{visit.time}</p>
                   <span className={`inline-block mt-2 px-2 py-0.5 text-xs rounded ${
                     visit.status === 'Scheduled' ? 'bg-green-100 text-green-700' : 
+                    visit.status === 'Modified' ? 'bg-blue-100 text-blue-700' :
                     visit.isManual ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'
                   }`}>{visit.status}</span>
+                  
+                  {/* Edit hint for target visits */}
+                  {visit.status === 'Target' && editingPlannedVisitIndex !== i && (
+                    <p className="text-[10px] text-gray-400 mt-1">Click to edit</p>
+                  )}
                 </div>
               ))}
             </div>
