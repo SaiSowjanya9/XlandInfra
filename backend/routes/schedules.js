@@ -848,7 +848,8 @@ router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async
         preferredDay: s.preferred_day,
         preferredTimeSlot: s.preferred_time_slot,
         recommendedDates: s.recommended_dates,
-        status: s.status
+        status: s.status,
+        schedulingStatus: s.scheduling_status
       }))
     });
   } catch (error) {
@@ -1192,9 +1193,11 @@ router.put('/property/:propertyId/cancel-all', authenticate, canMakeSchedule, as
       [reason, propertyId]
     );
 
-    // Delete from pending property schedules since it's cancelled
+    // Update pending property schedule status
     await pool.execute(
-      `DELETE FROM pending_property_schedules 
+      `UPDATE pending_property_schedules 
+       SET scheduling_status = 'cancelled',
+           updated_at = NOW()
        WHERE property_id = ?`,
       [propertyId]
     );

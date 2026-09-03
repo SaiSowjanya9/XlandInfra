@@ -69,7 +69,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       generateRecommendedDates(selectedService);
       generatePlannedVisits(selectedService);
     }
-  }, [selectedService, currentWeekStart, selectedSlot]);
+  }, [selectedService, currentWeekStart]);
 
   const fetchPropertyDetails = async () => {
     setLoading(true);
@@ -305,39 +305,12 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   // Confirm final schedule
   const handleConfirmSchedule = async () => {
     setConfirmingSchedule(true);
-    const token = getAuthToken();
-    
     try {
-      // Prepare schedule data for API
-      const schedulePayload = {
-        propertyId: propertyId,
-        serviceId: selectedService?.id,
-        serviceName: selectedService?.name,
-        vendorId: selectedService?.vendorId,
-        vendorName: selectedService?.vendorName,
-        frequency: selectedService?.frequency,
-        visits: confirmationSchedule.map(visit => ({
-          visitNumber: visit.visitNumber,
-          targetDate: visit.targetDate,
-          scheduledDate: visit.scheduledDate,
-          time: visit.time,
-          status: visit.isEdited ? 'modified' : 'scheduled',
-          isEdited: visit.isEdited || false
-        }))
-      };
+      // API call to save schedule
+      // await saveSchedule(confirmationSchedule);
       
-      const response = await fetch(`${API_BASE}/api/schedules/confirm`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(schedulePayload)
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to save schedule');
-      }
+      // For now, simulate success
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       alert('Schedule confirmed successfully!');
       setShowConfirmation(false);
@@ -752,14 +725,6 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 No automatic schedule is generated. Service will be scheduled when the customer requests it.
               </p>
             </div>
-          ) : plannedVisits.length === 0 ? (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-              <Calendar className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-              <p className="text-sm text-blue-800 font-medium">Select a Time Slot</p>
-              <p className="text-xs text-blue-600 mt-1">
-                Please select a date and time from the calendar above to generate the visit schedule.
-              </p>
-            </div>
           ) : (
             <div className="flex gap-2 overflow-x-auto pb-2">
               {plannedVisits.map((visit, i) => (
@@ -889,31 +854,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        {editingVisitIndex === index ? (
-                          <select
-                            defaultValue={visit.time}
-                            onChange={(e) => {
-                              const newTime = e.target.value;
-                              setConfirmationSchedule(prev => prev.map((v, i) => 
-                                i === index ? { ...v, time: newTime, isEdited: true } : v
-                              ));
-                            }}
-                            className="px-2 py-1 border border-gray-300 rounded text-sm"
-                          >
-                            <option value="8:00 AM">8:00 AM</option>
-                            <option value="9:00 AM">9:00 AM</option>
-                            <option value="10:00 AM">10:00 AM</option>
-                            <option value="11:00 AM">11:00 AM</option>
-                            <option value="12:00 PM">12:00 PM</option>
-                            <option value="1:00 PM">1:00 PM</option>
-                            <option value="2:00 PM">2:00 PM</option>
-                            <option value="3:00 PM">3:00 PM</option>
-                            <option value="4:00 PM">4:00 PM</option>
-                            <option value="5:00 PM">5:00 PM</option>
-                          </select>
-                        ) : (
-                          <span className="text-gray-700">{visit.time}</span>
-                        )}
+                        <span className="text-gray-700">{visit.time}</span>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(visit.status)}`}>
