@@ -377,8 +377,7 @@ export const formatSchedulesForDisplay = (schedules) => {
     shortDateStr: schedule.date
       ? schedule.date.toLocaleDateString('en-US', { 
           month: 'short', 
-          day: 'numeric',
-          year: 'numeric'
+          day: 'numeric' 
         })
       : 'TBD',
     monthYear: schedule.date
