@@ -488,20 +488,20 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               Home › Scheduling › Pending Property Schedules › <span className="text-gray-900">Schedule Property</span>
             </nav>
           </div>
-          <div className="flex items-center gap-3">
-            <button onClick={goBack} className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
-              <ArrowLeft className="w-4 h-4" />
+          <div className="flex items-center gap-2">
+            <button onClick={goBack} className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900">
+              <ArrowLeft className="w-3.5 h-3.5" />
               Back to Pending Schedules
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-              <Save className="w-4 h-4" />
+            <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-50">
+              <Save className="w-3.5 h-3.5" />
               Save Draft
             </button>
             <button 
               onClick={handleConfirmSchedule}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              <CheckCircle className="w-4 h-4" />
+              <CheckCircle className="w-3.5 h-3.5" />
               Confirm Schedule
             </button>
           </div>
@@ -526,8 +526,10 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
           </div>
           <div className="min-w-0">
             <p className="text-[10px] text-gray-400 uppercase tracking-wide">Customer</p>
-            <p className="text-sm font-semibold text-gray-900">{property?.customerName || 'Mr. Ramesh Kumar'}</p>
-            <p className="text-[10px] text-gray-400 flex items-center gap-1"><Phone className="w-3 h-3" /> 98765 43210</p>
+            <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+              {property?.customerName || 'Mr. Ramesh Kumar'}
+              <span className="text-xs text-gray-500 font-normal flex items-center gap-1"><Phone className="w-3 h-3" /> 98765 43210</span>
+            </p>
           </div>
           <div className="min-w-0">
             <p className="text-[10px] text-gray-400 uppercase tracking-wide">Property Type</p>
