@@ -329,15 +329,16 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     if (!selectedSlot || !selectedService) return;
     
     // Generate confirmation schedule with target dates and recommended dates
+    // Preserve isEdited flag from planned visits
     const schedule = plannedVisits.map((visit, index) => ({
       visitNumber: visit.visitNumber,
       targetDate: visit.date,
       targetDateStr: visit.dateStr || visit.shortDateStr,
       scheduledDate: visit.date, // Can be adjusted
       scheduledDateStr: visit.dateStr || visit.shortDateStr,
-      time: index === 0 ? selectedSlot.time : '10:00 AM',
+      time: visit.time || (index === 0 ? selectedSlot.time : '10:00 AM'),
       status: 'pending_schedule',
-      isEdited: false,
+      isEdited: visit.isEdited || false,
       isManual: visit.isManual || false
     }));
     
@@ -371,12 +372,41 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   // Confirm final schedule
   const handleConfirmSchedule = async () => {
     setConfirmingSchedule(true);
+    const token = getAuthToken();
+    
     try {
-      // API call to save schedule
-      // await saveSchedule(confirmationSchedule);
+      // Prepare schedule data for API
+      const schedulePayload = {
+        propertyId: propertyId,
+        serviceId: selectedService?.id,
+        serviceName: selectedService?.name,
+        serviceCategory: selectedService?.category,
+        vendorId: selectedService?.vendorId,
+        vendorName: selectedService?.vendorName,
+        frequency: selectedService?.frequency,
+        totalVisits: confirmationSchedule.length,
+        visits: confirmationSchedule.map(visit => ({
+          visitNumber: visit.visitNumber,
+          targetDate: visit.targetDate instanceof Date ? visit.targetDate.toISOString() : visit.targetDate,
+          scheduledDate: visit.scheduledDate instanceof Date ? visit.scheduledDate.toISOString() : visit.scheduledDate,
+          time: visit.time,
+          status: visit.isEdited ? 'modified' : 'scheduled',
+          isEdited: visit.isEdited || false
+        }))
+      };
       
-      // For now, simulate success
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch(`${API_BASE}/api/schedules/confirm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(schedulePayload)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save schedule');
+      }
       
       alert('Schedule confirmed successfully!');
       setShowConfirmation(false);
@@ -498,8 +528,9 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               Save Draft
             </button>
             <button 
-              onClick={handleConfirmSchedule}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              onClick={handlePrepareConfirmation}
+              disabled={!selectedSlot || !selectedService}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <CheckCircle className="w-3.5 h-3.5" />
               Confirm Schedule
