@@ -221,22 +221,25 @@ const FPDashboard = ({ user }) => {
     }
   }, []);
 
-  // Initial load and auto-refresh every 30 seconds
+  // Initial load
   useEffect(() => {
     fetchDashboardData(true);
+  }, []);
+  
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
     const interval = setInterval(() => {
       fetchDashboardData(false);
     }, 30000);
     return () => clearInterval(interval);
-  }, [fetchDashboardData]);
+  }, []);
 
   // Refresh when navigating back to dashboard
   useEffect(() => {
-    // This runs when location changes and we're on the dashboard
     if (location.pathname === '/fp/dashboard' || location.pathname === '/fp') {
       fetchDashboardData(false);
     }
-  }, [location.pathname, fetchDashboardData]);
+  }, [location.pathname]);
 
   // Refresh when tab becomes visible again
   useEffect(() => {

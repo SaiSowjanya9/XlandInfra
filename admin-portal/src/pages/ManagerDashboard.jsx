@@ -220,21 +220,25 @@ const ManagerDashboard = ({ user }) => {
     }
   }, []);
 
-  // Initial load and auto-refresh every 30 seconds
+  // Initial load
   useEffect(() => {
     fetchDashboardData(true);
+  }, []);
+  
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
     const interval = setInterval(() => {
       fetchDashboardData(false);
     }, 30000);
     return () => clearInterval(interval);
-  }, [fetchDashboardData]);
+  }, []);
 
   // Refresh when navigating back to dashboard
   useEffect(() => {
     if (location.pathname === '/manager/dashboard' || location.pathname === '/manager') {
       fetchDashboardData(false);
     }
-  }, [location.pathname, fetchDashboardData]);
+  }, [location.pathname]);
 
   // Refresh when tab becomes visible again
   useEffect(() => {

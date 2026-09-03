@@ -464,7 +464,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [fetchDashboardData]);
+  }, [token, dateRange, selectedFp]);
 
   const formatDateRange = () => {
     const start = new Date(dateRange.start);

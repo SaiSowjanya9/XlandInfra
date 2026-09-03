@@ -58,15 +58,20 @@ const SupervisorDashboard = ({ user }) => {
     }
   }, []);
 
+  // Initial load
   useEffect(() => {
     fetchDashboard(true);
+  }, []);
+  
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
     const interval = setInterval(() => fetchDashboard(false), 30000);
     return () => clearInterval(interval);
-  }, [fetchDashboard]);
+  }, []);
 
   useEffect(() => {
     if (location.pathname.includes('supervisor')) fetchDashboard(false);
-  }, [location.pathname, fetchDashboard]);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleVisibility = () => {
@@ -74,7 +79,7 @@ const SupervisorDashboard = ({ user }) => {
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [fetchDashboard]);
+  }, []);
 
   // Pie chart data - All 6 statuses
   const workOrdersByStatus = stats?.workOrdersByStatus || {};

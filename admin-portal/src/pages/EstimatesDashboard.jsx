@@ -144,14 +144,18 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     }
   }, [token, apiPath]);
 
-  // Initial load and auto-refresh every 30 seconds
+  // Initial load
   useEffect(() => {
     fetchEstimates();
+  }, []);
+  
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
     const interval = setInterval(() => {
       fetchEstimates(false);
     }, 30000);
     return () => clearInterval(interval);
-  }, [fetchEstimates]);
+  }, []);
 
   // Filter estimates by MAIN date range (controls entire dashboard)
   const getMainFilteredEstimates = () => {
