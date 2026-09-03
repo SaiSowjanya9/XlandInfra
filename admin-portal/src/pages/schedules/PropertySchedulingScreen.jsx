@@ -323,19 +323,60 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         isEdited: true
       } : visit
     ));
+  };
+
+  // Handle inline edit of planned visit time (before confirmation modal)
+  const handlePlannedVisitTimeChange = (index, newTime) => {
+    if (!newTime) return;
     
-    setEditingPlannedVisitIndex(null);
+    setPlannedVisits(prev => prev.map((visit, i) => 
+      i === index ? {
+        ...visit,
+        time: newTime,
+        status: i === 0 ? 'Scheduled' : 'Modified',
+        isEdited: true
+      } : visit
+    ));
   };
 
   // Confirm final schedule
   const handleConfirmSchedule = async () => {
     setConfirmingSchedule(true);
+    const token = getAuthToken();
+    
     try {
-      // API call to save schedule
-      // await saveSchedule(confirmationSchedule);
+      // Prepare schedule data for API
+      const schedulePayload = {
+        propertyId: propertyId,
+        serviceId: selectedService?.id,
+        serviceName: selectedService?.name,
+        vendorId: selectedService?.vendorId,
+        vendorName: selectedService?.vendorName,
+        frequency: selectedService?.frequency,
+        visits: confirmationSchedule.map(visit => ({
+          visitNumber: visit.visitNumber,
+          targetDate: visit.targetDate,
+          scheduledDate: visit.scheduledDate,
+          time: visit.time,
+          status: visit.isEdited ? 'modified' : 'scheduled',
+          isEdited: visit.isEdited || false
+        }))
+      };
       
-      // For now, simulate success
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch(`${API_BASE}/api/schedules/confirm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(schedulePayload)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save schedule');
+      }
+      
+      const result = await response.json();
       
       alert('Schedule confirmed successfully!');
       setShowConfirmation(false);
@@ -751,35 +792,24 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               </p>
             </div>
           ) : (
-            <div className="flex gap-2 overflow-x-auto pb-2">
+            <div className="flex gap-2 overflow-x-auto pb-2 relative">
               {plannedVisits.map((visit, i) => (
                 <div 
                   key={i}
-                  onClick={() => visit.status !== 'Scheduled' && !visit.isManual && setEditingPlannedVisitIndex(i)}
-                  className={`flex-shrink-0 w-28 p-3 rounded-lg border text-center transition-all ${
-                    visit.status === 'Scheduled' ? 'border-green-300 bg-green-50' : 
-                    visit.status === 'Modified' ? 'border-blue-300 bg-blue-50' :
-                    visit.isManual ? 'border-amber-300 bg-amber-50' : 
-                    'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer'
-                  }`}
+                  className="relative"
                 >
-                  <p className="text-xs text-gray-500">Visit {visit.visitNumber}</p>
-                  
-                  {/* Inline date picker when editing */}
-                  {editingPlannedVisitIndex === i ? (
-                    <div className="mt-1">
-                      <input
-                        type="date"
-                        defaultValue={visit.date ? new Date(visit.date).toISOString().split('T')[0] : ''}
-                        onChange={(e) => handlePlannedVisitDateChange(i, e.target.value)}
-                        onBlur={() => setEditingPlannedVisitIndex(null)}
-                        className="w-full px-1 py-1 text-xs border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        autoFocus
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                  ) : (
-                    <p className="font-semibold text-sm mt-1">
+                  {/* Visit Card */}
+                  <div 
+                    onClick={() => visit.status !== 'Scheduled' && !visit.isManual && setEditingPlannedVisitIndex(i)}
+                    className={`flex-shrink-0 min-w-[110px] p-3 rounded-lg border text-center transition-all ${
+                      visit.status === 'Scheduled' ? 'border-green-300 bg-green-50' : 
+                      visit.status === 'Modified' ? 'border-blue-300 bg-blue-50' :
+                      visit.isManual ? 'border-amber-300 bg-amber-50' : 
+                      'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer'
+                    }`}
+                  >
+                    <p className="text-xs text-gray-500">Visit {visit.visitNumber}</p>
+                    <p className="font-semibold text-sm mt-1 whitespace-nowrap">
                       {visit.isManual ? (
                         <button className="text-amber-600 hover:text-amber-700 underline">
                           Select
@@ -788,18 +818,73 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                         visit.shortDateStr || visit.dateStr
                       )}
                     </p>
-                  )}
+                    <p className={`text-xs ${visit.isEdited ? 'text-blue-600 font-medium' : 'text-gray-500'}`}>{visit.time}</p>
+                    <span className={`inline-block mt-2 px-2 py-0.5 text-xs rounded ${
+                      visit.status === 'Scheduled' ? 'bg-green-100 text-green-700' : 
+                      visit.status === 'Modified' ? 'bg-blue-100 text-blue-700' :
+                      visit.isManual ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'
+                    }`}>{visit.status}</span>
+                    
+                    {/* Edit hint for target visits */}
+                    {visit.status === 'Target' && editingPlannedVisitIndex !== i && (
+                      <p className="text-[10px] text-gray-400 mt-1">Click to edit</p>
+                    )}
+                  </div>
                   
-                  <p className="text-xs text-gray-500">{visit.time}</p>
-                  <span className={`inline-block mt-2 px-2 py-0.5 text-xs rounded ${
-                    visit.status === 'Scheduled' ? 'bg-green-100 text-green-700' : 
-                    visit.status === 'Modified' ? 'bg-blue-100 text-blue-700' :
-                    visit.isManual ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'
-                  }`}>{visit.status}</span>
-                  
-                  {/* Edit hint for target visits */}
-                  {visit.status === 'Target' && editingPlannedVisitIndex !== i && (
-                    <p className="text-[10px] text-gray-400 mt-1">Click to edit</p>
+                  {/* Edit Popup - appears below the card */}
+                  {editingPlannedVisitIndex === i && (
+                    <div className="absolute top-full left-0 mt-2 z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-4 w-56">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold text-gray-900 text-sm">Edit Visit {visit.visitNumber}</h4>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setEditingPlannedVisitIndex(null); }}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-xs font-medium text-gray-600 block mb-1">Date</label>
+                          <input
+                            type="date"
+                            defaultValue={visit.date ? new Date(visit.date).toISOString().split('T')[0] : ''}
+                            onChange={(e) => handlePlannedVisitDateChange(i, e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="text-xs font-medium text-gray-600 block mb-1">Time</label>
+                          <select
+                            defaultValue={visit.time}
+                            onChange={(e) => handlePlannedVisitTimeChange(i, e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <option value="8:00 AM">8:00 AM</option>
+                            <option value="9:00 AM">9:00 AM</option>
+                            <option value="10:00 AM">10:00 AM</option>
+                            <option value="11:00 AM">11:00 AM</option>
+                            <option value="12:00 PM">12:00 PM</option>
+                            <option value="1:00 PM">1:00 PM</option>
+                            <option value="2:00 PM">2:00 PM</option>
+                            <option value="3:00 PM">3:00 PM</option>
+                            <option value="4:00 PM">4:00 PM</option>
+                            <option value="5:00 PM">5:00 PM</option>
+                          </select>
+                        </div>
+                        
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setEditingPlannedVisitIndex(null); }}
+                          className="w-full px-4 py-2 text-sm bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700"
+                        >
+                          Done
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               ))}
@@ -905,7 +990,31 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-gray-700">{visit.time}</span>
+                        {editingVisitIndex === index ? (
+                          <select
+                            defaultValue={visit.time}
+                            onChange={(e) => {
+                              const newTime = e.target.value;
+                              setConfirmationSchedule(prev => prev.map((v, i) => 
+                                i === index ? { ...v, time: newTime, isEdited: true } : v
+                              ));
+                            }}
+                            className="px-2 py-1 border border-gray-300 rounded text-sm"
+                          >
+                            <option value="8:00 AM">8:00 AM</option>
+                            <option value="9:00 AM">9:00 AM</option>
+                            <option value="10:00 AM">10:00 AM</option>
+                            <option value="11:00 AM">11:00 AM</option>
+                            <option value="12:00 PM">12:00 PM</option>
+                            <option value="1:00 PM">1:00 PM</option>
+                            <option value="2:00 PM">2:00 PM</option>
+                            <option value="3:00 PM">3:00 PM</option>
+                            <option value="4:00 PM">4:00 PM</option>
+                            <option value="5:00 PM">5:00 PM</option>
+                          </select>
+                        ) : (
+                          <span className={`${visit.isEdited ? 'text-amber-700' : 'text-gray-700'}`}>{visit.time}</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(visit.status)}`}>
