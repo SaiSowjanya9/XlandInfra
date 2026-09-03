@@ -419,6 +419,50 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     }
   };
 
+  // Save draft schedule
+  const handleSaveDraft = async () => {
+    if (!selectedService || plannedVisits.length === 0) {
+      alert('Please select a service and generate a schedule first');
+      return;
+    }
+    
+    const token = getAuthToken();
+    
+    try {
+      const draftPayload = {
+        propertyId: propertyId,
+        serviceId: selectedService?.id,
+        serviceName: selectedService?.name,
+        frequency: selectedService?.frequency,
+        status: 'draft',
+        visits: plannedVisits.map(visit => ({
+          visitNumber: visit.visitNumber,
+          targetDate: visit.date instanceof Date ? visit.date.toISOString() : visit.date,
+          time: visit.time,
+          isEdited: visit.isEdited || false
+        }))
+      };
+      
+      const response = await fetch(`${API_BASE}/api/schedules/draft`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(draftPayload)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save draft');
+      }
+      
+      alert('Draft saved successfully!');
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      alert('Error saving draft. Please try again.');
+    }
+  };
+
   // Reschedule handlers
   const handleOpenReschedule = (visit) => {
     setRescheduleVisit(visit);
@@ -523,7 +567,10 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               <ArrowLeft className="w-3.5 h-3.5" />
               Back to Pending Schedules
             </button>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-50">
+            <button 
+              onClick={handleSaveDraft}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
               <Save className="w-3.5 h-3.5" />
               Save Draft
             </button>
