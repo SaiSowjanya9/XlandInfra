@@ -69,7 +69,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       generateRecommendedDates(selectedService);
       generatePlannedVisits(selectedService);
     }
-  }, [selectedService, currentWeekStart]);
+  }, [selectedService, currentWeekStart, selectedSlot]);
 
   const fetchPropertyDetails = async () => {
     setLoading(true);
