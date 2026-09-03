@@ -752,6 +752,14 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 No automatic schedule is generated. Service will be scheduled when the customer requests it.
               </p>
             </div>
+          ) : plannedVisits.length === 0 ? (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+              <Calendar className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+              <p className="text-sm text-blue-800 font-medium">Select a Time Slot</p>
+              <p className="text-xs text-blue-600 mt-1">
+                Please select a date and time from the calendar above to generate the visit schedule.
+              </p>
+            </div>
           ) : (
             <div className="flex gap-2 overflow-x-auto pb-2">
               {plannedVisits.map((visit, i) => (
