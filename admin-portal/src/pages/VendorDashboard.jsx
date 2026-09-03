@@ -46,15 +46,20 @@ const VendorDashboard = ({ user }) => {
     }
   }, []);
 
+  // Initial load
   useEffect(() => {
     fetchVendorDashboard(true);
+  }, []);
+  
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
     const interval = setInterval(() => fetchVendorDashboard(false), 30000);
     return () => clearInterval(interval);
-  }, [fetchVendorDashboard]);
+  }, []);
 
   useEffect(() => {
     if (location.pathname.includes('vendor')) fetchVendorDashboard(false);
-  }, [location.pathname, fetchVendorDashboard]);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleVisibility = () => {
@@ -62,7 +67,7 @@ const VendorDashboard = ({ user }) => {
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [fetchVendorDashboard]);
+  }, []);
 
   // Pie chart data
   const workOrdersByStatus = stats.byStatus || {};
