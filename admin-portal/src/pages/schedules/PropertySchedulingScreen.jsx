@@ -1040,7 +1040,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
           </p>
           
           {/* Confirm Schedule Button */}
-          {selectedSlot && plannedVisits.length > 0 && !selectedService?.frequency?.toLowerCase().includes('request') && (
+          {plannedVisits.length > 0 && plannedVisits.some(v => v.date) && !selectedService?.frequency?.toLowerCase().includes('request') && (
             <div className="mt-4 flex justify-end">
               <button
                 onClick={handlePrepareConfirmation}
