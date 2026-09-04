@@ -874,24 +874,29 @@ router.post('/draft', authenticate, canMakeSchedule, async (req, res) => {
       });
     }
 
+    const serviceNameToUse = serviceName || 'General Service';
+
     // Find or create the property_service_schedule record with draft status
     const [existingSchedule] = await pool.execute(
-      `SELECT id FROM property_service_schedules WHERE property_id = ? AND service_type = ? LIMIT 1`,
-      [propertyId, serviceName || 'General']
+      `SELECT id FROM property_service_schedules WHERE property_id = ? AND service_name = ? LIMIT 1`,
+      [propertyId, serviceNameToUse]
     );
 
     let serviceScheduleId;
     if (existingSchedule.length > 0) {
       serviceScheduleId = existingSchedule[0].id;
       await pool.execute(
-        `UPDATE property_service_schedules SET status = 'draft', draft_visits_json = ?, updated_at = NOW() WHERE id = ?`,
+        `UPDATE property_service_schedules SET status = 'pending_schedule', recommended_dates = ?, updated_at = NOW() WHERE id = ?`,
         [JSON.stringify(visits), serviceScheduleId]
       );
     } else {
+      const scheduleId = generateScheduleId();
+      const frequencyType = (frequency || 'monthly').toLowerCase().replace(' ', '_');
+      
       const [newSchedule] = await pool.execute(
-        `INSERT INTO property_service_schedules (property_id, service_type, vendor_id, frequency, total_visits, status, draft_visits_json, created_at)
-         VALUES (?, ?, ?, ?, ?, 'draft', ?, NOW())`,
-        [propertyId, serviceName || 'General', vendorId || null, frequency || 'monthly', visits.length, JSON.stringify(visits)]
+        `INSERT INTO property_service_schedules (schedule_id, property_id, service_name, vendor_id, frequency_type, total_visits, status, recommended_dates, created_by, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'pending_schedule', ?, ?, NOW())`,
+        [scheduleId, propertyId, serviceNameToUse, vendorId || null, frequencyType, visits.length, JSON.stringify(visits), req.user.id]
       );
       serviceScheduleId = newSchedule.insertId;
     }
@@ -916,29 +921,39 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
   try {
     const { propertyId, serviceId, serviceName, serviceCategory, vendorId, vendorName, frequency, totalVisits, visits } = req.body;
 
-    if (!propertyId || !serviceId || !visits?.length) {
+    if (!propertyId || !visits?.length) {
       return res.status(400).json({
         success: false,
-        message: 'Property ID, Service ID, and visits are required'
+        message: 'Property ID and visits are required'
       });
     }
+
+    const serviceNameToUse = serviceName || serviceCategory || 'General Service';
 
     // Find or create the property_service_schedule record
     let serviceScheduleId;
     
     const [existingSchedule] = await pool.execute(
-      `SELECT id FROM property_service_schedules WHERE property_id = ? AND service_type = ? LIMIT 1`,
-      [propertyId, serviceName || serviceCategory || 'General']
+      `SELECT id FROM property_service_schedules WHERE property_id = ? AND service_name = ? LIMIT 1`,
+      [propertyId, serviceNameToUse]
     );
 
     if (existingSchedule.length > 0) {
       serviceScheduleId = existingSchedule[0].id;
+      // Update existing schedule
+      await pool.execute(
+        `UPDATE property_service_schedules SET status = 'active', total_visits = ?, updated_at = NOW() WHERE id = ?`,
+        [totalVisits || visits.length, serviceScheduleId]
+      );
     } else {
-      // Create new service schedule
+      // Create new service schedule with required schedule_id
+      const scheduleId = generateScheduleId();
+      const frequencyType = (frequency || 'monthly').toLowerCase().replace(' ', '_').replace(/every\s*/i, 'every_');
+      
       const [newSchedule] = await pool.execute(
-        `INSERT INTO property_service_schedules (property_id, service_type, vendor_id, frequency, total_visits, status, created_at)
-         VALUES (?, ?, ?, ?, ?, 'active', NOW())`,
-        [propertyId, serviceName || serviceCategory || 'General', vendorId || null, frequency || 'monthly', totalVisits || visits.length]
+        `INSERT INTO property_service_schedules (schedule_id, property_id, service_name, service_category, vendor_id, frequency_type, total_visits, status, created_by, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, NOW())`,
+        [scheduleId, propertyId, serviceNameToUse, serviceCategory || null, vendorId || null, frequencyType, totalVisits || visits.length, req.user.id]
       );
       serviceScheduleId = newSchedule.insertId;
     }
