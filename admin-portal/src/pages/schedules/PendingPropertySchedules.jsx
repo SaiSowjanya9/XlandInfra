@@ -560,6 +560,57 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
     setCurrentPage(1);
   };
 
+  // Handle export to CSV
+  const handleExport = () => {
+    const dataToExport = filteredProperties;
+    
+    if (dataToExport.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    const headers = [
+      'Property ID',
+      'Property Name',
+      'Property Type',
+      'Customer Name',
+      'Zone',
+      'Total Services',
+      'Assigned Vendors',
+      'Pending Services',
+      'Added On',
+      'Status'
+    ];
+
+    const rows = dataToExport.map(property => [
+      property.propertyId || '',
+      property.propertyName || '',
+      property.propertyType || '',
+      property.customerName || '',
+      property.zone || '',
+      property.totalServices || 0,
+      property.assignedVendors || 0,
+      property.pendingServices || 0,
+      property.addedOn || '',
+      property.status || ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `pending_schedules_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Handle schedule action
   const handleSchedule = (property) => {
     setSelectedProperty(property);
@@ -819,7 +870,10 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           </select>
 
           {/* Export Button */}
-          <button className="flex items-center gap-1.5 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200 flex-shrink-0">
+          <button 
+            onClick={handleExport}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200 flex-shrink-0"
+          >
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline">Export</span>
           </button>

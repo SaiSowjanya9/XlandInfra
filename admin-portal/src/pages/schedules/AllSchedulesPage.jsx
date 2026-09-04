@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Clock, Search, Filter, Download, ChevronLeft, ChevronRight,
@@ -28,16 +28,18 @@ const MOCK_SCHEDULES = [
   { id: 12, visitId: 'VIS-012', propertyId: 'PROP-111', propertyName: 'Maple Gardens', propertyType: 'Apartment', customerName: 'Rahul Verma', serviceName: 'Deep Cleaning', serviceCategory: 'Cleaning', vendorId: 2, vendorCode: 'VND-002', vendorName: 'CleanPro Services', visitNumber: 1, totalVisits: 6, targetDate: '2024-09-25', scheduledDate: '2024-09-25', scheduledTime: '09:00:00', originalDate: null, isRescheduled: false, zone: 'Zone B', workOrderId: null, workOrderStatus: null, status: 'scheduled' },
 ];
 
-const MOCK_STATS = {
-  total: 45,
-  scheduled: 12,
-  upcoming: 8,
-  workOrderCreated: 5,
-  inProgress: 6,
-  completed: 10,
-  rescheduled: 2,
-  cancelled: 1,
-  overdue: 1
+// Function to calculate stats from mock data
+const calculateMockStats = (data) => {
+  return {
+    total: data.length,
+    scheduled: data.filter(s => s.status === 'scheduled').length,
+    upcoming: data.filter(s => s.status === 'upcoming').length,
+    inProgress: data.filter(s => s.status === 'in_progress').length,
+    completed: data.filter(s => s.status === 'completed').length,
+    rescheduled: data.filter(s => s.status === 'rescheduled').length,
+    cancelled: data.filter(s => s.status === 'cancelled').length,
+    overdue: data.filter(s => s.status === 'overdue').length
+  };
 };
 
 const MOCK_SERVICES = [
@@ -102,6 +104,9 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     inProgress: 0, completed: 0, rescheduled: 0, cancelled: 0, overdue: 0
   });
   
+  // Ref to store mock data that persists modifications
+  const mockDataRef = useRef([...MOCK_SCHEDULES]);
+  
   // Filter states
   const [filters, setFilters] = useState({
     search: '',
@@ -133,6 +138,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   const [newTime, setNewTime] = useState('');
   const [rescheduleReason, setRescheduleReason] = useState('');
   const [rescheduling, setRescheduling] = useState(false);
+  const [isSingleReschedule, setIsSingleReschedule] = useState(false); // true = single row action, false = header button
 
   // Fetch schedules
   const fetchSchedules = useCallback(async (showRefresh = false) => {
@@ -142,7 +148,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     // Use mock data if enabled
     if (USE_MOCK_DATA) {
       setTimeout(() => {
-        let filteredSchedules = [...MOCK_SCHEDULES];
+        let filteredSchedules = [...mockDataRef.current];
         
         // Apply filters
         if (filters.search) {
@@ -176,7 +182,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
         
         setSchedules(paginatedSchedules);
         setTotalCount(filteredSchedules.length);
-        setStats(MOCK_STATS);
+        setStats(calculateMockStats(mockDataRef.current));
         setLoading(false);
         setRefreshing(false);
       }, 500);
@@ -300,19 +306,80 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     } catch { return time; }
   };
 
+  // Handle export to CSV
+  const handleExport = () => {
+    // Get data to export (use mockDataRef for mock mode, or filtered schedules)
+    const dataToExport = USE_MOCK_DATA ? mockDataRef.current : schedules;
+    
+    if (dataToExport.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    // Define CSV headers
+    const headers = [
+      'Property ID',
+      'Property Name',
+      'Customer Name',
+      'Service',
+      'Vendor',
+      'Visit',
+      'Target Date',
+      'Scheduled Date',
+      'Time',
+      'Zone',
+      'Work Order',
+      'Status'
+    ];
+
+    // Convert data to CSV rows
+    const rows = dataToExport.map(schedule => [
+      schedule.propertyId || '',
+      schedule.propertyName || '',
+      schedule.customerName || '',
+      schedule.serviceName || '',
+      schedule.vendorName || '',
+      `${schedule.visitNumber} of ${schedule.totalVisits}`,
+      schedule.targetDate || '',
+      schedule.scheduledDate || '',
+      schedule.scheduledTime || '',
+      schedule.zone || '',
+      schedule.workOrderId || '',
+      schedule.status || ''
+    ]);
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `all_schedules_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Handle view details
   const handleViewDetails = (schedule) => {
     setSelectedSchedule(schedule);
     setShowViewModal(true);
   };
 
-  // Handle reschedule - open modal with schedule pre-selected
+  // Handle reschedule - open modal with schedule pre-selected (single row action)
   const handleReschedule = (schedule) => {
     setSelectedForReschedule(schedule);
     setNewDate('');
     setNewTime('');
     setRescheduleReason('');
     setRescheduleSearch('');
+    setIsSingleReschedule(true); // Single schedule mode - hide table
     setShowRescheduleModal(true);
   };
 
@@ -331,6 +398,28 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     }
     
     setCancelling(true);
+    
+    // For mock data, just update locally
+    if (USE_MOCK_DATA) {
+      setTimeout(() => {
+        // Update the persistent mock data ref
+        mockDataRef.current = mockDataRef.current.map(s => 
+          s.id === selectedSchedule.id ? { ...s, status: 'cancelled', cancelReason: cancelReason } : s
+        );
+        // Update stats
+        setStats(calculateMockStats(mockDataRef.current));
+        // Also update the displayed schedules
+        setSchedules(prev => prev.map(s => 
+          s.id === selectedSchedule.id ? { ...s, status: 'cancelled' } : s
+        ));
+        setShowCancelModal(false);
+        setSelectedSchedule(null);
+        setCancelling(false);
+        alert('Schedule cancelled successfully');
+      }, 500);
+      return;
+    }
+    
     try {
       const token = getAuthToken();
       const response = await fetch(`${API_BASE}/api/schedules/${selectedSchedule.id}/cancel`, {
@@ -363,6 +452,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   };
 
   // Open reschedule modal
+  // Open reschedule modal from header button (show all schedules list)
   const openRescheduleModal = () => {
     setShowRescheduleModal(true);
     setRescheduleSearch('');
@@ -370,11 +460,14 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     setNewDate('');
     setNewTime('');
     setRescheduleReason('');
+    setIsSingleReschedule(false); // All schedules mode - show table
   };
 
   // Get filtered schedules for reschedule modal (exclude completed/cancelled)
   const getReschedulableSchedules = () => {
-    const reschedulable = schedules.filter(s => 
+    // Use mockDataRef for mock mode to show all schedules (not just paginated)
+    const sourceData = USE_MOCK_DATA ? mockDataRef.current : schedules;
+    const reschedulable = sourceData.filter(s => 
       s.status !== 'completed' && s.status !== 'cancelled'
     );
     
@@ -440,6 +533,22 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     // For mock data, just update locally
     if (USE_MOCK_DATA) {
       setTimeout(() => {
+        // Update the persistent mock data ref
+        mockDataRef.current = mockDataRef.current.map(s => 
+          s.id === selectedForReschedule.id 
+            ? { 
+                ...s, 
+                originalDate: s.scheduledDate,
+                scheduledDate: isoDate,
+                scheduledTime: newTime,
+                isRescheduled: true,
+                status: 'rescheduled'
+              } 
+            : s
+        );
+        // Update stats
+        setStats(calculateMockStats(mockDataRef.current));
+        // Also update the displayed schedules
         setSchedules(prev => prev.map(s => 
           s.id === selectedForReschedule.id 
             ? { 
@@ -501,7 +610,6 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     { label: 'Total', value: stats.total || 0, icon: CalendarDays, color: 'bg-blue-500' },
     { label: 'Scheduled', value: stats.scheduled || 0, icon: Calendar, color: 'bg-blue-500' },
     { label: 'Upcoming', value: stats.upcoming || 0, icon: Clock3, color: 'bg-indigo-500' },
-    { label: 'Work Order Created', value: stats.workOrderCreated || 0, icon: FileText, color: 'bg-purple-500' },
     { label: 'In Progress', value: stats.inProgress || 0, icon: RefreshCw, color: 'bg-amber-500' },
     { label: 'Completed', value: stats.completed || 0, icon: CheckCircle, color: 'bg-green-500' },
     { label: 'Rescheduled', value: stats.rescheduled || 0, icon: RefreshCw, color: 'bg-orange-500' },
@@ -545,7 +653,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
 
       <div className="p-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-8 gap-3 mb-6">
+        <div className="grid grid-cols-7 gap-3 mb-6">
           {statsCards.map((stat, index) => (
             <div key={index} className="bg-white rounded-xl border border-gray-200 p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -583,10 +691,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Status</option>
-              <option value="pending_schedule">Pending Schedule</option>
               <option value="scheduled">Scheduled</option>
               <option value="upcoming">Upcoming</option>
-              <option value="work_order_created">Work Order Created</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
               <option value="rescheduled">Rescheduled</option>
@@ -631,7 +737,10 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             </select>
 
             {/* Export */}
-            <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50">
+            <button 
+              onClick={handleExport}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50"
+            >
               <Download className="w-4 h-4" />
               Export
             </button>
@@ -660,7 +769,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Property Name</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Service</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vendor</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Visit #</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Visit</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Target Date</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Scheduled Date</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Time</th>
@@ -704,10 +813,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                         <td className="px-4 py-3">
                           <span className="text-sm text-gray-700">{schedule.vendorName || '-'}</span>
                         </td>
-                        <td className="px-4 py-3">
-                          <span className="text-sm font-medium text-gray-900">
-                            {schedule.visitNumber} of {schedule.totalVisits}
-                          </span>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className="text-sm font-medium text-gray-900">{schedule.visitNumber} of {schedule.totalVisits}</span>
                         </td>
                         <td className="px-4 py-3">
                           <span className="text-sm text-gray-600">{formatDate(schedule.targetDate)}</span>
@@ -903,6 +1010,14 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               </div>
             </div>
             <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
+              {permissions.canCancel && selectedSchedule.status !== 'completed' && selectedSchedule.status !== 'cancelled' && (
+                <button
+                  onClick={() => { setShowViewModal(false); handleCancelClick(selectedSchedule); }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+                >
+                  Cancel Schedule
+                </button>
+              )}
               {permissions.canReschedule && selectedSchedule.status !== 'completed' && selectedSchedule.status !== 'cancelled' && (
                 <button
                   onClick={() => { setShowViewModal(false); handleReschedule(selectedSchedule); }}
@@ -974,12 +1089,16 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       {/* Reschedule Modal with Table View */}
       {showRescheduleModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className={`bg-white rounded-2xl shadow-xl w-full ${isSingleReschedule ? 'max-w-xl' : 'max-w-5xl'} max-h-[90vh] overflow-hidden flex flex-col`}>
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b bg-orange-50">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Reschedule Service</h2>
-                <p className="text-sm text-gray-500 mt-1">Select a schedule from the table below to reschedule</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {isSingleReschedule 
+                    ? `Reschedule ${selectedForReschedule?.serviceName} at ${selectedForReschedule?.propertyName}`
+                    : 'Select a schedule from the table below to reschedule'}
+                </p>
               </div>
               <button
                 onClick={() => { setShowRescheduleModal(false); setSelectedForReschedule(null); }}
@@ -989,103 +1108,140 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               </button>
             </div>
 
-            {/* Search Bar */}
-            <div className="p-4 border-b bg-gray-50">
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search by Property ID, Name, Service, Vendor..."
-                  value={rescheduleSearch}
-                  onChange={(e) => setRescheduleSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                />
+            {/* Search Bar - Only show in all schedules mode */}
+            {!isSingleReschedule && (
+              <div className="p-4 border-b bg-gray-50">
+                <div className="relative max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by Property ID, Name, Service, Vendor..."
+                    value={rescheduleSearch}
+                    onChange={(e) => setRescheduleSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Schedule Table */}
-            <div className="flex-1 overflow-auto">
-              <table className="w-full">
-                <thead className="bg-gray-100 sticky top-0">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Select</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Property</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Service</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Vendor</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Visit</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Current Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Time</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {getReschedulableSchedules().length === 0 ? (
+            {/* Schedule Table - Only show in all schedules mode */}
+            {!isSingleReschedule && (
+              <div className="flex-1 overflow-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-100 sticky top-0">
                     <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
-                        No schedules available for rescheduling
-                      </td>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Select</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Property</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Service</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Vendor</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Visit</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Current Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Time</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
                     </tr>
-                  ) : (
-                    getReschedulableSchedules().map((schedule) => {
-                      const isSelected = selectedForReschedule?.id === schedule.id;
-                      const statusStyle = getStatusBadge(schedule.status);
-                      return (
-                        <tr 
-                          key={schedule.id} 
-                          className={`cursor-pointer transition-colors ${isSelected ? 'bg-orange-50 border-l-4 border-l-orange-500' : 'hover:bg-gray-50'}`}
-                          onClick={() => setSelectedForReschedule(schedule)}
-                        >
-                          <td className="px-4 py-3">
-                            <input
-                              type="radio"
-                              name="rescheduleSelect"
-                              checked={isSelected}
-                              onChange={() => setSelectedForReschedule(schedule)}
-                              className="w-4 h-4 text-orange-600 border-gray-300 focus:ring-orange-500"
-                            />
-                          </td>
-                          <td className="px-4 py-3">
-                            <p className="text-sm font-medium text-blue-600">{schedule.propertyId}</p>
-                            <p className="text-xs text-gray-500">{schedule.propertyName}</p>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm text-gray-700">{schedule.serviceName}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm text-gray-700">{schedule.vendorName || '-'}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm font-medium text-gray-900">
-                              {schedule.visitNumber} / {schedule.totalVisits}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm text-gray-700">{formatDate(schedule.scheduledDate)}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm text-gray-700">{formatTime(schedule.scheduledTime)}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusStyle.bg} ${statusStyle.text}`}>
-                              {statusStyle.label}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {getReschedulableSchedules().length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                          No schedules available for rescheduling
+                        </td>
+                      </tr>
+                    ) : (
+                      getReschedulableSchedules().map((schedule) => {
+                        const isSelected = selectedForReschedule?.id === schedule.id;
+                        const statusStyle = getStatusBadge(schedule.status);
+                        return (
+                          <tr 
+                            key={schedule.id} 
+                            className={`cursor-pointer transition-colors ${isSelected ? 'bg-orange-50 border-l-4 border-l-orange-500' : 'hover:bg-gray-50'}`}
+                            onClick={() => setSelectedForReschedule(schedule)}
+                          >
+                            <td className="px-4 py-3">
+                              <input
+                                type="radio"
+                                name="rescheduleSelect"
+                                checked={isSelected}
+                                onChange={() => setSelectedForReschedule(schedule)}
+                                className="w-4 h-4 text-orange-600 border-gray-300 focus:ring-orange-500"
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <p className="text-sm font-medium text-blue-600">{schedule.propertyId}</p>
+                              <p className="text-xs text-gray-500">{schedule.propertyName}</p>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-sm text-gray-700">{schedule.serviceName}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-sm text-gray-700">{schedule.vendorName || '-'}</span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span className="text-sm font-medium text-gray-900">{schedule.visitNumber} of {schedule.totalVisits}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-sm text-gray-700">{formatDate(schedule.scheduledDate)}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-sm text-gray-700">{formatTime(schedule.scheduledTime)}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusStyle.bg} ${statusStyle.text}`}>
+                                {statusStyle.label}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Single Schedule Info - Only show in single reschedule mode */}
+            {isSingleReschedule && selectedForReschedule && (
+              <div className="p-4 bg-gray-50">
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase">Property</label>
+                      <p className="text-sm font-medium text-blue-600">{selectedForReschedule.propertyId}</p>
+                      <p className="text-sm text-gray-700">{selectedForReschedule.propertyName}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase">Service</label>
+                      <p className="text-sm font-medium text-gray-900">{selectedForReschedule.serviceName}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase">Vendor</label>
+                      <p className="text-sm text-gray-700">{selectedForReschedule.vendorName || '-'}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase">Visit</label>
+                      <p className="text-sm font-medium text-gray-900">{selectedForReschedule.visitNumber} of {selectedForReschedule.totalVisits}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase">Current Date</label>
+                      <p className="text-sm text-gray-700">{formatDate(selectedForReschedule.scheduledDate)}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase">Current Time</label>
+                      <p className="text-sm text-gray-700">{formatTime(selectedForReschedule.scheduledTime)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Reschedule Form - Only shown when a schedule is selected */}
             {selectedForReschedule && (
-              <div className="p-4 border-t bg-orange-50">
+              <div className={`p-4 ${isSingleReschedule ? '' : 'border-t'} bg-orange-50`}>
                 <div className="bg-white rounded-lg p-4 border border-orange-200">
                   <h3 className="text-sm font-semibold text-gray-900 mb-3">
-                    Reschedule: {selectedForReschedule.serviceName} at {selectedForReschedule.propertyName}
+                    {isSingleReschedule ? 'New Schedule Details' : `Reschedule: ${selectedForReschedule.serviceName} at ${selectedForReschedule.propertyName}`}
                   </h3>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className={`grid ${isSingleReschedule ? 'grid-cols-1 gap-3' : 'grid-cols-3 gap-4'}`}>
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">New Date * (dd/mm/yyyy)</label>
                       <input
@@ -1129,12 +1285,14 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             )}
 
             {/* Modal Footer */}
-            <div className="flex justify-between items-center p-4 border-t bg-gray-50">
-              <p className="text-sm text-gray-500">
-                {selectedForReschedule 
-                  ? `Selected: ${selectedForReschedule.propertyName} - ${selectedForReschedule.serviceName}` 
-                  : 'Select a schedule to reschedule'}
-              </p>
+            <div className={`flex ${isSingleReschedule ? 'justify-end' : 'justify-between'} items-center p-4 border-t bg-gray-50`}>
+              {!isSingleReschedule && (
+                <p className="text-sm text-gray-500">
+                  {selectedForReschedule 
+                    ? `Selected: ${selectedForReschedule.propertyName} - ${selectedForReschedule.serviceName}` 
+                    : 'Select a schedule to reschedule'}
+                </p>
+              )}
               <div className="flex gap-3">
                 <button
                   onClick={() => { setShowRescheduleModal(false); setSelectedForReschedule(null); }}

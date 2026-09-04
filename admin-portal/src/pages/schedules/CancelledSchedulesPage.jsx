@@ -225,6 +225,55 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
     }
   };
 
+  // Handle export to CSV
+  const handleExport = () => {
+    if (cancelledSchedules.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    const headers = [
+      'Property ID',
+      'Property Name',
+      'Service',
+      'Vendor',
+      'Scheduled Date',
+      'Time',
+      'Zone',
+      'Cancelled Date',
+      'Cancelled By',
+      'Reason'
+    ];
+
+    const rows = cancelledSchedules.map(schedule => [
+      schedule.propertyId || '',
+      schedule.propertyName || '',
+      schedule.serviceName || '',
+      schedule.vendorName || '',
+      schedule.scheduledDate || '',
+      schedule.scheduledTime || '',
+      schedule.zone || '',
+      schedule.cancelledAt || schedule.cancelledDate || '',
+      schedule.cancelledBy || '',
+      schedule.cancelReason || schedule.reason || ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `cancelled_schedules_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
@@ -235,13 +284,25 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
             View all cancelled service schedules and their cancellation details
           </p>
         </div>
-        <button
-          onClick={fetchCancelledSchedules}
-          className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
-          title="Refresh"
-        >
-          <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-2">
+          {permissions.canExport && (
+            <button
+              onClick={handleExport}
+              className="px-3 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-2 text-sm"
+              title="Export"
+            >
+              <Download className="w-4 h-4 text-gray-600" />
+              Export
+            </button>
+          )}
+          <button
+            onClick={fetchCancelledSchedules}
+            className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+            title="Refresh"
+          >
+            <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards - Responsive */}
