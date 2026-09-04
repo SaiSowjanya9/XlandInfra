@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Search, Filter, ChevronLeft, ChevronRight, Plus, Eye, RefreshCw, 
+  Search, Filter, ChevronLeft, ChevronRight, Eye, RefreshCw, 
   XCircle, RotateCcw, X, Calendar, Clock, User, Building2, Download
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
@@ -59,11 +59,11 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
   };
 
   const getMockData = () => [
-    { id: 1, visit_id: 'VIS-001', property_name: 'Green Valley Apartments', service: 'HVAC Maintenance', vendor: 'ABC HVAC Services', scheduled_date: '2026-07-15', scheduled_time: '10:00 AM', cancelled_at: '2026-07-12T14:30:00', cancelled_by: 'John Manager', cancelled_by_role: 'Manager', reason: 'Customer requested to postpone due to personal reasons' },
-    { id: 2, visit_id: 'VIS-002', property_name: 'Sunrise Towers', service: 'Plumbing Check', vendor: 'Aqua Plumbing', scheduled_date: '2026-07-18', scheduled_time: '02:00 PM', cancelled_at: '2026-07-15T09:00:00', cancelled_by: 'Vendor', cancelled_by_role: 'Vendor', reason: 'Vendor unavailable - staff shortage' },
-    { id: 3, visit_id: 'VIS-003', property_name: 'Palm Heights', service: 'Electrical Inspection', vendor: 'PowerFix Electricals', scheduled_date: '2026-07-20', scheduled_time: '09:00 AM', cancelled_at: '2026-07-19T16:00:00', cancelled_by: 'System', cancelled_by_role: 'System', reason: 'Payment pending - auto-cancelled after 7 days' },
-    { id: 4, visit_id: 'VIS-004', property_name: 'Blue Sky Complex', service: 'Lift Maintenance', vendor: 'Elevate Engineers', scheduled_date: '2026-08-01', scheduled_time: '11:00 AM', cancelled_at: '2026-07-28T11:00:00', cancelled_by: 'Customer', cancelled_by_role: 'Customer', reason: 'Building under renovation' },
-    { id: 5, visit_id: 'VIS-005', property_name: 'Garden View Residency', service: 'Fire Safety Check', vendor: 'SafeGuard Services', scheduled_date: '2026-08-05', scheduled_time: '03:00 PM', cancelled_at: '2026-08-02T10:30:00', cancelled_by: 'Admin', cancelled_by_role: 'Admin', reason: 'Duplicate schedule entry - consolidated with another visit' }
+    { id: 1, property_id: 'PROP-001', property_name: 'Green Valley Apartments', service: 'HVAC Maintenance', vendor: 'ABC HVAC Services', scheduled_date: '2026-07-15', scheduled_time: '10:00 AM', cancelled_at: '2026-07-12T14:30:00', cancelled_by: 'John Manager', cancelled_by_role: 'Manager', reason: 'Customer requested to postpone due to personal reasons' },
+    { id: 2, property_id: 'PROP-002', property_name: 'Sunrise Towers', service: 'Plumbing Check', vendor: 'Aqua Plumbing', scheduled_date: '2026-07-18', scheduled_time: '02:00 PM', cancelled_at: '2026-07-15T09:00:00', cancelled_by: 'Vendor', cancelled_by_role: 'Vendor', reason: 'Vendor unavailable - staff shortage' },
+    { id: 3, property_id: 'PROP-003', property_name: 'Palm Heights', service: 'Electrical Inspection', vendor: 'PowerFix Electricals', scheduled_date: '2026-07-20', scheduled_time: '09:00 AM', cancelled_at: '2026-07-19T16:00:00', cancelled_by: 'System', cancelled_by_role: 'System', reason: 'Payment pending - auto-cancelled after 7 days' },
+    { id: 4, property_id: 'PROP-004', property_name: 'Blue Sky Complex', service: 'Lift Maintenance', vendor: 'Elevate Engineers', scheduled_date: '2026-08-01', scheduled_time: '11:00 AM', cancelled_at: '2026-07-28T11:00:00', cancelled_by: 'Customer', cancelled_by_role: 'Customer', reason: 'Building under renovation' },
+    { id: 5, property_id: 'PROP-005', property_name: 'Garden View Residency', service: 'Fire Safety Check', vendor: 'SafeGuard Services', scheduled_date: '2026-08-05', scheduled_time: '03:00 PM', cancelled_at: '2026-08-02T10:30:00', cancelled_by: 'Admin', cancelled_by_role: 'Admin', reason: 'Duplicate schedule entry - consolidated with another visit' }
   ];
 
   const formatDate = (date) => {
@@ -108,7 +108,6 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       const matchesSearch = 
-        schedule.visit_id?.toLowerCase().includes(searchLower) ||
         schedule.property_name?.toLowerCase().includes(searchLower) ||
         schedule.service?.toLowerCase().includes(searchLower) ||
         schedule.vendor?.toLowerCase().includes(searchLower);
@@ -175,22 +174,13 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
             View all cancelled service schedules and their cancellation details
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={fetchCancelledSchedules}
-            className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
-            title="Refresh"
-          >
-            <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          <button
-            onClick={() => navigate(`${getBasePath()}/schedules`)}
-            className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            New Schedule
-          </button>
-        </div>
+        <button
+          onClick={fetchCancelledSchedules}
+          className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+          title="Refresh"
+        >
+          <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       {/* Stats Cards - Responsive */}
@@ -254,7 +244,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by ID, property, service..."
+              placeholder="Search by property, service..."
               value={filters.search}
               onChange={(e) => setFilters({...filters, search: e.target.value})}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
@@ -306,7 +296,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Visit ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Property ID</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Property</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Service</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Vendor</th>
@@ -320,7 +310,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
                 {paginatedSchedules.map((schedule) => (
                   <tr key={schedule.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      <span className="text-sm font-medium text-blue-600">{schedule.visit_id}</span>
+                      <span className="text-sm font-medium text-blue-600">{schedule.property_id || `PROP-${String(schedule.id).padStart(3, '0')}`}</span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-gray-900">{schedule.property_name}</span>
@@ -412,26 +402,27 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
             </div>
             
             <div className="p-5 space-y-3">
-              {/* Visit Info */}
+              {/* Property Info */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Visit ID</p>
-                  <p className="text-sm font-medium text-gray-900">{selectedSchedule.visit_id}</p>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Property ID</p>
+                  <p className="text-sm font-medium text-blue-600">{selectedSchedule.property_id}</p>
                 </div>
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Property Name</p>
+                  <p className="text-sm font-medium text-gray-900">{selectedSchedule.property_name}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Service</p>
                   <p className="text-sm font-medium text-gray-900">{selectedSchedule.service}</p>
                 </div>
-              </div>
-
-              <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Property</p>
-                <p className="text-sm font-medium text-gray-900">{selectedSchedule.property_name}</p>
-              </div>
-
-              <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Vendor</p>
-                <p className="text-sm font-medium text-gray-900">{selectedSchedule.vendor}</p>
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Vendor</p>
+                  <p className="text-sm font-medium text-gray-900">{selectedSchedule.vendor}</p>
+                </div>
               </div>
 
               <hr className="border-gray-200" />
