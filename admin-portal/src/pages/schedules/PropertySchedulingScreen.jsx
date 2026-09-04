@@ -749,24 +749,9 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             </nav>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={goBack} className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900">
-              <ArrowLeft className="w-3.5 h-3.5" />
+            <button onClick={goBack} className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900">
+              <ArrowLeft className="w-4 h-4" />
               Back to Pending Schedules
-            </button>
-            <button 
-              onClick={handleSaveDraft}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              <Save className="w-3.5 h-3.5" />
-              Save Draft
-            </button>
-            <button 
-              onClick={handlePrepareConfirmation}
-              disabled={(!selectedSlot && plannedVisits.length === 0) || !selectedService}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <CheckCircle className="w-3.5 h-3.5" />
-              Confirm Schedule
             </button>
           </div>
         </div>
@@ -915,12 +900,6 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                   
                   <button onClick={() => navigateWeek(1)} className="p-1.5 hover:bg-gray-100 rounded-full border border-gray-200">
                     <ChevronRight className="w-4 h-4 text-gray-600" />
-                  </button>
-                  <button 
-                    onClick={() => setCurrentWeekStart(getNextMonday())}
-                    className="ml-2 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
-                  >
-                    Today
                   </button>
                 </div>
               </div>
