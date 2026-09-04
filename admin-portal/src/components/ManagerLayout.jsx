@@ -210,7 +210,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
     { path: '/manager/schedules/all', icon: List, label: 'All Schedules' },
     { path: '/manager/schedules/pending', icon: CalendarClock, label: 'Pending Property', subLabel: 'Schedules' },
     { path: '/manager/schedules/calendar', icon: CalendarDays, label: 'Calendar' },
-    { path: '/manager/schedules/reschedule-requests', icon: RefreshCcw, label: 'Reschedule Requests' },
+    { path: '/manager/schedules/reschedule-requests', icon: RefreshCcw, label: 'Reschedules Requests' },
     { path: '/manager/schedules/cancelled', icon: Ban, label: 'Cancelled Schedules' },
   ];
 
