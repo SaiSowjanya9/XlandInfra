@@ -271,9 +271,9 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Reschedule Service</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Rescheduled Service</h1>
             <p className="text-sm text-gray-500 mt-1">
-              Home &gt; Scheduling &gt; Reschedule
+              Home &gt; Scheduling &gt; Rescheduled
             </p>
           </div>
         </div>
@@ -429,13 +429,12 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Current Date</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Time</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Status</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {paginatedSchedules.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-12 text-center">
+                      <td colSpan={6} className="px-4 py-12 text-center">
                         <div className="flex flex-col items-center">
                           <Calendar className="w-12 h-12 text-gray-300 mb-3" />
                           <p className="text-gray-500 font-medium">No visits found</p>
@@ -461,20 +460,6 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadge(schedule.status)}`}>
                           {schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {schedule.status === 'completed' ? (
-                          <button className="px-3 py-1.5 text-sm text-gray-500 border border-gray-200 rounded-lg">
-                            View
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleReschedule(schedule)}
-                            className="px-3 py-1.5 text-sm text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
-                          >
-                            Reschedule
-                          </button>
-                        )}
                       </td>
                     </tr>
                   ))}
