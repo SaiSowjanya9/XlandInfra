@@ -99,7 +99,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       }
       return visit;
     }));
-    setEditingVisitIndex(null);
+    // Don't close editing mode here - let user also change time
   };
 
   // Handle editing a planned visit time (in the visit series cards)
@@ -114,6 +114,8 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       }
       return visit;
     }));
+    // Close editing mode after time is changed
+    setEditingVisitIndex(null);
   };
 
   // Handle applying new recurrence settings
