@@ -621,8 +621,14 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             <p className="text-[10px] text-gray-400 uppercase tracking-wide">Package</p>
             <p className="text-sm font-medium text-purple-700">{property?.packageName || 'Apartment Basic AMC'}</p>
           </div>
-
-
+          <div className="min-w-0">
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Contract Period</p>
+            <p className="text-sm font-medium text-gray-700">
+              {property?.contractStartDate ? new Date(property.contractStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '01 Sep 2026'} 
+              {' - '}
+              {property?.contractEndDate ? new Date(property.contractEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '31 Aug 2027'}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -885,6 +891,9 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                   </div>
                   <p className="text-sm text-gray-600 mt-1">{rec.time}</p>
                   <p className="text-xs text-gray-400">{rec.vendor} • {rec.zone}</p>
+                  {rec.reason && (
+                    <p className="text-xs text-blue-600 mt-1 italic">{rec.reason}</p>
+                  )}
                   <span className={`inline-block mt-2 px-2 py-0.5 text-xs rounded ${
                     rec.type === 'recommended' ? 'bg-blue-100 text-blue-700' :
                     rec.type === 'available' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'

@@ -278,7 +278,7 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
         fe.id as estimateId,
         fe.estimate_id as estimateCode,
         fe.package_name as packageName,
-        fe.total_price as totalPrice,
+        fe.total_amount as totalPrice,
         fe.status as estimateStatus,
         fe.payment_status as paymentStatus,
         fe.service_rows as serviceRows,
@@ -948,7 +948,30 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
     } else {
       // Create new service schedule with required schedule_id
       const scheduleId = generateScheduleId();
-      const frequencyType = (frequency || 'monthly').toLowerCase().replace(' ', '_').replace(/every\s*/i, 'every_');
+      
+      // Map frequency to valid ENUM values: 'daily', 'weekly', 'bi_weekly', 'monthly', 'every_2_months', 'quarterly', 'half_yearly', 'yearly', 'one_time'
+      const frequencyMap = {
+        'daily': 'daily',
+        'weekly': 'weekly',
+        'bi-weekly': 'bi_weekly',
+        'bi_weekly': 'bi_weekly',
+        'biweekly': 'bi_weekly',
+        'monthly': 'monthly',
+        'every 2 months': 'every_2_months',
+        'every_2_months': 'every_2_months',
+        'quarterly': 'quarterly',
+        'half-yearly': 'half_yearly',
+        'half_yearly': 'half_yearly',
+        'halfyearly': 'half_yearly',
+        'yearly': 'yearly',
+        'annual': 'yearly',
+        'one-time': 'one_time',
+        'one_time': 'one_time',
+        'onetime': 'one_time',
+        'customer requirement': 'one_time',
+        'on request': 'one_time'
+      };
+      const frequencyType = frequencyMap[(frequency || 'monthly').toLowerCase()] || 'monthly';
       
       const [newSchedule] = await pool.execute(
         `INSERT INTO property_service_schedules (schedule_id, property_id, service_name, service_category, vendor_id, frequency_type, total_visits, status, created_by, created_at)
@@ -987,10 +1010,10 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
       );
     }
 
-    // Update service schedule status
+    // Update service schedule status (total_visits already set during insert/update above)
     await pool.execute(
-      `UPDATE property_service_schedules SET status = 'active', scheduled_visits_count = ? WHERE id = ?`,
-      [visits.length, serviceScheduleId]
+      `UPDATE property_service_schedules SET status = 'active', scheduling_status = 'completed' WHERE id = ?`,
+      [serviceScheduleId]
     );
 
     res.json({
