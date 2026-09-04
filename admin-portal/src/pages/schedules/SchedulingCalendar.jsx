@@ -419,11 +419,11 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
             <span className="text-sm font-medium text-gray-700">Filter</span>
           </button>
           
-          {/* New Schedule Button */}
+          {/* New Schedule Button - Goes to Pending Property Schedules */}
           <button
             onClick={() => {
               const basePath = portalType === 'franchise' ? '/fp' : portalType === 'manager' ? '/manager' : '';
-              navigate(`${basePath}/schedules/create`);
+              navigate(`${basePath}/schedules/pending`);
             }}
             className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
           >

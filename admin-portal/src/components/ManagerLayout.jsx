@@ -207,6 +207,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
   // Schedules sub-items
   const schedulesSubItems = [
     { path: '/manager/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/manager/schedules/all', icon: List, label: 'All Schedules' },
     { path: '/manager/schedules/pending', icon: CalendarClock, label: 'Pending Property', subLabel: 'Schedules' },
     { path: '/manager/schedules/calendar', icon: CalendarDays, label: 'Calendar' },
     { path: '/manager/schedules/reschedule-requests', icon: RefreshCcw, label: 'Reschedule Requests' },
