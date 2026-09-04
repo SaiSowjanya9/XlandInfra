@@ -681,18 +681,52 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                     <ChevronLeft className="w-4 h-4 text-gray-600" />
                   </button>
                   
-                  {/* Week Range Display */}
-                  <div className="text-center min-w-[140px]">
-                    <p className="text-sm font-semibold text-gray-900">
-                      {currentWeekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} -
-                    </p>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {(() => {
-                        const weekEnd = new Date(currentWeekStart);
-                        weekEnd.setDate(weekEnd.getDate() + 6);
-                        return weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                      })()}
-                    </p>
+                  {/* Individual Date Selectors */}
+                  <div className="flex items-center gap-1">
+                    {/* Month Selector */}
+                    <select
+                      value={currentWeekStart.getMonth()}
+                      onChange={(e) => {
+                        const newDate = new Date(currentWeekStart);
+                        newDate.setMonth(parseInt(e.target.value));
+                        setCurrentWeekStart(newDate);
+                      }}
+                      className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    >
+                      {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, i) => (
+                        <option key={i} value={i}>{month}</option>
+                      ))}
+                    </select>
+                    
+                    {/* Day Selector */}
+                    <select
+                      value={currentWeekStart.getDate()}
+                      onChange={(e) => {
+                        const newDate = new Date(currentWeekStart);
+                        newDate.setDate(parseInt(e.target.value));
+                        setCurrentWeekStart(newDate);
+                      }}
+                      className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    >
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                        <option key={day} value={day}>{day}</option>
+                      ))}
+                    </select>
+                    
+                    {/* Year Selector */}
+                    <select
+                      value={currentWeekStart.getFullYear()}
+                      onChange={(e) => {
+                        const newDate = new Date(currentWeekStart);
+                        newDate.setFullYear(parseInt(e.target.value));
+                        setCurrentWeekStart(newDate);
+                      }}
+                      className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    >
+                      {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + i).map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
                   </div>
                   
                   <button onClick={() => navigateWeek(1)} className="p-1.5 hover:bg-gray-100 rounded-full border border-gray-200">
@@ -1032,7 +1066,22 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-gray-700">{visit.time}</span>
+                        <select
+                          value={visit.time}
+                          onChange={(e) => {
+                            const newTime = e.target.value;
+                            setConfirmationSchedule(prev => prev.map((v, i) => 
+                              i === index ? { ...v, time: newTime, isEdited: true } : v
+                            ));
+                          }}
+                          className="px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                        >
+                          {['8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
+                            '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM',
+                            '4:00 PM', '4:30 PM', '5:00 PM'].map(time => (
+                            <option key={time} value={time}>{time}</option>
+                          ))}
+                        </select>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(visit.status)}`}>
