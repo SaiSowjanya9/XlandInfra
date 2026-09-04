@@ -559,7 +559,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
           >
             <img src="/logo.webp" alt="XLAND INFRA" className={`${sidebarCollapsed ? 'h-12' : 'h-14'} w-auto object-contain`} />
             {!sidebarCollapsed && (
-              <div className="flex flex-col ml-2">
+              <div className="flex flex-col items-center ml-2">
                 <span 
                   className="text-sm font-bold tracking-wider"
                   style={{ 
@@ -569,7 +569,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
                     backgroundClip: 'text'
                   }}
                 >XLAND INFRA</span>
-                <div className="flex items-center gap-1 -mt-0.5">
+                <div className="flex items-center justify-center gap-1 -mt-0.5">
                   <div className="w-5 h-[1px]" style={{ background: 'linear-gradient(90deg, transparent, #C9A227)' }}></div>
                   <span className="text-[8px] tracking-[0.15em] font-medium" style={{ color: '#A08520' }}>PVT LTD</span>
                   <div className="w-5 h-[1px]" style={{ background: 'linear-gradient(90deg, #C9A227, transparent)' }}></div>
