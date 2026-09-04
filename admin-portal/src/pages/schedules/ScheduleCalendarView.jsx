@@ -198,7 +198,10 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
               />
             </div>
             <button
-              onClick={() => navigate('/schedules/new')}
+              onClick={() => {
+                const basePath = portalType === 'franchise' ? '/fp' : portalType === 'manager' ? '/manager' : '';
+                navigate(`${basePath}/schedules/pending`);
+              }}
               className="px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 flex items-center gap-2"
             >
               <Plus className="w-5 h-5" />

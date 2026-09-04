@@ -302,6 +302,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
   // Schedules sub-items
   const schedulesSubItems = [
     { path: '/fp/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/fp/schedules/all', icon: List, label: 'All Schedules' },
     { path: '/fp/schedules/pending', icon: CalendarClock, label: 'Pending Property', subLabel: 'Schedules' },
     { path: '/fp/schedules/calendar', icon: CalendarDays, label: 'Calendar' },
     { path: '/fp/schedules/reschedule-requests', icon: RefreshCcw, label: 'Reschedule Requests' },

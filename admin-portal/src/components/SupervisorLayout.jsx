@@ -81,6 +81,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
   // Schedules sub-items
   const schedulesSubItems = [
     { path: '/supervisor/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/supervisor/schedules/all', icon: List, label: 'All Schedules' },
     { path: '/supervisor/schedules/schedule-service', icon: Calendar, label: 'Schedule Service' },
   ];
 
