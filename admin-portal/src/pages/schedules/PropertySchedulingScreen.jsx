@@ -758,14 +758,6 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             <p className="text-[10px] text-gray-400 uppercase tracking-wide">Package</p>
             <p className="text-sm font-medium text-purple-700">{property?.packageName || 'Apartment Basic AMC'}</p>
           </div>
-          <div className="min-w-0">
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Contract Period</p>
-            <p className="text-sm font-medium text-gray-700">
-              {property?.contractStartDate ? new Date(property.contractStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '01 Sep 2026'} 
-              {' - '}
-              {property?.contractEndDate ? new Date(property.contractEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '31 Aug 2027'}
-            </p>
-          </div>
         </div>
       </div>
 
@@ -1110,13 +1102,14 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               {plannedVisits.map((visit, i) => (
                 <div 
                   key={i}
-                  className={`flex-shrink-0 w-32 p-3 rounded-lg border text-center relative ${
-                    visit.status === 'Scheduled' ? 'border-green-300 bg-green-50' : 
+                  className={`flex-shrink-0 w-32 p-3 rounded-lg border text-center relative cursor-pointer ${
+                    visit.status === 'Scheduled' || visit.status === 'scheduled' ? 'border-green-300 bg-green-50' : 
                     visit.isEdited ? 'border-blue-300 bg-blue-50' :
                     visit.isManual ? 'border-amber-300 bg-amber-50' : 'border-gray-200'
-                  } ${visit.status === 'Target' && !visit.isManual ? 'cursor-pointer hover:border-blue-400 hover:bg-blue-50/50' : ''}`}
+                  } hover:border-blue-400 hover:bg-blue-50/50`}
                   onClick={() => {
-                    if (visit.status === 'Target' && !visit.isManual && editingVisitIndex !== i) {
+                    // Allow editing any visit except completed or in_progress
+                    if (visit.status !== 'completed' && visit.status !== 'in_progress' && editingVisitIndex !== i) {
                       setEditingVisitIndex(i);
                     }
                   }}
