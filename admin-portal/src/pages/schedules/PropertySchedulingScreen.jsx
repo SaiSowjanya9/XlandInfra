@@ -1152,7 +1152,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             <div className="flex gap-2 overflow-x-auto pb-2">
               {plannedVisits.map((visit, i) => (
                 <div 
-                  key={i}
+                  key={`visit-${i}-${visit.time}-${visit.shortDateStr || ''}`}
                   className={`flex-shrink-0 w-32 p-3 rounded-lg border text-center relative cursor-pointer ${
                     visit.status === 'Scheduled' || visit.status === 'scheduled' ? 'border-green-300 bg-green-50' : 
                     visit.isEdited ? 'border-blue-300 bg-blue-50' :
@@ -1167,23 +1167,27 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 >
                   <p className="text-xs text-gray-500">Visit {visit.visitNumber}</p>
                   {editingVisitIndex === i ? (
-                    <div className="mt-1 space-y-1">
+                    <div className="mt-1 space-y-1" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="date"
-                        defaultValue={visit.date ? (() => {
+                        value={visit.date ? (() => {
                           const d = visit.date;
                           const year = d.getFullYear();
                           const month = String(d.getMonth() + 1).padStart(2, '0');
                           const day = String(d.getDate()).padStart(2, '0');
                           return `${year}-${month}-${day}`;
                         })() : ''}
-                        onChange={(e) => handleEditPlannedVisitDate(i, e.target.value)}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            handleEditPlannedVisitDate(i, e.target.value);
+                          }
+                        }}
                         className="w-full px-1 py-0.5 text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        autoFocus
                       />
                       <select
                         value={visit.time || '10:00 AM'}
                         onChange={(e) => {
+                          console.log('Time changed to:', e.target.value);
                           handleEditPlannedVisitTime(i, e.target.value);
                         }}
                         className="w-full px-1 py-0.5 text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -1195,7 +1199,10 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                         ))}
                       </select>
                       <button
-                        onClick={() => setEditingVisitIndex(null)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingVisitIndex(null);
+                        }}
                         className="w-full mt-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
                       >
                         Done
@@ -1300,7 +1307,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                         {editingVisitIndex === index ? (
                           <input
                             type="date"
-                            defaultValue={(() => {
+                            value={(() => {
                               if (!visit.scheduledDate) return '';
                               const d = visit.scheduledDate instanceof Date ? visit.scheduledDate : new Date(visit.scheduledDate);
                               const year = d.getFullYear();
@@ -1308,9 +1315,12 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                               const day = String(d.getDate()).padStart(2, '0');
                               return `${year}-${month}-${day}`;
                             })()}
-                            onChange={(e) => handleEditVisitDate(index, e.target.value, visit.time)}
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                handleEditVisitDate(index, e.target.value, visit.time);
+                              }
+                            }}
                             className="px-2 py-1 border border-gray-300 rounded text-sm"
-                            autoFocus
                           />
                         ) : (
                           <span className={`font-medium ${visit.isEdited ? 'text-amber-700' : 'text-gray-900'}`}>
