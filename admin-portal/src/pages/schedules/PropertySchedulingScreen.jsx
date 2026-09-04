@@ -87,6 +87,20 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     setEditingVisitIndex(null);
   };
 
+  // Handle editing a planned visit time (in the visit series cards)
+  const handleEditPlannedVisitTime = (index, newTime) => {
+    setPlannedVisits(prev => prev.map((visit, i) => {
+      if (i === index) {
+        return {
+          ...visit,
+          time: newTime,
+          isEdited: true
+        };
+      }
+      return visit;
+    }));
+  };
+
   // Handle applying new recurrence settings
   const handleApplyRecurrence = () => {
     if (!selectedService || !selectedSlot) return;
@@ -1151,7 +1165,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 >
                   <p className="text-xs text-gray-500">Visit {visit.visitNumber}</p>
                   {editingVisitIndex === i ? (
-                    <div className="mt-1">
+                    <div className="mt-1 space-y-1">
                       <input
                         type="date"
                         defaultValue={visit.date ? (() => {
@@ -1162,10 +1176,21 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                           return `${year}-${month}-${day}`;
                         })() : ''}
                         onChange={(e) => handleEditPlannedVisitDate(i, e.target.value)}
-                        onBlur={() => setEditingVisitIndex(null)}
                         className="w-full px-1 py-0.5 text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                         autoFocus
                       />
+                      <select
+                        defaultValue={visit.time || '10:00 AM'}
+                        onChange={(e) => handleEditPlannedVisitTime(i, e.target.value)}
+                        onBlur={() => setEditingVisitIndex(null)}
+                        className="w-full px-1 py-0.5 text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        {['8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
+                          '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM',
+                          '4:00 PM', '4:30 PM', '5:00 PM'].map(time => (
+                          <option key={time} value={time}>{time}</option>
+                        ))}
+                      </select>
                     </div>
                   ) : (
                     <p className="font-semibold text-sm mt-1 whitespace-nowrap">
