@@ -862,6 +862,140 @@ router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async
   }
 });
 
+// Save schedule as draft (stores in property_service_schedules with draft status)
+router.post('/draft', authenticate, canMakeSchedule, async (req, res) => {
+  try {
+    const { propertyId, serviceId, serviceName, vendorId, vendorName, frequency, visits } = req.body;
+
+    if (!propertyId || !visits?.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'Property ID and visits are required'
+      });
+    }
+
+    // Find or create the property_service_schedule record with draft status
+    const [existingSchedule] = await pool.execute(
+      `SELECT id FROM property_service_schedules WHERE property_id = ? AND service_type = ? LIMIT 1`,
+      [propertyId, serviceName || 'General']
+    );
+
+    let serviceScheduleId;
+    if (existingSchedule.length > 0) {
+      serviceScheduleId = existingSchedule[0].id;
+      await pool.execute(
+        `UPDATE property_service_schedules SET status = 'draft', draft_visits_json = ?, updated_at = NOW() WHERE id = ?`,
+        [JSON.stringify(visits), serviceScheduleId]
+      );
+    } else {
+      const [newSchedule] = await pool.execute(
+        `INSERT INTO property_service_schedules (property_id, service_type, vendor_id, frequency, total_visits, status, draft_visits_json, created_at)
+         VALUES (?, ?, ?, ?, ?, 'draft', ?, NOW())`,
+        [propertyId, serviceName || 'General', vendorId || null, frequency || 'monthly', visits.length, JSON.stringify(visits)]
+      );
+      serviceScheduleId = newSchedule.insertId;
+    }
+
+    res.json({
+      success: true,
+      message: 'Draft saved successfully',
+      data: { serviceScheduleId }
+    });
+  } catch (error) {
+    console.error('Error saving draft:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error saving draft',
+      error: error.message
+    });
+  }
+});
+
+// Confirm schedule (create actual visits in database)
+router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
+  try {
+    const { propertyId, serviceId, serviceName, serviceCategory, vendorId, vendorName, frequency, totalVisits, visits } = req.body;
+
+    if (!propertyId || !serviceId || !visits?.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'Property ID, Service ID, and visits are required'
+      });
+    }
+
+    // Find or create the property_service_schedule record
+    let serviceScheduleId;
+    
+    const [existingSchedule] = await pool.execute(
+      `SELECT id FROM property_service_schedules WHERE property_id = ? AND service_type = ? LIMIT 1`,
+      [propertyId, serviceName || serviceCategory || 'General']
+    );
+
+    if (existingSchedule.length > 0) {
+      serviceScheduleId = existingSchedule[0].id;
+    } else {
+      // Create new service schedule
+      const [newSchedule] = await pool.execute(
+        `INSERT INTO property_service_schedules (property_id, service_type, vendor_id, frequency, total_visits, status, created_at)
+         VALUES (?, ?, ?, ?, ?, 'active', NOW())`,
+        [propertyId, serviceName || serviceCategory || 'General', vendorId || null, frequency || 'monthly', totalVisits || visits.length]
+      );
+      serviceScheduleId = newSchedule.insertId;
+    }
+
+    // Delete existing unstarted visits for this service schedule
+    await pool.execute(
+      `DELETE FROM scheduled_visits WHERE service_schedule_id = ? AND status IN ('scheduled', 'pending', 'confirmed')`,
+      [serviceScheduleId]
+    );
+
+    // Insert new visits
+    for (let i = 0; i < visits.length; i++) {
+      const visit = visits[i];
+      const visitId = `VIS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${i}`;
+      const scheduledDate = new Date(visit.scheduledDate || visit.targetDate);
+      
+      // Parse time to TIME format (e.g., "2:00 PM" -> "14:00:00")
+      const timeStr = visit.time || '10:00 AM';
+      let hours = parseInt(timeStr.split(':')[0]);
+      const minutes = timeStr.includes(':') ? parseInt(timeStr.split(':')[1]) : 0;
+      const isPM = timeStr.toLowerCase().includes('pm');
+      if (isPM && hours !== 12) hours += 12;
+      if (!isPM && hours === 12) hours = 0;
+      const timeStart = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
+      const timeEnd = `${(hours + 1).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
+      
+      await pool.execute(
+        `INSERT INTO scheduled_visits (visit_id, service_schedule_id, property_id, visit_number, total_visits, scheduled_date, scheduled_time_start, scheduled_time_end, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', NOW())`,
+        [visitId, serviceScheduleId, propertyId, visit.visitNumber || i + 1, visits.length, scheduledDate, timeStart, timeEnd]
+      );
+    }
+
+    // Update service schedule status
+    await pool.execute(
+      `UPDATE property_service_schedules SET status = 'active', scheduled_visits_count = ? WHERE id = ?`,
+      [visits.length, serviceScheduleId]
+    );
+
+    res.json({
+      success: true,
+      message: `Schedule confirmed with ${visits.length} visits`,
+      data: { 
+        serviceScheduleId,
+        visitsCreated: visits.length
+      }
+    });
+  } catch (error) {
+    console.error('Error confirming schedule:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error confirming schedule',
+      error: error.message
+    });
+  }
+});
+
 // Schedule a service (create visits)
 router.post('/property/:propertyId/services/:serviceScheduleId/schedule', authenticate, canMakeSchedule, async (req, res) => {
   try {
