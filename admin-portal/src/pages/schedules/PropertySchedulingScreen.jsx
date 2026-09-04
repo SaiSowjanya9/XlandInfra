@@ -346,14 +346,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     setShowConfirmation(true);
   };
 
-  // Accept all recommended dates
-  const handleAcceptAllRecommended = () => {
-    // Keep all dates as-is (already set to recommended)
-    setConfirmationSchedule(prev => prev.map(v => ({
-      ...v,
-      status: 'scheduled'
-    })));
-  };
+
 
   // Edit individual visit date
   const handleEditVisitDate = (index, newDate, newTime) => {
@@ -1014,17 +1007,10 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
 
             {/* Schedule Table */}
             <div className="p-6 overflow-auto max-h-[60vh]">
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-4">
                 <p className="text-sm text-gray-600">
-                  Review the scheduled dates below. You can edit individual dates or accept all recommendations.
+                  Review the scheduled dates below. You can edit individual dates and times before confirming.
                 </p>
-                <button
-                  onClick={handleAcceptAllRecommended}
-                  className="px-4 py-2 text-sm bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
-                >
-                  <CheckCircle className="w-4 h-4 inline mr-1" />
-                  Accept All Recommended
-                </button>
               </div>
 
               <table className="w-full border-collapse">
