@@ -141,8 +141,46 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   const fetchPropertyDetails = async () => {
     setLoading(true);
     try {
+      const token = getAuthToken();
+      
       if (propertyData) {
         setProperty(propertyData);
+      }
+      
+      // Fetch real services from the backend
+      const servicesResponse = await fetch(`${API_BASE}/api/schedules/property/${propertyId}/services`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (servicesResponse.ok) {
+        const servicesResult = await servicesResponse.json();
+        if (servicesResult.success && servicesResult.data?.length > 0) {
+          const realServices = servicesResult.data.map(s => ({
+            id: s.id,
+            scheduleId: s.id, // Use the service schedule ID for loading visits
+            name: s.service_name || s.serviceName,
+            category: s.service_category || s.serviceCategory,
+            vendorName: s.vendor_name || s.vendorName,
+            vendorId: s.vendor_id || s.vendorId,
+            frequency: s.frequency_type || s.frequency || 'Monthly',
+            visits: s.total_visits || s.visits || 12,
+            status: s.scheduling_status === 'completed' ? 'Scheduled' : (s.status === 'active' ? 'Scheduled' : 'Schedule'),
+            customVisits: s.custom_visits || s.customVisits
+          }));
+          setServices(realServices);
+          if (realServices.length > 0 && !selectedService) {
+            setSelectedService(realServices[0]);
+          }
+        } else {
+          // Fall back to mock services if no real data
+          const mockServices = generateMockServices(propertyData);
+          setServices(mockServices);
+          if (mockServices.length > 0) {
+            setSelectedService(mockServices[0]);
+          }
+        }
+      } else {
+        // Fall back to mock services
         const mockServices = generateMockServices(propertyData);
         setServices(mockServices);
         if (mockServices.length > 0) {
@@ -151,6 +189,12 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       }
     } catch (error) {
       console.error('Error fetching property details:', error);
+      // Fall back to mock services on error
+      const mockServices = generateMockServices(propertyData);
+      setServices(mockServices);
+      if (mockServices.length > 0) {
+        setSelectedService(mockServices[0]);
+      }
     } finally {
       setLoading(false);
     }
@@ -198,7 +242,56 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     setRecommendedDates(dates);
   };
 
-  const generatePlannedVisits = (service) => {
+  // Load saved visits from database if service is already scheduled
+  const loadSavedVisits = async (service) => {
+    if (!service?.scheduleId) return null;
+    
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE}/api/schedules/service/${service.scheduleId}/visits`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data?.length > 0) {
+          return result.data.map(visit => ({
+            visitNumber: visit.visit_number || visit.visitNumber,
+            date: new Date(visit.scheduled_date || visit.scheduledDate),
+            dateStr: new Date(visit.scheduled_date || visit.scheduledDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
+            shortDateStr: new Date(visit.scheduled_date || visit.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            time: visit.scheduled_time_start ? formatTimeFromDB(visit.scheduled_time_start) : '10:00 AM',
+            status: visit.status === 'scheduled' ? 'Scheduled' : visit.status,
+            isEdited: false,
+            visitId: visit.visit_id || visit.visitId
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error loading saved visits:', error);
+    }
+    return null;
+  };
+  
+  // Helper to format time from DB format (HH:MM:SS) to display format (H:MM AM/PM)
+  const formatTimeFromDB = (timeStr) => {
+    if (!timeStr) return '10:00 AM';
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const isPM = hours >= 12;
+    const hour12 = hours % 12 || 12;
+    return `${hour12}:${minutes.toString().padStart(2, '0')} ${isPM ? 'PM' : 'AM'}`;
+  };
+
+  const generatePlannedVisits = async (service) => {
+    // First, try to load saved visits if service is already scheduled
+    if (service?.status === 'Scheduled' || service?.status === 'active' || service?.scheduleId) {
+      const savedVisits = await loadSavedVisits(service);
+      if (savedVisits && savedVisits.length > 0) {
+        setPlannedVisits(savedVisits);
+        return;
+      }
+    }
+    
     // Use selected slot date or default to next week
     const firstServiceDate = selectedSlot?.date || (() => {
       const defaultDate = new Date(currentWeekStart);
@@ -352,12 +445,16 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
 
 
   // Edit individual visit date
-  const handleEditVisitDate = (index, newDate, newTime) => {
+  const handleEditVisitDate = (index, newDateStr, newTime) => {
+    // Parse date string to avoid timezone issues (YYYY-MM-DD format from input)
+    const [year, month, day] = newDateStr.split('-').map(Number);
+    const newDate = new Date(year, month - 1, day); // month is 0-indexed
+    
     setConfirmationSchedule(prev => prev.map((v, i) => 
       i === index ? {
         ...v,
         scheduledDate: newDate,
-        scheduledDateStr: new Date(newDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        scheduledDateStr: newDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
         time: newTime || v.time,
         isEdited: true
       } : v
@@ -381,14 +478,26 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         vendorName: selectedService?.vendorName,
         frequency: selectedService?.frequency,
         totalVisits: confirmationSchedule.length,
-        visits: confirmationSchedule.map(visit => ({
-          visitNumber: visit.visitNumber,
-          targetDate: visit.targetDate instanceof Date ? visit.targetDate.toISOString() : visit.targetDate,
-          scheduledDate: visit.scheduledDate instanceof Date ? visit.scheduledDate.toISOString() : visit.scheduledDate,
-          time: visit.time,
-          status: visit.isEdited ? 'modified' : 'scheduled',
-          isEdited: visit.isEdited || false
-        }))
+        visits: confirmationSchedule.map(visit => {
+          // Format dates as YYYY-MM-DD to avoid timezone issues
+          const formatDateForAPI = (date) => {
+            if (!date) return null;
+            const d = date instanceof Date ? date : new Date(date);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          };
+          
+          return {
+            visitNumber: visit.visitNumber,
+            targetDate: formatDateForAPI(visit.targetDate),
+            scheduledDate: formatDateForAPI(visit.scheduledDate),
+            time: visit.time,
+            status: visit.isEdited ? 'modified' : 'scheduled',
+            isEdited: visit.isEdited || false
+          };
+        })
       };
       
       console.log('Sending schedule payload:', schedulePayload);
@@ -412,9 +521,10 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       // Close modal and navigate immediately BEFORE alert
       setShowConfirmation(false);
       
-      // Update the service status to Scheduled
+      // Update the service status to Scheduled and store the scheduleId
+      const scheduleId = result.data?.serviceScheduleId;
       setServices(prev => prev.map(s => 
-        s.id === selectedService.id ? { ...s, status: 'Scheduled' } : s
+        s.id === selectedService.id ? { ...s, status: 'Scheduled', scheduleId: scheduleId } : s
       ));
       
       // Clear selection
@@ -446,6 +556,16 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     const token = getAuthToken();
     
     try {
+      // Format dates as YYYY-MM-DD to avoid timezone issues
+      const formatDateForAPI = (date) => {
+        if (!date) return null;
+        const d = date instanceof Date ? date : new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
       const draftPayload = {
         propertyId: propertyId,
         serviceId: selectedService?.id,
@@ -454,7 +574,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         status: 'draft',
         visits: plannedVisits.map(visit => ({
           visitNumber: visit.visitNumber,
-          targetDate: visit.date instanceof Date ? visit.date.toISOString() : visit.date,
+          targetDate: formatDateForAPI(visit.date),
           time: visit.time,
           isEdited: visit.isEdited || false
         }))
@@ -1006,7 +1126,13 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                     <div className="mt-1">
                       <input
                         type="date"
-                        defaultValue={visit.date ? visit.date.toISOString().split('T')[0] : ''}
+                        defaultValue={visit.date ? (() => {
+                          const d = visit.date;
+                          const year = d.getFullYear();
+                          const month = String(d.getMonth() + 1).padStart(2, '0');
+                          const day = String(d.getDate()).padStart(2, '0');
+                          return `${year}-${month}-${day}`;
+                        })() : ''}
                         onChange={(e) => handleEditPlannedVisitDate(i, e.target.value)}
                         onBlur={() => setEditingVisitIndex(null)}
                         className="w-full px-1 py-0.5 text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -1112,7 +1238,14 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                         {editingVisitIndex === index ? (
                           <input
                             type="date"
-                            defaultValue={visit.scheduledDate ? new Date(visit.scheduledDate).toISOString().split('T')[0] : ''}
+                            defaultValue={(() => {
+                              if (!visit.scheduledDate) return '';
+                              const d = visit.scheduledDate instanceof Date ? visit.scheduledDate : new Date(visit.scheduledDate);
+                              const year = d.getFullYear();
+                              const month = String(d.getMonth() + 1).padStart(2, '0');
+                              const day = String(d.getDate()).padStart(2, '0');
+                              return `${year}-${month}-${day}`;
+                            })()}
                             onChange={(e) => handleEditVisitDate(index, e.target.value, visit.time)}
                             className="px-2 py-1 border border-gray-300 rounded text-sm"
                             autoFocus
@@ -1226,7 +1359,13 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 <input
                   type="date"
                   id="reschedule-date"
-                  defaultValue={rescheduleVisit.scheduledDate ? new Date(rescheduleVisit.scheduledDate).toISOString().split('T')[0] : ''}
+                  defaultValue={rescheduleVisit.scheduledDate ? (() => {
+                    const d = new Date(rescheduleVisit.scheduledDate);
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                  })() : ''}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>

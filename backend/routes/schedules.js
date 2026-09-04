@@ -1014,7 +1014,18 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
     for (let i = 0; i < visits.length; i++) {
       const visit = visits[i];
       const visitId = `VIS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${i}`;
-      const scheduledDate = new Date(visit.scheduledDate || visit.targetDate);
+      
+      // Parse date carefully to avoid timezone issues
+      const dateStr = visit.scheduledDate || visit.targetDate;
+      let scheduledDate;
+      if (typeof dateStr === 'string') {
+        // If ISO string, extract date part only to avoid timezone shift
+        const datePart = dateStr.split('T')[0]; // Get YYYY-MM-DD
+        const [year, month, day] = datePart.split('-').map(Number);
+        scheduledDate = new Date(year, month - 1, day);
+      } else {
+        scheduledDate = new Date(dateStr);
+      }
       
       // Parse time to TIME format (e.g., "2:00 PM" -> "14:00:00")
       const timeStr = visit.time || '10:00 AM';
