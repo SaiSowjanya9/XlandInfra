@@ -22,13 +22,27 @@ const getSchedulePermissions = (portalType) => {
   return permissions[portalType] || permissions.executive;
 };
 
+// Get API path based on portal type
+const getApiPath = (portalType) => {
+  const pathMap = {
+    'admin': 'admin',
+    'franchise': 'fp',
+    'manager': 'manager',
+    'coordinator': 'coordinator',
+    'supervisor': 'supervisor'
+  };
+  return pathMap[portalType] || 'admin';
+};
+
 const RescheduleServicePage = ({ portalType = 'admin', user }) => {
   const navigate = useNavigate();
   const permissions = getSchedulePermissions(portalType);
+  const apiPath = getApiPath(portalType);
   const [loading, setLoading] = useState(false);
   const [properties, setProperties] = useState([]);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [schedules, setSchedules] = useState([]);
+  const [zones, setZones] = useState([]);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [filters, setFilters] = useState({
     search: '', service: 'all', status: 'all', vendor: 'all', zone: 'all', package: 'all'
@@ -51,9 +65,28 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
 
   useEffect(() => {
     fetchProperties();
+    fetchZones();
     // Initialize with mock data so filters have options
     setSchedules(generateMockSchedules());
   }, []);
+
+  // Fetch zones from API
+  const fetchZones = async () => {
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE}/api/${apiPath}/zones`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const zoneList = data.zones || data.data || [];
+        const zoneNames = zoneList.map(z => typeof z === 'string' ? z : (z.name || z.zone_name || z.zone)).filter(Boolean);
+        setZones([...new Set(zoneNames)].sort());
+      }
+    } catch (error) {
+      console.error('Error fetching zones:', error);
+    }
+  };
 
   useEffect(() => {
     if (selectedProperty) {
@@ -382,10 +415,9 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                     className="min-w-[90px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="all">All Zones</option>
-                    <option value="Zone A">Zone A</option>
-                    <option value="Zone B">Zone B</option>
-                    <option value="Zone C">Zone C</option>
-                    <option value="Zone D">Zone D</option>
+                    {zones.map(z => (
+                      <option key={z} value={z}>{z}</option>
+                    ))}
                   </select>
                   <button 
                     onClick={() => {
@@ -452,46 +484,32 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                 <p className="text-sm text-gray-500">
                   Showing {filteredSchedules.length === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredSchedules.length)} of {filteredSchedules.length} visits
                 </p>
-                <div className="flex items-center gap-2">
-                  <select 
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(parseInt(e.target.value));
-                      setCurrentPage(1);
-                    }}
-                    className="px-2 py-1 border border-gray-300 rounded text-sm"
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <option value={10}>10 per page</option>
-                    <option value={25}>25 per page</option>
-                    <option value={50}>50 per page</option>
-                  </select>
-                  <div className="flex items-center gap-1">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(page => (
                     <button 
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
-                      className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-8 h-8 text-sm font-medium rounded ${
+                        currentPage === page ? 'bg-blue-600 text-white' : 'border border-gray-300 hover:bg-gray-50'
+                      }`}
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      {page}
                     </button>
-                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(page => (
-                      <button 
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`w-8 h-8 text-sm font-medium rounded ${
-                          currentPage === page ? 'bg-blue-600 text-white' : 'border border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
-                    <button 
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages || totalPages === 0}
-                      className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
+                  ))}
+                  <button 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </div>

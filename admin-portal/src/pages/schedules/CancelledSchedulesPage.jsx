@@ -22,11 +22,25 @@ const getSchedulePermissions = (portalType) => {
   return permissions[portalType] || permissions.executive;
 };
 
+// Get API path based on portal type
+const getApiPath = (portalType) => {
+  const pathMap = {
+    'admin': 'admin',
+    'franchise': 'fp',
+    'manager': 'manager',
+    'coordinator': 'coordinator',
+    'supervisor': 'supervisor'
+  };
+  return pathMap[portalType] || 'admin';
+};
+
 const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
   const navigate = useNavigate();
   const permissions = getSchedulePermissions(portalType);
+  const apiPath = getApiPath(portalType);
   const [loading, setLoading] = useState(true);
   const [cancelledSchedules, setCancelledSchedules] = useState([]);
+  const [zones, setZones] = useState([]);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
@@ -46,8 +60,35 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
   const itemsPerPage = 10;
 
   useEffect(() => {
+    fetchZones();
+    fetchCancelledSchedules();
+  }, []);
+
+  useEffect(() => {
     fetchCancelledSchedules();
   }, [filters.cancelledBy, filters.service, filters.dateRange, filters.zone]);
+
+  // Fetch zones from API
+  const fetchZones = async () => {
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE}/api/${apiPath}/zones`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        // Handle different response formats
+        const zoneList = data.zones || data.data || [];
+        const zoneNames = zoneList.map(z => typeof z === 'string' ? z : (z.name || z.zone_name || z.zone)).filter(Boolean);
+        setZones([...new Set(zoneNames)].sort());
+      }
+    } catch (error) {
+      console.error('Error fetching zones:', error);
+      // Fallback to zones from data
+      const uniqueZones = [...new Set(cancelledSchedules.map(s => s.zone).filter(Boolean))];
+      setZones(uniqueZones);
+    }
+  };
 
   const fetchCancelledSchedules = async () => {
     setLoading(true);
@@ -302,7 +343,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
             className="min-w-[90px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
           >
             <option value="all">All Zones</option>
-            {[...new Set(cancelledSchedules.map(s => s.zone).filter(Boolean))].map(z => (
+            {zones.map(z => (
               <option key={z} value={z}>{z}</option>
             ))}
           </select>

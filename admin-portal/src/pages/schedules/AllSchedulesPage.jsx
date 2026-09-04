@@ -388,30 +388,23 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               {/* Pagination */}
               <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
                 <p className="text-sm text-gray-500">Showing 1 to 10 of 1,248 entries</p>
-                <div className="flex items-center gap-2">
-                  <select className="px-2 py-1 border border-gray-300 rounded text-sm">
-                    <option>10 per page</option>
-                    <option>25 per page</option>
-                    <option>50 per page</option>
-                  </select>
-                  <div className="flex items-center gap-1">
-                    <button className="p-1.5 border border-gray-300 rounded hover:bg-gray-50">
-                      <ChevronLeft className="w-4 h-4" />
+                <div className="flex items-center gap-1">
+                  <button className="p-1.5 border border-gray-300 rounded hover:bg-gray-50">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  {[1, 2, 3, 4, 5].map((page) => (
+                    <button
+                      key={page}
+                      className={`w-8 h-8 text-sm font-medium rounded ${
+                        page === 1 ? 'bg-blue-600 text-white' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
                     </button>
-                    {[1, 2, 3, 4, 5].map((page) => (
-                      <button
-                        key={page}
-                        className={`w-8 h-8 text-sm font-medium rounded ${
-                          page === 1 ? 'bg-blue-600 text-white' : 'hover:bg-gray-50'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
-                    <button className="p-1.5 border border-gray-300 rounded hover:bg-gray-50">
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
+                  ))}
+                  <button className="p-1.5 border border-gray-300 rounded hover:bg-gray-50">
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </div>
