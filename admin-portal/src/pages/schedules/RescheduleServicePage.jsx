@@ -8,8 +8,23 @@ import { getAuthToken } from '../../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-const RescheduleServicePage = ({ portalType = 'admin' }) => {
+// Role-based permissions for scheduling
+const getSchedulePermissions = (portalType) => {
+  const permissions = {
+    admin: { canView: true, canCreate: true, canEdit: true, canReschedule: true, canCancel: true, canAssignVendor: true, fullAccess: true },
+    operations_manager: { canView: true, canCreate: true, canEdit: true, canReschedule: true, canCancel: true, canAssignVendor: true, fullAccess: false },
+    franchise: { canView: true, canCreate: true, canEdit: true, canReschedule: true, canCancel: true, canAssignVendor: false, fullAccess: false },
+    manager: { canView: true, canCreate: true, canEdit: true, canReschedule: true, canCancel: true, canAssignVendor: true, fullAccess: false },
+    coordinator: { canView: true, canCreate: false, canEdit: false, canReschedule: false, canCancel: false, canAssignVendor: false, fullAccess: false },
+    supervisor: { canView: true, canCreate: false, canEdit: false, canReschedule: false, canCancel: false, canAssignVendor: false, fullAccess: false },
+    executive: { canView: true, canCreate: false, canEdit: false, canReschedule: false, canCancel: false, canAssignVendor: false, fullAccess: false }
+  };
+  return permissions[portalType] || permissions.executive;
+};
+
+const RescheduleServicePage = ({ portalType = 'admin', user }) => {
   const navigate = useNavigate();
+  const permissions = getSchedulePermissions(portalType);
   const [loading, setLoading] = useState(false);
   const [properties, setProperties] = useState([]);
   const [selectedProperty, setSelectedProperty] = useState(null);
@@ -283,38 +298,6 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
         <div className="flex gap-6">
           {/* Main Content */}
           <div className="flex-1">
-            {/* Property Search */}
-            <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 mb-4">
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div>
-                  <label className="block text-[10px] text-gray-400 uppercase tracking-wide mb-1">Property ID</label>
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                    <input
-                      type="text"
-                      value={filters.search}
-                      onChange={(e) => {
-                        setFilters(prev => ({ ...prev, search: e.target.value }));
-                        setCurrentPage(1);
-                      }}
-                      placeholder="Search Property ID..."
-                      className="w-full pl-8 pr-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[10px] text-gray-400 uppercase tracking-wide mb-1">Property Name</label>
-                  <input
-                    type="text"
-                    value={selectedProperty?.propertyName || selectedProperty?.property_name || ''}
-                    readOnly
-                    placeholder="Auto-fill from search"
-                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-medium bg-gray-50"
-                  />
-                </div>
-              </div>
-            </div>
-
             {/* Existing Schedules Table */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-200">
@@ -324,6 +307,20 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
               {/* Filters - Responsive */}
               <div className="px-3 sm:px-4 py-3 border-b border-gray-100">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  {/* Property ID Search */}
+                  <div className="relative min-w-[160px]">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={filters.search}
+                      onChange={(e) => {
+                        setFilters(prev => ({ ...prev, search: e.target.value }));
+                        setCurrentPage(1);
+                      }}
+                      placeholder="Property ID..."
+                      className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
                   <select 
                     value={filters.service}
                     onChange={(e) => {
