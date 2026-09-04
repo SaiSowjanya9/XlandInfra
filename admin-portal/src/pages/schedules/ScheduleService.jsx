@@ -1215,19 +1215,32 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
 
               {/* Property Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Property</label>
-                <select
-                  value={formData.propertyId}
-                  onChange={(e) => handleFormChange('propertyId', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select Property</option>
-                  {properties.map((prop, idx) => (
-                    <option key={prop.id || prop._id || idx} value={prop.id || prop._id}>
-                      {prop.name || prop.property_name}
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Property ID</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search Property ID..."
+                    value={formData.propertySearch || ''}
+                    onChange={(e) => {
+                      handleFormChange('propertySearch', e.target.value);
+                      const searchVal = e.target.value.toLowerCase();
+                      const matchedProp = properties.find(p => 
+                        (p.property_id || p.propertyId || '').toLowerCase().includes(searchVal) ||
+                        (p.name || p.property_name || '').toLowerCase().includes(searchVal)
+                      );
+                      if (matchedProp) {
+                        handleFormChange('propertyId', matchedProp.id || matchedProp._id);
+                      }
+                    }}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                {formData.propertyId && (
+                  <p className="text-xs text-green-600 mt-1">
+                    Selected: {properties.find(p => (p.id || p._id) == formData.propertyId)?.name || properties.find(p => (p.id || p._id) == formData.propertyId)?.property_name || 'Property found'}
+                  </p>
+                )}
               </div>
 
               {/* Date & Time */}
