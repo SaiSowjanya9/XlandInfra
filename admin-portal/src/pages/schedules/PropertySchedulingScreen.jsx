@@ -114,8 +114,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       }
       return visit;
     }));
-    // Close editing mode after time is changed
-    setEditingVisitIndex(null);
+    // Don't close editing mode - let user click Done button
   };
 
   // Handle applying new recurrence settings
@@ -148,11 +147,18 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     setShowRecurrenceModal(false);
   };
 
-  // Open recurrence modal with current values
+  // Open recurrence modal with current values from the schedule
   const openRecurrenceModal = () => {
     if (selectedService) {
-      setEditFrequency(selectedService.frequency || 'monthly');
-      setEditVisitCount(selectedService.visits || getFrequencyConfig(selectedService.frequency)?.visitsPerYear || 12);
+      // Use the current frequency from the service
+      const currentFrequency = selectedService.frequency || 'monthly';
+      setEditFrequency(currentFrequency);
+      
+      // Use the actual number of planned visits if available, otherwise use service visits
+      const currentVisitCount = plannedVisits.length > 0 
+        ? plannedVisits.length 
+        : (selectedService.visits || getFrequencyConfig(currentFrequency)?.visitsPerYear || 12);
+      setEditVisitCount(currentVisitCount);
     }
     setShowRecurrenceModal(true);
   };
@@ -1176,9 +1182,10 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                         autoFocus
                       />
                       <select
-                        defaultValue={visit.time || '10:00 AM'}
-                        onChange={(e) => handleEditPlannedVisitTime(i, e.target.value)}
-                        onBlur={() => setEditingVisitIndex(null)}
+                        value={visit.time || '10:00 AM'}
+                        onChange={(e) => {
+                          handleEditPlannedVisitTime(i, e.target.value);
+                        }}
                         className="w-full px-1 py-0.5 text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
                         {['8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
@@ -1187,6 +1194,12 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                           <option key={time} value={time}>{time}</option>
                         ))}
                       </select>
+                      <button
+                        onClick={() => setEditingVisitIndex(null)}
+                        className="w-full mt-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                      >
+                        Done
+                      </button>
                     </div>
                   ) : (
                     <p className="font-semibold text-sm mt-1 whitespace-nowrap">
@@ -1568,13 +1581,27 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 </p>
               </div>
 
-              {/* Preview */}
+              {/* Current vs New Preview */}
+              {plannedVisits.length > 0 && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Current Schedule</p>
+                  <p className="text-sm text-gray-800">
+                    {plannedVisits.length} visits, {selectedService?.frequency || 'monthly'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    First visit: {plannedVisits[0]?.shortDateStr || plannedVisits[0]?.dateStr}
+                  </p>
+                </div>
+              )}
+              
+              {/* New Preview */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-500 uppercase tracking-wide mb-1">New Schedule</p>
                 <p className="text-sm text-blue-800">
-                  <strong>Preview:</strong> {editVisitCount} visits, {editFrequency}
+                  <strong>{editVisitCount} visits, {editFrequency}</strong>
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
-                  Starting from {selectedSlot ? formatDateShort(selectedSlot.date) : 'selected date'}
+                  Starting from {selectedSlot ? formatDateShort(selectedSlot.date) : (plannedVisits[0]?.shortDateStr || 'selected date')}
                 </p>
               </div>
             </div>
