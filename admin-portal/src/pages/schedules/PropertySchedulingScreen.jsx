@@ -596,7 +596,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         throw new Error(result.message || result.error || 'Failed to save schedule');
       }
       
-      // Close modal and navigate immediately BEFORE alert
+      // Close modal
       setShowConfirmation(false);
       
       // Update the service status to Scheduled and store the scheduleId
@@ -605,16 +605,13 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         s.id === selectedService.id ? { ...s, status: 'Scheduled', scheduleId: scheduleId } : s
       ));
       
-      // Clear selection
-      setSelectedService(null);
-      setPlannedVisits([]);
+      // Update planned visits to show as scheduled
+      setPlannedVisits(prev => prev.map(v => ({ ...v, status: 'Scheduled' })));
+      
+      // Clear slot selection but keep showing the service
       setSelectedSlot(null);
       
-      // Navigate back based on portal type
-      const basePath = portalType === 'admin' ? '' : `/${portalType}`;
-      navigate(`${basePath}/schedules/pending`);
-      
-      // Show success message after navigation
+      // Show success message - stay on same page
       alert(`Schedule confirmed successfully! ${result.data?.visitsCreated || confirmationSchedule.length} visits created.`);
     } catch (error) {
       console.error('Error confirming schedule:', error);
