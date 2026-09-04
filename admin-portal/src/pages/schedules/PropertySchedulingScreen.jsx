@@ -134,7 +134,11 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     // Don't regenerate if confirmation modal is open or if confirming
     if (selectedService && !showConfirmation && !confirmingSchedule) {
       generateRecommendedDates(selectedService);
-      generatePlannedVisits(selectedService);
+      // Only generate/load visits if we don't already have edited visits
+      const hasEditedVisits = plannedVisits.some(v => v.isEdited);
+      if (!hasEditedVisits) {
+        generatePlannedVisits(selectedService);
+      }
     }
   }, [selectedService, currentWeekStart, selectedSlot, showConfirmation, confirmingSchedule]);
 
@@ -255,16 +259,29 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.data?.length > 0) {
-          return result.data.map(visit => ({
-            visitNumber: visit.visit_number || visit.visitNumber,
-            date: new Date(visit.scheduled_date || visit.scheduledDate),
-            dateStr: new Date(visit.scheduled_date || visit.scheduledDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
-            shortDateStr: new Date(visit.scheduled_date || visit.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            time: visit.scheduled_time_start ? formatTimeFromDB(visit.scheduled_time_start) : '10:00 AM',
-            status: visit.status === 'scheduled' ? 'Scheduled' : visit.status,
-            isEdited: false,
-            visitId: visit.visit_id || visit.visitId
-          }));
+          return result.data.map(visit => {
+            // Parse date carefully to avoid timezone issues
+            const dateStr = visit.scheduled_date || visit.scheduledDate;
+            let visitDate;
+            if (typeof dateStr === 'string') {
+              const datePart = dateStr.split('T')[0]; // Get YYYY-MM-DD
+              const [year, month, day] = datePart.split('-').map(Number);
+              visitDate = new Date(year, month - 1, day);
+            } else {
+              visitDate = new Date(dateStr);
+            }
+            
+            return {
+              visitNumber: visit.visit_number || visit.visitNumber,
+              date: visitDate,
+              dateStr: visitDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
+              shortDateStr: visitDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              time: visit.scheduled_time_start ? formatTimeFromDB(visit.scheduled_time_start) : '10:00 AM',
+              status: visit.status === 'scheduled' ? 'Scheduled' : visit.status,
+              isEdited: false,
+              visitId: visit.visit_id || visit.visitId
+            };
+          });
         }
       }
     } catch (error) {
@@ -374,6 +391,24 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   const handleSelectSlot = (day, time, status) => {
     if (status === 'booked') return;
     setSelectedSlot({ date: day, time, status });
+    
+    // If we already have planned visits, update the first one with the new slot
+    // but keep other visits' dates intact
+    if (plannedVisits.length > 0) {
+      setPlannedVisits(prev => prev.map((visit, index) => {
+        if (index === 0) {
+          return {
+            ...visit,
+            date: day,
+            dateStr: formatDateFull(day),
+            shortDateStr: formatDateShort(day),
+            time: time,
+            isEdited: true
+          };
+        }
+        return visit;
+      }));
+    }
   };
 
   const handleUseRecommended = () => {
