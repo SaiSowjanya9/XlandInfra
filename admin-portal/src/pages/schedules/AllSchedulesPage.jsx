@@ -14,18 +14,18 @@ const USE_MOCK_DATA = true;
 
 // Mock data for development
 const MOCK_SCHEDULES = [
-  { id: 1, visitId: 'VIS-001', propertyId: 'PROP-2024-001', propertyName: 'Sunrise Apartments', propertyType: 'Apartment', customerName: 'Rajesh Kumar', serviceName: 'Pest Control', serviceCategory: 'Pest Control', vendorId: 1, vendorCode: 'VND-001', vendorName: 'ABC Pest Solutions', visitNumber: 1, totalVisits: 12, targetDate: '2024-09-15', scheduledDate: '2024-09-15', scheduledTime: '10:00:00', originalDate: null, isRescheduled: false, zone: 'Zone A', workOrderId: 'WO-2024-001', workOrderStatus: 'in_progress', status: 'scheduled' },
-  { id: 2, visitId: 'VIS-002', propertyId: 'PROP-2024-002', propertyName: 'Green Valley Villa', propertyType: 'Villa', customerName: 'Priya Sharma', serviceName: 'Deep Cleaning', serviceCategory: 'Cleaning', vendorId: 2, vendorCode: 'VND-002', vendorName: 'CleanPro Services', visitNumber: 2, totalVisits: 6, targetDate: '2024-09-16', scheduledDate: '2024-09-18', scheduledTime: '14:00:00', originalDate: '2024-09-16', isRescheduled: true, zone: 'Zone B', workOrderId: null, workOrderStatus: null, status: 'rescheduled' },
-  { id: 3, visitId: 'VIS-003', propertyId: 'PROP-2024-003', propertyName: 'Royal Heights', propertyType: 'Apartment', customerName: 'Amit Patel', serviceName: 'AC Service', serviceCategory: 'HVAC', vendorId: 3, vendorCode: 'VND-003', vendorName: 'CoolTech AC', visitNumber: 1, totalVisits: 4, targetDate: '2024-09-10', scheduledDate: '2024-09-10', scheduledTime: '09:00:00', originalDate: null, isRescheduled: false, zone: 'Zone A', workOrderId: 'WO-2024-002', workOrderStatus: 'completed', status: 'completed' },
-  { id: 4, visitId: 'VIS-004', propertyId: 'PROP-2024-004', propertyName: 'Lake View Residency', propertyType: 'Villa', customerName: 'Sneha Reddy', serviceName: 'Plumbing', serviceCategory: 'Plumbing', vendorId: 4, vendorCode: 'VND-004', vendorName: 'QuickFix Plumbers', visitNumber: 3, totalVisits: 12, targetDate: '2024-09-20', scheduledDate: '2024-09-20', scheduledTime: '11:00:00', originalDate: null, isRescheduled: false, zone: 'Zone C', workOrderId: null, workOrderStatus: null, status: 'upcoming' },
-  { id: 5, visitId: 'VIS-005', propertyId: 'PROP-2024-005', propertyName: 'Paradise Towers', propertyType: 'Apartment', customerName: 'Vikram Singh', serviceName: 'Pest Control', serviceCategory: 'Pest Control', vendorId: 1, vendorCode: 'VND-001', vendorName: 'ABC Pest Solutions', visitNumber: 5, totalVisits: 12, targetDate: '2024-09-05', scheduledDate: '2024-09-05', scheduledTime: '15:00:00', originalDate: null, isRescheduled: false, zone: 'Zone B', workOrderId: 'WO-2024-003', workOrderStatus: 'in_progress', status: 'in_progress' },
-  { id: 6, visitId: 'VIS-006', propertyId: 'PROP-2024-006', propertyName: 'Ocean Breeze Apartments', propertyType: 'Apartment', customerName: 'Meera Nair', serviceName: 'Electrical', serviceCategory: 'Electrical', vendorId: 5, vendorCode: 'VND-005', vendorName: 'PowerFix Electricals', visitNumber: 1, totalVisits: 2, targetDate: '2024-08-25', scheduledDate: '2024-08-25', scheduledTime: '10:00:00', originalDate: null, isRescheduled: false, zone: 'Zone A', workOrderId: 'WO-2024-004', workOrderStatus: 'cancelled', status: 'cancelled' },
-  { id: 7, visitId: 'VIS-007', propertyId: 'PROP-2024-007', propertyName: 'Silver Oak Villa', propertyType: 'Villa', customerName: 'Karthik Menon', serviceName: 'Deep Cleaning', serviceCategory: 'Cleaning', vendorId: 2, vendorCode: 'VND-002', vendorName: 'CleanPro Services', visitNumber: 4, totalVisits: 6, targetDate: '2024-08-20', scheduledDate: '2024-08-20', scheduledTime: '09:30:00', originalDate: null, isRescheduled: false, zone: 'Zone C', workOrderId: 'WO-2024-005', workOrderStatus: 'completed', status: 'completed' },
-  { id: 8, visitId: 'VIS-008', propertyId: 'PROP-2024-001', propertyName: 'Sunrise Apartments', propertyType: 'Apartment', customerName: 'Rajesh Kumar', serviceName: 'Pest Control', serviceCategory: 'Pest Control', vendorId: 1, vendorCode: 'VND-001', vendorName: 'ABC Pest Solutions', visitNumber: 2, totalVisits: 12, targetDate: '2024-10-15', scheduledDate: '2024-10-15', scheduledTime: '10:00:00', originalDate: null, isRescheduled: false, zone: 'Zone A', workOrderId: null, workOrderStatus: null, status: 'scheduled' },
-  { id: 9, visitId: 'VIS-009', propertyId: 'PROP-2024-008', propertyName: 'Palm Grove Estate', propertyType: 'Independent House', customerName: 'Ananya Iyer', serviceName: 'AC Service', serviceCategory: 'HVAC', vendorId: 3, vendorCode: 'VND-003', vendorName: 'CoolTech AC', visitNumber: 2, totalVisits: 4, targetDate: '2024-09-01', scheduledDate: '2024-09-01', scheduledTime: '14:00:00', originalDate: null, isRescheduled: false, zone: 'Zone B', workOrderId: 'WO-2024-006', workOrderStatus: 'completed', status: 'completed' },
-  { id: 10, visitId: 'VIS-010', propertyId: 'PROP-2024-009', propertyName: 'Emerald Heights', propertyType: 'Apartment', customerName: 'Suresh Babu', serviceName: 'Pest Control', serviceCategory: 'Pest Control', vendorId: 1, vendorCode: 'VND-001', vendorName: 'ABC Pest Solutions', visitNumber: 1, totalVisits: 12, targetDate: '2024-08-15', scheduledDate: '2024-08-15', scheduledTime: '11:00:00', originalDate: null, isRescheduled: false, zone: 'Zone A', workOrderId: 'WO-2024-007', workOrderStatus: 'overdue', status: 'overdue' },
-  { id: 11, visitId: 'VIS-011', propertyId: 'PROP-2024-010', propertyName: 'Crystal Bay Residency', propertyType: 'Villa', customerName: 'Divya Krishnan', serviceName: 'Plumbing', serviceCategory: 'Plumbing', vendorId: 4, vendorCode: 'VND-004', vendorName: 'QuickFix Plumbers', visitNumber: 1, totalVisits: 12, targetDate: '2024-09-22', scheduledDate: '2024-09-22', scheduledTime: '10:30:00', originalDate: null, isRescheduled: false, zone: 'Zone C', workOrderId: null, workOrderStatus: null, status: 'scheduled' },
-  { id: 12, visitId: 'VIS-012', propertyId: 'PROP-2024-011', propertyName: 'Maple Gardens', propertyType: 'Apartment', customerName: 'Rahul Verma', serviceName: 'Deep Cleaning', serviceCategory: 'Cleaning', vendorId: 2, vendorCode: 'VND-002', vendorName: 'CleanPro Services', visitNumber: 1, totalVisits: 6, targetDate: '2024-09-25', scheduledDate: '2024-09-25', scheduledTime: '09:00:00', originalDate: null, isRescheduled: false, zone: 'Zone B', workOrderId: null, workOrderStatus: null, status: 'scheduled' },
+  { id: 1, visitId: 'VIS-001', propertyId: 'PROP-101', propertyName: 'Sunrise Apartments', propertyType: 'Apartment', customerName: 'Rajesh Kumar', serviceName: 'Pest Control', serviceCategory: 'Pest Control', vendorId: 1, vendorCode: 'VND-001', vendorName: 'ABC Pest Solutions', visitNumber: 1, totalVisits: 12, targetDate: '2024-09-15', scheduledDate: '2024-09-15', scheduledTime: '10:00:00', originalDate: null, isRescheduled: false, zone: 'Zone A', workOrderId: 'WO-2024-001', workOrderStatus: 'in_progress', status: 'scheduled' },
+  { id: 2, visitId: 'VIS-002', propertyId: 'PROP-102', propertyName: 'Green Valley Villa', propertyType: 'Villa', customerName: 'Priya Sharma', serviceName: 'Deep Cleaning', serviceCategory: 'Cleaning', vendorId: 2, vendorCode: 'VND-002', vendorName: 'CleanPro Services', visitNumber: 2, totalVisits: 6, targetDate: '2024-09-16', scheduledDate: '2024-09-18', scheduledTime: '14:00:00', originalDate: '2024-09-16', isRescheduled: true, zone: 'Zone B', workOrderId: null, workOrderStatus: null, status: 'rescheduled' },
+  { id: 3, visitId: 'VIS-003', propertyId: 'PROP-103', propertyName: 'Royal Heights', propertyType: 'Apartment', customerName: 'Amit Patel', serviceName: 'AC Service', serviceCategory: 'HVAC', vendorId: 3, vendorCode: 'VND-003', vendorName: 'CoolTech AC', visitNumber: 1, totalVisits: 4, targetDate: '2024-09-10', scheduledDate: '2024-09-10', scheduledTime: '09:00:00', originalDate: null, isRescheduled: false, zone: 'Zone A', workOrderId: 'WO-2024-002', workOrderStatus: 'completed', status: 'completed' },
+  { id: 4, visitId: 'VIS-004', propertyId: 'PROP-104', propertyName: 'Lake View Residency', propertyType: 'Villa', customerName: 'Sneha Reddy', serviceName: 'Plumbing', serviceCategory: 'Plumbing', vendorId: 4, vendorCode: 'VND-004', vendorName: 'QuickFix Plumbers', visitNumber: 3, totalVisits: 12, targetDate: '2024-09-20', scheduledDate: '2024-09-20', scheduledTime: '11:00:00', originalDate: null, isRescheduled: false, zone: 'Zone C', workOrderId: null, workOrderStatus: null, status: 'upcoming' },
+  { id: 5, visitId: 'VIS-005', propertyId: 'PROP-105', propertyName: 'Paradise Towers', propertyType: 'Apartment', customerName: 'Vikram Singh', serviceName: 'Pest Control', serviceCategory: 'Pest Control', vendorId: 1, vendorCode: 'VND-001', vendorName: 'ABC Pest Solutions', visitNumber: 5, totalVisits: 12, targetDate: '2024-09-05', scheduledDate: '2024-09-05', scheduledTime: '15:00:00', originalDate: null, isRescheduled: false, zone: 'Zone B', workOrderId: 'WO-2024-003', workOrderStatus: 'in_progress', status: 'in_progress' },
+  { id: 6, visitId: 'VIS-006', propertyId: 'PROP-106', propertyName: 'Ocean Breeze Apartments', propertyType: 'Apartment', customerName: 'Meera Nair', serviceName: 'Electrical', serviceCategory: 'Electrical', vendorId: 5, vendorCode: 'VND-005', vendorName: 'PowerFix Electricals', visitNumber: 1, totalVisits: 2, targetDate: '2024-08-25', scheduledDate: '2024-08-25', scheduledTime: '10:00:00', originalDate: null, isRescheduled: false, zone: 'Zone A', workOrderId: 'WO-2024-004', workOrderStatus: 'cancelled', status: 'cancelled' },
+  { id: 7, visitId: 'VIS-007', propertyId: 'PROP-107', propertyName: 'Silver Oak Villa', propertyType: 'Villa', customerName: 'Karthik Menon', serviceName: 'Deep Cleaning', serviceCategory: 'Cleaning', vendorId: 2, vendorCode: 'VND-002', vendorName: 'CleanPro Services', visitNumber: 4, totalVisits: 6, targetDate: '2024-08-20', scheduledDate: '2024-08-20', scheduledTime: '09:30:00', originalDate: null, isRescheduled: false, zone: 'Zone C', workOrderId: 'WO-2024-005', workOrderStatus: 'completed', status: 'completed' },
+  { id: 8, visitId: 'VIS-008', propertyId: 'PROP-101', propertyName: 'Sunrise Apartments', propertyType: 'Apartment', customerName: 'Rajesh Kumar', serviceName: 'Pest Control', serviceCategory: 'Pest Control', vendorId: 1, vendorCode: 'VND-001', vendorName: 'ABC Pest Solutions', visitNumber: 2, totalVisits: 12, targetDate: '2024-10-15', scheduledDate: '2024-10-15', scheduledTime: '10:00:00', originalDate: null, isRescheduled: false, zone: 'Zone A', workOrderId: null, workOrderStatus: null, status: 'scheduled' },
+  { id: 9, visitId: 'VIS-009', propertyId: 'PROP-108', propertyName: 'Palm Grove Estate', propertyType: 'Independent House', customerName: 'Ananya Iyer', serviceName: 'AC Service', serviceCategory: 'HVAC', vendorId: 3, vendorCode: 'VND-003', vendorName: 'CoolTech AC', visitNumber: 2, totalVisits: 4, targetDate: '2024-09-01', scheduledDate: '2024-09-01', scheduledTime: '14:00:00', originalDate: null, isRescheduled: false, zone: 'Zone B', workOrderId: 'WO-2024-006', workOrderStatus: 'completed', status: 'completed' },
+  { id: 10, visitId: 'VIS-010', propertyId: 'PROP-109', propertyName: 'Emerald Heights', propertyType: 'Apartment', customerName: 'Suresh Babu', serviceName: 'Pest Control', serviceCategory: 'Pest Control', vendorId: 1, vendorCode: 'VND-001', vendorName: 'ABC Pest Solutions', visitNumber: 1, totalVisits: 12, targetDate: '2024-08-15', scheduledDate: '2024-08-15', scheduledTime: '11:00:00', originalDate: null, isRescheduled: false, zone: 'Zone A', workOrderId: 'WO-2024-007', workOrderStatus: 'overdue', status: 'overdue' },
+  { id: 11, visitId: 'VIS-011', propertyId: 'PROP-110', propertyName: 'Crystal Bay Residency', propertyType: 'Villa', customerName: 'Divya Krishnan', serviceName: 'Plumbing', serviceCategory: 'Plumbing', vendorId: 4, vendorCode: 'VND-004', vendorName: 'QuickFix Plumbers', visitNumber: 1, totalVisits: 12, targetDate: '2024-09-22', scheduledDate: '2024-09-22', scheduledTime: '10:30:00', originalDate: null, isRescheduled: false, zone: 'Zone C', workOrderId: null, workOrderStatus: null, status: 'scheduled' },
+  { id: 12, visitId: 'VIS-012', propertyId: 'PROP-111', propertyName: 'Maple Gardens', propertyType: 'Apartment', customerName: 'Rahul Verma', serviceName: 'Deep Cleaning', serviceCategory: 'Cleaning', vendorId: 2, vendorCode: 'VND-002', vendorName: 'CleanPro Services', visitNumber: 1, totalVisits: 6, targetDate: '2024-09-25', scheduledDate: '2024-09-25', scheduledTime: '09:00:00', originalDate: null, isRescheduled: false, zone: 'Zone B', workOrderId: null, workOrderStatus: null, status: 'scheduled' },
 ];
 
 const MOCK_STATS = {
@@ -306,10 +306,14 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     setShowViewModal(true);
   };
 
-  // Handle reschedule navigation
+  // Handle reschedule - open modal with schedule pre-selected
   const handleReschedule = (schedule) => {
-    const basePath = portalType === 'franchise' ? '/fp' : portalType === 'manager' ? '/manager' : '';
-    navigate(`${basePath}/schedules/reschedule`, { state: { schedule } });
+    setSelectedForReschedule(schedule);
+    setNewDate('');
+    setNewTime('');
+    setRescheduleReason('');
+    setRescheduleSearch('');
+    setShowRescheduleModal(true);
   };
 
   // Handle cancel click
@@ -385,6 +389,27 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     );
   };
 
+  // Convert dd/mm/yyyy to yyyy-mm-dd
+  const convertDateToISO = (dateStr) => {
+    if (!dateStr) return null;
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return null;
+    const [day, month, year] = parts;
+    if (day.length !== 2 || month.length !== 2 || year.length !== 4) return null;
+    return `${year}-${month}-${day}`;
+  };
+
+  // Validate dd/mm/yyyy format
+  const isValidDate = (dateStr) => {
+    if (!dateStr || dateStr.length !== 10) return false;
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return false;
+    const [day, month, year] = parts.map(Number);
+    if (isNaN(day) || isNaN(month) || isNaN(year)) return false;
+    if (day < 1 || day > 31 || month < 1 || month > 12 || year < 2024) return false;
+    return true;
+  };
+
   // Handle confirm reschedule
   const handleConfirmReschedule = async () => {
     if (!selectedForReschedule) {
@@ -392,7 +417,15 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       return;
     }
     if (!newDate) {
-      alert('Please select a new date');
+      alert('Please enter a new date');
+      return;
+    }
+    if (!isValidDate(newDate)) {
+      alert('Please enter a valid date in dd/mm/yyyy format');
+      return;
+    }
+    if (!newTime) {
+      alert('Please select a new time');
       return;
     }
     if (!rescheduleReason.trim()) {
@@ -400,6 +433,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       return;
     }
 
+    const isoDate = convertDateToISO(newDate);
+    
     setRescheduling(true);
     
     // For mock data, just update locally
@@ -410,8 +445,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             ? { 
                 ...s, 
                 originalDate: s.scheduledDate,
-                scheduledDate: newDate,
-                scheduledTime: newTime || s.scheduledTime,
+                scheduledDate: isoDate,
+                scheduledTime: newTime,
                 isRescheduled: true,
                 status: 'rescheduled'
               } 
@@ -434,8 +469,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ 
-          newDate, 
-          newTimeStart: newTime || null,
+          newDate: isoDate, 
+          newTimeStart: newTime,
           reason: rescheduleReason 
         })
       });
@@ -443,7 +478,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       if (response.ok) {
         setSchedules(prev => prev.map(s => 
           s.id === selectedForReschedule.id 
-            ? { ...s, scheduledDate: newDate, isRescheduled: true, status: 'rescheduled' } 
+            ? { ...s, scheduledDate: isoDate, isRescheduled: true, status: 'rescheduled' } 
             : s
         ));
         setShowRescheduleModal(false);
@@ -1052,22 +1087,30 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                   </h3>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">New Date *</label>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">New Date * (dd/mm/yyyy)</label>
                       <input
-                        type="date"
+                        type="text"
                         value={newDate}
-                        onChange={(e) => setNewDate(e.target.value)}
-                        min={new Date().toISOString().split('T')[0]}
+                        onChange={(e) => {
+                          let val = e.target.value.replace(/[^0-9/]/g, '');
+                          // Auto-insert slashes
+                          if (val.length === 2 && !val.includes('/')) val += '/';
+                          if (val.length === 5 && val.split('/').length === 2) val += '/';
+                          if (val.length <= 10) setNewDate(val);
+                        }}
+                        placeholder="dd/mm/yyyy"
+                        maxLength={10}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">New Time (Optional)</label>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">New Time *</label>
                       <input
                         type="time"
                         value={newTime}
                         onChange={(e) => setNewTime(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
+                        required
                       />
                     </div>
                     <div>
@@ -1101,7 +1144,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 </button>
                 <button
                   onClick={handleConfirmReschedule}
-                  disabled={!selectedForReschedule || !newDate || !rescheduleReason.trim() || rescheduling}
+                  disabled={!selectedForReschedule || !newDate || !newTime || !rescheduleReason.trim() || rescheduling}
                   className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {rescheduling ? (
