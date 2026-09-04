@@ -891,7 +891,30 @@ router.post('/draft', authenticate, canMakeSchedule, async (req, res) => {
       );
     } else {
       const scheduleId = generateScheduleId();
-      const frequencyType = (frequency || 'monthly').toLowerCase().replace(' ', '_');
+      
+      // Map frequency to valid ENUM values
+      const frequencyMap = {
+        'daily': 'daily',
+        'weekly': 'weekly',
+        'bi-weekly': 'bi_weekly',
+        'bi_weekly': 'bi_weekly',
+        'biweekly': 'bi_weekly',
+        'monthly': 'monthly',
+        'every 2 months': 'every_2_months',
+        'every_2_months': 'every_2_months',
+        'quarterly': 'quarterly',
+        'half-yearly': 'half_yearly',
+        'half_yearly': 'half_yearly',
+        'halfyearly': 'half_yearly',
+        'yearly': 'yearly',
+        'annual': 'yearly',
+        'one-time': 'one_time',
+        'one_time': 'one_time',
+        'onetime': 'one_time',
+        'customer requirement': 'one_time',
+        'on request': 'one_time'
+      };
+      const frequencyType = frequencyMap[(frequency || 'monthly').toLowerCase()] || 'monthly';
       
       const [newSchedule] = await pool.execute(
         `INSERT INTO property_service_schedules (schedule_id, property_id, service_name, vendor_id, frequency_type, total_visits, status, recommended_dates, created_by, created_at)
@@ -981,9 +1004,9 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
       serviceScheduleId = newSchedule.insertId;
     }
 
-    // Delete existing unstarted visits for this service schedule
+    // Delete existing unstarted visits for this service schedule (only non-started visits)
     await pool.execute(
-      `DELETE FROM scheduled_visits WHERE service_schedule_id = ? AND status IN ('scheduled', 'pending', 'confirmed')`,
+      `DELETE FROM scheduled_visits WHERE service_schedule_id = ? AND status IN ('scheduled', 'confirmed')`,
       [serviceScheduleId]
     );
 
@@ -1351,7 +1374,7 @@ router.put('/property/:propertyId/cancel-all', authenticate, canMakeSchedule, as
            cancellation_note = ?
        WHERE property_id = ? 
          AND scheduled_date >= ?
-         AND status IN ('scheduled', 'confirmed', 'upcoming')`,
+         AND status IN ('scheduled', 'confirmed')`,
       [req.user.id, `Property contract cancelled: ${reason}`, propertyId, cancelFromDate]
     );
 
