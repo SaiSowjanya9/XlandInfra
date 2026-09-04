@@ -8,8 +8,23 @@ import { getAuthToken } from '../../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
+// Role-based permissions for scheduling
+const getSchedulePermissions = (portalType) => {
+  const permissions = {
+    admin: { canView: true, canRestore: true, canExport: true, fullAccess: true },
+    operations_manager: { canView: true, canRestore: true, canExport: true, fullAccess: false },
+    franchise: { canView: true, canRestore: true, canExport: true, fullAccess: false },
+    manager: { canView: true, canRestore: true, canExport: true, fullAccess: false },
+    coordinator: { canView: true, canRestore: false, canExport: false, fullAccess: false },
+    supervisor: { canView: true, canRestore: false, canExport: false, fullAccess: false },
+    executive: { canView: true, canRestore: false, canExport: false, fullAccess: false }
+  };
+  return permissions[portalType] || permissions.executive;
+};
+
+const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
   const navigate = useNavigate();
+  const permissions = getSchedulePermissions(portalType);
   const [loading, setLoading] = useState(true);
   const [cancelledSchedules, setCancelledSchedules] = useState([]);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
@@ -22,7 +37,8 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
     search: '',
     service: 'all',
     cancelledBy: 'all',
-    dateRange: 'all'
+    dateRange: 'all',
+    zone: 'all'
   });
   
   // Pagination
@@ -31,7 +47,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
 
   useEffect(() => {
     fetchCancelledSchedules();
-  }, [filters.cancelledBy, filters.service, filters.dateRange]);
+  }, [filters.cancelledBy, filters.service, filters.dateRange, filters.zone]);
 
   const fetchCancelledSchedules = async () => {
     setLoading(true);
@@ -61,11 +77,11 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
   };
 
   const getMockData = () => [
-    { id: 1, property_id: 'PROP-001', property_name: 'Green Valley Apartments', service: 'HVAC Maintenance', vendor: 'ABC HVAC Services', scheduled_date: '2026-07-15', scheduled_time: '10:00 AM', cancelled_at: '2026-07-12T14:30:00', cancelled_by: 'John Manager', cancelled_by_role: 'Manager', reason: 'Customer requested to postpone due to personal reasons' },
-    { id: 2, property_id: 'PROP-002', property_name: 'Sunrise Towers', service: 'Plumbing Check', vendor: 'Aqua Plumbing', scheduled_date: '2026-07-18', scheduled_time: '02:00 PM', cancelled_at: '2026-07-15T09:00:00', cancelled_by: 'Vendor', cancelled_by_role: 'Vendor', reason: 'Vendor unavailable - staff shortage' },
-    { id: 3, property_id: 'PROP-003', property_name: 'Palm Heights', service: 'Electrical Inspection', vendor: 'PowerFix Electricals', scheduled_date: '2026-07-20', scheduled_time: '09:00 AM', cancelled_at: '2026-07-19T16:00:00', cancelled_by: 'FP User', cancelled_by_role: 'FP', reason: 'Payment pending - auto-cancelled after 7 days' },
-    { id: 4, property_id: 'PROP-004', property_name: 'Blue Sky Complex', service: 'Lift Maintenance', vendor: 'Elevate Engineers', scheduled_date: '2026-08-01', scheduled_time: '11:00 AM', cancelled_at: '2026-07-28T11:00:00', cancelled_by: 'Customer', cancelled_by_role: 'Customer', reason: 'Building under renovation' },
-    { id: 5, property_id: 'PROP-005', property_name: 'Garden View Residency', service: 'Fire Safety Check', vendor: 'SafeGuard Services', scheduled_date: '2026-08-05', scheduled_time: '03:00 PM', cancelled_at: '2026-08-02T10:30:00', cancelled_by: 'Admin', cancelled_by_role: 'Admin', reason: 'Duplicate schedule entry - consolidated with another visit' }
+    { id: 1, property_id: 'PROP-001', property_name: 'Green Valley Apartments', service: 'HVAC Maintenance', vendor: 'ABC HVAC Services', zone: 'Zone A', scheduled_date: '2026-07-15', scheduled_time: '10:00 AM', cancelled_at: '2026-07-12T14:30:00', cancelled_by: 'John Manager', cancelled_by_role: 'Manager', reason: 'Customer requested to postpone due to personal reasons' },
+    { id: 2, property_id: 'PROP-002', property_name: 'Sunrise Towers', service: 'Plumbing Check', vendor: 'Aqua Plumbing', zone: 'Zone B', scheduled_date: '2026-07-18', scheduled_time: '02:00 PM', cancelled_at: '2026-07-15T09:00:00', cancelled_by: 'Vendor', cancelled_by_role: 'Vendor', reason: 'Vendor unavailable - staff shortage' },
+    { id: 3, property_id: 'PROP-003', property_name: 'Palm Heights', service: 'Electrical Inspection', vendor: 'PowerFix Electricals', zone: 'Zone A', scheduled_date: '2026-07-20', scheduled_time: '09:00 AM', cancelled_at: '2026-07-19T16:00:00', cancelled_by: 'FP User', cancelled_by_role: 'FP', reason: 'Payment pending - auto-cancelled after 7 days' },
+    { id: 4, property_id: 'PROP-004', property_name: 'Blue Sky Complex', service: 'Lift Maintenance', vendor: 'Elevate Engineers', zone: 'Zone C', scheduled_date: '2026-08-01', scheduled_time: '11:00 AM', cancelled_at: '2026-07-28T11:00:00', cancelled_by: 'Customer', cancelled_by_role: 'Customer', reason: 'Building under renovation' },
+    { id: 5, property_id: 'PROP-005', property_name: 'Garden View Residency', service: 'Fire Safety Check', vendor: 'SafeGuard Services', zone: 'Zone D', scheduled_date: '2026-08-05', scheduled_time: '03:00 PM', cancelled_at: '2026-08-02T10:30:00', cancelled_by: 'Admin', cancelled_by_role: 'Admin', reason: 'Duplicate schedule entry - consolidated with another visit' }
   ];
 
   const formatDate = (date) => {
@@ -111,12 +127,14 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
       const searchLower = filters.search.toLowerCase();
       const matchesSearch = 
         schedule.property_name?.toLowerCase().includes(searchLower) ||
+        schedule.property_id?.toLowerCase().includes(searchLower) ||
         schedule.service?.toLowerCase().includes(searchLower) ||
         schedule.vendor?.toLowerCase().includes(searchLower);
       if (!matchesSearch) return false;
     }
     if (filters.service !== 'all' && schedule.service !== filters.service) return false;
     if (filters.cancelledBy !== 'all' && schedule.cancelled_by_role !== filters.cancelledBy) return false;
+    if (filters.zone !== 'all' && schedule.zone !== filters.zone) return false;
     return true;
   });
 
@@ -277,6 +295,16 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
             <option value="week">Last 7 Days</option>
             <option value="month">Last 30 Days</option>
             <option value="quarter">Last 90 Days</option>
+          </select>
+          <select
+            value={filters.zone}
+            onChange={(e) => setFilters({...filters, zone: e.target.value})}
+            className="min-w-[90px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
+          >
+            <option value="all">All Zones</option>
+            {[...new Set(cancelledSchedules.map(s => s.zone).filter(Boolean))].map(z => (
+              <option key={z} value={z}>{z}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -479,13 +507,15 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
               >
                 Close
               </button>
-              <button
-                onClick={() => setShowRestoreModal(true)}
-                className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Restore Schedule
-              </button>
+              {permissions.canRestore && (
+                <button
+                  onClick={() => setShowRestoreModal(true)}
+                  className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Restore Schedule
+                </button>
+              )}
             </div>
           </div>
         </div>

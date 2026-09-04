@@ -16,11 +16,26 @@ import {
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+// Role-based permissions for scheduling
+const getSchedulePermissions = (portalType) => {
+  const permissions = {
+    admin: { canView: true, canCreate: true, canEdit: true, canReschedule: true, canCancel: true, canAssignVendor: true, canConfirm: true, fullAccess: true },
+    operations_manager: { canView: true, canCreate: true, canEdit: true, canReschedule: true, canCancel: true, canAssignVendor: true, canConfirm: true, fullAccess: false },
+    franchise: { canView: true, canCreate: true, canEdit: true, canReschedule: true, canCancel: true, canAssignVendor: false, canConfirm: true, fullAccess: false },
+    manager: { canView: true, canCreate: true, canEdit: true, canReschedule: true, canCancel: true, canAssignVendor: true, canConfirm: true, fullAccess: false },
+    coordinator: { canView: true, canCreate: false, canEdit: false, canReschedule: false, canCancel: false, canAssignVendor: false, canConfirm: false, fullAccess: false },
+    supervisor: { canView: true, canCreate: false, canEdit: false, canReschedule: false, canCancel: false, canAssignVendor: false, canConfirm: false, fullAccess: false },
+    executive: { canView: true, canCreate: false, canEdit: false, canReschedule: false, canCancel: false, canAssignVendor: false, canConfirm: false, fullAccess: false }
+  };
+  return permissions[portalType] || permissions.executive;
+};
+
 const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   const { propertyId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const propertyData = location.state?.property;
+  const permissions = getSchedulePermissions(portalType);
 
   const [property, setProperty] = useState(propertyData || null);
   const [services, setServices] = useState([]);

@@ -138,10 +138,25 @@ const StatusBadge = ({ status, type = 'payment' }) => {
   );
 };
 
+// Role-based permissions for scheduling
+const getSchedulePermissions = (portalType) => {
+  const permissions = {
+    admin: { canView: true, canCreate: true, canEdit: true, canReschedule: true, canCancel: true, canAssignVendor: true, canSchedule: true, fullAccess: true },
+    operations_manager: { canView: true, canCreate: true, canEdit: true, canReschedule: true, canCancel: true, canAssignVendor: true, canSchedule: true, fullAccess: false },
+    franchise: { canView: true, canCreate: true, canEdit: true, canReschedule: true, canCancel: true, canAssignVendor: false, canSchedule: true, fullAccess: false },
+    manager: { canView: true, canCreate: true, canEdit: true, canReschedule: true, canCancel: true, canAssignVendor: true, canSchedule: true, fullAccess: false },
+    coordinator: { canView: true, canCreate: false, canEdit: false, canReschedule: false, canCancel: false, canAssignVendor: false, canSchedule: false, fullAccess: false },
+    supervisor: { canView: true, canCreate: false, canEdit: false, canReschedule: false, canCancel: false, canAssignVendor: false, canSchedule: false, fullAccess: false },
+    executive: { canView: true, canCreate: false, canEdit: false, canReschedule: false, canCancel: false, canAssignVendor: false, canSchedule: false, fullAccess: false }
+  };
+  return permissions[portalType] || permissions.executive;
+};
+
 const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
   const navigate = useNavigate();
   const token = getAuthToken();
   const apiPath = getApiPath(portalType);
+  const permissions = getSchedulePermissions(portalType);
   
   // States
   const [loading, setLoading] = useState(true);
