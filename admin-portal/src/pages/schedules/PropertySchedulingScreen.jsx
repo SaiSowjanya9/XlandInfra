@@ -131,11 +131,12 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   }, [propertyId]);
 
   useEffect(() => {
-    if (selectedService) {
+    // Don't regenerate if confirmation modal is open or if confirming
+    if (selectedService && !showConfirmation && !confirmingSchedule) {
       generateRecommendedDates(selectedService);
       generatePlannedVisits(selectedService);
     }
-  }, [selectedService, currentWeekStart, selectedSlot]);
+  }, [selectedService, currentWeekStart, selectedSlot, showConfirmation, confirmingSchedule]);
 
   const fetchPropertyDetails = async () => {
     setLoading(true);
@@ -408,7 +409,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         throw new Error(result.message || result.error || 'Failed to save schedule');
       }
       
-      alert(`Schedule confirmed successfully! ${result.data?.visitsCreated || confirmationSchedule.length} visits created.`);
+      // Close modal and navigate immediately BEFORE alert
       setShowConfirmation(false);
       
       // Update the service status to Scheduled
@@ -416,7 +417,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         s.id === selectedService.id ? { ...s, status: 'Scheduled' } : s
       ));
       
-      // Clear selection and navigate back to pending schedules
+      // Clear selection
       setSelectedService(null);
       setPlannedVisits([]);
       setSelectedSlot(null);
@@ -424,6 +425,9 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       // Navigate back based on portal type
       const basePath = portalType === 'admin' ? '' : `/${portalType}`;
       navigate(`${basePath}/schedules/pending`);
+      
+      // Show success message after navigation
+      alert(`Schedule confirmed successfully! ${result.data?.visitsCreated || confirmationSchedule.length} visits created.`);
     } catch (error) {
       console.error('Error confirming schedule:', error);
       alert(`Error confirming schedule: ${error.message}`);
