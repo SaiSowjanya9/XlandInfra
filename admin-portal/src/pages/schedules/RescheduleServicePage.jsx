@@ -16,7 +16,7 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
   const [schedules, setSchedules] = useState([]);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [filters, setFilters] = useState({
-    search: '', service: 'all', status: 'all', vendor: 'all'
+    search: '', service: 'all', status: 'all', vendor: 'all', zone: 'all', package: 'all'
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -36,6 +36,8 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
 
   useEffect(() => {
     fetchProperties();
+    // Initialize with mock data so filters have options
+    setSchedules(generateMockSchedules());
   }, []);
 
   useEffect(() => {
@@ -43,6 +45,17 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
       fetchPropertySchedules(selectedProperty.id);
     }
   }, [selectedProperty]);
+
+  const generateMockSchedules = () => [
+    { id: 1, property_id: 'PROP-001', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Basic AMC', currentDate: '2026-08-10', time: '10:00 AM - 11:00 AM', status: 'completed' },
+    { id: 2, property_id: 'PROP-001', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Basic AMC', currentDate: '2026-09-10', time: '10:00 AM - 11:00 AM', status: 'scheduled' },
+    { id: 3, property_id: 'PROP-002', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Standard AMC', currentDate: '2026-10-10', time: '10:00 AM - 11:00 AM', status: 'scheduled' },
+    { id: 4, property_id: 'PROP-002', service: 'Plumbing', vendor: 'Aqua Plumbing', zone: 'Zone B', package: 'Standard AMC', currentDate: '2026-09-15', time: '02:00 PM - 03:00 PM', status: 'scheduled' },
+    { id: 5, property_id: 'PROP-003', service: 'Plumbing', vendor: 'Aqua Plumbing', zone: 'Zone B', package: 'Premium AMC', currentDate: '2026-10-15', time: '02:00 PM - 03:00 PM', status: 'scheduled' },
+    { id: 6, property_id: 'PROP-003', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone C', package: 'Premium AMC', currentDate: '2026-10-05', time: '11:30 AM - 12:30 PM', status: 'scheduled' },
+    { id: 7, property_id: 'PROP-004', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone C', package: 'Basic AMC', currentDate: '2026-11-05', time: '11:30 AM - 12:30 PM', status: 'scheduled' },
+    { id: 8, property_id: 'PROP-005', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone D', package: 'Standard AMC', currentDate: '2026-12-05', time: '11:30 AM - 12:30 PM', status: 'scheduled' }
+  ];
 
   const fetchProperties = async () => {
     try {
@@ -79,17 +92,6 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
       setLoading(false);
     }
   };
-
-  const generateMockSchedules = () => [
-    { id: 1, visit: 'HVAC 1/12', service: 'HVAC', vendor: 'ABC HVAC', currentDate: '2026-08-10', time: '10:00 AM - 11:00 AM', status: 'completed' },
-    { id: 2, visit: 'HVAC 2/12', service: 'HVAC', vendor: 'ABC HVAC', currentDate: '2026-09-10', time: '10:00 AM - 11:00 AM', status: 'scheduled' },
-    { id: 3, visit: 'HVAC 3/12', service: 'HVAC', vendor: 'ABC HVAC', currentDate: '2026-10-10', time: '10:00 AM - 11:00 AM', status: 'scheduled' },
-    { id: 4, visit: 'Plumbing 1/6', service: 'Plumbing', vendor: 'Aqua Plumbing', currentDate: '2026-09-15', time: '02:00 PM - 03:00 PM', status: 'scheduled' },
-    { id: 5, visit: 'Plumbing 2/6', service: 'Plumbing', vendor: 'Aqua Plumbing', currentDate: '2026-10-15', time: '02:00 PM - 03:00 PM', status: 'scheduled' },
-    { id: 6, visit: 'Lift 1/4', service: 'Lift', vendor: 'Elevate Engineers', currentDate: '2026-10-05', time: '11:30 AM - 12:30 PM', status: 'scheduled' },
-    { id: 7, visit: 'Lift 2/4', service: 'Lift', vendor: 'Elevate Engineers', currentDate: '2026-11-05', time: '11:30 AM - 12:30 PM', status: 'scheduled' },
-    { id: 8, visit: 'Lift 3/4', service: 'Lift', vendor: 'Elevate Engineers', currentDate: '2026-12-05', time: '11:30 AM - 12:30 PM', status: 'scheduled' }
-  ];
 
   const handleReschedule = (schedule) => {
     setSelectedSchedule(schedule);
@@ -228,11 +230,12 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
 
   // Apply filters to schedules
   const filteredSchedules = schedules.filter(schedule => {
-    // Search filter
-    if (filters.search && !schedule.visit.toLowerCase().includes(filters.search.toLowerCase()) &&
-        !schedule.service.toLowerCase().includes(filters.search.toLowerCase()) &&
-        !schedule.vendor.toLowerCase().includes(filters.search.toLowerCase())) {
-      return false;
+    // Search filter - by Property ID only
+    if (filters.search) {
+      const propertyId = schedule.property_id || schedule.propertyId || '';
+      if (!propertyId.toLowerCase().includes(filters.search.toLowerCase())) {
+        return false;
+      }
     }
     // Service filter
     if (filters.service !== 'all' && schedule.service !== filters.service) {
@@ -244,6 +247,14 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
     }
     // Vendor filter
     if (filters.vendor !== 'all' && schedule.vendor !== filters.vendor) {
+      return false;
+    }
+    // Zone filter
+    if (filters.zone !== 'all' && schedule.zone !== filters.zone) {
+      return false;
+    }
+    // Package filter
+    if (filters.package !== 'all' && schedule.package !== filters.package) {
       return false;
     }
     return true;
@@ -302,26 +313,6 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
                     className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-medium bg-gray-50"
                   />
                 </div>
-                <div>
-                  <label className="block text-[10px] text-gray-400 uppercase tracking-wide mb-1">Package</label>
-                  <input
-                    type="text"
-                    value={selectedProperty?.packageName || selectedProperty?.package_name || ''}
-                    readOnly
-                    placeholder="-"
-                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-medium bg-gray-50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] text-gray-400 uppercase tracking-wide mb-1">Zone</label>
-                  <input
-                    type="text"
-                    value={selectedProperty?.zone || ''}
-                    readOnly
-                    placeholder="-"
-                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-medium bg-gray-50"
-                  />
-                </div>
               </div>
             </div>
 
@@ -339,7 +330,7 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
                         type="text"
-                        placeholder="Search visits..."
+                        placeholder="Search by Property ID..."
                         value={filters.search}
                         onChange={(e) => {
                           setFilters(prev => ({ ...prev, search: e.target.value }));
@@ -388,9 +379,36 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
                       <option key={vendor} value={vendor}>{vendor}</option>
                     ))}
                   </select>
+                  <select 
+                    value={filters.package}
+                    onChange={(e) => {
+                      setFilters(prev => ({ ...prev, package: e.target.value }));
+                      setCurrentPage(1);
+                    }}
+                    className="min-w-[110px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="all">All Packages</option>
+                    <option value="Basic AMC">Basic AMC</option>
+                    <option value="Standard AMC">Standard AMC</option>
+                    <option value="Premium AMC">Premium AMC</option>
+                  </select>
+                  <select 
+                    value={filters.zone}
+                    onChange={(e) => {
+                      setFilters(prev => ({ ...prev, zone: e.target.value }));
+                      setCurrentPage(1);
+                    }}
+                    className="min-w-[90px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="all">All Zones</option>
+                    <option value="Zone A">Zone A</option>
+                    <option value="Zone B">Zone B</option>
+                    <option value="Zone C">Zone C</option>
+                    <option value="Zone D">Zone D</option>
+                  </select>
                   <button 
                     onClick={() => {
-                      setFilters({ search: '', service: 'all', status: 'all', vendor: 'all' });
+                      setFilters({ search: '', service: 'all', status: 'all', vendor: 'all', zone: 'all', package: 'all' });
                       setCurrentPage(1);
                     }}
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50 flex-shrink-0"
@@ -405,7 +423,7 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Visit</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Property ID</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Service</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Vendor</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Current Date</th>
@@ -433,12 +451,7 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
                       className={`hover:bg-gray-50 ${selectedSchedule?.id === schedule.id ? 'bg-blue-50' : ''}`}
                     >
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          {schedule.status === 'completed' && (
-                            <CheckCircle className="w-4 h-4 text-green-500" />
-                          )}
-                          <span className="text-sm font-medium text-gray-900">{schedule.visit}</span>
-                        </div>
+                        <span className="text-sm font-medium text-blue-600">{schedule.property_id || schedule.propertyId || `PROP-${String(schedule.id).padStart(3, '0')}`}</span>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700">{schedule.service}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{schedule.vendor}</td>
