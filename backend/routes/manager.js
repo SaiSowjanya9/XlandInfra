@@ -3142,6 +3142,191 @@ router.get('/schedules/pending-count', requireManagerScope, async (req, res) => 
   }
 });
 
+// Get all schedules (visits) with filtering and pagination
+router.get('/schedules/all', requireManagerScope, async (req, res) => {
+  try {
+    const franchisePartnerId = req.franchisePartnerId;
+    const { page = 1, limit = 15, search, status, service, vendor, zone, propertyType } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    let whereClause = 'WHERE op.franchise_partner_id = ?';
+    const params = [franchisePartnerId];
+    
+    // Search filter
+    if (search) {
+      whereClause += ` AND (op.property_id LIKE ? OR op.community_name LIKE ? OR pss.service_name LIKE ? OR ov.company_name LIKE ?)`;
+      const searchTerm = `%${search}%`;
+      params.push(searchTerm, searchTerm, searchTerm, searchTerm);
+    }
+    
+    // Status filter
+    if (status && status !== 'all') {
+      whereClause += ' AND sv.status = ?';
+      params.push(status);
+    }
+    
+    // Service filter
+    if (service && service !== 'all') {
+      whereClause += ' AND pss.service_name = ?';
+      params.push(service);
+    }
+    
+    // Vendor filter
+    if (vendor && vendor !== 'all') {
+      whereClause += ' AND (ov.company_name = ? OR ov.owner_name = ?)';
+      params.push(vendor, vendor);
+    }
+    
+    // Zone filter
+    if (zone && zone !== 'all') {
+      whereClause += ' AND op.zone = ?';
+      params.push(zone);
+    }
+    
+    // Property type filter
+    if (propertyType && propertyType !== 'all') {
+      whereClause += ' AND op.property_type = ?';
+      params.push(propertyType);
+    }
+    
+    // Get total count
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM scheduled_visits sv
+      JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+      JOIN onboarded_properties op ON op.id = sv.property_id
+      LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
+      ${whereClause}
+    `;
+    const [countResult] = await pool.execute(countQuery, params);
+    const total = countResult[0].total;
+    
+    // Get schedules with pagination
+    const query = `
+      SELECT 
+        sv.id,
+        sv.visit_id as visitId,
+        sv.visit_number as visitNumber,
+        sv.total_visits as totalVisits,
+        sv.scheduled_date as scheduledDate,
+        sv.scheduled_time_start as scheduledTime,
+        sv.original_date as originalDate,
+        sv.status,
+        sv.work_order_id as workOrderId,
+        pss.service_name as serviceName,
+        pss.service_category as serviceCategory,
+        pss.frequency_type as frequency,
+        op.id as propertyDbId,
+        op.property_id as propertyId,
+        op.community_name as propertyName,
+        op.property_type as propertyType,
+        op.zone,
+        pc.name as customerName,
+        pc.phone as customerPhone,
+        ov.id as vendorDbId,
+        ov.vendor_id as vendorCode,
+        COALESCE(ov.company_name, ov.owner_name) as vendorName,
+        wo.work_order_id as workOrderCode,
+        wo.status as workOrderStatus
+      FROM scheduled_visits sv
+      JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+      JOIN onboarded_properties op ON op.id = sv.property_id
+      LEFT JOIN property_contacts pc ON pc.property_id = op.id
+      LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
+      LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
+      ${whereClause}
+      ORDER BY sv.scheduled_date DESC, sv.scheduled_time_start ASC
+      LIMIT ? OFFSET ?
+    `;
+    
+    params.push(parseInt(limit), offset);
+    const [schedules] = await pool.execute(query, params);
+    
+    // Calculate stats
+    const statsQuery = `
+      SELECT sv.status, COUNT(*) as count
+      FROM scheduled_visits sv
+      JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+      JOIN onboarded_properties op ON op.id = sv.property_id
+      LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
+      WHERE op.franchise_partner_id = ?
+      GROUP BY sv.status
+    `;
+    
+    const [statusCounts] = await pool.execute(statsQuery, [franchisePartnerId]);
+    
+    const stats = {
+      total: 0,
+      scheduled: 0,
+      upcoming: 0,
+      workOrderCreated: 0,
+      inProgress: 0,
+      completed: 0,
+      rescheduled: 0,
+      cancelled: 0,
+      overdue: 0
+    };
+    
+    statusCounts.forEach(s => {
+      const count = parseInt(s.count);
+      stats.total += count;
+      switch(s.status) {
+        case 'scheduled': stats.scheduled = count; break;
+        case 'upcoming': stats.upcoming = count; break;
+        case 'work_order_created': stats.workOrderCreated = count; break;
+        case 'in_progress': stats.inProgress = count; break;
+        case 'completed': stats.completed = count; break;
+        case 'rescheduled': stats.rescheduled = count; break;
+        case 'cancelled': stats.cancelled = count; break;
+        case 'overdue': stats.overdue = count; break;
+      }
+    });
+    
+    // Format the response
+    const formattedSchedules = schedules.map(s => ({
+      id: s.id,
+      visitId: s.visitId,
+      propertyId: s.propertyId,
+      propertyName: s.propertyName,
+      propertyType: s.propertyType,
+      customerName: s.customerName,
+      serviceName: s.serviceName,
+      serviceCategory: s.serviceCategory,
+      vendorId: s.vendorDbId,
+      vendorCode: s.vendorCode,
+      vendorName: s.vendorName,
+      visitNumber: s.visitNumber,
+      totalVisits: s.totalVisits,
+      targetDate: s.scheduledDate,
+      scheduledDate: s.scheduledDate,
+      scheduledTime: s.scheduledTime,
+      originalDate: s.originalDate,
+      isRescheduled: s.originalDate !== null,
+      zone: s.zone,
+      workOrderId: s.workOrderCode,
+      workOrderStatus: s.workOrderStatus,
+      status: s.status
+    }));
+    
+    res.json({
+      success: true,
+      data: formattedSchedules,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      stats
+    });
+  } catch (error) {
+    console.error('Error fetching all schedules:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching all schedules',
+      error: error.message
+    });
+  }
+});
+
 // Get eligible vendors for a service
 router.get('/schedules/eligible-vendors', requireManagerScope, async (req, res) => {
   try {

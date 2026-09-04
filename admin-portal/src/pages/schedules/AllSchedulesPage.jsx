@@ -9,6 +9,59 @@ import { getAuthToken } from '../../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+// TODO: Set to false when backend is deployed
+const USE_MOCK_DATA = true;
+
+// Mock data for development
+const MOCK_SCHEDULES = [
+  { id: 1, visitId: 'VIS-001', propertyId: 'PROP-2024-001', propertyName: 'Sunrise Apartments', propertyType: 'Apartment', customerName: 'Rajesh Kumar', serviceName: 'Pest Control', serviceCategory: 'Pest Control', vendorId: 1, vendorCode: 'VND-001', vendorName: 'ABC Pest Solutions', visitNumber: 1, totalVisits: 12, targetDate: '2024-09-15', scheduledDate: '2024-09-15', scheduledTime: '10:00:00', originalDate: null, isRescheduled: false, zone: 'Zone A', workOrderId: 'WO-2024-001', workOrderStatus: 'in_progress', status: 'scheduled' },
+  { id: 2, visitId: 'VIS-002', propertyId: 'PROP-2024-002', propertyName: 'Green Valley Villa', propertyType: 'Villa', customerName: 'Priya Sharma', serviceName: 'Deep Cleaning', serviceCategory: 'Cleaning', vendorId: 2, vendorCode: 'VND-002', vendorName: 'CleanPro Services', visitNumber: 2, totalVisits: 6, targetDate: '2024-09-16', scheduledDate: '2024-09-18', scheduledTime: '14:00:00', originalDate: '2024-09-16', isRescheduled: true, zone: 'Zone B', workOrderId: null, workOrderStatus: null, status: 'rescheduled' },
+  { id: 3, visitId: 'VIS-003', propertyId: 'PROP-2024-003', propertyName: 'Royal Heights', propertyType: 'Apartment', customerName: 'Amit Patel', serviceName: 'AC Service', serviceCategory: 'HVAC', vendorId: 3, vendorCode: 'VND-003', vendorName: 'CoolTech AC', visitNumber: 1, totalVisits: 4, targetDate: '2024-09-10', scheduledDate: '2024-09-10', scheduledTime: '09:00:00', originalDate: null, isRescheduled: false, zone: 'Zone A', workOrderId: 'WO-2024-002', workOrderStatus: 'completed', status: 'completed' },
+  { id: 4, visitId: 'VIS-004', propertyId: 'PROP-2024-004', propertyName: 'Lake View Residency', propertyType: 'Villa', customerName: 'Sneha Reddy', serviceName: 'Plumbing', serviceCategory: 'Plumbing', vendorId: 4, vendorCode: 'VND-004', vendorName: 'QuickFix Plumbers', visitNumber: 3, totalVisits: 12, targetDate: '2024-09-20', scheduledDate: '2024-09-20', scheduledTime: '11:00:00', originalDate: null, isRescheduled: false, zone: 'Zone C', workOrderId: null, workOrderStatus: null, status: 'upcoming' },
+  { id: 5, visitId: 'VIS-005', propertyId: 'PROP-2024-005', propertyName: 'Paradise Towers', propertyType: 'Apartment', customerName: 'Vikram Singh', serviceName: 'Pest Control', serviceCategory: 'Pest Control', vendorId: 1, vendorCode: 'VND-001', vendorName: 'ABC Pest Solutions', visitNumber: 5, totalVisits: 12, targetDate: '2024-09-05', scheduledDate: '2024-09-05', scheduledTime: '15:00:00', originalDate: null, isRescheduled: false, zone: 'Zone B', workOrderId: 'WO-2024-003', workOrderStatus: 'in_progress', status: 'in_progress' },
+  { id: 6, visitId: 'VIS-006', propertyId: 'PROP-2024-006', propertyName: 'Ocean Breeze Apartments', propertyType: 'Apartment', customerName: 'Meera Nair', serviceName: 'Electrical', serviceCategory: 'Electrical', vendorId: 5, vendorCode: 'VND-005', vendorName: 'PowerFix Electricals', visitNumber: 1, totalVisits: 2, targetDate: '2024-08-25', scheduledDate: '2024-08-25', scheduledTime: '10:00:00', originalDate: null, isRescheduled: false, zone: 'Zone A', workOrderId: 'WO-2024-004', workOrderStatus: 'cancelled', status: 'cancelled' },
+  { id: 7, visitId: 'VIS-007', propertyId: 'PROP-2024-007', propertyName: 'Silver Oak Villa', propertyType: 'Villa', customerName: 'Karthik Menon', serviceName: 'Deep Cleaning', serviceCategory: 'Cleaning', vendorId: 2, vendorCode: 'VND-002', vendorName: 'CleanPro Services', visitNumber: 4, totalVisits: 6, targetDate: '2024-08-20', scheduledDate: '2024-08-20', scheduledTime: '09:30:00', originalDate: null, isRescheduled: false, zone: 'Zone C', workOrderId: 'WO-2024-005', workOrderStatus: 'completed', status: 'completed' },
+  { id: 8, visitId: 'VIS-008', propertyId: 'PROP-2024-001', propertyName: 'Sunrise Apartments', propertyType: 'Apartment', customerName: 'Rajesh Kumar', serviceName: 'Pest Control', serviceCategory: 'Pest Control', vendorId: 1, vendorCode: 'VND-001', vendorName: 'ABC Pest Solutions', visitNumber: 2, totalVisits: 12, targetDate: '2024-10-15', scheduledDate: '2024-10-15', scheduledTime: '10:00:00', originalDate: null, isRescheduled: false, zone: 'Zone A', workOrderId: null, workOrderStatus: null, status: 'scheduled' },
+  { id: 9, visitId: 'VIS-009', propertyId: 'PROP-2024-008', propertyName: 'Palm Grove Estate', propertyType: 'Independent House', customerName: 'Ananya Iyer', serviceName: 'AC Service', serviceCategory: 'HVAC', vendorId: 3, vendorCode: 'VND-003', vendorName: 'CoolTech AC', visitNumber: 2, totalVisits: 4, targetDate: '2024-09-01', scheduledDate: '2024-09-01', scheduledTime: '14:00:00', originalDate: null, isRescheduled: false, zone: 'Zone B', workOrderId: 'WO-2024-006', workOrderStatus: 'completed', status: 'completed' },
+  { id: 10, visitId: 'VIS-010', propertyId: 'PROP-2024-009', propertyName: 'Emerald Heights', propertyType: 'Apartment', customerName: 'Suresh Babu', serviceName: 'Pest Control', serviceCategory: 'Pest Control', vendorId: 1, vendorCode: 'VND-001', vendorName: 'ABC Pest Solutions', visitNumber: 1, totalVisits: 12, targetDate: '2024-08-15', scheduledDate: '2024-08-15', scheduledTime: '11:00:00', originalDate: null, isRescheduled: false, zone: 'Zone A', workOrderId: 'WO-2024-007', workOrderStatus: 'overdue', status: 'overdue' },
+  { id: 11, visitId: 'VIS-011', propertyId: 'PROP-2024-010', propertyName: 'Crystal Bay Residency', propertyType: 'Villa', customerName: 'Divya Krishnan', serviceName: 'Plumbing', serviceCategory: 'Plumbing', vendorId: 4, vendorCode: 'VND-004', vendorName: 'QuickFix Plumbers', visitNumber: 1, totalVisits: 12, targetDate: '2024-09-22', scheduledDate: '2024-09-22', scheduledTime: '10:30:00', originalDate: null, isRescheduled: false, zone: 'Zone C', workOrderId: null, workOrderStatus: null, status: 'scheduled' },
+  { id: 12, visitId: 'VIS-012', propertyId: 'PROP-2024-011', propertyName: 'Maple Gardens', propertyType: 'Apartment', customerName: 'Rahul Verma', serviceName: 'Deep Cleaning', serviceCategory: 'Cleaning', vendorId: 2, vendorCode: 'VND-002', vendorName: 'CleanPro Services', visitNumber: 1, totalVisits: 6, targetDate: '2024-09-25', scheduledDate: '2024-09-25', scheduledTime: '09:00:00', originalDate: null, isRescheduled: false, zone: 'Zone B', workOrderId: null, workOrderStatus: null, status: 'scheduled' },
+];
+
+const MOCK_STATS = {
+  total: 45,
+  scheduled: 12,
+  upcoming: 8,
+  workOrderCreated: 5,
+  inProgress: 6,
+  completed: 10,
+  rescheduled: 2,
+  cancelled: 1,
+  overdue: 1
+};
+
+const MOCK_SERVICES = [
+  { id: 1, name: 'Pest Control' },
+  { id: 2, name: 'Deep Cleaning' },
+  { id: 3, name: 'AC Service' },
+  { id: 4, name: 'Plumbing' },
+  { id: 5, name: 'Electrical' },
+];
+
+const MOCK_VENDORS = [
+  { id: 1, name: 'ABC Pest Solutions', businessName: 'ABC Pest Solutions' },
+  { id: 2, name: 'CleanPro Services', businessName: 'CleanPro Services' },
+  { id: 3, name: 'CoolTech AC', businessName: 'CoolTech AC' },
+  { id: 4, name: 'QuickFix Plumbers', businessName: 'QuickFix Plumbers' },
+  { id: 5, name: 'PowerFix Electricals', businessName: 'PowerFix Electricals' },
+];
+
+const MOCK_ZONES = [
+  { id: 1, name: 'Zone A' },
+  { id: 2, name: 'Zone B' },
+  { id: 3, name: 'Zone C' },
+];
+
 // Get portal-specific API path
 const getApiPath = (portalType) => {
   const portalMap = {
@@ -72,6 +125,50 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     if (showRefresh) setRefreshing(true);
     else setLoading(true);
     
+    // Use mock data if enabled
+    if (USE_MOCK_DATA) {
+      setTimeout(() => {
+        let filteredSchedules = [...MOCK_SCHEDULES];
+        
+        // Apply filters
+        if (filters.search) {
+          const searchLower = filters.search.toLowerCase();
+          filteredSchedules = filteredSchedules.filter(s => 
+            s.propertyId.toLowerCase().includes(searchLower) ||
+            s.propertyName.toLowerCase().includes(searchLower) ||
+            s.serviceName.toLowerCase().includes(searchLower) ||
+            s.vendorName.toLowerCase().includes(searchLower)
+          );
+        }
+        if (filters.status !== 'all') {
+          filteredSchedules = filteredSchedules.filter(s => s.status === filters.status);
+        }
+        if (filters.service !== 'all') {
+          filteredSchedules = filteredSchedules.filter(s => s.serviceName === filters.service);
+        }
+        if (filters.vendor !== 'all') {
+          filteredSchedules = filteredSchedules.filter(s => s.vendorName === filters.vendor);
+        }
+        if (filters.zone !== 'all') {
+          filteredSchedules = filteredSchedules.filter(s => s.zone === filters.zone);
+        }
+        if (filters.propertyType !== 'all') {
+          filteredSchedules = filteredSchedules.filter(s => s.propertyType === filters.propertyType);
+        }
+        
+        // Pagination
+        const startIdx = (currentPage - 1) * itemsPerPage;
+        const paginatedSchedules = filteredSchedules.slice(startIdx, startIdx + itemsPerPage);
+        
+        setSchedules(paginatedSchedules);
+        setTotalCount(filteredSchedules.length);
+        setStats(MOCK_STATS);
+        setLoading(false);
+        setRefreshing(false);
+      }, 500);
+      return;
+    }
+    
     try {
       const token = getAuthToken();
       const queryParams = new URLSearchParams({
@@ -91,8 +188,9 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       
       if (response.ok) {
         const data = await response.json();
-        setSchedules(data.data || []);
-        setTotalCount(data.total || 0);
+        const schedulesArray = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : (Array.isArray(data.schedules) ? data.schedules : []));
+        setSchedules(schedulesArray);
+        setTotalCount(data.total || data.totalCount || schedulesArray.length);
         if (data.stats) setStats(data.stats);
       }
     } catch (error) {
@@ -105,6 +203,14 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
 
   // Fetch filter options
   const fetchFilterOptions = useCallback(async () => {
+    // Use mock data if enabled
+    if (USE_MOCK_DATA) {
+      setServices(MOCK_SERVICES);
+      setVendors(MOCK_VENDORS);
+      setZones(MOCK_ZONES);
+      return;
+    }
+    
     try {
       const token = getAuthToken();
       
@@ -114,7 +220,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       });
       if (zonesRes.ok) {
         const data = await zonesRes.json();
-        setZones(data.data || []);
+        const zonesArray = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : (Array.isArray(data.zones) ? data.zones : []));
+        setZones(zonesArray);
       }
 
       // Fetch vendors
@@ -123,7 +230,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       });
       if (vendorsRes.ok) {
         const data = await vendorsRes.json();
-        setVendors(data.data || data.vendors || []);
+        const vendorsArray = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : (Array.isArray(data.vendors) ? data.vendors : []));
+        setVendors(vendorsArray);
       }
 
       // Fetch services
@@ -132,7 +240,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       });
       if (servicesRes.ok) {
         const data = await servicesRes.json();
-        setServices(data.data || []);
+        const servicesArray = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : (Array.isArray(data.services) ? data.services : []));
+        setServices(servicesArray);
       }
     } catch (error) {
       console.error('Error fetching filter options:', error);
