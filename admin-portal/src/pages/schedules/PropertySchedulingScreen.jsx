@@ -410,7 +410,20 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       
       alert(`Schedule confirmed successfully! ${result.data?.visitsCreated || confirmationSchedule.length} visits created.`);
       setShowConfirmation(false);
-      navigate(-1);
+      
+      // Update the service status to Scheduled
+      setServices(prev => prev.map(s => 
+        s.id === selectedService.id ? { ...s, status: 'Scheduled' } : s
+      ));
+      
+      // Clear selection and navigate back to pending schedules
+      setSelectedService(null);
+      setPlannedVisits([]);
+      setSelectedSlot(null);
+      
+      // Navigate back based on portal type
+      const basePath = portalType === 'admin' ? '' : `/${portalType}`;
+      navigate(`${basePath}/schedules/pending`);
     } catch (error) {
       console.error('Error confirming schedule:', error);
       alert(`Error confirming schedule: ${error.message}`);
