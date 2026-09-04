@@ -326,17 +326,19 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
 
   // Prepare schedule for confirmation
   const handlePrepareConfirmation = () => {
-    if (!selectedSlot || !selectedService) return;
+    if (!selectedService) return;
+    if (!selectedSlot && plannedVisits.length === 0) return;
     
     // Generate confirmation schedule with target dates and recommended dates
     // Preserve isEdited flag from planned visits
+    const defaultTime = selectedSlot?.time || '10:00 AM';
     const schedule = plannedVisits.map((visit, index) => ({
       visitNumber: visit.visitNumber,
       targetDate: visit.date,
       targetDateStr: visit.dateStr || visit.shortDateStr,
       scheduledDate: visit.date, // Can be adjusted
       scheduledDateStr: visit.dateStr || visit.shortDateStr,
-      time: visit.time || (index === 0 ? selectedSlot.time : '10:00 AM'),
+      time: visit.time || (index === 0 ? defaultTime : '10:00 AM'),
       status: 'pending_schedule',
       isEdited: visit.isEdited || false,
       isManual: visit.isManual || false
@@ -574,7 +576,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             </button>
             <button 
               onClick={handlePrepareConfirmation}
-              disabled={!selectedSlot || !selectedService}
+              disabled={(!selectedSlot && plannedVisits.length === 0) || !selectedService}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <CheckCircle className="w-3.5 h-3.5" />
