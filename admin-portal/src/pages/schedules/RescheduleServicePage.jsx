@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Clock, Search, Filter, ChevronLeft, ChevronRight,
-  Plus, Eye, RefreshCw, CheckCircle, AlertCircle, Info, X
+  Eye, RefreshCw, CheckCircle, AlertCircle, Info, X
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 
@@ -18,6 +18,8 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
   const [filters, setFilters] = useState({
     search: '', service: 'all', status: 'all', vendor: 'all'
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   
   // Reschedule panel state
   const [showReschedulePanel, setShowReschedulePanel] = useState(false);
@@ -219,6 +221,39 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
     return colors[status] || colors.available;
   };
 
+  // Get unique services and vendors for filter dropdowns
+  const uniqueServices = [...new Set(schedules.map(s => s.service))];
+  const uniqueVendors = [...new Set(schedules.map(s => s.vendor))];
+  const statusOptions = ['scheduled', 'completed', 'rescheduled', 'cancelled'];
+
+  // Apply filters to schedules
+  const filteredSchedules = schedules.filter(schedule => {
+    // Search filter
+    if (filters.search && !schedule.visit.toLowerCase().includes(filters.search.toLowerCase()) &&
+        !schedule.service.toLowerCase().includes(filters.search.toLowerCase()) &&
+        !schedule.vendor.toLowerCase().includes(filters.search.toLowerCase())) {
+      return false;
+    }
+    // Service filter
+    if (filters.service !== 'all' && schedule.service !== filters.service) {
+      return false;
+    }
+    // Status filter
+    if (filters.status !== 'all' && schedule.status !== filters.status) {
+      return false;
+    }
+    // Vendor filter
+    if (filters.vendor !== 'all' && schedule.vendor !== filters.vendor) {
+      return false;
+    }
+    return true;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredSchedules.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedSchedules = filteredSchedules.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -230,13 +265,6 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
               Home &gt; Scheduling &gt; Reschedule
             </p>
           </div>
-          <button
-            onClick={() => navigate('/schedules/new')}
-            className="px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            New Schedule
-          </button>
         </div>
       </div>
 
@@ -254,32 +282,45 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
                     onChange={(e) => {
                       const prop = properties.find(p => p.id === parseInt(e.target.value));
                       setSelectedProperty(prop || null);
+                      setCurrentPage(1);
                     }}
                     className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-medium"
                   >
                     <option value="">Select Property</option>
-                    <option value="1">PROP-001</option>
-                    <option value="2">PROP-002</option>
-                    <option value="3">PROP-003</option>
+                    {properties.map(p => (
+                      <option key={p.id} value={p.id}>{p.propertyId || p.property_id || `PROP-${p.id}`}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
                   <label className="block text-[10px] text-gray-400 uppercase tracking-wide mb-1">Property Name</label>
-                  <select className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-medium">
-                    <option>Green Valley Apartments</option>
-                  </select>
+                  <input
+                    type="text"
+                    value={selectedProperty?.propertyName || selectedProperty?.property_name || ''}
+                    readOnly
+                    placeholder="Select property first"
+                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-medium bg-gray-50"
+                  />
                 </div>
                 <div>
                   <label className="block text-[10px] text-gray-400 uppercase tracking-wide mb-1">Package</label>
-                  <select className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-medium">
-                    <option>Apartment Basic AMC</option>
-                  </select>
+                  <input
+                    type="text"
+                    value={selectedProperty?.packageName || selectedProperty?.package_name || ''}
+                    readOnly
+                    placeholder="-"
+                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-medium bg-gray-50"
+                  />
                 </div>
                 <div>
                   <label className="block text-[10px] text-gray-400 uppercase tracking-wide mb-1">Zone</label>
-                  <select className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-medium">
-                    <option>Zone A</option>
-                  </select>
+                  <input
+                    type="text"
+                    value={selectedProperty?.zone || ''}
+                    readOnly
+                    placeholder="-"
+                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-medium bg-gray-50"
+                  />
                 </div>
               </div>
             </div>
@@ -299,22 +340,63 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
                       <input
                         type="text"
                         placeholder="Search visits..."
+                        value={filters.search}
+                        onChange={(e) => {
+                          setFilters(prev => ({ ...prev, search: e.target.value }));
+                          setCurrentPage(1);
+                        }}
                         className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                       />
                     </div>
                   </div>
-                  <select className="min-w-[110px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option>All Services</option>
+                  <select 
+                    value={filters.service}
+                    onChange={(e) => {
+                      setFilters(prev => ({ ...prev, service: e.target.value }));
+                      setCurrentPage(1);
+                    }}
+                    className="min-w-[110px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="all">All Services</option>
+                    {uniqueServices.map(service => (
+                      <option key={service} value={service}>{service}</option>
+                    ))}
                   </select>
-                  <select className="min-w-[100px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option>All Status</option>
+                  <select 
+                    value={filters.status}
+                    onChange={(e) => {
+                      setFilters(prev => ({ ...prev, status: e.target.value }));
+                      setCurrentPage(1);
+                    }}
+                    className="min-w-[100px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="all">All Status</option>
+                    {statusOptions.map(status => (
+                      <option key={status} value={status}>{status.charAt(0).toUpperCase() + status.slice(1)}</option>
+                    ))}
                   </select>
-                  <select className="min-w-[105px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option>All Vendors</option>
+                  <select 
+                    value={filters.vendor}
+                    onChange={(e) => {
+                      setFilters(prev => ({ ...prev, vendor: e.target.value }));
+                      setCurrentPage(1);
+                    }}
+                    className="min-w-[105px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="all">All Vendors</option>
+                    {uniqueVendors.map(vendor => (
+                      <option key={vendor} value={vendor}>{vendor}</option>
+                    ))}
                   </select>
-                  <button className="px-3 py-2 border border-gray-300 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50 flex-shrink-0">
-                    <Filter className="w-4 h-4" />
-                    <span className="hidden sm:inline">Filters</span>
+                  <button 
+                    onClick={() => {
+                      setFilters({ search: '', service: 'all', status: 'all', vendor: 'all' });
+                      setCurrentPage(1);
+                    }}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50 flex-shrink-0"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span className="hidden sm:inline">Clear</span>
                   </button>
                 </div>
               </div>
@@ -333,7 +415,19 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {schedules.map((schedule) => (
+                  {paginatedSchedules.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-12 text-center">
+                        <div className="flex flex-col items-center">
+                          <Calendar className="w-12 h-12 text-gray-300 mb-3" />
+                          <p className="text-gray-500 font-medium">No visits found</p>
+                          <p className="text-gray-400 text-sm mt-1">
+                            {selectedProperty ? 'Try adjusting your filters' : 'Select a property to view schedules'}
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : paginatedSchedules.map((schedule) => (
                     <tr 
                       key={schedule.id} 
                       className={`hover:bg-gray-50 ${selectedSchedule?.id === schedule.id ? 'bg-blue-50' : ''}`}
@@ -376,17 +470,46 @@ const RescheduleServicePage = ({ portalType = 'admin' }) => {
 
               {/* Pagination */}
               <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-                <p className="text-sm text-gray-500">Showing 1 to 8 of 8 visits</p>
+                <p className="text-sm text-gray-500">
+                  Showing {filteredSchedules.length === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredSchedules.length)} of {filteredSchedules.length} visits
+                </p>
                 <div className="flex items-center gap-2">
-                  <select className="px-2 py-1 border border-gray-300 rounded text-sm">
-                    <option>10 per page</option>
+                  <select 
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(parseInt(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="px-2 py-1 border border-gray-300 rounded text-sm"
+                  >
+                    <option value={10}>10 per page</option>
+                    <option value={25}>25 per page</option>
+                    <option value={50}>50 per page</option>
                   </select>
                   <div className="flex items-center gap-1">
-                    <button className="p-1.5 border border-gray-300 rounded hover:bg-gray-50">
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <button className="w-8 h-8 bg-blue-600 text-white text-sm font-medium rounded">1</button>
-                    <button className="p-1.5 border border-gray-300 rounded hover:bg-gray-50">
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(page => (
+                      <button 
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-8 h-8 text-sm font-medium rounded ${
+                          currentPage === page ? 'bg-blue-600 text-white' : 'border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages || totalPages === 0}
+                      className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
