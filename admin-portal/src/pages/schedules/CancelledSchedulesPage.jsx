@@ -31,22 +31,24 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
 
   useEffect(() => {
     fetchCancelledSchedules();
-  }, []);
+  }, [filters.cancelledBy, filters.service, filters.dateRange]);
 
   const fetchCancelledSchedules = async () => {
     setLoading(true);
     try {
       const token = getAuthToken();
-      const response = await fetch(`${API_BASE}/api/schedules?status=cancelled`, {
+      const queryParams = new URLSearchParams();
+      if (filters.cancelledBy !== 'all') queryParams.append('cancelledBy', filters.cancelledBy);
+      if (filters.service !== 'all') queryParams.append('service', filters.service);
+      if (filters.dateRange !== 'all') queryParams.append('dateRange', filters.dateRange);
+      
+      const response = await fetch(`${API_BASE}/api/schedules/cancelled?${queryParams}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
       if (response.ok) {
         const data = await response.json();
-        const cancelled = (data.data || []).filter(s => 
-          s.status?.toLowerCase() === 'cancelled'
-        );
-        setCancelledSchedules(cancelled.length > 0 ? cancelled : getMockData());
+        setCancelledSchedules(data.data?.length > 0 ? data.data : getMockData());
       } else {
         setCancelledSchedules(getMockData());
       }
@@ -61,7 +63,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
   const getMockData = () => [
     { id: 1, property_id: 'PROP-001', property_name: 'Green Valley Apartments', service: 'HVAC Maintenance', vendor: 'ABC HVAC Services', scheduled_date: '2026-07-15', scheduled_time: '10:00 AM', cancelled_at: '2026-07-12T14:30:00', cancelled_by: 'John Manager', cancelled_by_role: 'Manager', reason: 'Customer requested to postpone due to personal reasons' },
     { id: 2, property_id: 'PROP-002', property_name: 'Sunrise Towers', service: 'Plumbing Check', vendor: 'Aqua Plumbing', scheduled_date: '2026-07-18', scheduled_time: '02:00 PM', cancelled_at: '2026-07-15T09:00:00', cancelled_by: 'Vendor', cancelled_by_role: 'Vendor', reason: 'Vendor unavailable - staff shortage' },
-    { id: 3, property_id: 'PROP-003', property_name: 'Palm Heights', service: 'Electrical Inspection', vendor: 'PowerFix Electricals', scheduled_date: '2026-07-20', scheduled_time: '09:00 AM', cancelled_at: '2026-07-19T16:00:00', cancelled_by: 'System', cancelled_by_role: 'System', reason: 'Payment pending - auto-cancelled after 7 days' },
+    { id: 3, property_id: 'PROP-003', property_name: 'Palm Heights', service: 'Electrical Inspection', vendor: 'PowerFix Electricals', scheduled_date: '2026-07-20', scheduled_time: '09:00 AM', cancelled_at: '2026-07-19T16:00:00', cancelled_by: 'FP User', cancelled_by_role: 'FP', reason: 'Payment pending - auto-cancelled after 7 days' },
     { id: 4, property_id: 'PROP-004', property_name: 'Blue Sky Complex', service: 'Lift Maintenance', vendor: 'Elevate Engineers', scheduled_date: '2026-08-01', scheduled_time: '11:00 AM', cancelled_at: '2026-07-28T11:00:00', cancelled_by: 'Customer', cancelled_by_role: 'Customer', reason: 'Building under renovation' },
     { id: 5, property_id: 'PROP-005', property_name: 'Garden View Residency', service: 'Fire Safety Check', vendor: 'SafeGuard Services', scheduled_date: '2026-08-05', scheduled_time: '03:00 PM', cancelled_at: '2026-08-02T10:30:00', cancelled_by: 'Admin', cancelled_by_role: 'Admin', reason: 'Duplicate schedule entry - consolidated with another visit' }
   ];
@@ -98,7 +100,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin' }) => {
       'Admin': 'bg-purple-100 text-purple-700',
       'Vendor': 'bg-orange-100 text-orange-700',
       'Customer': 'bg-green-100 text-green-700',
-      'System': 'bg-gray-100 text-gray-600'
+      'FP': 'bg-teal-100 text-teal-700'
     };
     return styles[role] || 'bg-gray-100 text-gray-600';
   };

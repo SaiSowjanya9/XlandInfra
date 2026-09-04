@@ -1438,6 +1438,116 @@ router.put('/property/:propertyId/cancel-all', authenticate, canMakeSchedule, as
   }
 });
 
+// Get cancelled schedules with filters
+router.get('/cancelled', authenticate, canSeeSchedule, async (req, res) => {
+  try {
+    const { cancelledBy, service, dateRange } = req.query;
+    const userFpId = req.user?.franchisePartnerId || req.user?.fpId;
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin' || req.user?.role === 'operations_manager';
+
+    let query = `
+      SELECT sv.id, sv.visit_id, sv.scheduled_date, sv.scheduled_time_start, sv.scheduled_time_end,
+             sv.status, sv.cancelled_at, sv.cancellation_note as reason,
+             op.property_id as property_code, op.community_name as property_name,
+             pss.service_name as service, pss.service_category,
+             COALESCE(ov.company_name, ov.owner_name) as vendor,
+             u.name as cancelled_by_name,
+             CASE 
+               WHEN u.role = 'franchise_partner' THEN 'FP'
+               WHEN u.role = 'manager' THEN 'Manager'
+               WHEN u.role = 'admin' OR u.role = 'super_admin' THEN 'Admin'
+               WHEN u.role = 'vendor' THEN 'Vendor'
+               WHEN u.role = 'customer' THEN 'Customer'
+               ELSE 'Admin'
+             END as cancelled_by_role
+      FROM scheduled_visits sv
+      LEFT JOIN onboarded_properties op ON op.id = sv.property_id
+      LEFT JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+      LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
+      LEFT JOIN users u ON u.id = sv.cancelled_by
+      WHERE sv.status = 'cancelled'
+    `;
+    const params = [];
+
+    // FP filter - only see their properties
+    if (!isAdmin && userFpId) {
+      query += ` AND op.franchise_partner_id = ?`;
+      params.push(userFpId);
+    }
+
+    // Cancelled by role filter
+    if (cancelledBy && cancelledBy !== 'all') {
+      const roleMap = {
+        'FP': ['franchise_partner'],
+        'Manager': ['manager'],
+        'Admin': ['admin', 'super_admin'],
+        'Vendor': ['vendor'],
+        'Customer': ['customer']
+      };
+      const roles = roleMap[cancelledBy] || [cancelledBy.toLowerCase()];
+      query += ` AND u.role IN (${roles.map(() => '?').join(',')})`;
+      params.push(...roles);
+    }
+
+    // Service filter
+    if (service && service !== 'all') {
+      query += ` AND pss.service_name = ?`;
+      params.push(service);
+    }
+
+    // Date range filter
+    if (dateRange && dateRange !== 'all') {
+      const now = new Date();
+      let startDate;
+      switch (dateRange) {
+        case 'week':
+          startDate = new Date(now.setDate(now.getDate() - 7));
+          break;
+        case 'month':
+          startDate = new Date(now.setDate(now.getDate() - 30));
+          break;
+        case 'quarter':
+          startDate = new Date(now.setDate(now.getDate() - 90));
+          break;
+      }
+      if (startDate) {
+        query += ` AND sv.cancelled_at >= ?`;
+        params.push(startDate.toISOString().split('T')[0]);
+      }
+    }
+
+    query += ` ORDER BY sv.cancelled_at DESC`;
+
+    const [cancelled] = await pool.execute(query, params);
+
+    res.json({
+      success: true,
+      data: cancelled.map(c => ({
+        id: c.id,
+        visit_id: c.visit_id,
+        property_id: c.property_code,
+        property_name: c.property_name,
+        service: c.service,
+        vendor: c.vendor,
+        scheduled_date: c.scheduled_date,
+        scheduled_time: c.scheduled_time_start ? 
+          `${c.scheduled_time_start.substring(0,5)} - ${c.scheduled_time_end?.substring(0,5) || ''}` : null,
+        cancelled_at: c.cancelled_at,
+        cancelled_by: c.cancelled_by_name,
+        cancelled_by_role: c.cancelled_by_role,
+        reason: c.reason
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching cancelled schedules:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching cancelled schedules',
+      error: error.message
+    });
+  }
+});
+
 // Customer custom scheduling request
 router.post('/visits/:visitId/customer-request', authenticate, async (req, res) => {
   try {
