@@ -756,15 +756,23 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                       {weekDays.map((day, dayIndex) => {
                         const status = getSlotStatus(day, timeIndex);
                         const isSelected = selectedSlot?.date?.getDate() === day.getDate() && selectedSlot?.time === time;
+                        const tooltipText = status === 'booked' 
+                          ? `${day.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} at ${time}\nStatus: Already booked\nVendor is not available`
+                          : status === 'recommended'
+                          ? `${day.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} at ${time}\nStatus: Recommended\nVendor: ${selectedService?.vendorName || 'N/A'}\nOptimal slot based on vendor schedule`
+                          : status === 'limited'
+                          ? `${day.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} at ${time}\nStatus: Limited availability\nVendor has other commitments nearby`
+                          : `${day.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} at ${time}\nStatus: Available\nVendor: ${selectedService?.vendorName || 'N/A'}\nClick to select this slot`;
                         return (
                           <td key={dayIndex} className="px-1 py-1">
                             <button
                               onClick={() => handleSelectSlot(day, time, status)}
                               disabled={status === 'booked'}
+                              title={tooltipText}
                               className={`w-full px-2 py-1.5 text-xs rounded transition-all ${
-                                isSelected ? 'ring-2 ring-blue-500 ring-offset-1' : ''
+                                isSelected ? 'ring-2 ring-blue-500 ring-offset-1 shadow-md' : ''
                               } ${
-                                status === 'recommended' ? 'bg-blue-100 text-blue-700 border border-blue-300' :
+                                status === 'recommended' ? 'bg-blue-100 text-blue-700 border border-blue-300 hover:bg-blue-200' :
                                 status === 'available' ? 'bg-green-50 text-green-700 hover:bg-green-100' :
                                 status === 'limited' ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' :
                                 'bg-red-50 text-red-400 cursor-not-allowed'
@@ -807,7 +815,41 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               </div>
             </div>
 
-            
+            {/* Selected Slot Info */}
+            {selectedSlot && (
+              <div className="p-4 border-t border-gray-200 bg-blue-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                      <Calendar className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">Selected Slot</p>
+                      <p className="text-sm text-blue-700">
+                        {selectedSlot.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })} at {selectedSlot.time}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      selectedSlot.status === 'recommended' ? 'bg-blue-100 text-blue-700' :
+                      selectedSlot.status === 'available' ? 'bg-green-100 text-green-700' :
+                      'bg-amber-100 text-amber-700'
+                    }`}>
+                      {selectedSlot.status === 'recommended' ? 'Recommended' : 
+                       selectedSlot.status === 'available' ? 'Available' : 'Limited'}
+                    </span>
+                    <button 
+                      onClick={() => setSelectedSlot(null)}
+                      className="p-1 text-gray-400 hover:text-gray-600"
+                      title="Clear selection"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
