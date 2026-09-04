@@ -388,6 +388,8 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         }))
       };
       
+      console.log('Sending schedule payload:', schedulePayload);
+      
       const response = await fetch(`${API_BASE}/api/schedules/confirm`, {
         method: 'POST',
         headers: {
@@ -397,16 +399,19 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         body: JSON.stringify(schedulePayload)
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to save schedule');
+      const result = await response.json();
+      console.log('API response:', result);
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || result.error || 'Failed to save schedule');
       }
       
-      alert('Schedule confirmed successfully!');
+      alert(`Schedule confirmed successfully! ${result.data?.visitsCreated || confirmationSchedule.length} visits created.`);
       setShowConfirmation(false);
       navigate(-1);
     } catch (error) {
       console.error('Error confirming schedule:', error);
-      alert('Error confirming schedule. Please try again.');
+      alert(`Error confirming schedule: ${error.message}`);
     } finally {
       setConfirmingSchedule(false);
     }
