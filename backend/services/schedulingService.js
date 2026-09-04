@@ -339,7 +339,7 @@ async function getPendingPropertiesForScheduling(franchisePartnerId, filters = {
         fe.id as estimateId,
         fe.estimate_id as estimateCode,
         fe.package_name as packageName,
-        fe.total_price as totalPrice,
+        fe.total_amount as totalPrice,
         fe.payment_status as paymentStatus,
         fe.service_rows as serviceRows,
         pc.name as customerName,

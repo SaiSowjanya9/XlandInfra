@@ -3038,7 +3038,7 @@ router.get('/schedules/pending-properties', requireManagerScope, async (req, res
         fe.id as estimateId,
         fe.estimate_id as estimateCode,
         fe.package_name as packageName,
-        fe.total_price as totalPrice,
+        fe.total_amount as totalPrice,
         fe.status as estimateStatus,
         fe.payment_status as paymentStatus,
         fe.service_rows as serviceRows,
