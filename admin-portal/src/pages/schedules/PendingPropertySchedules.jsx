@@ -37,7 +37,6 @@ import {
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
-import VendorAssignmentModal from '../../components/scheduling/VendorAssignmentModal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -186,7 +185,6 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [showAssignVendorModal, setShowAssignVendorModal] = useState(false);
   const [showServicesModal, setShowServicesModal] = useState(false);
 
   // Fetch pending properties
@@ -570,44 +568,21 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
     navigate(`${basePath}/schedules/property/${property.id}`, { state: { property } });
   };
 
-  // Handle assign vendor action
+  // Handle assign vendor action - navigate to Property Management page
   const handleAssignVendor = (property, service = null) => {
-    setSelectedProperty(property);
-    // If specific service provided, use it; otherwise pick first unassigned service
-    if (service) {
-      setSelectedService(service);
-    } else {
-      const unassignedService = property.services?.find(s => !s.vendorAssigned);
-      setSelectedService(unassignedService || property.services?.[0] || { name: 'General Service', frequency: 'Monthly', visits: 1 });
-    }
-    setShowAssignVendorModal(true);
-  };
-
-  // Handle vendor assigned callback
-  const handleVendorAssigned = (assignmentData) => {
-    // Update local state
-    setProperties(prevProperties => 
-      prevProperties.map(p => {
-        if (p.id === selectedProperty?.id) {
-          const updatedServices = p.services.map(s => 
-            s.name === assignmentData.service
-              ? { ...s, vendorAssigned: true, vendorName: assignmentData.vendorName, vendorId: assignmentData.vendorId }
-              : s
-          );
-          const assignedCount = updatedServices.filter(s => s.vendorAssigned).length;
-          return {
-            ...p,
-            services: updatedServices,
-            assignedVendors: assignedCount,
-            pendingServices: Math.max(0, p.totalServices - assignedCount)
-          };
-        }
-        return p;
-      })
-    );
+    // Navigate to Property Management page to assign vendor
+    const basePath = portalType === 'franchise' ? '/fp' : 
+                     portalType === 'manager' ? '/manager' : 
+                     portalType === 'coordinator' ? '/coordinator' : 
+                     portalType === 'supervisor' ? '/supervisor' : '';
     
-    // Refresh data after a short delay
-    setTimeout(() => fetchPendingProperties(true), 1000);
+    // Navigate to property management with the property ID
+    navigate(`${basePath}/property-management`, { 
+      state: { 
+        highlightPropertyId: property.id,
+        assignVendorFor: service?.name || 'all'
+      } 
+    });
   };
 
   // Handle view services
@@ -1233,18 +1208,6 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
         </div>
       )}
 
-      {/* Vendor Assignment Modal */}
-      <VendorAssignmentModal
-        isOpen={showAssignVendorModal}
-        onClose={() => {
-          setShowAssignVendorModal(false);
-          setSelectedService(null);
-        }}
-        property={selectedProperty}
-        service={selectedService}
-        portalType={portalType}
-        onVendorAssigned={handleVendorAssigned}
-      />
     </div>
   );
 };

@@ -1,134 +1,201 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Clock, Search, Filter, Download, ChevronLeft, ChevronRight,
-  Plus, MoreHorizontal, Eye, Edit2, Trash2, RefreshCw, CheckCircle,
-  AlertCircle, XCircle, Clock3, CalendarDays, Users, Building2, List,
-  LayoutGrid, MapPin, Settings, X
+  RefreshCw, CheckCircle, AlertCircle, XCircle, Clock3, CalendarDays, 
+  Users, Building2, List, MapPin, Eye, Edit2, X, FileText
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+// Get portal-specific API path
+const getApiPath = (portalType) => {
+  const portalMap = {
+    'franchise': 'fp',
+    'manager': 'manager',
+    'admin': 'admin',
+    'coordinator': 'coordinator',
+    'supervisor': 'supervisor'
+  };
+  return portalMap[portalType] || 'admin';
+};
+
+// Role-based permissions
+const getSchedulePermissions = (portalType) => {
+  const permissions = {
+    admin: { canView: true, canReschedule: true, canCancel: true, fullAccess: true },
+    operations_manager: { canView: true, canReschedule: true, canCancel: true, fullAccess: false },
+    franchise: { canView: true, canReschedule: true, canCancel: true, fullAccess: false },
+    manager: { canView: true, canReschedule: true, canCancel: true, fullAccess: false },
+    coordinator: { canView: true, canReschedule: false, canCancel: false, fullAccess: false },
+    supervisor: { canView: true, canReschedule: false, canCancel: false, fullAccess: false },
+    executive: { canView: true, canReschedule: false, canCancel: false, fullAccess: false }
+  };
+  return permissions[portalType] || permissions.executive;
+};
+
 const AllSchedulesPage = ({ portalType = 'admin' }) => {
   const navigate = useNavigate();
+  const permissions = getSchedulePermissions(portalType);
+  const apiPath = getApiPath(portalType);
+  
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [schedules, setSchedules] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [stats, setStats] = useState({
-    total: 0, scheduled: 0, inProgress: 0, completed: 0,
-    rescheduled: 0, cancelled: 0, overdue: 0, verificationPending: 0
+    total: 0, scheduled: 0, upcoming: 0, workOrderCreated: 0,
+    inProgress: 0, completed: 0, rescheduled: 0, cancelled: 0, overdue: 0
   });
+  
+  // Filter states
   const [filters, setFilters] = useState({
-    search: '', status: 'all', service: 'all', vendor: 'all',
-    zone: 'all', propertyType: 'all', dateRange: null
+    search: '',
+    status: 'all',
+    service: 'all',
+    vendor: 'all',
+    zone: 'all',
+    propertyType: 'all'
   });
-  const [activeView, setActiveView] = useState('list');
+  
+  // Dropdown data
+  const [services, setServices] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [zones, setZones] = useState([]);
+  
   const [currentPage, setCurrentPage] = useState(1);
-  const [showBulkActions, setShowBulkActions] = useState(false);
-  const [selectedSchedules, setSelectedSchedules] = useState([]);
+  const [itemsPerPage] = useState(15);
 
-  useEffect(() => {
-    fetchSchedules();
-    fetchStats();
-  }, [filters, currentPage]);
-
-  const fetchSchedules = async () => {
-    setLoading(true);
+  // Fetch schedules
+  const fetchSchedules = useCallback(async (showRefresh = false) => {
+    if (showRefresh) setRefreshing(true);
+    else setLoading(true);
+    
     try {
       const token = getAuthToken();
       const queryParams = new URLSearchParams({
         page: currentPage,
-        limit: 10,
-        ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v && v !== 'all'))
+        limit: itemsPerPage,
+        ...(filters.search && { search: filters.search }),
+        ...(filters.status !== 'all' && { status: filters.status }),
+        ...(filters.service !== 'all' && { service: filters.service }),
+        ...(filters.vendor !== 'all' && { vendor: filters.vendor }),
+        ...(filters.zone !== 'all' && { zone: filters.zone }),
+        ...(filters.propertyType !== 'all' && { propertyType: filters.propertyType })
       });
       
-      const response = await fetch(`${API_BASE}/api/schedules?${queryParams}`, {
+      const response = await fetch(`${API_BASE}/api/${apiPath}/schedules/all?${queryParams}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
       if (response.ok) {
         const data = await response.json();
         setSchedules(data.data || []);
+        setTotalCount(data.total || 0);
+        if (data.stats) setStats(data.stats);
       }
     } catch (error) {
       console.error('Error fetching schedules:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, [currentPage, filters, apiPath, itemsPerPage]);
 
-  const fetchStats = async () => {
+  // Fetch filter options
+  const fetchFilterOptions = useCallback(async () => {
     try {
       const token = getAuthToken();
-      const response = await fetch(`${API_BASE}/api/schedules/status-summary`, {
+      
+      // Fetch zones
+      const zonesRes = await fetch(`${API_BASE}/api/${apiPath}/zones`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data.data || stats);
+      if (zonesRes.ok) {
+        const data = await zonesRes.json();
+        setZones(data.data || []);
+      }
+
+      // Fetch vendors
+      const vendorsRes = await fetch(`${API_BASE}/api/${apiPath}/vendors?status=active`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (vendorsRes.ok) {
+        const data = await vendorsRes.json();
+        setVendors(data.data || data.vendors || []);
+      }
+
+      // Fetch services
+      const servicesRes = await fetch(`${API_BASE}/api/${apiPath}/services`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (servicesRes.ok) {
+        const data = await servicesRes.json();
+        setServices(data.data || []);
       }
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error('Error fetching filter options:', error);
     }
-  };
+  }, [apiPath]);
 
+  useEffect(() => {
+    fetchSchedules();
+    fetchFilterOptions();
+  }, [fetchSchedules, fetchFilterOptions]);
+
+  // Status badge styles based on document Section 12
   const getStatusBadge = (status) => {
     const styles = {
-      scheduled: 'bg-blue-100 text-blue-700',
-      in_progress: 'bg-amber-100 text-amber-700',
-      completed: 'bg-green-100 text-green-700',
-      rescheduled: 'bg-orange-100 text-orange-700',
-      verification_pending: 'bg-purple-100 text-purple-700',
-      overdue: 'bg-red-100 text-red-700',
-      cancelled: 'bg-gray-100 text-gray-500'
+      pending_schedule: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Pending Schedule' },
+      scheduled: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Scheduled' },
+      upcoming: { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'Upcoming' },
+      work_order_created: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Work Order Created' },
+      in_progress: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'In Progress' },
+      completed: { bg: 'bg-green-100', text: 'text-green-700', label: 'Completed' },
+      rescheduled: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Rescheduled' },
+      cancelled: { bg: 'bg-red-100', text: 'text-red-500', label: 'Cancelled' },
+      overdue: { bg: 'bg-red-100', text: 'text-red-700', label: 'Overdue' }
     };
     return styles[status] || styles.scheduled;
-  };
-
-  const getPriorityBadge = (priority) => {
-    const styles = {
-      high: 'bg-red-100 text-red-700',
-      medium: 'bg-amber-100 text-amber-700',
-      low: 'bg-green-100 text-green-700'
-    };
-    return styles[priority] || styles.medium;
   };
 
   const formatDate = (date) => {
     if (!date) return '-';
     return new Date(date).toLocaleDateString('en-US', { 
-      month: 'short', day: 'numeric', year: 'numeric' 
+      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' 
     });
   };
 
   const formatTime = (time) => {
-    if (!time) return '';
+    if (!time) return '-';
     try {
+      if (time.includes('AM') || time.includes('PM')) return time;
       return new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', { 
         hour: 'numeric', minute: '2-digit', hour12: true 
       });
     } catch { return time; }
   };
 
-  // Stats cards data
+  // Handle reschedule navigation
+  const handleReschedule = (schedule) => {
+    const basePath = portalType === 'franchise' ? '/fp' : portalType === 'manager' ? '/manager' : '';
+    navigate(`${basePath}/schedules/reschedule`, { state: { schedule } });
+  };
+
+  // Stats cards based on document Section 12 statuses
   const statsCards = [
-    { label: 'Total Schedules', value: stats.total || 1248, subtext: 'All time', icon: CalendarDays, color: 'blue' },
-    { label: 'Scheduled', value: stats.scheduled || 542, percent: '43.4%', icon: Calendar, color: 'indigo' },
-    { label: 'In Progress', value: stats.inProgress || 186, percent: '14.9%', icon: Clock3, color: 'amber' },
-    { label: 'Completed', value: stats.completed || 392, percent: '31.4%', icon: CheckCircle, color: 'green' },
-    { label: 'Rescheduled', value: stats.rescheduled || 68, percent: '5.4%', icon: RefreshCw, color: 'orange' },
-    { label: 'Cancelled', value: stats.cancelled || 32, percent: '2.6%', icon: XCircle, color: 'gray' },
-    { label: 'Overdue', value: stats.overdue || 28, percent: '2.2%', icon: AlertCircle, color: 'red' }
+    { label: 'Total', value: stats.total || 0, icon: CalendarDays, color: 'bg-blue-500' },
+    { label: 'Scheduled', value: stats.scheduled || 0, icon: Calendar, color: 'bg-blue-500' },
+    { label: 'Upcoming', value: stats.upcoming || 0, icon: Clock3, color: 'bg-indigo-500' },
+    { label: 'Work Order Created', value: stats.workOrderCreated || 0, icon: FileText, color: 'bg-purple-500' },
+    { label: 'In Progress', value: stats.inProgress || 0, icon: RefreshCw, color: 'bg-amber-500' },
+    { label: 'Completed', value: stats.completed || 0, icon: CheckCircle, color: 'bg-green-500' },
+    { label: 'Rescheduled', value: stats.rescheduled || 0, icon: RefreshCw, color: 'bg-orange-500' },
+    { label: 'Overdue', value: stats.overdue || 0, icon: AlertCircle, color: 'bg-red-500' }
   ];
 
-  const upcomingThisWeek = [
-    { day: 'Today, May 20', count: 12 },
-    { day: 'Wed, May 21', count: 18 },
-    { day: 'Thu, May 22', count: 15 },
-    { day: 'Fri, May 23', count: 22 },
-    { day: 'Sat, May 24', count: 8 }
-  ];
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -138,378 +205,300 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">All Schedules</h1>
             <p className="text-sm text-gray-500 mt-1">
-              Home &gt; Scheduling &gt; All Schedules
+              View all schedule occurrences across properties
             </p>
           </div>
           <button
-            onClick={() => navigate('/schedules/new')}
-            className="px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            onClick={() => fetchSchedules(true)}
+            disabled={refreshing}
+            className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 flex items-center gap-2"
           >
-            <Plus className="w-5 h-5" />
-            New Schedule
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
           </button>
         </div>
       </div>
 
       <div className="p-6">
-        <div className="flex gap-6">
-          {/* Main Content */}
-          <div className="flex-1">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-7 gap-4 mb-6">
-              {statsCards.map((stat, index) => (
-                <div key={index} className="bg-white rounded-xl border border-gray-200 p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={`w-8 h-8 rounded-lg bg-${stat.color}-100 flex items-center justify-center`}>
-                      <stat.icon className={`w-4 h-4 text-${stat.color}-600`} />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500">{stat.label}</p>
-                  {stat.percent && (
-                    <p className={`text-xs text-${stat.color}-600 mt-1`}>{stat.percent}</p>
-                  )}
+        {/* Stats Cards */}
+        <div className="grid grid-cols-8 gap-3 mb-6">
+          {statsCards.map((stat, index) => (
+            <div key={index} className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className={`w-8 h-8 rounded-lg ${stat.color} bg-opacity-10 flex items-center justify-center`}>
+                  <stat.icon className={`w-4 h-4 ${stat.color.replace('bg-', 'text-')}`} />
                 </div>
-              ))}
+              </div>
+              <p className="text-xl font-bold text-gray-900">{stat.value.toLocaleString()}</p>
+              <p className="text-xs text-gray-500">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            {/* Search */}
+            <div className="flex-1 min-w-[250px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by Property ID, Name, Service..."
+                  value={filters.search}
+                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
             </div>
 
-            {/* Filters */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
-              <div className="flex items-center gap-4 flex-wrap">
-                <div className="flex-1 min-w-[200px]">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search schedules..."
-                      value={filters.search}
-                      onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                
-                {['status', 'service', 'vendor', 'zone', 'propertyType'].map((filterKey) => (
-                  <select
-                    key={filterKey}
-                    value={filters[filterKey]}
-                    onChange={(e) => setFilters({ ...filters, [filterKey]: e.target.value })}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  >
-                    <option value="all">{filterKey.charAt(0).toUpperCase() + filterKey.slice(1)}</option>
-                    <option value="option1">Option 1</option>
-                  </select>
-                ))}
+            {/* Status Filter */}
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Status</option>
+              <option value="pending_schedule">Pending Schedule</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="work_order_created">Work Order Created</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="rescheduled">Rescheduled</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="overdue">Overdue</option>
+            </select>
 
-                <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                  <Calendar className="w-4 h-4 text-gray-400" />
-                  <span>May 18 - May 24, 2025</span>
-                </div>
+            {/* Service Filter */}
+            <select
+              value={filters.service}
+              onChange={(e) => setFilters({ ...filters, service: e.target.value })}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Services</option>
+              {services.map(s => (
+                <option key={s.id || s.name} value={s.name}>{s.name}</option>
+              ))}
+            </select>
 
-                <button className="px-3 py-2 border border-gray-300 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50">
-                  <Filter className="w-4 h-4" />
-                  Filters
+            {/* Vendor Filter */}
+            <select
+              value={filters.vendor}
+              onChange={(e) => setFilters({ ...filters, vendor: e.target.value })}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Vendors</option>
+              {vendors.map(v => (
+                <option key={v.id || v.name} value={v.name || v.businessName}>{v.name || v.businessName}</option>
+              ))}
+            </select>
+
+            {/* Zone Filter */}
+            <select
+              value={filters.zone}
+              onChange={(e) => setFilters({ ...filters, zone: e.target.value })}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Zones</option>
+              {zones.map(z => (
+                <option key={z.id || z.name} value={z.name}>{z.name}</option>
+              ))}
+            </select>
+
+            {/* Export */}
+            <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50">
+              <Download className="w-4 h-4" />
+              Export
+            </button>
+
+            {/* Clear Filters */}
+            {(filters.search || filters.status !== 'all' || filters.service !== 'all' || 
+              filters.vendor !== 'all' || filters.zone !== 'all') && (
+              <button
+                onClick={() => setFilters({ search: '', status: 'all', service: 'all', vendor: 'all', zone: 'all', propertyType: 'all' })}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 text-sm flex items-center gap-1"
+              >
+                <X className="w-4 h-4" />
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Schedule Table */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Property ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Property Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Service</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vendor</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Visit #</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Target Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Scheduled Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Time</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Zone</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Work Order</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {loading ? (
+                  <tr>
+                    <td colSpan={12} className="px-4 py-12 text-center">
+                      <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
+                      <p className="text-gray-500">Loading schedules...</p>
+                    </td>
+                  </tr>
+                ) : schedules.length === 0 ? (
+                  <tr>
+                    <td colSpan={12} className="px-4 py-12 text-center">
+                      <CalendarDays className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500 font-medium">No schedules found</p>
+                      <p className="text-sm text-gray-400 mt-1">Try adjusting your filters</p>
+                    </td>
+                  </tr>
+                ) : (
+                  schedules.map((schedule, index) => {
+                    const statusStyle = getStatusBadge(schedule.status);
+                    return (
+                      <tr key={schedule.id || index} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-medium text-blue-600">{schedule.propertyId}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="text-sm font-medium text-gray-900">{schedule.propertyName}</p>
+                          <p className="text-xs text-gray-500">{schedule.customerName}</p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-gray-700">{schedule.serviceName}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-gray-700">{schedule.vendorName || '-'}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-medium text-gray-900">
+                            {schedule.visitNumber} of {schedule.totalVisits}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-gray-600">{formatDate(schedule.targetDate)}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`text-sm ${schedule.isRescheduled ? 'text-orange-600 font-medium' : 'text-gray-900'}`}>
+                            {formatDate(schedule.scheduledDate)}
+                          </span>
+                          {schedule.isRescheduled && schedule.originalDate && (
+                            <p className="text-xs text-gray-400">Was: {formatDate(schedule.originalDate)}</p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-gray-700">{formatTime(schedule.scheduledTime)}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-gray-400" />
+                            <span className="text-sm text-gray-700">{schedule.zone || '-'}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          {schedule.workOrderId ? (
+                            <span className="text-sm text-blue-600 font-medium">{schedule.workOrderId}</span>
+                          ) : (
+                            <span className="text-sm text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusStyle.bg} ${statusStyle.text}`}>
+                            {statusStyle.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-center gap-1">
+                            <button 
+                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            {permissions.canReschedule && schedule.status !== 'completed' && schedule.status !== 'cancelled' && (
+                              <button 
+                                onClick={() => handleReschedule(schedule)}
+                                className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded"
+                                title="Reschedule"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                            )}
+                            {permissions.canCancel && schedule.status !== 'completed' && schedule.status !== 'cancelled' && (
+                              <button 
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                                title="Cancel"
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {totalCount > 0 && (
+            <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+              <p className="text-sm text-gray-500">
+                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount.toLocaleString()} schedules
+              </p>
+              <div className="flex items-center gap-1">
+                <button 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-8 h-8 text-sm font-medium rounded ${
+                        pageNum === currentPage ? 'bg-blue-600 text-white' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                <button 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
-
-            {/* View Tabs & Actions */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                <div className="flex items-center gap-1">
-                  {[
-                    { id: 'list', label: 'List View', icon: List },
-                    { id: 'calendar', label: 'Calendar View', icon: Calendar },
-                    { id: 'vendor', label: 'Vendor View', icon: Users },
-                    { id: 'property', label: 'Property View', icon: Building2 }
-                  ].map((view) => (
-                    <button
-                      key={view.id}
-                      onClick={() => setActiveView(view.id)}
-                      className={`px-4 py-2 text-sm font-medium rounded-lg flex items-center gap-2 ${
-                        activeView === view.id 
-                          ? 'bg-blue-50 text-blue-600' 
-                          : 'text-gray-600 hover:bg-gray-50'
-                      }`}
-                    >
-                      <view.icon className="w-4 h-4" />
-                      {view.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button className="px-3 py-2 border border-gray-300 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50">
-                    <Download className="w-4 h-4" />
-                    Export
-                  </button>
-                  <button
-                    onClick={() => setShowBulkActions(!showBulkActions)}
-                    className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 flex items-center gap-2"
-                  >
-                    Bulk Actions
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Schedule ID</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Work Order ID</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Property / Customer</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Service</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Frequency</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Vendor</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Zone</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Schedule Date & Time</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Next Visit</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Priority</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {loading ? (
-                      <tr>
-                        <td colSpan={12} className="px-4 py-12 text-center">
-                          <RefreshCw className="w-6 h-6 text-blue-600 animate-spin mx-auto" />
-                        </td>
-                      </tr>
-                    ) : schedules.length === 0 ? (
-                      // Demo data
-                      [...Array(10)].map((_, i) => (
-                        <tr key={i} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-blue-600 font-medium">SCH-2025-{1248 - i}</td>
-                          <td className="px-4 py-3 text-sm text-blue-600">WO-2025-{1187 - i}</td>
-                          <td className="px-4 py-3">
-                            <p className="text-sm font-medium text-gray-900">Green Heights Apartments</p>
-                            <p className="text-xs text-gray-500">Rahul Mehta</p>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">Water Tank Cleaning</td>
-                          <td className="px-4 py-3 text-sm text-gray-700">Monthly</td>
-                          <td className="px-4 py-3 text-sm text-gray-700">Aqua Pure Services</td>
-                          <td className="px-4 py-3 text-sm text-gray-700">North Zone</td>
-                          <td className="px-4 py-3">
-                            <p className="text-sm text-gray-900">May 20, 2025</p>
-                            <p className="text-xs text-gray-500">09:00 AM</p>
-                          </td>
-                          <td className="px-4 py-3">
-                            <p className="text-sm text-gray-900">Jun 20, 2025</p>
-                            <p className="text-xs text-gray-500">09:00 AM</p>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              i === 0 ? 'bg-blue-100 text-blue-700' :
-                              i === 1 ? 'bg-amber-100 text-amber-700' :
-                              i === 2 ? 'bg-green-100 text-green-700' :
-                              i === 3 ? 'bg-orange-100 text-orange-700' :
-                              i === 4 ? 'bg-purple-100 text-purple-700' :
-                              'bg-blue-100 text-blue-700'
-                            }`}>
-                              {i === 0 ? 'Scheduled' : i === 1 ? 'In Progress' : i === 2 ? 'Completed' : 
-                               i === 3 ? 'Rescheduled' : i === 4 ? 'Verification Pending' : 'Scheduled'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              i % 3 === 0 ? 'bg-red-100 text-red-700' :
-                              i % 3 === 1 ? 'bg-amber-100 text-amber-700' :
-                              'bg-green-100 text-green-700'
-                            }`}>
-                              {i % 3 === 0 ? 'High' : i % 3 === 1 ? 'Medium' : 'Low'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <button className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded">
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <button className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded">
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      schedules.map((schedule, i) => (
-                        <tr key={schedule.id || i} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-blue-600 font-medium">{schedule.scheduleId}</td>
-                          <td className="px-4 py-3 text-sm text-blue-600">{schedule.workOrderId || '-'}</td>
-                          <td className="px-4 py-3">
-                            <p className="text-sm font-medium text-gray-900">{schedule.propertyName}</p>
-                            <p className="text-xs text-gray-500">{schedule.customerName}</p>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">{schedule.serviceName}</td>
-                          <td className="px-4 py-3 text-sm text-gray-700">{schedule.frequency}</td>
-                          <td className="px-4 py-3 text-sm text-gray-700">{schedule.vendorName}</td>
-                          <td className="px-4 py-3 text-sm text-gray-700">{schedule.zone}</td>
-                          <td className="px-4 py-3">
-                            <p className="text-sm text-gray-900">{formatDate(schedule.scheduledDate)}</p>
-                            <p className="text-xs text-gray-500">{formatTime(schedule.scheduledTime)}</p>
-                          </td>
-                          <td className="px-4 py-3">
-                            <p className="text-sm text-gray-900">{formatDate(schedule.nextVisit)}</p>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadge(schedule.status)}`}>
-                              {schedule.status?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityBadge(schedule.priority)}`}>
-                              {schedule.priority?.charAt(0).toUpperCase() + schedule.priority?.slice(1)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <button className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded">
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <button className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded">
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination */}
-              <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-                <p className="text-sm text-gray-500">Showing 1 to 10 of 1,248 entries</p>
-                <div className="flex items-center gap-1">
-                  <button className="p-1.5 border border-gray-300 rounded hover:bg-gray-50">
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  {[1, 2, 3, 4, 5].map((page) => (
-                    <button
-                      key={page}
-                      className={`w-8 h-8 text-sm font-medium rounded ${
-                        page === 1 ? 'bg-blue-600 text-white' : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                  <button className="p-1.5 border border-gray-300 rounded hover:bg-gray-50">
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="w-64 flex-shrink-0 space-y-4">
-            {/* Quick Summary */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">Quick Summary</h3>
-              <div className="space-y-2">
-                {[
-                  { label: 'Scheduled', count: 542, color: 'blue' },
-                  { label: 'In Progress', count: 186, color: 'amber' },
-                  { label: 'Completed', count: 392, color: 'green' },
-                  { label: 'Rescheduled', count: 68, color: 'orange' },
-                  { label: 'Verification Pending', count: 18, color: 'purple' },
-                  { label: 'Overdue', count: 28, color: 'red' },
-                  { label: 'Cancelled', count: 32, color: 'gray' }
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full bg-${item.color}-500`} />
-                      <span className="text-sm text-gray-600">{item.label}</span>
-                    </div>
-                    <span className="text-sm font-medium text-gray-900">{item.count}</span>
-                  </div>
-                ))}
-                <div className="pt-2 border-t border-gray-200 flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-900">Total</span>
-                  <span className="text-sm font-bold text-gray-900">1,266</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Upcoming This Week */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">Upcoming This Week</h3>
-              <div className="space-y-2">
-                {upcomingThisWeek.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">{item.day}</span>
-                    <span className="text-sm font-medium text-blue-600">{item.count}</span>
-                  </div>
-                ))}
-                <div className="pt-2 border-t border-gray-200 flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-900">Total</span>
-                  <span className="text-sm font-bold text-gray-900">75</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">Quick Actions</h3>
-              <div className="space-y-2">
-                {[
-                  { label: 'New Schedule', icon: Plus, action: () => navigate('/schedules/new') },
-                  { label: 'Bulk Schedule', icon: LayoutGrid, action: () => {} },
-                  { label: 'Reschedule', icon: RefreshCw, action: () => navigate('/schedules/reschedule') },
-                  { label: 'Cancel Schedule', icon: XCircle, action: () => {} },
-                  { label: 'Schedule Settings', icon: Settings, action: () => {} }
-                ].map((item, i) => (
-                  <button
-                    key={i}
-                    onClick={item.action}
-                    className="w-full px-3 py-2 text-sm text-left text-gray-700 hover:bg-gray-50 rounded-lg flex items-center gap-2"
-                  >
-                    <item.icon className="w-4 h-4 text-gray-400" />
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Mini Calendar */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-gray-900">May 2025</h3>
-                <div className="flex items-center gap-1">
-                  <button className="p-1 hover:bg-gray-100 rounded">
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button className="p-1 hover:bg-gray-100 rounded">
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="grid grid-cols-7 gap-1 text-center text-xs">
-                {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-                  <div key={day} className="py-1 text-gray-500 font-medium">{day}</div>
-                ))}
-                {[...Array(31)].map((_, i) => (
-                  <button
-                    key={i}
-                    className={`py-1 rounded ${
-                      i + 1 === 20 ? 'bg-blue-600 text-white' : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
