@@ -119,7 +119,13 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
 
   // Handle applying new recurrence settings
   const handleApplyRecurrence = () => {
-    if (!selectedService || !selectedSlot) return;
+    if (!selectedService) return;
+    
+    // Get the start date - use selected slot, or first planned visit, or current date
+    const startDate = selectedSlot?.date || 
+                      (plannedVisits.length > 0 ? plannedVisits[0].date : new Date());
+    const startTime = selectedSlot?.time || 
+                      (plannedVisits.length > 0 ? plannedVisits[0].time : '10:00 AM');
     
     // Update service with new frequency and visit count
     const updatedService = {
@@ -130,7 +136,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     
     // Regenerate visits with new settings
     const schedules = generateScheduleDates(
-      selectedSlot.date,
+      startDate,
       editFrequency,
       editVisitCount
     );
@@ -138,7 +144,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     const formattedSchedules = formatSchedulesForDisplay(schedules);
     const visitsWithTime = formattedSchedules.map((schedule, index) => ({
       ...schedule,
-      time: selectedSlot.time || '10:00 AM',
+      time: startTime,
       status: index === 0 ? 'Scheduled' : 'Target'
     }));
     
@@ -1152,7 +1158,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             <div className="flex gap-2 overflow-x-auto pb-2">
               {plannedVisits.map((visit, i) => (
                 <div 
-                  key={`visit-${i}-${visit.time}-${visit.shortDateStr || ''}`}
+                  key={`visit-${i}`}
                   className={`flex-shrink-0 w-32 p-3 rounded-lg border text-center relative cursor-pointer ${
                     visit.status === 'Scheduled' || visit.status === 'scheduled' ? 'border-green-300 bg-green-50' : 
                     visit.isEdited ? 'border-blue-300 bg-blue-50' :
@@ -1187,8 +1193,10 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                       <select
                         value={visit.time || '10:00 AM'}
                         onChange={(e) => {
-                          console.log('Time changed to:', e.target.value);
-                          handleEditPlannedVisitTime(i, e.target.value);
+                          const newTime = e.target.value;
+                          setPlannedVisits(prev => prev.map((v, idx) => 
+                            idx === i ? { ...v, time: newTime, isEdited: true } : v
+                          ));
                         }}
                         className="w-full px-1 py-0.5 text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
@@ -1209,17 +1217,19 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                       </button>
                     </div>
                   ) : (
-                    <p className="font-semibold text-sm mt-1 whitespace-nowrap">
-                      {visit.isManual ? (
-                        <button className="text-amber-600 hover:text-amber-700 underline">
-                          Select
-                        </button>
-                      ) : (
-                        visit.shortDateStr || visit.dateStr
-                      )}
-                    </p>
+                    <>
+                      <p className="font-semibold text-sm mt-1 whitespace-nowrap">
+                        {visit.isManual ? (
+                          <button className="text-amber-600 hover:text-amber-700 underline">
+                            Select
+                          </button>
+                        ) : (
+                          visit.shortDateStr || visit.dateStr
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-500">{visit.time}</p>
+                    </>
                   )}
-                  <p className="text-xs text-gray-500">{visit.time}</p>
                   <span className={`inline-block mt-2 px-2 py-0.5 text-xs rounded ${
                     visit.status === 'Scheduled' ? 'bg-green-100 text-green-700' : 
                     visit.isEdited ? 'bg-blue-100 text-blue-700' :
