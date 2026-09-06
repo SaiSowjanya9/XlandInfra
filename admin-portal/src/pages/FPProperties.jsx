@@ -1569,7 +1569,7 @@ const FPProperties = ({ user }) => {
 
       {/* View Details Modal */}
       {showDetailsModal && selectedProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-t-xl">
@@ -2058,7 +2058,7 @@ const FPProperties = ({ user }) => {
 
       {/* Assign Modal - Table Layout for Vendor Assignment */}
       {showAssignModal && selectedProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowAssignModal(false); setSelectedProperty(null); setServiceAssignments([]); }}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => { setShowAssignModal(false); setSelectedProperty(null); setServiceAssignments([]); }}>
           <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-slate-600 to-slate-500">
@@ -2249,7 +2249,7 @@ const FPProperties = ({ user }) => {
 
       {/* Assigned Employees Modal - View Only */}
       {showAssignedEmployeesModal && assignedEmployeesProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowAssignedEmployeesModal(false); setAssignedEmployeesProperty(null); }}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => { setShowAssignedEmployeesModal(false); setAssignedEmployeesProperty(null); }}>
           <div className="bg-white rounded-xl w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             {/* Header - Soft teal/emerald gradient */}
             <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-teal-600 to-emerald-500">
@@ -2352,7 +2352,7 @@ const FPProperties = ({ user }) => {
 
       {/* Edit Property Modal - Comprehensive */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
           <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
               <div>
@@ -2695,7 +2695,7 @@ const FPProperties = ({ user }) => {
 
       {/* Delete Confirmation Modal (Move to Inactive) */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDeleteConfirm(null)}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => setDeleteConfirm(null)}>
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
             <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Trash2 className="w-7 h-7 text-orange-500" />
@@ -2724,7 +2724,7 @@ const FPProperties = ({ user }) => {
 
       {/* Permanent Delete Confirmation Modal */}
       {permanentDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setPermanentDeleteConfirm(null)}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => setPermanentDeleteConfirm(null)}>
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
             <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Trash2 className="w-7 h-7 text-red-600" />

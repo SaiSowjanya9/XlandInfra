@@ -770,7 +770,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
 
       {/* Schedule Detail Modal */}
       {selectedSchedule && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
             {/* Modal Header */}
             <div className={`px-6 py-4 border-b ${
@@ -873,31 +873,20 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
               >
                 Close
               </button>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => {
-                    setSelectedSchedule(null);
-                    navigate(`${getBasePath()}/schedules/reschedule?scheduleId=${selectedSchedule.id || selectedSchedule.scheduleId}`);
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                >
-                  Reschedule
-                </button>
-                <button 
-                  onClick={() => {
-                    setSelectedSchedule(null);
-                    const woId = selectedSchedule.workOrderId || selectedSchedule.work_order_id;
-                    if (woId) {
-                      navigate(`${getBasePath()}/work-orders/${woId}`);
-                    } else {
-                      navigate(`${getBasePath()}/work-orders`);
-                    }
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-                >
-                  View Work Order
-                </button>
-              </div>
+              <button 
+                onClick={() => {
+                  setSelectedSchedule(null);
+                  const woId = selectedSchedule.workOrderId || selectedSchedule.work_order_id;
+                  if (woId) {
+                    navigate(`${getBasePath()}/work-orders/${woId}`);
+                  } else {
+                    navigate(`${getBasePath()}/work-orders`);
+                  }
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+              >
+                View Work Order
+              </button>
             </div>
           </div>
         </div>
