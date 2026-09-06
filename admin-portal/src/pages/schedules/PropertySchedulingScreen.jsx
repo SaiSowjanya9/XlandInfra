@@ -492,27 +492,18 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     }
   };
 
-  const handleUseRecommended = () => {
-    if (recommendedDates.length > 0) {
-      const rec = recommendedDates[0];
-      setSelectedSlot({ date: rec.date, time: rec.time, status: 'recommended' });
-      // Automatically prepare confirmation with recommended date
-      setTimeout(() => handlePrepareConfirmation(), 100);
-    }
-  };
-
-  // Apply recommended date to all monthly visits
-  const handleApplyToAllMonthly = () => {
-    if (!selectedService || !recommendedDates.length) return;
+  // Handle clicking a recommended date - select it and generate visits
+  const handleSelectRecommendedDate = (rec) => {
+    if (!selectedService) return;
     
-    const rec = recommendedDates[0];
-    setSelectedSlot({ date: rec.date, time: rec.time, status: 'recommended' });
+    // Set the selected slot
+    setSelectedSlot({ date: rec.date, time: rec.time, status: rec.type });
     
     // Get the expected number of visits from service config
     const frequencyConfig = getFrequencyConfig(selectedService.frequency);
     const expectedVisits = selectedService.visits || frequencyConfig?.visitsPerYear || 12;
     
-    // Regenerate all visits with correct count using the recommended date
+    // Generate visits starting from this date
     const schedules = generateScheduleDates(rec.date, selectedService.frequency, expectedVisits);
     const formattedSchedules = formatSchedulesForDisplay(schedules);
     
@@ -523,17 +514,93 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     }));
     
     setPlannedVisits(updatedVisits);
-    handlePrepareConfirmation();
   };
 
-  // Show customize dates modal
+  // Use the first recommended date and go to confirmation
+  const handleUseRecommended = () => {
+    if (!selectedService || !recommendedDates.length) return;
+    
+    const rec = recommendedDates[0];
+    
+    // Set the selected slot
+    setSelectedSlot({ date: rec.date, time: rec.time, status: 'recommended' });
+    
+    // Get the expected number of visits from service config
+    const frequencyConfig = getFrequencyConfig(selectedService.frequency);
+    const expectedVisits = selectedService.visits || frequencyConfig?.visitsPerYear || 12;
+    
+    // Generate all visits with correct count using the recommended date
+    const schedules = generateScheduleDates(rec.date, selectedService.frequency, expectedVisits);
+    const formattedSchedules = formatSchedulesForDisplay(schedules);
+    
+    const updatedVisits = formattedSchedules.map((schedule, index) => ({
+      ...schedule,
+      time: rec.time,
+      status: index === 0 ? 'Scheduled' : 'Target'
+    }));
+    
+    setPlannedVisits(updatedVisits);
+    
+    // Go to confirmation after a brief delay for state to update
+    setTimeout(() => handlePrepareConfirmation(), 100);
+  };
+
+  // Apply recommended date to all monthly visits
+  const handleApplyToAllMonthly = () => {
+    if (!selectedService || !recommendedDates.length) return;
+    
+    // Use selected slot if available, otherwise use first recommended
+    const rec = selectedSlot ? 
+      { date: selectedSlot.date, time: selectedSlot.time } : 
+      recommendedDates[0];
+    
+    setSelectedSlot({ date: rec.date, time: rec.time, status: 'recommended' });
+    
+    // Get the expected number of visits from service config
+    const frequencyConfig = getFrequencyConfig(selectedService.frequency);
+    const expectedVisits = selectedService.visits || frequencyConfig?.visitsPerYear || 12;
+    
+    // Regenerate all visits with correct count using the selected/recommended date
+    const schedules = generateScheduleDates(rec.date, selectedService.frequency, expectedVisits);
+    const formattedSchedules = formatSchedulesForDisplay(schedules);
+    
+    const updatedVisits = formattedSchedules.map((schedule, index) => ({
+      ...schedule,
+      time: rec.time,
+      status: index === 0 ? 'Scheduled' : 'Target'
+    }));
+    
+    setPlannedVisits(updatedVisits);
+  };
+
+  // Show customize dates modal - opens the confirmation screen where user can edit individual dates
   const handleCustomizeDates = () => {
     if (!selectedService) return;
-    // Set the first slot if not already selected
-    if (!selectedSlot && recommendedDates.length > 0) {
-      const rec = recommendedDates[0];
-      setSelectedSlot({ date: rec.date, time: rec.time, status: 'recommended' });
+    
+    // If no visits generated yet, generate them first
+    if (plannedVisits.length === 0) {
+      const rec = selectedSlot || (recommendedDates.length > 0 ? recommendedDates[0] : null);
+      if (rec) {
+        const frequencyConfig = getFrequencyConfig(selectedService.frequency);
+        const expectedVisits = selectedService.visits || frequencyConfig?.visitsPerYear || 12;
+        
+        const schedules = generateScheduleDates(rec.date || new Date(), selectedService.frequency, expectedVisits);
+        const formattedSchedules = formatSchedulesForDisplay(schedules);
+        
+        const updatedVisits = formattedSchedules.map((schedule, index) => ({
+          ...schedule,
+          time: rec.time || '10:00 AM',
+          status: index === 0 ? 'Scheduled' : 'Target'
+        }));
+        
+        setPlannedVisits(updatedVisits);
+        
+        // Wait for state update then open confirmation
+        setTimeout(() => handlePrepareConfirmation(), 100);
+        return;
+      }
     }
+    
     handlePrepareConfirmation();
   };
 
@@ -1098,49 +1165,59 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               <span className="text-sm text-gray-500">{recommendedDates.length}</span>
             </div>
             <div className="space-y-3">
-              {recommendedDates.map((rec, i) => (
-                <div 
-                  key={rec.id}
-                  className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                    i === 0 ? 'border-blue-300 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => setSelectedSlot({ date: rec.date, time: rec.time, status: rec.type })}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      rec.type === 'recommended' ? 'bg-blue-500' :
-                      rec.type === 'available' ? 'bg-green-500' : 'bg-amber-500'
-                    }`} />
-                    <span className="font-medium text-sm">{rec.dateStr}</span>
+              {recommendedDates.map((rec, i) => {
+                // Check if this date is currently selected
+                const isSelected = selectedSlot && 
+                  selectedSlot.date?.getDate() === rec.date?.getDate() &&
+                  selectedSlot.date?.getMonth() === rec.date?.getMonth() &&
+                  selectedSlot.time === rec.time;
+                
+                return (
+                  <div 
+                    key={rec.id}
+                    className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                      isSelected ? 'border-blue-500 bg-blue-100 ring-2 ring-blue-200' :
+                      i === 0 ? 'border-blue-300 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                    onClick={() => handleSelectRecommendedDate(rec)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        rec.type === 'recommended' ? 'bg-blue-500' :
+                        rec.type === 'available' ? 'bg-green-500' : 'bg-amber-500'
+                      }`} />
+                      <span className="font-medium text-sm">{rec.dateStr}</span>
+                      {isSelected && <Check className="w-4 h-4 text-blue-600 ml-auto" />}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">{rec.time}</p>
+                    <p className="text-xs text-gray-400">{rec.vendor} • {rec.zone}</p>
+                    {rec.reason && (
+                      <p className="text-xs text-blue-600 mt-1 italic">{rec.reason}</p>
+                    )}
+                    <span className={`inline-block mt-2 px-2 py-0.5 text-xs rounded ${
+                      rec.type === 'recommended' ? 'bg-blue-100 text-blue-700' :
+                      rec.type === 'available' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                    }`}>
+                      {rec.type === 'recommended' ? 'Recommended' : rec.type === 'available' ? 'Available' : 'Limited'}
+                    </span>
                   </div>
-                  <p className="text-sm text-gray-600 mt-1">{rec.time}</p>
-                  <p className="text-xs text-gray-400">{rec.vendor} • {rec.zone}</p>
-                  {rec.reason && (
-                    <p className="text-xs text-blue-600 mt-1 italic">{rec.reason}</p>
-                  )}
-                  <span className={`inline-block mt-2 px-2 py-0.5 text-xs rounded ${
-                    rec.type === 'recommended' ? 'bg-blue-100 text-blue-700' :
-                    rec.type === 'available' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {rec.type === 'recommended' ? 'Recommended' : rec.type === 'available' ? 'Available' : 'Limited'}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="mt-4 space-y-2">
               <button 
                 onClick={handleUseRecommended}
-                disabled={!recommendedDates.length}
-                className="w-full py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                disabled={!recommendedDates.length || !selectedService}
+                className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               >
                 Use Recommended {recommendedDates[0]?.dateStr ? `(${recommendedDates[0].dateStr})` : ''}
               </button>
               <button 
                 onClick={handleApplyToAllMonthly}
-                disabled={!recommendedDates.length || !selectedService}
-                className="w-full py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                disabled={(!recommendedDates.length && !selectedSlot) || !selectedService}
+                className="w-full py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
               >
-                Apply to All Monthly Visits
+                Generate All {selectedService?.visits || getFrequencyConfig(selectedService?.frequency)?.visitsPerYear || 12} Visits
               </button>
               <button 
                 onClick={handleCustomizeDates}
