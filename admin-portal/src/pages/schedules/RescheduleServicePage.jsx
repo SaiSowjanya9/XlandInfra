@@ -319,9 +319,9 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Rescheduled Service</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Rescheduled Requests</h1>
             <p className="text-sm text-gray-500 mt-1">
-              Home &gt; Scheduling &gt; Rescheduled
+              Home &gt; Scheduling &gt; Rescheduled Requests
             </p>
           </div>
         </div>
