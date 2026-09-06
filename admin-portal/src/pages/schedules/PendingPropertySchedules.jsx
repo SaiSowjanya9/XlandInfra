@@ -1181,7 +1181,6 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                       <th className="text-left py-3 px-2 text-xs font-semibold text-gray-600 uppercase">Assigned Vendor</th>
                       <th className="text-center py-3 px-2 text-xs font-semibold text-gray-600 uppercase">Schedule Date</th>
                       <th className="text-center py-3 px-2 text-xs font-semibold text-gray-600 uppercase">Target Date</th>
-                      <th className="text-center py-3 px-2 text-xs font-semibold text-gray-600 uppercase">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -1230,29 +1229,6 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                             </span>
                           ) : (
                             <span className="text-xs text-gray-400">Not Set</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-2 text-center">
-                          {service.vendorAssigned ? (
-                            <button
-                              onClick={() => {
-                                setShowServicesModal(false);
-                                handleAssignVendor(selectedProperty, service);
-                              }}
-                              className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                            >
-                              Change
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setShowServicesModal(false);
-                                handleAssignVendor(selectedProperty, service);
-                              }}
-                              className="px-3 py-1 bg-orange-500 text-white text-xs font-medium rounded hover:bg-orange-600 transition-colors"
-                            >
-                              Assign
-                            </button>
                           )}
                         </td>
                       </tr>
