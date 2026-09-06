@@ -61,6 +61,10 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   const [showRecurrenceModal, setShowRecurrenceModal] = useState(false);
   const [editFrequency, setEditFrequency] = useState('monthly');
   const [editVisitCount, setEditVisitCount] = useState(12);
+  
+  // Vendor availability state for calendar
+  const [vendorAvailability, setVendorAvailability] = useState({ bookings: {}, maxDaily: 5 });
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
 
   function getNextMonday() {
     const today = new Date();
@@ -187,17 +191,26 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         setSelectedSlot(null);
       }
       
+      // Fetch vendor availability for calendar
+      if (selectedService.vendorId) {
+        fetchVendorAvailability(selectedService.vendorId);
+      }
+      
       // Generate dates for the selected service
       generateRecommendedDates(selectedService);
       generatePlannedVisits(selectedService);
     }
   }, [selectedService?.id]);
 
-  // Handle week navigation - regenerate recommended dates when week changes
+  // Handle week navigation - regenerate recommended dates and refetch availability when week changes
   useEffect(() => {
     if (selectedService && !showConfirmation && !confirmingSchedule) {
       // Regenerate recommended dates when navigating weeks
       generateRecommendedDates(selectedService);
+      // Refetch vendor availability for the new week
+      if (selectedService.vendorId) {
+        fetchVendorAvailability(selectedService.vendorId);
+      }
     }
   }, [currentWeekStart]);
 
@@ -223,72 +236,175 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             scheduleId: s.id, // Use the service schedule ID for loading visits
             name: s.service_name || s.serviceName,
             category: s.service_category || s.serviceCategory,
-            vendorName: s.vendor_name || s.vendorName,
+            vendorName: s.vendor_name || s.vendorName || 'Unassigned',
             vendorId: s.vendor_id || s.vendorId,
             frequency: s.frequency_type || s.frequency || 'Monthly',
             visits: s.total_visits || s.visits || 12,
             status: s.scheduling_status === 'completed' ? 'Scheduled' : (s.status === 'active' ? 'Scheduled' : 'Schedule'),
-            customVisits: s.custom_visits || s.customVisits
+            customVisits: s.custom_visits || s.customVisits,
+            startDate: s.start_date || s.startDate,
+            endDate: s.end_date || s.endDate
           }));
           setServices(realServices);
           if (realServices.length > 0 && !selectedService) {
             setSelectedService(realServices[0]);
+            // Fetch vendor availability for the first service
+            if (realServices[0].vendorId) {
+              fetchVendorAvailability(realServices[0].vendorId);
+            }
           }
         } else {
-          // Fall back to mock services if no real data
-          const mockServices = generateMockServices(propertyData);
-          setServices(mockServices);
-          if (mockServices.length > 0) {
-            setSelectedService(mockServices[0]);
-          }
+          // No services found - show empty state
+          setServices([]);
+          console.log('No services found for this property');
         }
       } else {
-        // Fall back to mock services
-        const mockServices = generateMockServices(propertyData);
-        setServices(mockServices);
-        if (mockServices.length > 0) {
-          setSelectedService(mockServices[0]);
-        }
+        // API error - show empty state
+        setServices([]);
+        console.error('Failed to fetch services');
       }
     } catch (error) {
       console.error('Error fetching property details:', error);
-      // Fall back to mock services on error
-      const mockServices = generateMockServices(propertyData);
-      setServices(mockServices);
-      if (mockServices.length > 0) {
-        setSelectedService(mockServices[0]);
-      }
+      setServices([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const generateMockServices = (prop) => {
-    return [
-      { id: 1, name: 'HVAC', vendorName: 'ABC HVAC', vendorId: 1, frequency: 'Monthly', visits: 12, status: 'Schedule' },
-      { id: 2, name: 'Plumbing', vendorName: 'XYZ Plumbing', vendorId: 2, frequency: 'Every 2 Months', visits: 6, status: 'Schedule' },
-      { id: 3, name: 'Lift AMC', vendorName: 'Elevate Services', vendorId: 3, frequency: 'Monthly', visits: 12, status: 'Schedule' },
-      { id: 4, name: 'Pest Control', vendorName: 'PestFree Experts', vendorId: 4, frequency: 'Half-Yearly', visits: 2, status: 'Schedule' },
-      { id: 5, name: 'Water Tank Cleaning', vendorName: 'Aqua Clean Services', vendorId: 5, frequency: 'Yearly', visits: 1, status: 'Schedule' },
-      { id: 6, name: 'Deep Cleaning', vendorName: 'CleanPro Services', vendorId: 6, frequency: 'Customer Requirement', visits: 3, customVisits: 3, status: 'Schedule' },
-      { id: 7, name: 'Emergency Repairs', vendorName: 'QuickFix Team', vendorId: 7, frequency: 'On Request', visits: 0, status: 'On Request' }
-    ];
+  // Fetch vendor availability for the calendar grid
+  const fetchVendorAvailability = async (vendorId) => {
+    if (!vendorId) return;
+    
+    setLoadingAvailability(true);
+    try {
+      const token = getAuthToken();
+      const month = currentWeekStart.getMonth() + 1;
+      const year = currentWeekStart.getFullYear();
+      
+      const response = await fetch(
+        `${API_BASE}/api/schedules/vendor/${vendorId}/availability?month=${month}&year=${year}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setVendorAvailability({
+            bookings: result.data.bookings || {},
+            maxDaily: result.data.maxDailyVisits || 5,
+            availability: result.data.availability || []
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching vendor availability:', error);
+    } finally {
+      setLoadingAvailability(false);
+    }
   };
 
-  const generateRecommendedDates = (service) => {
+  // No mock services - we use real data only
+  // If no services are found, the UI will show an empty state message
+
+  // Generate recommended dates using real vendor availability from backend
+  const generateRecommendedDates = async (service) => {
+    if (!service?.vendorId) {
+      // Fallback to mock data if no vendor
+      generateMockRecommendedDates(service);
+      return;
+    }
+
+    try {
+      const token = getAuthToken();
+      const startDate = new Date(currentWeekStart);
+      startDate.setDate(startDate.getDate() + 5); // Default to Saturday of current week
+      
+      const params = new URLSearchParams({
+        vendorId: service.vendorId,
+        frequency: service.frequency || 'monthly',
+        startDate: startDate.toISOString().split('T')[0],
+        totalVisits: 4, // Get recommendations for first 4 visits
+        zone: property?.zone || '',
+        searchWindow: 3
+      });
+
+      const response = await fetch(`${API_BASE}/api/schedules/recommended-dates?${params}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data?.recommendations?.length > 0) {
+          // Convert backend recommendations to frontend format
+          const dates = [];
+          
+          result.data.recommendations.slice(0, 4).forEach((rec, i) => {
+            const bestOption = rec.bestOption;
+            if (bestOption) {
+              // Parse date string to Date object
+              const [year, month, day] = bestOption.date.split('-').map(Number);
+              const dateObj = new Date(year, month - 1, day);
+              
+              // Map recommendation type to frontend type
+              let type = 'available';
+              if (bestOption.recommendation === 'highly_recommended' || bestOption.recommendation === 'recommended') {
+                type = 'recommended';
+              } else if (bestOption.recommendation === 'limited') {
+                type = 'limited';
+              }
+              
+              // Generate reason text from backend reasons
+              const reason = bestOption.reasons?.join(', ') || '';
+              
+              // Generate time based on availability (default times based on slot)
+              const defaultTimes = ['10:00 AM', '2:00 PM', '9:00 AM', '11:00 AM'];
+              
+              dates.push({
+                id: i + 1,
+                date: dateObj,
+                dateStr: formatDateFull(dateObj),
+                time: defaultTimes[i % defaultTimes.length],
+                type: type,
+                reason: reason,
+                vendor: service.vendorName,
+                zone: property?.zone || 'Zone A',
+                score: bestOption.score,
+                availableSlots: bestOption.availableSlots,
+                sameZoneJobs: bestOption.sameZoneJobs
+              });
+            }
+          });
+          
+          if (dates.length > 0) {
+            setRecommendedDates(dates);
+            return;
+          }
+        }
+      }
+      
+      // Fallback to mock data if API fails or returns no data
+      generateMockRecommendedDates(service);
+    } catch (error) {
+      console.error('Error fetching recommended dates:', error);
+      generateMockRecommendedDates(service);
+    }
+  };
+
+  // Fallback dates when vendor availability cannot be fetched
+  // This generates basic available dates based on the current week
+  const generateMockRecommendedDates = (service) => {
     const dates = [];
     const baseDate = new Date(currentWeekStart);
     
-    // Generate 4 recommended dates - types must match calendar slot status for consistency
-    // Times should match getTimeSlots() format: '10:00 AM', '2:00 PM', etc.
-    const recommendedDays = [
-      { day: 5, time: '10:00 AM', type: 'recommended', reason: 'Vendor already has Zone A jobs' },
-      { day: 3, time: '2:00 PM', type: 'recommended', reason: 'Optimal time slot' },
-      { day: 6, time: '9:00 AM', type: 'available', reason: '' },
-      { day: 0, time: '11:00 AM', type: 'limited', reason: '' }
+    // Generate dates for the current week (weekdays only)
+    const defaultSlots = [
+      { day: 1, time: '10:00 AM', type: 'available', reason: service?.vendorId ? '' : 'No vendor assigned' },
+      { day: 2, time: '2:00 PM', type: 'available', reason: '' },
+      { day: 3, time: '10:00 AM', type: 'available', reason: '' },
+      { day: 4, time: '11:00 AM', type: 'available', reason: '' }
     ];
     
-    recommendedDays.forEach((rec, i) => {
+    defaultSlots.forEach((rec, i) => {
       const date = new Date(baseDate);
       date.setDate(date.getDate() + rec.day);
       dates.push({
@@ -298,7 +414,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         time: rec.time,
         type: rec.type,
         reason: rec.reason,
-        vendor: service.vendorName,
+        vendor: service?.vendorName || 'Unassigned',
         zone: property?.zone || 'Zone A'
       });
     });
@@ -434,38 +550,61 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   };
 
   const getSlotStatus = (day, timeIndex) => {
-    const dayOfWeek = day.getDay();
-    const dayNum = day.getDate();
     const timeSlots = getTimeSlots();
     const currentSlotTime = timeSlots[timeIndex];
     
-    // Check if this slot matches any recommended date
-    // This ensures calendar colors match the recommended dates panel
+    // Format date as YYYY-MM-DD for lookup
+    const year = day.getFullYear();
+    const month = String(day.getMonth() + 1).padStart(2, '0');
+    const dayNum = String(day.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${dayNum}`;
+    
+    // Check if this slot matches any recommended date first
     const matchesRecommendedDate = recommendedDates.some(rec => {
       if (!rec.date) return false;
-      const recDayNum = rec.date.getDate();
-      // Normalize time for comparison (handle '02:00 PM' vs '2:00 PM')
+      const recYear = rec.date.getFullYear();
+      const recMonth = String(rec.date.getMonth() + 1).padStart(2, '0');
+      const recDay = String(rec.date.getDate()).padStart(2, '0');
+      const recDateStr = `${recYear}-${recMonth}-${recDay}`;
+      
+      // Normalize time for comparison
       const normalizeTime = (t) => {
         if (!t) return '';
         return t.replace(/^0/, '').replace(':00 ', ' ').replace(':30 ', ':30 ');
       };
       const recTimeNorm = normalizeTime(rec.time);
       const slotTimeNorm = normalizeTime(currentSlotTime);
-      return dayNum === recDayNum && recTimeNorm === slotTimeNorm && rec.type === 'recommended';
+      
+      return recDateStr === dateStr && recTimeNorm === slotTimeNorm && rec.type === 'recommended';
     });
     
     if (matchesRecommendedDate) return 'recommended';
     
-    // Simulate different slot statuses based on day/time
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
-      // Weekends - mornings available, afternoons limited
-      if (timeIndex < 4) return 'available';
-      return 'limited';
-    }
+    // Use real vendor availability data
+    const bookingCount = vendorAvailability.bookings[dateStr] || 0;
+    const maxDaily = vendorAvailability.maxDaily || 5;
+    const availableSlots = maxDaily - bookingCount;
     
-    // Weekdays
-    if (timeIndex === 5 || timeIndex === 7) return 'booked'; // 1 PM and 3 PM booked
-    if (timeIndex > 6) return 'limited'; // After 2 PM limited
+    // If vendor is fully booked for the day
+    if (availableSlots <= 0) return 'booked';
+    
+    // If vendor has limited availability (less than 2 slots remaining)
+    if (availableSlots <= 2) return 'limited';
+    
+    // Check if this time matches any recommended date (but not the top one)
+    const matchesAvailableRecommended = recommendedDates.some(rec => {
+      if (!rec.date) return false;
+      const recYear = rec.date.getFullYear();
+      const recMonth = String(rec.date.getMonth() + 1).padStart(2, '0');
+      const recDay = String(rec.date.getDate()).padStart(2, '0');
+      const recDateStr = `${recYear}-${recMonth}-${recDay}`;
+      
+      const normalizeTime = (t) => t?.replace(/^0/, '').replace(':00 ', ' ').replace(':30 ', ':30 ') || '';
+      return recDateStr === dateStr && normalizeTime(rec.time) === normalizeTime(currentSlotTime);
+    });
+    
+    if (matchesAvailableRecommended) return 'recommended';
+    
     return 'available';
   };
 
@@ -938,34 +1077,43 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               <span className="text-sm text-gray-500">{services.length}</span>
             </div>
             <div className="space-y-2">
-              {services.map(service => (
-                <button
-                  key={service.id}
-                  onClick={() => setSelectedService(service)}
-                  className={`w-full p-3 rounded-lg border text-left transition-all ${
-                    selectedService?.id === service.id 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full ${
-                      service.status === 'Scheduled' ? 'bg-green-500' : 'bg-gray-300'
-                    }`} />
-                    <span className="font-medium text-sm">{service.name}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">{service.vendorName}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs text-gray-400">{service.frequency}</span>
-                    <span className="text-xs text-gray-400">{service.visits}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded ${
-                      service.status === 'Scheduled' 
-                        ? 'bg-green-100 text-green-700' 
-                        : 'bg-blue-100 text-blue-700'
-                    }`}>{service.status}</span>
-                  </div>
-                </button>
-              ))}
+              {services.length === 0 ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                  <p className="text-sm text-gray-500 font-medium">No Services Found</p>
+                  <p className="text-xs text-gray-400 mt-1">This property has no services to schedule yet.</p>
+                  <p className="text-xs text-gray-400">Please assign services from the Property Management section.</p>
+                </div>
+              ) : (
+                services.map(service => (
+                  <button
+                    key={service.id}
+                    onClick={() => setSelectedService(service)}
+                    className={`w-full p-3 rounded-lg border text-left transition-all ${
+                      selectedService?.id === service.id 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${
+                        service.status === 'Scheduled' ? 'bg-green-500' : 'bg-gray-300'
+                      }`} />
+                      <span className="font-medium text-sm">{service.name}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">{service.vendorName}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-xs text-gray-400">{service.frequency}</span>
+                      <span className="text-xs text-gray-400">{service.visits} visits</span>
+                      <span className={`text-xs px-2 py-0.5 rounded ${
+                        service.status === 'Scheduled' 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-blue-100 text-blue-700'
+                      }`}>{service.status}</span>
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
           </div>
         </div>
