@@ -372,9 +372,25 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
           setPlannedVisits(savedVisits);
           return;
         }
-        // If mismatch, still show saved visits but log warning
-        console.warn(`Saved visits (${savedVisits.length}) don't match expected (${expectedVisits}). Using saved visits.`);
-        setPlannedVisits(savedVisits);
+        // If mismatch, regenerate visits with correct count
+        console.warn(`Saved visits (${savedVisits.length}) don't match expected (${expectedVisits}). Regenerating...`);
+        // Use first saved visit date as the starting point, or generate fresh
+        const startDate = savedVisits[0]?.date || selectedSlot?.date || (() => {
+          const defaultDate = new Date(currentWeekStart);
+          defaultDate.setDate(defaultDate.getDate() + 5);
+          return defaultDate;
+        })();
+        const startTime = savedVisits[0]?.time || selectedSlot?.time || '10:00 AM';
+        
+        // Generate correct number of visits
+        const schedules = generateScheduleDates(startDate, service.frequency, expectedVisits);
+        const formattedSchedules = formatSchedulesForDisplay(schedules);
+        const visitsWithTime = formattedSchedules.map((schedule, index) => ({
+          ...schedule,
+          time: startTime,
+          status: index === 0 ? 'Scheduled' : 'Target'
+        }));
+        setPlannedVisits(visitsWithTime);
         return;
       }
     }
