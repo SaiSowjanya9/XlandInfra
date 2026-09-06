@@ -493,15 +493,22 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
             
             {/* Clear Filters */}
             <button
+              onClick={() => fetchSchedules()}
+              className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors border border-gray-200"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </button>
+            <button
               onClick={() => {
                 setSearchTerm('');
                 setStatusFilter('all');
                 setServiceFilter('all');
                 setZoneFilter('all');
               }}
-              className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
+              className="flex items-center gap-2 px-3 py-2.5 text-sm text-orange-600 hover:bg-orange-50 rounded-xl transition-colors"
             >
-              <RefreshCw className="w-4 h-4" />
+              <X className="w-4 h-4" />
               <span>Clear</span>
             </button>
           </div>
