@@ -113,33 +113,6 @@ const CardLogos = () => (
   </div>
 );
 
-// UPI App logos component - matching official logos
-const UPIAppLogos = () => (
-  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-    {/* Google Pay - Colorful G + Pay */}
-    <div className="flex items-center gap-0.5 px-1.5 py-1 bg-white rounded border border-gray-200">
-      <svg width="14" height="14" viewBox="0 0 24 24">
-        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-      </svg>
-      <span className="text-[10px] font-medium text-gray-600">Pay</span>
-    </div>
-    {/* PhonePe - Purple circle with "पे" */}
-    <div className="w-7 h-7 bg-[#5f259f] rounded-full flex items-center justify-center">
-      <span className="text-white text-sm font-bold" style={{ fontFamily: 'Arial, sans-serif' }}>पे</span>
-    </div>
-    {/* Paytm - Dark blue circle outline with paytm text */}
-    <div className="w-7 h-7 bg-white rounded-full flex items-center justify-center border-2 border-[#00325b]">
-      <span className="text-[7px] font-bold"><span className="text-[#00325b]">pay</span><span className="text-[#00baf2]">tm</span></span>
-    </div>
-    <div className="px-2 py-1 bg-[#ed752e] rounded">
-      <span className="text-[10px] font-bold text-white">BHIM</span>
-    </div>
-  </div>
-);
-
 // Your Collection Badge - green badge matching Image 1
 const YourCollectionBadge = () => (
   <span className="px-2 py-0.5 bg-green-500 text-white text-[9px] font-semibold rounded">
@@ -190,8 +163,7 @@ const FeeIndicator = () => (
 
 // Payment method labels
 const PAYMENT_METHOD_LABELS = {
-  razorpay: 'Card / Net Banking',
-  upi: 'UPI',
+  razorpay: 'UPI / Cards / Net Banking',
   bank_transfer: 'Bank Transfer',
   cash: 'Cash',
   check: 'Cheque'
@@ -326,10 +298,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     accountType: 'Current Account'
   };
 
-  // UPI details
-  const upiDetails = {
-    upiId: 'xlandinfra@upi'
-  };
+
 
   // Fetch invoices with pending balance
   const fetchInvoices = useCallback(async () => {
@@ -531,7 +500,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     setError(null);
     
     const generatedReference = `XLAND${selectedInvoice.invoiceId?.replace(/[^0-9]/g, '') || ''}${new Date().getFullYear()}`;
-    const finalReference = (selectedMethod === 'bank_transfer' || selectedMethod === 'upi') 
+    const finalReference = selectedMethod === 'bank_transfer' 
       ? generatedReference 
       : paymentDetails.receiptNumber || paymentDetails.transactionReference || paymentDetails.chequeNumber;
     
@@ -630,7 +599,6 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     const getPaymentMethodDescription = () => {
       switch (selectedMethod) {
         case 'bank_transfer': return 'Bank transfer information';
-        case 'upi': return 'UPI payment information';
         case 'cash': return 'Cash payment information';
         case 'check': return 'Cheque payment information';
         default: return 'Payment information';
@@ -894,18 +862,6 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                       </div>
                     </>
                   )}
-                  {selectedMethod === 'upi' && (
-                    <>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Payment Type</span>
-                        <span className="text-sm font-medium text-gray-900">UPI Payment</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Reference Number</span>
-                        <span className="text-sm font-medium text-gray-900 font-mono">{generatedReference}</span>
-                      </div>
-                    </>
-                  )}
                   {selectedMethod === 'cash' && (
                     <>
                       <div className="flex justify-between">
@@ -1145,93 +1101,6 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                       <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-amber-600 rounded-full flex-shrink-0"></span>Upload clear payment proof</li>
                       <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-amber-600 rounded-full flex-shrink-0"></span>Payments are verified within 24 hours</li>
                       <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-amber-600 rounded-full flex-shrink-0"></span>You will receive confirmation once verified</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* ===== UPI PAYMENT ===== */}
-          {selectedMethod === 'upi' && (
-            <>
-              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">UPI Payment Details</h3>
-                <p className="text-sm text-gray-500 mb-6">Pay using any UPI app</p>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="border border-gray-200 rounded-xl p-5">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                        <Smartphone className="w-6 h-6 text-green-600" />
-                      </div>
-                      <h4 className="font-semibold text-gray-900">How it works?</h4>
-                    </div>
-                    <ol className="space-y-3 text-sm text-gray-600">
-                      <li className="flex gap-2"><span className="font-semibold text-gray-900">1.</span>Open any UPI app (GPay, PhonePe, Paytm, BHIM)</li>
-                      <li className="flex gap-2"><span className="font-semibold text-gray-900">2.</span>Enter the UPI ID or scan QR code</li>
-                      <li className="flex gap-2"><span className="font-semibold text-gray-900">3.</span>Enter the exact amount and add reference in remarks</li>
-                      <li className="flex gap-2"><span className="font-semibold text-gray-900">4.</span>Upload payment screenshot for verification</li>
-                    </ol>
-                    <div className="mt-4 flex items-center gap-2 text-green-600">
-                      <Info className="w-4 h-4" />
-                      <span className="text-sm">No additional charges for UPI Payment</span>
-                    </div>
-                    <UPIAppLogos />
-                  </div>
-                  <div className="border border-green-200 rounded-xl p-5 bg-green-50/30">
-                    <h4 className="font-semibold text-green-800 mb-4">Our UPI Details</h4>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-green-200">
-                        <Smartphone className="w-6 h-6 text-green-600" />
-                        <div className="flex-1">
-                          <p className="text-xs text-gray-500">UPI ID</p>
-                          <p className="font-mono font-bold text-lg text-gray-900">{upiDetails.upiId}</p>
-                        </div>
-                        <button onClick={() => copyToClipboard(upiDetails.upiId, 'upi')} className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700">
-                          {copied === 'upi' ? 'Copied!' : 'Copy'}
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-green-200">
-                        <FileText className="w-6 h-6 text-green-600" />
-                        <div className="flex-1">
-                          <p className="text-xs text-gray-500">Reference Number (use in remarks)</p>
-                          <p className="font-mono font-bold text-green-600">{generatedReference}</p>
-                        </div>
-                        <button onClick={() => copyToClipboard(generatedReference, 'ref')} className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-medium hover:bg-green-200">
-                          {copied === 'ref' ? 'Copied!' : 'Copy'}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5" />
-                        <p className="text-xs text-amber-700">Please use the Reference Number in remarks while making the UPI payment.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">Upload Payment Proof</h3>
-                <p className="text-sm text-gray-500 mb-6">Please upload the screenshot of the UPI payment</p>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-green-400 transition-colors">
-                    <input type="file" onChange={handleFileChange} className="hidden" id="proof-upload" accept="image/*,.pdf" />
-                    <label htmlFor="proof-upload" className="cursor-pointer">
-                      <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                      <p className="text-gray-600 mb-2">Drag & drop your file here or</p>
-                      <span className="inline-block px-4 py-2 border border-green-600 text-green-600 rounded-lg font-medium hover:bg-green-50">Choose File</span>
-                      <p className="text-xs text-gray-400 mt-3">Supports: JPG, PNG, PDF (Max size: 5MB)</p>
-                      {paymentProof && <p className="mt-3 text-sm text-green-600 font-medium">Selected: {paymentProof.name}</p>}
-                    </label>
-                  </div>
-                  <div className="bg-green-50 rounded-xl p-5 border border-green-200">
-                    <h4 className="font-semibold text-green-800 mb-3">Important Notes</h4>
-                    <ul className="space-y-2 text-sm text-green-700">
-                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-green-600 rounded-full flex-shrink-0"></span>Make sure to transfer the exact amount</li>
-                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-green-600 rounded-full flex-shrink-0"></span>Use the reference number in remarks</li>
-                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-green-600 rounded-full flex-shrink-0"></span>Upload clear payment screenshot</li>
-                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-green-600 rounded-full flex-shrink-0"></span>Payments are verified within 24 hours</li>
                     </ul>
                   </div>
                 </div>
@@ -1677,42 +1546,11 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-gray-900 text-sm">Debit / Card Payments & Net Banking</h4>
-                  <p className="text-xs text-gray-500 mt-0.5">Pay securely using your debit card, credit card or net banking.</p>
+                  <h4 className="font-semibold text-gray-900 text-sm">UPI / Cards / Net Banking (Online)</h4>
+                  <p className="text-xs text-gray-500 mt-0.5">Pay securely via UPI, debit card, credit card or net banking.</p>
                   <CardLogos />
                 </div>
                 <FeeIndicator />
-              </label>
-
-              {/* UPI */}
-              <label className={`flex items-start gap-3 p-4 cursor-pointer transition-colors ${selectedMethod === 'upi' ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
-                <input 
-                  type="radio" 
-                  name="paymentMethod" 
-                  value="upi" 
-                  checked={selectedMethod === 'upi'} 
-                  onChange={(e) => setSelectedMethod(e.target.value)} 
-                  className="mt-2 w-4 h-4 text-blue-600"
-                />
-                {/* Official UPI Logo Icon */}
-                <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center border-2 border-gray-200 flex-shrink-0">
-                  <svg viewBox="0 0 60 45" className="w-10 h-8" fill="none">
-                    {/* UPI Text */}
-                    <text x="2" y="22" fill="#6b7280" fontSize="18" fontWeight="bold" fontFamily="Arial, sans-serif" letterSpacing="-1">UPI</text>
-                    {/* Orange triangle - outline only */}
-                    <polygon points="38,6 44,6 38,16" stroke="#f97316" strokeWidth="1.5" fill="none"/>
-                    {/* Green triangle - outline only */}
-                    <polygon points="38,16 44,16 44,26" stroke="#22c55e" strokeWidth="1.5" fill="none"/>
-                    {/* UNIFIED PAYMENTS text */}
-                    <text x="2" y="35" fill="#9ca3af" fontSize="5" fontFamily="Arial, sans-serif" letterSpacing="0.3">UNIFIED PAYMENTS</text>
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-gray-900 text-sm">UPI (QR / UPI ID)</h4>
-                  <p className="text-xs text-gray-500 mt-0.5">Scan QR code or pay using any UPI app.</p>
-                  <UPIAppLogos />
-                </div>
-                <NoFeesIndicator />
               </label>
 
               {/* Bank Transfer */}

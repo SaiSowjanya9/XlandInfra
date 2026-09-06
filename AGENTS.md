@@ -38,3 +38,25 @@ For reusable task instructions for major modules, see `.devin/skills/`:
 
 - `billing-payments.md`
 - `scheduling-module.md`
+
+## Razorpay Integration
+
+The project uses **Razorpay Payment Links** (hosted checkout) for online payments. UPI, cards, net banking, and wallets are all handled by Razorpay's hosted page.
+
+### Environment Variables (Backend)
+```
+RAZORPAY_KEY_ID=rzp_test_xxx (test) or rzp_live_xxx (live)
+RAZORPAY_KEY_SECRET=xxx
+RAZORPAY_WEBHOOK_SECRET=xxx
+```
+
+### Webhook Configuration
+- **URL:** `https://xlandinfra.com/api/razorpay/webhook`
+- **Events to enable:** `payment_link.paid`, `payment_link.partially_paid`, `payment_link.expired`, `payment.captured`, `payment.failed`, `refund.processed`
+
+### Database Migrations
+Run schema files in order:
+1. `schema_v17_payments.sql` - Base payments tables
+2. `schema_v18_razorpay.sql` - Razorpay webhook tables
+3. `schema_v21_payment_security.sql` - Security logs
+4. `schema_v22_razorpay_fix.sql` - **Required fix for webhook tracking**
