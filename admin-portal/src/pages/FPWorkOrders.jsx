@@ -1466,11 +1466,20 @@ const FPWorkOrders = ({ user }) => {
                 <option value="cancelled">Cancelled</option>
               </select>
               <button
-                onClick={handleClear}
-                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                onClick={() => fetchWorkOrders()}
+                className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm text-gray-700"
                 title="Refresh"
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+              <button
+                onClick={handleClear}
+                className="flex items-center gap-1.5 px-3 py-2 text-orange-600 hover:bg-orange-50 rounded-lg text-sm"
+                title="Clear Filters"
+              >
+                <X className="w-4 h-4" />
+                Clear
               </button>
               <button
                 onClick={exportAllWorkOrders}

@@ -869,6 +869,16 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
             ))}
           </select>
 
+          {/* Refresh Button */}
+          <button 
+            onClick={() => fetchPendingProperties(true)}
+            disabled={refreshing}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border border-gray-300 flex-shrink-0 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+
           {/* Export Button */}
           <button 
             onClick={handleExport}
@@ -878,12 +888,12 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
             <span className="hidden sm:inline">Export</span>
           </button>
 
-          {/* Clear Button */}
+          {/* Clear Filters Button */}
           <button
             onClick={clearFilters}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-lg transition-colors flex-shrink-0"
           >
-            <RefreshCw className="w-4 h-4" />
+            <X className="w-4 h-4" />
             <span className="hidden sm:inline">Clear</span>
           </button>
         </div>
