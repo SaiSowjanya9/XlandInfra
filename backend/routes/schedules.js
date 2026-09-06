@@ -600,14 +600,33 @@ router.post('/:id/pause', authenticate, canMakeSchedule, async (req, res) => {
   }
 });
 
-// Cancel schedule (Admin only)
-router.post('/:id/cancel', authenticate, adminOnly, async (req, res) => {
+// Cancel schedule (Admin, FP, Manager)
+router.post('/:id/cancel', authenticate, canMakeSchedule, async (req, res) => {
   try {
     const { id } = req.params;
+    const { reason } = req.body;
 
+    // Get FP scope for non-admin users
+    const userFpId = req.user?.franchisePartnerId || req.user?.fpId;
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin' || req.user?.role === 'operations_manager';
+
+    // Verify ownership for non-admin users
+    if (!isAdmin && userFpId) {
+      const [schedule] = await pool.execute(
+        `SELECT s.id FROM schedules s 
+         LEFT JOIN onboarded_properties op ON s.property_id = op.id 
+         WHERE s.id = ? AND op.franchise_partner_id = ?`,
+        [id, userFpId]
+      );
+      if (schedule.length === 0) {
+        return res.status(403).json({ success: false, message: 'Access denied: Schedule does not belong to your account' });
+      }
+    }
+
+    // Update status to cancelled (reason stored in description if needed)
     await pool.execute(
-      `UPDATE schedules SET status = 'cancelled' WHERE id = ?`,
-      [id]
+      `UPDATE schedules SET status = 'cancelled', description = CONCAT(COALESCE(description, ''), ' | Cancelled: ', ?) WHERE id = ?`,
+      [reason || 'No reason provided', id]
     );
 
     res.json({
