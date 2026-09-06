@@ -8,7 +8,6 @@ import {
   CheckCircle,
   XCircle,
   RefreshCw,
-  Plus,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -679,23 +678,6 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           {/* Notification Bell */}
           <button className="relative p-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
             <Bell className="w-5 h-5 text-gray-500" />
-          </button>
-          
-          {/* New Schedule Button */}
-          <button
-            onClick={() => {
-              const basePath = portalType === 'franchise' ? '/fp' : 
-                              portalType === 'manager' ? '/manager' : 
-                              portalType === 'coordinator' ? '/coordinator' : 
-                              portalType === 'supervisor' ? '/supervisor' : 
-                              '/employee';
-              navigate(`${basePath}/schedules/calendar`);
-            }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="text-sm font-medium">New Schedule</span>
-            <ChevronDown className="w-4 h-4 ml-1" />
           </button>
         </div>
       </div>
