@@ -160,10 +160,9 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       const currentFrequency = selectedService.frequency || 'monthly';
       setEditFrequency(currentFrequency);
       
-      // Use the actual number of planned visits if available, otherwise use service visits
-      const currentVisitCount = plannedVisits.length > 0 
-        ? plannedVisits.length 
-        : (selectedService.visits || getFrequencyConfig(currentFrequency)?.visitsPerYear || 12);
+      // Use service.visits first (the configured count), then frequency default, then plannedVisits length
+      const frequencyConfig = getFrequencyConfig(currentFrequency);
+      const currentVisitCount = selectedService.visits || frequencyConfig?.visitsPerYear || plannedVisits.length || 12;
       setEditVisitCount(currentVisitCount);
     }
     setShowRecurrenceModal(true);
@@ -361,10 +360,20 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   };
 
   const generatePlannedVisits = async (service) => {
+    const frequencyConfig = getFrequencyConfig(service.frequency);
+    const expectedVisits = service.visits || frequencyConfig.visitsPerYear || 12;
+    
     // First, try to load saved visits if service is already scheduled
     if (service?.status === 'Scheduled' || service?.status === 'active' || service?.scheduleId) {
       const savedVisits = await loadSavedVisits(service);
       if (savedVisits && savedVisits.length > 0) {
+        // Check if saved visits match expected count
+        if (savedVisits.length === expectedVisits) {
+          setPlannedVisits(savedVisits);
+          return;
+        }
+        // If mismatch, still show saved visits but log warning
+        console.warn(`Saved visits (${savedVisits.length}) don't match expected (${expectedVisits}). Using saved visits.`);
         setPlannedVisits(savedVisits);
         return;
       }
@@ -376,8 +385,6 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       defaultDate.setDate(defaultDate.getDate() + 5); // Default to Saturday
       return defaultDate;
     })();
-    
-    const frequencyConfig = getFrequencyConfig(service.frequency);
     
     // Check if this is a manual/customer requirement frequency
     if (!frequencyConfig.autoGenerate) {
@@ -399,11 +406,11 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       return;
     }
     
-    // Generate automatic schedule based on frequency
+    // Generate automatic schedule based on frequency - use expectedVisits
     const schedules = generateScheduleDates(
       firstServiceDate,
       service.frequency,
-      service.visits || frequencyConfig.visitsPerYear
+      expectedVisits
     );
     
     // Format for display
@@ -508,16 +515,19 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     const rec = recommendedDates[0];
     setSelectedSlot({ date: rec.date, time: rec.time, status: 'recommended' });
     
-    // Update all planned visits with the same day-of-week pattern
-    const updatedVisits = plannedVisits.map((visit, index) => {
-      if (index === 0) {
-        return { ...visit, date: rec.date, dateStr: formatDateFull(rec.date), time: rec.time };
-      }
-      // For subsequent visits, maintain the same day of week
-      const newDate = new Date(rec.date);
-      newDate.setMonth(newDate.getMonth() + index);
-      return { ...visit, date: newDate, dateStr: formatDateFull(newDate), time: rec.time };
-    });
+    // Get the expected number of visits from service config
+    const frequencyConfig = getFrequencyConfig(selectedService.frequency);
+    const expectedVisits = selectedService.visits || frequencyConfig?.visitsPerYear || 12;
+    
+    // Regenerate all visits with correct count using the recommended date
+    const schedules = generateScheduleDates(rec.date, selectedService.frequency, expectedVisits);
+    const formattedSchedules = formatSchedulesForDisplay(schedules);
+    
+    const updatedVisits = formattedSchedules.map((schedule, index) => ({
+      ...schedule,
+      time: rec.time,
+      status: index === 0 ? 'Scheduled' : 'Target'
+    }));
     
     setPlannedVisits(updatedVisits);
     handlePrepareConfirmation();
