@@ -267,7 +267,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     return [
       { id: 1, name: 'HVAC', vendorName: 'ABC HVAC', vendorId: 1, frequency: 'Monthly', visits: 12, status: 'Schedule' },
       { id: 2, name: 'Plumbing', vendorName: 'XYZ Plumbing', vendorId: 2, frequency: 'Every 2 Months', visits: 6, status: 'Schedule' },
-      { id: 3, name: 'Lift AMC', vendorName: 'Elevate Services', vendorId: 3, frequency: 'Quarterly', visits: 4, status: 'Schedule' },
+      { id: 3, name: 'Lift AMC', vendorName: 'Elevate Services', vendorId: 3, frequency: 'Monthly', visits: 12, status: 'Schedule' },
       { id: 4, name: 'Pest Control', vendorName: 'PestFree Experts', vendorId: 4, frequency: 'Half-Yearly', visits: 2, status: 'Schedule' },
       { id: 5, name: 'Water Tank Cleaning', vendorName: 'Aqua Clean Services', vendorId: 5, frequency: 'Yearly', visits: 1, status: 'Schedule' },
       { id: 6, name: 'Deep Cleaning', vendorName: 'CleanPro Services', vendorId: 6, frequency: 'Customer Requirement', visits: 3, customVisits: 3, status: 'Schedule' },
@@ -361,36 +361,13 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
 
   const generatePlannedVisits = async (service) => {
     const frequencyConfig = getFrequencyConfig(service.frequency);
-    const expectedVisits = service.visits || frequencyConfig.visitsPerYear || 12;
+    const expectedVisits = service.visits || frequencyConfig?.visitsPerYear || 12;
     
     // First, try to load saved visits if service is already scheduled
     if (service?.status === 'Scheduled' || service?.status === 'active' || service?.scheduleId) {
       const savedVisits = await loadSavedVisits(service);
       if (savedVisits && savedVisits.length > 0) {
-        // Check if saved visits match expected count
-        if (savedVisits.length === expectedVisits) {
-          setPlannedVisits(savedVisits);
-          return;
-        }
-        // If mismatch, regenerate visits with correct count
-        console.warn(`Saved visits (${savedVisits.length}) don't match expected (${expectedVisits}). Regenerating...`);
-        // Use first saved visit date as the starting point, or generate fresh
-        const startDate = savedVisits[0]?.date || selectedSlot?.date || (() => {
-          const defaultDate = new Date(currentWeekStart);
-          defaultDate.setDate(defaultDate.getDate() + 5);
-          return defaultDate;
-        })();
-        const startTime = savedVisits[0]?.time || selectedSlot?.time || '10:00 AM';
-        
-        // Generate correct number of visits
-        const schedules = generateScheduleDates(startDate, service.frequency, expectedVisits);
-        const formattedSchedules = formatSchedulesForDisplay(schedules);
-        const visitsWithTime = formattedSchedules.map((schedule, index) => ({
-          ...schedule,
-          time: startTime,
-          status: index === 0 ? 'Scheduled' : 'Target'
-        }));
-        setPlannedVisits(visitsWithTime);
+        setPlannedVisits(savedVisits);
         return;
       }
     }
@@ -403,7 +380,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     })();
     
     // Check if this is a manual/customer requirement frequency
-    if (!frequencyConfig.autoGenerate) {
+    if (!frequencyConfig?.autoGenerate) {
       // For customer requirement / on request - create empty visits for manual selection
       const manualVisits = [];
       const numVisits = service.customVisits || service.visits || 0;
