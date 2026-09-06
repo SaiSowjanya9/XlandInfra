@@ -309,6 +309,24 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
 
     const [properties] = await pool.execute(query, params);
 
+    // Get all property IDs to fetch their service schedules
+    const propertyIds = properties.map(p => p.id);
+    
+    // Fetch service schedules with vendor assignments and dates for all properties
+    let serviceSchedules = [];
+    if (propertyIds.length > 0) {
+      const [schedules] = await pool.execute(
+        `SELECT pss.property_id, pss.service_name, pss.start_date, pss.end_date, 
+                pss.vendor_id, pss.status as schedule_status,
+                ov.company_name as vendor_name, ov.owner_name as vendor_owner
+         FROM property_service_schedules pss
+         LEFT JOIN onboarded_vendors ov ON pss.vendor_id = ov.id
+         WHERE pss.property_id IN (${propertyIds.map(() => '?').join(',')})`,
+        propertyIds
+      );
+      serviceSchedules = schedules;
+    }
+
     // Parse service rows and calculate service counts
     const processedProperties = properties.map(p => {
       let services = [];
@@ -323,6 +341,9 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
           console.warn('Error parsing service rows:', e);
         }
       }
+      
+      // Get service schedules for this property
+      const propertySchedules = serviceSchedules.filter(ss => ss.property_id === p.id);
       
       const assignedVendors = p.assignedVendors || 0;
       const pendingServices = Math.max(0, totalServices - assignedVendors);
@@ -348,14 +369,23 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
         paymentStatus: p.paymentStatus === 'paid' ? 'Paid' : 'Partial',
         addedOn: p.addedOn,
         isNew: true, // Mark as new for UI badge
-        services: services.map(s => ({
-          name: s.service || s.name || s.serviceType,
-          frequency: s.frequencyType || 'Monthly',
-          frequencyCount: s.frequencyCount || 1,
-          visits: s.frequencyCount || 1,
-          vendorAssigned: false,
-          vendorName: null
-        }))
+        services: services.map(s => {
+          const serviceName = s.service || s.name || s.serviceType;
+          // Find matching service schedule for dates and vendor
+          const schedule = propertySchedules.find(ps => 
+            ps.service_name?.toLowerCase() === serviceName?.toLowerCase()
+          );
+          return {
+            name: serviceName,
+            frequency: s.frequencyType || 'Monthly',
+            frequencyCount: s.frequencyCount || 1,
+            visits: s.frequencyCount || 1,
+            vendorAssigned: !!schedule?.vendor_id,
+            vendorName: schedule?.vendor_name || schedule?.vendor_owner || null,
+            scheduleDate: schedule?.start_date || null,
+            targetDate: schedule?.end_date || null
+          };
+        })
       };
     });
 

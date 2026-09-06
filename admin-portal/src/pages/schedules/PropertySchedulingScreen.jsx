@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, Building2, MapPin, Package, Calendar, CalendarDays, Clock,
@@ -173,17 +173,34 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     fetchPropertyDetails();
   }, [propertyId]);
 
+  // Track the previous service ID to detect service changes
+  const prevServiceIdRef = useRef(null);
+
+  // Handle service switching - reset state when service changes
   useEffect(() => {
-    // Don't regenerate if confirmation modal is open or if confirming
-    if (selectedService && !showConfirmation && !confirmingSchedule) {
-      generateRecommendedDates(selectedService);
-      // Only generate/load visits if we don't already have edited visits
-      const hasEditedVisits = plannedVisits.some(v => v.isEdited);
-      if (!hasEditedVisits) {
-        generatePlannedVisits(selectedService);
+    if (selectedService && prevServiceIdRef.current !== selectedService.id) {
+      const isInitialLoad = prevServiceIdRef.current === null;
+      prevServiceIdRef.current = selectedService.id;
+      
+      if (!isInitialLoad) {
+        // Service changed - reset state for new service
+        setPlannedVisits([]);
+        setSelectedSlot(null);
       }
+      
+      // Generate dates for the selected service
+      generateRecommendedDates(selectedService);
+      generatePlannedVisits(selectedService);
     }
-  }, [selectedService, currentWeekStart, selectedSlot, showConfirmation, confirmingSchedule]);
+  }, [selectedService?.id]);
+
+  // Handle week navigation - regenerate recommended dates when week changes
+  useEffect(() => {
+    if (selectedService && !showConfirmation && !confirmingSchedule) {
+      // Regenerate recommended dates when navigating weeks
+      generateRecommendedDates(selectedService);
+    }
+  }, [currentWeekStart]);
 
   const fetchPropertyDetails = async () => {
     setLoading(true);
@@ -263,11 +280,12 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     const dates = [];
     const baseDate = new Date(currentWeekStart);
     
-    // Generate 4 recommended dates
+    // Generate 4 recommended dates - types must match calendar slot status for consistency
+    // Times should match getTimeSlots() format: '10:00 AM', '2:00 PM', etc.
     const recommendedDays = [
       { day: 5, time: '10:00 AM', type: 'recommended', reason: 'Vendor already has Zone A jobs' },
-      { day: 3, time: '02:00 PM', type: 'available', reason: '' },
-      { day: 6, time: '09:30 AM', type: 'available', reason: '' },
+      { day: 3, time: '2:00 PM', type: 'recommended', reason: 'Optimal time slot' },
+      { day: 6, time: '9:00 AM', type: 'available', reason: '' },
       { day: 0, time: '11:00 AM', type: 'limited', reason: '' }
     ];
     
@@ -418,16 +436,36 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   const getSlotStatus = (day, timeIndex) => {
     const dayOfWeek = day.getDay();
     const dayNum = day.getDate();
+    const timeSlots = getTimeSlots();
+    const currentSlotTime = timeSlots[timeIndex];
     
-    // Simulate different slot statuses
+    // Check if this slot matches any recommended date
+    // This ensures calendar colors match the recommended dates panel
+    const matchesRecommendedDate = recommendedDates.some(rec => {
+      if (!rec.date) return false;
+      const recDayNum = rec.date.getDate();
+      // Normalize time for comparison (handle '02:00 PM' vs '2:00 PM')
+      const normalizeTime = (t) => {
+        if (!t) return '';
+        return t.replace(/^0/, '').replace(':00 ', ' ').replace(':30 ', ':30 ');
+      };
+      const recTimeNorm = normalizeTime(rec.time);
+      const slotTimeNorm = normalizeTime(currentSlotTime);
+      return dayNum === recDayNum && recTimeNorm === slotTimeNorm && rec.type === 'recommended';
+    });
+    
+    if (matchesRecommendedDate) return 'recommended';
+    
+    // Simulate different slot statuses based on day/time
     if (dayOfWeek === 0 || dayOfWeek === 6) {
+      // Weekends - mornings available, afternoons limited
       if (timeIndex < 4) return 'available';
       return 'limited';
     }
-    if (dayNum === 12 && timeIndex === 2) return 'recommended';
-    if (dayNum === 10 && timeIndex === 6) return 'recommended';
-    if (timeIndex === 5 || timeIndex === 7) return 'booked';
-    if (timeIndex > 6) return 'limited';
+    
+    // Weekdays
+    if (timeIndex === 5 || timeIndex === 7) return 'booked'; // 1 PM and 3 PM booked
+    if (timeIndex > 6) return 'limited'; // After 2 PM limited
     return 'available';
   };
 
