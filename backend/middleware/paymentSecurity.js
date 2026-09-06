@@ -53,11 +53,11 @@ const paymentCreationLimiter = rateLimit({
 
 /**
  * Payment Link Generation Rate Limiter
- * Prevents abuse of payment link generation - 20 per hour
+ * Prevents abuse of payment link generation - 50 per hour
  */
 const paymentLinkLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 20, // 20 payment links per hour
+  max: 50, // 50 payment links per hour
   message: {
     success: false,
     message: 'Too many payment link requests. Please try again later.',
