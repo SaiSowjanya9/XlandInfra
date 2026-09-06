@@ -149,7 +149,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     const visitsWithTime = formattedSchedules.map((schedule, index) => ({
       ...schedule,
       time: startTime,
-      status: index === 0 ? 'Scheduled' : 'Target'
+      status: 'Planned'
     }));
     
     setPlannedVisits(visitsWithTime);
@@ -233,14 +233,14 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         if (servicesResult.success && servicesResult.data?.length > 0) {
           const realServices = servicesResult.data.map(s => ({
             id: s.id,
-            scheduleId: s.id, // Use the service schedule ID for loading visits
+            scheduleId: s.scheduling_status === 'completed' ? (s.service_schedule_id || s.scheduleId || s.id) : null,
             name: s.service_name || s.serviceName,
             category: s.service_category || s.serviceCategory,
             vendorName: s.vendor_name || s.vendorName || 'Unassigned',
             vendorId: s.vendor_id || s.vendorId,
             frequency: s.frequency_type || s.frequency || 'Monthly',
             visits: s.total_visits || s.visits || 12,
-            status: s.scheduling_status === 'completed' ? 'Scheduled' : (s.status === 'active' ? 'Scheduled' : 'Schedule'),
+            status: s.scheduling_status === 'completed' ? 'Scheduled' : 'Schedule',
             customVisits: s.custom_visits || s.customVisits,
             startDate: s.start_date || s.startDate,
             endDate: s.end_date || s.endDate
@@ -493,7 +493,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     const expectedVisits = service.visits || frequencyConfig?.visitsPerYear || 12;
     
     // First, try to load saved visits if service is already scheduled
-    if (service?.status === 'Scheduled' || service?.status === 'active' || service?.scheduleId) {
+    if (service?.status === 'Scheduled' || service?.scheduleId) {
       const savedVisits = await loadSavedVisits(service);
       if (savedVisits && savedVisits.length > 0) {
         setPlannedVisits(savedVisits);
@@ -542,7 +542,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     const visitsWithTime = formattedSchedules.map((schedule, index) => ({
       ...schedule,
       time: selectedSlot?.time || '10:00 AM',
-      status: index === 0 ? 'Scheduled' : 'Target'
+      status: 'Planned'
     }));
     
     setPlannedVisits(visitsWithTime);
@@ -662,7 +662,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     const updatedVisits = formattedSchedules.map((schedule, index) => ({
       ...schedule,
       time: rec.time,
-      status: index === 0 ? 'Scheduled' : 'Target'
+      status: 'Planned'
     }));
     
     setPlannedVisits(updatedVisits);
@@ -688,7 +688,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     const updatedVisits = formattedSchedules.map((schedule, index) => ({
       ...schedule,
       time: rec.time,
-      status: index === 0 ? 'Scheduled' : 'Target'
+      status: 'Planned'
     }));
     
     setPlannedVisits(updatedVisits);
@@ -719,7 +719,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     const updatedVisits = formattedSchedules.map((schedule, index) => ({
       ...schedule,
       time: rec.time,
-      status: index === 0 ? 'Scheduled' : 'Target'
+      status: 'Planned'
     }));
     
     setPlannedVisits(updatedVisits);
@@ -742,7 +742,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         const updatedVisits = formattedSchedules.map((schedule, index) => ({
           ...schedule,
           time: rec.time || '10:00 AM',
-          status: index === 0 ? 'Scheduled' : 'Target'
+          status: 'Planned'
         }));
         
         setPlannedVisits(updatedVisits);
@@ -1455,6 +1455,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                   key={`visit-${i}`}
                   className={`flex-shrink-0 w-32 p-3 rounded-lg border text-center relative cursor-pointer ${
                     visit.status === 'Scheduled' || visit.status === 'scheduled' ? 'border-green-300 bg-green-50' : 
+                    visit.status === 'Planned' ? 'border-blue-300 bg-blue-50' :
                     visit.isEdited ? 'border-blue-300 bg-blue-50' :
                     visit.isManual ? 'border-amber-300 bg-amber-50' : 'border-gray-200'
                   } hover:border-blue-400 hover:bg-blue-50/50`}
@@ -1526,6 +1527,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                   )}
                   <span className={`inline-block mt-2 px-2 py-0.5 text-xs rounded ${
                     visit.status === 'Scheduled' ? 'bg-green-100 text-green-700' : 
+                    visit.status === 'Planned' ? 'bg-blue-100 text-blue-700' :
                     visit.isEdited ? 'bg-blue-100 text-blue-700' :
                     visit.isManual ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'
                   }`}>{visit.isEdited ? 'Edited' : visit.status}</span>
