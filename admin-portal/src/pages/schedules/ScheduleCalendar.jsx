@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Calendar, ChevronLeft, ChevronRight, Search, Plus, Bell,
+  Calendar, ChevronLeft, ChevronRight, Search, Bell,
   CheckCircle, Clock, AlertCircle, XCircle, RefreshCw, X,
   MapPin, User, Building2, Wrench, Truck, Phone, Mail, FileText
 } from 'lucide-react';
@@ -371,13 +371,6 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
             <button className="relative p-2 hover:bg-gray-100 rounded-lg">
               <Bell className="w-5 h-5 text-gray-600" />
               <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">12</span>
-            </button>
-            <button 
-              onClick={() => navigate(`${getBasePath()}/schedules/pending`)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              New Schedule
             </button>
           </div>
         </div>
