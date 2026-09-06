@@ -353,8 +353,20 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 type = 'limited';
               }
               
-              // Generate reason text from backend reasons
-              const reason = bestOption.reasons?.join(', ') || '';
+              // Generate clear reason text based on zone jobs
+              let reason = '';
+              const zoneJobs = bestOption.sameZoneJobs || 0;
+              const zoneName = property?.zone || 'Zone A';
+              
+              if (zoneJobs > 0) {
+                reason = `Vendor already has ${zoneJobs} ${zoneName} job${zoneJobs > 1 ? 's' : ''} on this date`;
+              } else if (bestOption.daysFromTarget === 0) {
+                reason = 'Exact target date based on frequency';
+              } else if (bestOption.availableSlots >= 3) {
+                reason = 'High availability';
+              } else if (bestOption.availableSlots >= 1) {
+                reason = 'Limited availability';
+              }
               
               // Generate time based on availability (default times based on slot)
               const defaultTimes = ['10:00 AM', '2:00 PM', '9:00 AM', '11:00 AM'];
@@ -367,10 +379,11 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 type: type,
                 reason: reason,
                 vendor: service.vendorName,
-                zone: property?.zone || 'Zone A',
+                zone: zoneName,
                 score: bestOption.score,
                 availableSlots: bestOption.availableSlots,
-                sameZoneJobs: bestOption.sameZoneJobs
+                sameZoneJobs: zoneJobs,
+                daysFromTarget: bestOption.daysFromTarget
               });
             }
           });
@@ -1329,25 +1342,43 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                     }`}
                     onClick={() => handleSelectRecommendedDate(rec)}
                   >
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${
-                        rec.type === 'recommended' ? 'bg-blue-500' :
-                        rec.type === 'available' ? 'bg-green-500' : 'bg-amber-500'
-                      }`} />
-                      <span className="font-medium text-sm">{rec.dateStr}</span>
-                      {isSelected && <Check className="w-4 h-4 text-blue-600 ml-auto" />}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          rec.type === 'recommended' ? 'bg-blue-500' :
+                          rec.type === 'available' ? 'bg-green-500' : 'bg-amber-500'
+                        }`} />
+                        <span className="font-medium text-sm">{rec.dateStr}</span>
+                      </div>
+                      {isSelected && <Check className="w-4 h-4 text-blue-600" />}
                     </div>
                     <p className="text-sm text-gray-600 mt-1">{rec.time}</p>
-                    <p className="text-xs text-gray-400">{rec.vendor} • {rec.zone}</p>
-                    {rec.reason && (
-                      <p className="text-xs text-blue-600 mt-1 italic">{rec.reason}</p>
+                    <p className="text-xs text-gray-400">• {rec.zone}</p>
+                    
+                    {/* Show zone jobs count prominently */}
+                    {rec.sameZoneJobs > 0 && (
+                      <div className="mt-2 flex items-center gap-1.5 text-xs text-green-700 bg-green-50 px-2 py-1 rounded">
+                        <CheckCircle className="w-3 h-3" />
+                        <span>Vendor has {rec.sameZoneJobs} {rec.zone} job{rec.sameZoneJobs > 1 ? 's' : ''} this day</span>
+                      </div>
                     )}
-                    <span className={`inline-block mt-2 px-2 py-0.5 text-xs rounded ${
-                      rec.type === 'recommended' ? 'bg-blue-100 text-blue-700' :
-                      rec.type === 'available' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                    }`}>
-                      {rec.type === 'recommended' ? 'Recommended' : rec.type === 'available' ? 'Available' : 'Limited'}
-                    </span>
+                    
+                    {/* Show reason if no zone jobs */}
+                    {rec.sameZoneJobs === 0 && rec.reason && (
+                      <p className="text-xs text-blue-600 mt-1.5 italic">{rec.reason}</p>
+                    )}
+                    
+                    <div className="flex items-center justify-between mt-2">
+                      <span className={`px-2 py-0.5 text-xs rounded ${
+                        rec.type === 'recommended' ? 'bg-blue-100 text-blue-700' :
+                        rec.type === 'available' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {rec.type === 'recommended' ? 'Recommended' : rec.type === 'available' ? 'Available' : 'Limited'}
+                      </span>
+                      {rec.availableSlots !== undefined && (
+                        <span className="text-xs text-gray-400">{rec.availableSlots} slots left</span>
+                      )}
+                    </div>
                   </div>
                 );
               })}

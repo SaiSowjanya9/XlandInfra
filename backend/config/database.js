@@ -13,7 +13,7 @@ const dbConfig = isProduction ? {
   database: process.env.DB_NAME || 'xland_pm',
   port: process.env.DB_PORT || 3306,
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: 25, // Increased for production load
   queueLimit: 0,
   // SECURITY: SSL configuration for production
   // Set DB_SSL=true to enable SSL (recommended for remote databases)

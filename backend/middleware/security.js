@@ -53,10 +53,10 @@ const helmetConfig = helmet({
 // RATE LIMITING CONFIGURATIONS
 // =============================================================================
 
-// General API Rate Limiter - 100 requests per 15 minutes per IP
+// General API Rate Limiter - 500 requests per 15 minutes per IP
 const apiRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per window
+  max: 500, // Limit each IP to 500 requests per window
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again after 15 minutes.',
@@ -96,10 +96,10 @@ const passwordResetLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// File Upload Rate Limiter - 20 uploads per hour
+// File Upload Rate Limiter - 100 uploads per hour
 const uploadRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 20, // 20 uploads per hour
+  max: 100, // 100 uploads per hour (property images, documents, etc.)
   message: {
     success: false,
     message: 'Too many file uploads. Please try again later.',
@@ -277,9 +277,9 @@ const validatePagination = (req, res, next) => {
 // =============================================================================
 
 const bodyParserLimits = {
-  json: { limit: '10kb' }, // Limit JSON body to 10KB
-  urlencoded: { limit: '10kb', extended: true },
-  raw: { limit: '5mb' }, // For file uploads through raw body
+  json: { limit: '2mb' }, // Limit JSON body to 2MB (estimates, work orders with many items)
+  urlencoded: { limit: '2mb', extended: true },
+  raw: { limit: '10mb' }, // For file uploads through raw body
 };
 
 // =============================================================================
