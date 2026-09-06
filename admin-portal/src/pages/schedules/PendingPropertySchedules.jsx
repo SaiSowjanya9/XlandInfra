@@ -1109,7 +1109,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
 
       {/* Help Modal */}
       {showHelpModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowHelpModal(false)}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => setShowHelpModal(false)}>
           <div 
             className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
@@ -1166,7 +1166,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
 
       {/* Services Modal - View all services with vendor assignments */}
       {showServicesModal && selectedProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowServicesModal(false)}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => setShowServicesModal(false)}>
           <div 
             className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}

@@ -937,7 +937,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
 
       {/* View Details Modal */}
       {showViewModal && selectedSchedule && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b">
               <h2 className="text-xl font-bold text-gray-900">Schedule Details</h2>
@@ -1039,7 +1039,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
 
       {/* Cancel Schedule Modal */}
       {showCancelModal && selectedSchedule && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
             <div className="flex items-center justify-between p-6 border-b">
               <h2 className="text-xl font-bold text-gray-900">Cancel Schedule</h2>
@@ -1088,7 +1088,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
 
       {/* Reschedule Modal with Table View */}
       {showRescheduleModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
           <div className={`bg-white rounded-2xl shadow-xl w-full ${isSingleReschedule ? 'max-w-xl' : 'max-w-5xl'} max-h-[90vh] overflow-hidden flex flex-col`}>
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b bg-orange-50">

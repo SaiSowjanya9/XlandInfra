@@ -419,17 +419,6 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
             <span className="text-sm font-medium text-gray-700">Filter</span>
           </button>
           
-          {/* New Schedule Button - Goes to Pending Property Schedules */}
-          <button
-            onClick={() => {
-              const basePath = portalType === 'franchise' ? '/fp' : portalType === 'manager' ? '/manager' : '';
-              navigate(`${basePath}/schedules/pending`);
-            }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="text-sm font-medium">New Schedule</span>
-          </button>
         </div>
       </div>
 
@@ -607,7 +596,7 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
 
       {/* Schedule Detail Modal */}
       {showEventModal && selectedSchedule && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowEventModal(false)}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => setShowEventModal(false)}>
           <div 
             className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden"
             onClick={(e) => e.stopPropagation()}
@@ -700,7 +689,7 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
 
       {/* Day Detail Modal */}
       {showEventModal && selectedDate && !selectedSchedule && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowEventModal(false); setSelectedDate(null); }}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => { setShowEventModal(false); setSelectedDate(null); }}>
           <div 
             className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden"
             onClick={(e) => e.stopPropagation()}
