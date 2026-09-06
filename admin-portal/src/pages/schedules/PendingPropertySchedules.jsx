@@ -311,11 +311,11 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       addedOn: '2025-08-07T09:15:00',
       isNew: true,
       services: [
-        { name: 'HVAC', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'ABC HVAC' },
-        { name: 'Plumbing', frequency: 'Every 2 Months', visits: 6, vendorAssigned: true, vendorName: 'XYZ Plumbing' },
-        { name: 'Electrical', frequency: 'Quarterly', visits: 4, vendorAssigned: true, vendorName: 'Power Services' },
-        { name: 'Pest Control', frequency: 'Half-Yearly', visits: 2, vendorAssigned: true, vendorName: 'PestFree' },
-        { name: 'Water Tank', frequency: 'Yearly', visits: 1, vendorAssigned: true, vendorName: 'Aqua Service' }
+        { name: 'HVAC', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'ABC HVAC', scheduleDate: '2025-08-15', targetDate: '2026-08-15' },
+        { name: 'Plumbing', frequency: 'Every 2 Months', visits: 6, vendorAssigned: true, vendorName: 'XYZ Plumbing', scheduleDate: '2025-08-20', targetDate: '2026-08-20' },
+        { name: 'Electrical', frequency: 'Quarterly', visits: 4, vendorAssigned: true, vendorName: 'Power Services', scheduleDate: '2025-09-01', targetDate: '2026-09-01' },
+        { name: 'Pest Control', frequency: 'Half-Yearly', visits: 2, vendorAssigned: true, vendorName: 'PestFree', scheduleDate: '2025-09-10', targetDate: '2026-09-10' },
+        { name: 'Water Tank', frequency: 'Yearly', visits: 1, vendorAssigned: true, vendorName: 'Aqua Service', scheduleDate: '2025-10-01', targetDate: '2026-10-01' }
       ]
     },
     {
@@ -335,10 +335,10 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       addedOn: '2025-08-07T08:45:00',
       isNew: true,
       services: [
-        { name: 'HVAC', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'CoolAir HVAC' },
-        { name: 'Landscaping', frequency: 'Weekly', visits: 52, vendorAssigned: true, vendorName: 'Green Gardens' },
-        { name: 'Pool', frequency: 'Weekly', visits: 52, vendorAssigned: true, vendorName: 'AquaCare Pool' },
-        { name: 'Security', frequency: 'Daily', visits: 365, vendorAssigned: true, vendorName: 'SecureGuard' }
+        { name: 'HVAC', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'CoolAir HVAC', scheduleDate: '2025-08-18', targetDate: '2026-08-18' },
+        { name: 'Landscaping', frequency: 'Weekly', visits: 52, vendorAssigned: true, vendorName: 'Green Gardens', scheduleDate: '2025-08-20', targetDate: '2026-08-20' },
+        { name: 'Pool', frequency: 'Weekly', visits: 52, vendorAssigned: true, vendorName: 'AquaCare Pool', scheduleDate: '2025-08-22', targetDate: '2026-08-22' },
+        { name: 'Security', frequency: 'Daily', visits: 365, vendorAssigned: true, vendorName: 'SecureGuard', scheduleDate: '2025-08-25', targetDate: '2026-08-25' }
       ]
     },
     {
@@ -358,12 +358,12 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       addedOn: '2025-08-07T08:20:00',
       isNew: true,
       services: [
-        { name: 'HVAC', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'ABC HVAC' },
-        { name: 'Plumbing', frequency: 'Every 2 Months', visits: 6, vendorAssigned: true, vendorName: 'XYZ Plumbing' },
-        { name: 'Electrical', frequency: 'Quarterly', visits: 4, vendorAssigned: true, vendorName: 'Power Services' },
-        { name: 'Pest Control', frequency: 'Half-Yearly', visits: 2, vendorAssigned: true, vendorName: 'PestFree' },
-        { name: 'Landscaping', frequency: 'Weekly', visits: 52, vendorAssigned: true, vendorName: 'Green Gardens' },
-        { name: 'Pool', frequency: 'Weekly', visits: 52, vendorAssigned: false, vendorName: null }
+        { name: 'HVAC', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'ABC HVAC', scheduleDate: '2025-08-15', targetDate: '2026-08-15' },
+        { name: 'Plumbing', frequency: 'Every 2 Months', visits: 6, vendorAssigned: true, vendorName: 'XYZ Plumbing', scheduleDate: '2025-08-20', targetDate: '2026-08-20' },
+        { name: 'Electrical', frequency: 'Quarterly', visits: 4, vendorAssigned: true, vendorName: 'Power Services', scheduleDate: null, targetDate: null },
+        { name: 'Pest Control', frequency: 'Half-Yearly', visits: 2, vendorAssigned: true, vendorName: 'PestFree', scheduleDate: '2025-09-10', targetDate: '2026-09-10' },
+        { name: 'Landscaping', frequency: 'Weekly', visits: 52, vendorAssigned: true, vendorName: 'Green Gardens', scheduleDate: '2025-09-15', targetDate: '2026-09-15' },
+        { name: 'Pool', frequency: 'Weekly', visits: 52, vendorAssigned: false, vendorName: null, scheduleDate: null, targetDate: null }
       ]
     },
     {
@@ -1158,7 +1158,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       {showServicesModal && selectedProperty && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowServicesModal(false)}>
           <div 
-            className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden"
+            className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
@@ -1179,6 +1179,8 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                       <th className="text-center py-3 px-2 text-xs font-semibold text-gray-600 uppercase">Frequency</th>
                       <th className="text-center py-3 px-2 text-xs font-semibold text-gray-600 uppercase">Visits</th>
                       <th className="text-left py-3 px-2 text-xs font-semibold text-gray-600 uppercase">Assigned Vendor</th>
+                      <th className="text-center py-3 px-2 text-xs font-semibold text-gray-600 uppercase">Schedule Date</th>
+                      <th className="text-center py-3 px-2 text-xs font-semibold text-gray-600 uppercase">Target Date</th>
                       <th className="text-center py-3 px-2 text-xs font-semibold text-gray-600 uppercase">Action</th>
                     </tr>
                   </thead>
@@ -1210,6 +1212,24 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                               <AlertTriangle className="w-4 h-4 text-yellow-500" />
                               <span className="text-sm text-yellow-700">No Vendor Assigned</span>
                             </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          {service.scheduleDate ? (
+                            <span className="text-sm text-gray-700">
+                              {new Date(service.scheduleDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400">Not Set</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          {service.targetDate ? (
+                            <span className="text-sm text-gray-700">
+                              {new Date(service.targetDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400">Not Set</span>
                           )}
                         </td>
                         <td className="py-3 px-2 text-center">
