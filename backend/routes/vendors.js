@@ -1084,6 +1084,68 @@ router.post('/assignments', authenticate, managerOrAdmin, async (req, res) => {
       );
     }
 
+    // Create or update property_service_schedules for scheduling workflow
+    const [existingSchedule] = await pool.execute(
+      `SELECT id FROM property_service_schedules WHERE property_id = ? AND service_name = ?`,
+      [propertyId, assignedServiceType]
+    );
+
+    // Get property's franchise partner
+    const [propFp] = await pool.execute(
+      `SELECT franchise_partner_id FROM onboarded_properties WHERE id = ?`,
+      [propertyId]
+    );
+    const fpId = propFp.length > 0 ? propFp[0].franchise_partner_id : null;
+
+    // Get estimate info for frequency
+    const [estimateInfo] = await pool.execute(
+      `SELECT fe.id, fe.service_rows FROM fp_estimates fe 
+       WHERE fe.property_id = ? AND fe.status = 'approved' 
+       ORDER BY fe.created_at DESC LIMIT 1`,
+      [propertyId]
+    );
+
+    let frequencyType = 'monthly';
+    let totalVisits = 12;
+    
+    // Try to extract frequency from estimate service_rows
+    if (estimateInfo.length > 0 && estimateInfo[0].service_rows) {
+      try {
+        const serviceRows = typeof estimateInfo[0].service_rows === 'string' 
+          ? JSON.parse(estimateInfo[0].service_rows) 
+          : estimateInfo[0].service_rows;
+        const matchingService = serviceRows.find(s => 
+          s.serviceName === assignedServiceType || s.service_name === assignedServiceType
+        );
+        if (matchingService) {
+          frequencyType = (matchingService.frequency || matchingService.frequencyType || 'monthly').toLowerCase().replace(' ', '_');
+          totalVisits = matchingService.visits || matchingService.total_visits || 12;
+        }
+      } catch (e) { /* Use defaults */ }
+    }
+
+    if (existingSchedule.length > 0) {
+      // Update existing schedule with vendor
+      await pool.execute(
+        `UPDATE property_service_schedules 
+         SET vendor_id = ?, vendor_assigned_at = NOW(), vendor_assigned_by = ?, 
+             status = 'pending_schedule', updated_at = NOW()
+         WHERE id = ?`,
+        [numericVendorId, req.user.id, existingSchedule[0].id]
+      );
+    } else {
+      // Create new service schedule
+      const scheduleId = `SCH-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+      await pool.execute(
+        `INSERT INTO property_service_schedules 
+         (schedule_id, property_id, service_name, service_category, vendor_id, vendor_assigned_at, vendor_assigned_by,
+          frequency_type, total_visits, status, scheduling_status, franchise_partner_id, created_by, created_at)
+         VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, ?, 'pending_schedule', 'not_started', ?, ?, NOW())`,
+        [scheduleId, propertyId, assignedServiceType, assignedServiceType, numericVendorId, req.user.id,
+         frequencyType, totalVisits, fpId, req.user.id]
+      );
+    }
+
     // Send email notification
     if (vendor[0].owner_email) {
       sendVendorAssignmentEmail(vendor[0].owner_email, vendor[0].owner_name, property[0])

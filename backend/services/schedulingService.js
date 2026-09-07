@@ -356,6 +356,7 @@ async function getPendingPropertiesForScheduling(franchisePartnerId, filters = {
       LEFT JOIN pending_property_schedules pps ON pps.property_id = op.id
       WHERE op.status = 'active'
         AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
+        AND (pps.scheduling_status IS NULL OR pps.scheduling_status NOT IN ('completed', 'cancelled'))
     `;
     const params = [];
 

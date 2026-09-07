@@ -286,7 +286,8 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
         pc.phone as customerPhone,
         pc.email as customerEmail,
         (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = op.id AND pva.is_active = 1) as assignedVendors,
-        (SELECT COUNT(*) FROM schedules s WHERE s.property_id = op.id AND s.status IN ('active', 'draft')) as existingSchedules
+        (SELECT COUNT(*) FROM schedules s WHERE s.property_id = op.id AND s.status IN ('active', 'draft')) as existingSchedules,
+        (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = op.id AND pss.scheduling_status = 'completed') as completedServiceSchedules
       FROM onboarded_properties op
       LEFT JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
       LEFT JOIN property_contacts pc ON pc.property_id = op.id
@@ -303,8 +304,8 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
       params.push(userFpId);
     }
     
-    // Exclude properties that already have active schedules
-    query += ` HAVING existingSchedules = 0`;
+    // Exclude properties that already have active schedules or completed service schedules
+    query += ` HAVING existingSchedules = 0 AND completedServiceSchedules = 0`;
     query += ` ORDER BY op.created_at DESC`;
 
     const [properties] = await pool.execute(query, params);
@@ -668,6 +669,68 @@ router.post('/:id/cancel', authenticate, canMakeSchedule, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error cancelling schedule',
+      error: error.message
+    });
+  }
+});
+
+// Restore cancelled schedule (Admin, FP, Manager)
+router.post('/:id/restore', authenticate, canMakeSchedule, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get FP scope for non-admin users
+    const userFpId = req.user?.franchisePartnerId || req.user?.fpId;
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin' || req.user?.role === 'operations_manager';
+
+    // Verify ownership for non-admin users
+    if (!isAdmin && userFpId) {
+      const [schedule] = await pool.execute(
+        `SELECT s.id FROM schedules s 
+         LEFT JOIN onboarded_properties op ON s.property_id = op.id 
+         WHERE s.id = ? AND op.franchise_partner_id = ?`,
+        [id, userFpId]
+      );
+      if (schedule.length === 0) {
+        return res.status(403).json({ success: false, message: 'Access denied: Schedule does not belong to your account' });
+      }
+    }
+
+    // Check if schedule is cancelled
+    const [existing] = await pool.execute(
+      `SELECT id, status FROM schedules WHERE id = ?`,
+      [id]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'Schedule not found' });
+    }
+
+    if (existing[0].status !== 'cancelled') {
+      return res.status(400).json({ success: false, message: 'Only cancelled schedules can be restored' });
+    }
+
+    // Restore to pending_schedule status
+    await pool.execute(
+      `UPDATE schedules SET status = 'pending_schedule', description = CONCAT(COALESCE(description, ''), ' | Restored on ', NOW()) WHERE id = ?`,
+      [id]
+    );
+
+    // Also restore any cancelled visits for this schedule
+    await pool.execute(
+      `UPDATE scheduled_visits SET status = 'pending' WHERE schedule_id = ? AND status = 'cancelled'`,
+      [id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Schedule restored successfully'
+    });
+  } catch (error) {
+    console.error('Error restoring schedule:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error restoring schedule',
       error: error.message
     });
   }

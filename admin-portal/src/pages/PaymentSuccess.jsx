@@ -382,6 +382,25 @@ const PaymentSuccess = () => {
           </button>
         </div>
 
+        {/* Navigation Buttons */}
+        <div className="flex items-center justify-center gap-4 mt-6 print:hidden">
+          <a
+            href="/"
+            className="flex items-center gap-2 px-6 py-3 bg-gray-800 text-white rounded-xl font-semibold hover:bg-gray-700 transition-colors"
+          >
+            <Home className="w-5 h-5" />
+            Back to Home
+          </a>
+          
+          <a
+            href="/employee/billing/invoices"
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+          >
+            <FileText className="w-5 h-5" />
+            View Invoices
+          </a>
+        </div>
+
         {/* Info Notice */}
         <div className="mt-8 text-center text-sm text-gray-500 print:hidden">
           <p>A copy of this receipt has been sent to your email.</p>

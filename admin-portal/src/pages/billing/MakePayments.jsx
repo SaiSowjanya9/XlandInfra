@@ -255,7 +255,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
   const isAdminPortal = portalType === 'admin' || portalType === 'employee';
   
-  const [selectedMethod, setSelectedMethod] = useState('upi_razorpay');
+  const [selectedMethod, setSelectedMethod] = useState('razorpay');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1527,6 +1527,33 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
             </div>
 
             <div className="divide-y divide-gray-100">
+              {/* Debit/Card Payments & Net Banking */}
+              <label className={`flex items-start gap-3 p-4 cursor-pointer transition-colors ${selectedMethod === 'razorpay' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                <input 
+                  type="radio" 
+                  name="paymentMethod" 
+                  value="razorpay" 
+                  checked={selectedMethod === 'razorpay'} 
+                  onChange={(e) => setSelectedMethod(e.target.value)} 
+                  className="mt-2 w-4 h-4 text-blue-600"
+                />
+                {/* Card Icon - Line art */}
+                <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center border-2 border-gray-200 flex-shrink-0">
+                  <svg width="28" height="22" viewBox="0 0 28 22" fill="none" stroke="#6b7280" strokeWidth="1.5">
+                    <rect x="1" y="1" width="26" height="20" rx="3"/>
+                    <rect x="4" y="5" width="5" height="4" rx="1"/>
+                    <line x1="1" y1="11" x2="27" y2="11"/>
+                    <line x1="1" y1="14" x2="27" y2="14"/>
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-gray-900 text-sm">Cards / Net Banking</h4>
+                  <p className="text-xs text-gray-500 mt-0.5">Pay securely using debit card, credit card or net banking.</p>
+                  <CardLogos />
+                </div>
+                <FeeIndicator />
+              </label>
+
               {/* UPI Payment - via Razorpay */}
               <label className={`flex items-start gap-3 p-4 cursor-pointer transition-colors ${selectedMethod === 'upi_razorpay' ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
                 <input 
@@ -1577,33 +1604,6 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                     <span className="text-[10px] text-blue-600 font-medium">Razorpay Secured</span>
                   </div>
                 </div>
-              </label>
-
-              {/* Debit/Card Payments & Net Banking */}
-              <label className={`flex items-start gap-3 p-4 cursor-pointer transition-colors ${selectedMethod === 'razorpay' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
-                <input 
-                  type="radio" 
-                  name="paymentMethod" 
-                  value="razorpay" 
-                  checked={selectedMethod === 'razorpay'} 
-                  onChange={(e) => setSelectedMethod(e.target.value)} 
-                  className="mt-2 w-4 h-4 text-blue-600"
-                />
-                {/* Card Icon - Line art */}
-                <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center border-2 border-gray-200 flex-shrink-0">
-                  <svg width="28" height="22" viewBox="0 0 28 22" fill="none" stroke="#6b7280" strokeWidth="1.5">
-                    <rect x="1" y="1" width="26" height="20" rx="3"/>
-                    <rect x="4" y="5" width="5" height="4" rx="1"/>
-                    <line x1="1" y1="11" x2="27" y2="11"/>
-                    <line x1="1" y1="14" x2="27" y2="14"/>
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-gray-900 text-sm">Cards / Net Banking</h4>
-                  <p className="text-xs text-gray-500 mt-0.5">Pay securely using debit card, credit card or net banking.</p>
-                  <CardLogos />
-                </div>
-                <FeeIndicator />
               </label>
 
               {/* Bank Transfer */}
