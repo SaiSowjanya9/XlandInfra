@@ -310,11 +310,11 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       addedOn: '2025-08-07T09:15:00',
       isNew: true,
       services: [
-        { name: 'HVAC', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'ABC HVAC', scheduleDate: '2025-08-15', targetDate: '2026-08-15' },
-        { name: 'Plumbing', frequency: 'Every 2 Months', visits: 6, vendorAssigned: true, vendorName: 'XYZ Plumbing', scheduleDate: '2025-08-20', targetDate: '2026-08-20' },
-        { name: 'Electrical', frequency: 'Quarterly', visits: 4, vendorAssigned: true, vendorName: 'Power Services', scheduleDate: '2025-09-01', targetDate: '2026-09-01' },
-        { name: 'Pest Control', frequency: 'Half-Yearly', visits: 2, vendorAssigned: true, vendorName: 'PestFree', scheduleDate: '2025-09-10', targetDate: '2026-09-10' },
-        { name: 'Water Tank', frequency: 'Yearly', visits: 1, vendorAssigned: true, vendorName: 'Aqua Service', scheduleDate: '2025-10-01', targetDate: '2026-10-01' }
+        { id: 101, name: 'HVAC', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'ABC HVAC', vendorId: 1, scheduleDate: null, targetDate: '2026-09-15' },
+        { id: 102, name: 'Plumbing', frequency: 'Every 2 Months', visits: 6, vendorAssigned: true, vendorName: 'XYZ Plumbing', vendorId: 4, scheduleDate: null, targetDate: '2026-09-20' },
+        { id: 103, name: 'Electrical', frequency: 'Quarterly', visits: 4, vendorAssigned: true, vendorName: 'Power Services', vendorId: 5, scheduleDate: null, targetDate: '2026-10-01' },
+        { id: 104, name: 'Pest Control', frequency: 'Half-Yearly', visits: 2, vendorAssigned: true, vendorName: 'PestFree', vendorId: 2, scheduleDate: null, targetDate: '2026-10-10' },
+        { id: 105, name: 'Water Tank', frequency: 'Yearly', visits: 1, vendorAssigned: true, vendorName: 'Aqua Service', vendorId: 7, scheduleDate: null, targetDate: '2026-12-01' }
       ]
     },
     {
@@ -334,10 +334,10 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       addedOn: '2025-08-07T08:45:00',
       isNew: true,
       services: [
-        { name: 'HVAC', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'CoolAir HVAC', scheduleDate: '2025-08-18', targetDate: '2026-08-18' },
-        { name: 'Landscaping', frequency: 'Weekly', visits: 52, vendorAssigned: true, vendorName: 'Green Gardens', scheduleDate: '2025-08-20', targetDate: '2026-08-20' },
-        { name: 'Pool', frequency: 'Weekly', visits: 52, vendorAssigned: true, vendorName: 'AquaCare Pool', scheduleDate: '2025-08-22', targetDate: '2026-08-22' },
-        { name: 'Security', frequency: 'Daily', visits: 365, vendorAssigned: true, vendorName: 'SecureGuard', scheduleDate: '2025-08-25', targetDate: '2026-08-25' }
+        { id: 201, name: 'HVAC', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'CoolAir HVAC', vendorId: 1, scheduleDate: null, targetDate: '2026-09-18' },
+        { id: 202, name: 'Landscaping', frequency: 'Weekly', visits: 52, vendorAssigned: true, vendorName: 'Green Gardens', vendorId: 6, scheduleDate: null, targetDate: '2026-09-20' },
+        { id: 203, name: 'Pool', frequency: 'Weekly', visits: 52, vendorAssigned: true, vendorName: 'AquaCare Pool', vendorId: 9, scheduleDate: null, targetDate: '2026-09-22' },
+        { id: 204, name: 'Security', frequency: 'Daily', visits: 365, vendorAssigned: true, vendorName: 'SecureGuard', vendorId: 8, scheduleDate: null, targetDate: '2026-09-01' }
       ]
     },
     {
@@ -357,12 +357,12 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       addedOn: '2025-08-07T08:20:00',
       isNew: true,
       services: [
-        { name: 'HVAC', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'ABC HVAC', scheduleDate: '2025-08-15', targetDate: '2026-08-15' },
-        { name: 'Plumbing', frequency: 'Every 2 Months', visits: 6, vendorAssigned: true, vendorName: 'XYZ Plumbing', scheduleDate: '2025-08-20', targetDate: '2026-08-20' },
-        { name: 'Electrical', frequency: 'Quarterly', visits: 4, vendorAssigned: true, vendorName: 'Power Services', scheduleDate: null, targetDate: null },
-        { name: 'Pest Control', frequency: 'Half-Yearly', visits: 2, vendorAssigned: true, vendorName: 'PestFree', scheduleDate: '2025-09-10', targetDate: '2026-09-10' },
-        { name: 'Landscaping', frequency: 'Weekly', visits: 52, vendorAssigned: true, vendorName: 'Green Gardens', scheduleDate: '2025-09-15', targetDate: '2026-09-15' },
-        { name: 'Pool', frequency: 'Weekly', visits: 52, vendorAssigned: false, vendorName: null, scheduleDate: null, targetDate: null }
+        { id: 301, name: 'HVAC', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'ABC HVAC', vendorId: 1, scheduleDate: null, targetDate: '2026-09-15' },
+        { id: 302, name: 'Plumbing', frequency: 'Every 2 Months', visits: 6, vendorAssigned: true, vendorName: 'XYZ Plumbing', vendorId: 4, scheduleDate: null, targetDate: '2026-09-20' },
+        { id: 303, name: 'Electrical', frequency: 'Quarterly', visits: 4, vendorAssigned: true, vendorName: 'Power Services', vendorId: 5, scheduleDate: null, targetDate: '2026-10-01' },
+        { id: 304, name: 'Pest Control', frequency: 'Half-Yearly', visits: 2, vendorAssigned: true, vendorName: 'PestFree', vendorId: 2, scheduleDate: null, targetDate: '2026-10-10' },
+        { id: 305, name: 'Landscaping', frequency: 'Weekly', visits: 52, vendorAssigned: true, vendorName: 'Green Gardens', vendorId: 6, scheduleDate: null, targetDate: '2026-09-15' },
+        { id: 306, name: 'Pool', frequency: 'Weekly', visits: 52, vendorAssigned: false, vendorName: null, vendorId: null, scheduleDate: null, targetDate: null }
       ]
     },
     {
@@ -381,7 +381,11 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       paymentStatus: 'Paid',
       addedOn: '2025-08-07T07:50:00',
       isNew: true,
-      services: []
+      services: [
+        { id: 401, name: 'AC Service', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'CoolAir HVAC', vendorId: 1, scheduleDate: null, targetDate: '2026-09-15' },
+        { id: 402, name: 'Pest Control', frequency: 'Quarterly', visits: 4, vendorAssigned: true, vendorName: 'PestFree Solutions', vendorId: 2, scheduleDate: null, targetDate: '2026-09-20' },
+        { id: 403, name: 'Deep Cleaning', frequency: 'Half-Yearly', visits: 2, vendorAssigned: true, vendorName: 'CleanPro Services', vendorId: 3, scheduleDate: null, targetDate: '2026-10-01' }
+      ]
     },
     {
       id: 5,
@@ -394,12 +398,17 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       packageName: 'Villa Basic',
       packageType: 'AMC',
       totalServices: 4,
-      assignedVendors: 3,
-      pendingServices: 1,
+      assignedVendors: 4,
+      pendingServices: 0,
       paymentStatus: 'Paid',
       addedOn: '2025-08-07T07:10:00',
       isNew: true,
-      services: []
+      services: [
+        { id: 501, name: 'HVAC', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'ABC HVAC', vendorId: 1, scheduleDate: null, targetDate: '2026-09-10' },
+        { id: 502, name: 'Plumbing', frequency: 'Every 2 Months', visits: 6, vendorAssigned: true, vendorName: 'QuickFix Plumbers', vendorId: 4, scheduleDate: null, targetDate: '2026-09-15' },
+        { id: 503, name: 'Electrical', frequency: 'Quarterly', visits: 4, vendorAssigned: true, vendorName: 'PowerFix Electricals', vendorId: 5, scheduleDate: null, targetDate: '2026-09-20' },
+        { id: 504, name: 'Landscaping', frequency: 'Weekly', visits: 52, vendorAssigned: true, vendorName: 'Green Gardens', vendorId: 6, scheduleDate: null, targetDate: '2026-09-25' }
+      ]
     },
     {
       id: 6,
@@ -412,18 +421,24 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       packageName: 'Apartment Basic',
       packageType: 'AMC',
       totalServices: 5,
-      assignedVendors: 4,
-      pendingServices: 1,
+      assignedVendors: 5,
+      pendingServices: 0,
       paymentStatus: 'Paid',
       addedOn: '2025-08-07T06:40:00',
       isNew: true,
-      services: []
+      services: [
+        { id: 601, name: 'AC Service', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'CoolTech AC', vendorId: 1, scheduleDate: null, targetDate: '2026-09-12' },
+        { id: 602, name: 'Plumbing', frequency: 'Quarterly', visits: 4, vendorAssigned: true, vendorName: 'XYZ Plumbing', vendorId: 4, scheduleDate: null, targetDate: '2026-09-18' },
+        { id: 603, name: 'Electrical', frequency: 'Half-Yearly', visits: 2, vendorAssigned: true, vendorName: 'Power Services', vendorId: 5, scheduleDate: null, targetDate: '2026-10-01' },
+        { id: 604, name: 'Pest Control', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'ABC Pest Solutions', vendorId: 2, scheduleDate: null, targetDate: '2026-09-14' },
+        { id: 605, name: 'Water Tank Cleaning', frequency: 'Yearly', visits: 1, vendorAssigned: true, vendorName: 'Aqua Service', vendorId: 7, scheduleDate: null, targetDate: '2026-12-01' }
+      ]
     },
     {
       id: 7,
       propertyId: 'PROP-107',
       propertyName: 'Elite Enclave',
-      customerName: 'Mr. Pooja Sharma',
+      customerName: 'Ms. Pooja Sharma',
       customerPhone: '88776 65544',
       propertyType: 'Apartment',
       zone: 'Zone A',
@@ -435,7 +450,14 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       paymentStatus: 'Paid',
       addedOn: '2025-08-07T06:05:00',
       isNew: true,
-      services: []
+      services: [
+        { id: 701, name: 'HVAC', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'ABC HVAC', vendorId: 1, scheduleDate: null, targetDate: '2026-09-10' },
+        { id: 702, name: 'Plumbing', frequency: 'Every 2 Months', visits: 6, vendorAssigned: true, vendorName: 'QuickFix Plumbers', vendorId: 4, scheduleDate: null, targetDate: '2026-09-12' },
+        { id: 703, name: 'Electrical', frequency: 'Quarterly', visits: 4, vendorAssigned: true, vendorName: 'PowerFix Electricals', vendorId: 5, scheduleDate: null, targetDate: '2026-09-15' },
+        { id: 704, name: 'Pest Control', frequency: 'Half-Yearly', visits: 2, vendorAssigned: true, vendorName: 'PestFree', vendorId: 2, scheduleDate: null, targetDate: '2026-09-18' },
+        { id: 705, name: 'Deep Cleaning', frequency: 'Quarterly', visits: 4, vendorAssigned: true, vendorName: 'CleanPro Services', vendorId: 3, scheduleDate: null, targetDate: '2026-09-20' },
+        { id: 706, name: 'Security', frequency: 'Daily', visits: 365, vendorAssigned: true, vendorName: 'SecureGuard', vendorId: 8, scheduleDate: null, targetDate: '2026-09-01' }
+      ]
     },
     {
       id: 8,
@@ -448,12 +470,17 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       packageName: 'Apartment Basic',
       packageType: 'AMC',
       totalServices: 4,
-      assignedVendors: 2,
-      pendingServices: 2,
+      assignedVendors: 4,
+      pendingServices: 0,
       paymentStatus: 'Paid',
       addedOn: '2025-08-07T05:30:00',
       isNew: true,
-      services: []
+      services: [
+        { id: 801, name: 'AC Service', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'CoolAir HVAC', vendorId: 1, scheduleDate: null, targetDate: '2026-09-08' },
+        { id: 802, name: 'Pest Control', frequency: 'Monthly', visits: 12, vendorAssigned: true, vendorName: 'ABC Pest Solutions', vendorId: 2, scheduleDate: null, targetDate: '2026-09-10' },
+        { id: 803, name: 'Plumbing', frequency: 'Quarterly', visits: 4, vendorAssigned: true, vendorName: 'XYZ Plumbing', vendorId: 4, scheduleDate: null, targetDate: '2026-09-15' },
+        { id: 804, name: 'Deep Cleaning', frequency: 'Half-Yearly', visits: 2, vendorAssigned: true, vendorName: 'CleanPro Services', vendorId: 3, scheduleDate: null, targetDate: '2026-10-01' }
+      ]
     }
   ];
 
@@ -618,19 +645,33 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
     navigate(`${basePath}/schedules/property/${property.id}`, { state: { property } });
   };
 
-  // Handle assign vendor action - navigate to Property Management page
+  // Handle assign vendor action - navigate to Properties page to assign vendor
   const handleAssignVendor = (property, service = null) => {
-    // Navigate to Property Management page to assign vendor
-    const basePath = portalType === 'franchise' ? '/fp' : 
-                     portalType === 'manager' ? '/manager' : 
-                     portalType === 'coordinator' ? '/coordinator' : 
-                     portalType === 'supervisor' ? '/supervisor' : '';
+    // Route to the correct properties/vendor page based on portal type
+    let targetPath;
     
-    // Navigate to property management with the property ID
-    navigate(`${basePath}/property-management`, { 
+    if (portalType === 'admin' || portalType === 'employee') {
+      // Admin portal: go to Assigned Vendors page
+      targetPath = '/employee/assigned-vendors';
+    } else if (portalType === 'franchise') {
+      targetPath = '/fp/properties';
+    } else if (portalType === 'manager') {
+      targetPath = '/manager/properties';
+    } else if (portalType === 'coordinator') {
+      targetPath = '/coordinator/properties';
+    } else if (portalType === 'supervisor') {
+      targetPath = '/supervisor/properties';
+    } else {
+      targetPath = '/employee/assigned-vendors';
+    }
+    
+    // Navigate to properties/vendors page with the property ID to highlight
+    navigate(targetPath, { 
       state: { 
         highlightPropertyId: property.id,
-        assignVendorFor: service?.name || 'all'
+        propertyCode: property.propertyId,
+        assignVendorFor: service?.name || 'all',
+        fromScheduling: true
       } 
     });
   };

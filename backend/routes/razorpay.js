@@ -1673,16 +1673,108 @@ router.post('/verify-payment-callback', async (req, res) => {
       razorpay_signature
     } = req.body;
 
-    // If no signature provided, just return status without verification
+    // If no signature provided, still try to process payment if status is paid
     if (!razorpay_signature) {
+      let paymentDetails = null;
+      
+      // Try to update payment if status is paid (fallback for missing webhook)
+      if (razorpay_payment_link_status === 'paid' && razorpay_payment_link_id && razorpay_payment_id) {
+        console.log('[Callback No-Sig] Processing payment without signature verification');
+        
+        try {
+          // Check if payment already exists
+          const [existingPayments] = await pool.execute(
+            'SELECT payment_id, amount, status FROM payments WHERE razorpay_payment_id = ?',
+            [razorpay_payment_id]
+          );
+
+          if (existingPayments.length > 0) {
+            paymentDetails = existingPayments[0];
+          } else {
+            // Find invoice and process payment
+            const [invoices] = await pool.execute(`
+              SELECT id, invoice_id, total_amount, balance_due, customer_name, property_name
+              FROM invoices WHERE razorpay_payment_link_id = ?
+            `, [razorpay_payment_link_id]);
+
+            if (invoices.length > 0) {
+              const invoice = invoices[0];
+              let amountPaid = invoice.balance_due || invoice.total_amount;
+
+              // Try to get actual amount from Razorpay
+              if (razorpay) {
+                try {
+                  const rzpPayment = await razorpay.payments.fetch(razorpay_payment_id);
+                  amountPaid = rzpPayment.amount / 100;
+                } catch (e) { /* Use default */ }
+              }
+
+              const connection = await pool.getConnection();
+              try {
+                await connection.beginTransaction();
+
+                // Generate payment ID
+                const [lastPayment] = await connection.execute(
+                  'SELECT payment_id FROM payments ORDER BY id DESC LIMIT 1'
+                );
+                let paymentNumber = 1;
+                if (lastPayment.length > 0 && lastPayment[0].payment_id) {
+                  const match = lastPayment[0].payment_id.match(/PAY-(\d+)/);
+                  if (match) paymentNumber = parseInt(match[1]) + 1;
+                }
+                const newPaymentId = `PAY-${String(paymentNumber).padStart(6, '0')}`;
+
+                // Insert payment
+                await connection.execute(`
+                  INSERT INTO payments (
+                    payment_id, invoice_id, amount, payment_method, payment_type,
+                    status, transaction_reference, razorpay_payment_id, notes, created_by
+                  ) VALUES (?, ?, ?, 'razorpay', 'online', 'completed', ?, ?, 'Callback processed (no signature)', 1)
+                `, [newPaymentId, invoice.id, amountPaid, razorpay_payment_id, razorpay_payment_id]);
+
+                // Update invoice
+                const newBalanceDue = Math.max(0, (invoice.balance_due || invoice.total_amount) - amountPaid);
+                const newStatus = newBalanceDue <= 0 ? 'paid' : 'partial';
+
+                await connection.execute(`
+                  UPDATE invoices SET
+                    status = ?, balance_due = ?, paid_amount = COALESCE(paid_amount, 0) + ?,
+                    payment_status = ?, payment_link_status = 'paid', updated_at = NOW()
+                  WHERE id = ?
+                `, [newStatus, newBalanceDue, amountPaid, newStatus, invoice.id]);
+
+                await connection.commit();
+                console.log(`[Callback No-Sig] Payment recorded: ${newPaymentId} for invoice ${invoice.invoice_id}`);
+
+                paymentDetails = {
+                  paymentId: newPaymentId,
+                  amount: amountPaid,
+                  status: 'completed',
+                  invoiceId: invoice.invoice_id,
+                  customerName: invoice.customer_name
+                };
+              } catch (txErr) {
+                await connection.rollback();
+                console.error('[Callback No-Sig] Transaction error:', txErr);
+              } finally {
+                connection.release();
+              }
+            }
+          }
+        } catch (err) {
+          console.error('[Callback No-Sig] Error:', err.message);
+        }
+      }
+
       return res.json({
         success: true,
         verified: false,
-        message: 'No signature provided for verification',
+        message: 'Payment processed without signature verification',
         data: {
           paymentId: razorpay_payment_id,
           paymentLinkId: razorpay_payment_link_id,
-          status: razorpay_payment_link_status
+          status: razorpay_payment_link_status,
+          ...paymentDetails
         }
       });
     }
@@ -1733,10 +1825,13 @@ router.post('/verify-payment-callback', async (req, res) => {
 
     // Signature is valid - get payment details from database
     let paymentDetails = null;
+    let needsUpdate = false;
+    
     try {
+      // First check if payment already recorded
       const [payments] = await pool.execute(`
         SELECT p.payment_id, p.amount, p.status, p.payment_date,
-               i.invoice_id, i.customer_name
+               i.invoice_id, i.customer_name, i.id as internal_invoice_id
         FROM payments p
         LEFT JOIN invoices i ON p.invoice_id = i.id
         WHERE p.razorpay_payment_id = ?
@@ -1753,9 +1848,109 @@ router.post('/verify-payment-callback', async (req, res) => {
           customerName: payments[0].customer_name,
           paymentDate: payments[0].payment_date
         };
+      } else {
+        // Payment not recorded yet - webhook may not have fired
+        // Try to update based on payment link ID
+        needsUpdate = true;
       }
     } catch (dbErr) {
       console.error('Error fetching payment details:', dbErr.message);
+    }
+
+    // Fallback: If webhook hasn't processed yet and status is paid, update now
+    if (needsUpdate && razorpay_payment_link_status === 'paid' && razorpay_payment_link_id) {
+      console.log('[Callback Fallback] Webhook may not have fired, processing payment via callback');
+      
+      try {
+        // Find invoice by payment link ID
+        const [invoices] = await pool.execute(`
+          SELECT id, invoice_id, total_amount, balance_due, customer_name, property_name
+          FROM invoices 
+          WHERE razorpay_payment_link_id = ?
+        `, [razorpay_payment_link_id]);
+
+        if (invoices.length > 0) {
+          const invoice = invoices[0];
+          
+          // Fetch payment details from Razorpay API
+          let amountPaid = invoice.balance_due || invoice.total_amount;
+          
+          if (razorpay && razorpay_payment_id) {
+            try {
+              const rzpPayment = await razorpay.payments.fetch(razorpay_payment_id);
+              amountPaid = rzpPayment.amount / 100; // Convert from paise
+            } catch (rzpErr) {
+              console.error('Error fetching Razorpay payment:', rzpErr.message);
+            }
+          }
+
+          const connection = await pool.getConnection();
+          try {
+            await connection.beginTransaction();
+
+            // Check if payment already exists (double-check)
+            const [existingPayments] = await connection.execute(
+              'SELECT id FROM payments WHERE razorpay_payment_id = ?',
+              [razorpay_payment_id]
+            );
+
+            if (existingPayments.length === 0) {
+              // Generate payment ID
+              const [lastPayment] = await connection.execute(
+                'SELECT payment_id FROM payments ORDER BY id DESC LIMIT 1'
+              );
+              let paymentNumber = 1;
+              if (lastPayment.length > 0 && lastPayment[0].payment_id) {
+                const match = lastPayment[0].payment_id.match(/PAY-(\d+)/);
+                if (match) paymentNumber = parseInt(match[1]) + 1;
+              }
+              const paymentId = `PAY-${String(paymentNumber).padStart(6, '0')}`;
+
+              // Insert payment
+              await connection.execute(`
+                INSERT INTO payments (
+                  payment_id, invoice_id, amount, payment_method, payment_type,
+                  status, transaction_reference, razorpay_payment_id, notes, created_by
+                ) VALUES (?, ?, ?, 'razorpay', 'online', 'completed', ?, ?, 'Callback fallback - paid via Razorpay', 1)
+              `, [paymentId, invoice.id, amountPaid, razorpay_payment_id, razorpay_payment_id]);
+
+              // Update invoice
+              const newBalanceDue = Math.max(0, (invoice.balance_due || invoice.total_amount) - amountPaid);
+              const newStatus = newBalanceDue <= 0 ? 'paid' : 'partial';
+
+              await connection.execute(`
+                UPDATE invoices SET
+                  status = ?,
+                  balance_due = ?,
+                  paid_amount = COALESCE(paid_amount, 0) + ?,
+                  payment_status = ?,
+                  payment_link_status = 'paid',
+                  updated_at = NOW()
+                WHERE id = ?
+              `, [newStatus, newBalanceDue, amountPaid, newStatus, invoice.id]);
+
+              await connection.commit();
+              console.log(`[Callback Fallback] Payment recorded for invoice ${invoice.invoice_id}: ₹${amountPaid}`);
+
+              paymentDetails = {
+                paymentId: paymentId,
+                amount: amountPaid,
+                status: 'completed',
+                invoiceId: invoice.invoice_id,
+                customerName: invoice.customer_name,
+                propertyName: invoice.property_name
+              };
+            }
+          } catch (txErr) {
+            await connection.rollback();
+            console.error('[Callback Fallback] Error:', txErr);
+          } finally {
+            connection.release();
+          }
+        }
+      } catch (fallbackErr) {
+        console.error('[Callback Fallback] Error:', fallbackErr.message);
+      }
     }
 
     res.json({

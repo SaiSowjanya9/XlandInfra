@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Clock, Search, Filter, Download, ChevronLeft, ChevronRight,
   RefreshCw, CheckCircle, AlertCircle, XCircle, Clock3, CalendarDays, 
-  Users, Building2, List, MapPin, Eye, Edit2, X, FileText
+  Users, Building2, List, MapPin, Eye, Edit2, X, FileText, Plus
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-// TODO: Set to false when backend is deployed
-const USE_MOCK_DATA = true;
+// Backend is deployed - using real data
+const USE_MOCK_DATA = false;
 
 // Mock data for development
 const MOCK_SCHEDULES = [
@@ -79,13 +79,13 @@ const getApiPath = (portalType) => {
 // Role-based permissions
 const getSchedulePermissions = (portalType) => {
   const permissions = {
-    admin: { canView: true, canReschedule: true, canCancel: true, fullAccess: true },
-    operations_manager: { canView: true, canReschedule: true, canCancel: true, fullAccess: false },
-    franchise: { canView: true, canReschedule: true, canCancel: true, fullAccess: false },
-    manager: { canView: true, canReschedule: true, canCancel: true, fullAccess: false },
-    coordinator: { canView: true, canReschedule: false, canCancel: false, fullAccess: false },
-    supervisor: { canView: true, canReschedule: false, canCancel: false, fullAccess: false },
-    executive: { canView: true, canReschedule: false, canCancel: false, fullAccess: false }
+    admin: { canView: true, canCreate: true, canReschedule: true, canCancel: true, fullAccess: true },
+    operations_manager: { canView: true, canCreate: true, canReschedule: true, canCancel: true, fullAccess: false },
+    franchise: { canView: true, canCreate: true, canReschedule: true, canCancel: true, fullAccess: false },
+    manager: { canView: true, canCreate: true, canReschedule: true, canCancel: true, fullAccess: false },
+    coordinator: { canView: true, canCreate: false, canReschedule: false, canCancel: false, fullAccess: false },
+    supervisor: { canView: true, canCreate: false, canReschedule: false, canCancel: false, fullAccess: false },
+    executive: { canView: true, canCreate: false, canReschedule: false, canCancel: false, fullAccess: false }
   };
   return permissions[portalType] || permissions.executive;
 };
@@ -630,6 +630,18 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {permissions.canCreate && (
+              <button
+                onClick={() => {
+                  const basePath = portalType === 'franchise' ? '/fp' : portalType === 'manager' ? '/manager' : '';
+                  navigate(`${basePath}/schedules/pending`);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                New Schedule
+              </button>
+            )}
             {permissions.canReschedule && (
               <button
                 onClick={openRescheduleModal}
