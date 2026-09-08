@@ -1359,9 +1359,9 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
       
       try {
         await pool.execute(
-          `INSERT INTO scheduled_visits (visit_id, service_schedule_id, property_id, visit_number, total_visits, scheduled_date, scheduled_time_start, scheduled_time_end, status, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', NOW())`,
-          [visitId, serviceScheduleId, propertyId, visit.visitNumber || i + 1, visits.length, scheduledDate, timeStart, timeEnd]
+          `INSERT INTO scheduled_visits (visit_id, service_schedule_id, property_id, vendor_id, visit_number, total_visits, scheduled_date, scheduled_time_start, scheduled_time_end, status, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', NOW())`,
+          [visitId, serviceScheduleId, propertyId, vendorId || null, visit.visitNumber || i + 1, visits.length, scheduledDate, timeStart, timeEnd]
         );
         insertedCount++;
       } catch (visitError) {
