@@ -2590,21 +2590,21 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
       params.push(propertyType);
     }
     
-    // Get total count
+    // Get total count - handle both numeric and string property_id
     const countQuery = `
-      SELECT COUNT(*) as total
+      SELECT COUNT(DISTINCT sv.id) as total
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
+      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${whereClause}
     `;
     const [countResult] = await pool.execute(countQuery, params);
     const total = countResult[0].total;
     
-    // Get schedules with pagination
+    // Get schedules with pagination - handle both numeric and string property_id
     const query = `
-      SELECT 
+      SELECT DISTINCT
         sv.id,
         sv.visit_id as visitId,
         sv.visit_number as visitNumber,
@@ -2631,7 +2631,7 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
         wo.status as workOrderStatus
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
+      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
       LEFT JOIN property_contacts pc ON pc.property_id = op.id
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
@@ -2683,10 +2683,10 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
     if (propertyType && propertyType !== 'all') statsWhereClause += ' AND op.property_type = ?';
     
     const statsQueryFinal = `
-      SELECT sv.status, COUNT(*) as count
+      SELECT sv.status, COUNT(DISTINCT sv.id) as count
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
+      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${statsWhereClause}
       GROUP BY sv.status
