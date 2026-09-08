@@ -929,16 +929,40 @@ router.get('/pending-properties-v2', authenticate, canSeeSchedule, async (req, r
 router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async (req, res) => {
   try {
     const { propertyId } = req.params;
+    
+    console.log('[Property Services] Fetching services for property ID:', propertyId);
 
     // Get services from estimate's service_rows (source of truth)
     const [estimates] = await pool.execute(
-      `SELECT fe.service_rows, fe.id as estimate_id
+      `SELECT fe.service_rows, fe.id as estimate_id, fe.status, fe.property_id
        FROM fp_estimates fe
        WHERE fe.property_id = ? AND fe.status = 'approved'
        ORDER BY fe.created_at DESC
        LIMIT 1`,
       [propertyId]
     );
+    
+    console.log('[Property Services] Found estimates:', estimates.length, estimates.length > 0 ? `(estimate_id: ${estimates[0].estimate_id}, has service_rows: ${!!estimates[0].service_rows})` : '(none)');
+    
+    // If no estimate found, try to debug by checking what estimates exist
+    if (estimates.length === 0) {
+      const [debugEstimates] = await pool.execute(
+        `SELECT fe.id, fe.property_id, fe.status, op.property_id as prop_code 
+         FROM fp_estimates fe 
+         LEFT JOIN onboarded_properties op ON op.id = fe.property_id
+         WHERE fe.property_id = ? OR op.property_id = ?
+         LIMIT 5`,
+        [propertyId, `PROP-${propertyId}`]
+      );
+      console.log('[Property Services] Debug - related estimates:', debugEstimates);
+      
+      // Also check if property exists
+      const [debugProperty] = await pool.execute(
+        `SELECT id, property_id, community_name FROM onboarded_properties WHERE id = ? OR property_id = ?`,
+        [propertyId, propertyId]
+      );
+      console.log('[Property Services] Debug - property info:', debugProperty);
+    }
 
     // Get vendor assignments for this property
     const [vendorAssignments] = await pool.execute(
@@ -1090,6 +1114,7 @@ router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async
     }
 
     // No services found anywhere
+    console.log('[Property Services] No services found - estimates:', estimates.length, ', serviceSchedules:', serviceSchedules.length);
     res.json({
       success: true,
       data: [],
