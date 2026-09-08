@@ -6168,7 +6168,7 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
         fe.total_amount as totalPrice,
         fe.status as estimateStatus,
         fe.payment_status as paymentStatus,
-        fe.service_rows as serviceRows,
+        fe.package_services as serviceRows,
         pc.name as customerName,
         pc.phone as customerPhone,
         pc.email as customerEmail,

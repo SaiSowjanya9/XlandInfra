@@ -281,7 +281,7 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
         fe.total_amount as totalPrice,
         fe.status as estimateStatus,
         fe.payment_status as paymentStatus,
-        fe.service_rows as serviceRows,
+        fe.package_services as serviceRows,
         pc.name as customerName,
         pc.phone as customerPhone,
         pc.email as customerEmail,
@@ -333,7 +333,7 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
       let services = [];
       let totalServices = 0;
       
-      // Parse service_rows JSON
+      // Parse package_services JSON
       if (p.serviceRows) {
         try {
           services = typeof p.serviceRows === 'string' ? JSON.parse(p.serviceRows) : p.serviceRows;
@@ -924,7 +924,7 @@ router.get('/pending-properties-v2', authenticate, canSeeSchedule, async (req, r
 });
 
 // Get service schedules for a property
-// Uses fp_estimates.service_rows as the source of truth for services
+// Uses fp_estimates.package_services as the source of truth for services
 // Enhances with vendor assignments and scheduling status
 router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async (req, res) => {
   try {
@@ -932,9 +932,9 @@ router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async
     
     console.log('[Property Services] Fetching services for property ID:', propertyId);
 
-    // Get services from estimate's service_rows (source of truth)
+    // Get services from estimate's package_services (source of truth)
     const [estimates] = await pool.execute(
-      `SELECT fe.service_rows, fe.id as estimate_id, fe.status, fe.property_id
+      `SELECT fe.package_services, fe.id as estimate_id, fe.status, fe.property_id
        FROM fp_estimates fe
        WHERE fe.property_id = ? AND fe.status = 'approved'
        ORDER BY fe.created_at DESC
@@ -942,7 +942,7 @@ router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async
       [propertyId]
     );
     
-    console.log('[Property Services] Found estimates:', estimates.length, estimates.length > 0 ? `(estimate_id: ${estimates[0].estimate_id}, has service_rows: ${!!estimates[0].service_rows})` : '(none)');
+    console.log('[Property Services] Found estimates:', estimates.length, estimates.length > 0 ? `(estimate_id: ${estimates[0].estimate_id}, has package_services: ${!!estimates[0].package_services})` : '(none)');
     
     // If no estimate found, try to debug by checking what estimates exist
     if (estimates.length === 0) {
@@ -1024,14 +1024,14 @@ router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async
     console.log('[Property Services] Schedule statuses:', serviceSchedules.map(ss => ({ name: ss.service_name, status: ss.scheduling_status })));
 
     // If estimate has services, use those as source of truth
-    if (estimates.length > 0 && estimates[0].service_rows) {
+    if (estimates.length > 0 && estimates[0].package_services) {
       let serviceRows = [];
       try {
-        serviceRows = typeof estimates[0].service_rows === 'string' 
-          ? JSON.parse(estimates[0].service_rows) 
-          : estimates[0].service_rows;
+        serviceRows = typeof estimates[0].package_services === 'string' 
+          ? JSON.parse(estimates[0].package_services) 
+          : estimates[0].package_services;
       } catch (e) {
-        console.warn('Error parsing service_rows:', e);
+        console.warn('Error parsing package_services:', e);
       }
 
       if (Array.isArray(serviceRows) && serviceRows.length > 0) {
