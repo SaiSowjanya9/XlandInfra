@@ -139,6 +139,12 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   const [rescheduleReason, setRescheduleReason] = useState('');
   const [rescheduling, setRescheduling] = useState(false);
   const [isSingleReschedule, setIsSingleReschedule] = useState(false); // true = single row action, false = header button
+  
+  // Schedule Details PDF Modal states
+  const [showScheduleDetailsModal, setShowScheduleDetailsModal] = useState(false);
+  const [scheduleDetailsData, setScheduleDetailsData] = useState(null);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
+  const scheduleDetailsRef = useRef(null);
 
   // Fetch schedules
   const fetchSchedules = useCallback(async (showRefresh = false) => {
@@ -370,6 +376,62 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   const handleViewDetails = (schedule) => {
     setSelectedSchedule(schedule);
     setShowViewModal(true);
+  };
+
+  // Handle Schedule Details with PDF - open detailed modal
+  const handleScheduleDetails = (schedule) => {
+    setScheduleDetailsData(schedule);
+    setShowScheduleDetailsModal(true);
+  };
+
+  // Generate and download PDF
+  const handleDownloadPDF = async () => {
+    if (!scheduleDetailsRef.current || !scheduleDetailsData) return;
+    
+    setGeneratingPDF(true);
+    try {
+      // Dynamic import for html2canvas
+      const html2canvas = (await import('html2canvas')).default;
+      
+      const element = scheduleDetailsRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+      
+      // Create PDF using canvas
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // Dynamic import for jspdf
+      const { jsPDF } = await import('jspdf');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      let heightLeft = imgHeight;
+      let position = 0;
+      
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      const fileName = `Schedule_${scheduleDetailsData.propertyId}_${scheduleDetailsData.serviceName?.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+    } finally {
+      setGeneratingPDF(false);
+    }
   };
 
   // Handle reschedule - open modal with schedule pre-selected (single row action)
@@ -869,6 +931,13 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                             >
                               <Eye className="w-4 h-4" />
                             </button>
+                            <button 
+                              onClick={() => handleScheduleDetails(schedule)}
+                              className="p-1.5 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded border border-emerald-200"
+                              title="Schedule Details & PDF"
+                            >
+                              <FileText className="w-4 h-4" />
+                            </button>
                             {permissions.canReschedule && schedule.status !== 'completed' && schedule.status !== 'cancelled' && (
                               <button 
                                 onClick={() => handleReschedule(schedule)}
@@ -1329,6 +1398,213 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                     </>
                   )}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Details PDF Modal */}
+      {showScheduleDetailsModal && scheduleDetailsData && (
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-10 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[95vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b bg-gradient-to-r from-emerald-500 to-teal-600">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-lg">
+                  <FileText className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Schedule Details</h2>
+                  <p className="text-emerald-100 text-sm">Property Schedule Report</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={generatingPDF}
+                  className="flex items-center gap-2 px-4 py-2 bg-white text-emerald-600 rounded-lg hover:bg-emerald-50 font-medium transition-colors disabled:opacity-50"
+                >
+                  {generatingPDF ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      Download PDF
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowScheduleDetailsModal(false)}
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            
+            {/* PDF Content Area */}
+            <div className="overflow-y-auto max-h-[calc(95vh-80px)]">
+              <div ref={scheduleDetailsRef} className="p-6 bg-white">
+                {/* Header Section */}
+                <div className="text-center mb-6 pb-4 border-b-2 border-emerald-500">
+                  <h1 className="text-2xl font-bold text-gray-900 mb-1">XLAND INFRA</h1>
+                  <p className="text-gray-500 text-sm">Property Maintenance Services</p>
+                  <div className="mt-3 inline-block px-4 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                    Schedule Confirmation Report
+                  </div>
+                </div>
+
+                {/* Property Information */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-emerald-600 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    Property Information
+                  </h3>
+                  <div className="bg-gray-50 rounded-xl p-4 grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase">Property ID</p>
+                      <p className="text-lg font-bold text-blue-600">{scheduleDetailsData.propertyId}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase">Property Name</p>
+                      <p className="text-lg font-semibold text-gray-900">{scheduleDetailsData.propertyName}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase">Customer Name</p>
+                      <p className="text-base text-gray-700">{scheduleDetailsData.customerName || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase">Property Type</p>
+                      <p className="text-base text-gray-700">{scheduleDetailsData.propertyType || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase">Zone</p>
+                      <p className="text-base text-gray-700">{scheduleDetailsData.zone || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase">Contact</p>
+                      <p className="text-base text-gray-700">{scheduleDetailsData.customerPhone || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Service Information */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-emerald-600 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Service Details
+                  </h3>
+                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-100">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase">Service Name</p>
+                        <p className="text-lg font-bold text-gray-900">{scheduleDetailsData.serviceName}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase">Service Category</p>
+                        <p className="text-base text-gray-700">{scheduleDetailsData.serviceCategory || scheduleDetailsData.serviceName}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase">Frequency</p>
+                        <p className="text-base text-gray-700 capitalize">{scheduleDetailsData.frequency?.replace(/_/g, ' ') || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase">Visit Progress</p>
+                        <p className="text-base font-semibold text-emerald-600">
+                          Visit {scheduleDetailsData.visitNumber} of {scheduleDetailsData.totalVisits}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Schedule Information */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-emerald-600 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Schedule Information
+                  </h3>
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center p-3 bg-white rounded-lg border">
+                        <p className="text-xs text-gray-500 uppercase mb-1">Target Date</p>
+                        <p className="text-base font-semibold text-gray-900">{formatDate(scheduleDetailsData.targetDate)}</p>
+                      </div>
+                      <div className="text-center p-3 bg-white rounded-lg border border-emerald-200">
+                        <p className="text-xs text-emerald-600 uppercase mb-1">Scheduled Date</p>
+                        <p className="text-base font-bold text-emerald-700">{formatDate(scheduleDetailsData.scheduledDate)}</p>
+                      </div>
+                      <div className="text-center p-3 bg-white rounded-lg border">
+                        <p className="text-xs text-gray-500 uppercase mb-1">Time Slot</p>
+                        <p className="text-base font-semibold text-gray-900">{formatTime(scheduleDetailsData.scheduledTime)}</p>
+                      </div>
+                    </div>
+                    {scheduleDetailsData.originalDate && (
+                      <div className="mt-3 p-2 bg-orange-50 rounded-lg border border-orange-200">
+                        <p className="text-xs text-orange-600 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          Rescheduled from: {formatDate(scheduleDetailsData.originalDate)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Vendor Information */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-emerald-600 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Vendor Information
+                  </h3>
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase">Vendor Code</p>
+                        <p className="text-base font-medium text-blue-600">{scheduleDetailsData.vendorCode || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase">Vendor Name</p>
+                        <p className="text-base font-semibold text-gray-900">{scheduleDetailsData.vendorName || 'Not Assigned'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status & Work Order */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-emerald-600 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" />
+                    Status Information
+                  </h3>
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase">Visit ID</p>
+                        <p className="text-sm font-mono text-gray-700">{scheduleDetailsData.visitId || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase">Current Status</p>
+                        <span className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${getStatusBadge(scheduleDetailsData.status).bg} ${getStatusBadge(scheduleDetailsData.status).text}`}>
+                          {getStatusBadge(scheduleDetailsData.status).label}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase">Work Order</p>
+                        <p className="text-sm font-medium text-blue-600">{scheduleDetailsData.workOrderId || scheduleDetailsData.workOrderCode || 'Not Created'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="mt-8 pt-4 border-t text-center text-xs text-gray-400">
+                  <p>Generated on {new Date().toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })}</p>
+                  <p className="mt-1">XLAND INFRA Property Management System</p>
+                </div>
               </div>
             </div>
           </div>
