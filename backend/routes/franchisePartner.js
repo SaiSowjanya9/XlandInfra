@@ -5514,6 +5514,60 @@ router.get('/zones', requireFPScope, async (req, res) => {
   }
 });
 
+// ============================================
+// SERVICES - Get unique services for filter dropdowns
+// ============================================
+router.get('/services', authenticate, attachFPScope, async (req, res) => {
+  try {
+    const franchisePartnerId = req.fpId || req.user?.franchisePartnerId || req.user?.id;
+    
+    // Get unique services from property_service_schedules for this FP's properties
+    const [services] = await pool.execute(`
+      SELECT DISTINCT pss.service_name as name, pss.service_category as category
+      FROM property_service_schedules pss
+      JOIN onboarded_properties op ON op.id = pss.property_id
+      WHERE op.franchise_partner_id = ?
+        AND pss.service_name IS NOT NULL
+        AND pss.service_name != ''
+      ORDER BY pss.service_name
+    `, [franchisePartnerId]);
+    
+    // Also get services from estimates/packages
+    const [estimateServices] = await pool.execute(`
+      SELECT DISTINCT 
+        JSON_UNQUOTE(JSON_EXTRACT(service.value, '$.service')) as name,
+        JSON_UNQUOTE(JSON_EXTRACT(service.value, '$.category')) as category
+      FROM fp_estimates fe,
+           JSON_TABLE(fe.package_services, '$[*]' COLUMNS (value JSON PATH '$')) as service
+      WHERE fe.franchise_partner_id = ?
+        AND fe.status = 'approved'
+        AND JSON_EXTRACT(service.value, '$.service') IS NOT NULL
+    `, [franchisePartnerId]);
+    
+    // Combine and deduplicate
+    const serviceMap = new Map();
+    [...services, ...estimateServices].forEach(s => {
+      if (s.name && !serviceMap.has(s.name)) {
+        serviceMap.set(s.name, { id: s.name, name: s.name, category: s.category || s.name });
+      }
+    });
+    
+    const uniqueServices = Array.from(serviceMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+    
+    res.json({
+      success: true,
+      data: uniqueServices
+    });
+  } catch (error) {
+    console.error('Get services error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch services',
+      error: error.message
+    });
+  }
+});
+
 // Create zone - FP can create zones
 router.post('/zones', requireFPScope, async (req, res) => {
   try {
@@ -6330,6 +6384,10 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
     const { page = 1, limit = 15, search, status, service, vendor, zone, propertyType } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     
+    console.log('[FP All Schedules] Query params:', { franchisePartnerId, page, limit, search, status });
+    
+    // Handle both numeric and string property_id in scheduled_visits
+    // Join on numeric ID first, fallback to property_id string match
     let whereClause = 'WHERE op.franchise_partner_id = ?';
     const params = [franchisePartnerId];
     
@@ -6370,21 +6428,25 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
       params.push(propertyType);
     }
     
-    // Get total count
+    // Get total count - handle both numeric and string property_id
     const countQuery = `
-      SELECT COUNT(*) as total
+      SELECT COUNT(DISTINCT sv.id) as total
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
+      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${whereClause}
     `;
+    console.log('[FP All Schedules] Count query:', countQuery);
+    console.log('[FP All Schedules] Count params:', params);
+    
     const [countResult] = await pool.execute(countQuery, params);
     const total = countResult[0].total;
+    console.log('[FP All Schedules] Total count:', total);
     
-    // Get schedules with pagination
+    // Get schedules with pagination - handle both numeric and string property_id
     const query = `
-      SELECT 
+      SELECT DISTINCT
         sv.id,
         sv.visit_id as visitId,
         sv.visit_number as visitNumber,
@@ -6411,27 +6473,30 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
         wo.status as workOrderStatus
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
+      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
       LEFT JOIN property_contacts pc ON pc.property_id = op.id
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
       ${whereClause}
+      GROUP BY sv.id
       ORDER BY sv.scheduled_date DESC, sv.scheduled_time_start ASC
       LIMIT ? OFFSET ?
     `;
     
     params.push(parseInt(limit), offset);
+    console.log('[FP All Schedules] Main query params:', params);
     const [schedules] = await pool.execute(query, params);
+    console.log('[FP All Schedules] Found schedules:', schedules.length);
     
-    // Calculate stats
+    // Calculate stats - handle both numeric and string property_id
     const statsWhereClause = 'WHERE op.franchise_partner_id = ?';
     const statsParams = [franchisePartnerId];
     
     const statsQuery = `
-      SELECT sv.status, COUNT(*) as count
+      SELECT sv.status, COUNT(DISTINCT sv.id) as count
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
+      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${statsWhereClause}
       GROUP BY sv.status
