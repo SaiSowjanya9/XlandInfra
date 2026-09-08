@@ -142,7 +142,11 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   
   // Schedule Details PDF Modal states
   const [showScheduleDetailsModal, setShowScheduleDetailsModal] = useState(false);
-  const [scheduleDetailsData, setScheduleDetailsData] = useState(null);
+  const [scheduleDetailsData, setScheduleDetailsData] = useState(null); // Original clicked schedule
+  const [propertySchedules, setPropertySchedules] = useState([]); // All schedules for the property
+  const [filteredPropertySchedules, setFilteredPropertySchedules] = useState([]);
+  const [serviceFilter, setServiceFilter] = useState('');
+  const [loadingPropertySchedules, setLoadingPropertySchedules] = useState(false);
   const [generatingPDF, setGeneratingPDF] = useState(false);
   const scheduleDetailsRef = useRef(null);
 
@@ -378,10 +382,49 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     setShowViewModal(true);
   };
 
-  // Handle Schedule Details with PDF - open detailed modal
-  const handleScheduleDetails = (schedule) => {
+  // Handle Schedule Details with PDF - open detailed modal and fetch all property schedules
+  const handleScheduleDetails = async (schedule) => {
     setScheduleDetailsData(schedule);
+    setServiceFilter('');
     setShowScheduleDetailsModal(true);
+    setLoadingPropertySchedules(true);
+    
+    try {
+      const token = getAuthToken();
+      // Fetch all schedules for this property
+      const response = await fetch(`${API_BASE}/api/${apiPath}/schedules/all?search=${schedule.propertyId}&limit=100`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const allSchedules = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : (Array.isArray(data.schedules) ? data.schedules : []));
+        // Filter to only include schedules for this exact property
+        const propertyOnly = allSchedules.filter(s => s.propertyId === schedule.propertyId);
+        setPropertySchedules(propertyOnly);
+        setFilteredPropertySchedules(propertyOnly);
+      }
+    } catch (error) {
+      console.error('Error fetching property schedules:', error);
+      // Fallback to just the clicked schedule
+      setPropertySchedules([schedule]);
+      setFilteredPropertySchedules([schedule]);
+    } finally {
+      setLoadingPropertySchedules(false);
+    }
+  };
+
+  // Handle service filter change
+  const handleServiceFilterChange = (value) => {
+    setServiceFilter(value);
+    if (!value.trim()) {
+      setFilteredPropertySchedules(propertySchedules);
+    } else {
+      const filtered = propertySchedules.filter(s => 
+        s.serviceName?.toLowerCase().includes(value.toLowerCase())
+      );
+      setFilteredPropertySchedules(filtered);
+    }
   };
 
   // Generate and download PDF
@@ -424,7 +467,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
         heightLeft -= pageHeight;
       }
       
-      const fileName = `Schedule_${scheduleDetailsData.propertyId}_${scheduleDetailsData.serviceName?.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      const serviceSuffix = serviceFilter ? `_${serviceFilter.replace(/\s+/g, '_')}` : '_All_Services';
+      const fileName = `Schedules_${scheduleDetailsData.propertyId}${serviceSuffix}_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -1406,24 +1450,24 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
 
       {/* Schedule Details PDF Modal */}
       {showScheduleDetailsModal && scheduleDetailsData && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-10 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[95vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 p-4 pt-8 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[95vh] overflow-hidden border border-gray-200">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-5 border-b bg-gradient-to-r from-emerald-500 to-teal-600">
+            <div className="flex items-center justify-between px-5 py-4 border-b bg-gray-50">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-white/20 rounded-lg">
-                  <FileText className="w-6 h-6 text-white" />
+                <div className="p-2 bg-gray-200 rounded-lg">
+                  <FileText className="w-5 h-5 text-gray-600" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-white">Schedule Details</h2>
-                  <p className="text-emerald-100 text-sm">Property Schedule Report</p>
+                  <h2 className="text-lg font-semibold text-gray-800">Property Schedules</h2>
+                  <p className="text-gray-500 text-sm">{scheduleDetailsData.propertyId} • {scheduleDetailsData.propertyName}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleDownloadPDF}
-                  disabled={generatingPDF}
-                  className="flex items-center gap-2 px-4 py-2 bg-white text-emerald-600 rounded-lg hover:bg-emerald-50 font-medium transition-colors disabled:opacity-50"
+                  disabled={generatingPDF || filteredPropertySchedules.length === 0}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-gray-700 text-white text-sm rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
                 >
                   {generatingPDF ? (
                     <>
@@ -1439,171 +1483,127 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 </button>
                 <button
                   onClick={() => setShowScheduleDetailsModal(false)}
-                  className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+                  className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
+
+            {/* Service Filter - Outside PDF area */}
+            <div className="px-5 py-3 border-b bg-white">
+              <div className="flex items-center gap-3">
+                <label className="text-sm text-gray-600 font-medium">Filter by Service:</label>
+                <div className="relative flex-1 max-w-xs">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Type service name..."
+                    value={serviceFilter}
+                    onChange={(e) => handleServiceFilterChange(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
+                  />
+                </div>
+                <span className="text-sm text-gray-500">
+                  {filteredPropertySchedules.length} of {propertySchedules.length} schedules
+                </span>
+              </div>
+            </div>
             
             {/* PDF Content Area */}
-            <div className="overflow-y-auto max-h-[calc(95vh-80px)]">
-              <div ref={scheduleDetailsRef} className="p-6 bg-white">
-                {/* Header Section */}
-                <div className="text-center mb-6 pb-4 border-b-2 border-emerald-500">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-1">XLAND INFRA</h1>
-                  <p className="text-gray-500 text-sm">Property Maintenance Services</p>
-                  <div className="mt-3 inline-block px-4 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
-                    Schedule Confirmation Report
-                  </div>
+            <div className="overflow-y-auto max-h-[calc(95vh-160px)]">
+              <div ref={scheduleDetailsRef} className="p-5 bg-white">
+                {/* PDF Header */}
+                <div className="text-center mb-5 pb-4 border-b border-gray-300">
+                  <h1 className="text-xl font-bold text-gray-800 mb-0.5">XLAND INFRA</h1>
+                  <p className="text-gray-500 text-xs">Property Maintenance Services</p>
+                  <p className="mt-2 text-sm text-gray-600">Schedule Report</p>
                 </div>
 
-                {/* Property Information */}
-                <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-emerald-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <Building2 className="w-4 h-4" />
-                    Property Information
-                  </h3>
-                  <div className="bg-gray-50 rounded-xl p-4 grid grid-cols-2 gap-4">
+                {/* Property Info Summary */}
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="grid grid-cols-4 gap-3 text-sm">
                     <div>
-                      <p className="text-xs text-gray-500 uppercase">Property ID</p>
-                      <p className="text-lg font-bold text-blue-600">{scheduleDetailsData.propertyId}</p>
+                      <span className="text-gray-500">Property:</span>
+                      <span className="ml-1 font-medium text-gray-800">{scheduleDetailsData.propertyId}</span>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 uppercase">Property Name</p>
-                      <p className="text-lg font-semibold text-gray-900">{scheduleDetailsData.propertyName}</p>
+                      <span className="text-gray-500">Name:</span>
+                      <span className="ml-1 font-medium text-gray-800">{scheduleDetailsData.propertyName}</span>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 uppercase">Customer Name</p>
-                      <p className="text-base text-gray-700">{scheduleDetailsData.customerName || '-'}</p>
+                      <span className="text-gray-500">Customer:</span>
+                      <span className="ml-1 text-gray-700">{scheduleDetailsData.customerName || '-'}</span>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 uppercase">Property Type</p>
-                      <p className="text-base text-gray-700">{scheduleDetailsData.propertyType || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase">Zone</p>
-                      <p className="text-base text-gray-700">{scheduleDetailsData.zone || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase">Contact</p>
-                      <p className="text-base text-gray-700">{scheduleDetailsData.customerPhone || '-'}</p>
+                      <span className="text-gray-500">Zone:</span>
+                      <span className="ml-1 text-gray-700">{scheduleDetailsData.zone || '-'}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Service Information */}
-                <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-emerald-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    Service Details
-                  </h3>
-                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-100">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase">Service Name</p>
-                        <p className="text-lg font-bold text-gray-900">{scheduleDetailsData.serviceName}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase">Service Category</p>
-                        <p className="text-base text-gray-700">{scheduleDetailsData.serviceCategory || scheduleDetailsData.serviceName}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase">Frequency</p>
-                        <p className="text-base text-gray-700 capitalize">{scheduleDetailsData.frequency?.replace(/_/g, ' ') || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase">Visit Progress</p>
-                        <p className="text-base font-semibold text-emerald-600">
-                          Visit {scheduleDetailsData.visitNumber} of {scheduleDetailsData.totalVisits}
-                        </p>
-                      </div>
-                    </div>
+                {/* Filter Applied Indicator */}
+                {serviceFilter && (
+                  <div className="mb-3 text-sm text-gray-600">
+                    <span className="font-medium">Filtered by:</span> "{serviceFilter}" — Showing {filteredPropertySchedules.length} schedule(s)
                   </div>
-                </div>
+                )}
 
-                {/* Schedule Information */}
-                <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-emerald-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    Schedule Information
-                  </h3>
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="text-center p-3 bg-white rounded-lg border">
-                        <p className="text-xs text-gray-500 uppercase mb-1">Target Date</p>
-                        <p className="text-base font-semibold text-gray-900">{formatDate(scheduleDetailsData.targetDate)}</p>
-                      </div>
-                      <div className="text-center p-3 bg-white rounded-lg border border-emerald-200">
-                        <p className="text-xs text-emerald-600 uppercase mb-1">Scheduled Date</p>
-                        <p className="text-base font-bold text-emerald-700">{formatDate(scheduleDetailsData.scheduledDate)}</p>
-                      </div>
-                      <div className="text-center p-3 bg-white rounded-lg border">
-                        <p className="text-xs text-gray-500 uppercase mb-1">Time Slot</p>
-                        <p className="text-base font-semibold text-gray-900">{formatTime(scheduleDetailsData.scheduledTime)}</p>
-                      </div>
-                    </div>
-                    {scheduleDetailsData.originalDate && (
-                      <div className="mt-3 p-2 bg-orange-50 rounded-lg border border-orange-200">
-                        <p className="text-xs text-orange-600 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
-                          Rescheduled from: {formatDate(scheduleDetailsData.originalDate)}
-                        </p>
-                      </div>
-                    )}
+                {/* Schedules Table */}
+                {loadingPropertySchedules ? (
+                  <div className="py-8 text-center">
+                    <RefreshCw className="w-6 h-6 text-gray-400 animate-spin mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">Loading schedules...</p>
                   </div>
-                </div>
-
-                {/* Vendor Information */}
-                <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-emerald-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    Vendor Information
-                  </h3>
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase">Vendor Code</p>
-                        <p className="text-base font-medium text-blue-600">{scheduleDetailsData.vendorCode || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase">Vendor Name</p>
-                        <p className="text-base font-semibold text-gray-900">{scheduleDetailsData.vendorName || 'Not Assigned'}</p>
-                      </div>
-                    </div>
+                ) : filteredPropertySchedules.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <Calendar className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No schedules found{serviceFilter ? ` for "${serviceFilter}"` : ''}</p>
                   </div>
-                </div>
-
-                {/* Status & Work Order */}
-                <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-emerald-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" />
-                    Status Information
-                  </h3>
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase">Visit ID</p>
-                        <p className="text-sm font-mono text-gray-700">{scheduleDetailsData.visitId || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase">Current Status</p>
-                        <span className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${getStatusBadge(scheduleDetailsData.status).bg} ${getStatusBadge(scheduleDetailsData.status).text}`}>
-                          {getStatusBadge(scheduleDetailsData.status).label}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase">Work Order</p>
-                        <p className="text-sm font-medium text-blue-600">{scheduleDetailsData.workOrderId || scheduleDetailsData.workOrderCode || 'Not Created'}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                ) : (
+                  <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Service</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Vendor</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase">Visit</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Time</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {filteredPropertySchedules.map((schedule, idx) => {
+                        const statusStyle = getStatusBadge(schedule.status);
+                        return (
+                          <tr key={schedule.id || idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-3 py-2">
+                              <p className="font-medium text-gray-800">{schedule.serviceName}</p>
+                              <p className="text-xs text-gray-500">{schedule.frequency?.replace(/_/g, ' ') || '-'}</p>
+                            </td>
+                            <td className="px-3 py-2 text-gray-700">{schedule.vendorName || '-'}</td>
+                            <td className="px-3 py-2 text-center">
+                              <span className="font-medium text-gray-800">{schedule.visitNumber}</span>
+                              <span className="text-gray-400">/{schedule.totalVisits}</span>
+                            </td>
+                            <td className="px-3 py-2 text-gray-700">{formatDate(schedule.scheduledDate)}</td>
+                            <td className="px-3 py-2 text-gray-700">{formatTime(schedule.scheduledTime)}</td>
+                            <td className="px-3 py-2 text-center">
+                              <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${statusStyle.bg} ${statusStyle.text}`}>
+                                {statusStyle.label}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
 
                 {/* Footer */}
-                <div className="mt-8 pt-4 border-t text-center text-xs text-gray-400">
-                  <p>Generated on {new Date().toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })}</p>
-                  <p className="mt-1">XLAND INFRA Property Management System</p>
+                <div className="mt-6 pt-3 border-t border-gray-200 text-center text-xs text-gray-400">
+                  <p>Generated on {new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                  <p className="mt-0.5">XLAND INFRA Property Management System</p>
                 </div>
               </div>
             </div>
