@@ -281,7 +281,7 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
         fe.total_amount as totalPrice,
         fe.status as estimateStatus,
         fe.payment_status as paymentStatus,
-        fe.package_services as serviceRows,
+        COALESCE(fe.package_services, fpamc.services) as serviceRows,
         pc.name as customerName,
         pc.phone as customerPhone,
         pc.email as customerEmail,
@@ -290,6 +290,7 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
         (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = op.id AND pss.scheduling_status = 'completed') as completedServiceSchedules
       FROM onboarded_properties op
       LEFT JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
+      LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id
       LEFT JOIN property_contacts pc ON pc.property_id = op.id
       WHERE op.status = 'active'
         AND fe.id IS NOT NULL
@@ -932,17 +933,36 @@ router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async
     
     console.log('[Property Services] Fetching services for property ID:', propertyId);
 
-    // Get services from estimate's package_services (source of truth)
+    // Get services from estimate's package_services OR from fp_amc_packages (same as pending properties)
     const [estimates] = await pool.execute(
-      `SELECT fe.package_services, fe.id as estimate_id, fe.status, fe.property_id
+      `SELECT 
+         fe.id as estimate_id, 
+         fe.status, 
+         fe.property_id,
+         fe.package_id,
+         COALESCE(fe.package_services, fpamc.services) as package_services
        FROM fp_estimates fe
+       LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id
        WHERE fe.property_id = ? AND fe.status = 'approved'
        ORDER BY fe.created_at DESC
        LIMIT 1`,
       [propertyId]
     );
     
-    console.log('[Property Services] Found estimates:', estimates.length, estimates.length > 0 ? `(estimate_id: ${estimates[0].estimate_id}, has package_services: ${!!estimates[0].package_services})` : '(none)');
+    console.log('[Property Services] Found estimates:', estimates.length, estimates.length > 0 ? `(estimate_id: ${estimates[0].estimate_id}, package_id: ${estimates[0].package_id}, has package_services: ${!!estimates[0].package_services})` : '(none)');
+    
+    // Debug: Log the actual package_services content
+    if (estimates.length > 0 && estimates[0].package_services) {
+      try {
+        const parsed = typeof estimates[0].package_services === 'string' 
+          ? JSON.parse(estimates[0].package_services) 
+          : estimates[0].package_services;
+        console.log('[Property Services] Package services count:', Array.isArray(parsed) ? parsed.length : 0);
+        console.log('[Property Services] Package services:', JSON.stringify(parsed).substring(0, 500));
+      } catch (e) {
+        console.log('[Property Services] Error parsing for debug:', e.message);
+      }
+    }
     
     // If no estimate found, try to debug by checking what estimates exist
     if (estimates.length === 0) {
