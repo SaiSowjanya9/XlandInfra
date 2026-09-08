@@ -6146,7 +6146,8 @@ router.get('/work-orders/approaching-deletion/count', requireFPScope, async (req
 // Returns properties that are paid and have vendors assigned but not yet scheduled
 router.get('/schedules/pending-properties', authenticate, attachFPScope, async (req, res) => {
   try {
-    const franchisePartnerId = req.user?.franchisePartnerId || req.user?.id;
+    // Use req.fpId which is correctly set by attachFPScope middleware
+    const franchisePartnerId = req.fpId || req.user?.franchisePartnerId || req.user?.id;
     
     // Query to get properties with:
     // 1. Approved/paid estimates (payment_status = 'paid')
@@ -6172,7 +6173,8 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
         pc.phone as customerPhone,
         pc.email as customerEmail,
         (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = op.id AND pva.is_active = 1) as assignedVendors,
-        (SELECT COUNT(*) FROM schedules s WHERE s.property_id = op.id AND s.status IN ('active', 'draft')) as existingSchedules
+        (SELECT COUNT(*) FROM schedules s WHERE s.property_id = op.id AND s.status IN ('active', 'draft')) as existingSchedules,
+        (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = op.id AND pss.scheduling_status = 'completed') as completedServiceSchedules
       FROM onboarded_properties op
       LEFT JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
       LEFT JOIN property_contacts pc ON pc.property_id = op.id
@@ -6180,13 +6182,34 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
         AND fe.id IS NOT NULL
         AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
         AND op.franchise_partner_id = ?
-      HAVING existingSchedules = 0
+      HAVING existingSchedules = 0 AND completedServiceSchedules = 0
       ORDER BY op.created_at DESC
     `;
 
     const [properties] = await pool.execute(query, [franchisePartnerId]);
 
-    // Parse service rows and calculate service counts
+    // Get all property IDs to fetch their vendor assignments
+    const propertyIds = properties.map(p => p.id);
+    
+    // Fetch vendor assignments for all properties
+    let vendorAssignments = [];
+    if (propertyIds.length > 0) {
+      const [assignments] = await pool.execute(
+        `SELECT pva.property_id, pva.service_type,
+                pva.vendor_id, COALESCE(ov.company_name, ov.owner_name) as vendor_name,
+                pss.start_date, pss.end_date
+         FROM property_vendor_assignments pva
+         LEFT JOIN onboarded_vendors ov ON ov.id = pva.vendor_id
+         LEFT JOIN property_service_schedules pss ON pss.property_id = pva.property_id 
+           AND LOWER(pss.service_name) = LOWER(pva.service_type)
+         WHERE pva.property_id IN (${propertyIds.map(() => '?').join(',')})
+           AND pva.is_active = 1`,
+        propertyIds
+      );
+      vendorAssignments = assignments;
+    }
+
+    // Parse service rows and calculate service counts with vendor info
     const processedProperties = properties.map(p => {
       let services = [];
       let totalServices = 0;
@@ -6201,7 +6224,45 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
         }
       }
       
-      const assignedVendors = p.assignedVendors || 0;
+      // Get vendor assignments for this property
+      const propertyVendors = vendorAssignments.filter(va => va.property_id === p.id);
+      
+      // Build vendor lookup map (by service type, case-insensitive)
+      const vendorMap = {};
+      propertyVendors.forEach(va => {
+        const key = (va.service_type || '').toLowerCase().trim();
+        vendorMap[key] = {
+          vendorId: va.vendor_id,
+          vendorName: va.vendor_name,
+          startDate: va.start_date,
+          endDate: va.end_date
+        };
+      });
+      
+      // Count how many services have vendors assigned
+      let vendorAssignedCount = 0;
+      const mappedServices = services.map(s => {
+        const serviceName = s.service || s.name || s.serviceType || 'Unknown';
+        const serviceKey = serviceName.toLowerCase().trim();
+        const vendorInfo = vendorMap[serviceKey];
+        
+        if (vendorInfo?.vendorId) {
+          vendorAssignedCount++;
+        }
+        
+        return {
+          name: serviceName,
+          frequency: s.frequencyType || 'Monthly',
+          frequencyCount: s.frequencyCount || 1,
+          visits: s.frequencyCount || 1,
+          vendorAssigned: !!vendorInfo?.vendorId,
+          vendorName: vendorInfo?.vendorName || null,
+          scheduleDate: vendorInfo?.startDate || null,
+          targetDate: vendorInfo?.endDate || null
+        };
+      });
+      
+      const assignedVendors = vendorAssignedCount;
       const pendingServices = Math.max(0, totalServices - assignedVendors);
       
       return {
@@ -6220,19 +6281,12 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
         estimateCode: p.estimateCode,
         totalPrice: p.totalPrice,
         totalServices: totalServices,
-        assignedVendors: Math.min(assignedVendors, totalServices),
+        assignedVendors: assignedVendors,
         pendingServices: pendingServices,
         paymentStatus: p.paymentStatus === 'paid' ? 'Paid' : 'Partial',
         addedOn: p.addedOn,
         isNew: true,
-        services: services.map(s => ({
-          name: s.service || s.name || s.serviceType,
-          frequency: s.frequencyType || 'Monthly',
-          frequencyCount: s.frequencyCount || 1,
-          visits: s.frequencyCount || 1,
-          vendorAssigned: false,
-          vendorName: null
-        }))
+        services: mappedServices
       };
     });
 
@@ -6270,7 +6324,8 @@ router.get('/schedules/pending-count', async (req, res) => {
 // Get all schedules (visits) with filtering and pagination
 router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
   try {
-    const franchisePartnerId = req.user?.franchisePartnerId || req.user?.id;
+    // Use req.fpId which is correctly set by attachFPScope middleware
+    const franchisePartnerId = req.fpId || req.user?.franchisePartnerId || req.user?.id;
     const { page = 1, limit = 15, search, status, service, vendor, zone, propertyType } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     

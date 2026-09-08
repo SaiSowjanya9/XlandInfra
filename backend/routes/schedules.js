@@ -924,45 +924,176 @@ router.get('/pending-properties-v2', authenticate, canSeeSchedule, async (req, r
 });
 
 // Get service schedules for a property
+// Uses fp_estimates.service_rows as the source of truth for services
+// Enhances with vendor assignments and scheduling status
 router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async (req, res) => {
   try {
     const { propertyId } = req.params;
 
-    const [services] = await pool.execute(
+    // Get services from estimate's service_rows (source of truth)
+    const [estimates] = await pool.execute(
+      `SELECT fe.service_rows, fe.id as estimate_id
+       FROM fp_estimates fe
+       WHERE fe.property_id = ? AND fe.status = 'approved'
+       ORDER BY fe.created_at DESC
+       LIMIT 1`,
+      [propertyId]
+    );
+
+    // Get vendor assignments for this property
+    const [vendorAssignments] = await pool.execute(
+      `SELECT pva.service_type, pva.vendor_id, 
+              ov.vendor_id as vendor_code,
+              COALESCE(ov.company_name, ov.owner_name) as vendor_name,
+              ov.owner_mobile as vendor_phone,
+              pva.assigned_at
+       FROM property_vendor_assignments pva
+       LEFT JOIN onboarded_vendors ov ON ov.id = pva.vendor_id
+       WHERE pva.property_id = ? AND pva.is_active = 1`,
+      [propertyId]
+    );
+
+    // Get scheduling status from property_service_schedules
+    const [serviceSchedules] = await pool.execute(
       `SELECT pss.*, 
               ov.vendor_id as vendor_code, 
               COALESCE(ov.company_name, ov.owner_name) as vendor_name,
               ov.owner_mobile as vendor_phone
        FROM property_service_schedules pss
        LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
-       WHERE pss.property_id = ?
-       ORDER BY pss.service_name`,
+       WHERE pss.property_id = ?`,
       [propertyId]
     );
 
+    // Build vendor assignment lookup map (by service type, case-insensitive)
+    const vendorMap = {};
+    vendorAssignments.forEach(va => {
+      const key = (va.service_type || '').toLowerCase().trim();
+      vendorMap[key] = {
+        vendorId: va.vendor_id,
+        vendorCode: va.vendor_code,
+        vendorName: va.vendor_name,
+        vendorPhone: va.vendor_phone,
+        assignedAt: va.assigned_at
+      };
+    });
+
+    // Build schedule lookup map (by service name, case-insensitive)
+    const scheduleMap = {};
+    serviceSchedules.forEach(ss => {
+      const key = (ss.service_name || '').toLowerCase().trim();
+      scheduleMap[key] = {
+        id: ss.id,
+        scheduleId: ss.schedule_id,
+        status: ss.status,
+        schedulingStatus: ss.scheduling_status,
+        startDate: ss.start_date,
+        endDate: ss.end_date,
+        vendorId: ss.vendor_id,
+        vendorCode: ss.vendor_code,
+        vendorName: ss.vendor_name,
+        vendorPhone: ss.vendor_phone
+      };
+    });
+    
+    console.log('[Property Services] Schedule map keys:', Object.keys(scheduleMap));
+    console.log('[Property Services] Schedule statuses:', serviceSchedules.map(ss => ({ name: ss.service_name, status: ss.scheduling_status })));
+
+    // If estimate has services, use those as source of truth
+    if (estimates.length > 0 && estimates[0].service_rows) {
+      let serviceRows = [];
+      try {
+        serviceRows = typeof estimates[0].service_rows === 'string' 
+          ? JSON.parse(estimates[0].service_rows) 
+          : estimates[0].service_rows;
+      } catch (e) {
+        console.warn('Error parsing service_rows:', e);
+      }
+
+      if (Array.isArray(serviceRows) && serviceRows.length > 0) {
+        console.log('[Property Services] Estimate service names:', serviceRows.map(s => s.service || s.name || s.serviceType));
+        
+        const mappedServices = serviceRows.map((s, index) => {
+          const serviceName = s.service || s.name || s.serviceType || 'Unknown Service';
+          const serviceKey = serviceName.toLowerCase().trim();
+          
+          // Look up vendor assignment
+          const vendorInfo = vendorMap[serviceKey] || {};
+          // Look up schedule info
+          const scheduleInfo = scheduleMap[serviceKey] || {};
+          
+          console.log(`[Property Services] Service "${serviceName}" (key: "${serviceKey}") -> scheduleInfo:`, scheduleInfo.schedulingStatus || 'not found');
+          
+          // Determine vendor - prefer schedule info, fallback to assignment
+          const hasVendor = scheduleInfo.vendorId || vendorInfo.vendorId;
+          
+          return {
+            id: scheduleInfo.id || `estimate-${index}`,
+            scheduleId: scheduleInfo.scheduleId || null,
+            serviceName: serviceName,
+            serviceCategory: s.category || s.serviceCategory || serviceName,
+            frequencyType: (s.frequencyType || s.frequency || 'monthly').toLowerCase().replace(/[\s-]/g, '_'),
+            frequencyCount: s.frequencyCount || 1,
+            totalVisits: s.frequencyCount || s.visits || 12,
+            vendorId: scheduleInfo.vendorId || vendorInfo.vendorId || null,
+            vendorCode: scheduleInfo.vendorCode || vendorInfo.vendorCode || null,
+            vendorName: hasVendor ? (scheduleInfo.vendorName || vendorInfo.vendorName) : 'Unassigned',
+            vendorPhone: scheduleInfo.vendorPhone || vendorInfo.vendorPhone || null,
+            vendorAssignedAt: vendorInfo.assignedAt || null,
+            startDate: scheduleInfo.startDate || null,
+            endDate: scheduleInfo.endDate || null,
+            preferredDay: null,
+            preferredTimeSlot: null,
+            recommendedDates: null,
+            status: scheduleInfo.status || (hasVendor ? 'pending_schedule' : 'pending_vendor'),
+            schedulingStatus: scheduleInfo.schedulingStatus || 'not_started',
+            fromEstimate: true,
+            estimateId: estimates[0].estimate_id
+          };
+        });
+
+        return res.json({
+          success: true,
+          data: mappedServices,
+          source: 'estimate'
+        });
+      }
+    }
+
+    // If no estimate services, fall back to property_service_schedules
+    if (serviceSchedules.length > 0) {
+      return res.json({
+        success: true,
+        data: serviceSchedules.map(s => ({
+          id: s.id,
+          scheduleId: s.schedule_id,
+          serviceName: s.service_name,
+          serviceCategory: s.service_category,
+          frequencyType: s.frequency_type,
+          frequencyCount: s.frequency_count,
+          totalVisits: s.total_visits,
+          vendorId: s.vendor_id,
+          vendorCode: s.vendor_code,
+          vendorName: s.vendor_name || 'Unassigned',
+          vendorPhone: s.vendor_phone,
+          vendorAssignedAt: s.vendor_assigned_at,
+          startDate: s.start_date,
+          endDate: s.end_date,
+          preferredDay: s.preferred_day,
+          preferredTimeSlot: s.preferred_time_slot,
+          recommendedDates: s.recommended_dates,
+          status: s.status,
+          schedulingStatus: s.scheduling_status
+        })),
+        source: 'service_schedules'
+      });
+    }
+
+    // No services found anywhere
     res.json({
       success: true,
-      data: services.map(s => ({
-        id: s.id,
-        scheduleId: s.schedule_id,
-        serviceName: s.service_name,
-        serviceCategory: s.service_category,
-        frequencyType: s.frequency_type,
-        frequencyCount: s.frequency_count,
-        totalVisits: s.total_visits,
-        vendorId: s.vendor_id,
-        vendorCode: s.vendor_code,
-        vendorName: s.vendor_name,
-        vendorPhone: s.vendor_phone,
-        vendorAssignedAt: s.vendor_assigned_at,
-        startDate: s.start_date,
-        endDate: s.end_date,
-        preferredDay: s.preferred_day,
-        preferredTimeSlot: s.preferred_time_slot,
-        recommendedDates: s.recommended_dates,
-        status: s.status,
-        schedulingStatus: s.scheduling_status
-      }))
+      data: [],
+      message: 'No services found for this property'
     });
   } catch (error) {
     console.error('Error fetching property services:', error);
@@ -1056,33 +1187,62 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
   try {
     const { propertyId, serviceId, serviceName, serviceCategory, vendorId, vendorName, frequency, totalVisits, visits } = req.body;
 
-    if (!propertyId || !visits?.length) {
+    console.log('[Confirm Schedule] Request received:', {
+      propertyId,
+      serviceId,
+      serviceName,
+      serviceCategory,
+      vendorId,
+      frequency,
+      totalVisits,
+      visitsCount: visits?.length,
+      userId: req.user?.id
+    });
+
+    if (!propertyId) {
+      console.log('[Confirm Schedule] Error: Missing propertyId');
       return res.status(400).json({
         success: false,
-        message: 'Property ID and visits are required'
+        message: 'Property ID is required'
+      });
+    }
+
+    if (!visits?.length) {
+      console.log('[Confirm Schedule] Error: Missing visits array');
+      return res.status(400).json({
+        success: false,
+        message: 'Visits array is required and must not be empty'
       });
     }
 
     const serviceNameToUse = serviceName || serviceCategory || 'General Service';
+    console.log('[Confirm Schedule] Using service name:', serviceNameToUse);
 
     // Find or create the property_service_schedule record
     let serviceScheduleId;
     
+    console.log('[Confirm Schedule] Looking for existing schedule with property_id:', propertyId, 'service_name:', serviceNameToUse);
+    
+    // Use LOWER() for case-insensitive matching
     const [existingSchedule] = await pool.execute(
-      `SELECT id FROM property_service_schedules WHERE property_id = ? AND service_name = ? LIMIT 1`,
+      `SELECT id, service_name FROM property_service_schedules WHERE property_id = ? AND LOWER(TRIM(service_name)) = LOWER(TRIM(?)) LIMIT 1`,
       [propertyId, serviceNameToUse]
     );
 
+    console.log('[Confirm Schedule] Existing schedule found:', existingSchedule.length > 0 ? `id=${existingSchedule[0].id}, name="${existingSchedule[0].service_name}"` : 'none');
+
     if (existingSchedule.length > 0) {
       serviceScheduleId = existingSchedule[0].id;
-      // Update existing schedule
+      // Update existing schedule - set both status and scheduling_status
       await pool.execute(
-        `UPDATE property_service_schedules SET status = 'active', total_visits = ?, updated_at = NOW() WHERE id = ?`,
+        `UPDATE property_service_schedules SET status = 'active', scheduling_status = 'completed', total_visits = ?, updated_at = NOW() WHERE id = ?`,
         [totalVisits || visits.length, serviceScheduleId]
       );
+      console.log('[Confirm Schedule] Updated existing schedule:', serviceScheduleId, 'with scheduling_status=completed');
     } else {
       // Create new service schedule with required schedule_id
       const scheduleId = generateScheduleId();
+      console.log('[Confirm Schedule] Creating new schedule with ID:', scheduleId);
       
       // Map frequency to valid ENUM values: 'daily', 'weekly', 'bi_weekly', 'monthly', 'every_2_months', 'quarterly', 'half_yearly', 'yearly', 'one_time'
       const frequencyMap = {
@@ -1114,30 +1274,53 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
         [scheduleId, propertyId, serviceNameToUse, serviceCategory || null, vendorId || null, frequencyType, totalVisits || visits.length, req.user.id]
       );
       serviceScheduleId = newSchedule.insertId;
+      console.log('[Confirm Schedule] Created new schedule with DB id:', serviceScheduleId);
     }
 
     // Delete existing unstarted visits for this service schedule (only non-started visits)
-    await pool.execute(
+    const [deleteResult] = await pool.execute(
       `DELETE FROM scheduled_visits WHERE service_schedule_id = ? AND status IN ('scheduled', 'confirmed')`,
       [serviceScheduleId]
     );
+    console.log('[Confirm Schedule] Deleted existing visits:', deleteResult.affectedRows);
 
     // Insert new visits
+    console.log('[Confirm Schedule] Inserting', visits.length, 'new visits...');
+    let insertedCount = 0;
     for (let i = 0; i < visits.length; i++) {
       const visit = visits[i];
       const visitId = `VIS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${i}`;
       
       // Parse date carefully to avoid timezone issues
       const dateStr = visit.scheduledDate || visit.targetDate;
+      
+      if (!dateStr) {
+        console.error(`[Confirm Schedule] Visit ${i + 1} has no date:`, visit);
+        throw new Error(`Visit ${i + 1} is missing a scheduled date`);
+      }
+      
       let scheduledDate;
       if (typeof dateStr === 'string') {
         // If ISO string, extract date part only to avoid timezone shift
         const datePart = dateStr.split('T')[0]; // Get YYYY-MM-DD
         const [year, month, day] = datePart.split('-').map(Number);
+        if (!year || !month || !day) {
+          console.error(`[Confirm Schedule] Invalid date format for visit ${i + 1}:`, dateStr);
+          throw new Error(`Invalid date format for visit ${i + 1}: ${dateStr}`);
+        }
         scheduledDate = new Date(year, month - 1, day);
+      } else if (dateStr instanceof Date) {
+        scheduledDate = dateStr;
       } else {
         scheduledDate = new Date(dateStr);
       }
+      
+      if (isNaN(scheduledDate.getTime())) {
+        console.error(`[Confirm Schedule] Invalid date for visit ${i + 1}:`, dateStr);
+        throw new Error(`Invalid date for visit ${i + 1}`);
+      }
+      
+      console.log(`[Confirm Schedule] Visit ${i + 1}: ${scheduledDate.toISOString().split('T')[0]}`);
       
       // Parse time to TIME format (e.g., "2:00 PM" -> "14:00:00")
       const timeStr = visit.time || '10:00 AM';
@@ -1149,29 +1332,47 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
       const timeStart = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
       const timeEnd = `${(hours + 1).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
       
-      await pool.execute(
-        `INSERT INTO scheduled_visits (visit_id, service_schedule_id, property_id, visit_number, total_visits, scheduled_date, scheduled_time_start, scheduled_time_end, status, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', NOW())`,
-        [visitId, serviceScheduleId, propertyId, visit.visitNumber || i + 1, visits.length, scheduledDate, timeStart, timeEnd]
-      );
+      try {
+        await pool.execute(
+          `INSERT INTO scheduled_visits (visit_id, service_schedule_id, property_id, visit_number, total_visits, scheduled_date, scheduled_time_start, scheduled_time_end, status, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', NOW())`,
+          [visitId, serviceScheduleId, propertyId, visit.visitNumber || i + 1, visits.length, scheduledDate, timeStart, timeEnd]
+        );
+        insertedCount++;
+      } catch (visitError) {
+        console.error(`[Confirm Schedule] Error inserting visit ${i + 1}:`, visitError.message);
+        throw visitError;
+      }
     }
+    
+    console.log('[Confirm Schedule] Successfully inserted', insertedCount, 'visits');
 
     // Update service schedule status (total_visits already set during insert/update above)
     await pool.execute(
       `UPDATE property_service_schedules SET status = 'active', scheduling_status = 'completed' WHERE id = ?`,
       [serviceScheduleId]
     );
+    
+    // Verify the update
+    const [verifyResult] = await pool.execute(
+      `SELECT id, service_name, status, scheduling_status FROM property_service_schedules WHERE id = ?`,
+      [serviceScheduleId]
+    );
+    console.log('[Confirm Schedule] Verified saved schedule:', verifyResult[0]);
+    
+    console.log('[Confirm Schedule] Schedule confirmation complete. Service schedule ID:', serviceScheduleId);
 
     res.json({
       success: true,
       message: `Schedule confirmed with ${visits.length} visits`,
       data: { 
         serviceScheduleId,
-        visitsCreated: visits.length
+        visitsCreated: insertedCount
       }
     });
   } catch (error) {
-    console.error('Error confirming schedule:', error);
+    console.error('[Confirm Schedule] Error:', error.message);
+    console.error('[Confirm Schedule] Stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Error confirming schedule',

@@ -838,7 +838,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         })
       };
       
-      console.log('Sending schedule payload:', schedulePayload);
+      console.log('Sending schedule payload:', JSON.stringify(schedulePayload, null, 2));
       
       const response = await fetch(`${API_BASE}/api/schedules/confirm`, {
         method: 'POST',
@@ -849,11 +849,20 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         body: JSON.stringify(schedulePayload)
       });
       
-      const result = await response.json();
-      console.log('API response:', result);
+      console.log('Response status:', response.status);
+      
+      let result;
+      try {
+        result = await response.json();
+        console.log('API response:', result);
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError);
+        throw new Error('Invalid response from server');
+      }
       
       if (!response.ok || !result.success) {
-        throw new Error(result.message || result.error || 'Failed to save schedule');
+        console.error('API error:', result);
+        throw new Error(result.message || result.error || `Failed to save schedule (status: ${response.status})`);
       }
       
       // Close modal
@@ -1095,7 +1104,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                   <AlertCircle className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                   <p className="text-sm text-gray-500 font-medium">No Services Found</p>
                   <p className="text-xs text-gray-400 mt-1">This property has no services to schedule yet.</p>
-                  <p className="text-xs text-gray-400">Please assign services from the Property Management section.</p>
+                  <p className="text-xs text-gray-400">Ensure the estimate is approved and has services defined.</p>
                 </div>
               ) : (
                 services.map(service => (
