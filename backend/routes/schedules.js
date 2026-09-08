@@ -1162,12 +1162,28 @@ router.post('/draft', authenticate, canMakeSchedule, async (req, res) => {
       });
     }
 
+    // Resolve property ID - could be numeric DB ID or external property code
+    let propertyDbId = propertyId;
+    if (isNaN(propertyId)) {
+      const [propertyRows] = await pool.execute(
+        `SELECT id FROM onboarded_properties WHERE property_id = ? LIMIT 1`,
+        [propertyId]
+      );
+      if (propertyRows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: `Property not found: ${propertyId}`
+        });
+      }
+      propertyDbId = propertyRows[0].id;
+    }
+
     const serviceNameToUse = serviceName || 'General Service';
 
     // Find or create the property_service_schedule record with draft status
     const [existingSchedule] = await pool.execute(
       `SELECT id FROM property_service_schedules WHERE property_id = ? AND service_name = ? LIMIT 1`,
-      [propertyId, serviceNameToUse]
+      [propertyDbId, serviceNameToUse]
     );
 
     let serviceScheduleId;
@@ -1207,7 +1223,7 @@ router.post('/draft', authenticate, canMakeSchedule, async (req, res) => {
       const [newSchedule] = await pool.execute(
         `INSERT INTO property_service_schedules (schedule_id, property_id, service_name, vendor_id, frequency_type, total_visits, status, recommended_dates, created_by, created_at)
          VALUES (?, ?, ?, ?, ?, ?, 'pending_schedule', ?, ?, NOW())`,
-        [scheduleId, propertyId, serviceNameToUse, vendorId || null, frequencyType, visits.length, JSON.stringify(visits), req.user.id]
+        [scheduleId, propertyDbId, serviceNameToUse, vendorId || null, frequencyType, visits.length, JSON.stringify(visits), req.user.id]
       );
       serviceScheduleId = newSchedule.insertId;
     }
@@ -1260,18 +1276,37 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
       });
     }
 
+    // Resolve property ID - could be numeric DB ID or external property code like "PROP-101"
+    let propertyDbId = propertyId;
+    if (isNaN(propertyId)) {
+      // It's an external property code, resolve to DB ID
+      const [propertyRows] = await pool.execute(
+        `SELECT id FROM onboarded_properties WHERE property_id = ? LIMIT 1`,
+        [propertyId]
+      );
+      if (propertyRows.length === 0) {
+        console.log('[Confirm Schedule] Error: Property not found:', propertyId);
+        return res.status(404).json({
+          success: false,
+          message: `Property not found: ${propertyId}`
+        });
+      }
+      propertyDbId = propertyRows[0].id;
+      console.log('[Confirm Schedule] Resolved property code', propertyId, 'to DB ID:', propertyDbId);
+    }
+
     const serviceNameToUse = serviceName || serviceCategory || 'General Service';
     console.log('[Confirm Schedule] Using service name:', serviceNameToUse);
 
     // Find or create the property_service_schedule record
     let serviceScheduleId;
     
-    console.log('[Confirm Schedule] Looking for existing schedule with property_id:', propertyId, 'service_name:', serviceNameToUse);
+    console.log('[Confirm Schedule] Looking for existing schedule with property_id:', propertyDbId, 'service_name:', serviceNameToUse);
     
     // Use LOWER() for case-insensitive matching
     const [existingSchedule] = await pool.execute(
       `SELECT id, service_name FROM property_service_schedules WHERE property_id = ? AND LOWER(TRIM(service_name)) = LOWER(TRIM(?)) LIMIT 1`,
-      [propertyId, serviceNameToUse]
+      [propertyDbId, serviceNameToUse]
     );
 
     console.log('[Confirm Schedule] Existing schedule found:', existingSchedule.length > 0 ? `id=${existingSchedule[0].id}, name="${existingSchedule[0].service_name}"` : 'none');
@@ -1316,7 +1351,7 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
       const [newSchedule] = await pool.execute(
         `INSERT INTO property_service_schedules (schedule_id, property_id, service_name, service_category, vendor_id, frequency_type, total_visits, status, created_by, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, NOW())`,
-        [scheduleId, propertyId, serviceNameToUse, serviceCategory || null, vendorId || null, frequencyType, totalVisits || visits.length, req.user.id]
+        [scheduleId, propertyDbId, serviceNameToUse, serviceCategory || null, vendorId || null, frequencyType, totalVisits || visits.length, req.user.id]
       );
       serviceScheduleId = newSchedule.insertId;
       console.log('[Confirm Schedule] Created new schedule with DB id:', serviceScheduleId);
@@ -1381,7 +1416,7 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
         await pool.execute(
           `INSERT INTO scheduled_visits (visit_id, service_schedule_id, property_id, vendor_id, visit_number, total_visits, scheduled_date, scheduled_time_start, scheduled_time_end, status, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', NOW())`,
-          [visitId, serviceScheduleId, propertyId, vendorId || null, visit.visitNumber || i + 1, visits.length, scheduledDate, timeStart, timeEnd]
+          [visitId, serviceScheduleId, propertyDbId, vendorId || null, visit.visitNumber || i + 1, visits.length, scheduledDate, timeStart, timeEnd]
         );
         insertedCount++;
       } catch (visitError) {
