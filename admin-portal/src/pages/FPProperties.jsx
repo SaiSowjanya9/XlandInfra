@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import {
   Building2,
@@ -50,7 +50,9 @@ const FPProperties = ({ user }) => {
   // Check if user is FP Manager (restricted access - view only)
   const isFPManager = user?.role === 'manager';
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const autoOpenProcessed = useRef(false);
   
   // URL-synced state for filters and navigation
   const searchTerm = searchParams.get('search') || '';
@@ -465,6 +467,29 @@ const FPProperties = ({ user }) => {
   useEffect(() => {
     fetchProperties();
   }, [statusFilter]);
+
+  // Auto-open vendor assignment modal when coming from Pending Property Schedules
+  useEffect(() => {
+    if (location.state?.fromScheduling && location.state?.highlightPropertyId && properties.length > 0 && !autoOpenProcessed.current) {
+      const { highlightPropertyId, propertyCode } = location.state;
+      
+      // Find property by DB ID or property code
+      const property = properties.find(p => 
+        p.id === highlightPropertyId || 
+        String(p.id) === String(highlightPropertyId) ||
+        p.property_id === propertyCode
+      );
+      
+      if (property) {
+        autoOpenProcessed.current = true;
+        // Auto-open the vendor assignment modal
+        openAssignModal(property, 'vendor');
+        
+        // Clear the navigation state to prevent re-triggering
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+    }
+  }, [location.state, properties, navigate, location.pathname]);
   
   // Sync selectedProperty from URL params
   useEffect(() => {
