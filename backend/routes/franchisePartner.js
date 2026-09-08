@@ -6168,7 +6168,7 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
         fe.total_amount as totalPrice,
         fe.status as estimateStatus,
         fe.payment_status as paymentStatus,
-        fe.package_services as serviceRows,
+        COALESCE(fe.package_services, fpamc.services) as serviceRows,
         pc.name as customerName,
         pc.phone as customerPhone,
         pc.email as customerEmail,
@@ -6177,6 +6177,7 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
         (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = op.id AND pss.scheduling_status = 'completed') as completedServiceSchedules
       FROM onboarded_properties op
       LEFT JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
+      LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id
       LEFT JOIN property_contacts pc ON pc.property_id = op.id
       WHERE op.status = 'active'
         AND fe.id IS NOT NULL
