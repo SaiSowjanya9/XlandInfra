@@ -6388,18 +6388,40 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
     
     console.log('[FP All Schedules] Query params:', { franchisePartnerId, page, limit, search, status });
     
-    // Debug: Check if there are any scheduled_visits at all
+    // Debug: Detailed logging to diagnose the issue
     try {
+      // 1. Total scheduled_visits
       const [allVisits] = await pool.execute(`SELECT COUNT(*) as count FROM scheduled_visits`);
       console.log('[FP All Schedules] Total scheduled_visits in DB:', allVisits[0].count);
       
-      // Debug: Check visits for this FP's properties (handle both numeric and string property_id)
-      const [fpVisitsDebug] = await pool.execute(`
-        SELECT sv.id, sv.property_id, sv.status, sv.service_schedule_id
+      // 2. Sample visits with property info
+      const [sampleVisits] = await pool.execute(`
+        SELECT sv.id, sv.property_id as sv_property_id, sv.status,
+               op.id as op_id, op.property_id as op_property_code, op.franchise_partner_id as op_fp_id
         FROM scheduled_visits sv
+        LEFT JOIN onboarded_properties op ON op.id = sv.property_id
         LIMIT 5
       `);
-      console.log('[FP All Schedules] Sample visits:', fpVisitsDebug);
+      console.log('[FP All Schedules] Sample visits with property join:', JSON.stringify(sampleVisits));
+      
+      // 3. Properties owned by this FP
+      const [fpProperties] = await pool.execute(`
+        SELECT id, property_id, franchise_partner_id 
+        FROM onboarded_properties 
+        WHERE franchise_partner_id = ?
+        LIMIT 5
+      `, [franchisePartnerId]);
+      console.log('[FP All Schedules] Properties for FP', franchisePartnerId, ':', JSON.stringify(fpProperties));
+      
+      // 4. Visits that should match this FP (with OR condition)
+      const [matchingVisits] = await pool.execute(`
+        SELECT sv.id, sv.property_id, op.franchise_partner_id
+        FROM scheduled_visits sv
+        JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
+        WHERE op.franchise_partner_id = ?
+        LIMIT 5
+      `, [franchisePartnerId]);
+      console.log('[FP All Schedules] Visits matching FP', franchisePartnerId, ':', matchingVisits.length);
     } catch (debugErr) {
       console.log('[FP All Schedules] Debug query error:', debugErr.message);
     }
