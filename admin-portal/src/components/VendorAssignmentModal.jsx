@@ -172,7 +172,7 @@ const normalizeServiceType = (serviceType) => {
   return lower;
 };
 
-const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
+const VendorAssignmentModal = ({ property, onClose, onSuccess, portalType }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [vendors, setVendors] = useState([]);
@@ -182,13 +182,18 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
   const [existingDbAssignments, setExistingDbAssignments] = useState([]); // Track database assignments
   const [error, setError] = useState(null);
 
-  // Determine API base path based on current user role
+  // Determine API base path based on portal type or URL
   const getApiBasePath = () => {
+    // Use portalType prop if provided
+    if (portalType === 'franchise' || portalType === 'fp') return '/api/fp';
+    if (portalType === 'manager') return '/api/manager';
+    if (portalType === 'admin' || portalType === 'employee') return '/api/fp'; // FP endpoints work for admin too
+    
+    // Fallback to URL-based detection
     const path = window.location.pathname;
     if (path.startsWith('/fp/')) return '/api/fp';
     if (path.startsWith('/manager/')) return '/api/manager';
-    if (path.startsWith('/admin/')) return '/api/vendors';
-    return '/api/vendors'; // default
+    return '/api/fp'; // default to FP which has proper auth
   };
 
   // Fetch existing vendor assignments from database
