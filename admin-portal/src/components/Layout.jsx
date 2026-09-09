@@ -88,8 +88,8 @@ const Layout = ({ admin, onLogout, children }) => {
   // Schedules sub-items
   const schedulesSubItems = [
     { path: '/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
-    { path: '/schedules/all', icon: List, label: 'All Schedules' },
     { path: '/schedules/pending', icon: CalendarClock, label: 'Pending Property Schedules' },
+    { path: '/schedules/all', icon: List, label: 'All Schedules' },
     { path: '/schedules/calendar', icon: CalendarDays, label: 'Calendar' },
     { path: '/schedules/reschedule-requests', icon: RefreshCcw, label: 'Rescheduled Requests' },
     { path: '/schedules/cancelled', icon: Ban, label: 'Cancelled Schedules' },
