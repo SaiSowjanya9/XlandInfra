@@ -137,16 +137,21 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
 
   // Handle editing a planned visit time (in the visit series cards)
   const handleEditPlannedVisitTime = (index, newTime) => {
-    setPlannedVisits(prev => prev.map((visit, i) => {
-      if (i === index) {
-        return {
-          ...visit,
-          time: newTime,
-          isEdited: true
-        };
-      }
-      return visit;
-    }));
+    console.log('[Edit Visit Time] Visit', index + 1, 'changed to:', newTime);
+    setPlannedVisits(prev => {
+      const updated = prev.map((visit, i) => {
+        if (i === index) {
+          return {
+            ...visit,
+            time: newTime,
+            isEdited: true
+          };
+        }
+        return visit;
+      });
+      console.log('[Edit Visit Time] Updated plannedVisits:', updated.map(v => ({ visit: v.visitNumber, time: v.time, isEdited: v.isEdited })));
+      return updated;
+    });
     
     // If editing first visit, also update selectedSlot and recommended dates
     if (index === 0) {
@@ -876,6 +881,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     if (!selectedService) return;
     
     const visitsToUse = directVisits || plannedVisits;
+    console.log('[Prepare Confirmation] Visits:', visitsToUse.map(v => ({ visit: v.visitNumber, time: v.time, edited: v.isEdited })));
     if (!selectedSlot && visitsToUse.length === 0) return;
     
     // Generate confirmation schedule with target dates and recommended dates
