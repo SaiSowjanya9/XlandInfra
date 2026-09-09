@@ -1290,9 +1290,16 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
     }
 
     // Resolve property ID - could be numeric DB ID or external property code like "PROP-101"
-    let propertyDbId = propertyId;
-    if (isNaN(propertyId)) {
-      // It's an external property code, resolve to DB ID
+    let propertyDbId;
+    
+    // Check if it's a numeric value (could be number or numeric string)
+    const numericId = parseInt(propertyId, 10);
+    if (!isNaN(numericId) && String(numericId) === String(propertyId).trim()) {
+      // It's a numeric ID - use it directly
+      propertyDbId = numericId;
+      console.log('[Confirm Schedule] Using numeric property ID:', propertyDbId);
+    } else {
+      // It's an external property code like "PROP-101", resolve to DB ID
       const [propertyRows] = await pool.execute(
         `SELECT id FROM onboarded_properties WHERE property_id = ? LIMIT 1`,
         [propertyId]
@@ -1307,6 +1314,24 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
       propertyDbId = propertyRows[0].id;
       console.log('[Confirm Schedule] Resolved property code', propertyId, 'to DB ID:', propertyDbId);
     }
+    
+    // Verify the property exists and get its franchise_partner_id for debugging
+    const [propertyCheck] = await pool.execute(
+      `SELECT id, property_id, franchise_partner_id FROM onboarded_properties WHERE id = ? LIMIT 1`,
+      [propertyDbId]
+    );
+    if (propertyCheck.length === 0) {
+      console.log('[Confirm Schedule] Error: Property DB ID not found:', propertyDbId);
+      return res.status(404).json({
+        success: false,
+        message: `Property not found with ID: ${propertyDbId}`
+      });
+    }
+    console.log('[Confirm Schedule] Property verified:', {
+      dbId: propertyCheck[0].id,
+      propertyCode: propertyCheck[0].property_id,
+      franchisePartnerId: propertyCheck[0].franchise_partner_id
+    });
 
     const serviceNameToUse = serviceName || serviceCategory || 'General Service';
     console.log('[Confirm Schedule] Using service name:', serviceNameToUse);
