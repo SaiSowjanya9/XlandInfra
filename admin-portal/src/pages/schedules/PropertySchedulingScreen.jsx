@@ -62,6 +62,9 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   const [editFrequency, setEditFrequency] = useState('monthly');
   const [editVisitCount, setEditVisitCount] = useState(12);
   
+  // All visits modal state
+  const [showAllVisitsModal, setShowAllVisitsModal] = useState(false);
+  
   // Vendor availability state for calendar
   const [vendorAvailability, setVendorAvailability] = useState({ bookings: {}, maxDaily: 5 });
   const [loadingAvailability, setLoadingAvailability] = useState(false);
@@ -1622,9 +1625,15 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                           </div>
                         ))}
                         {plannedVisits.length > 6 && (
-                          <div className="flex-shrink-0 px-2 py-1 bg-green-100 rounded text-xs text-green-700 font-medium">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowAllVisitsModal(true);
+                            }}
+                            className="flex-shrink-0 px-2 py-1 bg-green-100 rounded text-xs text-green-700 font-medium hover:bg-green-200 transition-colors cursor-pointer"
+                          >
                             +{plannedVisits.length - 6} more
-                          </div>
+                          </button>
                         )}
                       </div>
                     </div>
@@ -2191,6 +2200,85 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Apply Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* All Visits Modal */}
+      {showAllVisitsModal && selectedService && plannedVisits.length > 0 && (
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-10 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white">All Scheduled Visits</h2>
+                  <p className="text-green-100 text-sm mt-1">
+                    {selectedService.name} • {plannedVisits.length} visits
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setShowAllVisitsModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Visits Grid */}
+            <div className="p-6 overflow-auto max-h-[70vh]">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {plannedVisits.map((visit, index) => (
+                  <div 
+                    key={index}
+                    className={`p-4 rounded-lg border-2 ${
+                      visit.status === 'Scheduled' || visit.status === 'scheduled'
+                        ? 'border-green-200 bg-green-50'
+                        : visit.status === 'completed'
+                          ? 'border-gray-200 bg-gray-50'
+                          : 'border-blue-200 bg-blue-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-gray-500">Visit {visit.visitNumber || index + 1}</span>
+                      <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                        visit.status === 'Scheduled' || visit.status === 'scheduled'
+                          ? 'bg-green-100 text-green-700'
+                          : visit.status === 'completed'
+                            ? 'bg-gray-100 text-gray-700'
+                            : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {visit.status === 'Scheduled' || visit.status === 'scheduled' ? 'Scheduled' : visit.status || 'Planned'}
+                      </span>
+                    </div>
+                    <p className="font-semibold text-gray-900">{visit.shortDateStr || visit.dateStr}</p>
+                    <p className="text-sm text-gray-600 mt-1">{visit.time}</p>
+                    {visit.visitId && (
+                      <p className="text-xs text-gray-400 mt-2 font-mono">{visit.visitId}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+              <div className="text-sm text-gray-500">
+                <span className="font-medium text-green-600">{plannedVisits.filter(v => v.status === 'Scheduled' || v.status === 'scheduled').length}</span> scheduled
+                {plannedVisits.filter(v => v.status === 'completed').length > 0 && (
+                  <span className="ml-3">
+                    <span className="font-medium text-gray-600">{plannedVisits.filter(v => v.status === 'completed').length}</span> completed
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => setShowAllVisitsModal(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>
