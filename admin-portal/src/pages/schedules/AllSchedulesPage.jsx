@@ -1692,50 +1692,46 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                       }, {})
                     ).map(([serviceName, serviceData], idx) => (
                       <div key={serviceName} className="border border-gray-200 rounded-lg bg-white">
-                        {/* Service Header - Clean style like Image 2 */}
-                        <div className="px-4 py-3 border-b border-gray-100">
+                        {/* Service Header */}
+                        <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
                           <div className="flex items-center justify-between">
-                            <div>
-                              <h3 className="font-bold text-gray-900 text-base">{serviceName} - Visit Schedule</h3>
-                              <p className="text-sm text-gray-500 mt-0.5">{serviceData.visits.length} visits scheduled • Vendor: {serviceData.vendorName || 'Unassigned'}</p>
-                            </div>
+                            <span className="font-semibold text-gray-800 text-sm">{serviceName}</span>
+                            <span className="text-xs text-gray-500">Vendor: {serviceData.vendorName || '-'} • {serviceData.visits.length} visits</span>
                           </div>
                         </div>
-                        {/* Visits - Horizontal scroll layout like Image 2 */}
-                        <div className="p-4 overflow-x-auto">
-                          <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
+                        {/* Compact Table View - fits PDF */}
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="bg-gray-100">
+                              <th className="px-2 py-1 text-left font-medium text-gray-600 w-8">#</th>
+                              <th className="px-2 py-1 text-left font-medium text-gray-600">Date</th>
+                              <th className="px-2 py-1 text-left font-medium text-gray-600">Time</th>
+                              <th className="px-2 py-1 text-center font-medium text-gray-600">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
                             {serviceData.visits
                               .sort((a, b) => new Date(a.scheduledDate) - new Date(b.scheduledDate))
                               .map((visit, vIdx) => {
                                 const isCompleted = visit.status === 'completed';
                                 const isCancelled = visit.status === 'cancelled';
                                 return (
-                                  <div 
-                                    key={visit.id || vIdx} 
-                                    className={`flex-shrink-0 w-28 rounded-lg border-2 p-3 text-center ${
-                                      isCompleted 
-                                        ? 'border-green-400 bg-green-50' 
-                                        : isCancelled
-                                        ? 'border-red-300 bg-red-50'
-                                        : 'border-blue-400 bg-blue-50'
-                                    }`}
-                                  >
-                                    <div className="font-bold text-gray-900 text-sm">{formatDate(visit.scheduledDate)}</div>
-                                    <div className="text-xs text-gray-600 mt-1">{formatTime(visit.scheduledTime)}</div>
-                                    <div className={`mt-2 text-xs font-medium px-2 py-0.5 rounded-full inline-block ${
-                                      isCompleted 
-                                        ? 'bg-green-100 text-green-700' 
-                                        : isCancelled
-                                        ? 'bg-red-100 text-red-700'
-                                        : 'bg-blue-100 text-blue-700'
-                                    }`}>
-                                      {isCompleted ? 'Completed' : isCancelled ? 'Cancelled' : 'Scheduled'}
-                                    </div>
-                                  </div>
+                                  <tr key={visit.id || vIdx} className={vIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                    <td className="px-2 py-1 text-gray-500">{vIdx + 1}</td>
+                                    <td className="px-2 py-1 text-gray-800">{formatDate(visit.scheduledDate)}</td>
+                                    <td className="px-2 py-1 text-gray-600">{formatTime(visit.scheduledTime)}</td>
+                                    <td className="px-2 py-1 text-center">
+                                      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                        isCompleted ? 'bg-green-100 text-green-700' : isCancelled ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                                      }`}>
+                                        {isCompleted ? 'Done' : isCancelled ? 'Cancelled' : 'Scheduled'}
+                                      </span>
+                                    </td>
+                                  </tr>
                                 );
                               })}
-                          </div>
-                        </div>
+                          </tbody>
+                        </table>
                       </div>
                     ))}
                   </div>

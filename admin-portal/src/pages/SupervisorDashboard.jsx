@@ -93,15 +93,42 @@ const SupervisorDashboard = ({ user }) => {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
-  // Pie chart data - All 6 statuses
-  const workOrdersByStatus = stats?.workOrdersByStatus || {};
-  const pendingWO = Number(workOrdersByStatus.pending) || 0;
-  const assignedWO = Number(workOrdersByStatus.assigned) || 0;
-  const inProgressWO = Number(workOrdersByStatus.in_progress) || 0;
-  const completedWO = Number(workOrdersByStatus.completed) || 0;
-  const closedWO = Number(workOrdersByStatus.closed) || 0;
-  const cancelledWO = Number(workOrdersByStatus.cancelled) || 0;
-  const pieTotal = pendingWO + assignedWO + inProgressWO + completedWO + closedWO + cancelledWO;
+  // Date filtering for real-time data
+  const dateFilteredWorkOrders = startDate && endDate ? workOrders.filter(wo => {
+    const woDate = new Date(wo.created_at || wo.createdAt);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return woDate >= start && woDate <= end;
+  }) : workOrders;
+
+  const dateFilteredEstimates = startDate && endDate ? estimates.filter(est => {
+    const estDate = new Date(est.created_at || est.createdAt);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return estDate >= start && estDate <= end;
+  }) : estimates;
+
+  const dateFilteredVendors = startDate && endDate ? vendors.filter(v => {
+    const vDate = new Date(v.created_at || v.createdAt || v.onboarded_at);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return vDate >= start && vDate <= end;
+  }) : vendors;
+
+  // Helper function to normalize status
+  const getWOStatus = (wo) => (wo.status || '').toString().trim().toLowerCase().replace(/[_\s-]/g, '');
+
+  // Compute real-time work order stats from actual data
+  const pendingWO = dateFilteredWorkOrders.filter(wo => getWOStatus(wo) === 'pending').length;
+  const assignedWO = dateFilteredWorkOrders.filter(wo => getWOStatus(wo) === 'assigned').length;
+  const inProgressWO = dateFilteredWorkOrders.filter(wo => getWOStatus(wo) === 'inprogress').length;
+  const completedWO = dateFilteredWorkOrders.filter(wo => getWOStatus(wo) === 'completed').length;
+  const closedWO = dateFilteredWorkOrders.filter(wo => getWOStatus(wo) === 'closed').length;
+  const cancelledWO = dateFilteredWorkOrders.filter(wo => getWOStatus(wo) === 'cancelled').length;
+  const totalWorkOrders = dateFilteredWorkOrders.length;
   
   const pieData = [
     { name: 'Pending', value: pendingWO, color: '#F59E0B' },
@@ -112,8 +139,15 @@ const SupervisorDashboard = ({ user }) => {
     { name: 'Cancelled', value: cancelledWO, color: '#EF4444' },
   ].filter(item => item.value > 0);
 
-  // Use actual API total as primary source
-  const totalWorkOrders = stats?.totalWorkOrders || pieTotal || 0;
+  // Computed real-time stats from actual data arrays
+  const realTimeStats = {
+    properties: properties.length,
+    vendors: dateFilteredVendors.length || vendors.length,
+    zones: stats?.zones || 0,
+    workOrders: totalWorkOrders,
+    estimates: dateFilteredEstimates.length
+  };
+
   const totalForPercentage = totalWorkOrders || 1;
 
   // Stacked bar chart data - Property types with Direct vs Property-based breakdown
