@@ -989,15 +989,23 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       
       // Update the service status to Scheduled and store the scheduleId
       const scheduleId = result.data?.serviceScheduleId;
+      const updatedService = { ...selectedService, status: 'Scheduled', scheduleId: scheduleId };
+      
+      // Update services array
       setServices(prev => prev.map(s => 
-        s.id === selectedService.id ? { ...s, status: 'Scheduled', scheduleId: scheduleId } : s
+        s.id === selectedService.id ? updatedService : s
       ));
+      
+      // Also update the selected service directly
+      setSelectedService(updatedService);
       
       // Update planned visits to show as scheduled
       setPlannedVisits(prev => prev.map(v => ({ ...v, status: 'Scheduled' })));
       
       // Clear slot selection but keep showing the service
       setSelectedSlot(null);
+      
+      console.log('[Confirm Schedule] Service updated to Scheduled:', updatedService);
       
       // Show success message - stay on same page
       alert(`Schedule confirmed successfully! ${result.data?.visitsCreated || confirmationSchedule.length} visits created.`);
