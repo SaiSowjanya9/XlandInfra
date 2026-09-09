@@ -27,6 +27,7 @@ const {
   hashIP
 } = require('../utils/paymentSecurity');
 const { generateInvoicePDF } = require('../services/pdfService');
+const { markPaymentCompleted } = require('../services/schedulingWorkflow');
 
 // Secure file upload configuration for payment proofs
 // SECURITY: Whitelist both MIME types AND file extensions
@@ -2794,6 +2795,23 @@ router.put('/payments/:id/verify', authenticate, canEditPayments, async (req, re
             updated_at = NOW()
           WHERE id = ?
         `, [totalPaid, newBalance, invoiceStatus, invoiceStatus, p.invoice_id]);
+
+        // Trigger scheduling workflow when invoice is fully paid
+        if (newBalance <= 0 && p.property_id && p.estimate_id) {
+          try {
+            await markPaymentCompleted({
+              propertyId: p.property_id,
+              estimateId: p.estimate_id,
+              invoiceId: p.invoice_id,
+              paidAmount: totalPaid,
+              paidBy: userName
+            });
+            console.log(`Scheduling workflow triggered for property ${p.property_id}`);
+          } catch (scheduleErr) {
+            console.error('Error triggering scheduling workflow:', scheduleErr);
+            // Don't fail payment verification if scheduling fails
+          }
+        }
       }
 
       // Send receipt email automatically
