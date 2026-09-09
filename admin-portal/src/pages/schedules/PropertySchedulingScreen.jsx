@@ -240,7 +240,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             vendorId: s.vendor_id || s.vendorId,
             frequency: s.frequency_type || s.frequency || 'Monthly',
             visits: s.total_visits || s.visits || 12,
-            status: s.scheduling_status === 'completed' ? 'Scheduled' : 'Schedule',
+            status: (s.scheduling_status === 'scheduled' || s.scheduling_status === 'completed') ? 'Scheduled' : 'Schedule',
             customVisits: s.custom_visits || s.customVisits,
             startDate: s.start_date || s.startDate,
             endDate: s.end_date || s.endDate
