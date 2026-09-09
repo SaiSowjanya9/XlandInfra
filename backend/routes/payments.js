@@ -2702,6 +2702,7 @@ router.put('/payments/:id/verify', authenticate, canEditPayments, async (req, re
     let selectQuery = `
       SELECT p.*, 
              i.invoice_id as invoice_code, i.total_amount as invoice_amount,
+             i.customer_email as invoice_email, i.customer_name as invoice_customer_name,
              prop.community_name as property_name, prop.property_id as property_code,
              prop.customer_email, prop.customer_phone
       FROM payments p
@@ -2803,6 +2804,18 @@ router.put('/payments/:id/verify', authenticate, canEditPayments, async (req, re
           WHERE id = ?
         `, [totalPaid, newBalance, invoiceStatus, invoiceStatus, p.invoice_id]);
 
+        // Update fp_estimates payment_status to enable scheduling
+        if (p.estimate_id) {
+          const fpEstimateStatus = newBalance <= 0 ? 'paid' : 'partial';
+          await pool.execute(`
+            UPDATE fp_estimates SET
+              payment_status = ?,
+              updated_at = NOW()
+            WHERE id = ? OR property_id = ?
+          `, [fpEstimateStatus, p.estimate_id, p.property_id]);
+          console.log(`[Payment Verify] Updated fp_estimates payment_status to ${fpEstimateStatus} for estimate ${p.estimate_id}`);
+        }
+
         // Trigger scheduling workflow when invoice is fully paid
         if (newBalance <= 0 && p.property_id && p.estimate_id) {
           try {
@@ -2822,7 +2835,8 @@ router.put('/payments/:id/verify', authenticate, canEditPayments, async (req, re
       }
 
       // Send receipt email automatically
-      const customerEmail = p.customer_email || p.email;
+      const customerEmail = p.customer_email || p.invoice_email || p.email;
+      console.log(`[Payment Verify] Customer email for receipt: ${customerEmail || 'NOT FOUND'}`);
       if (customerEmail) {
         try {
           const amountPaid = parseFloat(p.amount) || 0;
@@ -2832,7 +2846,7 @@ router.put('/payments/:id/verify', authenticate, canEditPayments, async (req, re
           const paymentData = {
             paymentId: p.payment_id || `PAY-${String(p.id).padStart(4, '0')}`,
             invoiceId: p.invoice_code,
-            customerName: p.customer_name,
+            customerName: p.customer_name || p.invoice_customer_name,
             customerEmail,
             propertyName: p.property_name,
             amount: amountPaid,

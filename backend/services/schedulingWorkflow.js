@@ -50,37 +50,60 @@ async function markPaymentCompleted({ propertyId, estimateId, invoiceId, paidAmo
     await connection.beginTransaction();
 
     // Get estimate services to prepare for vendor assignment
-    const [estimate] = await connection.execute(
-      `SELECT service_rows, franchise_partner_id FROM estimates WHERE id = ?`,
-      [estimateId]
+    // Try fp_estimates first, then fallback to estimates table
+    let estimate = null;
+    let services = [];
+    let franchisePartnerId = null;
+
+    const [fpEstimates] = await connection.execute(
+      `SELECT service_rows, franchise_partner_id FROM fp_estimates WHERE id = ? OR property_id = ?`,
+      [estimateId, propertyId]
     );
-
-    if (estimate.length === 0) {
-      throw new Error('Estimate not found');
+    
+    if (fpEstimates.length > 0) {
+      estimate = fpEstimates[0];
+    } else {
+      const [estimates] = await connection.execute(
+        `SELECT service_rows, franchise_partner_id FROM estimates WHERE id = ?`,
+        [estimateId]
+      );
+      if (estimates.length > 0) {
+        estimate = estimates[0];
+      }
     }
 
-    const services = JSON.parse(estimate[0].service_rows || '[]');
-    const franchisePartnerId = estimate[0].franchise_partner_id;
-
-    // Create pending schedule entry for each service
-    for (const service of services) {
-      await connection.execute(`
-        INSERT INTO pending_property_schedules (
-          property_id, estimate_id, invoice_id, service_name, service_category,
-          frequency, total_visits, status, franchise_partner_id, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_vendor', ?, NOW())
-        ON DUPLICATE KEY UPDATE 
-          status = 'pending_vendor',
-          updated_at = NOW()
-      `, [
-        propertyId, estimateId, invoiceId,
-        service.serviceName || service.name,
-        service.category || service.serviceCategory,
-        service.frequencyType || service.frequency || 'monthly',
-        service.visits || service.totalVisits || 1,
-        franchisePartnerId
-      ]);
+    if (!estimate) {
+      console.log(`[markPaymentCompleted] No estimate found for id ${estimateId}, property ${propertyId}`);
+      // Still create the pending schedule entry without service details
+      franchisePartnerId = null;
+      services = [];
+    } else {
+      try {
+        services = typeof estimate.service_rows === 'string' 
+          ? JSON.parse(estimate.service_rows || '[]')
+          : (estimate.service_rows || []);
+      } catch (e) {
+        services = [];
+      }
+      franchisePartnerId = estimate.franchise_partner_id;
     }
+
+    const totalServices = services.length || 1;
+
+    // Create/update pending property schedule entry (property-level, not per-service)
+    await connection.execute(`
+      INSERT INTO pending_property_schedules (
+        property_id, estimate_id, total_services, vendors_assigned, services_scheduled,
+        scheduling_status, franchise_partner_id, added_at
+      ) VALUES (?, ?, ?, 0, 0, 'pending_vendor', ?, NOW())
+      ON DUPLICATE KEY UPDATE 
+        estimate_id = VALUES(estimate_id),
+        total_services = VALUES(total_services),
+        scheduling_status = 'pending_vendor',
+        updated_at = NOW()
+    `, [
+      propertyId, estimateId, totalServices, franchisePartnerId
+    ]);
 
     // Notify Manager about pending scheduling
     await createNotification({

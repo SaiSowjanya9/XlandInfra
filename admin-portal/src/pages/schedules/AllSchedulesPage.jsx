@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Clock, Search, Filter, Download, ChevronLeft, ChevronRight, ChevronDown,
   RefreshCw, CheckCircle, AlertCircle, XCircle, Clock3, CalendarDays, 
-  Users, Building2, List, MapPin, Eye, Edit2, X, FileText, Plus
+  Users, Building2, List, MapPin, Eye, Edit2, X, FileText, Plus, Printer
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 
@@ -266,6 +266,89 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     } catch { return time; }
   };
 
+  // Handle print to PDF
+  const handlePrint = async () => {
+    const dataToExport = schedules;
+    
+    if (dataToExport.length === 0) {
+      showToast('No data to print', 'error');
+      return;
+    }
+
+    // Create print content
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Schedule Report - XLAND INFRA</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+          .header { background: #3a3a3a; padding: 16px 24px; text-align: center; border-radius: 8px 8px 0 0; margin: 0 auto; max-width: 600px; }
+          .header-title { color: #D39A1A; font-size: 18px; font-weight: bold; letter-spacing: 1px; }
+          .header-subtitle { color: #D39A1A; font-size: 10px; letter-spacing: 2px; margin-top: 4px; }
+          .report-title { background: #D39A1A; color: white; text-align: center; padding: 10px; font-weight: 600; font-size: 14px; border-radius: 0 0 8px 8px; margin: 0 auto 20px auto; max-width: 600px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+          th { background: #f3f4f6; padding: 8px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; }
+          td { padding: 8px; border: 1px solid #e5e7eb; }
+          tr:nth-child(even) { background: #f9fafb; }
+          .status-scheduled { background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 10px; }
+          .status-completed { background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-size: 10px; }
+          .status-cancelled { background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 12px; font-size: 10px; }
+          .footer { text-align: center; margin-top: 20px; font-size: 10px; color: #9ca3af; }
+          @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="header-title">XLAND INFRA</div>
+          <div class="header-subtitle">PVT LTD</div>
+        </div>
+        <div class="report-title">SCHEDULE REPORT</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Property ID</th>
+              <th>Property Name</th>
+              <th>Service</th>
+              <th>Vendor</th>
+              <th>Visit</th>
+              <th>Scheduled Date</th>
+              <th>Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${dataToExport.map(schedule => `
+              <tr>
+                <td>${schedule.propertyId || ''}</td>
+                <td>${schedule.propertyName || ''}</td>
+                <td>${schedule.serviceName || ''}</td>
+                <td>${schedule.vendorName || ''}</td>
+                <td>${schedule.visitNumber} of ${schedule.totalVisits}</td>
+                <td>${schedule.scheduledDate ? new Date(schedule.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</td>
+                <td>${schedule.scheduledTime || ''}</td>
+                <td><span class="status-${schedule.status === 'completed' ? 'completed' : schedule.status === 'cancelled' ? 'cancelled' : 'scheduled'}">${schedule.status || 'Scheduled'}</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="footer">
+          <p>Generated on ${new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+          <p>XLAND INFRA Property Management System</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
   // Handle export to CSV
   const handleExport = () => {
     const dataToExport = schedules;
@@ -376,53 +459,85 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     }
   };
 
-  // Generate and download PDF
-  const handleDownloadPDF = async () => {
+  // Generate and download PDF using print
+  const handleDownloadPDF = () => {
     if (!scheduleDetailsRef.current || !scheduleDetailsData) return;
     
     setGeneratingPDF(true);
+    
     try {
-      // Dynamic import for html2canvas
-      const html2canvas = (await import('html2canvas')).default;
-      
       const element = scheduleDetailsRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff'
-      });
+      const printContent = element.innerHTML;
       
-      // Create PDF using canvas
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Schedule Report - ${scheduleDetailsData.propertyId}</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: Arial, sans-serif; padding: 20px; background: white; }
+            
+            /* Header styles */
+            .header-container { max-width: 500px; margin: 0 auto 20px auto; }
+            .header-dark { background: #3a3a3a; padding: 12px 20px; border-radius: 8px 8px 0 0; text-align: center; }
+            .header-title { color: #D39A1A; font-size: 16px; font-weight: bold; letter-spacing: 1px; }
+            .header-subtitle { color: #D39A1A; font-size: 8px; letter-spacing: 2px; margin-top: 2px; }
+            .header-gold { background: #D39A1A; color: white; text-align: center; padding: 6px; font-weight: 600; font-size: 13px; border-radius: 0 0 8px 8px; }
+            
+            /* Property info */
+            .property-info { background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 16px; }
+            .property-info span { margin-right: 24px; font-size: 13px; }
+            .property-info .label { color: #6b7280; }
+            .property-info .value { color: #1f2937; font-weight: 500; }
+            
+            /* Service sections */
+            .service-section { border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 16px; page-break-inside: avoid; break-inside: avoid; }
+            .service-header { background: #f9fafb; padding: 8px 12px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
+            .service-name { font-weight: 600; color: #1f2937; font-size: 13px; }
+            .service-vendor { font-size: 11px; color: #6b7280; }
+            
+            /* Table styles */
+            table { width: 100%; border-collapse: collapse; font-size: 11px; }
+            th { background: #f3f4f6; padding: 8px 12px; text-align: center; font-weight: 500; color: #4b5563; }
+            td { padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; }
+            tr:nth-child(even) { background: #f9fafb; }
+            tr { page-break-inside: avoid; break-inside: avoid; }
+            
+            /* Status badges */
+            .status-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 10px; font-weight: 500; }
+            .status-scheduled { background: #dbeafe; color: #1e40af; }
+            .status-completed { background: #dcfce7; color: #166534; }
+            .status-cancelled { background: #fee2e2; color: #dc2626; }
+            
+            /* Footer */
+            .footer { text-align: center; margin-top: 24px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af; }
+            
+            /* Print styles */
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .service-section { page-break-inside: avoid; break-inside: avoid; }
+              tr { page-break-inside: avoid; break-inside: avoid; }
+            }
+            @page { margin: 15mm; }
+          </style>
+        </head>
+        <body>
+          ${printContent}
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
       
-      // Dynamic import for jspdf
-      const { jsPDF } = await import('jspdf');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      let heightLeft = imgHeight;
-      let position = 0;
-      
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-      
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-      
-      const serviceSuffix = serviceFilter ? `_${serviceFilter.replace(/\s+/g, '_')}` : '_All_Services';
-      const fileName = `Schedules_${scheduleDetailsData.propertyId}${serviceSuffix}_${new Date().toISOString().split('T')[0]}.pdf`;
-      pdf.save(fileName);
+      setTimeout(() => {
+        printWindow.print();
+        setGeneratingPDF(false);
+      }, 500);
     } catch (error) {
       console.error('Error generating PDF:', error);
       showToast('Error generating PDF', 'error');
-    } finally {
       setGeneratingPDF(false);
     }
   };
@@ -801,6 +916,16 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             >
               <Download className="w-4 h-4" />
               Export
+            </button>
+
+            {/* Print */}
+            <button 
+              onClick={handlePrint}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50"
+              title="Print Schedule Report"
+            >
+              <Printer className="w-4 h-4" />
+              Print
             </button>
 
             {/* Clear Filters */}
@@ -1448,28 +1573,28 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             <div className="overflow-y-auto max-h-[calc(95vh-160px)]">
               <div ref={scheduleDetailsRef} className="p-5 bg-white">
                 {/* PDF Header with Logo Banner - matching Invoice style */}
-                <div className="mb-5">
-                  <div className="bg-[#1a1a1a] px-6 py-4 rounded-t-lg">
+                <div className="mb-5 max-w-xl mx-auto">
+                  <div className="bg-[#3a3a3a] px-5 py-3 rounded-t-lg">
                     <div className="flex items-center justify-center gap-3">
-                      <img src="/logo.webp" alt="XLAND INFRA" className="h-14 w-14 object-contain" />
+                      <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-12 object-contain" />
                       <div className="flex flex-col justify-center">
-                        <h1 className="text-[#D39A1A] text-lg font-bold tracking-wider leading-tight">XLAND INFRA</h1>
+                        <h1 className="text-[#D39A1A] text-base font-bold tracking-wider leading-tight">XLAND INFRA</h1>
                         <div className="flex items-center gap-1 mt-0.5">
-                          <div className="w-5 h-[1px] bg-[#D39A1A]"></div>
+                          <div className="w-4 h-[1px] bg-[#D39A1A]"></div>
                           <span className="text-[#D39A1A] text-[8px] tracking-[0.12em]">PVT LTD</span>
-                          <div className="w-5 h-[1px] bg-[#D39A1A]"></div>
+                          <div className="w-4 h-[1px] bg-[#D39A1A]"></div>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div className="bg-[#D39A1A] text-center py-2 rounded-b-lg">
+                  <div className="bg-[#D39A1A] text-center py-1.5 rounded-b-lg">
                     <span className="text-white font-semibold text-sm tracking-wide">SCHEDULE REPORT</span>
                   </div>
                 </div>
 
                 {/* Property Info Summary - Single Line */}
                 <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex items-center justify-between text-sm whitespace-nowrap">
+                  <div className="flex items-center flex-wrap gap-x-6 gap-y-2 text-sm">
                     <span><span className="text-gray-500">Property:</span> <span className="font-medium text-gray-800">{scheduleDetailsData.propertyId}</span></span>
                     <span><span className="text-gray-500">Name:</span> <span className="font-medium text-gray-800">{scheduleDetailsData.propertyName}</span></span>
                     <span><span className="text-gray-500">Customer:</span> <span className="text-gray-700">{scheduleDetailsData.customerName || '-'}</span></span>
@@ -1514,7 +1639,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                         return acc;
                       }, {})
                     ).map(([serviceName, serviceData], idx) => (
-                      <div key={serviceName} className="border border-gray-200 rounded-lg bg-white">
+                      <div key={serviceName} className="border border-gray-200 rounded-lg bg-white" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                         {/* Service Header */}
                         <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
                           <div className="flex items-center justify-between">
@@ -1523,13 +1648,13 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                           </div>
                         </div>
                         {/* Compact Table View - fits PDF */}
-                        <table className="w-full text-xs">
+                        <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
                           <thead>
                             <tr className="bg-gray-100">
-                              <th className="px-2 py-1 text-left font-medium text-gray-600 w-8">#</th>
-                              <th className="px-2 py-1 text-left font-medium text-gray-600">Date</th>
-                              <th className="px-2 py-1 text-left font-medium text-gray-600">Time</th>
-                              <th className="px-2 py-1 text-center font-medium text-gray-600">Status</th>
+                              <th className="px-3 py-1.5 text-center font-medium text-gray-600" style={{width: '40px'}}>#</th>
+                              <th className="px-3 py-1.5 text-center font-medium text-gray-600">Date</th>
+                              <th className="px-3 py-1.5 text-center font-medium text-gray-600">Time</th>
+                              <th className="px-3 py-1.5 text-center font-medium text-gray-600" style={{width: '100px'}}>Status</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1539,12 +1664,12 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                                 const isCompleted = visit.status === 'completed';
                                 const isCancelled = visit.status === 'cancelled';
                                 return (
-                                  <tr key={visit.id || vIdx} className={vIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                    <td className="px-2 py-1 text-gray-500">{vIdx + 1}</td>
-                                    <td className="px-2 py-1 text-gray-800">{formatDate(visit.scheduledDate)}</td>
-                                    <td className="px-2 py-1 text-gray-600">{formatTime(visit.scheduledTime)}</td>
-                                    <td className="px-2 py-1 text-center">
-                                      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                  <tr key={visit.id || vIdx} className={vIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                                    <td className="px-3 py-1.5 text-center text-gray-500">{vIdx + 1}</td>
+                                    <td className="px-3 py-1.5 text-center text-gray-800">{formatDate(visit.scheduledDate)}</td>
+                                    <td className="px-3 py-1.5 text-center text-gray-600">{formatTime(visit.scheduledTime)}</td>
+                                    <td className="px-3 py-1.5 text-center">
+                                      <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${
                                         isCompleted ? 'bg-green-100 text-green-700' : isCancelled ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
                                       }`}>
                                         {isCompleted ? 'Done' : isCancelled ? 'Cancelled' : 'Scheduled'}

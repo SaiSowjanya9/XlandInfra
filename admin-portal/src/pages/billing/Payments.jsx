@@ -1612,8 +1612,8 @@ const BankTransferVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) 
   const daysInfo = getDaysInfo();
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto my-auto" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
           <div className="flex items-center gap-3">
@@ -3214,50 +3214,51 @@ const Payments = ({ user, portalType = 'admin' }) => {
                                 className="p-1.5 hover:bg-gray-100 rounded-lg"
                               >
                                 <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                            </button>
-                            {actionMenuOpen === payment.id && (
-                              <div className="absolute right-4 top-12 bg-white border border-gray-200 rounded-xl shadow-lg z-10 py-2 min-w-[160px]">
-                                {payment.status === 'verification_pending' && (
-                                  <>
-                                    <button 
-                                      onClick={() => {
-                                        setSelectedPaymentForVerify(payment);
-                                        setShowVerifyModal(true);
-                                        setActionMenuOpen(null);
-                                      }}
-                                      className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2 font-medium"
-                                    >
-                                      <CheckCircle className="w-4 h-4" /> Verify Payment
-                                    </button>
-                                    <div className="border-t border-gray-100 my-1"></div>
-                                  </>
-                                )}
-                                <button 
-                                  onClick={() => { handleViewReceipt(payment); setActionMenuOpen(null); }}
-                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                >
-                                  <Eye className="w-4 h-4" /> View Receipt
-                                </button>
-                                <button 
-                                  onClick={() => { handleDownloadReceipt(payment); setActionMenuOpen(null); }}
-                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                >
-                                  <Download className="w-4 h-4" /> Download Receipt
-                                </button>
-                                {payment.status === 'paid' && (
+                              </button>
+                              {actionMenuOpen === payment.id && (
+                                <div className="absolute right-4 top-12 bg-white border border-gray-200 rounded-xl shadow-lg z-10 py-2 min-w-[160px]">
+                                  {payment.status === 'verification_pending' && (
+                                    <>
+                                      <button 
+                                        onClick={() => {
+                                          setSelectedPaymentForVerify(payment);
+                                          setShowVerifyModal(true);
+                                          setActionMenuOpen(null);
+                                        }}
+                                        className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2 font-medium"
+                                      >
+                                        <CheckCircle className="w-4 h-4" /> Verify Payment
+                                      </button>
+                                      <div className="border-t border-gray-100 my-1"></div>
+                                    </>
+                                  )}
                                   <button 
-                                    onClick={() => { handleSendReceipt(payment); setActionMenuOpen(null); }}
-                                    className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center gap-2"
+                                    onClick={() => { handleViewReceipt(payment); setActionMenuOpen(null); }}
+                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                                   >
-                                    <Send className="w-4 h-4" /> Send Receipt
+                                    <Eye className="w-4 h-4" /> View Receipt
                                   </button>
-                                )}
-                                <div className="border-t border-gray-100 my-1"></div>
-                                <button className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
-                                  <Trash2 className="w-4 h-4" /> Delete
-                                </button>
-                              </div>
-                            )}
+                                  <button 
+                                    onClick={() => { handleDownloadReceipt(payment); setActionMenuOpen(null); }}
+                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                  >
+                                    <Download className="w-4 h-4" /> Download Receipt
+                                  </button>
+                                  {payment.status === 'paid' && (
+                                    <button 
+                                      onClick={() => { handleSendReceipt(payment); setActionMenuOpen(null); }}
+                                      className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center gap-2"
+                                    >
+                                      <Send className="w-4 h-4" /> Send Receipt
+                                    </button>
+                                  )}
+                                  <div className="border-t border-gray-100 my-1"></div>
+                                  <button className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                    <Trash2 className="w-4 h-4" /> Delete
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
