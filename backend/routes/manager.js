@@ -1782,7 +1782,7 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
 
     const query = `SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
               ov.zone, ov.zone as zone_name, ov.area_name, ov.area_name as area, ov.division,
-              ov.owner_name, ov.owner_name as company_name, ov.owner_name as contact_person,
+              ov.owner_name, COALESCE(ov.company_name, ov.owner_name) as company_name, ov.owner_name as contact_person,
               ov.owner_mobile, ov.owner_mobile as phone, ov.owner_email, ov.owner_email as email,
               ov.owner_aadhar, ov.owner_country_code,
               ov.manager_name, ov.manager_mobile, ov.manager_email, ov.manager_country_code,
@@ -1911,7 +1911,7 @@ router.get('/vendors/assignments', requireManagerScope, async (req, res) => {
         COALESCE(op.property_type, p.property_type) as property_type, 
         COALESCE(op.address, p.address) as address, 
         COALESCE(op.city, p.city) as city,
-        v.owner_name as vendor_name, v.vendor_id as vendor_code,
+        COALESCE(v.company_name, v.owner_name) as vendor_name, v.vendor_id as vendor_code,
         v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
         v.zone as zone_name, v.area_name as area, v.rate_per_visit, v.coverage_per_day,
         v.owner_aadhar, v.manager_name, v.manager_mobile, v.manager_email,

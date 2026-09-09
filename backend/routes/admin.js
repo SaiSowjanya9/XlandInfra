@@ -1299,7 +1299,7 @@ router.get('/vendors/assignments', async (req, res) => {
         COALESCE(p.property_type, op.property_type) as property_type, 
         COALESCE(p.address, op.address) as address, 
         COALESCE(p.city, op.city) as city,
-        v.owner_name as vendor_name, v.vendor_id as vendor_code, COALESCE(pva.service_type, v.service_type) as service_type,
+        COALESCE(v.company_name, v.owner_name) as vendor_name, v.vendor_id as vendor_code, COALESCE(pva.service_type, v.service_type) as service_type,
         v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
         v.zone as zone_name, v.area_name as area, v.rate_per_visit
       FROM property_vendor_assignments pva
@@ -2706,7 +2706,7 @@ router.get('/all-vendor-assignments', authenticate, adminOnly, async (req, res) 
   try {
     const [assignments] = await pool.execute(
       `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at as assigned_date, pva.is_active,
-              ov.vendor_id as vendor_code, ov.owner_name as vendor_name, COALESCE(pva.service_type, ov.service_type) as service_type, 
+              ov.vendor_id as vendor_code, COALESCE(ov.company_name, ov.owner_name) as vendor_name, COALESCE(pva.service_type, ov.service_type) as service_type, 
               ov.zone as vendor_zone, ov.zone as zone_name, ov.area_name as area, 
               ov.rate_per_visit, ov.coverage_per_day, ov.status as vendor_status,
               ov.owner_mobile as vendor_phone, ov.owner_email as vendor_email,
@@ -2742,7 +2742,7 @@ router.get('/all-vendors', authenticate, adminOnly, async (req, res) => {
     const statusCondition = includeDeleted ? "(ov.status IN ('active', 'deleted', 'inactive') OR ov.is_active = 0)" : "(ov.status = 'active' OR ov.status IS NULL)";
     
     const [vendors] = await pool.execute(
-      `SELECT ov.*, ov.owner_name as vendor_name, ov.owner_mobile as phone, ov.owner_email as email,
+      `SELECT ov.*, COALESCE(ov.company_name, ov.owner_name) as vendor_name, ov.owner_mobile as phone, ov.owner_email as email,
               ov.franchise_partner_id as fp_id, fp.fp_code, fp.company_name as fp_name,
               COALESCE(
                 CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
@@ -3036,7 +3036,7 @@ router.get('/fp-view/:fpId/vendors', authenticate, adminOnly, async (req, res) =
     const statusCondition = includeDeleted ? "(ov.status IN ('active', 'deleted', 'inactive') OR ov.is_active = 0)" : "(ov.status = 'active' OR ov.status IS NULL)";
     
     const [vendors] = await pool.execute(
-      `SELECT ov.*, ov.owner_name as vendor_name, ov.owner_mobile as phone, ov.owner_email as email,
+      `SELECT ov.*, COALESCE(ov.company_name, ov.owner_name) as vendor_name, ov.owner_mobile as phone, ov.owner_email as email,
               COALESCE(
                 CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
                 ov.created_by, 'System'
@@ -3107,7 +3107,7 @@ router.get('/fp-view/:fpId/vendor-assignments', authenticate, adminOnly, async (
               COALESCE(p.property_id, op.property_id) as property_code,
               COALESCE(p.zone_id, op.zone) as property_zone,
               COALESCE(p.property_type, op.property_type) as property_type,
-              v.owner_name as vendor_name, v.vendor_id as vendor_code, COALESCE(pva.service_type, v.service_type) as service_type,
+              COALESCE(v.company_name, v.owner_name) as vendor_name, v.vendor_id as vendor_code, COALESCE(pva.service_type, v.service_type) as service_type,
               v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
               v.zone as zone_name, v.area_name as area,
               v.rate_per_visit, v.coverage_per_day, v.status as vendor_status,
