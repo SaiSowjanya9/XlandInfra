@@ -456,8 +456,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     
     try {
       const token = getAuthToken();
-      const response = await fetch(`${API_BASE}/api/schedules/${selectedSchedule.id}/cancel`, {
-        method: 'POST',
+      const response = await fetch(`${API_BASE}/api/schedules/visits/${selectedSchedule.id}/cancel`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -516,8 +516,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       
       for (const visit of visits) {
         try {
-          await fetch(`${API_BASE}/api/${apiPath}/schedules/${visit.id}/cancel`, {
-            method: 'POST',
+          await fetch(`${API_BASE}/api/schedules/visits/${visit.id}/cancel`, {
+            method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`
