@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Calendar, Clock, Search, Filter, Download, ChevronLeft, ChevronRight,
+  Calendar, Clock, Search, Filter, Download, ChevronLeft, ChevronRight, ChevronDown,
   RefreshCw, CheckCircle, AlertCircle, XCircle, Clock3, CalendarDays, 
   Users, Building2, List, MapPin, Eye, Edit2, X, FileText, Plus
 } from 'lucide-react';
@@ -121,6 +121,54 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   const [services, setServices] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [zones, setZones] = useState([]);
+  
+  // Expanded properties for grouped view
+  const [expandedProperties, setExpandedProperties] = useState(new Set());
+  
+  // Group schedules by property
+  const groupedSchedules = React.useMemo(() => {
+    const groups = {};
+    schedules.forEach(schedule => {
+      const key = schedule.propertyId;
+      if (!groups[key]) {
+        groups[key] = {
+          propertyId: schedule.propertyId,
+          propertyName: schedule.propertyName,
+          customerName: schedule.customerName,
+          zone: schedule.zone,
+          services: {}
+        };
+      }
+      // Group by service within property
+      const serviceName = schedule.serviceName;
+      if (!groups[key].services[serviceName]) {
+        groups[key].services[serviceName] = {
+          serviceName,
+          vendorName: schedule.vendorName,
+          visits: [],
+          totalVisits: schedule.totalVisits,
+          scheduledCount: 0,
+          completedCount: 0
+        };
+      }
+      groups[key].services[serviceName].visits.push(schedule);
+      if (schedule.status === 'scheduled') groups[key].services[serviceName].scheduledCount++;
+      if (schedule.status === 'completed') groups[key].services[serviceName].completedCount++;
+    });
+    return Object.values(groups);
+  }, [schedules]);
+  
+  const togglePropertyExpand = (propertyId) => {
+    setExpandedProperties(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(propertyId)) {
+        newSet.delete(propertyId);
+      } else {
+        newSet.add(propertyId);
+      }
+      return newSet;
+    });
+  };
   
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(15);
@@ -877,23 +925,19 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
           </div>
         </div>
 
-        {/* Schedule Table */}
+        {/* Schedule Table - Grouped by Property */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-8"></th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Property ID</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Property Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Service</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vendor</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Visit</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Target Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Scheduled Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Time</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Zone</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Work Order</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Services</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Visits</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Progress</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -913,96 +957,114 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                       <p className="text-sm text-gray-400 mt-1">Try adjusting your filters</p>
                     </td>
                   </tr>
+                ) : groupedSchedules.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-12 text-center">
+                      <CalendarDays className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500 font-medium">No schedules found</p>
+                      <p className="text-sm text-gray-400 mt-1">Try adjusting your filters</p>
+                    </td>
+                  </tr>
                 ) : (
-                  schedules.map((schedule, index) => {
-                    const statusStyle = getStatusBadge(schedule.status);
+                  groupedSchedules.map((property, index) => {
+                    const isExpanded = expandedProperties.has(property.propertyId);
+                    const serviceList = Object.values(property.services);
+                    const totalVisits = serviceList.reduce((sum, s) => sum + s.visits.length, 0);
+                    const completedVisits = serviceList.reduce((sum, s) => sum + s.completedCount, 0);
+                    const scheduledVisits = serviceList.reduce((sum, s) => sum + s.scheduledCount, 0);
+                    
                     return (
-                      <tr key={schedule.id || index} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <span className="text-sm font-medium text-blue-600">{schedule.propertyId}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <p className="text-sm font-medium text-gray-900">{schedule.propertyName}</p>
-                          <p className="text-xs text-gray-500">{schedule.customerName}</p>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-sm text-gray-700">{schedule.serviceName}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-sm text-gray-700">{schedule.vendorName || '-'}</span>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <span className="text-sm font-medium text-gray-900">{schedule.visitNumber} of {schedule.totalVisits}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-sm text-gray-600">{formatDate(schedule.targetDate)}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`text-sm ${schedule.isRescheduled ? 'text-orange-600 font-medium' : 'text-gray-900'}`}>
-                            {formatDate(schedule.scheduledDate)}
-                          </span>
-                          {schedule.isRescheduled && schedule.originalDate && (
-                            <p className="text-xs text-gray-400">Was: {formatDate(schedule.originalDate)}</p>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-sm text-gray-700">{formatTime(schedule.scheduledTime)}</span>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                            <span className="text-sm text-gray-700">{schedule.zone || '-'}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          {schedule.workOrderId ? (
-                            <span className="text-sm text-blue-600 font-medium">{schedule.workOrderId}</span>
-                          ) : (
-                            <span className="text-sm text-gray-400">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusStyle.bg} ${statusStyle.text}`}>
-                            {statusStyle.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-1">
-                            <button 
-                              onClick={() => handleViewDetails(schedule)}
-                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
-                              title="View Details"
-                            >
-                              <Eye className="w-4 h-4" />
+                      <React.Fragment key={property.propertyId}>
+                        {/* Property Row */}
+                        <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => togglePropertyExpand(property.propertyId)}>
+                          <td className="px-4 py-3">
+                            <button className="p-1 hover:bg-gray-200 rounded">
+                              {isExpanded ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
                             </button>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-sm font-medium text-blue-600">{property.propertyId}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <p className="text-sm font-medium text-gray-900">{property.propertyName}</p>
+                            <p className="text-xs text-gray-500">{property.customerName}</p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-gray-400" />
+                              <span className="text-sm text-gray-700">{property.zone || '-'}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap gap-1">
+                              {serviceList.map((service, i) => (
+                                <span key={i} className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                                  {service.serviceName}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-sm font-medium text-gray-900">{totalVisits} visits</span>
+                            <p className="text-xs text-gray-500">{serviceList.length} services</p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-green-500 rounded-full" 
+                                  style={{ width: `${(completedVisits / totalVisits) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-gray-600">{completedVisits}/{totalVisits}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
                             <button 
-                              onClick={() => handleScheduleDetails(schedule)}
+                              onClick={(e) => { e.stopPropagation(); handleScheduleDetails(serviceList[0]?.visits[0]); }}
                               className="p-1.5 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded border border-emerald-200"
-                              title="Schedule Details & PDF"
+                              title="View Details"
                             >
                               <FileText className="w-4 h-4" />
                             </button>
-                            {permissions.canReschedule && schedule.status !== 'completed' && schedule.status !== 'cancelled' && (
-                              <button 
-                                onClick={() => handleReschedule(schedule)}
-                                className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded"
-                                title="Reschedule"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                            )}
-                            {permissions.canCancel && schedule.status !== 'completed' && schedule.status !== 'cancelled' && (
-                              <button 
-                                onClick={() => handleCancelClick(schedule)}
-                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-                                title="Cancel"
-                              >
-                                <XCircle className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
+                          </td>
+                        </tr>
+                        
+                        {/* Expanded Service Details */}
+                        {isExpanded && serviceList.map((service, sIdx) => (
+                          <tr key={`${property.propertyId}-${sIdx}`} className="bg-gray-50">
+                            <td className="px-4 py-2"></td>
+                            <td colSpan={7} className="px-4 py-3">
+                              <div className="ml-4 p-3 bg-white rounded-lg border border-gray-200">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-3">
+                                    <span className="font-medium text-gray-900">{service.serviceName}</span>
+                                    <span className="text-sm text-gray-500">Vendor: {service.vendorName || 'Unassigned'}</span>
+                                  </div>
+                                  <span className="text-sm text-gray-600">{service.visits.length} visits</span>
+                                </div>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {service.visits.slice(0, 12).map((visit, vIdx) => {
+                                    const statusStyle = getStatusBadge(visit.status);
+                                    return (
+                                      <div 
+                                        key={vIdx} 
+                                        className={`px-2 py-1 rounded text-xs border ${visit.status === 'completed' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-blue-50 border-blue-200 text-blue-700'}`}
+                                        title={`Visit ${visit.visitNumber}: ${formatDate(visit.scheduledDate)}`}
+                                      >
+                                        V{visit.visitNumber}: {formatDate(visit.scheduledDate)}
+                                      </div>
+                                    );
+                                  })}
+                                  {service.visits.length > 12 && (
+                                    <span className="px-2 py-1 text-xs text-gray-500">+{service.visits.length - 12} more</span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
                     );
                   })
                 )}
