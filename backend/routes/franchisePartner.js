@@ -2703,7 +2703,7 @@ router.delete('/vendors/assignments/:id', requireFPScope, async (req, res) => {
 router.post('/vendors', requireFPScope, async (req, res) => {
   try {
     const {
-      serviceType, serviceVerified, zone, areaName, division,
+      companyName, serviceType, serviceVerified, zone, areaName, division,
       ownerName, ownerMobile, ownerEmail, ownerAadhar, ownerCountryCode,
       managerName, managerMobile, managerEmail, managerCountryCode,
       pocName, pocMobile, pocEmail, pocCountryCode,
@@ -2716,21 +2716,23 @@ router.post('/vendors', requireFPScope, async (req, res) => {
     const tempPassword = await bcrypt.hash('temp123', 10);
 
     const creatorName = req.user.name || req.user.username || req.user.full_name || 'Franchise Partner';
+    // Use companyName if provided, otherwise use ownerName as the company name
+    const vendorCompanyName = companyName || ownerName || '';
     
     const [result] = await pool.execute(
       `INSERT INTO onboarded_vendors (
         vendor_id, username, password_hash,
-        service_type, service_verified, zone, area_name, division,
+        company_name, service_type, service_verified, zone, area_name, division,
         owner_name, owner_mobile, owner_email, owner_aadhar, owner_country_code,
         manager_name, manager_mobile, manager_email, manager_country_code,
         poc_name, poc_mobile, poc_email, poc_country_code,
         gst_number, pan_number, license_number,
         rate_per_visit, coverage_per_day,
         franchise_partner_id, created_by, created_by_id, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
       [
         vendorId, username, tempPassword,
-        serviceType || '', serviceVerified ? 1 : 0, zone || '', areaName || '', division || '',
+        vendorCompanyName, serviceType || '', serviceVerified ? 1 : 0, zone || '', areaName || '', division || '',
         ownerName || '', ownerMobile || '', ownerEmail || '', ownerAadhar || '', ownerCountryCode || '+91',
         managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
         pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
@@ -2779,6 +2781,7 @@ router.put('/vendors/:id', requireFPScope, async (req, res) => {
     const values = [];
 
     const fields = {
+      company_name: body.company_name || body.companyName,
       service_type: body.service_type || body.serviceType,
       service_verified: body.service_verified !== undefined ? body.service_verified : body.serviceVerified,
       zone: body.zone || body.zone_name,
