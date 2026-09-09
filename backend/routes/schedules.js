@@ -40,7 +40,7 @@ router.get('/', authenticate, canSeeSchedule, async (req, res) => {
              op.zone as zone,
              COALESCE(op.city, p.city) as city,
              op.franchise_partner_id as fp_id,
-             fe.estimate_id as fp_estimate_id, fe.title as fp_estimate_title,
+             fe.estimate_id as fp_estimate_id, COALESCE(fe.package_name, fe.description) as fp_estimate_title,
              fe.service_category,
              CONCAT(u.first_name, ' ', u.last_name) as created_by_name
       FROM schedules s
@@ -137,7 +137,7 @@ router.get('/dashboard/stats', authenticate, canSeeSchedule, async (req, res) =>
               op.zone as zone,
               COALESCE(op.city, p.city) as city,
               CONCAT(u.first_name, ' ', u.last_name) as created_by_name,
-              fe.title as estimate_title,
+              COALESCE(fe.package_name, fe.description) as estimate_title,
               fe.service_category
        FROM schedules s
        LEFT JOIN onboarded_properties op ON s.property_id = op.id
@@ -415,7 +415,7 @@ router.get('/:id', authenticate, canSeeSchedule, async (req, res) => {
               COALESCE(op.community_name, p.name) as property_name, 
               COALESCE(op.property_id, p.property_id) as property_code,
               COALESCE(op.property_type, p.property_type) as property_type,
-              fe.estimate_id as fp_estimate_id, fe.title as fp_estimate_title,
+              fe.estimate_id as fp_estimate_id, COALESCE(fe.package_name, fe.description) as fp_estimate_title,
               CONCAT(u.first_name, ' ', u.last_name) as created_by_name
        FROM schedules s
        LEFT JOIN onboarded_properties op ON s.property_id = op.id
@@ -2148,12 +2148,19 @@ router.get('/vendor/:vendorId/availability', authenticate, canSeeSchedule, async
     );
 
     // Get vendor's availability settings
-    const [availability] = await pool.execute(
-      `SELECT * FROM vendor_availability 
-       WHERE vendor_id = ?
-       ORDER BY date, day_of_week`,
-      [vendorId]
-    );
+    let availability = [];
+    try {
+      const [availResult] = await pool.execute(
+        `SELECT * FROM vendor_availability 
+         WHERE vendor_id = ?
+         ORDER BY date`,
+        [vendorId]
+      );
+      availability = availResult;
+    } catch (availErr) {
+      console.log('[Vendor Availability] Query error (table may not exist):', availErr.message);
+      // Return empty availability if table doesn't exist
+    }
 
     // Get vendor's max daily visits
     const [[vendor]] = await pool.execute(
