@@ -173,6 +173,13 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(500); // Show all at once - no pagination
   
+  // Toast notification state
+  const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
+  const showToast = (message, type = 'info') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'info' }), 3000);
+  };
+  
   // Modal states
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -375,7 +382,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     const dataToExport = USE_MOCK_DATA ? mockDataRef.current : schedules;
     
     if (dataToExport.length === 0) {
-      alert('No data to export');
+      showToast('No data to export', 'error');
       return;
     }
 
@@ -525,7 +532,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       pdf.save(fileName);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Error generating PDF. Please try again.');
+      showToast('Error generating PDF', 'error');
     } finally {
       setGeneratingPDF(false);
     }
@@ -552,7 +559,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   // Handle cancel confirmation
   const handleConfirmCancel = async () => {
     if (!cancelReason.trim()) {
-      alert('Please provide a reason for cancellation');
+      showToast('Please provide a reason for cancellation', 'error');
       return;
     }
     
@@ -574,7 +581,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
         setShowCancelModal(false);
         setSelectedSchedule(null);
         setCancelling(false);
-        alert('Schedule cancelled successfully');
+        showToast('Schedule cancelled successfully', 'success');
       }, 500);
       return;
     }
@@ -591,20 +598,19 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       });
       
       if (response.ok) {
-        // Update the schedule in the list
         setSchedules(prev => prev.map(s => 
           s.id === selectedSchedule.id ? { ...s, status: 'cancelled' } : s
         ));
         setShowCancelModal(false);
         setSelectedSchedule(null);
-        alert('Schedule cancelled successfully');
+        showToast('Schedule cancelled successfully', 'success');
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to cancel schedule');
+        showToast(data.message || 'Failed to cancel schedule', 'error');
       }
     } catch (error) {
       console.error('Error cancelling schedule:', error);
-      alert('Error cancelling schedule');
+      showToast('Error cancelling schedule', 'error');
     } finally {
       setCancelling(false);
     }
@@ -719,23 +725,23 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   // Handle confirm reschedule
   const handleConfirmReschedule = async () => {
     if (!selectedForReschedule) {
-      alert('Please select a schedule to reschedule');
+      showToast('Please select a schedule', 'error');
       return;
     }
     if (!newDate) {
-      alert('Please enter a new date');
+      showToast('Please enter a new date', 'error');
       return;
     }
     if (!isValidDate(newDate)) {
-      alert('Please enter a valid date in dd/mm/yyyy format');
+      showToast('Please enter a valid date (dd/mm/yyyy)', 'error');
       return;
     }
     if (!newTime) {
-      alert('Please select a new time');
+      showToast('Please select a new time', 'error');
       return;
     }
     if (!rescheduleReason.trim()) {
-      alert('Please provide a reason for rescheduling');
+      showToast('Please provide a reason', 'error');
       return;
     }
 
@@ -777,7 +783,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
         setShowRescheduleModal(false);
         setSelectedForReschedule(null);
         setRescheduling(false);
-        alert('Schedule rescheduled successfully');
+        showToast('Schedule rescheduled successfully', 'success');
       }, 500);
       return;
     }
@@ -805,14 +811,14 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
         ));
         setShowRescheduleModal(false);
         setSelectedForReschedule(null);
-        alert('Schedule rescheduled successfully');
+        showToast('Schedule rescheduled successfully', 'success');
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to reschedule');
+        showToast(data.message || 'Failed to reschedule', 'error');
       }
     } catch (error) {
       console.error('Error rescheduling:', error);
-      alert('Error rescheduling schedule');
+      showToast('Error rescheduling schedule', 'error');
     } finally {
       setRescheduling(false);
     }
@@ -1776,6 +1782,19 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in ${
+          toast.type === 'success' ? 'bg-green-600 text-white' : 
+          toast.type === 'error' ? 'bg-red-600 text-white' : 
+          'bg-gray-800 text-white'
+        }`}>
+          {toast.type === 'success' && <CheckCircle className="w-5 h-5" />}
+          {toast.type === 'error' && <XCircle className="w-5 h-5" />}
+          <span className="text-sm font-medium">{toast.message}</span>
         </div>
       )}
     </div>
