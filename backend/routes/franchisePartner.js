@@ -6619,12 +6619,16 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
     
     params.push(parseInt(limit), offset);
     let schedules = [];
+    let queryError = null;
     try {
+      console.log('[FP All Schedules] Executing main query with params:', params);
       const [result] = await pool.execute(query, params);
       schedules = result;
       console.log('[FP All Schedules] Found schedules:', schedules.length);
     } catch (queryErr) {
+      queryError = queryErr.message;
       console.log('[FP All Schedules] Main query failed:', queryErr.message);
+      console.log('[FP All Schedules] Query was:', query);
     }
     console.log('[FP All Schedules] Found schedules:', schedules.length);
     
@@ -6711,7 +6715,8 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
       page: parseInt(page),
       limit: parseInt(limit),
       totalPages: Math.ceil(total / parseInt(limit)),
-      stats
+      stats,
+      ...(queryError && { queryError }) // Include error if query failed
     });
   } catch (error) {
     console.error('Error fetching all schedules:', error);
