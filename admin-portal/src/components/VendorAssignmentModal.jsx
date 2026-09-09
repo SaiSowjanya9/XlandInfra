@@ -702,10 +702,10 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
       let successCount = 0;
       let errorMessages = [];
       
-      // Process new assignments
+      // Process new assignments - use correct API path based on portal
       for (const assignment of newAssignments) {
         try {
-          const response = await fetch(`${API_BASE}/api/vendors/assignments`, {
+          const response = await fetch(`${API_BASE}${apiBase}/vendors/assignments`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -730,10 +730,10 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
         }
       }
       
-      // Process updated assignments (reassignments)
+      // Process updated assignments (reassignments) - use correct API path based on portal
       for (const assignment of updatedAssignments) {
         try {
-          const response = await fetch(`${API_BASE}/api/vendors/assignments/${assignment.assignmentId}`, {
+          const response = await fetch(`${API_BASE}${apiBase}/vendors/assignments/${assignment.assignmentId}`, {
             method: 'PUT',
             headers: {
               'Authorization': `Bearer ${token}`,
