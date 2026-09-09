@@ -6535,7 +6535,7 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
       JOIN onboarded_properties op ON op.id = sv.property_id
-      LEFT JOIN property_contacts pc ON pc.property_id = op.id AND pc.is_primary = 1
+      LEFT JOIN property_contacts pc ON pc.property_id = op.id
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
       ${whereClause}
