@@ -762,11 +762,11 @@ async function handlePaymentLinkPaid(payload, webhookId) {
     const invoice = invoices[0];
     const amountPaid = paymentLinkEntity.amount_paid / 100; // Convert from paise
 
-    // Generate payment ID
-    const paymentId = `PAY-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    // Generate payment ID string for human-readable reference
+    const paymentIdString = `PAY-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-    // Insert payment record
-    await connection.execute(`
+    // Insert payment record and get the auto-generated ID
+    const [paymentResult] = await connection.execute(`
       INSERT INTO payments (
         payment_id, invoice_id, property_id, estimate_id, customer_id, franchise_partner_id,
         customer_name, amount, payment_method, payment_type,
@@ -775,7 +775,7 @@ async function handlePaymentLinkPaid(payload, webhookId) {
         received_by_name, received_by_role, remarks
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?)
     `, [
-      paymentId,
+      paymentIdString,
       invoice.id,
       invoice.property_id,
       invoice.estimate_id,
@@ -793,6 +793,9 @@ async function handlePaymentLinkPaid(payload, webhookId) {
       'system',
       `Online payment via Razorpay Payment Link`
     ]);
+    
+    // Get the auto-generated payment ID (integer) for payment_history
+    const paymentDbId = paymentResult.insertId;
 
     // Update invoice
     const newAmountPaid = parseFloat(invoice.amount_paid) + amountPaid;
@@ -877,7 +880,7 @@ async function handlePaymentLinkPaid(payload, webhookId) {
       VALUES (?, ?, 'razorpay_payment', 'completed', ?, ?, 'Razorpay', 'system', ?, ?, ?)
     `, [
       invoice.id, 
-      paymentId,
+      paymentDbId,
       amountPaid, 
       receiptDescription,
       paymentEntity?.id || null,
