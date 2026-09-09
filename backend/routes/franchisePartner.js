@@ -6446,12 +6446,13 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
       params.push(propertyType);
     }
     
-    // Get total count - property_id should be numeric DB ID
+    // Get total count - handle both numeric and string property_id
+    // Use OR condition to match either op.id (numeric) or op.property_id (string code)
     const countQuery = `
       SELECT COUNT(*) as total
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
+      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${whereClause}
     `;
@@ -6461,21 +6462,10 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
     try {
       const [countResult] = await pool.execute(countQuery, params);
       total = countResult[0].total;
+      console.log('[FP All Schedules] Total count:', total);
     } catch (countErr) {
-      console.log('[FP All Schedules] Count query failed, trying alternative:', countErr.message);
-      // If CAST fails (string values), try direct match
-      const altCountQuery = `
-        SELECT COUNT(*) as total
-        FROM scheduled_visits sv
-        JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-        JOIN onboarded_properties op ON op.property_id = sv.property_id
-        LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
-        ${whereClause}
-      `;
-      const [altResult] = await pool.execute(altCountQuery, params);
-      total = altResult[0].total;
+      console.log('[FP All Schedules] Count query failed:', countErr.message);
     }
-    console.log('[FP All Schedules] Total count:', total);
     
     // Get schedules with pagination
     const query = `
@@ -6506,7 +6496,7 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
         wo.status as workOrderStatus
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
+      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
       LEFT JOIN property_contacts pc ON pc.property_id = op.id AND pc.is_primary = 1
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
@@ -6520,9 +6510,9 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
     try {
       const [result] = await pool.execute(query, params);
       schedules = result;
+      console.log('[FP All Schedules] Found schedules:', schedules.length);
     } catch (queryErr) {
       console.log('[FP All Schedules] Main query failed:', queryErr.message);
-      // Return empty if query fails
     }
     console.log('[FP All Schedules] Found schedules:', schedules.length);
     
@@ -6534,7 +6524,7 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
       SELECT sv.status, COUNT(*) as count
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
+      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${statsWhereClause}
       GROUP BY sv.status

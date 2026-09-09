@@ -2640,12 +2640,12 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
       params.push(propertyType);
     }
     
-    // Get total count - property_id should be numeric DB ID
+    // Get total count - handle both numeric and string property_id
     const countQuery = `
       SELECT COUNT(*) as total
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
+      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${whereClause}
     `;
@@ -2687,7 +2687,7 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
         wo.status as workOrderStatus
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
+      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
       LEFT JOIN property_contacts pc ON pc.property_id = op.id AND pc.is_primary = 1
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
@@ -2702,9 +2702,9 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
     try {
       const [result] = await pool.execute(query, params);
       schedules = result;
+      console.log('[All Schedules] Found schedules:', schedules.length);
     } catch (queryErr) {
       console.log('[All Schedules] Main query failed:', queryErr.message);
-      // Return empty if query fails
     }
     
     // Calculate stats - simpler approach
@@ -2732,7 +2732,7 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
       SELECT sv.status, COUNT(*) as count
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
+      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${statsWhereClause}
       GROUP BY sv.status
