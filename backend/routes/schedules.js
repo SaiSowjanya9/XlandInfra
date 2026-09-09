@@ -1465,15 +1465,15 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
     
     console.log('[Confirm Schedule] Successfully inserted', insertedCount, 'visits for property_id:', propertyDbId);
     
-    // Debug: Verify the visits were inserted with correct property_id
+    // Debug: Verify the visits were inserted with correct property_id and service_schedule_id
     const [insertedVisits] = await pool.execute(
-      `SELECT sv.id, sv.property_id, sv.status, op.franchise_partner_id 
+      `SELECT sv.id, sv.property_id, sv.service_schedule_id, sv.status, op.franchise_partner_id 
        FROM scheduled_visits sv 
        LEFT JOIN onboarded_properties op ON op.id = sv.property_id 
        WHERE sv.service_schedule_id = ? LIMIT 3`,
       [serviceScheduleId]
     );
-    console.log('[Confirm Schedule] Inserted visits with FP:', insertedVisits);
+    console.log('[Confirm Schedule] Inserted visits:', JSON.stringify(insertedVisits));
 
     // Update service schedule status to 'scheduled' (not 'completed' - that's for after work is done)
     await pool.execute(
@@ -1481,12 +1481,28 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
       [serviceScheduleId]
     );
     
-    // Verify the update
+    // Verify the PSS record has correct property_id
     const [verifyResult] = await pool.execute(
-      `SELECT id, service_name, status, scheduling_status FROM property_service_schedules WHERE id = ?`,
+      `SELECT pss.id, pss.property_id, pss.service_name, pss.status, pss.scheduling_status,
+              op.id as op_id, op.franchise_partner_id as op_fp_id
+       FROM property_service_schedules pss
+       LEFT JOIN onboarded_properties op ON op.id = pss.property_id
+       WHERE pss.id = ?`,
       [serviceScheduleId]
     );
-    console.log('[Confirm Schedule] Verified saved schedule:', verifyResult[0]);
+    console.log('[Confirm Schedule] Verified PSS with property join:', JSON.stringify(verifyResult[0]));
+    
+    // Final verification: Can we query this visit with the full join chain?
+    const [fullJoinTest] = await pool.execute(
+      `SELECT sv.id, sv.property_id as sv_prop, pss.property_id as pss_prop, op.id as op_id, op.franchise_partner_id
+       FROM scheduled_visits sv
+       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+       JOIN onboarded_properties op ON op.id = sv.property_id
+       WHERE sv.service_schedule_id = ?
+       LIMIT 1`,
+      [serviceScheduleId]
+    );
+    console.log('[Confirm Schedule] Full join test result:', JSON.stringify(fullJoinTest));
     
     console.log('[Confirm Schedule] Schedule confirmation complete. Service schedule ID:', serviceScheduleId);
 

@@ -6394,17 +6394,33 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
       const [allVisits] = await pool.execute(`SELECT COUNT(*) as count FROM scheduled_visits`);
       console.log('[FP All Schedules] Total scheduled_visits in DB:', allVisits[0].count);
       
-      // 2. Sample visits with property info
+      // 2. Total property_service_schedules
+      const [allPSS] = await pool.execute(`SELECT COUNT(*) as count FROM property_service_schedules`);
+      console.log('[FP All Schedules] Total property_service_schedules in DB:', allPSS[0].count);
+      
+      // 3. Sample visits with ALL joins to see where it breaks
       const [sampleVisits] = await pool.execute(`
-        SELECT sv.id, sv.property_id as sv_property_id, sv.status,
+        SELECT sv.id as sv_id, sv.property_id as sv_property_id, sv.service_schedule_id,
+               pss.id as pss_id, pss.property_id as pss_property_id, pss.service_name,
                op.id as op_id, op.property_id as op_property_code, op.franchise_partner_id as op_fp_id
         FROM scheduled_visits sv
+        LEFT JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
         LEFT JOIN onboarded_properties op ON op.id = sv.property_id
         LIMIT 5
       `);
-      console.log('[FP All Schedules] Sample visits with property join:', JSON.stringify(sampleVisits));
+      console.log('[FP All Schedules] Sample visits with ALL joins:', JSON.stringify(sampleVisits));
       
-      // 3. Properties owned by this FP
+      // 4. Check if PSS join is the problem - visits without matching PSS
+      const [orphanVisits] = await pool.execute(`
+        SELECT sv.id, sv.service_schedule_id, sv.property_id
+        FROM scheduled_visits sv
+        LEFT JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+        WHERE pss.id IS NULL
+        LIMIT 5
+      `);
+      console.log('[FP All Schedules] Orphan visits (no PSS match):', orphanVisits.length, JSON.stringify(orphanVisits));
+      
+      // 5. Properties owned by this FP
       const [fpProperties] = await pool.execute(`
         SELECT id, property_id, franchise_partner_id 
         FROM onboarded_properties 
@@ -6413,15 +6429,16 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
       `, [franchisePartnerId]);
       console.log('[FP All Schedules] Properties for FP', franchisePartnerId, ':', JSON.stringify(fpProperties));
       
-      // 4. Visits that should match this FP (with OR condition)
+      // 6. Visits that should match this FP (with full join chain)
       const [matchingVisits] = await pool.execute(`
-        SELECT sv.id, sv.property_id, op.franchise_partner_id
+        SELECT sv.id, sv.property_id, pss.id as pss_id, op.franchise_partner_id
         FROM scheduled_visits sv
-        JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
+        JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+        JOIN onboarded_properties op ON op.id = sv.property_id
         WHERE op.franchise_partner_id = ?
         LIMIT 5
       `, [franchisePartnerId]);
-      console.log('[FP All Schedules] Visits matching FP', franchisePartnerId, ':', matchingVisits.length);
+      console.log('[FP All Schedules] Visits matching FP (full join):', matchingVisits.length, JSON.stringify(matchingVisits));
     } catch (debugErr) {
       console.log('[FP All Schedules] Debug query error:', debugErr.message);
     }
