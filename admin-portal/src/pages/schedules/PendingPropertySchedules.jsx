@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
+import VendorAssignmentModal from '../../components/VendorAssignmentModal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -185,6 +186,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
   const [selectedService, setSelectedService] = useState(null);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showServicesModal, setShowServicesModal] = useState(false);
+  const [vendorAssignmentProperty, setVendorAssignmentProperty] = useState(null);
 
   // Fetch pending properties
   const fetchPendingProperties = useCallback(async (showRefreshSpinner = false) => {
@@ -643,35 +645,10 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
     navigate(`${basePath}/schedules/property/${property.id}`, { state: { property } });
   };
 
-  // Handle assign vendor action - navigate to Properties page to assign vendor
+  // Handle assign vendor action - open vendor assignment modal
   const handleAssignVendor = (property, service = null) => {
-    // Route to the correct properties/vendor page based on portal type
-    let targetPath;
-    
-    if (portalType === 'admin' || portalType === 'employee') {
-      // Admin portal: go to Assigned Vendors page
-      targetPath = '/employee/assigned-vendors';
-    } else if (portalType === 'franchise') {
-      targetPath = '/fp/properties';
-    } else if (portalType === 'manager') {
-      targetPath = '/manager/properties';
-    } else if (portalType === 'coordinator') {
-      targetPath = '/coordinator/properties';
-    } else if (portalType === 'supervisor') {
-      targetPath = '/supervisor/properties';
-    } else {
-      targetPath = '/employee/assigned-vendors';
-    }
-    
-    // Navigate to properties/vendors page with the property ID to highlight
-    navigate(targetPath, { 
-      state: { 
-        highlightPropertyId: property.id,
-        propertyCode: property.propertyId,
-        assignVendorFor: service?.name || 'all',
-        fromScheduling: true
-      } 
-    });
+    // Open the vendor assignment modal directly
+    setVendorAssignmentProperty(property);
   };
 
   // Handle view services
@@ -1276,6 +1253,20 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Vendor Assignment Modal */}
+      {vendorAssignmentProperty && (
+        <VendorAssignmentModal
+          property={vendorAssignmentProperty}
+          onClose={() => setVendorAssignmentProperty(null)}
+          onSuccess={(message) => {
+            console.log('Vendor assignment success:', message);
+            setVendorAssignmentProperty(null);
+            // Refresh the pending properties list
+            fetchPendingProperties(true);
+          }}
+        />
       )}
 
     </div>
