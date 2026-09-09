@@ -58,5 +58,7 @@ RAZORPAY_WEBHOOK_SECRET=xxx
 Run schema files in order:
 1. `schema_v17_payments.sql` - Base payments tables
 2. `schema_v18_razorpay.sql` - Razorpay webhook tables
-3. `schema_v21_payment_security.sql` - Security logs
-4. `schema_v22_razorpay_fix.sql` - **Required fix for webhook tracking**
+3. `schema_v20_entity_linkage.sql` - Adds receipt_id, invoice_number, property_code columns and receipt_sequence table
+4. `schema_v21_payment_security.sql` - Security logs
+5. `schema_v22_razorpay_fix.sql` - **Required fix for webhook tracking**
+6. `migrations/schema_v25_payment_status_fix.sql` - **Required for offline payment verification (bank transfer, cash, cheque)**

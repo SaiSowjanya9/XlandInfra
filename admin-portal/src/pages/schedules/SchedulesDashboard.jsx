@@ -151,11 +151,11 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         const result = await response.json();
         setSchedules(result.data || []);
       } else {
-        setSchedules(getMockSchedules());
+        setSchedules([]);
       }
     } catch (err) {
       console.error('Fetch error:', err);
-      setSchedules(getMockSchedules());
+      setSchedules([]);
     } finally {
       setLoading(false);
     }
@@ -186,14 +186,6 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     const interval = setInterval(fetchSchedules, 30000);
     return () => clearInterval(interval);
   }, []);
-
-  // Mock data
-  const getMockSchedules = () => [
-    { id: 1, title: 'Water Tank Cleaning', property_name: 'Green Valley Apartments', vendor: 'ABC Services', startDate: new Date().toISOString(), status: 'scheduled', priority: 'high', service: 'Cleaning', property_type: 'Apartment' },
-    { id: 2, title: 'Pest Control Service', property_name: 'Sunrise Villas', vendor: 'PestFree Services', startDate: new Date(Date.now() + 86400000).toISOString(), status: 'scheduled', priority: 'medium', service: 'Pest Control', property_type: 'Villa' },
-    { id: 3, title: 'Electrical Repair', property_name: 'Palm Meadows', vendor: 'PowerFix', startDate: new Date(Date.now() + 172800000).toISOString(), status: 'in_progress', priority: 'high', service: 'Electrical', property_type: 'Apartment' },
-    { id: 4, title: 'Drainage Cleaning', property_name: 'Skyline Towers', vendor: 'DrainPro', startDate: new Date(Date.now() - 86400000).toISOString(), status: 'completed', priority: 'low', service: 'Plumbing', property_type: 'Commercial' }
-  ];
 
   // Calculate stats
   const today = new Date(); today.setHours(0, 0, 0, 0);
