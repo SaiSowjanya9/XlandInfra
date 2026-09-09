@@ -261,6 +261,12 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
     setCurrentDate(newDate);
   };
 
+  const navigateYear = (direction) => {
+    const newDate = new Date(currentDate);
+    newDate.setFullYear(newDate.getFullYear() + direction);
+    setCurrentDate(newDate);
+  };
+
   const goToToday = () => {
     setCurrentDate(new Date());
   };
@@ -290,6 +296,36 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
       .filter(s => s.date >= today)
       .sort((a, b) => a.date - b.date)
       .slice(0, 20);
+  };
+
+  // Get schedules for a specific month in the year view
+  const getSchedulesForMonth = (year, month) => {
+    const filtered = getFilteredSchedules();
+    return filtered.filter(s => 
+      s.date.getFullYear() === year && 
+      s.date.getMonth() === month
+    );
+  };
+
+  // Get days in a specific month (for year view mini calendars)
+  const getDaysInSpecificMonth = (year, month) => {
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const days = [];
+    
+    // Add days from previous month
+    const startDay = firstDay.getDay();
+    for (let i = startDay - 1; i >= 0; i--) {
+      const date = new Date(year, month, -i);
+      days.push({ date, isCurrentMonth: false });
+    }
+    
+    // Add days of current month
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      days.push({ date: new Date(year, month, day), isCurrentMonth: true });
+    }
+    
+    return days;
   };
 
   const getStatusColor = (status) => {
@@ -427,7 +463,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
           
           {/* Right: View Mode Tabs */}
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 self-start lg:self-auto flex-shrink-0">
-            {['Month', 'Week', 'Day', 'Agenda'].map(mode => (
+            {['Day', 'Week', 'Month', 'Year'].map(mode => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
@@ -452,16 +488,16 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                 {viewMode === 'Month' && monthName}
                 {viewMode === 'Week' && `Week of ${getWeekDays()[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${getWeekDays()[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
                 {viewMode === 'Day' && currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-                {viewMode === 'Agenda' && 'Upcoming Schedules'}
+                {viewMode === 'Year' && currentDate.getFullYear().toString()}
               </h2>
               <button 
-                onClick={() => viewMode === 'Month' ? navigateMonth(-1) : viewMode === 'Week' ? navigateWeek(-1) : navigateDay(-1)} 
+                onClick={() => viewMode === 'Month' ? navigateMonth(-1) : viewMode === 'Week' ? navigateWeek(-1) : viewMode === 'Year' ? navigateYear(-1) : navigateDay(-1)} 
                 className="p-1 hover:bg-gray-100 rounded"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <button 
-                onClick={() => viewMode === 'Month' ? navigateMonth(1) : viewMode === 'Week' ? navigateWeek(1) : navigateDay(1)} 
+                onClick={() => viewMode === 'Month' ? navigateMonth(1) : viewMode === 'Week' ? navigateWeek(1) : viewMode === 'Year' ? navigateYear(1) : navigateDay(1)} 
                 className="p-1 hover:bg-gray-100 rounded"
               >
                 <ChevronRight className="w-5 h-5" />
@@ -598,46 +634,87 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
             </div>
           )}
 
-          {/* AGENDA VIEW */}
-          {viewMode === 'Agenda' && (
-            <div className="overflow-y-auto max-h-[600px]">
-              {getAgendaSchedules().length === 0 ? (
-                <div className="p-8 text-center text-gray-500">No upcoming schedules</div>
-              ) : (
-                getAgendaSchedules().map((schedule, idx) => {
-                  const isNewDay = idx === 0 || schedule.date.toDateString() !== getAgendaSchedules()[idx - 1].date.toDateString();
+          {/* YEAR VIEW */}
+          {viewMode === 'Year' && (
+            <div className="p-4 overflow-y-auto max-h-[600px]">
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+                {Array.from({ length: 12 }, (_, month) => {
+                  const year = currentDate.getFullYear();
+                  const monthName = new Date(year, month, 1).toLocaleDateString('en-US', { month: 'short' });
+                  const monthDays = getDaysInSpecificMonth(year, month);
+                  const monthSchedules = getSchedulesForMonth(year, month);
+                  const isCurrentMonth = new Date().getMonth() === month && new Date().getFullYear() === year;
+                  
                   return (
-                    <div key={idx}>
-                      {isNewDay && (
-                        <div className="px-4 py-2 bg-gray-100 border-b border-gray-200 sticky top-0">
-                          <span className="font-semibold text-gray-700">
-                            {schedule.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                    <div 
+                      key={month} 
+                      className={`bg-white rounded-lg border p-3 cursor-pointer hover:shadow-md transition-shadow ${
+                        isCurrentMonth ? 'border-blue-400 ring-1 ring-blue-200' : 'border-gray-200'
+                      }`}
+                      onClick={() => {
+                        const newDate = new Date(year, month, 1);
+                        setCurrentDate(newDate);
+                        setViewMode('Month');
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-sm font-semibold ${isCurrentMonth ? 'text-blue-600' : 'text-gray-900'}`}>
+                          {monthName}
+                        </span>
+                        {monthSchedules.length > 0 && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
+                            {monthSchedules.length}
                           </span>
+                        )}
+                      </div>
+                      
+                      {/* Mini calendar grid */}
+                      <div className="grid grid-cols-7 gap-0.5 text-center">
+                        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                          <div key={i} className="text-[8px] text-gray-400 py-0.5">{d}</div>
+                        ))}
+                        {monthDays.slice(0, 35).map((day, i) => {
+                          const isToday = day.date.toDateString() === new Date().toDateString();
+                          const hasSchedule = monthSchedules.some(s => 
+                            s.date.getDate() === day.date.getDate() && 
+                            s.date.getMonth() === day.date.getMonth()
+                          );
+                          return (
+                            <div
+                              key={i}
+                              className={`text-[9px] py-0.5 rounded ${
+                                isToday ? 'bg-blue-600 text-white font-bold' :
+                                hasSchedule && day.isCurrentMonth ? 'bg-blue-100 text-blue-700 font-medium' :
+                                day.isCurrentMonth ? 'text-gray-700' : 'text-gray-300'
+                              }`}
+                            >
+                              {day.date.getDate()}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      
+                      {/* Schedule summary */}
+                      {monthSchedules.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-gray-100">
+                          <div className="flex flex-wrap gap-1">
+                            {monthSchedules.filter(s => s.status === 'completed').length > 0 && (
+                              <span className="text-[9px] bg-green-100 text-green-700 px-1 rounded">
+                                {monthSchedules.filter(s => s.status === 'completed').length} done
+                              </span>
+                            )}
+                            {monthSchedules.filter(s => s.status === 'scheduled' || s.status === 'pending').length > 0 && (
+                              <span className="text-[9px] bg-blue-100 text-blue-700 px-1 rounded">
+                                {monthSchedules.filter(s => s.status === 'scheduled' || s.status === 'pending').length} pending
+                              </span>
+                            )}
+                          </div>
                         </div>
                       )}
-                      <div 
-                        onClick={() => setSelectedSchedule(schedule)}
-                        className={`flex items-start gap-4 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${getStatusColor(schedule.status)}`}
-                      >
-                        <div className="w-16 text-sm font-medium text-gray-700">{schedule.time}</div>
-                        <div className="flex-1">
-                          <div className="font-semibold text-gray-900">{schedule.service}</div>
-                          <div className="text-sm text-gray-600">{schedule.property}</div>
-                          <div className="text-sm text-gray-500">{schedule.vendor} • {schedule.zone}</div>
-                        </div>
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full capitalize ${
-                          schedule.status === 'completed' ? 'bg-green-100 text-green-700' :
-                          schedule.status === 'in_progress' ? 'bg-purple-100 text-purple-700' :
-                          schedule.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                          'bg-blue-100 text-blue-700'
-                        }`}>
-                          {schedule.status.replace('_', ' ')}
-                        </span>
-                      </div>
                     </div>
                   );
-                })
-              )}
+                })}
+              </div>
             </div>
           )}
         </div>

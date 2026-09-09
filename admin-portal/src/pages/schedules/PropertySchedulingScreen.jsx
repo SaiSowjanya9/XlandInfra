@@ -291,9 +291,11 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         }
       }
       
-      // If API returned no services, use services from navigation state (propertyData)
-      if (servicesToUse.length === 0 && propertyData?.services?.length > 0) {
-        console.log('[PropertyScheduling] Using services from navigation state:', propertyData.services.length);
+      // Use navigation state services if they have MORE services than API returned
+      // This handles cases where API returns incomplete data or mock data has more accurate count
+      const navServicesCount = propertyData?.services?.length || 0;
+      if (navServicesCount > servicesToUse.length) {
+        console.log('[PropertyScheduling] Navigation state has more services:', navServicesCount, 'vs API:', servicesToUse.length);
         servicesToUse = propertyData.services.map((s, index) => ({
           id: s.id || `nav-${index}`,
           scheduleId: null,

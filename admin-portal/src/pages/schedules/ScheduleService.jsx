@@ -367,6 +367,33 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
     return days;
   };
 
+  // Get days in a specific month (for Year view mini calendars)
+  const getDaysInSpecificMonth = (year, month) => {
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const days = [];
+    
+    const startDay = firstDay.getDay();
+    for (let i = startDay - 1; i >= 0; i--) {
+      const date = new Date(year, month, -i);
+      days.push({ date, isCurrentMonth: false });
+    }
+    
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      days.push({ date: new Date(year, month, day), isCurrentMonth: true });
+    }
+    
+    return days;
+  };
+
+  // Get schedules for a specific month (Year view)
+  const getSchedulesForMonth = (year, month) => {
+    return schedules.filter(s => {
+      const sDate = new Date(s.startDate || s.start_date);
+      return sDate.getFullYear() === year && sDate.getMonth() === month;
+    });
+  };
+
   // Get schedules for a specific date
   const getSchedulesForDate = (date) => {
     return schedules.filter(s => {
@@ -399,6 +426,8 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
       newDate.setDate(newDate.getDate() + (direction * 7));
     } else if (calendarView === 'Day') {
       newDate.setDate(newDate.getDate() + direction);
+    } else if (calendarView === 'Year') {
+      newDate.setFullYear(newDate.getFullYear() + direction);
     }
     
     setCalendarDate(newDate);
@@ -419,6 +448,8 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
         return `${startMonth} ${startDate.getDate()} - ${endDate.getDate()}, ${startDate.getFullYear()}`;
       }
       return `${startMonth} ${startDate.getDate()} - ${endMonth} ${endDate.getDate()}, ${endDate.getFullYear()}`;
+    } else if (calendarView === 'Year') {
+      return calendarDate.getFullYear().toString();
     } else {
       return calendarDate.toLocaleDateString('en-IN', { 
         weekday: 'long', 
@@ -742,7 +773,7 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
               
               {/* View Toggle */}
               <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
-                {['Month', 'Week', 'Day'].map(view => (
+                {['Day', 'Week', 'Month', 'Year'].map(view => (
                   <button
                     key={view}
                     onClick={() => setCalendarView(view)}
