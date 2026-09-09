@@ -136,6 +136,23 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   const [bulkCancelReason, setBulkCancelReason] = useState('');
   const [rescheduleSearch, setRescheduleSearch] = useState('');
   const [selectedForReschedule, setSelectedForReschedule] = useState(null);
+  
+  // Services modal state
+  const [servicesModal, setServicesModal] = useState({ show: false, services: [], propertyName: '' });
+  
+  // Service-level reschedule modal state
+  const [showServiceRescheduleModal, setShowServiceRescheduleModal] = useState(false);
+  const [serviceToReschedule, setServiceToReschedule] = useState(null);
+  const [serviceRescheduleDate, setServiceRescheduleDate] = useState('');
+  const [serviceRescheduleTime, setServiceRescheduleTime] = useState('');
+  const [serviceRescheduleReason, setServiceRescheduleReason] = useState('');
+  const [serviceRescheduling, setServiceRescheduling] = useState(false);
+  
+  // Service-level cancel modal state
+  const [showServiceCancelModal, setShowServiceCancelModal] = useState(false);
+  const [serviceToCancel, setServiceToCancel] = useState(null);
+  const [serviceCancelReason, setServiceCancelReason] = useState('');
+  const [serviceCancelling, setServiceCancelling] = useState(false);
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
   const [rescheduleReason, setRescheduleReason] = useState('');
@@ -736,6 +753,178 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     }
   };
 
+  // Handle service-level reschedule - open modal
+  const handleServiceReschedule = (service, property) => {
+    setServiceToReschedule({
+      serviceName: service.serviceName,
+      vendorName: service.vendorName,
+      propertyId: property.propertyId,
+      propertyName: property.propertyName,
+      visits: service.visits.filter(v => v.status !== 'completed' && v.status !== 'cancelled')
+    });
+    setServiceRescheduleDate('');
+    setServiceRescheduleTime('');
+    setServiceRescheduleReason('');
+    setShowServiceRescheduleModal(true);
+  };
+
+  // Handle confirm service-level reschedule (bulk)
+  const handleConfirmServiceReschedule = async () => {
+    if (!serviceToReschedule || serviceToReschedule.visits.length === 0) {
+      showToast('No visits to reschedule', 'error');
+      return;
+    }
+    if (!serviceRescheduleDate) {
+      showToast('Please enter a new start date', 'error');
+      return;
+    }
+    if (!isValidDate(serviceRescheduleDate)) {
+      showToast('Please enter a valid date (dd/mm/yyyy)', 'error');
+      return;
+    }
+    if (!serviceRescheduleTime) {
+      showToast('Please select a new time', 'error');
+      return;
+    }
+    if (!serviceRescheduleReason.trim()) {
+      showToast('Please provide a reason', 'error');
+      return;
+    }
+
+    const isoDate = convertDateToISO(serviceRescheduleDate);
+    setServiceRescheduling(true);
+
+    try {
+      const token = getAuthToken();
+      let successCount = 0;
+      let failCount = 0;
+
+      // Sort visits by date to maintain order
+      const sortedVisits = [...serviceToReschedule.visits].sort(
+        (a, b) => new Date(a.scheduledDate) - new Date(b.scheduledDate)
+      );
+
+      // Calculate the date shift from first visit
+      const firstVisitDate = new Date(sortedVisits[0].scheduledDate);
+      const newStartDate = new Date(isoDate);
+      const daysDiff = Math.round((newStartDate - firstVisitDate) / (1000 * 60 * 60 * 24));
+
+      // Reschedule each visit with shifted date
+      for (const visit of sortedVisits) {
+        try {
+          const visitDate = new Date(visit.scheduledDate);
+          visitDate.setDate(visitDate.getDate() + daysDiff);
+          const newVisitDate = visitDate.toISOString().split('T')[0];
+
+          const response = await fetch(`${API_BASE}/api/schedules/visits/${visit.id}/reschedule`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+              newDate: newVisitDate, 
+              newTimeStart: serviceRescheduleTime,
+              reason: serviceRescheduleReason 
+            })
+          });
+          
+          if (response.ok) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (err) {
+          failCount++;
+        }
+      }
+
+      setShowServiceRescheduleModal(false);
+      setServiceToReschedule(null);
+      
+      if (successCount > 0) {
+        showToast(`Rescheduled ${successCount} visit(s) successfully${failCount > 0 ? `, ${failCount} failed` : ''}`, 'success');
+        fetchSchedules(true);
+      } else {
+        showToast('Failed to reschedule visits', 'error');
+      }
+    } catch (error) {
+      console.error('Error rescheduling service:', error);
+      showToast('Error rescheduling service', 'error');
+    } finally {
+      setServiceRescheduling(false);
+    }
+  };
+
+  // Handle service-level cancel - open modal
+  const handleServiceCancel = (service, property) => {
+    setServiceToCancel({
+      serviceName: service.serviceName,
+      vendorName: service.vendorName,
+      propertyId: property.propertyId,
+      propertyName: property.propertyName,
+      visits: service.visits.filter(v => v.status !== 'completed' && v.status !== 'cancelled')
+    });
+    setServiceCancelReason('');
+    setShowServiceCancelModal(true);
+  };
+
+  // Handle confirm service-level cancel (bulk)
+  const handleConfirmServiceCancel = async () => {
+    if (!serviceToCancel || serviceToCancel.visits.length === 0) {
+      showToast('No visits to cancel', 'error');
+      return;
+    }
+    if (!serviceCancelReason.trim()) {
+      showToast('Please provide a reason', 'error');
+      return;
+    }
+
+    setServiceCancelling(true);
+
+    try {
+      const token = getAuthToken();
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const visit of serviceToCancel.visits) {
+        try {
+          const response = await fetch(`${API_BASE}/api/schedules/visits/${visit.id}/cancel`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ reason: serviceCancelReason })
+          });
+          
+          if (response.ok) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (err) {
+          failCount++;
+        }
+      }
+
+      setShowServiceCancelModal(false);
+      setServiceToCancel(null);
+      
+      if (successCount > 0) {
+        showToast(`Cancelled ${successCount} visit(s) successfully${failCount > 0 ? `, ${failCount} failed` : ''}`, 'success');
+        fetchSchedules(true);
+      } else {
+        showToast('Failed to cancel visits', 'error');
+      }
+    } catch (error) {
+      console.error('Error cancelling service:', error);
+      showToast('Error cancelling service', 'error');
+    } finally {
+      setServiceCancelling(false);
+    }
+  };
+
   // Stats cards based on document Section 12 statuses
   const statsCards = [
     { label: 'Total', value: stats.total || 0, icon: CalendarDays, color: 'bg-blue-500' },
@@ -983,19 +1172,19 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <div className="group relative inline-block">
-                              <span 
-                                className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded cursor-default"
-                                title={serviceList.map(s => s.serviceName).join(', ')}
-                              >
-                                {serviceList.length} service{serviceList.length > 1 ? 's' : ''}
-                              </span>
-                              <div className="hidden group-hover:block absolute left-0 top-full mt-1 bg-gray-800 text-white text-xs rounded-lg shadow-lg z-20 py-2 px-3 whitespace-nowrap">
-                                {serviceList.map((service, i) => (
-                                  <div key={i} className="py-0.5">{service.serviceName}</div>
-                                ))}
-                              </div>
-                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setServicesModal({ 
+                                  show: true, 
+                                  services: serviceList.map(s => s.serviceName), 
+                                  propertyName: property.propertyName 
+                                });
+                              }}
+                              className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                            >
+                              {serviceList.length} service{serviceList.length > 1 ? 's' : ''}
+                            </button>
                           </td>
                           <td className="px-4 py-3">
                             <span className="text-sm font-medium text-gray-900">{totalVisits} visits</span>
@@ -1054,7 +1243,27 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                                     <span className="font-medium text-gray-900">{service.serviceName}</span>
                                     <span className="text-sm text-gray-500">Vendor: {service.vendorName || 'Unassigned'}</span>
                                   </div>
-                                  <span className="text-sm text-gray-600">{service.visits.length} visits</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-600">{service.visits.length} visits</span>
+                                    {permissions.canReschedule && service.visits.some(v => v.status !== 'completed' && v.status !== 'cancelled') && (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleServiceReschedule(service, property); }}
+                                        className="p-1 text-orange-500 hover:text-orange-700 hover:bg-orange-50 rounded border border-orange-200"
+                                        title={`Reschedule all ${service.serviceName} visits`}
+                                      >
+                                        <Edit2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                    {permissions.canCancel && service.visits.some(v => v.status !== 'completed' && v.status !== 'cancelled') && (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleServiceCancel(service, property); }}
+                                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded border border-red-200"
+                                        title={`Cancel all ${service.serviceName} visits`}
+                                      >
+                                        <XCircle className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                                 <div className="flex flex-wrap gap-2 mt-2">
                                   {[...service.visits].sort((a, b) => new Date(a.scheduledDate) - new Date(b.scheduledDate)).slice(0, 12).map((visit, vIdx) => {
@@ -1702,6 +1911,230 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               >
                 {cancelling ? 'Cancelling...' : 'Confirm Cancel'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Service-Level Cancel Modal */}
+      {showServiceCancelModal && serviceToCancel && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between px-5 py-4 border-b bg-red-50">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Cancel Service Schedules</h2>
+                <p className="text-sm text-gray-600">
+                  Cancel all {serviceToCancel.serviceName} visits
+                </p>
+              </div>
+              <button
+                onClick={() => { setShowServiceCancelModal(false); setServiceToCancel(null); }}
+                className="p-1.5 hover:bg-red-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-5">
+              {/* Service Info */}
+              <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="text-xs text-gray-500 uppercase">Property</label>
+                  <p className="text-sm font-medium text-blue-600">{serviceToCancel.propertyId}</p>
+                  <p className="text-xs text-gray-600">{serviceToCancel.propertyName}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 uppercase">Service</label>
+                  <p className="text-sm font-medium text-gray-900">{serviceToCancel.serviceName}</p>
+                  <p className="text-xs text-gray-600">{serviceToCancel.visits.length} visit(s) to cancel</p>
+                </div>
+              </div>
+
+              {/* Warning */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-red-700">
+                  <strong>Warning:</strong> This will cancel all {serviceToCancel.visits.length} scheduled visit(s) for {serviceToCancel.serviceName}. This action cannot be undone.
+                </p>
+              </div>
+
+              {/* Cancel Form */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reason for Cancellation *</label>
+                <textarea
+                  value={serviceCancelReason}
+                  onChange={(e) => setServiceCancelReason(e.target.value)}
+                  placeholder="e.g., Service no longer required, Contract terminated..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 px-5 py-4 border-t bg-gray-50 rounded-b-xl">
+              <button
+                onClick={() => { setShowServiceCancelModal(false); setServiceToCancel(null); }}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 font-medium"
+              >
+                Keep Schedules
+              </button>
+              <button
+                onClick={handleConfirmServiceCancel}
+                disabled={!serviceCancelReason.trim() || serviceCancelling}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {serviceCancelling ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Cancelling...
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-4 h-4" />
+                    Cancel All
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Service-Level Reschedule Modal */}
+      {showServiceRescheduleModal && serviceToReschedule && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between px-5 py-4 border-b bg-orange-50">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Reschedule Service</h2>
+                <p className="text-sm text-gray-600">
+                  Reschedule all {serviceToReschedule.serviceName} visits
+                </p>
+              </div>
+              <button
+                onClick={() => { setShowServiceRescheduleModal(false); setServiceToReschedule(null); }}
+                className="p-1.5 hover:bg-orange-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-5">
+              {/* Service Info */}
+              <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="text-xs text-gray-500 uppercase">Property</label>
+                  <p className="text-sm font-medium text-blue-600">{serviceToReschedule.propertyId}</p>
+                  <p className="text-xs text-gray-600">{serviceToReschedule.propertyName}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 uppercase">Service</label>
+                  <p className="text-sm font-medium text-gray-900">{serviceToReschedule.serviceName}</p>
+                  <p className="text-xs text-gray-600">{serviceToReschedule.visits.length} visit(s) to reschedule</p>
+                </div>
+              </div>
+
+              {/* Reschedule Form */}
+              <div className="space-y-4">
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                  <p className="text-xs text-orange-700">
+                    <strong>Note:</strong> Enter the new start date. All visits will be shifted by the same number of days while maintaining their original intervals.
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">New Start Date * (dd/mm/yyyy)</label>
+                  <input
+                    type="text"
+                    value={serviceRescheduleDate}
+                    onChange={(e) => {
+                      let val = e.target.value.replace(/[^0-9/]/g, '');
+                      if (val.length === 2 && !val.includes('/')) val += '/';
+                      if (val.length === 5 && val.split('/').length === 2) val += '/';
+                      if (val.length <= 10) setServiceRescheduleDate(val);
+                    }}
+                    placeholder="dd/mm/yyyy"
+                    maxLength={10}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">New Time *</label>
+                  <input
+                    type="time"
+                    value={serviceRescheduleTime}
+                    onChange={(e) => setServiceRescheduleTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Reason *</label>
+                  <input
+                    type="text"
+                    value={serviceRescheduleReason}
+                    onChange={(e) => setServiceRescheduleReason(e.target.value)}
+                    placeholder="e.g., Vendor schedule conflict, Customer request..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 px-5 py-4 border-t bg-gray-50 rounded-b-xl">
+              <button
+                onClick={() => { setShowServiceRescheduleModal(false); setServiceToReschedule(null); }}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmServiceReschedule}
+                disabled={!serviceRescheduleDate || !serviceRescheduleTime || !serviceRescheduleReason.trim() || serviceRescheduling}
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {serviceRescheduling ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Rescheduling...
+                  </>
+                ) : (
+                  <>
+                    <Edit2 className="w-4 h-4" />
+                    Reschedule All
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Services Modal */}
+      {servicesModal.show && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={() => setServicesModal({ show: false, services: [], propertyName: '' })}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <div>
+                <h3 className="font-semibold text-gray-900">Services</h3>
+                <p className="text-xs text-gray-500">{servicesModal.propertyName}</p>
+              </div>
+              <button
+                onClick={() => setServicesModal({ show: false, services: [], propertyName: '' })}
+                className="p-1 hover:bg-gray-100 rounded-lg text-gray-500"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              <div className="space-y-2">
+                {servicesModal.services.map((service, i) => (
+                  <div key={i} className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    <span className="text-sm text-gray-700">{service}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
