@@ -1624,43 +1624,64 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                     <p className="text-sm text-gray-500">No schedules found{serviceFilter ? ` for "${serviceFilter}"` : ''}</p>
                   </div>
                 ) : (
-                  <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Service</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Vendor</th>
-                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase">Visit</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Time</th>
-                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {filteredPropertySchedules.map((schedule, idx) => {
-                        const statusStyle = getStatusBadge(schedule.status);
-                        return (
-                          <tr key={schedule.id || idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                            <td className="px-3 py-2">
-                              <p className="font-medium text-gray-800">{schedule.serviceName}</p>
-                              <p className="text-xs text-gray-500">{schedule.frequency?.replace(/_/g, ' ') || '-'}</p>
-                            </td>
-                            <td className="px-3 py-2 text-gray-700">{schedule.vendorName || '-'}</td>
-                            <td className="px-3 py-2 text-center">
-                              <span className="font-medium text-gray-800">{schedule.visitNumber}</span>
-                              <span className="text-gray-400">/{schedule.totalVisits}</span>
-                            </td>
-                            <td className="px-3 py-2 text-gray-700">{formatDate(schedule.scheduledDate)}</td>
-                            <td className="px-3 py-2 text-gray-700">{formatTime(schedule.scheduledTime)}</td>
-                            <td className="px-3 py-2 text-center">
-                              <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${statusStyle.bg} ${statusStyle.text}`}>
-                                {statusStyle.label}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                  <div className="space-y-4">
+                    {/* Group schedules by service */}
+                    {Object.entries(
+                      filteredPropertySchedules.reduce((acc, schedule) => {
+                        const key = schedule.serviceName;
+                        if (!acc[key]) {
+                          acc[key] = {
+                            serviceName: schedule.serviceName,
+                            vendorName: schedule.vendorName,
+                            frequency: schedule.frequency,
+                            totalVisits: schedule.totalVisits,
+                            visits: []
+                          };
+                        }
+                        acc[key].visits.push(schedule);
+                        return acc;
+                      }, {})
+                    ).map(([serviceName, serviceData], idx) => (
+                      <div key={serviceName} className="border border-gray-200 rounded-lg overflow-hidden">
+                        {/* Service Header */}
+                        <div className="bg-gray-100 px-4 py-2 flex items-center justify-between">
+                          <div>
+                            <span className="font-semibold text-gray-800">{serviceName}</span>
+                            <span className="ml-2 text-xs text-gray-500">({serviceData.frequency?.replace(/_/g, ' ') || 'N/A'})</span>
+                          </div>
+                          <div className="text-sm">
+                            <span className="text-gray-500">Vendor:</span>
+                            <span className="ml-1 font-medium text-gray-700">{serviceData.vendorName || '-'}</span>
+                            <span className="mx-2 text-gray-300">|</span>
+                            <span className="text-gray-500">Total:</span>
+                            <span className="ml-1 font-medium text-gray-700">{serviceData.totalVisits} visits</span>
+                          </div>
+                        </div>
+                        {/* Visits Grid */}
+                        <div className="p-3 grid grid-cols-6 gap-2">
+                          {serviceData.visits
+                            .sort((a, b) => a.visitNumber - b.visitNumber)
+                            .map((visit, vIdx) => {
+                              const statusStyle = getStatusBadge(visit.status);
+                              return (
+                                <div 
+                                  key={visit.id || vIdx} 
+                                  className={`text-center p-2 rounded border text-xs ${
+                                    visit.status === 'completed' 
+                                      ? 'bg-green-50 border-green-200' 
+                                      : 'bg-blue-50 border-blue-200'
+                                  }`}
+                                >
+                                  <div className="font-semibold text-gray-800">V{visit.visitNumber}</div>
+                                  <div className="text-gray-600">{formatDate(visit.scheduledDate)}</div>
+                                  <div className="text-gray-500">{formatTime(visit.scheduledTime)}</div>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
 
                 {/* Footer */}
