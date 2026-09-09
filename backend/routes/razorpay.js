@@ -809,6 +809,17 @@ async function handlePaymentLinkPaid(payload, webhookId) {
       WHERE id = ?
     `, [newAmountPaid, Math.max(0, newBalance), newPaymentStatus, newStatus, invoice.id]);
 
+    // Also update fp_estimates payment_status if linked to estimate
+    if (invoice.estimate_id) {
+      await connection.execute(`
+        UPDATE fp_estimates SET
+          payment_status = ?,
+          updated_at = NOW()
+        WHERE id = ?
+      `, [newPaymentStatus, invoice.estimate_id]);
+      console.log(`[Webhook] Updated fp_estimates ${invoice.estimate_id} payment_status to ${newPaymentStatus}`);
+    }
+
     // If fully paid and linked to work order, close it
     if (newBalance <= 0 && invoice.work_order_id) {
       await connection.execute(`
@@ -1743,6 +1754,13 @@ router.post('/verify-payment-callback', async (req, res) => {
                   WHERE id = ?
                 `, [newStatus, newBalanceDue, amountPaid, newStatus, invoice.id]);
 
+                // Also update fp_estimates payment_status if linked to estimate
+                if (invoice.estimate_id) {
+                  await connection.execute(`
+                    UPDATE fp_estimates SET payment_status = ?, updated_at = NOW() WHERE id = ?
+                  `, [newStatus, invoice.estimate_id]);
+                }
+
                 await connection.commit();
                 console.log(`[Callback No-Sig] Payment recorded: ${newPaymentId} for invoice ${invoice.invoice_id}`);
 
@@ -1928,6 +1946,13 @@ router.post('/verify-payment-callback', async (req, res) => {
                   updated_at = NOW()
                 WHERE id = ?
               `, [newStatus, newBalanceDue, amountPaid, newStatus, invoice.id]);
+
+              // Also update fp_estimates payment_status if linked to estimate
+              if (invoice.estimate_id) {
+                await connection.execute(`
+                  UPDATE fp_estimates SET payment_status = ?, updated_at = NOW() WHERE id = ?
+                `, [newStatus, invoice.estimate_id]);
+              }
 
               await connection.commit();
               console.log(`[Callback Fallback] Payment recorded for invoice ${invoice.invoice_id}: ₹${amountPaid}`);
