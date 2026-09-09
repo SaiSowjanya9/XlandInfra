@@ -117,7 +117,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
         const minute = Math.random() > 0.5 ? '00' : '30';
         
         const types = ['scheduled', 'unscheduled', 'work_order'];
-        const statuses = ['scheduled', 'in_progress', 'completed', 'pending', 'rescheduled', 'cancelled'];
+        const statuses = ['scheduled', 'completed', 'pending', 'rescheduled', 'cancelled'];
         
         mockData.push({
           id: `${day}-${i}`,
@@ -332,10 +332,10 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
     switch (status) {
       case 'pending': return 'bg-amber-100 border-l-amber-500';
       case 'scheduled': return 'bg-blue-100 border-l-blue-500';
-      case 'in_progress': return 'bg-purple-100 border-l-purple-500';
       case 'completed': return 'bg-green-100 border-l-green-500';
       case 'rescheduled': return 'bg-orange-100 border-l-orange-500';
       case 'cancelled': return 'bg-red-100 border-l-red-500';
+      case 'overdue': return 'bg-gray-800 border-l-gray-800';
       default: return 'bg-gray-100 border-l-gray-500';
     }
   };
@@ -761,7 +761,6 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
               {[
                 { color: 'bg-amber-500', label: 'New / Pending' },
                 { color: 'bg-blue-500', label: 'Scheduled' },
-                { color: 'bg-purple-500', label: 'In Progress' },
                 { color: 'bg-green-500', label: 'Completed' },
                 { color: 'bg-orange-500', label: 'Rescheduled' },
                 { color: 'bg-red-500', label: 'Cancelled' },
@@ -845,7 +844,6 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
             {/* Modal Header */}
             <div className={`px-6 py-4 border-b ${
               selectedSchedule.status === 'completed' ? 'bg-green-50' :
-              selectedSchedule.status === 'in_progress' ? 'bg-purple-50' :
               selectedSchedule.status === 'pending' ? 'bg-amber-50' :
               selectedSchedule.status === 'cancelled' ? 'bg-red-50' :
               selectedSchedule.status === 'rescheduled' ? 'bg-orange-50' :
@@ -873,7 +871,6 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
               <div className="flex items-center gap-3">
                 <span className={`px-3 py-1.5 text-sm font-semibold rounded-full capitalize ${
                   selectedSchedule.status === 'completed' ? 'bg-green-100 text-green-700' :
-                  selectedSchedule.status === 'in_progress' ? 'bg-purple-100 text-purple-700' :
                   selectedSchedule.status === 'pending' ? 'bg-amber-100 text-amber-700' :
                   selectedSchedule.status === 'cancelled' ? 'bg-red-100 text-red-700' :
                   selectedSchedule.status === 'rescheduled' ? 'bg-orange-100 text-orange-700' :
