@@ -2640,12 +2640,12 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
       params.push(propertyType);
     }
     
-    // Get total count
+    // Get total count - property_id should be numeric DB ID
     const countQuery = `
       SELECT COUNT(*) as total
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = CAST(sv.property_id AS UNSIGNED)
+      JOIN onboarded_properties op ON op.id = sv.property_id
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${whereClause}
     `;
@@ -2655,10 +2655,7 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
       const [countResult] = await pool.execute(countQuery, params);
       total = countResult[0].total;
     } catch (countErr) {
-      console.log('[All Schedules] Count with CAST failed, trying string match:', countErr.message);
-      const altCountQuery = countQuery.replace('op.id = CAST(sv.property_id AS UNSIGNED)', 'op.property_id = sv.property_id');
-      const [altResult] = await pool.execute(altCountQuery, params);
-      total = altResult[0].total;
+      console.log('[All Schedules] Count query failed:', countErr.message);
     }
     
     // Get schedules with pagination
@@ -2690,7 +2687,7 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
         wo.status as workOrderStatus
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = CAST(sv.property_id AS UNSIGNED)
+      JOIN onboarded_properties op ON op.id = sv.property_id
       LEFT JOIN property_contacts pc ON pc.property_id = op.id AND pc.is_primary = 1
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
@@ -2706,10 +2703,8 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
       const [result] = await pool.execute(query, params);
       schedules = result;
     } catch (queryErr) {
-      console.log('[All Schedules] Main query failed, trying string match:', queryErr.message);
-      const altQuery = query.replace('op.id = CAST(sv.property_id AS UNSIGNED)', 'op.property_id = sv.property_id');
-      const [altResult] = await pool.execute(altQuery, params);
-      schedules = altResult;
+      console.log('[All Schedules] Main query failed:', queryErr.message);
+      // Return empty if query fails
     }
     
     // Calculate stats - simpler approach
@@ -2737,7 +2732,7 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
       SELECT sv.status, COUNT(*) as count
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = CAST(sv.property_id AS UNSIGNED)
+      JOIN onboarded_properties op ON op.id = sv.property_id
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${statsWhereClause}
       GROUP BY sv.status
