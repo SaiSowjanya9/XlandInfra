@@ -91,18 +91,44 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     const newDate = new Date(year, month - 1, day); // month is 0-indexed
     if (isNaN(newDate.getTime())) return;
     
+    const newDateFormatted = formatDateShort(newDate);
+    const newDateFull = formatDateFull(newDate);
+    
+    // Update planned visits
     setPlannedVisits(prev => prev.map((visit, i) => {
       if (i === index) {
         return {
           ...visit,
           date: newDate,
-          shortDateStr: formatDateShort(newDate),
-          dateStr: formatDateFull(newDate),
+          shortDateStr: newDateFormatted,
+          dateStr: newDateFull,
           isEdited: true
         };
       }
       return visit;
     }));
+    
+    // If editing first visit, also update selectedSlot to keep in sync
+    if (index === 0) {
+      setSelectedSlot(prev => prev ? { ...prev, date: newDate } : { date: newDate, time: '10:00 AM', status: 'edited' });
+      
+      // Update recommended dates to show the edited date at top
+      setRecommendedDates(prev => {
+        if (prev.length === 0) return prev;
+        return prev.map((rec, i) => {
+          if (i === 0) {
+            return {
+              ...rec,
+              date: newDate,
+              dateStr: newDateFull,
+              type: 'edited',
+              reason: 'Custom date selected'
+            };
+          }
+          return rec;
+        });
+      });
+    }
     // Don't close editing mode here - let user also change time
   };
 
@@ -118,6 +144,21 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       }
       return visit;
     }));
+    
+    // If editing first visit, also update selectedSlot and recommended dates
+    if (index === 0) {
+      setSelectedSlot(prev => prev ? { ...prev, time: newTime } : null);
+      
+      setRecommendedDates(prev => {
+        if (prev.length === 0) return prev;
+        return prev.map((rec, i) => {
+          if (i === 0) {
+            return { ...rec, time: newTime, type: 'edited' };
+          }
+          return rec;
+        });
+      });
+    }
     // Don't close editing mode - let user click Done button
   };
 
@@ -1354,6 +1395,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className={`w-2 h-2 rounded-full ${
+                          rec.type === 'edited' ? 'bg-purple-500' :
                           rec.type === 'recommended' ? 'bg-blue-500' :
                           rec.type === 'available' ? 'bg-green-500' : 'bg-amber-500'
                         }`} />
@@ -1372,17 +1414,20 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                       </div>
                     )}
                     
-                    {/* Show reason if no zone jobs */}
-                    {rec.sameZoneJobs === 0 && rec.reason && (
-                      <p className="text-xs text-blue-600 mt-1.5 italic">{rec.reason}</p>
+                    {/* Show reason if no zone jobs or edited */}
+                    {((rec.sameZoneJobs === 0 && rec.reason) || rec.type === 'edited') && (
+                      <p className={`text-xs mt-1.5 italic ${rec.type === 'edited' ? 'text-purple-600' : 'text-blue-600'}`}>
+                        {rec.reason || 'Custom date selected'}
+                      </p>
                     )}
                     
                     <div className="flex items-center justify-between mt-2">
                       <span className={`px-2 py-0.5 text-xs rounded ${
+                        rec.type === 'edited' ? 'bg-purple-100 text-purple-700' :
                         rec.type === 'recommended' ? 'bg-blue-100 text-blue-700' :
                         rec.type === 'available' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                       }`}>
-                        {rec.type === 'recommended' ? 'Recommended' : rec.type === 'available' ? 'Available' : 'Limited'}
+                        {rec.type === 'edited' ? 'Edited' : rec.type === 'recommended' ? 'Recommended' : rec.type === 'available' ? 'Available' : 'Limited'}
                       </span>
                       {rec.availableSlots !== undefined && (
                         <span className="text-xs text-gray-400">{rec.availableSlots} slots left</span>
@@ -1497,10 +1542,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                       <select
                         value={visit.time || '10:00 AM'}
                         onChange={(e) => {
-                          const newTime = e.target.value;
-                          setPlannedVisits(prev => prev.map((v, idx) => 
-                            idx === i ? { ...v, time: newTime, isEdited: true } : v
-                          ));
+                          handleEditPlannedVisitTime(i, e.target.value);
                         }}
                         className="w-full px-1 py-0.5 text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
