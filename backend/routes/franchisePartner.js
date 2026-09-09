@@ -1215,7 +1215,7 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
     res.json({
       success: true,
       message: 'Vendor assigned successfully',
-      data: { vendorName: vendor[0].owner_name, serviceType: vendor[0].service_type }
+      data: { vendorName: vendor[0].company_name || vendor[0].owner_name, serviceType: vendor[0].service_type }
     });
   } catch (error) {
     console.error('Assign vendor error:', error);
@@ -1302,7 +1302,7 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
         op.entry_type,
         COALESCE(c.name, wo.category_name) as category_name,
         wo.subcategory_name,
-        v.company_name as vendor_name,
+        COALESCE(v.company_name, v.owner_name) as vendor_name,
         wo.customer_name,
         wo.customer_email,
         wo.customer_phone,
@@ -1892,7 +1892,7 @@ router.get('/work-orders/by-order-id/:workOrderId', requireFPScope, async (req, 
         op.block_names,
         COALESCE(c.name, wo.category_name) as category_name,
         wo.subcategory_name,
-        v.company_name as vendor_name,
+        COALESCE(v.company_name, v.owner_name) as vendor_name,
         v.owner_name as vendor_owner_name,
         v.owner_mobile as vendor_phone,
         wo.customer_name,
@@ -2366,7 +2366,7 @@ router.get('/vendors', requireFPScope, async (req, res) => {
     const [vendors] = await pool.execute(
       `SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
               ov.zone, ov.zone as zone_name, ov.area_name, ov.area_name as area, ov.division,
-              ov.owner_name, ov.owner_name as company_name, ov.owner_name as contact_person,
+              ov.owner_name, COALESCE(ov.company_name, ov.owner_name) as company_name, ov.owner_name as contact_person,
               ov.owner_mobile, ov.owner_mobile as phone, ov.owner_email, ov.owner_email as email,
               ov.owner_aadhar, ov.owner_country_code,
               ov.manager_name, ov.manager_mobile, ov.manager_email, ov.manager_country_code,
@@ -2489,7 +2489,7 @@ router.get('/vendors/assignments', requireFPScope, async (req, res) => {
         COALESCE(op.city, p.city) as city, 
         COALESCE(op.zone, p.zone_id) as property_zone,
         COALESCE(p.property_id, op.property_id) as property_code,
-        v.owner_name as vendor_name, v.vendor_id as vendor_code, 
+        COALESCE(v.company_name, v.owner_name) as vendor_name, v.vendor_id as vendor_code, 
         v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
         v.zone as zone_name, v.area_name as area, v.rate_per_visit, v.coverage_per_day
        FROM property_vendor_assignments pva

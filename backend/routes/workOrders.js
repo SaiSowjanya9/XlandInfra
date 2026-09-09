@@ -1161,7 +1161,7 @@ router.get('/pending-verification', authenticate, managerOrAdmin, async (req, re
     let query = `
       SELECT wo.*, 
              op.community_name as property_name, op.property_id as property_code,
-             ov.company_name as vendor_company, ov.owner_name as vendor_name
+             ov.company_name as vendor_company, COALESCE(ov.company_name, ov.owner_name) as vendor_name
       FROM work_orders wo
       JOIN onboarded_properties op ON op.id = wo.property_id
       LEFT JOIN onboarded_vendors ov ON ov.id = wo.assigned_vendor_id

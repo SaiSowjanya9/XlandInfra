@@ -320,7 +320,7 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
       const [schedules] = await pool.execute(
         `SELECT pss.property_id, pss.service_name, pss.start_date, pss.end_date, 
                 pss.vendor_id, pss.status as schedule_status,
-                ov.company_name as vendor_name, ov.owner_name as vendor_owner
+                COALESCE(ov.company_name, ov.owner_name) as vendor_name, ov.owner_name as vendor_owner
          FROM property_service_schedules pss
          LEFT JOIN onboarded_vendors ov ON pss.vendor_id = ov.id
          WHERE pss.property_id IN (${propertyIds.map(() => '?').join(',')})`,
