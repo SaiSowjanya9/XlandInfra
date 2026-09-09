@@ -180,6 +180,11 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  
+  // Bulk cancel modal states
+  const [showBulkCancelModal, setShowBulkCancelModal] = useState(false);
+  const [bulkCancelProperty, setBulkCancelProperty] = useState(null);
+  const [bulkCancelReason, setBulkCancelReason] = useState('');
   const [rescheduleSearch, setRescheduleSearch] = useState('');
   const [selectedForReschedule, setSelectedForReschedule] = useState(null);
   const [newDate, setNewDate] = useState('');
@@ -605,41 +610,39 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     }
   };
 
-  // Handle cancel all schedules for a property
+  // Handle cancel all schedules for a property - opens modal
   const handleCancelPropertySchedules = (property) => {
     const allVisits = Object.values(property.services).flatMap(s => s.visits);
     const activeVisits = allVisits.filter(v => v.status !== 'completed' && v.status !== 'cancelled');
     
     if (activeVisits.length === 0) {
-      alert('No active schedules to cancel for this property.');
-      return;
+      return; // No active schedules
     }
     
-    const confirmMsg = `Are you sure you want to cancel all ${activeVisits.length} active schedule(s) for property ${property.propertyId}?`;
-    if (!confirm(confirmMsg)) return;
-    
-    const reason = prompt('Please provide a reason for cancellation:');
-    if (!reason || !reason.trim()) {
-      alert('Cancellation reason is required.');
-      return;
-    }
-    
-    // Cancel all active visits
-    cancelMultipleSchedules(activeVisits, reason);
+    setBulkCancelProperty({ ...property, activeVisits });
+    setBulkCancelReason('');
+    setShowBulkCancelModal(true);
+  };
+  
+  // Confirm bulk cancel from modal
+  const handleConfirmBulkCancel = () => {
+    if (!bulkCancelReason.trim()) return;
+    cancelMultipleSchedules(bulkCancelProperty.activeVisits, bulkCancelReason);
+    setShowBulkCancelModal(false);
+    setBulkCancelProperty(null);
+    setBulkCancelReason('');
   };
 
   // Cancel multiple schedules
   const cancelMultipleSchedules = async (visits, reason) => {
     setCancelling(true);
-    let successCount = 0;
-    let failCount = 0;
     
     try {
       const token = getAuthToken();
       
       for (const visit of visits) {
         try {
-          const response = await fetch(`${API_BASE}/api/${apiPath}/schedules/${visit.id}/cancel`, {
+          await fetch(`${API_BASE}/api/${apiPath}/schedules/${visit.id}/cancel`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -647,28 +650,15 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             },
             body: JSON.stringify({ reason })
           });
-          
-          if (response.ok) {
-            successCount++;
-          } else {
-            failCount++;
-          }
         } catch (err) {
-          failCount++;
+          console.error('Error cancelling visit:', err);
         }
       }
       
       // Refresh the list
       fetchSchedules(true);
-      
-      if (failCount === 0) {
-        alert(`Successfully cancelled ${successCount} schedule(s).`);
-      } else {
-        alert(`Cancelled ${successCount} schedule(s). ${failCount} failed.`);
-      }
     } catch (error) {
       console.error('Error cancelling schedules:', error);
-      alert('Error cancelling schedules');
     } finally {
       setCancelling(false);
     }
@@ -1743,6 +1733,47 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                   <p className="mt-0.5">XLAND INFRA Property Management System</p>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Cancel Modal */}
+      {showBulkCancelModal && bulkCancelProperty && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Cancel All Schedules</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Property: {bulkCancelProperty.propertyId} • {bulkCancelProperty.activeVisits?.length || 0} active schedule(s)
+              </p>
+            </div>
+            <div className="p-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Reason for Cancellation <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={bulkCancelReason}
+                onChange={(e) => setBulkCancelReason(e.target.value)}
+                placeholder="Enter reason for cancelling all schedules..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                rows={3}
+              />
+            </div>
+            <div className="flex justify-end gap-3 p-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+              <button
+                onClick={() => { setShowBulkCancelModal(false); setBulkCancelProperty(null); }}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmBulkCancel}
+                disabled={!bulkCancelReason.trim() || cancelling}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {cancelling ? 'Cancelling...' : 'Confirm Cancel'}
+              </button>
             </div>
           </div>
         </div>
