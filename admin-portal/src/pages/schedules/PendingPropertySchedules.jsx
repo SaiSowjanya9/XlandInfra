@@ -603,7 +603,6 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       'Zone',
       'Total Services',
       'Assigned Vendors',
-      'Pending Services',
       'Added On',
       'Status'
     ];
@@ -616,7 +615,6 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       property.zone || '',
       property.totalServices || 0,
       property.assignedVendors || 0,
-      property.pendingServices || 0,
       property.addedOn || '',
       property.status || ''
     ]);
@@ -935,8 +933,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                 <th className="text-left px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Package</th>
                 <th className="text-center px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Services</th>
                 <th className="text-center px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Vendors Assigned</th>
-                <th className="text-center px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Pending Services</th>
-                <th className="text-center px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Payment</th>
+                <th className="text-center px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
                 <th className="text-left px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Added On</th>
                 <th className="text-center px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
               </tr>
@@ -1027,27 +1024,28 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                       </div>
                     </td>
                     
-                    {/* Pending Services */}
+                    {/* Status */}
                     <td className="px-6 py-4 text-center">
-                      {property.pendingServices > 0 ? (
-                        <div className="flex flex-col items-center">
-                          <span className="text-red-600 font-bold">{property.pendingServices}</span>
-                          <span className="text-xs text-red-500">Assign Vendor</span>
-                        </div>
+                      {property.schedulingStatus === 'scheduled' ? (
+                        <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          Scheduled
+                        </span>
+                      ) : property.assignedVendors < property.totalServices ? (
+                        <button
+                          onClick={() => handleAssignVendor(property)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-red-100 text-red-600 hover:bg-red-200 transition-colors cursor-pointer"
+                        >
+                          Assign Vendor
+                        </button>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <button
+                          onClick={() => handleSchedule(property)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors cursor-pointer"
+                        >
+                          Schedule
+                        </button>
                       )}
-                    </td>
-                    
-                    {/* Payment */}
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold uppercase ${
-                        property.paymentStatus?.toLowerCase() === 'paid' 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {property.paymentStatus || 'Pending'}
-                      </span>
                     </td>
                     
                     {/* Added On */}
@@ -1064,13 +1062,10 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => property.pendingServices === 0 ? handleSchedule(property) : handleAssignVendor(property)}
-                          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                          onClick={() => handleViewServices(property)}
+                          className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                         >
-                          {property.pendingServices === 0 ? 'Schedule' : 'Assign Vendor'}
-                        </button>
-                        <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-                          <ChevronDown className="w-4 h-4" />
+                          View
                         </button>
                       </div>
                     </td>
