@@ -45,8 +45,9 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
   // Dynamic filter options from API
   const [zones, setZones] = useState([]);
   const [vendors, setVendors] = useState([]);
-  const propertyTypeOptions = ['Apartment', 'Villa', 'Gated Community', 'Plot', 'Flat'];
-  const serviceOptions = ['Water Tank Cleaning', 'Electrical Repair', 'Plumbing Repair', 'Lift Maintenance', 'Pest Control', 'AC Service', 'Generator Checkup', 'Drainage Cleaning', 'HVAC', 'Landscaping'];
+  const [services, setServices] = useState([]);
+  const [propertyTypes, setPropertyTypes] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   // Fetch zones from API
   const fetchZones = useCallback(async () => {
@@ -78,65 +79,135 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
     }
   }, [token]);
 
+  // Fetch services from API
+  const fetchServices = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/services`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success && Array.isArray(result.data)) {
+        const serviceNames = [...new Set(result.data.map(s => s.name || s.serviceName || s.service_name).filter(Boolean))];
+        setServices(serviceNames);
+      }
+    } catch (err) {
+      console.error('Fetch services error:', err);
+    }
+  }, [token]);
+
+  // Fetch property types from API
+  const fetchPropertyTypes = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/onboarding/suggestions/property-types`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success && Array.isArray(result.data)) {
+        setPropertyTypes(result.data);
+      } else {
+        // Fallback property types
+        setPropertyTypes(['Apartment', 'Villa', 'Gated Community', 'Plot', 'Flat', 'Independent House']);
+      }
+    } catch (err) {
+      console.error('Fetch property types error:', err);
+      setPropertyTypes(['Apartment', 'Villa', 'Gated Community', 'Plot', 'Flat', 'Independent House']);
+    }
+  }, [token]);
+
+  // Fetch real schedules from API
+  const fetchSchedules = useCallback(async () => {
+    setLoading(true);
+    try {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth() + 1; // API expects 1-indexed month
+      
+      const response = await fetch(`${API_BASE}/api/schedules/all?limit=500`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      
+      if (result.success && Array.isArray(result.data)) {
+        // Transform API data to component format
+        const formattedSchedules = result.data.map(s => {
+          // Parse scheduled date
+          const scheduledDate = s.scheduledDate ? new Date(s.scheduledDate) : new Date();
+          
+          // Format time
+          let timeStr = '10:00 AM';
+          if (s.scheduledTime) {
+            const [hours, minutes] = s.scheduledTime.split(':').map(Number);
+            const isPM = hours >= 12;
+            const hour12 = hours % 12 || 12;
+            timeStr = `${hour12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${isPM ? 'PM' : 'AM'}`;
+          }
+          
+          // Determine schedule type
+          let type = 'scheduled';
+          if (s.workOrderId) type = 'work_order';
+          
+          // Check if overdue
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          let status = s.status || 'scheduled';
+          if (scheduledDate < today && (status === 'pending' || status === 'scheduled')) {
+            status = 'overdue';
+          }
+          
+          return {
+            id: s.id || s.visitId,
+            visitId: s.visitId,
+            date: scheduledDate,
+            time: timeStr,
+            service: s.serviceName || s.serviceCategory || 'Service',
+            property: s.propertyName || 'Property',
+            propertyId: s.propertyId,
+            vendor: s.vendorName || 'Unassigned',
+            vendorId: s.vendorDbId,
+            zone: s.zone || '',
+            propertyType: s.propertyType || '',
+            type: type,
+            status: status,
+            visitNumber: s.visitNumber,
+            totalVisits: s.totalVisits,
+            workOrderId: s.workOrderId
+          };
+        });
+        
+        setSchedules(formattedSchedules);
+        
+        // Extract unique services and property types from fetched data for filter dropdowns
+        const uniqueServices = [...new Set(formattedSchedules.map(s => s.service).filter(Boolean))];
+        const uniquePropertyTypes = [...new Set(formattedSchedules.map(s => s.propertyType).filter(Boolean))];
+        
+        if (uniqueServices.length > 0 && services.length === 0) {
+          setServices(uniqueServices);
+        }
+        if (uniquePropertyTypes.length > 0 && propertyTypes.length === 0) {
+          setPropertyTypes(uniquePropertyTypes);
+        }
+      } else {
+        setSchedules([]);
+      }
+    } catch (err) {
+      console.error('Fetch schedules error:', err);
+      setSchedules([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentDate, token]);
+
   // Initial load
   useEffect(() => {
     fetchZones();
     fetchVendors();
+    fetchServices();
+    fetchPropertyTypes();
   }, []);
   
-  // Regenerate schedules when date changes
+  // Fetch schedules when date changes
   useEffect(() => {
-    generateMockSchedules();
-  }, [currentDate]);
-
-  const generateMockSchedules = () => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const mockData = [];
-    
-    const services = [
-      { name: 'Water Tank Cleaning', property: 'Green Valley Apts', vendor: 'ABC Cleaning', zone: 'Zone A', propertyType: 'Apartment', color: 'blue' },
-      { name: 'Electrical Repair', property: 'Palm Meadows', vendor: 'PowerFix Solutions', zone: 'Zone A', propertyType: 'Villa', color: 'amber' },
-      { name: 'Plumbing Repair', property: 'Urban Nest', vendor: 'Pipe Masters', zone: 'Zone D', propertyType: 'Villa', color: 'green' },
-      { name: 'Lift Maintenance', property: 'Elite Enclave', vendor: 'Elevate Engineers', zone: 'Zone A', propertyType: 'Apartment', color: 'purple' },
-      { name: 'Pest Control', property: 'Sunrise Villas', vendor: 'PestFree Services', zone: 'Zone B', propertyType: 'Villa', color: 'red' },
-      { name: 'AC Service', property: 'Lake View Residency', vendor: 'Cool Breeze', zone: 'Zone C', propertyType: 'Apartment', color: 'cyan' },
-      { name: 'Generator Checkup', property: 'Golden Heights', vendor: 'GenCare Services', zone: 'Zone B', propertyType: 'Apartment', color: 'orange' },
-      { name: 'Drainage Cleaning', property: 'Skyline Towers', vendor: 'Drain Pro', zone: 'Zone C', propertyType: 'Gated Community', color: 'teal' }
-    ];
-
-    // Generate random schedules for the month
-    for (let day = 1; day <= 31; day++) {
-      const date = new Date(year, month, day);
-      if (date.getMonth() !== month) continue;
-      
-      const numSchedules = Math.floor(Math.random() * 4);
-      for (let i = 0; i < numSchedules; i++) {
-        const service = services[Math.floor(Math.random() * services.length)];
-        const hour = 9 + Math.floor(Math.random() * 8);
-        const minute = Math.random() > 0.5 ? '00' : '30';
-        
-        const types = ['scheduled', 'unscheduled', 'work_order'];
-        const statuses = ['scheduled', 'completed', 'pending', 'rescheduled', 'cancelled'];
-        
-        mockData.push({
-          id: `${day}-${i}`,
-          date: new Date(year, month, day),
-          time: `${hour.toString().padStart(2, '0')}:${minute} ${hour < 12 ? 'AM' : 'PM'}`,
-          service: service.name,
-          property: service.property,
-          vendor: service.vendor,
-          zone: service.zone,
-          propertyType: service.propertyType,
-          color: service.color,
-          type: types[Math.floor(Math.random() * types.length)],
-          status: statuses[Math.floor(Math.random() * statuses.length)]
-        });
-      }
-    }
-    
-    setSchedules(mockData);
-  };
+    fetchSchedules();
+  }, [currentDate, fetchSchedules]);
 
   // Filter schedules based on current filters and view options
   const getFilteredSchedules = () => {
@@ -423,7 +494,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
               className="min-w-[120px] max-w-[160px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
             >
               <option value="All Services">All Services</option>
-              {serviceOptions.map(s => <option key={s} value={s}>{s}</option>)}
+              {services.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
             
             <select 
@@ -450,7 +521,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
               className="min-w-[130px] max-w-[170px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
             >
               <option value="All Property Types">All Property Types</option>
-              {propertyTypeOptions.map(pt => <option key={pt} value={pt}>{pt}</option>)}
+              {propertyTypes.map(pt => <option key={pt} value={pt}>{pt}</option>)}
             </select>
             
             <button 
@@ -490,6 +561,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                 {viewMode === 'Day' && currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                 {viewMode === 'Year' && currentDate.getFullYear().toString()}
               </h2>
+              {loading && <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />}
               <button 
                 onClick={() => viewMode === 'Month' ? navigateMonth(-1) : viewMode === 'Week' ? navigateWeek(-1) : viewMode === 'Year' ? navigateYear(-1) : navigateDay(-1)} 
                 className="p-1 hover:bg-gray-100 rounded"
@@ -503,9 +575,19 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
-            <button onClick={goToToday} className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
-              Today
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={fetchSchedules} 
+                disabled={loading}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Refresh schedules"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+              <button onClick={goToToday} className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
+                Today
+              </button>
+            </div>
           </div>
 
           {/* MONTH VIEW */}

@@ -769,11 +769,14 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     }
   };
 
-  // Use the first recommended date and go to confirmation
+  // Use the selected/first recommended date and go to confirmation
   const handleUseRecommended = () => {
     if (!selectedService || !recommendedDates.length) return;
     
-    const rec = recommendedDates[0];
+    // Use currently selected slot if available, otherwise use first recommended
+    const rec = selectedSlot && selectedSlot.date 
+      ? { date: selectedSlot.date, time: selectedSlot.time }
+      : recommendedDates[0];
     
     // Set the selected slot
     setSelectedSlot({ date: rec.date, time: rec.time, status: 'recommended' });
@@ -782,7 +785,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     const frequencyConfig = getFrequencyConfig(selectedService.frequency);
     const expectedVisits = selectedService.visits || frequencyConfig?.visitsPerYear || 12;
     
-    // Generate all visits with correct count using the recommended date
+    // Generate all visits with correct count using the selected/recommended date
     const schedules = generateScheduleDates(rec.date, selectedService.frequency, expectedVisits);
     const formattedSchedules = formatSchedulesForDisplay(schedules);
     
@@ -1506,7 +1509,10 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 disabled={!recommendedDates.length || !selectedService}
                 className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               >
-                Use Recommended {recommendedDates[0]?.dateStr ? `(${recommendedDates[0].dateStr})` : ''}
+                {selectedSlot?.date 
+                  ? `Use Selected (${formatDateShort(selectedSlot.date)})` 
+                  : `Use Recommended ${recommendedDates[0]?.dateStr ? `(${recommendedDates[0].dateStr})` : ''}`
+                }
               </button>
               <button 
                 onClick={handleApplyToAllMonthly}
