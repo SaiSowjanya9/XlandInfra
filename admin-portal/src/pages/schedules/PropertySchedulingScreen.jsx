@@ -269,10 +269,12 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
+      let servicesToUse = [];
+      
       if (servicesResponse.ok) {
         const servicesResult = await servicesResponse.json();
         if (servicesResult.success && servicesResult.data?.length > 0) {
-          const realServices = servicesResult.data.map(s => ({
+          servicesToUse = servicesResult.data.map(s => ({
             id: s.id,
             scheduleId: s.scheduling_status === 'completed' ? (s.service_schedule_id || s.scheduleId || s.id) : null,
             name: s.service_name || s.serviceName,
@@ -286,27 +288,67 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             startDate: s.start_date || s.startDate,
             endDate: s.end_date || s.endDate
           }));
-          setServices(realServices);
-          if (realServices.length > 0 && !selectedService) {
-            setSelectedService(realServices[0]);
-            // Fetch vendor availability for the first service
-            if (realServices[0].vendorId) {
-              fetchVendorAvailability(realServices[0].vendorId);
-            }
+        }
+      }
+      
+      // If API returned no services, use services from navigation state (propertyData)
+      if (servicesToUse.length === 0 && propertyData?.services?.length > 0) {
+        console.log('[PropertyScheduling] Using services from navigation state:', propertyData.services.length);
+        servicesToUse = propertyData.services.map((s, index) => ({
+          id: s.id || `nav-${index}`,
+          scheduleId: null,
+          name: s.name || s.service,
+          category: s.category || s.serviceType || s.name,
+          vendorName: s.vendorName || s.vendor_name || 'Unassigned',
+          vendorId: s.vendorId || s.vendor_id || null,
+          frequency: s.frequency || s.frequencyType || 'Monthly',
+          visits: s.visits || s.frequencyCount || 12,
+          status: s.schedulingStatus === 'scheduled' ? 'Scheduled' : 'Schedule',
+          customVisits: s.customVisits,
+          startDate: s.startDate || s.scheduleDate,
+          endDate: s.endDate
+        }));
+      }
+      
+      if (servicesToUse.length > 0) {
+        setServices(servicesToUse);
+        if (!selectedService) {
+          setSelectedService(servicesToUse[0]);
+          // Fetch vendor availability for the first service
+          if (servicesToUse[0].vendorId) {
+            fetchVendorAvailability(servicesToUse[0].vendorId);
           }
-        } else {
-          // No services found - show empty state
-          setServices([]);
-          console.log('No services found for this property');
         }
       } else {
-        // API error - show empty state
+        // No services found from any source
         setServices([]);
-        console.error('Failed to fetch services');
+        console.log('No services found for this property');
       }
     } catch (error) {
       console.error('Error fetching property details:', error);
-      setServices([]);
+      // Try to use navigation state services as fallback
+      if (propertyData?.services?.length > 0) {
+        const fallbackServices = propertyData.services.map((s, index) => ({
+          id: s.id || `nav-${index}`,
+          scheduleId: null,
+          name: s.name || s.service,
+          category: s.category || s.serviceType || s.name,
+          vendorName: s.vendorName || s.vendor_name || 'Unassigned',
+          vendorId: s.vendorId || s.vendor_id || null,
+          frequency: s.frequency || s.frequencyType || 'Monthly',
+          visits: s.visits || s.frequencyCount || 12,
+          status: 'Schedule',
+          customVisits: s.customVisits,
+          startDate: s.startDate || s.scheduleDate,
+          endDate: s.endDate
+        }));
+        setServices(fallbackServices);
+        if (fallbackServices.length > 0 && !selectedService) {
+          setSelectedService(fallbackServices[0]);
+        }
+      } else {
+        setServices([]);
+      }
     } finally {
       setLoading(false);
     }

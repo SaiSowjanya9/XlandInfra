@@ -933,7 +933,6 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                 <th className="text-left px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Package</th>
                 <th className="text-center px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Services</th>
                 <th className="text-center px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Vendors Assigned</th>
-                <th className="text-center px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
                 <th className="text-left px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Added On</th>
                 <th className="text-center px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
               </tr>
@@ -941,7 +940,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
             <tbody className="divide-y divide-gray-100">
               {paginatedProperties.length === 0 ? (
                 <tr>
-                  <td colSpan="11" className="px-6 py-16 text-center">
+                  <td colSpan="9" className="px-6 py-16 text-center">
                     <div className="flex flex-col items-center">
                       <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                         <CalendarClock className="w-8 h-8 text-gray-400" />
@@ -1024,7 +1023,17 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                       </div>
                     </td>
                     
-                    {/* Status */}
+                    {/* Added On */}
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-700 whitespace-nowrap">
+                        {new Date(property.addedOn).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </div>
+                      <div className="text-xs text-gray-400 whitespace-nowrap">
+                        {new Date(property.addedOn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                      </div>
+                    </td>
+                    
+                    {/* Actions */}
                     <td className="px-6 py-4 text-center">
                       {property.schedulingStatus === 'scheduled' ? (
                         <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
@@ -1046,28 +1055,6 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                           Schedule
                         </button>
                       )}
-                    </td>
-                    
-                    {/* Added On */}
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-700 whitespace-nowrap">
-                        {new Date(property.addedOn).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </div>
-                      <div className="text-xs text-gray-400 whitespace-nowrap">
-                        {new Date(property.addedOn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
-                      </div>
-                    </td>
-                    
-                    {/* Actions */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleViewServices(property)}
-                          className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                        >
-                          View
-                        </button>
-                      </div>
                     </td>
                   </tr>
                 ))
