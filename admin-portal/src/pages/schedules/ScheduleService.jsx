@@ -41,10 +41,12 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 // Status colors
 const STATUS_COLORS = {
   upcoming: '#3B82F6',
-  in_progress: '#F59E0B',
+  scheduled: '#3B82F6',
+  pending: '#F59E0B',
   completed: '#10B981',
-  rescheduled: '#8B5CF6',
+  rescheduled: '#F97316',
   cancelled: '#EF4444',
+  overdue: '#1F2937',
   draft: '#6B7280',
   active: '#3B82F6',
   paused: '#F59E0B'
@@ -609,22 +611,26 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
   const StatusBadge = ({ status }) => {
     const statusColors = {
       upcoming: 'bg-blue-100 text-blue-700',
+      scheduled: 'bg-blue-100 text-blue-700',
       active: 'bg-blue-100 text-blue-700',
       draft: 'bg-gray-100 text-gray-700',
-      in_progress: 'bg-amber-100 text-amber-700',
+      pending: 'bg-amber-100 text-amber-700',
       completed: 'bg-green-100 text-green-700',
-      rescheduled: 'bg-purple-100 text-purple-700',
-      cancelled: 'bg-red-100 text-red-700'
+      rescheduled: 'bg-orange-100 text-orange-700',
+      cancelled: 'bg-red-100 text-red-700',
+      overdue: 'bg-gray-800 text-white'
     };
     const normalizedStatus = status?.toLowerCase().replace(/\s+/g, '_') || 'draft';
     const statusLabels = {
       upcoming: 'Upcoming',
+      scheduled: 'Scheduled',
       active: 'Active',
       draft: 'Draft',
-      in_progress: 'In Progress',
+      pending: 'Pending',
       completed: 'Completed',
       rescheduled: 'Rescheduled',
-      cancelled: 'Cancelled'
+      cancelled: 'Cancelled',
+      overdue: 'Overdue'
     };
     
     return (
@@ -1120,6 +1126,99 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
                           </div>
                         )}
                       </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Calendar Grid - Year View */}
+          {calendarView === 'Year' && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 overflow-y-auto max-h-[600px]">
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+                {Array.from({ length: 12 }, (_, month) => {
+                  const year = calendarDate.getFullYear();
+                  const monthName = new Date(year, month, 1).toLocaleDateString('en-US', { month: 'short' });
+                  const monthDays = getDaysInSpecificMonth(year, month);
+                  const monthSchedules = getSchedulesForMonth(year, month);
+                  const filteredMonthSchedules = monthSchedules.filter(s => {
+                    if (typeFilter !== 'all' && (s.type || 'job').toLowerCase() !== typeFilter) return false;
+                    if (vendorFilter !== 'all' && s.vendorId !== vendorFilter && s.vendor_id !== vendorFilter) return false;
+                    if (zoneFilter !== 'all' && s.zone !== zoneFilter) return false;
+                    return true;
+                  });
+                  const isCurrentMonth = new Date().getMonth() === month && new Date().getFullYear() === year;
+                  
+                  return (
+                    <div 
+                      key={month} 
+                      className={`bg-white rounded-lg border p-3 cursor-pointer hover:shadow-md transition-shadow ${
+                        isCurrentMonth ? 'border-blue-400 ring-1 ring-blue-200' : 'border-gray-200'
+                      }`}
+                      onClick={() => {
+                        const newDate = new Date(year, month, 1);
+                        setCalendarDate(newDate);
+                        setCalendarView('Month');
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-sm font-semibold ${isCurrentMonth ? 'text-blue-600' : 'text-gray-900'}`}>
+                          {monthName}
+                        </span>
+                        {filteredMonthSchedules.length > 0 && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
+                            {filteredMonthSchedules.length}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Mini calendar grid */}
+                      <div className="grid grid-cols-7 gap-0.5 text-center">
+                        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                          <div key={i} className="text-[8px] text-gray-400 py-0.5">{d}</div>
+                        ))}
+                        {monthDays.slice(0, 35).map((day, i) => {
+                          const isToday = day.date.toDateString() === new Date().toDateString();
+                          const daySchedules = filteredMonthSchedules.filter(s => {
+                            const sDate = new Date(s.startDate || s.start_date);
+                            return sDate.getDate() === day.date.getDate() && 
+                                   sDate.getMonth() === day.date.getMonth();
+                          });
+                          const hasSchedule = daySchedules.length > 0;
+                          
+                          return (
+                            <div
+                              key={i}
+                              className={`text-[9px] py-0.5 rounded ${
+                                isToday ? 'bg-blue-600 text-white font-bold' :
+                                hasSchedule && day.isCurrentMonth ? 'bg-blue-100 text-blue-700 font-medium' :
+                                day.isCurrentMonth ? 'text-gray-700' : 'text-gray-300'
+                              }`}
+                            >
+                              {day.date.getDate()}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      
+                      {/* Schedule summary */}
+                      {filteredMonthSchedules.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-gray-100">
+                          <div className="flex flex-wrap gap-1">
+                            {filteredMonthSchedules.filter(s => s.status === 'completed').length > 0 && (
+                              <span className="text-[9px] bg-green-100 text-green-700 px-1 rounded">
+                                {filteredMonthSchedules.filter(s => s.status === 'completed').length} done
+                              </span>
+                            )}
+                            {filteredMonthSchedules.filter(s => s.status === 'scheduled' || s.status === 'pending').length > 0 && (
+                              <span className="text-[9px] bg-blue-100 text-blue-700 px-1 rounded">
+                                {filteredMonthSchedules.filter(s => s.status === 'scheduled' || s.status === 'pending').length} pending
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

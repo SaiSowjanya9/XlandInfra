@@ -751,6 +751,22 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     }));
     
     setPlannedVisits(updatedVisits);
+    
+    // If confirmation modal is open, also update the confirmation schedule
+    if (showConfirmation) {
+      const confirmSchedule = updatedVisits.map((visit, index) => ({
+        visitNumber: visit.visitNumber,
+        targetDate: visit.date,
+        targetDateStr: visit.dateStr || visit.shortDateStr,
+        scheduledDate: visit.date,
+        scheduledDateStr: visit.dateStr || visit.shortDateStr,
+        time: visit.time || rec.time,
+        status: 'pending_schedule',
+        isEdited: false,
+        isManual: false
+      }));
+      setConfirmationSchedule(confirmSchedule);
+    }
   };
 
   // Use the first recommended date and go to confirmation
