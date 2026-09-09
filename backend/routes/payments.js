@@ -2228,7 +2228,8 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
              i.invoice_id as invoice_code, i.estimate_id as invoice_estimate_id,
              i.total_amount as invoice_amount, i.balance_amount as invoice_balance,
              i.customer_name as invoice_customer_name, i.customer_email as invoice_customer_email,
-             prop.community_name as property_name, prop.property_id as property_code
+             prop.community_name as property_name, prop.property_id as property_code,
+             prop.property_type as prop_type
       FROM payments p
       LEFT JOIN invoices i ON p.invoice_id = i.id
       LEFT JOIN onboarded_properties prop ON p.property_id = prop.id
@@ -2286,6 +2287,7 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
         propertyId: p.property_id,
         propertyName: p.property_name,
         propertyCode: p.property_code,
+        propertyType: p.prop_type,
         estimateId: p.estimate_id || p.invoice_estimate_id,
         customerId: p.customer_id,
         customerName: p.customer_name || p.invoice_customer_name,
@@ -2338,11 +2340,16 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
     // Transaction reference is optional but recommended for non-cash payments
     // Removed the requirement to make it more flexible
 
-    // Get invoice details
-    const [invoices] = await connection.execute(
-      'SELECT * FROM invoices WHERE id = ?',
-      [invoiceId]
-    );
+    // Get invoice details with property info
+    const [invoices] = await connection.execute(`
+      SELECT i.*, 
+             p.property_id as prop_code, 
+             p.property_type as prop_type,
+             p.community_name as prop_name
+      FROM invoices i
+      LEFT JOIN onboarded_properties p ON i.property_id = p.id
+      WHERE i.id = ?
+    `, [invoiceId]);
 
     if (invoices.length === 0) {
       await connection.rollback();
@@ -2381,7 +2388,7 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
       invoiceId,
       invoice.invoice_id, // Store invoice number string
       propertyId || invoice.property_id,
-      invoice.property_code || null, // Store property code string
+      invoice.property_code || invoice.prop_code || null, // Store property code string
       estimateId || invoice.estimate_id,
       invoice.source_estimate_id || null, // Store estimate number string
       customerId || invoice.customer_id,
