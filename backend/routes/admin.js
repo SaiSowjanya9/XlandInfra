@@ -1371,20 +1371,23 @@ router.post('/vendors/assignments', authenticate, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Property not found' });
     }
 
-    // Verify vendor exists
+    // Verify vendor exists (check both numeric id and string vendor_id)
     const [vendor] = await pool.execute(
-      `SELECT id, company_name, owner_name FROM onboarded_vendors WHERE id = ?`,
-      [vendorId]
+      `SELECT id, company_name, owner_name FROM onboarded_vendors WHERE id = ? OR vendor_id = ?`,
+      [vendorId, vendorId]
     );
 
     if (vendor.length === 0) {
       return res.status(404).json({ success: false, message: 'Vendor not found' });
     }
+    
+    // Use numeric id for assignments
+    const numericVendorId = vendor[0].id;
 
     // Check if assignment already exists
     const [existing] = await pool.execute(
       `SELECT id, is_active FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND service_type = ?`,
-      [propertyId, vendorId, serviceType || null]
+      [propertyId, numericVendorId, serviceType || null]
     );
 
     if (existing.length > 0) {
@@ -1405,11 +1408,11 @@ router.post('/vendors/assignments', authenticate, async (req, res) => {
         );
       }
 
-      // Create new assignment
+      // Create new assignment (use numeric vendor id)
       await pool.execute(
         `INSERT INTO property_vendor_assignments (property_id, vendor_id, service_type, assigned_by, assigned_at, is_active)
          VALUES (?, ?, ?, ?, NOW(), 1)`,
-        [propertyId, vendorId, serviceType || null, req.user.id]
+        [propertyId, numericVendorId, serviceType || null, req.user.id]
       );
     }
 
