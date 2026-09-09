@@ -1575,11 +1575,16 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             {/* PDF Content Area */}
             <div className="overflow-y-auto max-h-[calc(95vh-160px)]">
               <div ref={scheduleDetailsRef} className="p-5 bg-white">
-                {/* PDF Header */}
-                <div className="text-center mb-5 pb-4 border-b border-gray-300">
-                  <h1 className="text-xl font-bold text-gray-800 mb-0.5">XLAND INFRA</h1>
-                  <p className="text-gray-500 text-xs">Property Maintenance Services</p>
-                  <p className="mt-2 text-sm text-gray-600">Schedule Report</p>
+                {/* PDF Header with Logo Banner */}
+                <div className="mb-5 pb-4 border-b border-gray-300">
+                  <div className="flex items-center justify-center gap-4 mb-2">
+                    <img src="/logo.webp" alt="XLAND INFRA" className="h-14 w-14 object-contain" />
+                    <div className="text-center">
+                      <h1 className="text-xl font-bold text-gray-800 mb-0.5">XLAND INFRA</h1>
+                      <p className="text-gray-500 text-xs">Property Maintenance Services</p>
+                    </div>
+                  </div>
+                  <p className="text-center mt-2 text-sm font-medium text-gray-700 bg-gray-100 py-1 rounded">Schedule Report</p>
                 </div>
 
                 {/* Property Info Summary */}
