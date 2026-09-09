@@ -303,27 +303,34 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: Arial, sans-serif; }
-          .header { background: #3a3a3a; padding: 12px 0; text-align: center; width: 100%; }
-          .header-title { color: #D39A1A; font-size: 16px; font-weight: bold; letter-spacing: 1px; }
-          .header-subtitle { color: #D39A1A; font-size: 8px; letter-spacing: 3px; margin-top: 2px; }
-          .header-line { display: inline-block; width: 20px; height: 1px; background: #D39A1A; vertical-align: middle; }
-          .report-title { background: #D39A1A; color: white; text-align: center; padding: 6px 0; font-weight: 600; font-size: 11px; width: 100%; }
+          .header { background-color: #3a3a3a !important; padding: 15px 20px; text-align: center; width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          .header-logo { width: 40px; height: 40px; }
+          .header-text { text-align: left; }
+          .header-title { color: #D39A1A !important; font-size: 18px; font-weight: bold; letter-spacing: 2px; -webkit-print-color-adjust: exact !important; }
+          .header-subtitle { color: #D39A1A !important; font-size: 9px; letter-spacing: 2px; margin-top: 3px; -webkit-print-color-adjust: exact !important; }
+          .report-title { background-color: #D39A1A !important; color: white !important; text-align: center; padding: 8px 0; font-weight: 600; font-size: 12px; width: 100%; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           .content { padding: 15px 20px; }
           table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
-          th { background: #f3f4f6; padding: 8px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; }
+          th { background-color: #f3f4f6 !important; padding: 8px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; -webkit-print-color-adjust: exact !important; }
           td { padding: 8px; border: 1px solid #e5e7eb; }
-          tr:nth-child(even) { background: #f9fafb; }
-          .status-scheduled { background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 10px; }
-          .status-completed { background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-size: 10px; }
-          .status-cancelled { background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 12px; font-size: 10px; }
+          tr:nth-child(even) { background-color: #f9fafb !important; -webkit-print-color-adjust: exact !important; }
+          .status-scheduled { background-color: #dbeafe !important; color: #1e40af !important; padding: 2px 8px; border-radius: 12px; font-size: 10px; -webkit-print-color-adjust: exact !important; }
+          .status-completed { background-color: #dcfce7 !important; color: #166534 !important; padding: 2px 8px; border-radius: 12px; font-size: 10px; -webkit-print-color-adjust: exact !important; }
+          .status-cancelled { background-color: #fee2e2 !important; color: #dc2626 !important; padding: 2px 8px; border-radius: 12px; font-size: 10px; -webkit-print-color-adjust: exact !important; }
           .footer { text-align: center; margin-top: 20px; font-size: 10px; color: #9ca3af; }
-          @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+          @media print { 
+            body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } 
+            .header, .report-title, th, .status-scheduled, .status-completed, .status-cancelled { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          }
         </style>
       </head>
       <body>
         <div class="header">
-          <div class="header-title">XLAND INFRA</div>
-          <div class="header-subtitle"><span class="header-line"></span> PVT LTD <span class="header-line"></span></div>
+          <img src="/logo.webp" alt="Logo" class="header-logo" />
+          <div class="header-text">
+            <div class="header-title">XLAND INFRA</div>
+            <div class="header-subtitle">— PVT LTD —</div>
+          </div>
         </div>
         <div class="report-title">SCHEDULE REPORT</div>
         <div class="content">
