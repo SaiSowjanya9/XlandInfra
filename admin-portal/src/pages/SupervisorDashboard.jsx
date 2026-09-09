@@ -27,6 +27,8 @@ const SupervisorDashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [estimates, setEstimates] = useState([]);
   const [properties, setProperties] = useState([]);
+  const [workOrders, setWorkOrders] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [propertyChartFilter, setPropertyChartFilter] = useState('all');
   const lastFetchRef = useRef(0);
   
@@ -42,15 +44,25 @@ const SupervisorDashboard = ({ user }) => {
     if (isInitialLoad) setLoading(true);
     try {
       const token = getAuthToken();
-      const [dashRes, estRes, propRes] = await Promise.all([
+      const [dashRes, estRes, propRes, woRes, vendorRes] = await Promise.all([
         fetch(`${API_BASE}/api/supervisor/dashboard`, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(`${API_BASE}/api/supervisor/estimates`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE}/api/supervisor/properties`, { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`${API_BASE}/api/supervisor/properties`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/supervisor/work-orders`, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ ok: false })),
+        fetch(`${API_BASE}/api/supervisor/vendors`, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ ok: false }))
       ]);
-      const [dashResult, estResult, propResult] = await Promise.all([dashRes.json(), estRes.json(), propRes.json()]);
+      const [dashResult, estResult, propResult, woResult, vendorResult] = await Promise.all([
+        dashRes.json(), 
+        estRes.json(), 
+        propRes.json(),
+        woRes.ok ? woRes.json() : { success: false, data: [] },
+        vendorRes.ok ? vendorRes.json() : { success: false, data: [] }
+      ]);
       if (dashResult.success) setStats(dashResult.data.stats);
       if (estResult.success && Array.isArray(estResult.data)) setEstimates(estResult.data);
       if (propResult.success && Array.isArray(propResult.data)) setProperties(propResult.data);
+      if (woResult.success && Array.isArray(woResult.data)) setWorkOrders(woResult.data);
+      if (vendorResult.success && Array.isArray(vendorResult.data)) setVendors(vendorResult.data);
     } catch (error) {
       console.error('Dashboard fetch error:', error);
     } finally {
