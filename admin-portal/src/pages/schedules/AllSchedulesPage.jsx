@@ -143,6 +143,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   // Service-level reschedule modal state
   const [showServiceRescheduleModal, setShowServiceRescheduleModal] = useState(false);
   const [serviceToReschedule, setServiceToReschedule] = useState(null);
+  const [selectedVisitForReschedule, setSelectedVisitForReschedule] = useState(null);
+  const [rescheduleScope, setRescheduleScope] = useState('this_only'); // 'this_only' or 'this_and_future'
   const [serviceRescheduleDate, setServiceRescheduleDate] = useState('');
   const [serviceRescheduleTime, setServiceRescheduleTime] = useState('');
   const [serviceRescheduleReason, setServiceRescheduleReason] = useState('');
@@ -755,27 +757,30 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
 
   // Handle service-level reschedule - open modal
   const handleServiceReschedule = (service, property) => {
+    const activeVisits = service.visits.filter(v => v.status !== 'completed' && v.status !== 'cancelled');
     setServiceToReschedule({
       serviceName: service.serviceName,
       vendorName: service.vendorName,
       propertyId: property.propertyId,
       propertyName: property.propertyName,
-      visits: service.visits.filter(v => v.status !== 'completed' && v.status !== 'cancelled')
+      visits: activeVisits
     });
+    setSelectedVisitForReschedule(activeVisits[0] || null); // Default select first visit
+    setRescheduleScope('this_only'); // Default to this visit only
     setServiceRescheduleDate('');
     setServiceRescheduleTime('');
     setServiceRescheduleReason('');
     setShowServiceRescheduleModal(true);
   };
 
-  // Handle confirm service-level reschedule (bulk)
+  // Handle confirm service-level reschedule
   const handleConfirmServiceReschedule = async () => {
-    if (!serviceToReschedule || serviceToReschedule.visits.length === 0) {
-      showToast('No visits to reschedule', 'error');
+    if (!selectedVisitForReschedule) {
+      showToast('Please select a visit to reschedule', 'error');
       return;
     }
     if (!serviceRescheduleDate) {
-      showToast('Please enter a new start date', 'error');
+      showToast('Please enter a new date', 'error');
       return;
     }
     if (!isValidDate(serviceRescheduleDate)) {
@@ -799,58 +804,84 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       let successCount = 0;
       let failCount = 0;
 
-      // Sort visits by date to maintain order
-      const sortedVisits = [...serviceToReschedule.visits].sort(
-        (a, b) => new Date(a.scheduledDate) - new Date(b.scheduledDate)
-      );
+      if (rescheduleScope === 'this_only') {
+        // Reschedule only the selected visit
+        const response = await fetch(`${API_BASE}/api/schedules/visits/${selectedVisitForReschedule.id}/reschedule`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ 
+            newDate: isoDate, 
+            newTimeStart: serviceRescheduleTime,
+            reason: serviceRescheduleReason 
+          })
+        });
+        
+        if (response.ok) {
+          successCount = 1;
+        } else {
+          failCount = 1;
+        }
+      } else {
+        // Reschedule this and all future visits
+        const sortedVisits = [...serviceToReschedule.visits].sort(
+          (a, b) => new Date(a.scheduledDate) - new Date(b.scheduledDate)
+        );
+        
+        // Find selected visit index
+        const selectedIndex = sortedVisits.findIndex(v => v.id === selectedVisitForReschedule.id);
+        const visitsToReschedule = sortedVisits.slice(selectedIndex);
+        
+        // Calculate the date shift
+        const selectedVisitDate = new Date(selectedVisitForReschedule.scheduledDate);
+        const newDate = new Date(isoDate);
+        const daysDiff = Math.round((newDate - selectedVisitDate) / (1000 * 60 * 60 * 24));
 
-      // Calculate the date shift from first visit
-      const firstVisitDate = new Date(sortedVisits[0].scheduledDate);
-      const newStartDate = new Date(isoDate);
-      const daysDiff = Math.round((newStartDate - firstVisitDate) / (1000 * 60 * 60 * 24));
+        for (const visit of visitsToReschedule) {
+          try {
+            const visitDate = new Date(visit.scheduledDate);
+            visitDate.setDate(visitDate.getDate() + daysDiff);
+            const newVisitDate = visitDate.toISOString().split('T')[0];
 
-      // Reschedule each visit with shifted date
-      for (const visit of sortedVisits) {
-        try {
-          const visitDate = new Date(visit.scheduledDate);
-          visitDate.setDate(visitDate.getDate() + daysDiff);
-          const newVisitDate = visitDate.toISOString().split('T')[0];
-
-          const response = await fetch(`${API_BASE}/api/schedules/visits/${visit.id}/reschedule`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ 
-              newDate: newVisitDate, 
-              newTimeStart: serviceRescheduleTime,
-              reason: serviceRescheduleReason 
-            })
-          });
-          
-          if (response.ok) {
-            successCount++;
-          } else {
+            const response = await fetch(`${API_BASE}/api/schedules/visits/${visit.id}/reschedule`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ 
+                newDate: newVisitDate, 
+                newTimeStart: serviceRescheduleTime,
+                reason: serviceRescheduleReason 
+              })
+            });
+            
+            if (response.ok) {
+              successCount++;
+            } else {
+              failCount++;
+            }
+          } catch (err) {
             failCount++;
           }
-        } catch (err) {
-          failCount++;
         }
       }
 
       setShowServiceRescheduleModal(false);
       setServiceToReschedule(null);
+      setSelectedVisitForReschedule(null);
       
       if (successCount > 0) {
         showToast(`Rescheduled ${successCount} visit(s) successfully${failCount > 0 ? `, ${failCount} failed` : ''}`, 'success');
         fetchSchedules(true);
       } else {
-        showToast('Failed to reschedule visits', 'error');
+        showToast('Failed to reschedule visit(s)', 'error');
       }
     } catch (error) {
-      console.error('Error rescheduling service:', error);
-      showToast('Error rescheduling service', 'error');
+      console.error('Error rescheduling:', error);
+      showToast('Error rescheduling', 'error');
     } finally {
       setServiceRescheduling(false);
     }
@@ -2002,47 +2033,87 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       {/* Service-Level Reschedule Modal */}
       {showServiceRescheduleModal && serviceToReschedule && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
             <div className="flex items-center justify-between px-5 py-4 border-b bg-orange-50">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Reschedule Service</h2>
+                <h2 className="text-lg font-bold text-gray-900">Reschedule {serviceToReschedule.serviceName}</h2>
                 <p className="text-sm text-gray-600">
-                  Reschedule all {serviceToReschedule.serviceName} visits
+                  {serviceToReschedule.propertyId} • {serviceToReschedule.propertyName}
                 </p>
               </div>
               <button
-                onClick={() => { setShowServiceRescheduleModal(false); setServiceToReschedule(null); }}
+                onClick={() => { setShowServiceRescheduleModal(false); setServiceToReschedule(null); setSelectedVisitForReschedule(null); }}
                 className="p-1.5 hover:bg-orange-100 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             
-            <div className="p-5">
-              {/* Service Info */}
-              <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <label className="text-xs text-gray-500 uppercase">Property</label>
-                  <p className="text-sm font-medium text-blue-600">{serviceToReschedule.propertyId}</p>
-                  <p className="text-xs text-gray-600">{serviceToReschedule.propertyName}</p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 uppercase">Service</label>
-                  <p className="text-sm font-medium text-gray-900">{serviceToReschedule.serviceName}</p>
-                  <p className="text-xs text-gray-600">{serviceToReschedule.visits.length} visit(s) to reschedule</p>
+            <div className="p-5 space-y-4">
+              {/* Select Visit */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Visit to Reschedule *</label>
+                <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-lg">
+                  {serviceToReschedule.visits
+                    .sort((a, b) => new Date(a.scheduledDate) - new Date(b.scheduledDate))
+                    .map((visit, i) => (
+                      <label 
+                        key={visit.id} 
+                        className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 ${selectedVisitForReschedule?.id === visit.id ? 'bg-orange-50' : ''} ${i > 0 ? 'border-t border-gray-100' : ''}`}
+                      >
+                        <input
+                          type="radio"
+                          name="visitSelect"
+                          checked={selectedVisitForReschedule?.id === visit.id}
+                          onChange={() => setSelectedVisitForReschedule(visit)}
+                          className="w-4 h-4 text-orange-600"
+                        />
+                        <span className="text-sm text-gray-700">
+                          Visit {i + 1}: <span className="font-medium">{formatDate(visit.scheduledDate)}</span>
+                          {visit.scheduledTime && <span className="text-gray-500 ml-1">• {formatTime(visit.scheduledTime)}</span>}
+                        </span>
+                      </label>
+                    ))}
                 </div>
               </div>
 
-              {/* Reschedule Form */}
-              <div className="space-y-4">
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                  <p className="text-xs text-orange-700">
-                    <strong>Note:</strong> Enter the new start date. All visits will be shifted by the same number of days while maintaining their original intervals.
-                  </p>
+              {/* Reschedule Scope */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Reschedule Scope</label>
+                <div className="space-y-2">
+                  <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${rescheduleScope === 'this_only' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                    <input
+                      type="radio"
+                      name="rescheduleScope"
+                      checked={rescheduleScope === 'this_only'}
+                      onChange={() => setRescheduleScope('this_only')}
+                      className="w-4 h-4 text-orange-600"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">This Visit Only</p>
+                      <p className="text-xs text-gray-500">Only reschedule the selected visit</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${rescheduleScope === 'this_and_future' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                    <input
+                      type="radio"
+                      name="rescheduleScope"
+                      checked={rescheduleScope === 'this_and_future'}
+                      onChange={() => setRescheduleScope('this_and_future')}
+                      className="w-4 h-4 text-orange-600"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">This and Future Visits</p>
+                      <p className="text-xs text-gray-500">Shift all visits from selected date onwards</p>
+                    </div>
+                  </label>
                 </div>
-                
+              </div>
+
+              {/* New Date & Time */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">New Start Date * (dd/mm/yyyy)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">New Date * (dd/mm/yyyy)</label>
                   <input
                     type="text"
                     value={serviceRescheduleDate}
@@ -2054,43 +2125,43 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                     }}
                     placeholder="dd/mm/yyyy"
                     maxLength={10}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
                   />
                 </div>
-                
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">New Time *</label>
                   <input
                     type="time"
                     value={serviceRescheduleTime}
                     onChange={(e) => setServiceRescheduleTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
                   />
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Reason *</label>
-                  <input
-                    type="text"
-                    value={serviceRescheduleReason}
-                    onChange={(e) => setServiceRescheduleReason(e.target.value)}
-                    placeholder="e.g., Vendor schedule conflict, Customer request..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  />
-                </div>
+              </div>
+              
+              {/* Reason */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reason *</label>
+                <input
+                  type="text"
+                  value={serviceRescheduleReason}
+                  onChange={(e) => setServiceRescheduleReason(e.target.value)}
+                  placeholder="e.g., Customer request, Vendor unavailable..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
+                />
               </div>
             </div>
             
             <div className="flex justify-end gap-3 px-5 py-4 border-t bg-gray-50 rounded-b-xl">
               <button
-                onClick={() => { setShowServiceRescheduleModal(false); setServiceToReschedule(null); }}
+                onClick={() => { setShowServiceRescheduleModal(false); setServiceToReschedule(null); setSelectedVisitForReschedule(null); }}
                 className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmServiceReschedule}
-                disabled={!serviceRescheduleDate || !serviceRescheduleTime || !serviceRescheduleReason.trim() || serviceRescheduling}
+                disabled={!selectedVisitForReschedule || !serviceRescheduleDate || !serviceRescheduleTime || !serviceRescheduleReason.trim() || serviceRescheduling}
                 className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {serviceRescheduling ? (
@@ -2101,7 +2172,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 ) : (
                   <>
                     <Edit2 className="w-4 h-4" />
-                    Reschedule All
+                    {rescheduleScope === 'this_only' ? 'Reschedule Visit' : 'Reschedule All'}
                   </>
                 )}
               </button>
