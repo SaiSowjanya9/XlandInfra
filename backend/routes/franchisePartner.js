@@ -6381,6 +6381,19 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
     
     console.log('[FP All Schedules] Query params:', { franchisePartnerId, page, limit, search, status });
     
+    // Debug: Check if there are any scheduled_visits at all
+    const [allVisits] = await pool.execute(`SELECT COUNT(*) as count FROM scheduled_visits`);
+    console.log('[FP All Schedules] Total scheduled_visits in DB:', allVisits[0].count);
+    
+    // Debug: Check visits for this FP's properties
+    const [fpVisitsDebug] = await pool.execute(`
+      SELECT sv.id, sv.property_id, sv.status, op.franchise_partner_id, op.property_id as prop_code
+      FROM scheduled_visits sv
+      LEFT JOIN onboarded_properties op ON op.id = sv.property_id
+      LIMIT 10
+    `);
+    console.log('[FP All Schedules] Sample visits with FP IDs:', fpVisitsDebug);
+    
     // Handle both numeric and string property_id in scheduled_visits
     // Join on numeric ID first, fallback to property_id string match
     let whereClause = 'WHERE op.franchise_partner_id = ?';

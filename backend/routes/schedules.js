@@ -1438,7 +1438,17 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
       }
     }
     
-    console.log('[Confirm Schedule] Successfully inserted', insertedCount, 'visits');
+    console.log('[Confirm Schedule] Successfully inserted', insertedCount, 'visits for property_id:', propertyDbId);
+    
+    // Debug: Verify the visits were inserted with correct property_id
+    const [insertedVisits] = await pool.execute(
+      `SELECT sv.id, sv.property_id, sv.status, op.franchise_partner_id 
+       FROM scheduled_visits sv 
+       LEFT JOIN onboarded_properties op ON op.id = sv.property_id 
+       WHERE sv.service_schedule_id = ? LIMIT 3`,
+      [serviceScheduleId]
+    );
+    console.log('[Confirm Schedule] Inserted visits with FP:', insertedVisits);
 
     // Update service schedule status to 'scheduled' (not 'completed' - that's for after work is done)
     await pool.execute(
