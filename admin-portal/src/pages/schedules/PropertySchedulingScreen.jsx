@@ -276,7 +276,10 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         if (servicesResult.success && servicesResult.data?.length > 0) {
           servicesToUse = servicesResult.data.map(s => ({
             id: s.id,
-            scheduleId: s.scheduling_status === 'completed' ? (s.service_schedule_id || s.scheduleId || s.id) : null,
+            // Set scheduleId for both 'scheduled' and 'completed' statuses
+            scheduleId: (s.scheduling_status === 'scheduled' || s.scheduling_status === 'completed') 
+              ? (s.service_schedule_id || s.scheduleId || s.id) 
+              : null,
             name: s.service_name || s.serviceName,
             category: s.service_category || s.serviceCategory,
             vendorName: s.vendor_name || s.vendorName || 'Unassigned',
@@ -522,11 +525,15 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
 
   // Load saved visits from database if service is already scheduled
   const loadSavedVisits = async (service) => {
-    if (!service?.scheduleId) return null;
+    // Use scheduleId (could be numeric ID or string schedule_id like "SCH-xxx")
+    const scheduleIdToUse = service?.scheduleId || service?.id;
+    if (!scheduleIdToUse) return null;
+    
+    console.log('[PropertyScheduling] Loading saved visits for schedule:', scheduleIdToUse);
     
     try {
       const token = getAuthToken();
-      const response = await fetch(`${API_BASE}/api/schedules/service/${service.scheduleId}/visits`, {
+      const response = await fetch(`${API_BASE}/api/schedules/service/${scheduleIdToUse}/visits`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -1515,13 +1522,6 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                   ? `Use Selected (${formatDateShort(selectedSlot.date)})` 
                   : `Use Recommended ${recommendedDates[0]?.dateStr ? `(${recommendedDates[0].dateStr})` : ''}`
                 }
-              </button>
-              <button 
-                onClick={handleApplyToAllMonthly}
-                disabled={(!recommendedDates.length && !selectedSlot) || !selectedService}
-                className="w-full py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
-              >
-                Generate All {selectedService?.visits || getFrequencyConfig(selectedService?.frequency)?.visitsPerYear || 12} Visits
               </button>
               <button 
                 onClick={handleCustomizeDates}
