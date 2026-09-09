@@ -1326,12 +1326,12 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
 
     if (existingSchedule.length > 0) {
       serviceScheduleId = existingSchedule[0].id;
-      // Update existing schedule - set both status and scheduling_status
+      // Update existing schedule - set status to 'active' and scheduling_status to 'scheduled'
       await pool.execute(
-        `UPDATE property_service_schedules SET status = 'active', scheduling_status = 'completed', total_visits = ?, updated_at = NOW() WHERE id = ?`,
+        `UPDATE property_service_schedules SET status = 'active', scheduling_status = 'scheduled', total_visits = ?, updated_at = NOW() WHERE id = ?`,
         [totalVisits || visits.length, serviceScheduleId]
       );
-      console.log('[Confirm Schedule] Updated existing schedule:', serviceScheduleId, 'with scheduling_status=completed');
+      console.log('[Confirm Schedule] Updated existing schedule:', serviceScheduleId, 'with scheduling_status=scheduled');
     } else {
       // Create new service schedule with required schedule_id
       const scheduleId = generateScheduleId();
@@ -1362,12 +1362,12 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
       const frequencyType = frequencyMap[(frequency || 'monthly').toLowerCase()] || 'monthly';
       
       const [newSchedule] = await pool.execute(
-        `INSERT INTO property_service_schedules (schedule_id, property_id, service_name, service_category, vendor_id, frequency_type, total_visits, status, created_by, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, NOW())`,
+        `INSERT INTO property_service_schedules (schedule_id, property_id, service_name, service_category, vendor_id, frequency_type, total_visits, status, scheduling_status, created_by, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 'scheduled', ?, NOW())`,
         [scheduleId, propertyDbId, serviceNameToUse, serviceCategory || null, vendorId || null, frequencyType, totalVisits || visits.length, req.user.id]
       );
       serviceScheduleId = newSchedule.insertId;
-      console.log('[Confirm Schedule] Created new schedule with DB id:', serviceScheduleId);
+      console.log('[Confirm Schedule] Created new schedule with DB id:', serviceScheduleId, 'with scheduling_status=scheduled');
     }
 
     // Delete existing unstarted visits for this service schedule (only non-started visits)
@@ -1440,9 +1440,9 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
     
     console.log('[Confirm Schedule] Successfully inserted', insertedCount, 'visits');
 
-    // Update service schedule status (total_visits already set during insert/update above)
+    // Update service schedule status to 'scheduled' (not 'completed' - that's for after work is done)
     await pool.execute(
-      `UPDATE property_service_schedules SET status = 'active', scheduling_status = 'completed' WHERE id = ?`,
+      `UPDATE property_service_schedules SET status = 'active', scheduling_status = 'scheduled' WHERE id = ?`,
       [serviceScheduleId]
     );
     
