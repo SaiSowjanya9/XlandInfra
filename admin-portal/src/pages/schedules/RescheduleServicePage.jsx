@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Clock, Search, Filter, ChevronLeft, ChevronRight,
-  Eye, RefreshCw, CheckCircle, AlertCircle, Info, X
+  Eye, RefreshCw, CheckCircle, AlertCircle, Info, X, XCircle
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 
@@ -62,12 +62,18 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
   const [vendorAvailability, setVendorAvailability] = useState({});
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Toast notification
+  const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
+  const showToast = (message, type = 'info') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'info' }), 3000);
+  };
 
   useEffect(() => {
     fetchProperties();
     fetchZones();
-    // Initialize with mock data so filters have options
-    setSchedules(generateMockSchedules());
+    fetchRescheduledSchedules();
   }, []);
 
   // Fetch zones from API
@@ -94,16 +100,27 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
     }
   }, [selectedProperty]);
 
-  const generateMockSchedules = () => [
-    { id: 1, property_id: 'PROP-001', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Basic AMC', status: 'rescheduled', actualDate: '2026-08-09', actualTime: '10:00 AM - 11:00 AM', rescheduledDate: '2026-08-15', rescheduledTime: '11:00 AM - 12:00 PM' },
-    { id: 2, property_id: 'PROP-001', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Basic AMC', status: 'rescheduled', actualDate: '2026-09-09', actualTime: '10:00 AM - 11:00 AM', rescheduledDate: '2026-09-16', rescheduledTime: '10:00 AM - 11:00 AM' },
-    { id: 3, property_id: 'PROP-002', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Standard AMC', status: 'rescheduled', actualDate: '2026-10-09', actualTime: '10:00 AM - 11:00 AM', rescheduledDate: '2026-10-18', rescheduledTime: '02:00 PM - 03:00 PM' },
-    { id: 4, property_id: 'PROP-002', service: 'Plumbing', vendor: 'Aqua Plumbing', zone: 'Zone B', package: 'Standard AMC', status: 'rescheduled', actualDate: '2026-09-14', actualTime: '02:00 PM - 03:00 PM', rescheduledDate: '2026-09-20', rescheduledTime: '03:00 PM - 04:00 PM' },
-    { id: 5, property_id: 'PROP-003', service: 'Plumbing', vendor: 'Aqua Plumbing', zone: 'Zone B', package: 'Premium AMC', status: 'rescheduled', actualDate: '2026-10-14', actualTime: '02:00 PM - 03:00 PM', rescheduledDate: '2026-10-21', rescheduledTime: '02:00 PM - 03:00 PM' },
-    { id: 6, property_id: 'PROP-003', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone C', package: 'Premium AMC', status: 'rescheduled', actualDate: '2026-10-04', actualTime: '11:30 AM - 12:30 PM', rescheduledDate: '2026-10-10', rescheduledTime: '11:30 AM - 12:30 PM' },
-    { id: 7, property_id: 'PROP-004', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone C', package: 'Basic AMC', status: 'rescheduled', actualDate: '2026-11-04', actualTime: '11:30 AM - 12:30 PM', rescheduledDate: '2026-11-12', rescheduledTime: '10:00 AM - 11:00 AM' },
-    { id: 8, property_id: 'PROP-005', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone D', package: 'Standard AMC', status: 'rescheduled', actualDate: '2026-12-04', actualTime: '11:30 AM - 12:30 PM', rescheduledDate: '2026-12-11', rescheduledTime: '11:30 AM - 12:30 PM' }
-  ];
+  // Fetch rescheduled schedules from API
+  const fetchRescheduledSchedules = async () => {
+    setLoading(true);
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE}/api/${apiPath}/schedules/rescheduled`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSchedules(data.data || []);
+      } else {
+        setSchedules([]);
+      }
+    } catch (error) {
+      console.error('Error fetching rescheduled schedules:', error);
+      setSchedules([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchProperties = async () => {
     try {
@@ -129,13 +146,13 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
       });
       if (response.ok) {
         const data = await response.json();
-        setSchedules(data.data || generateMockSchedules());
+        setSchedules(data.data || []);
       } else {
-        setSchedules(generateMockSchedules());
+        setSchedules([]);
       }
     } catch (error) {
       console.error('Error fetching schedules:', error);
-      setSchedules(generateMockSchedules());
+      setSchedules([]);
     } finally {
       setLoading(false);
     }
@@ -154,7 +171,7 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
   };
 
   const generateWeekAvailability = () => {
-    // Generate mock vendor availability for the week
+    // Generate vendor availability for the week
     const availability = {};
     const start = new Date(weekStart);
     
@@ -193,7 +210,7 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
 
   const handleConfirmReschedule = async () => {
     if (!rescheduleData.newDate || !selectedTimeSlot) {
-      alert('Please select a new date and time');
+      showToast('Please select a new date and time', 'error');
       return;
     }
     
@@ -215,42 +232,52 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
       });
       
       if (response.ok) {
-        alert('Schedule rescheduled successfully!');
+        showToast('Schedule rescheduled successfully!', 'success');
         setShowReschedulePanel(false);
         setSelectedSchedule(null);
         if (selectedProperty) {
           fetchPropertySchedules(selectedProperty.id);
+        } else {
+          fetchRescheduledSchedules();
         }
       } else {
         const error = await response.json();
-        alert(error.message || 'Failed to reschedule');
+        showToast(error.message || 'Failed to reschedule', 'error');
       }
     } catch (error) {
       console.error('Error rescheduling:', error);
-      alert('Error processing reschedule');
+      showToast('Error processing reschedule', 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Restore schedule to original date
-  const handleRestoreSchedule = async (schedule) => {
+  // Restore modal state
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [scheduleToRestore, setScheduleToRestore] = useState(null);
+
+  // Open restore confirmation modal
+  const handleRestoreClick = (schedule) => {
     const originalDate = schedule.actualDate || schedule.originalDate;
-    const originalTime = schedule.actualTime || schedule.originalTime;
-    
     if (!originalDate) {
-      alert('Original date not found. Cannot restore.');
+      showToast('Original date not found', 'error');
       return;
     }
+    setScheduleToRestore(schedule);
+    setShowRestoreModal(true);
+  };
+
+  // Restore schedule to original date
+  const handleRestoreSchedule = async () => {
+    if (!scheduleToRestore) return;
     
-    const confirmMsg = `Restore this schedule to its original date?\n\nOriginal: ${formatDate(originalDate)} ${originalTime || ''}\nCurrent: ${formatDate(schedule.rescheduledDate || schedule.scheduledDate)}`;
-    
-    if (!confirm(confirmMsg)) return;
+    const originalDate = scheduleToRestore.actualDate || scheduleToRestore.originalDate;
+    const originalTime = scheduleToRestore.actualTime || scheduleToRestore.originalTime;
     
     setSubmitting(true);
     try {
       const token = getAuthToken();
-      const response = await fetch(`${API_BASE}/api/${apiPath}/schedules/${schedule.id}/restore`, {
+      const response = await fetch(`${API_BASE}/api/${apiPath}/schedules/${scheduleToRestore.id}/restore`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -263,21 +290,21 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
       });
       
       if (response.ok) {
-        alert('Schedule restored to original date successfully!');
-        // Refresh the list
+        showToast('Schedule restored successfully!', 'success');
+        setShowRestoreModal(false);
+        setScheduleToRestore(null);
         if (selectedProperty) {
           fetchPropertySchedules(selectedProperty.id);
         } else {
-          // Refresh mock data by removing the restored item
-          setSchedules(prev => prev.filter(s => s.id !== schedule.id));
+          fetchRescheduledSchedules();
         }
       } else {
         const error = await response.json();
-        alert(error.message || 'Failed to restore schedule');
+        showToast(error.message || 'Failed to restore schedule', 'error');
       }
     } catch (error) {
       console.error('Error restoring schedule:', error);
-      alert('Error restoring schedule');
+      showToast('Error restoring schedule', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -522,7 +549,7 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => handleRestoreSchedule(schedule)}
+                            onClick={() => handleRestoreClick(schedule)}
                             className="px-3 py-1.5 text-xs font-medium bg-green-100 text-green-700 rounded-lg hover:bg-green-200 flex items-center gap-1"
                             title="Restore to original date"
                           >
@@ -812,6 +839,52 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
           )}
         </div>
       </div>
+
+      {/* Restore Confirmation Modal */}
+      {showRestoreModal && scheduleToRestore && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Restore Schedule</h3>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 mb-4">Restore this schedule to its original date?</p>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
+                <p><span className="text-gray-500">Original:</span> <span className="font-medium">{formatDate(scheduleToRestore.actualDate || scheduleToRestore.originalDate)}</span></p>
+                <p><span className="text-gray-500">Current:</span> <span className="font-medium">{formatDate(scheduleToRestore.rescheduledDate || scheduleToRestore.scheduledDate)}</span></p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 p-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+              <button
+                onClick={() => { setShowRestoreModal(false); setScheduleToRestore(null); }}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRestoreSchedule}
+                disabled={submitting}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              >
+                {submitting ? 'Restoring...' : 'Restore'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
+          toast.type === 'success' ? 'bg-green-600 text-white' : 
+          toast.type === 'error' ? 'bg-red-600 text-white' : 
+          'bg-gray-800 text-white'
+        }`}>
+          {toast.type === 'success' && <CheckCircle className="w-5 h-5" />}
+          {toast.type === 'error' && <XCircle className="w-5 h-5" />}
+          <span className="text-sm font-medium">{toast.message}</span>
+        </div>
+      )}
     </div>
   );
 };
