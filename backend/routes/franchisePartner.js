@@ -5532,25 +5532,20 @@ router.get('/services', authenticate, attachFPScope, async (req, res) => {
       ORDER BY pss.service_name
     `, [franchisePartnerId]);
     
-    // Also get services from estimates/packages
-    const [estimateServices] = await pool.execute(`
-      SELECT DISTINCT 
-        JSON_UNQUOTE(JSON_EXTRACT(service.value, '$.service')) as name,
-        JSON_UNQUOTE(JSON_EXTRACT(service.value, '$.category')) as category
-      FROM fp_estimates fe,
-           JSON_TABLE(fe.package_services, '$[*]' COLUMNS (value JSON PATH '$')) as service
-      WHERE fe.franchise_partner_id = ?
-        AND fe.status = 'approved'
-        AND JSON_EXTRACT(service.value, '$.service') IS NOT NULL
-    `, [franchisePartnerId]);
-    
     // Combine and deduplicate
     const serviceMap = new Map();
-    [...services, ...estimateServices].forEach(s => {
+    services.forEach(s => {
       if (s.name && !serviceMap.has(s.name)) {
         serviceMap.set(s.name, { id: s.name, name: s.name, category: s.category || s.name });
       }
     });
+    
+    // Add common services if none found
+    if (serviceMap.size === 0) {
+      ['Pest Control', 'Deep Cleaning', 'AC Service', 'Plumbing', 'Electrical', 'HVAC', 'Lift AMC'].forEach(name => {
+        serviceMap.set(name, { id: name, name, category: name });
+      });
+    }
     
     const uniqueServices = Array.from(serviceMap.values()).sort((a, b) => a.name.localeCompare(b.name));
     
@@ -6428,25 +6423,40 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
       params.push(propertyType);
     }
     
-    // Get total count - handle both numeric and string property_id
+    // Get total count - handle both numeric and string property_id using CAST
     const countQuery = `
-      SELECT COUNT(DISTINCT sv.id) as total
+      SELECT COUNT(*) as total
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
+      JOIN onboarded_properties op ON op.id = CAST(sv.property_id AS UNSIGNED)
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${whereClause}
     `;
-    console.log('[FP All Schedules] Count query:', countQuery);
     console.log('[FP All Schedules] Count params:', params);
     
-    const [countResult] = await pool.execute(countQuery, params);
-    const total = countResult[0].total;
+    let total = 0;
+    try {
+      const [countResult] = await pool.execute(countQuery, params);
+      total = countResult[0].total;
+    } catch (countErr) {
+      console.log('[FP All Schedules] Count query failed, trying alternative:', countErr.message);
+      // If CAST fails (string values), try direct match
+      const altCountQuery = `
+        SELECT COUNT(*) as total
+        FROM scheduled_visits sv
+        JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+        JOIN onboarded_properties op ON op.property_id = sv.property_id
+        LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
+        ${whereClause}
+      `;
+      const [altResult] = await pool.execute(altCountQuery, params);
+      total = altResult[0].total;
+    }
     console.log('[FP All Schedules] Total count:', total);
     
-    // Get schedules with pagination - handle both numeric and string property_id
+    // Get schedules with pagination
     const query = `
-      SELECT DISTINCT
+      SELECT 
         sv.id,
         sv.visit_id as visitId,
         sv.visit_number as visitNumber,
@@ -6473,30 +6483,38 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
         wo.status as workOrderStatus
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
-      LEFT JOIN property_contacts pc ON pc.property_id = op.id
+      JOIN onboarded_properties op ON op.id = CAST(sv.property_id AS UNSIGNED)
+      LEFT JOIN property_contacts pc ON pc.property_id = op.id AND pc.is_primary = 1
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
       ${whereClause}
-      GROUP BY sv.id
       ORDER BY sv.scheduled_date DESC, sv.scheduled_time_start ASC
       LIMIT ? OFFSET ?
     `;
     
     params.push(parseInt(limit), offset);
-    console.log('[FP All Schedules] Main query params:', params);
-    const [schedules] = await pool.execute(query, params);
+    let schedules = [];
+    try {
+      const [result] = await pool.execute(query, params);
+      schedules = result;
+    } catch (queryErr) {
+      console.log('[FP All Schedules] Main query failed, trying alternative:', queryErr.message);
+      // Fallback: try with string property_id match
+      const altQuery = query.replace('op.id = CAST(sv.property_id AS UNSIGNED)', 'op.property_id = sv.property_id');
+      const [altResult] = await pool.execute(altQuery, params);
+      schedules = altResult;
+    }
     console.log('[FP All Schedules] Found schedules:', schedules.length);
     
-    // Calculate stats - handle both numeric and string property_id
+    // Calculate stats
     const statsWhereClause = 'WHERE op.franchise_partner_id = ?';
     const statsParams = [franchisePartnerId];
     
-    const statsQuery = `
-      SELECT sv.status, COUNT(DISTINCT sv.id) as count
+    let statsQuery = `
+      SELECT sv.status, COUNT(*) as count
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
+      JOIN onboarded_properties op ON op.id = CAST(sv.property_id AS UNSIGNED)
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${statsWhereClause}
       GROUP BY sv.status
