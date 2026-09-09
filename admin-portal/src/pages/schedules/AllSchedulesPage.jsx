@@ -301,39 +301,37 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       <head>
         <title></title>
         <style>
-          @page { margin: 10mm; margin-top: 5mm; }
-          * { margin: 0; padding: 0; box-sizing: border-box; }
+          @page { margin: 8mm; margin-top: 0; }
+          * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
           body { font-family: Arial, sans-serif; }
-          .header { background-color: #3a3a3a !important; padding: 15px 20px; text-align: center; width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .header-logo { width: 40px; height: 40px; }
-          .header-text { text-align: left; }
-          .header-title { color: #D39A1A !important; font-size: 18px; font-weight: bold; letter-spacing: 2px; -webkit-print-color-adjust: exact !important; }
-          .header-subtitle { color: #D39A1A !important; font-size: 9px; letter-spacing: 2px; margin-top: 3px; -webkit-print-color-adjust: exact !important; }
-          .report-title { background-color: #D39A1A !important; color: white !important; text-align: center; padding: 8px 0; font-weight: 600; font-size: 12px; width: 100%; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           .content { padding: 15px 20px; }
           table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
-          th { background-color: #f3f4f6 !important; padding: 8px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; -webkit-print-color-adjust: exact !important; }
+          th { background: #f3f4f6; padding: 8px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; }
           td { padding: 8px; border: 1px solid #e5e7eb; }
-          tr:nth-child(even) { background-color: #f9fafb !important; -webkit-print-color-adjust: exact !important; }
-          .status-scheduled { background-color: #dbeafe !important; color: #1e40af !important; padding: 2px 8px; border-radius: 12px; font-size: 10px; -webkit-print-color-adjust: exact !important; }
-          .status-completed { background-color: #dcfce7 !important; color: #166534 !important; padding: 2px 8px; border-radius: 12px; font-size: 10px; -webkit-print-color-adjust: exact !important; }
-          .status-cancelled { background-color: #fee2e2 !important; color: #dc2626 !important; padding: 2px 8px; border-radius: 12px; font-size: 10px; -webkit-print-color-adjust: exact !important; }
           .footer { text-align: center; margin-top: 20px; font-size: 10px; color: #9ca3af; }
-          @media print { 
-            body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } 
-            .header, .report-title, th, .status-scheduled, .status-completed, .status-cancelled { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          }
         </style>
       </head>
       <body>
-        <div class="header">
-          <img src="/logo.webp" alt="Logo" class="header-logo" />
-          <div class="header-text">
-            <div class="header-title">XLAND INFRA</div>
-            <div class="header-subtitle">— PVT LTD —</div>
-          </div>
-        </div>
-        <div class="report-title">SCHEDULE REPORT</div>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+          <tr>
+            <td style="background: #3a3a3a; padding: 15px 0; text-align: center;" bgcolor="#3a3a3a">
+              <table align="center" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align: middle; padding-right: 12px;">
+                    <img src="/logo.webp" alt="Logo" width="45" height="45" style="display: block;" />
+                  </td>
+                  <td style="vertical-align: middle; text-align: left;">
+                    <div style="color: #D39A1A; font-size: 20px; font-weight: bold; letter-spacing: 2px; font-family: Arial, sans-serif;">XLAND INFRA</div>
+                    <div style="color: #D39A1A; font-size: 10px; letter-spacing: 2px; margin-top: 2px; font-family: Arial, sans-serif;">— PVT LTD —</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background: #D39A1A; color: white; text-align: center; padding: 8px 0; font-weight: 600; font-size: 13px; letter-spacing: 1px; font-family: Arial, sans-serif;" bgcolor="#D39A1A">SCHEDULE REPORT</td>
+          </tr>
+        </table>
         <div class="content">
         <table>
           <thead>
