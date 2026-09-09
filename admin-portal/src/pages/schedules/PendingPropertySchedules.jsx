@@ -999,13 +999,18 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                     
                     {/* Services */}
                     <td className="px-6 py-4 text-center">
-                      <button 
-                        onClick={() => handleViewServices(property)}
-                        className="text-blue-600 font-semibold underline hover:text-blue-800 transition-colors cursor-pointer"
-                        title="View Services"
-                      >
-                        {property.totalServices} <span className="text-xs font-normal">view</span>
-                      </button>
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold bg-blue-100 text-blue-700">
+                          {property.totalServices}
+                        </div>
+                        <button 
+                          onClick={() => handleViewServices(property)}
+                          className="text-blue-600 text-xs underline hover:text-blue-800 transition-colors cursor-pointer"
+                          title="View Services"
+                        >
+                          view
+                        </button>
+                      </div>
                     </td>
                     
                     {/* Vendors Assigned */}
