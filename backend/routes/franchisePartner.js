@@ -6198,6 +6198,9 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
     // Use req.fpId which is correctly set by attachFPScope middleware
     const franchisePartnerId = req.fpId || req.user?.franchisePartnerId || req.user?.id;
     
+    console.log('[FP Pending Properties] Starting with FP ID:', franchisePartnerId);
+    console.log('[FP Pending Properties] User info:', { userId: req.user?.id, role: req.user?.role, fpId: req.fpId });
+    
     // Query to get properties with:
     // 1. Approved/paid estimates (payment_status = 'paid')
     // 2. Vendor assignments (from property_vendor_assignments)
@@ -6236,7 +6239,9 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
       ORDER BY op.created_at DESC
     `;
 
+    console.log('[FP Pending Properties] Executing query with FP ID:', franchisePartnerId);
     const [properties] = await pool.execute(query, [franchisePartnerId]);
+    console.log('[FP Pending Properties] Found', properties.length, 'pending properties');
 
     // Get all property IDs to fetch their vendor assignments
     const propertyIds = properties.map(p => p.id);
@@ -6345,11 +6350,13 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
       data: processedProperties
     });
   } catch (error) {
-    console.error('Error fetching pending properties for scheduling:', error);
+    console.error('[FP Pending Properties] Error:', error.message);
+    console.error('[FP Pending Properties] Stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Error fetching pending properties',
-      error: error.message
+      error: error.message,
+      code: error.code
     });
   }
 });
