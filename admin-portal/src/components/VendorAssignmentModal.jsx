@@ -621,13 +621,6 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     });
     
     debug(`[FILTER] ═══ RESULT: ${filtered.length} vendors in zone "${property?.zone}" ═══`);
-    
-    // If no vendors match the zone, return ALL vendors (fallback for zones like "Zone A" that may not have vendors yet)
-    if (filtered.length === 0 && vendors.length > 0) {
-      debug(`[FILTER] No zone-specific vendors found. Showing all ${vendors.length} vendors as fallback.`);
-      return vendors;
-    }
-    
     return filtered;
   };
 
@@ -850,7 +843,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
                       <span className="font-semibold text-gray-900">Assign Vendors to Services</span>
                     </div>
                     <span className="text-xs text-purple-600 bg-purple-100 px-2.5 py-1 rounded-full font-medium">
-                      {zoneVendors.length} vendor(s) available
+                      {zoneVendors.length} vendor(s) in {property?.zone || 'zone'}
                     </span>
                   </div>
                   <table className="w-full text-sm bg-white">
@@ -919,7 +912,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
                                       ))}
                                     </>
                                   ) : (
-                                    <option value="">No {service.serviceType} vendors available</option>
+                                    <option value="">No {service.serviceType} vendors in zone</option>
                                   )}
                                 </select>
                                 <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-gray-400" />
