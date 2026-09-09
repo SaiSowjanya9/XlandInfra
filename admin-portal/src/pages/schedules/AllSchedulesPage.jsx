@@ -136,6 +136,9 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   const [bulkCancelReason, setBulkCancelReason] = useState('');
   const [rescheduleSearch, setRescheduleSearch] = useState('');
   const [selectedForReschedule, setSelectedForReschedule] = useState(null);
+  
+  // Services dropdown state
+  const [servicesDropdownOpen, setServicesDropdownOpen] = useState(null);
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
   const [rescheduleReason, setRescheduleReason] = useState('');
@@ -232,6 +235,15 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     fetchSchedules();
     fetchFilterOptions();
   }, [fetchSchedules, fetchFilterOptions]);
+
+  // Close services dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setServicesDropdownOpen(null);
+    if (servicesDropdownOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [servicesDropdownOpen]);
 
   // Status badge styles based on document Section 12
   const getStatusBadge = (status) => {
@@ -983,12 +995,27 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <div className="flex flex-wrap gap-1">
-                              {serviceList.map((service, i) => (
-                                <span key={i} className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
-                                  {service.serviceName}
-                                </span>
-                              ))}
+                            <div className="relative">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setServicesDropdownOpen(servicesDropdownOpen === property.propertyId ? null : property.propertyId);
+                                }}
+                                className="px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-100 flex items-center gap-1"
+                              >
+                                <Eye className="w-3 h-3" />
+                                View ({serviceList.length})
+                              </button>
+                              {servicesDropdownOpen === property.propertyId && (
+                                <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[160px] py-1">
+                                  {serviceList.map((service, i) => (
+                                    <div key={i} className="px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                      {service.serviceName}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </td>
                           <td className="px-4 py-3">
