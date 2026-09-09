@@ -35,7 +35,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
   });
   const [viewOptions, setViewOptions] = useState({
     showUnscheduled: true,
-    showWorkOrders: true,
+    zoneFilter: 'All Zones',
     groupByVendor: false,
     groupByProperty: false
   });
@@ -226,7 +226,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
       
       // Apply view options filters
       if (!viewOptions.showUnscheduled && s.type === 'unscheduled') return false;
-      if (!viewOptions.showWorkOrders && s.type === 'work_order') return false;
+      if (viewOptions.zoneFilter !== 'All Zones' && s.zone !== viewOptions.zoneFilter) return false;
       
       // Apply quick filter
       if (activeQuickFilter) {
@@ -897,23 +897,52 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
           {/* View Options */}
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <h3 className="font-semibold text-gray-900 mb-3">View Options</h3>
-            <div className="space-y-2">
-              {[
-                { key: 'showUnscheduled', label: 'Show Unscheduled' },
-                { key: 'showWorkOrders', label: 'Show Work Orders' },
-                { key: 'groupByVendor', label: 'Group by Vendor' },
-                { key: 'groupByProperty', label: 'Group by Property' }
-              ].map(option => (
-                <label key={option.key} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={viewOptions[option.key]}
-                    onChange={(e) => setViewOptions({ ...viewOptions, [option.key]: e.target.checked })}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-600">{option.label}</span>
-                </label>
-              ))}
+            <div className="space-y-3">
+              {/* Show Unscheduled Checkbox */}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={viewOptions.showUnscheduled}
+                  onChange={(e) => setViewOptions({ ...viewOptions, showUnscheduled: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-600">Show Unscheduled</span>
+              </label>
+              
+              {/* Zone Filter Dropdown */}
+              <div className="space-y-1">
+                <label className="text-sm text-gray-600">Zone</label>
+                <select
+                  value={viewOptions.zoneFilter}
+                  onChange={(e) => setViewOptions({ ...viewOptions, zoneFilter: e.target.value })}
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  <option value="All Zones">All Zones</option>
+                  {zones.map(z => <option key={z} value={z}>{z}</option>)}
+                </select>
+              </div>
+              
+              {/* Group by Vendor Checkbox */}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={viewOptions.groupByVendor}
+                  onChange={(e) => setViewOptions({ ...viewOptions, groupByVendor: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-600">Group by Vendor</span>
+              </label>
+              
+              {/* Group by Property Checkbox */}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={viewOptions.groupByProperty}
+                  onChange={(e) => setViewOptions({ ...viewOptions, groupByProperty: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-600">Group by Property</span>
+              </label>
             </div>
           </div>
         </div>
