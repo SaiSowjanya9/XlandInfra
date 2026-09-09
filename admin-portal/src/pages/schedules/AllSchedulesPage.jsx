@@ -1775,6 +1775,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                                   </div>
                                 );
                               })}
+                          </div>
                         </div>
                       </div>
                     ))}
