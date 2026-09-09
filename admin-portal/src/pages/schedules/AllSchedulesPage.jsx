@@ -463,8 +463,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     }
   };
 
-  // Generate and download PDF using print
-  const handleDownloadPDF = () => {
+  // Generate and download/print PDF
+  const handleDownloadPDF = (printDirect = false) => {
     if (!scheduleDetailsRef.current || !scheduleDetailsData) return;
     
     setGeneratingPDF(true);
@@ -479,56 +479,22 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
         <html>
         <head>
           <title>Schedule Report - ${scheduleDetailsData.propertyId}</title>
+          <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
           <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: Arial, sans-serif; padding: 20px; background: white; }
-            
-            /* Header styles */
-            .header-container { max-width: 500px; margin: 0 auto 20px auto; }
-            .header-dark { background: #3a3a3a; padding: 12px 20px; border-radius: 8px 8px 0 0; text-align: center; }
-            .header-title { color: #D39A1A; font-size: 16px; font-weight: bold; letter-spacing: 1px; }
-            .header-subtitle { color: #D39A1A; font-size: 8px; letter-spacing: 2px; margin-top: 2px; }
-            .header-gold { background: #D39A1A; color: white; text-align: center; padding: 6px; font-weight: 600; font-size: 13px; border-radius: 0 0 8px 8px; }
-            
-            /* Property info */
-            .property-info { background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 16px; }
-            .property-info span { margin-right: 24px; font-size: 13px; }
-            .property-info .label { color: #6b7280; }
-            .property-info .value { color: #1f2937; font-weight: 500; }
-            
-            /* Service sections */
-            .service-section { border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 16px; page-break-inside: avoid; break-inside: avoid; }
-            .service-header { background: #f9fafb; padding: 8px 12px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
-            .service-name { font-weight: 600; color: #1f2937; font-size: 13px; }
-            .service-vendor { font-size: 11px; color: #6b7280; }
-            
-            /* Table styles */
-            table { width: 100%; border-collapse: collapse; font-size: 11px; }
-            th { background: #f3f4f6; padding: 8px 12px; text-align: center; font-weight: 500; color: #4b5563; }
-            td { padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; }
-            tr:nth-child(even) { background: #f9fafb; }
-            tr { page-break-inside: avoid; break-inside: avoid; }
-            
-            /* Status badges */
-            .status-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 10px; font-weight: 500; }
-            .status-scheduled { background: #dbeafe; color: #1e40af; }
-            .status-completed { background: #dcfce7; color: #166534; }
-            .status-cancelled { background: #fee2e2; color: #dc2626; }
-            
-            /* Footer */
-            .footer { text-align: center; margin-top: 24px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af; }
-            
-            /* Print styles */
             @media print {
-              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-              .service-section { page-break-inside: avoid; break-inside: avoid; }
-              tr { page-break-inside: avoid; break-inside: avoid; }
+              body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+              .page-break { page-break-before: always; }
             }
-            @page { margin: 15mm; }
+            @page { margin: 10mm; }
+            body { font-family: Arial, sans-serif; }
           </style>
         </head>
-        <body>
+        <body class="bg-white p-4">
           ${printContent}
+          <div class="text-center mt-6 pt-4 border-t border-gray-200 text-xs text-gray-400">
+            <p>Generated on ${new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+            <p>XLAND INFRA Property Management System</p>
+          </div>
         </body>
         </html>
       `);
@@ -1528,7 +1494,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={handleDownloadPDF}
+                  onClick={() => handleDownloadPDF()}
                   disabled={generatingPDF || filteredPropertySchedules.length === 0}
                   className="flex items-center gap-2 px-3 py-1.5 bg-gray-700 text-white text-sm rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
                 >
@@ -1539,8 +1505,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                     </>
                   ) : (
                     <>
-                      <Download className="w-4 h-4" />
-                      Download PDF
+                      <Printer className="w-4 h-4" />
+                      Print / Save PDF
                     </>
                   )}
                 </button>
@@ -1576,23 +1542,17 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             {/* PDF Content Area */}
             <div className="overflow-y-auto max-h-[calc(95vh-160px)]">
               <div ref={scheduleDetailsRef} className="p-5 bg-white">
-                {/* PDF Header with Logo Banner - matching Invoice style */}
-                <div className="mb-5 max-w-xl mx-auto">
-                  <div className="bg-[#3a3a3a] px-5 py-3 rounded-t-lg">
-                    <div className="flex items-center justify-center gap-3">
-                      <img src="/logo.webp" alt="XLAND INFRA" className="h-12 w-12 object-contain" />
-                      <div className="flex flex-col justify-center">
-                        <h1 className="text-[#D39A1A] text-base font-bold tracking-wider leading-tight">XLAND INFRA</h1>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <div className="w-4 h-[1px] bg-[#D39A1A]"></div>
-                          <span className="text-[#D39A1A] text-[8px] tracking-[0.12em]">PVT LTD</span>
-                          <div className="w-4 h-[1px] bg-[#D39A1A]"></div>
-                        </div>
-                      </div>
+                {/* PDF Header with Logo Banner - Full Width */}
+                <div className="mb-5 -mx-5 -mt-5">
+                  <div className="bg-[#3a3a3a] px-5 py-2 flex items-center justify-center gap-3">
+                    <img src="/logo.webp" alt="XLAND INFRA" className="h-8 w-8 object-contain" />
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-[#D39A1A] text-sm font-bold tracking-wider">XLAND INFRA</h1>
+                      <span className="text-[#D39A1A] text-[8px] tracking-[0.12em]">— PVT LTD —</span>
                     </div>
                   </div>
-                  <div className="bg-[#D39A1A] text-center py-1.5 rounded-b-lg">
-                    <span className="text-white font-semibold text-sm tracking-wide">SCHEDULE REPORT</span>
+                  <div className="bg-[#D39A1A] text-center py-1">
+                    <span className="text-white font-semibold text-xs tracking-wide">SCHEDULE REPORT</span>
                   </div>
                 </div>
 
