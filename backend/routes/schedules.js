@@ -1534,8 +1534,23 @@ router.post('/property/:propertyId/services/:serviceScheduleId/schedule', authen
 // Get scheduled visits for a service
 router.get('/service/:serviceScheduleId/visits', authenticate, canSeeSchedule, async (req, res) => {
   try {
-    const { serviceScheduleId } = req.params;
+    let { serviceScheduleId } = req.params;
     const { status, startDate, endDate } = req.query;
+
+    // Resolve schedule_id string (like "SCH-abc123") to numeric database ID if needed
+    if (isNaN(serviceScheduleId)) {
+      const [scheduleRows] = await pool.execute(
+        `SELECT id FROM property_service_schedules WHERE schedule_id = ? LIMIT 1`,
+        [serviceScheduleId]
+      );
+      if (scheduleRows.length > 0) {
+        serviceScheduleId = scheduleRows[0].id;
+        console.log('[Get Visits] Resolved schedule_id to DB ID:', req.params.serviceScheduleId, '->', serviceScheduleId);
+      } else {
+        console.log('[Get Visits] No schedule found for schedule_id:', serviceScheduleId);
+        return res.json({ success: true, data: [] });
+      }
+    }
 
     let query = `
       SELECT sv.*, 
