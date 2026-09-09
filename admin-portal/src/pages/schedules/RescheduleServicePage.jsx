@@ -95,14 +95,14 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
   }, [selectedProperty]);
 
   const generateMockSchedules = () => [
-    { id: 1, property_id: 'PROP-001', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Basic AMC', actualDate: '2026-08-09', actualTime: '10:00 AM - 11:00 AM', rescheduledDate: '2026-08-15', rescheduledTime: '11:00 AM - 12:00 PM' },
-    { id: 2, property_id: 'PROP-001', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Basic AMC', actualDate: '2026-09-09', actualTime: '10:00 AM - 11:00 AM', rescheduledDate: '2026-09-16', rescheduledTime: '10:00 AM - 11:00 AM' },
-    { id: 3, property_id: 'PROP-002', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Standard AMC', actualDate: '2026-10-09', actualTime: '10:00 AM - 11:00 AM', rescheduledDate: '2026-10-18', rescheduledTime: '02:00 PM - 03:00 PM' },
-    { id: 4, property_id: 'PROP-002', service: 'Plumbing', vendor: 'Aqua Plumbing', zone: 'Zone B', package: 'Standard AMC', actualDate: '2026-09-14', actualTime: '02:00 PM - 03:00 PM', rescheduledDate: '2026-09-20', rescheduledTime: '03:00 PM - 04:00 PM' },
-    { id: 5, property_id: 'PROP-003', service: 'Plumbing', vendor: 'Aqua Plumbing', zone: 'Zone B', package: 'Premium AMC', actualDate: '2026-10-14', actualTime: '02:00 PM - 03:00 PM', rescheduledDate: '2026-10-21', rescheduledTime: '02:00 PM - 03:00 PM' },
-    { id: 6, property_id: 'PROP-003', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone C', package: 'Premium AMC', actualDate: '2026-10-04', actualTime: '11:30 AM - 12:30 PM', rescheduledDate: '2026-10-10', rescheduledTime: '11:30 AM - 12:30 PM' },
-    { id: 7, property_id: 'PROP-004', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone C', package: 'Basic AMC', actualDate: '2026-11-04', actualTime: '11:30 AM - 12:30 PM', rescheduledDate: '2026-11-12', rescheduledTime: '10:00 AM - 11:00 AM' },
-    { id: 8, property_id: 'PROP-005', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone D', package: 'Standard AMC', actualDate: '2026-12-04', actualTime: '11:30 AM - 12:30 PM', rescheduledDate: '2026-12-11', rescheduledTime: '11:30 AM - 12:30 PM' }
+    { id: 1, property_id: 'PROP-001', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Basic AMC', status: 'rescheduled', actualDate: '2026-08-09', actualTime: '10:00 AM - 11:00 AM', rescheduledDate: '2026-08-15', rescheduledTime: '11:00 AM - 12:00 PM' },
+    { id: 2, property_id: 'PROP-001', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Basic AMC', status: 'rescheduled', actualDate: '2026-09-09', actualTime: '10:00 AM - 11:00 AM', rescheduledDate: '2026-09-16', rescheduledTime: '10:00 AM - 11:00 AM' },
+    { id: 3, property_id: 'PROP-002', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Standard AMC', status: 'rescheduled', actualDate: '2026-10-09', actualTime: '10:00 AM - 11:00 AM', rescheduledDate: '2026-10-18', rescheduledTime: '02:00 PM - 03:00 PM' },
+    { id: 4, property_id: 'PROP-002', service: 'Plumbing', vendor: 'Aqua Plumbing', zone: 'Zone B', package: 'Standard AMC', status: 'rescheduled', actualDate: '2026-09-14', actualTime: '02:00 PM - 03:00 PM', rescheduledDate: '2026-09-20', rescheduledTime: '03:00 PM - 04:00 PM' },
+    { id: 5, property_id: 'PROP-003', service: 'Plumbing', vendor: 'Aqua Plumbing', zone: 'Zone B', package: 'Premium AMC', status: 'rescheduled', actualDate: '2026-10-14', actualTime: '02:00 PM - 03:00 PM', rescheduledDate: '2026-10-21', rescheduledTime: '02:00 PM - 03:00 PM' },
+    { id: 6, property_id: 'PROP-003', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone C', package: 'Premium AMC', status: 'rescheduled', actualDate: '2026-10-04', actualTime: '11:30 AM - 12:30 PM', rescheduledDate: '2026-10-10', rescheduledTime: '11:30 AM - 12:30 PM' },
+    { id: 7, property_id: 'PROP-004', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone C', package: 'Basic AMC', status: 'rescheduled', actualDate: '2026-11-04', actualTime: '11:30 AM - 12:30 PM', rescheduledDate: '2026-11-12', rescheduledTime: '10:00 AM - 11:00 AM' },
+    { id: 8, property_id: 'PROP-005', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone D', package: 'Standard AMC', status: 'rescheduled', actualDate: '2026-12-04', actualTime: '11:30 AM - 12:30 PM', rescheduledDate: '2026-12-11', rescheduledTime: '11:30 AM - 12:30 PM' }
   ];
 
   const fetchProperties = async () => {
@@ -337,11 +337,11 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                 <h3 className="font-semibold text-gray-900">Existing Schedule for Property</h3>
               </div>
 
-              {/* Filters - Responsive */}
-              <div className="px-3 sm:px-4 py-3 border-b border-gray-100">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              {/* Filters - Single Line */}
+              <div className="px-4 py-3 border-b border-gray-100 overflow-x-auto">
+                <div className="flex items-center gap-3 flex-nowrap min-w-max">
                   {/* Property ID Search */}
-                  <div className="relative min-w-[160px]">
+                  <div className="relative w-40">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="text"
@@ -360,24 +360,11 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                       setFilters(prev => ({ ...prev, service: e.target.value }));
                       setCurrentPage(1);
                     }}
-                    className="min-w-[110px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="all">All Services</option>
                     {uniqueServices.map(service => (
                       <option key={service} value={service}>{service}</option>
-                    ))}
-                  </select>
-                  <select 
-                    value={filters.status}
-                    onChange={(e) => {
-                      setFilters(prev => ({ ...prev, status: e.target.value }));
-                      setCurrentPage(1);
-                    }}
-                    className="min-w-[100px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="all">All Status</option>
-                    {statusOptions.map(status => (
-                      <option key={status} value={status}>{status.charAt(0).toUpperCase() + status.slice(1)}</option>
                     ))}
                   </select>
                   <select 
@@ -386,7 +373,7 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                       setFilters(prev => ({ ...prev, vendor: e.target.value }));
                       setCurrentPage(1);
                     }}
-                    className="min-w-[105px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="all">All Vendors</option>
                     {uniqueVendors.map(vendor => (
@@ -399,7 +386,7 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                       setFilters(prev => ({ ...prev, package: e.target.value }));
                       setCurrentPage(1);
                     }}
-                    className="min-w-[110px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="all">All Packages</option>
                     <option value="Basic AMC">Basic AMC</option>
@@ -412,22 +399,29 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                       setFilters(prev => ({ ...prev, zone: e.target.value }));
                       setCurrentPage(1);
                     }}
-                    className="min-w-[90px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="all">All Zones</option>
-                    {zones.map(z => (
+                    {zones.length > 0 ? zones.map(z => (
                       <option key={z} value={z}>{z}</option>
-                    ))}
+                    )) : (
+                      <>
+                        <option value="Zone A">Zone A</option>
+                        <option value="Zone B">Zone B</option>
+                        <option value="Zone C">Zone C</option>
+                        <option value="Zone D">Zone D</option>
+                      </>
+                    )}
                   </select>
                   <button 
                     onClick={() => {
                       setFilters({ search: '', service: 'all', status: 'all', vendor: 'all', zone: 'all', package: 'all' });
                       setCurrentPage(1);
                     }}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50 flex-shrink-0"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50 whitespace-nowrap"
                   >
                     <RefreshCw className="w-4 h-4" />
-                    <span className="hidden sm:inline">Clear</span>
+                    Clear
                   </button>
                 </div>
               </div>
