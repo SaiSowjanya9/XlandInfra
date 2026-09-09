@@ -265,7 +265,7 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
     // Query to get properties with:
     // 1. Approved/paid estimates (payment_status = 'paid')
     // 2. Vendor assignments (from property_vendor_assignments)
-    // 3. Not yet scheduled (no active schedule exists)
+    // 3. Not yet fully scheduled (check property_service_schedules and scheduled_visits)
     let query = `
       SELECT DISTINCT
         op.id,
@@ -286,8 +286,8 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
         pc.phone as customerPhone,
         pc.email as customerEmail,
         (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = op.id AND pva.is_active = 1) as assignedVendors,
-        (SELECT COUNT(*) FROM schedules s WHERE s.property_id = op.id AND s.status IN ('active', 'draft')) as existingSchedules,
-        (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = op.id AND pss.scheduling_status = 'completed') as completedServiceSchedules
+        (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = op.id AND pss.scheduling_status IN ('scheduled', 'completed')) as scheduledServiceCount,
+        (SELECT COUNT(*) FROM scheduled_visits sv WHERE sv.property_id = op.id) as totalScheduledVisits
       FROM onboarded_properties op
       LEFT JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
       LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id
@@ -305,8 +305,8 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
       params.push(userFpId);
     }
     
-    // Exclude properties that already have active schedules or completed service schedules
-    query += ` HAVING existingSchedules = 0 AND completedServiceSchedules = 0`;
+    // Exclude properties that already have scheduled services or scheduled visits
+    query += ` HAVING scheduledServiceCount = 0 AND totalScheduledVisits = 0`;
     query += ` ORDER BY op.created_at DESC`;
 
     const [properties] = await pool.execute(query, params);
@@ -1360,7 +1360,8 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
     } else {
       // Create new service schedule with required schedule_id
       const scheduleId = generateScheduleId();
-      console.log('[Confirm Schedule] Creating new schedule with ID:', scheduleId);
+      const franchisePartnerId = propertyCheck[0].franchise_partner_id;
+      console.log('[Confirm Schedule] Creating new schedule with ID:', scheduleId, 'FP ID:', franchisePartnerId);
       
       // Map frequency to valid ENUM values: 'daily', 'weekly', 'bi_weekly', 'monthly', 'every_2_months', 'quarterly', 'half_yearly', 'yearly', 'one_time'
       const frequencyMap = {
@@ -1387,9 +1388,9 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
       const frequencyType = frequencyMap[(frequency || 'monthly').toLowerCase()] || 'monthly';
       
       const [newSchedule] = await pool.execute(
-        `INSERT INTO property_service_schedules (schedule_id, property_id, service_name, service_category, vendor_id, frequency_type, total_visits, status, scheduling_status, created_by, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 'scheduled', ?, NOW())`,
-        [scheduleId, propertyDbId, serviceNameToUse, serviceCategory || null, vendorId || null, frequencyType, totalVisits || visits.length, req.user.id]
+        `INSERT INTO property_service_schedules (schedule_id, property_id, service_name, service_category, vendor_id, frequency_type, total_visits, status, scheduling_status, franchise_partner_id, created_by, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 'scheduled', ?, ?, NOW())`,
+        [scheduleId, propertyDbId, serviceNameToUse, serviceCategory || null, vendorId || null, frequencyType, totalVisits || visits.length, franchisePartnerId || null, req.user.id]
       );
       serviceScheduleId = newSchedule.insertId;
       console.log('[Confirm Schedule] Created new schedule with DB id:', serviceScheduleId, 'with scheduling_status=scheduled');
@@ -2688,12 +2689,12 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
       params.push(propertyType);
     }
     
-    // Get total count - handle both numeric and string property_id
+    // Get total count - scheduled_visits.property_id is always the numeric onboarded_properties.id
     const countQuery = `
       SELECT COUNT(*) as total
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
+      JOIN onboarded_properties op ON op.id = sv.property_id
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${whereClause}
     `;
@@ -2735,7 +2736,7 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
         wo.status as workOrderStatus
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
+      JOIN onboarded_properties op ON op.id = sv.property_id
       LEFT JOIN property_contacts pc ON pc.property_id = op.id AND pc.is_primary = 1
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
@@ -2780,7 +2781,7 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
       SELECT sv.status, COUNT(*) as count
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
+      JOIN onboarded_properties op ON op.id = sv.property_id
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${statsWhereClause}
       GROUP BY sv.status

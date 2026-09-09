@@ -2924,7 +2924,7 @@ router.get('/schedules/all', requireSupervisorScope, async (req, res) => {
       SELECT COUNT(*) as total
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
+      JOIN onboarded_properties op ON op.id = sv.property_id
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${whereClause}
     `;
@@ -2967,7 +2967,7 @@ router.get('/schedules/all', requireSupervisorScope, async (req, res) => {
         wo.status as workOrderStatus
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
+      JOIN onboarded_properties op ON op.id = sv.property_id
       LEFT JOIN property_contacts pc ON pc.property_id = op.id
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
@@ -2991,7 +2991,7 @@ router.get('/schedules/all', requireSupervisorScope, async (req, res) => {
       SELECT sv.status, COUNT(*) as count
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
+      JOIN onboarded_properties op ON op.id = sv.property_id
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       WHERE op.franchise_partner_id = ?
       GROUP BY sv.status

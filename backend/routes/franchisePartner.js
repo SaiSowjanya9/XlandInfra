@@ -6204,7 +6204,7 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
     // Query to get properties with:
     // 1. Approved/paid estimates (payment_status = 'paid')
     // 2. Vendor assignments (from property_vendor_assignments)
-    // 3. Not yet scheduled (no active schedule exists)
+    // 3. Not yet fully scheduled (check property_service_schedules for 'scheduled' or 'completed' status)
     const query = `
       SELECT DISTINCT
         op.id,
@@ -6225,8 +6225,8 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
         pc.phone as customerPhone,
         pc.email as customerEmail,
         (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = op.id AND pva.is_active = 1) as assignedVendors,
-        (SELECT COUNT(*) FROM schedules s WHERE s.property_id = op.id AND s.status IN ('active', 'draft')) as existingSchedules,
-        (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = op.id AND pss.scheduling_status = 'completed') as completedServiceSchedules
+        (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = op.id AND pss.scheduling_status IN ('scheduled', 'completed')) as scheduledServiceCount,
+        (SELECT COUNT(*) FROM scheduled_visits sv WHERE sv.property_id = op.id) as totalScheduledVisits
       FROM onboarded_properties op
       LEFT JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
       LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id
@@ -6235,7 +6235,7 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
         AND fe.id IS NOT NULL
         AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
         AND op.franchise_partner_id = ?
-      HAVING existingSchedules = 0 AND completedServiceSchedules = 0
+      HAVING scheduledServiceCount = 0 AND totalScheduledVisits = 0
       ORDER BY op.created_at DESC
     `;
 
@@ -6485,13 +6485,12 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
       params.push(propertyType);
     }
     
-    // Get total count - handle both numeric and string property_id
-    // Use OR condition to match either op.id (numeric) or op.property_id (string code)
+    // Get total count - scheduled_visits.property_id is always the numeric onboarded_properties.id
     const countQuery = `
       SELECT COUNT(*) as total
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
+      JOIN onboarded_properties op ON op.id = sv.property_id
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${whereClause}
     `;
@@ -6535,7 +6534,7 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
         wo.status as workOrderStatus
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
+      JOIN onboarded_properties op ON op.id = sv.property_id
       LEFT JOIN property_contacts pc ON pc.property_id = op.id AND pc.is_primary = 1
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
@@ -6563,7 +6562,7 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
       SELECT sv.status, COUNT(*) as count
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
+      JOIN onboarded_properties op ON op.id = sv.property_id
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${statsWhereClause}
       GROUP BY sv.status
