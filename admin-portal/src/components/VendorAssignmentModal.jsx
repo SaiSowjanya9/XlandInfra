@@ -283,23 +283,43 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
       setExistingDbAssignments(dbAssignments);
       debug('[DEBUG] Existing DB Assignments:', dbAssignments);
       
-      // Load estimates for this property
-      const propertyEstimates = getEstimatesByPropertyId(property.propertyId);
-      debug('[DEBUG] Estimates for property:', propertyEstimates?.length || 0);
-      if (propertyEstimates?.length > 0) {
-        debug('[DEBUG] First Estimate ID:', propertyEstimates[0]?.estimateId);
-      }
-      setEstimates(propertyEstimates || []);
-      
-      // Auto-select first estimate if available
-      // If no estimate exists, do NOT show default services - user must create estimate first
-      if (propertyEstimates && propertyEstimates.length > 0) {
-        handleEstimateSelect(propertyEstimates[0], vendorData, dbAssignments);
+      // Check if services are provided directly from the property (e.g., from Pending Property Schedules)
+      if (property.services && Array.isArray(property.services) && property.services.length > 0) {
+        debug('[DEBUG] Using services directly from property:', property.services.length);
+        
+        // Create a synthetic estimate from the property's services
+        const syntheticEstimate = {
+          estimateId: property.estimateCode || property.estimateId || `EST-${property.id}`,
+          packageName: property.packageName || 'Custom Package',
+          totalPrice: property.totalPrice || 0,
+          services: property.services.map(s => ({
+            service: s.name || s.serviceName,
+            frequencyType: s.frequency || s.frequencyType || 'Monthly',
+            frequencyCount: s.frequencyCount || s.visits || 1
+          }))
+        };
+        
+        setEstimates([syntheticEstimate]);
+        handleEstimateSelect(syntheticEstimate, vendorData, dbAssignments);
       } else {
-        // No estimate exists - keep serviceAssignments empty
-        // Vendor assignment is only enabled after estimate is created and linked
-        setServiceAssignments([]);
-        debug('[DEBUG] No estimate found - vendor assignment disabled until estimate is created');
+        // Load estimates for this property from local storage
+        const propertyEstimates = getEstimatesByPropertyId(property.propertyId);
+        debug('[DEBUG] Estimates for property:', propertyEstimates?.length || 0);
+        if (propertyEstimates?.length > 0) {
+          debug('[DEBUG] First Estimate ID:', propertyEstimates[0]?.estimateId);
+        }
+        setEstimates(propertyEstimates || []);
+        
+        // Auto-select first estimate if available
+        // If no estimate exists, do NOT show default services - user must create estimate first
+        if (propertyEstimates && propertyEstimates.length > 0) {
+          handleEstimateSelect(propertyEstimates[0], vendorData, dbAssignments);
+        } else {
+          // No estimate exists - keep serviceAssignments empty
+          // Vendor assignment is only enabled after estimate is created and linked
+          setServiceAssignments([]);
+          debug('[DEBUG] No estimate found - vendor assignment disabled until estimate is created');
+        }
       }
     } catch (err) {
       console.error('Error loading data:', err);
