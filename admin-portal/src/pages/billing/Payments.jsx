@@ -3104,22 +3104,20 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 <table className="w-full">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100">
-                      <th className="px-4 py-3.5 w-10">
+                      <th className="px-3 py-3 w-10">
                         <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                       </th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment ID</th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Invoice ID</th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">Estimate ID</th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Property ID</th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Property Type</th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Method</th>
-                      <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Paid Date</th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Received By</th>
-                      <th className="px-4 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Reference / Transaction No.</th>
-                      <th className="px-4 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Payment ID</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Invoice</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Customer</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Property ID</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Property Type</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Method</th>
+                      <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Amount</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Date</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">Received By</th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -3131,10 +3129,10 @@ const Payments = ({ user, portalType = 'admin' }) => {
 
                       return (
                         <tr key={payment.id} className="hover:bg-gray-50/50">
-                          <td className="px-4 py-4">
+                          <td className="px-3 py-3">
                             <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                           </td>
-                          <td className="px-4 py-4">
+                          <td className="px-3 py-3 whitespace-nowrap">
                             <button
                               onClick={() => handleViewReceipt(payment)}
                               className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
@@ -3142,71 +3140,80 @@ const Payments = ({ user, portalType = 'admin' }) => {
                               {payment.paymentId}
                             </button>
                           </td>
-                          <td className="px-4 py-4">
+                          <td className="px-3 py-3 whitespace-nowrap">
                             <span className="text-sm text-gray-600">{payment.invoiceId || '-'}</span>
                           </td>
-                          <td className="px-4 py-4 hidden xl:table-cell">
-                            <span className="text-sm text-gray-600">{payment.estimateId || payment.estimate_id || '-'}</span>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <span className="text-sm font-medium text-gray-800">{payment.customerName || payment.propertyName || '-'}</span>
                           </td>
-                          <td className="px-4 py-4">
-                            <span className="text-sm text-gray-800">{payment.customerName || payment.propertyName || '-'}</span>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <span className="text-sm text-gray-600">{payment.propertyCode || '-'}</span>
                           </td>
-                          <td className="px-4 py-4">
-                            <span className="text-sm text-gray-600">{payment.propertyCode || payment.propertyId || '-'}</span>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <span className="text-sm text-gray-600 capitalize">{(payment.propertyType || '-').replace(/_/g, ' ')}</span>
                           </td>
-                          <td className="px-4 py-4">
-                            <span className="text-sm text-gray-600">{formatPropertyType(payment.propertyType)}</span>
-                          </td>
-                          <td className="px-4 py-4">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium ${method.bg} ${method.color} border ${method.border}`}>
-                              <MethodIcon className="w-3.5 h-3.5" />
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${method.bg} ${method.color} border ${method.border}`}>
+                              <MethodIcon className="w-3 h-3" />
                               {method.label}
                             </span>
                           </td>
-                          <td className="px-4 py-4 text-right">
+                          <td className="px-3 py-3 text-right whitespace-nowrap">
                             <span className="text-sm font-semibold text-gray-900">{formatCurrencyShort(payment.amount)}</span>
                           </td>
-                          <td className="px-4 py-4">
+                          <td className="px-3 py-3 whitespace-nowrap">
                             <div className="text-sm text-gray-800">{dateTime.date}</div>
                             <div className="text-xs text-gray-500">{dateTime.time}</div>
                           </td>
-                          <td className="px-4 py-4 hidden lg:table-cell">
-                            <div className="text-sm font-medium text-gray-900">
+                          <td className="px-3 py-3 hidden lg:table-cell whitespace-nowrap">
+                            <span className="text-sm text-gray-700">
                               {payment.receivedByName || payment.received_by_name || payment.createdByName || 'System'}
-                            </div>
-                            {(payment.receivedByRole || payment.received_by_role || payment.createdByRole) && (
-                              <div className="text-xs text-gray-400 capitalize">
-                                {(payment.receivedByRole || payment.received_by_role || payment.createdByRole || '').replace(/_/g, ' ')}
-                              </div>
-                            )}
+                            </span>
                           </td>
-                          <td className="px-4 py-4 text-center">
+                          <td className="px-3 py-3 text-center whitespace-nowrap">
                             {payment.status === 'verification_pending' ? (
                               <button
                                 onClick={() => {
                                   setSelectedPaymentForVerify(payment);
                                   setShowVerifyModal(true);
                                 }}
-                                className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${status.color} hover:opacity-80 cursor-pointer transition-opacity`}
+                                className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${status.color} hover:opacity-80 cursor-pointer transition-opacity`}
                                 title="Click to verify payment"
                               >
-                                {status.label}
+                                Pending
                               </button>
                             ) : (
-                              <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${status.color}`}>
+                              <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${status.color}`}>
                                 {status.label}
                               </span>
                             )}
                           </td>
-                          <td className="px-4 py-4">
-                            <span className="text-sm text-gray-600 font-mono">{payment.transactionId || payment.referenceNumber || '-'}</span>
-                          </td>
-                          <td className="px-4 py-4 text-center relative">
-                            <button
-                              onClick={() => setActionMenuOpen(actionMenuOpen === payment.id ? null : payment.id)}
-                              className="p-1.5 hover:bg-gray-100 rounded-lg"
-                            >
-                              <MoreHorizontal className="w-5 h-5 text-gray-400" />
+                          <td className="px-3 py-3 text-center relative whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1">
+                              {payment.status === 'verification_pending' && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedPaymentForVerify(payment);
+                                    setShowVerifyModal(true);
+                                  }}
+                                  className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg"
+                                  title="Verify Payment"
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleViewReceipt(payment)}
+                                className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg"
+                                title="View Receipt"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => setActionMenuOpen(actionMenuOpen === payment.id ? null : payment.id)}
+                                className="p-1.5 hover:bg-gray-100 rounded-lg"
+                              >
+                                <MoreHorizontal className="w-4 h-4 text-gray-400" />
                             </button>
                             {actionMenuOpen === payment.id && (
                               <div className="absolute right-4 top-12 bg-white border border-gray-200 rounded-xl shadow-lg z-10 py-2 min-w-[160px]">
