@@ -26,6 +26,9 @@ const Dashboard = () => {
   const [estimates, setEstimates] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [properties, setProperties] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [woStatusFilter, setWoStatusFilter] = useState('all');
   const [woPriorityFilter, setWoPriorityFilter] = useState('all');
   const [woPropertyTypeFilter, setWoPropertyTypeFilter] = useState('all');
@@ -77,40 +80,55 @@ const Dashboard = () => {
       let estimatesEndpoint;
       let workOrdersEndpoint;
       let invoicesEndpoint;
+      let propertiesEndpoint;
+      let vendorsEndpoint;
+      let employeesEndpoint;
       if (selectedFp.id === 'all') {
         // Admin mode - fetch aggregated data from all sources
         endpoint = `${API_BASE}/api/admin/dashboard-stats`;
         estimatesEndpoint = `${API_BASE}/api/admin/estimates`;
         workOrdersEndpoint = `${API_BASE}/api/admin/work-orders`;
         invoicesEndpoint = `${API_BASE}/api/payments/invoices`;
+        propertiesEndpoint = `${API_BASE}/api/admin/all-properties`;
+        vendorsEndpoint = `${API_BASE}/api/admin/all-vendors`;
+        employeesEndpoint = `${API_BASE}/api/admin/all-employees`;
       } else {
         // Specific FP selected
         endpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/dashboard`;
         estimatesEndpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/estimates`;
         workOrdersEndpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/work-orders`;
         invoicesEndpoint = `${API_BASE}/api/payments/invoices?fpId=${selectedFp.id}`;
+        propertiesEndpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/properties`;
+        vendorsEndpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/vendors`;
+        employeesEndpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/employees`;
       }
       
-      const [dashRes, estRes, woRes, invRes] = await Promise.all([
+      const [dashRes, estRes, woRes, invRes, propRes, vendorRes, empRes] = await Promise.all([
         fetch(endpoint, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(estimatesEndpoint, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(workOrdersEndpoint, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(invoicesEndpoint, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ ok: false }))
+        fetch(invoicesEndpoint, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ ok: false })),
+        fetch(propertiesEndpoint, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ ok: false })),
+        fetch(vendorsEndpoint, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ ok: false })),
+        fetch(employeesEndpoint, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ ok: false }))
       ]);
       
       if (!dashRes.ok) {
         throw new Error(`HTTP ${dashRes.status}`);
       }
       
-      const [result, estResult, woResult, invResult] = await Promise.all([
+      const [result, estResult, woResult, invResult, propResult, vendorResult, empResult] = await Promise.all([
         dashRes.json(), 
         estRes.json(), 
         woRes.json(),
-        invRes.ok ? invRes.json() : { success: false, data: [] }
+        invRes.ok ? invRes.json() : { success: false, data: [] },
+        propRes.ok ? propRes.json() : { success: false, data: [] },
+        vendorRes.ok ? vendorRes.json() : { success: false, data: [] },
+        empRes.ok ? empRes.json() : { success: false, data: [] }
       ]);
       if (result.success && result.data) {
         const data = result.data;
-        // Map dashboard data to stats format with safe defaults
+        // Map dashboard data to stats format with safe defaults (used as fallback)
         setStats({
           totalProperties: data.stats?.totalProperties ?? data.totalProperties ?? 0,
           pendingWorkOrders: data.stats?.pendingWorkOrders ?? data.pendingWorkOrders ?? 0,
@@ -137,6 +155,15 @@ const Dashboard = () => {
       }
       if (invResult.success && Array.isArray(invResult.data)) {
         setInvoices(invResult.data);
+      }
+      if (propResult.success && Array.isArray(propResult.data)) {
+        setProperties(propResult.data);
+      }
+      if (vendorResult.success && Array.isArray(vendorResult.data)) {
+        setVendors(vendorResult.data);
+      }
+      if (empResult.success && Array.isArray(empResult.data)) {
+        setEmployees(empResult.data);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -303,6 +330,40 @@ const Dashboard = () => {
     end.setHours(23, 59, 59, 999);
     return estDate >= start && estDate <= end;
   }) : estimates;
+
+  const dateFilteredProperties = startDate && endDate ? properties.filter(p => {
+    const pDate = new Date(p.created_at || p.createdAt);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return pDate >= start && pDate <= end;
+  }) : properties;
+
+  const dateFilteredVendors = startDate && endDate ? vendors.filter(v => {
+    const vDate = new Date(v.created_at || v.createdAt || v.onboarded_at);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return vDate >= start && vDate <= end;
+  }) : vendors;
+
+  const dateFilteredInvoices = startDate && endDate ? invoices.filter(inv => {
+    const invDate = new Date(inv.created_at || inv.createdAt || inv.invoice_date);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return invDate >= start && invDate <= end;
+  }) : invoices;
+
+  // Computed real-time stats from actual data arrays
+  const realTimeStats = {
+    totalProperties: dateFilteredProperties.length || properties.length,
+    totalVendors: dateFilteredVendors.length || vendors.length,
+    totalEmployees: employees.length, // Employees typically not date-filtered
+    totalWorkOrders: dateFilteredWorkOrders.length,
+    totalEstimates: dateFilteredEstimates.length,
+    totalInvoices: dateFilteredInvoices.length
+  };
 
   // Check if we have real data
   const hasData = stats !== null;
@@ -711,7 +772,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* First Stats Row - 3 KPI Cards */}
+        {/* First Stats Row - 5 KPI Cards with Real-Time Data */}
         <div className="flex flex-wrap gap-3">
           <div 
             onClick={() => navigate('/employee/customer-submissions')}
@@ -723,8 +784,8 @@ const Dashboard = () => {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Properties</p>
-                <p className="text-xl font-bold text-gray-900">{stats?.totalProperties ?? 0}</p>
-                <p className="text-[10px] text-gray-400">Total Properties</p>
+                <p className="text-xl font-bold text-gray-900">{realTimeStats.totalProperties}</p>
+                <p className="text-[10px] text-gray-400">{startDate && endDate ? 'In Selected Period' : 'Total Properties'}</p>
               </div>
             </div>
           </div>
@@ -739,8 +800,8 @@ const Dashboard = () => {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Vendors</p>
-                <p className="text-xl font-bold text-gray-900">{stats?.totalVendors ?? 0}</p>
-                <p className="text-[10px] text-gray-400">Total Vendors</p>
+                <p className="text-xl font-bold text-gray-900">{realTimeStats.totalVendors}</p>
+                <p className="text-[10px] text-gray-400">{startDate && endDate ? 'In Selected Period' : 'Total Vendors'}</p>
               </div>
             </div>
           </div>
@@ -755,8 +816,40 @@ const Dashboard = () => {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Employees</p>
-                <p className="text-xl font-bold text-gray-900">{stats?.totalEmployees ?? 0}</p>
-                <p className="text-[10px] text-gray-400">Total Employees</p>
+                <p className="text-xl font-bold text-gray-900">{realTimeStats.totalEmployees}</p>
+                <p className="text-[10px] text-gray-400">Active Employees</p>
+              </div>
+            </div>
+          </div>
+
+          <div 
+            onClick={() => navigate('/employee/work-orders')}
+            className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-purple-200 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                <ClipboardList className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Work Orders</p>
+                <p className="text-xl font-bold text-gray-900">{realTimeStats.totalWorkOrders}</p>
+                <p className="text-[10px] text-gray-400">{startDate && endDate ? 'In Selected Period' : 'Total Work Orders'}</p>
+              </div>
+            </div>
+          </div>
+
+          <div 
+            onClick={() => navigate('/employee/estimates/list')}
+            className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-teal-200 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-teal-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                <FileText className="w-5 h-5 text-teal-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Estimates</p>
+                <p className="text-xl font-bold text-gray-900">{realTimeStats.totalEstimates}</p>
+                <p className="text-[10px] text-gray-400">{startDate && endDate ? 'In Selected Period' : 'Total Estimates'}</p>
               </div>
             </div>
           </div>
@@ -946,7 +1039,8 @@ const Dashboard = () => {
               <div className="flex items-center gap-6">
                 {(() => {
                   // Filter out cancelled invoices - they shouldn't appear in payment status chart
-                  const activeInvoices = invoices.filter(inv => 
+                  // Use dateFilteredInvoices for real-time accuracy
+                  const activeInvoices = dateFilteredInvoices.filter(inv => 
                     inv.status !== 'cancelled' && inv.status !== 'void'
                   );
                   

@@ -1133,15 +1133,14 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                                   <span className="text-sm text-gray-600">{service.visits.length} visits</span>
                                 </div>
                                 <div className="flex flex-wrap gap-2 mt-2">
-                                  {service.visits.slice(0, 12).map((visit, vIdx) => {
-                                    const statusStyle = getStatusBadge(visit.status);
+                                  {[...service.visits].sort((a, b) => new Date(a.scheduledDate) - new Date(b.scheduledDate)).slice(0, 12).map((visit, vIdx) => {
                                     return (
                                       <div 
                                         key={vIdx} 
-                                        className={`px-2 py-1 rounded text-xs border ${visit.status === 'completed' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-blue-50 border-blue-200 text-blue-700'}`}
-                                        title={`Visit ${visit.visitNumber}: ${formatDate(visit.scheduledDate)}`}
+                                        className={`px-3 py-1.5 rounded text-xs border ${visit.status === 'completed' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-blue-50 border-blue-200 text-blue-700'}`}
                                       >
-                                        V{visit.visitNumber}: {formatDate(visit.scheduledDate)}
+                                        <span className="font-medium">{formatDate(visit.scheduledDate)}</span>
+                                        {visit.scheduledTime && <span className="ml-1 text-gray-500">• {formatTime(visit.scheduledTime)}</span>}
                                       </div>
                                     );
                                   })}
@@ -1745,7 +1744,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                         <div className="p-4 overflow-x-auto">
                           <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
                             {serviceData.visits
-                              .sort((a, b) => a.visitNumber - b.visitNumber)
+                              .sort((a, b) => new Date(a.scheduledDate) - new Date(b.scheduledDate))
                               .map((visit, vIdx) => {
                                 const isCompleted = visit.status === 'completed';
                                 const isCancelled = visit.status === 'cancelled';
@@ -1760,7 +1759,6 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                                         : 'border-blue-400 bg-blue-50'
                                     }`}
                                   >
-                                    <div className="text-xs text-gray-500 mb-1">Visit {visit.visitNumber}</div>
                                     <div className="font-bold text-gray-900 text-sm">{formatDate(visit.scheduledDate)}</div>
                                     <div className="text-xs text-gray-600 mt-1">{formatTime(visit.scheduledTime)}</div>
                                     <div className={`mt-2 text-xs font-medium px-2 py-0.5 rounded-full inline-block ${

@@ -47,6 +47,8 @@ const FPDashboard = ({ user }) => {
   const [workOrders, setWorkOrders] = useState([]);
   const [properties, setProperties] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [propertyChartFilter, setPropertyChartFilter] = useState('all');
   const [woStatusFilter, setWoStatusFilter] = useState('all');
   const [woPriorityFilter, setWoPriorityFilter] = useState('all');
@@ -166,7 +168,7 @@ const FPDashboard = ({ user }) => {
     
     try {
       const token = getAuthToken();
-      const [dashboardRes, estimatesRes, workOrdersRes, propertiesRes, invoicesRes] = await Promise.all([
+      const [dashboardRes, estimatesRes, workOrdersRes, propertiesRes, invoicesRes, vendorsRes, employeesRes] = await Promise.all([
         fetch(`${API_BASE}/api/fp/dashboard`, {
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         }),
@@ -181,15 +183,23 @@ const FPDashboard = ({ user }) => {
         }),
         fetch(`${API_BASE}/api/payments/invoices`, {
           headers: { 'Authorization': `Bearer ${token}` }
+        }).catch(() => ({ ok: false })),
+        fetch(`${API_BASE}/api/fp/vendors`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).catch(() => ({ ok: false })),
+        fetch(`${API_BASE}/api/fp/employees`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         }).catch(() => ({ ok: false }))
       ]);
       
-      const [dashResult, estResult, woResult, propResult, invResult] = await Promise.all([
+      const [dashResult, estResult, woResult, propResult, invResult, vendorResult, empResult] = await Promise.all([
         dashboardRes.json(), 
         estimatesRes.json(), 
         workOrdersRes.json(), 
         propertiesRes.json(),
-        invoicesRes.ok ? invoicesRes.json() : { success: false, data: [] }
+        invoicesRes.ok ? invoicesRes.json() : { success: false, data: [] },
+        vendorsRes.ok ? vendorsRes.json() : { success: false, data: [] },
+        employeesRes.ok ? employeesRes.json() : { success: false, data: [] }
       ]);
       
       if (dashResult.success) {
@@ -212,6 +222,14 @@ const FPDashboard = ({ user }) => {
       
       if (invResult.success && Array.isArray(invResult.data)) {
         setInvoices(invResult.data);
+      }
+      
+      if (vendorResult.success && Array.isArray(vendorResult.data)) {
+        setVendors(vendorResult.data);
+      }
+      
+      if (empResult.success && Array.isArray(empResult.data)) {
+        setEmployees(empResult.data);
       }
     } catch (err) {
       console.error('Dashboard fetch error:', err);
@@ -310,6 +328,23 @@ const FPDashboard = ({ user }) => {
     end.setHours(23, 59, 59, 999);
     return pDate >= start && pDate <= end;
   }) : properties;
+
+  const dateFilteredVendors = startDate && endDate ? vendors.filter(v => {
+    const vDate = new Date(v.created_at || v.createdAt || v.onboarded_at);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return vDate >= start && vDate <= end;
+  }) : vendors;
+
+  // Computed real-time stats from actual data arrays
+  const realTimeStats = {
+    properties: dateFilteredProperties.length || properties.length,
+    vendors: dateFilteredVendors.length || vendors.length,
+    employees: employees.length, // Employees typically not date-filtered
+    workOrders: dateFilteredWorkOrders.length,
+    estimates: dateFilteredEstimates.length
+  };
 
   // Helper function to normalize status
   const getWOStatus = (wo) => (wo.status || '').toString().trim().toLowerCase().replace(/[_\s-]/g, '');
