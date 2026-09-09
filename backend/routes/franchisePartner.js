@@ -6565,7 +6565,7 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
       JOIN onboarded_properties op ON op.id = sv.property_id
-      LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
+      LEFT JOIN onboarded_vendors ov ON (ov.id = pss.vendor_id OR ov.vendor_id = pss.vendor_id)
       ${whereClause}
     `;
     console.log('[FP All Schedules] Count params:', params);
@@ -6611,7 +6611,7 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
       JOIN onboarded_properties op ON op.id = sv.property_id
       LEFT JOIN property_contacts pc ON pc.property_id = op.id
-      LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
+      LEFT JOIN onboarded_vendors ov ON (ov.id = pss.vendor_id OR ov.vendor_id = pss.vendor_id)
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
       ${whereClause}
       ORDER BY sv.scheduled_date DESC, sv.scheduled_time_start ASC
@@ -6639,7 +6639,7 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
       JOIN onboarded_properties op ON op.id = sv.property_id
-      LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
+      LEFT JOIN onboarded_vendors ov ON (ov.id = pss.vendor_id OR ov.vendor_id = pss.vendor_id)
       ${statsWhereClause}
       GROUP BY sv.status
     `;
