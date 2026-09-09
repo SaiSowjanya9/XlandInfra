@@ -241,14 +241,24 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     debug('[DEBUG] Zone was mapped:', propZoneDebug.wasMapped ? `YES (${propZoneDebug.original} → ${propZoneDebug.normalized})` : 'NO (direct match or unknown)');
     
     try {
-      // Load vendors from API only (test vendors only used as fallback if API fails)
+      // Load vendors from API database (not localStorage)
       let vendorData = [];
       try {
-        const apiVendors = await getVendors();
-        debug('[DEBUG] Vendors loaded from API:', apiVendors?.length || 0);
+        const token = getAuthToken();
+        const response = await fetch(`${API_BASE}/api/vendors?status=active`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         
-        // Use only API vendors - no merging with test data
-        vendorData = apiVendors || [];
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && Array.isArray(result.data)) {
+            vendorData = result.data;
+            debug('[DEBUG] Vendors loaded from API database:', vendorData.length);
+          }
+        }
         
         if (vendorData.length === 0) {
           console.warn('[DEBUG] No vendors from API, falling back to test vendors');
