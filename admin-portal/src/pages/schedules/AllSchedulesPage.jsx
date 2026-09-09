@@ -282,12 +282,13 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       <head>
         <title>Schedule Report - XLAND INFRA</title>
         <style>
-          body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-          .header { background: #3a3a3a; padding: 12px 20px; text-align: center; }
-          .header-title { color: #D39A1A; font-size: 16px; font-weight: bold; letter-spacing: 1px; }
-          .header-subtitle { color: #D39A1A; font-size: 9px; letter-spacing: 2px; margin-top: 2px; }
-          .report-title { background: #D39A1A; color: white; text-align: center; padding: 8px; font-weight: 600; font-size: 12px; margin-bottom: 15px; }
-          .content { padding: 0 20px 20px 20px; }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; }
+          .header { background: #3a3a3a; padding: 10px 0; text-align: center; width: 100%; }
+          .header-title { color: #D39A1A; font-size: 15px; font-weight: bold; letter-spacing: 1px; display: inline; }
+          .header-subtitle { color: #D39A1A; font-size: 8px; letter-spacing: 2px; display: inline; margin-left: 5px; }
+          .report-title { background: #D39A1A; color: white; text-align: center; padding: 6px 0; font-weight: 600; font-size: 11px; width: 100%; }
+          .content { padding: 15px 20px; }
           table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
           th { background: #f3f4f6; padding: 8px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; }
           td { padding: 8px; border: 1px solid #e5e7eb; }
@@ -301,8 +302,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       </head>
       <body>
         <div class="header">
-          <div class="header-title">XLAND INFRA</div>
-          <div class="header-subtitle">PVT LTD</div>
+          <span class="header-title">XLAND INFRA</span>
+          <span class="header-subtitle">— PVT LTD —</span>
         </div>
         <div class="report-title">SCHEDULE REPORT</div>
         <div class="content">
