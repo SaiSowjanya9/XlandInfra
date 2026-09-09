@@ -3189,17 +3189,24 @@ router.get('/schedules/all', requireManagerScope, async (req, res) => {
       params.push(propertyType);
     }
     
-    // Get total count
+    // Get total count - handle both numeric and string property_id
     const countQuery = `
       SELECT COUNT(*) as total
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
+      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${whereClause}
     `;
-    const [countResult] = await pool.execute(countQuery, params);
-    const total = countResult[0].total;
+    
+    let total = 0;
+    try {
+      const [countResult] = await pool.execute(countQuery, params);
+      total = countResult[0].total;
+      console.log('[Manager All Schedules] Total count:', total);
+    } catch (countErr) {
+      console.log('[Manager All Schedules] Count query failed:', countErr.message);
+    }
     
     // Get schedules with pagination
     const query = `
@@ -3230,7 +3237,7 @@ router.get('/schedules/all', requireManagerScope, async (req, res) => {
         wo.status as workOrderStatus
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
+      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
       LEFT JOIN property_contacts pc ON pc.property_id = op.id
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
@@ -3240,20 +3247,33 @@ router.get('/schedules/all', requireManagerScope, async (req, res) => {
     `;
     
     params.push(parseInt(limit), offset);
-    const [schedules] = await pool.execute(query, params);
+    let schedules = [];
+    try {
+      const [result] = await pool.execute(query, params);
+      schedules = result;
+      console.log('[Manager All Schedules] Found schedules:', schedules.length);
+    } catch (queryErr) {
+      console.log('[Manager All Schedules] Main query failed:', queryErr.message);
+    }
     
     // Calculate stats
     const statsQuery = `
       SELECT sv.status, COUNT(*) as count
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
+      JOIN onboarded_properties op ON (op.id = sv.property_id OR op.property_id = sv.property_id)
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       WHERE op.franchise_partner_id = ?
       GROUP BY sv.status
     `;
     
-    const [statusCounts] = await pool.execute(statsQuery, [franchisePartnerId]);
+    let statusCounts = [];
+    try {
+      const [result] = await pool.execute(statsQuery, [franchisePartnerId]);
+      statusCounts = result;
+    } catch (statsErr) {
+      console.log('[Manager All Schedules] Stats query failed:', statsErr.message);
+    }
     
     const stats = {
       total: 0,
