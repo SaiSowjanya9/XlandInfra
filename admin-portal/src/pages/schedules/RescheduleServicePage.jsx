@@ -95,14 +95,14 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
   }, [selectedProperty]);
 
   const generateMockSchedules = () => [
-    { id: 1, property_id: 'PROP-001', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Basic AMC', currentDate: '2026-08-10', time: '10:00 AM - 11:00 AM', status: 'completed' },
-    { id: 2, property_id: 'PROP-001', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Basic AMC', currentDate: '2026-09-10', time: '10:00 AM - 11:00 AM', status: 'scheduled' },
-    { id: 3, property_id: 'PROP-002', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Standard AMC', currentDate: '2026-10-10', time: '10:00 AM - 11:00 AM', status: 'scheduled' },
-    { id: 4, property_id: 'PROP-002', service: 'Plumbing', vendor: 'Aqua Plumbing', zone: 'Zone B', package: 'Standard AMC', currentDate: '2026-09-15', time: '02:00 PM - 03:00 PM', status: 'scheduled' },
-    { id: 5, property_id: 'PROP-003', service: 'Plumbing', vendor: 'Aqua Plumbing', zone: 'Zone B', package: 'Premium AMC', currentDate: '2026-10-15', time: '02:00 PM - 03:00 PM', status: 'scheduled' },
-    { id: 6, property_id: 'PROP-003', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone C', package: 'Premium AMC', currentDate: '2026-10-05', time: '11:30 AM - 12:30 PM', status: 'scheduled' },
-    { id: 7, property_id: 'PROP-004', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone C', package: 'Basic AMC', currentDate: '2026-11-05', time: '11:30 AM - 12:30 PM', status: 'scheduled' },
-    { id: 8, property_id: 'PROP-005', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone D', package: 'Standard AMC', currentDate: '2026-12-05', time: '11:30 AM - 12:30 PM', status: 'scheduled' }
+    { id: 1, property_id: 'PROP-001', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Basic AMC', actualDate: '2026-08-09', actualTime: '10:00 AM - 11:00 AM', rescheduledDate: '2026-08-15', rescheduledTime: '11:00 AM - 12:00 PM' },
+    { id: 2, property_id: 'PROP-001', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Basic AMC', actualDate: '2026-09-09', actualTime: '10:00 AM - 11:00 AM', rescheduledDate: '2026-09-16', rescheduledTime: '10:00 AM - 11:00 AM' },
+    { id: 3, property_id: 'PROP-002', service: 'HVAC', vendor: 'ABC HVAC', zone: 'Zone A', package: 'Standard AMC', actualDate: '2026-10-09', actualTime: '10:00 AM - 11:00 AM', rescheduledDate: '2026-10-18', rescheduledTime: '02:00 PM - 03:00 PM' },
+    { id: 4, property_id: 'PROP-002', service: 'Plumbing', vendor: 'Aqua Plumbing', zone: 'Zone B', package: 'Standard AMC', actualDate: '2026-09-14', actualTime: '02:00 PM - 03:00 PM', rescheduledDate: '2026-09-20', rescheduledTime: '03:00 PM - 04:00 PM' },
+    { id: 5, property_id: 'PROP-003', service: 'Plumbing', vendor: 'Aqua Plumbing', zone: 'Zone B', package: 'Premium AMC', actualDate: '2026-10-14', actualTime: '02:00 PM - 03:00 PM', rescheduledDate: '2026-10-21', rescheduledTime: '02:00 PM - 03:00 PM' },
+    { id: 6, property_id: 'PROP-003', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone C', package: 'Premium AMC', actualDate: '2026-10-04', actualTime: '11:30 AM - 12:30 PM', rescheduledDate: '2026-10-10', rescheduledTime: '11:30 AM - 12:30 PM' },
+    { id: 7, property_id: 'PROP-004', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone C', package: 'Basic AMC', actualDate: '2026-11-04', actualTime: '11:30 AM - 12:30 PM', rescheduledDate: '2026-11-12', rescheduledTime: '10:00 AM - 11:00 AM' },
+    { id: 8, property_id: 'PROP-005', service: 'Lift', vendor: 'Elevate Engineers', zone: 'Zone D', package: 'Standard AMC', actualDate: '2026-12-04', actualTime: '11:30 AM - 12:30 PM', rescheduledDate: '2026-12-11', rescheduledTime: '11:30 AM - 12:30 PM' }
   ];
 
   const fetchProperties = async () => {
@@ -439,15 +439,14 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Property ID</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Service</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Vendor</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Current Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Time</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Actual Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Rescheduled Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {paginatedSchedules.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-12 text-center">
+                      <td colSpan={5} className="px-4 py-12 text-center">
                         <div className="flex flex-col items-center">
                           <Calendar className="w-12 h-12 text-gray-300 mb-3" />
                           <p className="text-gray-500 font-medium">No visits found</p>
@@ -467,12 +466,13 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700">{schedule.service}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{schedule.vendor}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{formatDate(schedule.currentDate)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{schedule.time}</td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadge(schedule.status)}`}>
-                          {schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}
-                        </span>
+                        <div className="text-sm text-gray-700">{formatDate(schedule.actualDate || schedule.currentDate)}</div>
+                        <div className="text-xs text-gray-500">{schedule.actualTime || schedule.time}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm text-gray-700">{formatDate(schedule.rescheduledDate)}</div>
+                        <div className="text-xs text-gray-500">{schedule.rescheduledTime || '-'}</div>
                       </td>
                     </tr>
                   ))}
