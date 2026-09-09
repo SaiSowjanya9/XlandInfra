@@ -1352,6 +1352,75 @@ router.get('/vendors/assignments', async (req, res) => {
   }
 });
 
+// Create vendor assignment (Admin can assign any vendor to any property)
+router.post('/vendors/assignments', authenticate, async (req, res) => {
+  try {
+    const { propertyId, vendorId, serviceType } = req.body;
+
+    if (!propertyId || !vendorId) {
+      return res.status(400).json({ success: false, message: 'Property ID and Vendor ID are required' });
+    }
+
+    // Verify property exists
+    const [property] = await pool.execute(
+      `SELECT id FROM onboarded_properties WHERE id = ?`,
+      [propertyId]
+    );
+
+    if (property.length === 0) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
+
+    // Verify vendor exists
+    const [vendor] = await pool.execute(
+      `SELECT id, company_name, owner_name FROM onboarded_vendors WHERE id = ?`,
+      [vendorId]
+    );
+
+    if (vendor.length === 0) {
+      return res.status(404).json({ success: false, message: 'Vendor not found' });
+    }
+
+    // Check if assignment already exists
+    const [existing] = await pool.execute(
+      `SELECT id, is_active FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND service_type = ?`,
+      [propertyId, vendorId, serviceType || null]
+    );
+
+    if (existing.length > 0) {
+      if (existing[0].is_active) {
+        return res.json({ success: true, message: 'Vendor already assigned to this service' });
+      }
+      // Reactivate existing assignment
+      await pool.execute(
+        `UPDATE property_vendor_assignments SET is_active = 1, assigned_at = NOW(), assigned_by = ? WHERE id = ?`,
+        [req.user.id, existing[0].id]
+      );
+    } else {
+      // Deactivate previous assignments for this service
+      if (serviceType) {
+        await pool.execute(
+          `UPDATE property_vendor_assignments SET is_active = 0 WHERE property_id = ? AND service_type = ? AND is_active = 1`,
+          [propertyId, serviceType]
+        );
+      }
+
+      // Create new assignment
+      await pool.execute(
+        `INSERT INTO property_vendor_assignments (property_id, vendor_id, service_type, assigned_by, assigned_at, is_active)
+         VALUES (?, ?, ?, ?, NOW(), 1)`,
+        [propertyId, vendorId, serviceType || null, req.user.id]
+      );
+    }
+
+    const vendorName = vendor[0].company_name || vendor[0].owner_name;
+    res.json({ success: true, message: `Vendor ${vendorName} assigned successfully` });
+  } catch (error) {
+    console.error('Create vendor assignment error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create assignment', error: error.message });
+  }
+});
+
 // Delete work order (Admin only)
 router.delete('/work-orders/:id', authenticate, managerOrAdmin, async (req, res) => {
   try {
