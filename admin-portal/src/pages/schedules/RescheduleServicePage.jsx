@@ -233,6 +233,56 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
     }
   };
 
+  // Restore schedule to original date
+  const handleRestoreSchedule = async (schedule) => {
+    const originalDate = schedule.actualDate || schedule.originalDate;
+    const originalTime = schedule.actualTime || schedule.originalTime;
+    
+    if (!originalDate) {
+      alert('Original date not found. Cannot restore.');
+      return;
+    }
+    
+    const confirmMsg = `Restore this schedule to its original date?\n\nOriginal: ${formatDate(originalDate)} ${originalTime || ''}\nCurrent: ${formatDate(schedule.rescheduledDate || schedule.scheduledDate)}`;
+    
+    if (!confirm(confirmMsg)) return;
+    
+    setSubmitting(true);
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE}/api/${apiPath}/schedules/${schedule.id}/restore`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          originalDate: originalDate,
+          originalTime: originalTime?.split(' - ')[0] || '10:00'
+        })
+      });
+      
+      if (response.ok) {
+        alert('Schedule restored to original date successfully!');
+        // Refresh the list
+        if (selectedProperty) {
+          fetchPropertySchedules(selectedProperty.id);
+        } else {
+          // Refresh mock data by removing the restored item
+          setSchedules(prev => prev.filter(s => s.id !== schedule.id));
+        }
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Failed to restore schedule');
+      }
+    } catch (error) {
+      console.error('Error restoring schedule:', error);
+      alert('Error restoring schedule');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const formatDate = (date) => {
     if (!date) return '-';
     return new Date(date).toLocaleDateString('en-US', { 
@@ -433,17 +483,18 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Property ID</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Service</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Vendor</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Actual Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Rescheduled Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Original Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Rescheduled To</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {paginatedSchedules.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-12 text-center">
+                      <td colSpan={6} className="px-4 py-12 text-center">
                         <div className="flex flex-col items-center">
                           <Calendar className="w-12 h-12 text-gray-300 mb-3" />
-                          <p className="text-gray-500 font-medium">No visits found</p>
+                          <p className="text-gray-500 font-medium">No rescheduled visits found</p>
                           <p className="text-gray-400 text-sm mt-1">
                             {selectedProperty ? 'Try adjusting your filters' : 'Select a property to view schedules'}
                           </p>
@@ -458,15 +509,38 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                       <td className="px-4 py-3">
                         <span className="text-sm font-medium text-blue-600">{schedule.property_id || schedule.propertyId || `PROP-${String(schedule.id).padStart(3, '0')}`}</span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{schedule.service}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{schedule.vendor}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{schedule.service || schedule.serviceName}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{schedule.vendor || schedule.vendorName}</td>
                       <td className="px-4 py-3">
-                        <div className="text-sm text-gray-700">{formatDate(schedule.actualDate || schedule.currentDate)}</div>
-                        <div className="text-xs text-gray-500">{schedule.actualTime || schedule.time}</div>
+                        <div className="text-sm text-gray-700">{formatDate(schedule.actualDate || schedule.originalDate)}</div>
+                        <div className="text-xs text-gray-500">{schedule.actualTime || schedule.originalTime || '-'}</div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="text-sm text-gray-700">{formatDate(schedule.rescheduledDate)}</div>
-                        <div className="text-xs text-gray-500">{schedule.rescheduledTime || '-'}</div>
+                        <div className="text-sm font-medium text-orange-600">{formatDate(schedule.rescheduledDate || schedule.scheduledDate)}</div>
+                        <div className="text-xs text-gray-500">{schedule.rescheduledTime || schedule.scheduledTime || '-'}</div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleRestoreSchedule(schedule)}
+                            className="px-3 py-1.5 text-xs font-medium bg-green-100 text-green-700 rounded-lg hover:bg-green-200 flex items-center gap-1"
+                            title="Restore to original date"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            Restore
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedSchedule(schedule);
+                              setShowReschedulePanel(true);
+                            }}
+                            className="px-3 py-1.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 flex items-center gap-1"
+                            title="Reschedule again"
+                          >
+                            <Calendar className="w-3 h-3" />
+                            Reschedule
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

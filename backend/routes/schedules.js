@@ -1781,6 +1781,69 @@ router.put('/visits/:visitId/reschedule', authenticate, canMakeSchedule, async (
   }
 });
 
+// Restore a rescheduled visit to its original date
+router.post('/visits/:visitId/restore', authenticate, canMakeSchedule, async (req, res) => {
+  try {
+    const { visitId } = req.params;
+    const { originalDate, originalTime } = req.body;
+
+    // Get the current visit
+    const [visits] = await pool.execute(
+      `SELECT * FROM scheduled_visits WHERE id = ? OR visit_id = ?`,
+      [visitId, visitId]
+    );
+
+    if (visits.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Visit not found'
+      });
+    }
+
+    const visit = visits[0];
+    
+    // Use provided original date or the stored original_date
+    const restoreDate = originalDate || visit.original_date;
+    const restoreTime = originalTime || visit.scheduled_time_start;
+    
+    if (!restoreDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Original date not available for restoration'
+      });
+    }
+
+    // Restore the visit to original date
+    await pool.execute(
+      `UPDATE scheduled_visits 
+       SET scheduled_date = ?,
+           scheduled_time_start = ?,
+           original_date = NULL,
+           status = 'scheduled',
+           updated_at = NOW()
+       WHERE id = ?`,
+      [restoreDate, restoreTime, visit.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Schedule restored to original date successfully',
+      data: {
+        visitId: visit.id,
+        restoredDate: restoreDate,
+        restoredTime: restoreTime
+      }
+    });
+  } catch (error) {
+    console.error('Error restoring visit:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error restoring visit',
+      error: error.message
+    });
+  }
+});
+
 // Cancel a visit
 router.put('/visits/:visitId/cancel', authenticate, canMakeSchedule, async (req, res) => {
   try {

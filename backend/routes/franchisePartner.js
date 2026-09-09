@@ -6728,6 +6728,84 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
   }
 });
 
+// Restore a rescheduled visit to its original date
+router.post('/schedules/:visitId/restore', authenticate, attachFPScope, async (req, res) => {
+  try {
+    const { visitId } = req.params;
+    const { originalDate, originalTime } = req.body;
+    
+    console.log('[FP Restore Schedule] Restoring visit:', visitId);
+
+    // Get the current visit
+    const [visits] = await pool.execute(
+      `SELECT sv.*, op.franchise_partner_id 
+       FROM scheduled_visits sv
+       JOIN onboarded_properties op ON op.id = sv.property_id
+       WHERE (sv.id = ? OR sv.visit_id = ?)`,
+      [visitId, visitId]
+    );
+
+    if (visits.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Visit not found'
+      });
+    }
+
+    const visit = visits[0];
+    
+    // Verify FP owns this property
+    if (visit.franchise_partner_id !== req.fpId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied - visit does not belong to your franchise'
+      });
+    }
+    
+    // Use provided original date or the stored original_date
+    const restoreDate = originalDate || visit.original_date;
+    const restoreTime = originalTime || visit.scheduled_time_start;
+    
+    if (!restoreDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Original date not available for restoration'
+      });
+    }
+
+    // Restore the visit to original date
+    await pool.execute(
+      `UPDATE scheduled_visits 
+       SET scheduled_date = ?,
+           scheduled_time_start = ?,
+           original_date = NULL,
+           status = 'scheduled',
+           updated_at = NOW()
+       WHERE id = ?`,
+      [restoreDate, restoreTime, visit.id]
+    );
+
+    console.log('[FP Restore Schedule] Successfully restored visit', visitId, 'to', restoreDate);
+
+    res.json({
+      success: true,
+      message: 'Schedule restored to original date successfully',
+      data: {
+        visitId: visit.id,
+        restoredDate: restoreDate,
+        restoredTime: restoreTime
+      }
+    });
+  } catch (error) {
+    console.error('Error restoring visit:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error restoring visit',
+      error: error.message
+    });
+  }
+});
+
 // Get eligible vendors for a service
 router.get('/schedules/eligible-vendors', async (req, res) => {
   try {
