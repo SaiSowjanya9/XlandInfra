@@ -22,6 +22,7 @@ const {
   getClientIP,
   hashIP
 } = require('../utils/paymentSecurity');
+const { markPaymentCompleted } = require('../services/schedulingWorkflow');
 
 // Environment variables for Razorpay
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || '';
@@ -829,6 +830,23 @@ async function handlePaymentLinkPaid(payload, webhookId) {
           updated_at = NOW()
         WHERE id = ? AND status = 'completed'
       `, [invoice.work_order_id]);
+    }
+
+    // Trigger scheduling workflow when invoice is fully paid
+    if (newBalance <= 0 && invoice.property_id && invoice.estimate_id) {
+      try {
+        await markPaymentCompleted({
+          propertyId: invoice.property_id,
+          estimateId: invoice.estimate_id,
+          invoiceId: invoice.id,
+          paidAmount: newAmountPaid,
+          paidBy: 'Razorpay Online Payment'
+        });
+        console.log(`[Webhook] Scheduling workflow triggered for property ${invoice.property_id}`);
+      } catch (scheduleErr) {
+        console.error('[Webhook] Error triggering scheduling workflow:', scheduleErr);
+        // Don't fail payment if scheduling fails
+      }
     }
 
     // Extract Razorpay payment details for receipt
