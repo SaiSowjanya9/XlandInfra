@@ -2566,14 +2566,14 @@ router.post('/vendors/assignments', requireFPScope, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Property not found or access denied' });
     }
 
-    // Verify vendor belongs to this FP
+    // Verify vendor exists and is active (FP can use any available vendor)
     const [vendor] = await pool.execute(
-      `SELECT id, company_name, owner_name FROM onboarded_vendors WHERE id = ? AND franchise_partner_id = ?`,
-      [vendorId, fpId]
+      `SELECT id, company_name, owner_name FROM onboarded_vendors WHERE id = ? AND status = 'active'`,
+      [vendorId]
     );
 
     if (vendor.length === 0) {
-      return res.status(404).json({ success: false, message: 'Vendor not found or access denied' });
+      return res.status(404).json({ success: false, message: 'Vendor not found or inactive' });
     }
 
     // Check if assignment already exists
