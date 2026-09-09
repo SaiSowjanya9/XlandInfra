@@ -605,6 +605,75 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     }
   };
 
+  // Handle cancel all schedules for a property
+  const handleCancelPropertySchedules = (property) => {
+    const allVisits = Object.values(property.services).flatMap(s => s.visits);
+    const activeVisits = allVisits.filter(v => v.status !== 'completed' && v.status !== 'cancelled');
+    
+    if (activeVisits.length === 0) {
+      alert('No active schedules to cancel for this property.');
+      return;
+    }
+    
+    const confirmMsg = `Are you sure you want to cancel all ${activeVisits.length} active schedule(s) for property ${property.propertyId}?`;
+    if (!confirm(confirmMsg)) return;
+    
+    const reason = prompt('Please provide a reason for cancellation:');
+    if (!reason || !reason.trim()) {
+      alert('Cancellation reason is required.');
+      return;
+    }
+    
+    // Cancel all active visits
+    cancelMultipleSchedules(activeVisits, reason);
+  };
+
+  // Cancel multiple schedules
+  const cancelMultipleSchedules = async (visits, reason) => {
+    setCancelling(true);
+    let successCount = 0;
+    let failCount = 0;
+    
+    try {
+      const token = getAuthToken();
+      
+      for (const visit of visits) {
+        try {
+          const response = await fetch(`${API_BASE}/api/${apiPath}/schedules/${visit.id}/cancel`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ reason })
+          });
+          
+          if (response.ok) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (err) {
+          failCount++;
+        }
+      }
+      
+      // Refresh the list
+      fetchSchedules(true);
+      
+      if (failCount === 0) {
+        alert(`Successfully cancelled ${successCount} schedule(s).`);
+      } else {
+        alert(`Cancelled ${successCount} schedule(s). ${failCount} failed.`);
+      }
+    } catch (error) {
+      console.error('Error cancelling schedules:', error);
+      alert('Error cancelling schedules');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   // Open reschedule modal
   // Open reschedule modal from header button (show all schedules list)
   const openRescheduleModal = () => {
@@ -1020,13 +1089,33 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleScheduleDetails(serviceList[0]?.visits[0]); }}
-                              className="p-1.5 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded border border-emerald-200"
-                              title="View Details"
-                            >
-                              <FileText className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleScheduleDetails(serviceList[0]?.visits[0]); }}
+                                className="p-1.5 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded border border-emerald-200"
+                                title="View Details"
+                              >
+                                <FileText className="w-4 h-4" />
+                              </button>
+                              {permissions.canReschedule && (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); handleReschedule(serviceList[0]?.visits[0]); }}
+                                  className="p-1.5 text-orange-500 hover:text-orange-700 hover:bg-orange-50 rounded border border-orange-200"
+                                  title="Reschedule"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                              )}
+                              {permissions.canCancel && (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); handleCancelPropertySchedules(property); }}
+                                  className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded border border-red-200"
+                                  title="Cancel All Schedules"
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                         
@@ -1624,7 +1713,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                     <p className="text-sm text-gray-500">No schedules found{serviceFilter ? ` for "${serviceFilter}"` : ''}</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {/* Group schedules by service */}
                     {Object.entries(
                       filteredPropertySchedules.reduce((acc, schedule) => {
@@ -1642,42 +1731,50 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                         return acc;
                       }, {})
                     ).map(([serviceName, serviceData], idx) => (
-                      <div key={serviceName} className="border border-gray-200 rounded-lg overflow-hidden">
-                        {/* Service Header */}
-                        <div className="bg-gray-100 px-4 py-2 flex items-center justify-between">
-                          <div>
-                            <span className="font-semibold text-gray-800">{serviceName}</span>
-                            <span className="ml-2 text-xs text-gray-500">({serviceData.frequency?.replace(/_/g, ' ') || 'N/A'})</span>
-                          </div>
-                          <div className="text-sm">
-                            <span className="text-gray-500">Vendor:</span>
-                            <span className="ml-1 font-medium text-gray-700">{serviceData.vendorName || '-'}</span>
-                            <span className="mx-2 text-gray-300">|</span>
-                            <span className="text-gray-500">Total:</span>
-                            <span className="ml-1 font-medium text-gray-700">{serviceData.totalVisits} visits</span>
+                      <div key={serviceName} className="border border-gray-200 rounded-lg bg-white">
+                        {/* Service Header - Clean style like Image 2 */}
+                        <div className="px-4 py-3 border-b border-gray-100">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-bold text-gray-900 text-base">{serviceName} - Visit Schedule</h3>
+                              <p className="text-sm text-gray-500 mt-0.5">{serviceData.visits.length} visits scheduled • Vendor: {serviceData.vendorName || 'Unassigned'}</p>
+                            </div>
                           </div>
                         </div>
-                        {/* Visits Grid */}
-                        <div className="p-3 grid grid-cols-6 gap-2">
-                          {serviceData.visits
-                            .sort((a, b) => a.visitNumber - b.visitNumber)
-                            .map((visit, vIdx) => {
-                              const statusStyle = getStatusBadge(visit.status);
-                              return (
-                                <div 
-                                  key={visit.id || vIdx} 
-                                  className={`text-center p-2 rounded border text-xs ${
-                                    visit.status === 'completed' 
-                                      ? 'bg-green-50 border-green-200' 
-                                      : 'bg-blue-50 border-blue-200'
-                                  }`}
-                                >
-                                  <div className="font-semibold text-gray-800">V{visit.visitNumber}</div>
-                                  <div className="text-gray-600">{formatDate(visit.scheduledDate)}</div>
-                                  <div className="text-gray-500">{formatTime(visit.scheduledTime)}</div>
-                                </div>
-                              );
-                            })}
+                        {/* Visits - Horizontal scroll layout like Image 2 */}
+                        <div className="p-4 overflow-x-auto">
+                          <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
+                            {serviceData.visits
+                              .sort((a, b) => a.visitNumber - b.visitNumber)
+                              .map((visit, vIdx) => {
+                                const isCompleted = visit.status === 'completed';
+                                const isCancelled = visit.status === 'cancelled';
+                                return (
+                                  <div 
+                                    key={visit.id || vIdx} 
+                                    className={`flex-shrink-0 w-28 rounded-lg border-2 p-3 text-center ${
+                                      isCompleted 
+                                        ? 'border-green-400 bg-green-50' 
+                                        : isCancelled
+                                        ? 'border-red-300 bg-red-50'
+                                        : 'border-blue-400 bg-blue-50'
+                                    }`}
+                                  >
+                                    <div className="text-xs text-gray-500 mb-1">Visit {visit.visitNumber}</div>
+                                    <div className="font-bold text-gray-900 text-sm">{formatDate(visit.scheduledDate)}</div>
+                                    <div className="text-xs text-gray-600 mt-1">{formatTime(visit.scheduledTime)}</div>
+                                    <div className={`mt-2 text-xs font-medium px-2 py-0.5 rounded-full inline-block ${
+                                      isCompleted 
+                                        ? 'bg-green-100 text-green-700' 
+                                        : isCancelled
+                                        ? 'bg-red-100 text-red-700'
+                                        : 'bg-blue-100 text-blue-700'
+                                    }`}>
+                                      {isCompleted ? 'Completed' : isCancelled ? 'Cancelled' : 'Scheduled'}
+                                    </div>
+                                  </div>
+                                );
+                              })}
                         </div>
                       </div>
                     ))}
