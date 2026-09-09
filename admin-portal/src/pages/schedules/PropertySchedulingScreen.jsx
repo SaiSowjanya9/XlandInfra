@@ -776,8 +776,8 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     
     setPlannedVisits(updatedVisits);
     
-    // Go to confirmation after a brief delay for state to update
-    setTimeout(() => handlePrepareConfirmation(), 100);
+    // Pass visits directly to confirmation to avoid state timing issues
+    handlePrepareConfirmation(updatedVisits);
   };
 
   // Apply recommended date to all monthly visits
@@ -830,8 +830,8 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         
         setPlannedVisits(updatedVisits);
         
-        // Wait for state update then open confirmation
-        setTimeout(() => handlePrepareConfirmation(), 100);
+        // Pass visits directly to confirmation to avoid state timing issues
+        handlePrepareConfirmation(updatedVisits);
         return;
       }
     }
@@ -840,14 +840,17 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   };
 
   // Prepare schedule for confirmation
-  const handlePrepareConfirmation = () => {
+  // Can optionally pass visits directly to avoid state timing issues
+  const handlePrepareConfirmation = (directVisits = null) => {
     if (!selectedService) return;
-    if (!selectedSlot && plannedVisits.length === 0) return;
+    
+    const visitsToUse = directVisits || plannedVisits;
+    if (!selectedSlot && visitsToUse.length === 0) return;
     
     // Generate confirmation schedule with target dates and recommended dates
     // Preserve isEdited flag from planned visits
     const defaultTime = selectedSlot?.time || '10:00 AM';
-    const schedule = plannedVisits.map((visit, index) => ({
+    const schedule = visitsToUse.map((visit, index) => ({
       visitNumber: visit.visitNumber,
       targetDate: visit.date,
       targetDateStr: visit.dateStr || visit.shortDateStr,
