@@ -1575,37 +1575,33 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             {/* PDF Content Area */}
             <div className="overflow-y-auto max-h-[calc(95vh-160px)]">
               <div ref={scheduleDetailsRef} className="p-5 bg-white">
-                {/* PDF Header with Logo Banner */}
-                <div className="mb-5 pb-4 border-b border-gray-300">
-                  <div className="flex items-center justify-center gap-4 mb-2">
-                    <img src="/logo.webp" alt="XLAND INFRA" className="h-14 w-14 object-contain" />
-                    <div className="text-center">
-                      <h1 className="text-xl font-bold text-gray-800 mb-0.5">XLAND INFRA</h1>
-                      <p className="text-gray-500 text-xs">Property Maintenance Services</p>
+                {/* PDF Header with Logo Banner - matching Invoice style */}
+                <div className="mb-5">
+                  <div className="bg-[#1a1a1a] px-6 py-4 rounded-t-lg">
+                    <div className="flex items-center justify-center gap-3">
+                      <img src="/logo.webp" alt="XLAND INFRA" className="h-14 w-14 object-contain" />
+                      <div className="flex flex-col justify-center">
+                        <h1 className="text-[#D39A1A] text-lg font-bold tracking-wider leading-tight">XLAND INFRA</h1>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <div className="w-5 h-[1px] bg-[#D39A1A]"></div>
+                          <span className="text-[#D39A1A] text-[8px] tracking-[0.12em]">PVT LTD</span>
+                          <div className="w-5 h-[1px] bg-[#D39A1A]"></div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <p className="text-center mt-2 text-sm font-medium text-gray-700 bg-gray-100 py-1 rounded">Schedule Report</p>
+                  <div className="bg-[#D39A1A] text-center py-2 rounded-b-lg">
+                    <span className="text-white font-semibold text-sm tracking-wide">SCHEDULE REPORT</span>
+                  </div>
                 </div>
 
-                {/* Property Info Summary */}
+                {/* Property Info Summary - Single Line */}
                 <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="grid grid-cols-4 gap-3 text-sm">
-                    <div>
-                      <span className="text-gray-500">Property:</span>
-                      <span className="ml-1 font-medium text-gray-800">{scheduleDetailsData.propertyId}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Name:</span>
-                      <span className="ml-1 font-medium text-gray-800">{scheduleDetailsData.propertyName}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Customer:</span>
-                      <span className="ml-1 text-gray-700">{scheduleDetailsData.customerName || '-'}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Zone:</span>
-                      <span className="ml-1 text-gray-700">{scheduleDetailsData.zone || '-'}</span>
-                    </div>
+                  <div className="flex items-center justify-between text-sm whitespace-nowrap">
+                    <span><span className="text-gray-500">Property:</span> <span className="font-medium text-gray-800">{scheduleDetailsData.propertyId}</span></span>
+                    <span><span className="text-gray-500">Name:</span> <span className="font-medium text-gray-800">{scheduleDetailsData.propertyName}</span></span>
+                    <span><span className="text-gray-500">Customer:</span> <span className="text-gray-700">{scheduleDetailsData.customerName || '-'}</span></span>
+                    <span><span className="text-gray-500">Zone:</span> <span className="text-gray-700">{scheduleDetailsData.zone || '-'}</span></span>
                   </div>
                 </div>
 
