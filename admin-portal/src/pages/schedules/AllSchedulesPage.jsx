@@ -282,11 +282,12 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       <head>
         <title>Schedule Report - XLAND INFRA</title>
         <style>
-          body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-          .header { background: #3a3a3a; padding: 16px 24px; text-align: center; border-radius: 8px 8px 0 0; margin: 0 auto; max-width: 600px; }
-          .header-title { color: #D39A1A; font-size: 18px; font-weight: bold; letter-spacing: 1px; }
-          .header-subtitle { color: #D39A1A; font-size: 10px; letter-spacing: 2px; margin-top: 4px; }
-          .report-title { background: #D39A1A; color: white; text-align: center; padding: 10px; font-weight: 600; font-size: 14px; border-radius: 0 0 8px 8px; margin: 0 auto 20px auto; max-width: 600px; }
+          body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+          .header { background: #3a3a3a; padding: 12px 20px; text-align: center; }
+          .header-title { color: #D39A1A; font-size: 16px; font-weight: bold; letter-spacing: 1px; }
+          .header-subtitle { color: #D39A1A; font-size: 9px; letter-spacing: 2px; margin-top: 2px; }
+          .report-title { background: #D39A1A; color: white; text-align: center; padding: 8px; font-weight: 600; font-size: 12px; margin-bottom: 15px; }
+          .content { padding: 0 20px 20px 20px; }
           table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
           th { background: #f3f4f6; padding: 8px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; }
           td { padding: 8px; border: 1px solid #e5e7eb; }
@@ -304,6 +305,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
           <div class="header-subtitle">PVT LTD</div>
         </div>
         <div class="report-title">SCHEDULE REPORT</div>
+        <div class="content">
         <table>
           <thead>
             <tr>
@@ -335,6 +337,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
         <div class="footer">
           <p>Generated on ${new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
           <p>XLAND INFRA Property Management System</p>
+        </div>
         </div>
       </body>
       </html>
