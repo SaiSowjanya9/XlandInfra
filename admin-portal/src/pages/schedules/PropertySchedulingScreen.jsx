@@ -303,7 +303,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       }
       
       // Use navigation state services if they have MORE services than API returned
-      // This handles cases where API returns incomplete data or mock data has more accurate count
+      // This handles cases where API returns incomplete data or navigation state has more accurate count
       const navServicesCount = propertyData?.services?.length || 0;
       if (navServicesCount > servicesToUse.length) {
         console.log('[PropertyScheduling] Navigation state has more services:', navServicesCount, 'vs API:', servicesToUse.length);
@@ -399,14 +399,11 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     }
   };
 
-  // No mock services - we use real data only
-  // If no services are found, the UI will show an empty state message
-
   // Generate recommended dates using real vendor availability from backend
   const generateRecommendedDates = async (service) => {
     if (!service?.vendorId) {
-      // Fallback to mock data if no vendor
-      generateMockRecommendedDates(service);
+      // Fallback to default dates if no vendor assigned
+      generateDefaultAvailableDates(service);
       return;
     }
 
@@ -491,17 +488,17 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         }
       }
       
-      // Fallback to mock data if API fails or returns no data
-      generateMockRecommendedDates(service);
+      // Fallback to default dates if API fails or returns no data
+      generateDefaultAvailableDates(service);
     } catch (error) {
       console.error('Error fetching recommended dates:', error);
-      generateMockRecommendedDates(service);
+      generateDefaultAvailableDates(service);
     }
   };
 
   // Fallback dates when vendor availability cannot be fetched
   // This generates basic available dates based on the current week
-  const generateMockRecommendedDates = (service) => {
+  const generateDefaultAvailableDates = (service) => {
     const dates = [];
     const baseDate = new Date(currentWeekStart);
     

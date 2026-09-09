@@ -120,130 +120,19 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
       );
       
       if (!response.ok) {
-        // Use mock data if API not available
-        setSchedules(getMockSchedules());
+        setSchedules([]);
         return;
       }
       
       const result = await response.json();
-      if (result.success) {
-        setSchedules(result.data || []);
-      } else {
-        setSchedules(getMockSchedules());
-      }
+      setSchedules(result.data || []);
     } catch (err) {
       console.error('Fetch schedules error:', err);
-      setSchedules(getMockSchedules());
+      setSchedules([]);
     } finally {
       setLoading(false);
     }
   }, [token, apiPath, currentDate]);
-
-  // Mock schedules for development
-  const getMockSchedules = () => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    return [
-      {
-        id: 1,
-        scheduleId: 'SCH-001',
-        title: 'HVAC Maintenance',
-        propertyName: 'Green Valley Apartments',
-        propertyType: 'Apartment',
-        zone: 'Zone A',
-        vendorName: 'ABC HVAC Services',
-        serviceType: 'HVAC',
-        startDate: new Date(year, month, 5, 10, 0).toISOString(),
-        endDate: new Date(year, month, 5, 12, 0).toISOString(),
-        status: 'scheduled',
-        frequency: 'Monthly'
-      },
-      {
-        id: 2,
-        scheduleId: 'SCH-002',
-        title: 'Plumbing Inspection',
-        propertyName: 'Sunrise Villas',
-        propertyType: 'Villa',
-        zone: 'Zone B',
-        vendorName: 'XYZ Plumbing',
-        serviceType: 'Plumbing',
-        startDate: new Date(year, month, 8, 9, 0).toISOString(),
-        endDate: new Date(year, month, 8, 11, 0).toISOString(),
-        status: 'completed',
-        frequency: 'Every 2 Months'
-      },
-      {
-        id: 3,
-        scheduleId: 'SCH-003',
-        title: 'Pest Control',
-        propertyName: 'Palm Meadows',
-        propertyType: 'Villa',
-        zone: 'Zone A',
-        vendorName: 'PestFree Services',
-        serviceType: 'Pest Control',
-        startDate: new Date(year, month, 12, 14, 0).toISOString(),
-        endDate: new Date(year, month, 12, 16, 0).toISOString(),
-        status: 'scheduled',
-        frequency: 'Half-Yearly'
-      },
-      {
-        id: 4,
-        scheduleId: 'SCH-004',
-        title: 'Electrical Check',
-        propertyName: 'Lake View Residency',
-        propertyType: 'Apartment',
-        zone: 'Zone C',
-        vendorName: 'Power Services',
-        serviceType: 'Electrical',
-        startDate: new Date(year, month, 15, 10, 0).toISOString(),
-        endDate: new Date(year, month, 15, 12, 0).toISOString(),
-        status: 'in_progress',
-        frequency: 'Quarterly'
-      },
-      {
-        id: 5,
-        scheduleId: 'SCH-005',
-        title: 'Water Tank Cleaning',
-        propertyName: 'Urban Nest',
-        propertyType: 'Villa',
-        zone: 'Zone D',
-        vendorName: 'Aqua Service',
-        serviceType: 'Water Tank',
-        startDate: new Date(year, month, 18, 8, 0).toISOString(),
-        endDate: new Date(year, month, 18, 10, 0).toISOString(),
-        status: 'scheduled',
-        frequency: 'Yearly'
-      },
-      {
-        id: 6,
-        scheduleId: 'SCH-006',
-        title: 'HVAC Service',
-        propertyName: 'Golden Heights',
-        propertyType: 'Apartment',
-        zone: 'Zone B',
-        vendorName: 'CoolAir HVAC',
-        serviceType: 'HVAC',
-        startDate: new Date(year, month, 22, 11, 0).toISOString(),
-        endDate: new Date(year, month, 22, 13, 0).toISOString(),
-        status: 'scheduled',
-        frequency: 'Monthly'
-      },
-      {
-        id: 7,
-        scheduleId: 'SCH-007',
-        title: 'Lift Maintenance',
-        propertyName: 'Elite Enclave',
-        propertyType: 'Apartment',
-        zone: 'Zone A',
-        vendorName: 'Elevate Services',
-        serviceType: 'Lift',
-        startDate: new Date(year, month, 25, 9, 0).toISOString(),
-        endDate: new Date(year, month, 25, 11, 0).toISOString(),
-        status: 'cancelled',
-        frequency: 'Quarterly'
-      }
-    ];
-  };
 
   // Fetch schedules when date changes
   useEffect(() => {

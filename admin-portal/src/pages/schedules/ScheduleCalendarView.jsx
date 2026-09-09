@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Clock, Search, Filter, ChevronLeft, ChevronRight,
@@ -8,12 +8,25 @@ import { getAuthToken } from '../../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+// Get API path based on portal type
+const getApiPath = (portalType) => {
+  const pathMap = {
+    'admin': 'admin',
+    'franchise': 'fp',
+    'manager': 'manager',
+    'coordinator': 'coordinator',
+    'supervisor': 'supervisor'
+  };
+  return pathMap[portalType] || 'admin';
+};
+
 const ScheduleCalendarView = ({ portalType = 'admin' }) => {
   const navigate = useNavigate();
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 7, 7)); // August 2025
-  const [viewMode, setViewMode] = useState('month'); // month, week, day, agenda
+  const apiPath = getApiPath(portalType);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState('month');
   const [schedules, setSchedules] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     services: 'all', vendors: 'all', zones: 'all', propertyTypes: 'all'
   });
@@ -23,10 +36,107 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
     groupByVendor: false,
     groupByProperty: false
   });
+  
+  // Quick filter counts
+  const [quickFilterCounts, setQuickFilterCounts] = useState({
+    today: 0, upcoming: 0, overdue: 0, rescheduled: 0, cancelled: 0
+  });
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  // Fetch schedules from API
+  const fetchSchedules = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = getAuthToken();
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      
+      // Get first and last day of the month for the query
+      const startDate = new Date(year, month, 1).toISOString().split('T')[0];
+      const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
+      
+      const response = await fetch(
+        `${API_BASE}/api/${apiPath}/schedules/all?startDate=${startDate}&endDate=${endDate}&limit=500`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        const schedulesData = data.data || data.schedules || [];
+        
+        // Flatten property-based schedules to visit level
+        const allVisits = [];
+        schedulesData.forEach(property => {
+          if (property.services && Array.isArray(property.services)) {
+            property.services.forEach(service => {
+              if (service.visits && Array.isArray(service.visits)) {
+                service.visits.forEach(visit => {
+                  allVisits.push({
+                    id: visit.id || visit.visitId,
+                    date: visit.scheduledDate || visit.scheduled_date,
+                    time: visit.scheduledTime || visit.scheduled_time_start || '09:00',
+                    service: service.serviceName || service.service_name || 'Service',
+                    property: property.propertyName || property.property_name,
+                    vendor: service.vendorName || service.vendor_name || 'Unassigned',
+                    status: visit.status || 'scheduled'
+                  });
+                });
+              }
+            });
+          }
+        });
+        
+        setSchedules(allVisits);
+        calculateQuickFilters(allVisits);
+      } else {
+        setSchedules([]);
+      }
+    } catch (error) {
+      console.error('Error fetching schedules:', error);
+      setSchedules([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentDate, apiPath]);
+
+  // Calculate quick filter counts
+  const calculateQuickFilters = (schedulesData) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+    const weekFromNow = new Date(today);
+    weekFromNow.setDate(weekFromNow.getDate() + 7);
+    
+    const counts = {
+      today: 0,
+      upcoming: 0,
+      overdue: 0,
+      rescheduled: 0,
+      cancelled: 0
+    };
+    
+    schedulesData.forEach(schedule => {
+      const schedDate = new Date(schedule.date);
+      schedDate.setHours(0, 0, 0, 0);
+      const schedDateStr = schedule.date?.split('T')[0];
+      
+      if (schedDateStr === todayStr) counts.today++;
+      if (schedDate >= today && schedDate <= weekFromNow && schedule.status !== 'cancelled') counts.upcoming++;
+      if (schedDate < today && schedule.status !== 'completed' && schedule.status !== 'cancelled') counts.overdue++;
+      if (schedule.status === 'rescheduled') counts.rescheduled++;
+      if (schedule.status === 'cancelled') counts.cancelled++;
+    });
+    
+    setQuickFilterCounts(counts);
+  };
+
+  // Load schedules on mount and when month changes
+  useEffect(() => {
+    fetchSchedules();
+  }, [fetchSchedules]);
 
   // Generate calendar days for current month view
   const generateCalendarDays = () => {
@@ -68,70 +178,30 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
     return days;
   };
 
-  // Mock schedule data for calendar
+  // Get schedules for a specific date from fetched data
   const getSchedulesForDate = (date) => {
     const dateStr = date.toISOString().split('T')[0];
-    const day = date.getDate();
-    
-    // Generate mock schedules based on date
-    const mockSchedules = [];
-    
-    if (day % 2 === 0) {
-      mockSchedules.push({
-        id: `${dateStr}-1`,
-        time: '09:00 AM',
-        service: 'Water Tank Cleaning',
-        property: 'Green Valley Apts',
-        vendor: 'ABC Cleaning',
-        status: 'scheduled'
-      });
+    return schedules.filter(s => {
+      const schedDateStr = s.date?.split('T')[0];
+      return schedDateStr === dateStr;
+    }).map(s => ({
+      ...s,
+      time: formatTime(s.time)
+    }));
+  };
+
+  // Format time for display
+  const formatTime = (time) => {
+    if (!time) return '';
+    try {
+      const [hours, minutes] = time.split(':');
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const hour12 = hour % 12 || 12;
+      return `${hour12}:${minutes || '00'} ${ampm}`;
+    } catch {
+      return time;
     }
-    
-    if (day % 3 === 0) {
-      mockSchedules.push({
-        id: `${dateStr}-2`,
-        time: '10:00 AM',
-        service: 'Electrical Repair',
-        property: 'Palm Meadows',
-        vendor: 'PowerFix Solutions',
-        status: 'scheduled'
-      });
-    }
-    
-    if (day % 4 === 0) {
-      mockSchedules.push({
-        id: `${dateStr}-3`,
-        time: '11:00 AM',
-        service: 'Lift Maintenance',
-        property: 'Elite Enclave',
-        vendor: 'Elevate Engineers',
-        status: 'in_progress'
-      });
-    }
-    
-    if (day % 5 === 0) {
-      mockSchedules.push({
-        id: `${dateStr}-4`,
-        time: '02:00 PM',
-        service: 'AC Service',
-        property: 'Lake View Residency',
-        vendor: 'Cool Breeze',
-        status: 'completed'
-      });
-    }
-    
-    if (day % 7 === 0) {
-      mockSchedules.push({
-        id: `${dateStr}-5`,
-        time: '02:30 PM',
-        service: 'Drainage Cleaning',
-        property: 'Skyline Towers',
-        vendor: 'Drain Pro',
-        status: 'rescheduled'
-      });
-    }
-    
-    return mockSchedules;
   };
 
   const getStatusColor = (status) => {
@@ -158,13 +228,13 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
 
   const calendarDays = generateCalendarDays();
 
-  // Quick filters data
+  // Quick filters data with real counts
   const quickFilters = [
-    { label: "Today's Schedules", count: 18 },
-    { label: 'Upcoming (7 Days)', count: 45 },
-    { label: 'Overdue', count: 3 },
-    { label: 'Reschedule Requests', count: 6 },
-    { label: 'Cancelled', count: 4 }
+    { label: "Today's Schedules", count: quickFilterCounts.today },
+    { label: 'Upcoming (7 Days)', count: quickFilterCounts.upcoming },
+    { label: 'Overdue', count: quickFilterCounts.overdue },
+    { label: 'Rescheduled', count: quickFilterCounts.rescheduled },
+    { label: 'Cancelled', count: quickFilterCounts.cancelled }
   ];
 
   const scheduleLegend = [
@@ -214,36 +284,43 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
       {/* Filters Bar */}
       <div className="bg-white border-b border-gray-200 px-6 py-3">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm">
-            <Calendar className="w-4 h-4 text-gray-400" />
-            <span>01 Aug 2025 - 07 Aug 2025</span>
-          </div>
-          
           {['All Services', 'All Vendors', 'All Zones', 'All Property Types'].map((filter, i) => (
             <select key={i} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
               <option>{filter}</option>
             </select>
           ))}
 
-          <button className="px-3 py-2 border border-gray-300 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50">
-            <Filter className="w-4 h-4" />
-            Filters
+          <button 
+            onClick={() => { setFilters({ services: 'all', vendors: 'all', zones: 'all', propertyTypes: 'all' }); }}
+            className="text-sm text-gray-500 hover:text-gray-700"
+          >
+            Clear
           </button>
 
-          <div className="ml-auto flex items-center border border-gray-300 rounded-lg overflow-hidden">
-            {['Month', 'Week', 'Day', 'Agenda'].map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode.toLowerCase())}
-                className={`px-4 py-2 text-sm font-medium ${
-                  viewMode === mode.toLowerCase()
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                {mode}
-              </button>
-            ))}
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={fetchSchedules}
+              disabled={loading}
+              className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              title="Refresh"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+              {['Day', 'Week', 'Month', 'Year'].map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode.toLowerCase())}
+                  className={`px-4 py-2 text-sm font-medium ${
+                    viewMode === mode.toLowerCase()
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -282,7 +359,12 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
             </div>
 
             {/* Calendar Grid */}
-            <div className="bg-white border-x border-b border-gray-200 rounded-b-xl overflow-hidden">
+            <div className="bg-white border-x border-b border-gray-200 rounded-b-xl overflow-hidden relative">
+              {loading && (
+                <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10">
+                  <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
+                </div>
+              )}
               {/* Day Headers */}
               <div className="grid grid-cols-7 border-b border-gray-200">
                 {dayNames.map((day) => (
@@ -295,7 +377,7 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
               {/* Calendar Days */}
               <div className="grid grid-cols-7">
                 {calendarDays.map((day, index) => {
-                  const schedules = getSchedulesForDate(day.date);
+                  const daySchedules = getSchedulesForDate(day.date);
                   const isToday = day.date.toDateString() === new Date().toDateString();
                   
                   return (
@@ -313,13 +395,13 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
                         }`}>
                           {day.date.getDate()}
                         </span>
-                        {schedules.length > 0 && (
-                          <span className="text-xs text-gray-500">{schedules.length}</span>
+                        {daySchedules.length > 0 && (
+                          <span className="text-xs text-gray-500">{daySchedules.length}</span>
                         )}
                       </div>
                       
                       <div className="space-y-1">
-                        {schedules.slice(0, 3).map((schedule, i) => (
+                        {daySchedules.slice(0, 3).map((schedule, i) => (
                           <div
                             key={i}
                             className={`px-1.5 py-1 text-xs rounded border-l-2 cursor-pointer hover:shadow-sm ${getStatusColor(schedule.status)}`}
@@ -329,9 +411,9 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
                             <p className="truncate text-gray-600">{schedule.property}</p>
                           </div>
                         ))}
-                        {schedules.length > 3 && (
+                        {daySchedules.length > 3 && (
                           <button className="text-xs text-blue-600 hover:underline w-full text-left px-1">
-                            +{schedules.length - 3} more
+                            +{daySchedules.length - 3} more
                           </button>
                         )}
                       </div>
@@ -363,18 +445,21 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
                 {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
                   <div key={day} className="py-1 text-gray-500 font-medium">{day}</div>
                 ))}
-                {calendarDays.slice(0, 35).map((day, i) => (
-                  <button
-                    key={i}
-                    className={`py-1 rounded ${
-                      day.date.getDate() === 7 && day.isCurrentMonth
-                        ? 'bg-blue-600 text-white'
-                        : day.isCurrentMonth ? 'hover:bg-gray-100' : 'text-gray-400'
-                    }`}
-                  >
-                    {day.date.getDate()}
-                  </button>
-                ))}
+                {calendarDays.slice(0, 35).map((day, i) => {
+                  const isToday = day.date.toDateString() === new Date().toDateString();
+                  return (
+                    <button
+                      key={i}
+                      className={`py-1 rounded ${
+                        isToday && day.isCurrentMonth
+                          ? 'bg-blue-600 text-white'
+                          : day.isCurrentMonth ? 'hover:bg-gray-100' : 'text-gray-400'
+                      }`}
+                    >
+                      {day.date.getDate()}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
