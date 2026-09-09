@@ -105,25 +105,17 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
       
       if (response.ok) {
         const data = await response.json();
-        setCancelledSchedules(data.data?.length > 0 ? data.data : getMockData());
+        setCancelledSchedules(data.data || []);
       } else {
-        setCancelledSchedules(getMockData());
+        setCancelledSchedules([]);
       }
     } catch (error) {
       console.error('Error fetching cancelled schedules:', error);
-      setCancelledSchedules(getMockData());
+      setCancelledSchedules([]);
     } finally {
       setLoading(false);
     }
   };
-
-  const getMockData = () => [
-    { id: 1, property_id: 'PROP-001', property_name: 'Green Valley Apartments', service: 'HVAC Maintenance', vendor: 'ABC HVAC Services', zone: 'Zone A', scheduled_date: '2026-07-15', scheduled_time: '10:00 AM', cancelled_at: '2026-07-12T14:30:00', cancelled_by: 'John Manager', cancelled_by_role: 'Manager', reason: 'Customer requested to postpone due to personal reasons' },
-    { id: 2, property_id: 'PROP-002', property_name: 'Sunrise Towers', service: 'Plumbing Check', vendor: 'Aqua Plumbing', zone: 'Zone B', scheduled_date: '2026-07-18', scheduled_time: '02:00 PM', cancelled_at: '2026-07-15T09:00:00', cancelled_by: 'Vendor', cancelled_by_role: 'Vendor', reason: 'Vendor unavailable - staff shortage' },
-    { id: 3, property_id: 'PROP-003', property_name: 'Palm Heights', service: 'Electrical Inspection', vendor: 'PowerFix Electricals', zone: 'Zone A', scheduled_date: '2026-07-20', scheduled_time: '09:00 AM', cancelled_at: '2026-07-19T16:00:00', cancelled_by: 'FP User', cancelled_by_role: 'FP', reason: 'Payment pending - auto-cancelled after 7 days' },
-    { id: 4, property_id: 'PROP-004', property_name: 'Blue Sky Complex', service: 'Lift Maintenance', vendor: 'Elevate Engineers', zone: 'Zone C', scheduled_date: '2026-08-01', scheduled_time: '11:00 AM', cancelled_at: '2026-07-28T11:00:00', cancelled_by: 'Customer', cancelled_by_role: 'Customer', reason: 'Building under renovation' },
-    { id: 5, property_id: 'PROP-005', property_name: 'Garden View Residency', service: 'Fire Safety Check', vendor: 'SafeGuard Services', zone: 'Zone D', scheduled_date: '2026-08-05', scheduled_time: '03:00 PM', cancelled_at: '2026-08-02T10:30:00', cancelled_by: 'Admin', cancelled_by_role: 'Admin', reason: 'Duplicate schedule entry - consolidated with another visit' }
-  ];
 
   const formatDate = (date) => {
     if (!date) return '-';
