@@ -46,6 +46,8 @@ const ManagerDashboard = ({ user }) => {
   const [workOrders, setWorkOrders] = useState([]);
   const [properties, setProperties] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [propertyChartFilter, setPropertyChartFilter] = useState('all');
   const [woStatusFilter, setWoStatusFilter] = useState('all');
   const [woPriorityFilter, setWoPriorityFilter] = useState('all');
@@ -165,7 +167,7 @@ const ManagerDashboard = ({ user }) => {
     
     try {
       const token = getAuthToken();
-      const [dashboardRes, estimatesRes, workOrdersRes, propertiesRes, invoicesRes] = await Promise.all([
+      const [dashboardRes, estimatesRes, workOrdersRes, propertiesRes, invoicesRes, vendorsRes, employeesRes] = await Promise.all([
         fetch(`${API_BASE}/api/manager/dashboard`, {
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         }),
@@ -180,15 +182,23 @@ const ManagerDashboard = ({ user }) => {
         }),
         fetch(`${API_BASE}/api/payments/invoices`, {
           headers: { 'Authorization': `Bearer ${token}` }
+        }).catch(() => ({ ok: false })),
+        fetch(`${API_BASE}/api/manager/vendors`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).catch(() => ({ ok: false })),
+        fetch(`${API_BASE}/api/manager/employees`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         }).catch(() => ({ ok: false }))
       ]);
       
-      const [dashResult, estResult, woResult, propResult, invResult] = await Promise.all([
+      const [dashResult, estResult, woResult, propResult, invResult, vendorResult, empResult] = await Promise.all([
         dashboardRes.json(), 
         estimatesRes.json(), 
         workOrdersRes.json(), 
         propertiesRes.json(),
-        invoicesRes.ok ? invoicesRes.json() : { success: false, data: [] }
+        invoicesRes.ok ? invoicesRes.json() : { success: false, data: [] },
+        vendorsRes.ok ? vendorsRes.json() : { success: false, data: [] },
+        employeesRes.ok ? employeesRes.json() : { success: false, data: [] }
       ]);
       
       if (dashResult.success) {
@@ -211,6 +221,14 @@ const ManagerDashboard = ({ user }) => {
       
       if (invResult.success && Array.isArray(invResult.data)) {
         setInvoices(invResult.data);
+      }
+      
+      if (vendorResult.success && Array.isArray(vendorResult.data)) {
+        setVendors(vendorResult.data);
+      }
+      
+      if (empResult.success && Array.isArray(empResult.data)) {
+        setEmployees(empResult.data);
       }
     } catch (err) {
       console.error('Dashboard fetch error:', err);
@@ -309,6 +327,23 @@ const ManagerDashboard = ({ user }) => {
     end.setHours(23, 59, 59, 999);
     return pDate >= start && pDate <= end;
   }) : properties;
+
+  const dateFilteredVendors = startDate && endDate ? vendors.filter(v => {
+    const vDate = new Date(v.created_at || v.createdAt || v.onboarded_at);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return vDate >= start && vDate <= end;
+  }) : vendors;
+
+  // Computed real-time stats from actual data arrays
+  const realTimeStats = {
+    properties: dateFilteredProperties.length || properties.length,
+    vendors: dateFilteredVendors.length || vendors.length,
+    employees: employees.length, // Employees typically not date-filtered
+    workOrders: dateFilteredWorkOrders.length,
+    estimates: dateFilteredEstimates.length
+  };
 
   // Helper function to normalize status
   const getWOStatus = (wo) => (wo.status || '').toString().trim().toLowerCase().replace(/[_\s-]/g, '');
@@ -557,7 +592,7 @@ const ManagerDashboard = ({ user }) => {
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-gray-500">Properties</p>
-                  <p className="text-lg font-bold text-gray-900">{stats?.properties || 0}</p>
+                  <p className="text-lg font-bold text-gray-900">{realTimeStats.properties}</p>
                 </div>
               </div>
             </Link>
@@ -568,7 +603,7 @@ const ManagerDashboard = ({ user }) => {
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-gray-500">Vendors</p>
-                  <p className="text-lg font-bold text-gray-900">{stats?.vendors || 0}</p>
+                  <p className="text-lg font-bold text-gray-900">{realTimeStats.vendors}</p>
                 </div>
               </div>
             </Link>
@@ -579,7 +614,29 @@ const ManagerDashboard = ({ user }) => {
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-gray-500">Employees</p>
-                  <p className="text-lg font-bold text-gray-900">{stats?.employees || 0}</p>
+                  <p className="text-lg font-bold text-gray-900">{realTimeStats.employees}</p>
+                </div>
+              </div>
+            </Link>
+            <Link to="/manager/work-orders" className="bg-white rounded-lg border border-gray-100 px-3 py-2 hover:shadow-md hover:border-purple-200 transition-all duration-200 group">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <ClipboardList className="w-4 h-4 text-purple-600" />
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-500">Work Orders</p>
+                  <p className="text-lg font-bold text-gray-900">{realTimeStats.workOrders}</p>
+                </div>
+              </div>
+            </Link>
+            <Link to="/manager/estimates" className="bg-white rounded-lg border border-gray-100 px-3 py-2 hover:shadow-md hover:border-teal-200 transition-all duration-200 group">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-teal-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <FileText className="w-4 h-4 text-teal-600" />
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-500">Estimates</p>
+                  <p className="text-lg font-bold text-gray-900">{realTimeStats.estimates}</p>
                 </div>
               </div>
             </Link>

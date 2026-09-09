@@ -27,6 +27,8 @@ const CoordinatorDashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [estimates, setEstimates] = useState([]);
   const [properties, setProperties] = useState([]);
+  const [workOrders, setWorkOrders] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [propertyChartFilter, setPropertyChartFilter] = useState('all');
   const lastFetchRef = useRef(0);
   
@@ -44,15 +46,25 @@ const CoordinatorDashboard = ({ user }) => {
     if (isInitialLoad) setLoading(true);
     try {
       const token = getAuthToken();
-      const [dashRes, estRes, propRes] = await Promise.all([
+      const [dashRes, estRes, propRes, woRes, vendorRes] = await Promise.all([
         fetch(`${API_BASE}/api/coordinator/dashboard`, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(`${API_BASE}/api/coordinator/estimates`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE}/api/coordinator/properties`, { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`${API_BASE}/api/coordinator/properties`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/coordinator/work-orders`, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ ok: false })),
+        fetch(`${API_BASE}/api/coordinator/vendors`, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ ok: false }))
       ]);
-      const [dashResult, estResult, propResult] = await Promise.all([dashRes.json(), estRes.json(), propRes.json()]);
+      const [dashResult, estResult, propResult, woResult, vendorResult] = await Promise.all([
+        dashRes.json(), 
+        estRes.json(), 
+        propRes.json(),
+        woRes.ok ? woRes.json() : { success: false, data: [] },
+        vendorRes.ok ? vendorRes.json() : { success: false, data: [] }
+      ]);
       if (dashResult.success) setStats(dashResult.data.stats);
       if (estResult.success && Array.isArray(estResult.data)) setEstimates(estResult.data);
       if (propResult.success && Array.isArray(propResult.data)) setProperties(propResult.data);
+      if (woResult.success && Array.isArray(woResult.data)) setWorkOrders(woResult.data);
+      if (vendorResult.success && Array.isArray(vendorResult.data)) setVendors(vendorResult.data);
     } catch (error) {
       console.error('Dashboard fetch error:', error);
     } finally {
@@ -83,15 +95,42 @@ const CoordinatorDashboard = ({ user }) => {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
-  // Pie chart data - All 6 statuses
-  const workOrdersByStatus = stats?.workOrdersByStatus || {};
-  const pendingWO = Number(workOrdersByStatus.pending) || 0;
-  const assignedWO = Number(workOrdersByStatus.assigned) || 0;
-  const inProgressWO = Number(workOrdersByStatus.in_progress) || 0;
-  const completedWO = Number(workOrdersByStatus.completed) || 0;
-  const closedWO = Number(workOrdersByStatus.closed) || 0;
-  const cancelledWO = Number(workOrdersByStatus.cancelled) || 0;
-  const pieTotal = pendingWO + assignedWO + inProgressWO + completedWO + closedWO + cancelledWO;
+  // Date filtering for real-time data
+  const dateFilteredWorkOrders = startDate && endDate ? workOrders.filter(wo => {
+    const woDate = new Date(wo.created_at || wo.createdAt);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return woDate >= start && woDate <= end;
+  }) : workOrders;
+
+  const dateFilteredEstimates = startDate && endDate ? estimates.filter(est => {
+    const estDate = new Date(est.created_at || est.createdAt);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return estDate >= start && estDate <= end;
+  }) : estimates;
+
+  const dateFilteredVendors = startDate && endDate ? vendors.filter(v => {
+    const vDate = new Date(v.created_at || v.createdAt || v.onboarded_at);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return vDate >= start && vDate <= end;
+  }) : vendors;
+
+  // Helper function to normalize status
+  const getWOStatus = (wo) => (wo.status || '').toString().trim().toLowerCase().replace(/[_\s-]/g, '');
+
+  // Compute real-time work order stats from actual data
+  const pendingWO = dateFilteredWorkOrders.filter(wo => getWOStatus(wo) === 'pending').length;
+  const assignedWO = dateFilteredWorkOrders.filter(wo => getWOStatus(wo) === 'assigned').length;
+  const inProgressWO = dateFilteredWorkOrders.filter(wo => getWOStatus(wo) === 'inprogress').length;
+  const completedWO = dateFilteredWorkOrders.filter(wo => getWOStatus(wo) === 'completed').length;
+  const closedWO = dateFilteredWorkOrders.filter(wo => getWOStatus(wo) === 'closed').length;
+  const cancelledWO = dateFilteredWorkOrders.filter(wo => getWOStatus(wo) === 'cancelled').length;
+  const totalWorkOrders = dateFilteredWorkOrders.length;
   
   const pieData = [
     { name: 'Pending', value: pendingWO, color: '#F59E0B' },
@@ -102,8 +141,15 @@ const CoordinatorDashboard = ({ user }) => {
     { name: 'Cancelled', value: cancelledWO, color: '#EF4444' },
   ].filter(item => item.value > 0);
 
-  // Use actual API total as primary source
-  const totalWorkOrders = stats?.totalWorkOrders || pieTotal || 0;
+  // Computed real-time stats from actual data arrays
+  const realTimeStats = {
+    properties: properties.length,
+    vendors: dateFilteredVendors.length || vendors.length,
+    zones: stats?.zones || 0,
+    workOrders: totalWorkOrders,
+    estimates: dateFilteredEstimates.length
+  };
+
   const totalForPercentage = totalWorkOrders || 1;
 
   // Stacked bar chart data - Property types with Direct vs Property-based breakdown
@@ -197,7 +243,7 @@ const CoordinatorDashboard = ({ user }) => {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Properties</p>
-                  <p className="text-xl font-bold text-gray-900">{stats?.properties || 0}</p>
+                  <p className="text-xl font-bold text-gray-900">{realTimeStats.properties}</p>
                   <p className="text-[10px] text-gray-400">Assigned Properties</p>
                 </div>
               </div>
@@ -209,7 +255,7 @@ const CoordinatorDashboard = ({ user }) => {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Vendors</p>
-                  <p className="text-xl font-bold text-gray-900">{stats?.vendors || 0}</p>
+                  <p className="text-xl font-bold text-gray-900">{realTimeStats.vendors}</p>
                   <p className="text-[10px] text-gray-400">Available Vendors</p>
                 </div>
               </div>
@@ -221,8 +267,20 @@ const CoordinatorDashboard = ({ user }) => {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Zones</p>
-                  <p className="text-xl font-bold text-gray-900">{stats?.zones || 0}</p>
+                  <p className="text-xl font-bold text-gray-900">{realTimeStats.zones}</p>
                   <p className="text-[10px] text-gray-400">Assigned Zones</p>
+                </div>
+              </div>
+            </button>
+            <button onClick={() => navigate('/coordinator/work-orders')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-indigo-200 transition-all duration-200 group text-left">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <ClipboardList className="w-5 h-5 text-indigo-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Work Orders</p>
+                  <p className="text-xl font-bold text-gray-900">{realTimeStats.workOrders}</p>
+                  <p className="text-[10px] text-gray-400">{startDate && endDate ? 'In Selected Period' : 'Total'}</p>
                 </div>
               </div>
             </button>

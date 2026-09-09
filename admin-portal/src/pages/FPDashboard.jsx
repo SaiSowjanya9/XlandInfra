@@ -593,7 +593,7 @@ const FPDashboard = ({ user }) => {
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-gray-500">Properties</p>
-                  <p className="text-lg font-bold text-gray-900">{stats?.properties || 0}</p>
+                  <p className="text-lg font-bold text-gray-900">{realTimeStats.properties}</p>
                 </div>
               </div>
             </Link>
@@ -604,7 +604,7 @@ const FPDashboard = ({ user }) => {
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-gray-500">Vendors</p>
-                  <p className="text-lg font-bold text-gray-900">{stats?.vendors || 0}</p>
+                  <p className="text-lg font-bold text-gray-900">{realTimeStats.vendors}</p>
                 </div>
               </div>
             </Link>
@@ -615,7 +615,29 @@ const FPDashboard = ({ user }) => {
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-gray-500">Employees</p>
-                  <p className="text-lg font-bold text-gray-900">{stats?.employees || 0}</p>
+                  <p className="text-lg font-bold text-gray-900">{realTimeStats.employees}</p>
+                </div>
+              </div>
+            </Link>
+            <Link to="/fp/work-orders" className="bg-white rounded-lg border border-gray-100 px-3 py-2 hover:shadow-md hover:border-purple-200 transition-all duration-200 group">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <ClipboardList className="w-4 h-4 text-purple-600" />
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-500">Work Orders</p>
+                  <p className="text-lg font-bold text-gray-900">{realTimeStats.workOrders}</p>
+                </div>
+              </div>
+            </Link>
+            <Link to="/fp/estimates" className="bg-white rounded-lg border border-gray-100 px-3 py-2 hover:shadow-md hover:border-teal-200 transition-all duration-200 group">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-teal-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <FileText className="w-4 h-4 text-teal-600" />
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-500">Estimates</p>
+                  <p className="text-lg font-bold text-gray-900">{realTimeStats.estimates}</p>
                 </div>
               </div>
             </Link>

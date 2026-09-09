@@ -171,7 +171,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   };
   
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(15);
+  const [itemsPerPage] = useState(500); // Show all at once - no pagination
   
   // Modal states
   const [selectedSchedule, setSelectedSchedule] = useState(null);
@@ -1160,51 +1160,12 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             </table>
           </div>
 
-          {/* Pagination */}
+          {/* Footer - Total Count */}
           {totalCount > 0 && (
-            <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+            <div className="px-4 py-3 border-t border-gray-200">
               <p className="text-sm text-gray-500">
-                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount.toLocaleString()} schedules
+                Total: {totalCount.toLocaleString()} schedules across {Object.keys(groupedSchedules).length} properties
               </p>
-              <div className="flex items-center gap-1">
-                <button 
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`w-8 h-8 text-sm font-medium rounded ${
-                        pageNum === currentPage ? 'bg-blue-600 text-white' : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-                <button 
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
             </div>
           )}
         </div>
