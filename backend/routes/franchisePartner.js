@@ -6614,21 +6614,18 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
       ${whereClause}
       ORDER BY sv.scheduled_date DESC, sv.scheduled_time_start ASC
-      LIMIT ? OFFSET ?
+      LIMIT ${parseInt(limit)} OFFSET ${offset}
     `;
-    
-    params.push(parseInt(limit), offset);
     let schedules = [];
     let queryError = null;
     try {
-      console.log('[FP All Schedules] Executing main query with params:', params);
+      console.log('[FP All Schedules] Executing main query with params:', params, 'limit:', limit, 'offset:', offset);
       const [result] = await pool.execute(query, params);
       schedules = result;
       console.log('[FP All Schedules] Found schedules:', schedules.length);
     } catch (queryErr) {
       queryError = queryErr.message;
       console.log('[FP All Schedules] Main query failed:', queryErr.message);
-      console.log('[FP All Schedules] Query was:', query);
     }
     console.log('[FP All Schedules] Found schedules:', schedules.length);
     
