@@ -1090,9 +1090,9 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         </div>
       </div>
 
-      <div className="p-6 flex gap-6">
+      <div className="p-6 flex gap-4 overflow-x-auto">
         {/* Left: Services List */}
-        <div className="w-64 flex-shrink-0">
+        <div className="w-56 min-w-[224px] flex-shrink-0">
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Services to Schedule</h3>
@@ -1141,7 +1141,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         </div>
 
         {/* Center: Calendar */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="bg-white rounded-xl border border-gray-200">
             <div className="p-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -1328,7 +1328,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         </div>
 
         {/* Right: Recommended Dates */}
-        <div className="w-72 flex-shrink-0">
+        <div className="w-64 min-w-[256px] flex-shrink-0">
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Recommended Dates</h3>
