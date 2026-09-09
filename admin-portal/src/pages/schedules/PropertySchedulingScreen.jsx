@@ -969,7 +969,9 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       
       if (!response.ok || !result.success) {
         console.error('API error:', result);
-        throw new Error(result.message || result.error || `Failed to save schedule (status: ${response.status})`);
+        // Show detailed error message
+        const errorDetails = result.error || result.message || `Failed to save schedule (status: ${response.status})`;
+        throw new Error(errorDetails);
       }
       
       // Close modal

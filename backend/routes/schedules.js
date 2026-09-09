@@ -1466,10 +1466,22 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
   } catch (error) {
     console.error('[Confirm Schedule] Error:', error.message);
     console.error('[Confirm Schedule] Stack:', error.stack);
+    
+    // Provide more specific error messages
+    let errorMessage = error.message;
+    if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+      errorMessage = 'Referenced property or vendor not found in database';
+    } else if (error.code === 'ER_DUP_ENTRY') {
+      errorMessage = 'A schedule with this ID already exists';
+    } else if (error.code === 'ER_TRUNCATED_WRONG_VALUE') {
+      errorMessage = 'Invalid date or time format in schedule';
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error confirming schedule',
-      error: error.message
+      error: errorMessage,
+      code: error.code || 'UNKNOWN'
     });
   }
 });
