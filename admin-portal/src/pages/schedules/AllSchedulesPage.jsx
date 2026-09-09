@@ -299,8 +299,9 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Schedule Report - XLAND INFRA</title>
+        <title></title>
         <style>
+          @page { margin: 10mm; margin-top: 5mm; }
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: Arial, sans-serif; }
           .header { background-color: #3a3a3a !important; padding: 15px 20px; text-align: center; width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
