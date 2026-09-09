@@ -1535,45 +1535,189 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         </div>
       </div>
 
-      {/* Planned Visits Series */}
+      {/* All Services Schedule Overview */}
       <div className="px-6 pb-6">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-semibold text-gray-900">Planned Visit Series</h3>
+              <h3 className="font-semibold text-gray-900">All Services Schedule Overview</h3>
               <p className="text-sm text-gray-500">
-                {selectedSlot 
-                  ? generateScheduleSummary(selectedService?.frequency, selectedSlot.date)
-                  : `${selectedService?.frequency || 'Monthly'}: Select first service date to generate schedule`
-                }
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                {getFrequencyConfig(selectedService?.frequency)?.autoGenerate 
-                  ? `${selectedService?.visits || getFrequencyConfig(selectedService?.frequency)?.visitsPerYear} visits total • Dates can be adjusted based on vendor availability`
-                  : selectedService?.frequency?.toLowerCase() === 'on request'
-                    ? 'No automatic schedule - service requested when needed'
-                    : `${selectedService?.visits || selectedService?.customVisits || 0} visits to be manually scheduled`
-                }
+                {services.filter(s => s.status === 'Scheduled').length} of {services.length} services scheduled
               </p>
             </div>
-            <button 
-              onClick={openRecurrenceModal}
-              className="flex items-center gap-1 text-sm text-blue-600 hover:underline"
-            >
-              <Edit2 className="w-3 h-3" /> Edit Recurrence
-            </button>
           </div>
           
-          {/* Show message for On Request services */}
-          {selectedService?.frequency?.toLowerCase() === 'on request' ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
-              <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-              <p className="text-sm text-amber-800 font-medium">On Request Service</p>
-              <p className="text-xs text-amber-600 mt-1">
-                No automatic schedule is generated. Service will be scheduled when the customer requests it.
-              </p>
+          {/* Services Grid */}
+          <div className="space-y-3">
+            {services.map((service, index) => {
+              const isSelected = selectedService?.id === service.id;
+              const isScheduled = service.status === 'Scheduled';
+              const frequencyConfig = getFrequencyConfig(service.frequency);
+              
+              return (
+                <div 
+                  key={service.id || index}
+                  className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
+                    isSelected 
+                      ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' 
+                      : isScheduled 
+                        ? 'border-green-300 bg-green-50 hover:border-green-400' 
+                        : 'border-amber-300 bg-amber-50 hover:border-amber-400'
+                  }`}
+                  onClick={() => {
+                    setSelectedService(service);
+                  }}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        isScheduled ? 'bg-green-100' : 'bg-amber-100'
+                      }`}>
+                        {isScheduled ? (
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <Clock className="w-5 h-5 text-amber-600" />
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{service.name}</h4>
+                        <p className="text-sm text-gray-500">
+                          {service.vendorName || 'Unassigned'} • {service.frequency}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
+                        isScheduled 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {isScheduled ? (
+                          <>
+                            <CheckCircle className="w-3 h-3" />
+                            Scheduled
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="w-3 h-3" />
+                            Pending
+                          </>
+                        )}
+                      </span>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {service.visits || frequencyConfig?.visitsPerYear || 12} visits
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Show scheduled visits preview or pending message */}
+                  {isScheduled && isSelected && plannedVisits.length > 0 ? (
+                    <div className="mt-3 pt-3 border-t border-green-200">
+                      <p className="text-xs text-green-700 mb-2 font-medium">Scheduled Visits:</p>
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {plannedVisits.slice(0, 6).map((visit, i) => (
+                          <div key={i} className="flex-shrink-0 px-2 py-1 bg-white rounded border border-green-200 text-xs">
+                            <span className="font-medium">{visit.shortDateStr}</span>
+                            <span className="text-gray-400 ml-1">{visit.time}</span>
+                          </div>
+                        ))}
+                        {plannedVisits.length > 6 && (
+                          <div className="flex-shrink-0 px-2 py-1 bg-green-100 rounded text-xs text-green-700 font-medium">
+                            +{plannedVisits.length - 6} more
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : isScheduled && !isSelected ? (
+                    <div className="mt-3 pt-3 border-t border-green-200">
+                      <p className="text-xs text-green-600">
+                        <CheckCircle className="w-3 h-3 inline mr-1" />
+                        Click to view scheduled visits
+                      </p>
+                    </div>
+                  ) : !isScheduled && isSelected ? (
+                    <div className="mt-3 pt-3 border-t border-amber-200">
+                      <p className="text-xs text-amber-700 mb-2">
+                        <AlertCircle className="w-3 h-3 inline mr-1" />
+                        Select a date from the calendar above or use recommended dates to schedule this service.
+                      </p>
+                      {plannedVisits.length > 0 && plannedVisits.some(v => v.date) && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePrepareConfirmation();
+                          }}
+                          className="mt-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                        >
+                          <Check className="w-4 h-4" />
+                          Review & Confirm Schedule
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mt-3 pt-3 border-t border-amber-200">
+                      <p className="text-xs text-amber-600">
+                        <Clock className="w-3 h-3 inline mr-1" />
+                        Scheduling pending - Click to schedule this service
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Summary footer */}
+          {services.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-4 text-sm">
+                <span className="flex items-center gap-1 text-green-600">
+                  <CheckCircle className="w-4 h-4" />
+                  {services.filter(s => s.status === 'Scheduled').length} Scheduled
+                </span>
+                <span className="flex items-center gap-1 text-amber-600">
+                  <Clock className="w-4 h-4" />
+                  {services.filter(s => s.status !== 'Scheduled').length} Pending
+                </span>
+              </div>
+              {services.every(s => s.status === 'Scheduled') && (
+                <span className="flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                  <CheckCircle className="w-4 h-4" />
+                  All services scheduled!
+                </span>
+              )}
             </div>
-          ) : (
+          )}
+        </div>
+      </div>
+      
+      {/* Selected Service Visit Details */}
+      {selectedService && plannedVisits.length > 0 && (
+        <div className="px-6 pb-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-semibold text-gray-900">
+                  {selectedService.name} - Visit Schedule
+                </h3>
+                <p className="text-sm text-gray-500">
+                  {selectedService.status === 'Scheduled' 
+                    ? `${plannedVisits.length} visits scheduled` 
+                    : `${plannedVisits.length} visits planned - Confirm to finalize`
+                  }
+                </p>
+              </div>
+              {selectedService.status !== 'Scheduled' && (
+                <button 
+                  onClick={openRecurrenceModal}
+                  className="flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                >
+                  <Edit2 className="w-3 h-3" /> Edit Recurrence
+                </button>
+              )}
+            </div>
+            
+            {/* Visit cards */}
             <div className="flex gap-2 overflow-x-auto pb-2">
               {plannedVisits.map((visit, i) => (
                 <div 
@@ -1585,14 +1729,13 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                     visit.isManual ? 'border-amber-300 bg-amber-50' : 'border-gray-200'
                   } hover:border-blue-400 hover:bg-blue-50/50`}
                   onClick={() => {
-                    // Allow editing any visit except completed or in_progress
-                    if (visit.status !== 'completed' && visit.status !== 'in_progress' && editingVisitIndex !== i) {
+                    if (visit.status !== 'completed' && visit.status !== 'in_progress' && editingVisitIndex !== i && selectedService.status !== 'Scheduled') {
                       setEditingVisitIndex(i);
                     }
                   }}
                 >
                   <p className="text-xs text-gray-500">Visit {visit.visitNumber}</p>
-                  {editingVisitIndex === i ? (
+                  {editingVisitIndex === i && selectedService.status !== 'Scheduled' ? (
                     <div className="mt-1 space-y-1" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="date"
@@ -1656,30 +1799,22 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 </div>
               ))}
             </div>
-          )}
-          
-          <p className="text-xs text-gray-400 mt-3 flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" />
-            {getFrequencyConfig(selectedService?.frequency)?.autoGenerate 
-              ? 'The series is generated based on the first visit date. Dates may be adjusted slightly based on vendor availability.'
-              : 'Manual scheduling required. Select dates for each visit individually.'
-            }
-          </p>
-          
-          {/* Confirm Schedule Button */}
-          {plannedVisits.length > 0 && plannedVisits.some(v => v.date) && !selectedService?.frequency?.toLowerCase().includes('request') && (
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={handlePrepareConfirmation}
-                className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-              >
-                <Check className="w-4 h-4" />
-                Review & Confirm Schedule
-              </button>
-            </div>
-          )}
+            
+            {/* Confirm button for unscheduled services */}
+            {selectedService.status !== 'Scheduled' && plannedVisits.length > 0 && plannedVisits.some(v => v.date) && (
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={handlePrepareConfirmation}
+                  className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  Review & Confirm Schedule
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Schedule Confirmation Modal */}
       {showConfirmation && (
