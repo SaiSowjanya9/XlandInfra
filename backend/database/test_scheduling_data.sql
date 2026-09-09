@@ -44,7 +44,7 @@ WHERE property_id IN ('PROP-101', 'PROP-102', 'PROP-103', 'PROP-104', 'PROP-105'
 -- ============================================
 
 -- PROP-101: Green Valley Apartments - 5 services, all vendors assigned
-INSERT INTO fp_estimates (estimate_id, property_id, package_name, title, total_amount, status, payment_status, service_rows, franchise_partner_id, created_by, created_at)
+INSERT INTO fp_estimates (estimate_id, property_id, package_name, title, total_amount, status, payment_status, package_services, franchise_partner_id, created_by, created_at)
 SELECT 
   CONCAT('EST-', LPAD(FLOOR(RAND() * 100000), 5, '0')) as estimate_id,
   id as property_id,
@@ -54,12 +54,12 @@ SELECT
   'approved' as status,
   'paid' as payment_status,
   '[
-    {"service": "HVAC", "serviceType": "HVAC", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 30000},
-    {"service": "Plumbing", "serviceType": "Plumbing", "frequencyType": "Every 2 Months", "frequencyCount": 6, "visits": 6, "amount": 18000},
-    {"service": "Electrical", "serviceType": "Electrical", "frequencyType": "Quarterly", "frequencyCount": 4, "visits": 4, "amount": 24000},
-    {"service": "Pest Control", "serviceType": "Pest Control", "frequencyType": "Half-Yearly", "frequencyCount": 2, "visits": 2, "amount": 8000},
-    {"service": "Water Tank", "serviceType": "Water Tank", "frequencyType": "Yearly", "frequencyCount": 1, "visits": 1, "amount": 5000}
-  ]' as service_rows,
+    {"service": "HVAC", "category": "HVAC", "frequency": "Monthly", "visits": 12, "amount": 30000},
+    {"service": "Plumbing", "category": "Plumbing", "frequency": "Every 2 Months", "visits": 6, "amount": 18000},
+    {"service": "Electrical", "category": "Electrical", "frequency": "Quarterly", "visits": 4, "amount": 24000},
+    {"service": "Pest Control", "category": "Pest Control", "frequency": "Half-Yearly", "visits": 2, "amount": 8000},
+    {"service": "Water Tank", "category": "Water Tank", "frequency": "Yearly", "visits": 1, "amount": 5000}
+  ]' as package_services,
   franchise_partner_id,
   1 as created_by,
   NOW()
@@ -67,7 +67,7 @@ FROM onboarded_properties WHERE property_id = 'PROP-101'
 AND NOT EXISTS (SELECT 1 FROM fp_estimates WHERE property_id = (SELECT id FROM onboarded_properties WHERE property_id = 'PROP-101') AND status = 'approved');
 
 -- PROP-102: Sunrise Villas - 4 services, 2 vendors assigned
-INSERT INTO fp_estimates (estimate_id, property_id, package_name, title, total_amount, status, payment_status, service_rows, franchise_partner_id, created_by, created_at)
+INSERT INTO fp_estimates (estimate_id, property_id, package_name, title, total_amount, status, payment_status, package_services, franchise_partner_id, created_by, created_at)
 SELECT 
   CONCAT('EST-', LPAD(FLOOR(RAND() * 100000), 5, '0')) as estimate_id,
   id as property_id,
@@ -77,11 +77,11 @@ SELECT
   'approved' as status,
   'paid' as payment_status,
   '[
-    {"service": "Lift AMC", "serviceType": "Lift AMC", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 48000},
-    {"service": "Plumbing", "serviceType": "Plumbing", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 36000},
-    {"service": "Electrical", "serviceType": "Electrical", "frequencyType": "Quarterly", "frequencyCount": 4, "visits": 4, "amount": 20000},
-    {"service": "Landscaping", "serviceType": "Landscaping", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 24000}
-  ]' as service_rows,
+    {"service": "Lift AMC", "category": "Lift AMC", "frequency": "Monthly", "visits": 12, "amount": 48000},
+    {"service": "Plumbing", "category": "Plumbing", "frequency": "Monthly", "visits": 12, "amount": 36000},
+    {"service": "Electrical", "category": "Electrical", "frequency": "Quarterly", "visits": 4, "amount": 20000},
+    {"service": "Landscaping", "category": "Landscaping", "frequency": "Monthly", "visits": 12, "amount": 24000}
+  ]' as package_services,
   franchise_partner_id,
   1 as created_by,
   NOW()
@@ -89,7 +89,7 @@ FROM onboarded_properties WHERE property_id = 'PROP-102'
 AND NOT EXISTS (SELECT 1 FROM fp_estimates WHERE property_id = (SELECT id FROM onboarded_properties WHERE property_id = 'PROP-102') AND status = 'approved');
 
 -- PROP-103: Royal Heights - 6 services, 4 vendors assigned
-INSERT INTO fp_estimates (estimate_id, property_id, package_name, title, total_amount, status, payment_status, service_rows, franchise_partner_id, created_by, created_at)
+INSERT INTO fp_estimates (estimate_id, property_id, package_name, title, total_amount, status, payment_status, package_services, franchise_partner_id, created_by, created_at)
 SELECT 
   CONCAT('EST-', LPAD(FLOOR(RAND() * 100000), 5, '0')) as estimate_id,
   id as property_id,
@@ -99,13 +99,13 @@ SELECT
   'approved' as status,
   'paid' as payment_status,
   '[
-    {"service": "HVAC", "serviceType": "HVAC", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 45000},
-    {"service": "Plumbing", "serviceType": "Plumbing", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 36000},
-    {"service": "Electrical", "serviceType": "Electrical", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 40000},
-    {"service": "Pest Control", "serviceType": "Pest Control", "frequencyType": "Quarterly", "frequencyCount": 4, "visits": 4, "amount": 16000},
-    {"service": "Deep Cleaning", "serviceType": "Cleaning", "frequencyType": "Quarterly", "frequencyCount": 4, "visits": 4, "amount": 28000},
-    {"service": "Water Tank", "serviceType": "Water Tank", "frequencyType": "Half-Yearly", "frequencyCount": 2, "visits": 2, "amount": 6000}
-  ]' as service_rows,
+    {"service": "HVAC", "category": "HVAC", "frequency": "Monthly", "visits": 12, "amount": 45000},
+    {"service": "Plumbing", "category": "Plumbing", "frequency": "Monthly", "visits": 12, "amount": 36000},
+    {"service": "Electrical", "category": "Electrical", "frequency": "Monthly", "visits": 12, "amount": 40000},
+    {"service": "Pest Control", "category": "Pest Control", "frequency": "Quarterly", "visits": 4, "amount": 16000},
+    {"service": "Deep Cleaning", "category": "Cleaning", "frequency": "Quarterly", "visits": 4, "amount": 28000},
+    {"service": "Water Tank", "category": "Water Tank", "frequency": "Half-Yearly", "visits": 2, "amount": 6000}
+  ]' as package_services,
   franchise_partner_id,
   1 as created_by,
   NOW()
@@ -113,7 +113,7 @@ FROM onboarded_properties WHERE property_id = 'PROP-103'
 AND NOT EXISTS (SELECT 1 FROM fp_estimates WHERE property_id = (SELECT id FROM onboarded_properties WHERE property_id = 'PROP-103') AND status = 'approved');
 
 -- PROP-104: Lake View Residency - 3 services, all vendors assigned
-INSERT INTO fp_estimates (estimate_id, property_id, package_name, title, total_amount, status, payment_status, service_rows, franchise_partner_id, created_by, created_at)
+INSERT INTO fp_estimates (estimate_id, property_id, package_name, title, total_amount, status, payment_status, package_services, franchise_partner_id, created_by, created_at)
 SELECT 
   CONCAT('EST-', LPAD(FLOOR(RAND() * 100000), 5, '0')) as estimate_id,
   id as property_id,
@@ -123,10 +123,10 @@ SELECT
   'approved' as status,
   'paid' as payment_status,
   '[
-    {"service": "Pest Control", "serviceType": "Pest Control", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 36000},
-    {"service": "Deep Cleaning", "serviceType": "Cleaning", "frequencyType": "Quarterly", "frequencyCount": 4, "visits": 4, "amount": 24000},
-    {"service": "Water Tank", "serviceType": "Water Tank", "frequencyType": "Quarterly", "frequencyCount": 4, "visits": 4, "amount": 12000}
-  ]' as service_rows,
+    {"service": "Pest Control", "category": "Pest Control", "frequency": "Monthly", "visits": 12, "amount": 36000},
+    {"service": "Deep Cleaning", "category": "Cleaning", "frequency": "Quarterly", "visits": 4, "amount": 24000},
+    {"service": "Water Tank", "category": "Water Tank", "frequency": "Quarterly", "visits": 4, "amount": 12000}
+  ]' as package_services,
   franchise_partner_id,
   1 as created_by,
   NOW()
@@ -134,7 +134,7 @@ FROM onboarded_properties WHERE property_id = 'PROP-104'
 AND NOT EXISTS (SELECT 1 FROM fp_estimates WHERE property_id = (SELECT id FROM onboarded_properties WHERE property_id = 'PROP-104') AND status = 'approved');
 
 -- PROP-105: Paradise Towers - 5 services, 3 vendors assigned
-INSERT INTO fp_estimates (estimate_id, property_id, package_name, title, total_amount, status, payment_status, service_rows, franchise_partner_id, created_by, created_at)
+INSERT INTO fp_estimates (estimate_id, property_id, package_name, title, total_amount, status, payment_status, package_services, franchise_partner_id, created_by, created_at)
 SELECT 
   CONCAT('EST-', LPAD(FLOOR(RAND() * 100000), 5, '0')) as estimate_id,
   id as property_id,
@@ -144,12 +144,12 @@ SELECT
   'approved' as status,
   'partial' as payment_status,
   '[
-    {"service": "Lift AMC", "serviceType": "Lift AMC", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 60000},
-    {"service": "HVAC", "serviceType": "HVAC", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 48000},
-    {"service": "Electrical", "serviceType": "Electrical", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 36000},
-    {"service": "Plumbing", "serviceType": "Plumbing", "frequencyType": "Quarterly", "frequencyCount": 4, "visits": 4, "amount": 16000},
-    {"service": "Pest Control", "serviceType": "Pest Control", "frequencyType": "Quarterly", "frequencyCount": 4, "visits": 4, "amount": 12000}
-  ]' as service_rows,
+    {"service": "Lift AMC", "category": "Lift AMC", "frequency": "Monthly", "visits": 12, "amount": 60000},
+    {"service": "HVAC", "category": "HVAC", "frequency": "Monthly", "visits": 12, "amount": 48000},
+    {"service": "Electrical", "category": "Electrical", "frequency": "Monthly", "visits": 12, "amount": 36000},
+    {"service": "Plumbing", "category": "Plumbing", "frequency": "Quarterly", "visits": 4, "amount": 16000},
+    {"service": "Pest Control", "category": "Pest Control", "frequency": "Quarterly", "visits": 4, "amount": 12000}
+  ]' as package_services,
   franchise_partner_id,
   1 as created_by,
   NOW()
@@ -157,7 +157,7 @@ FROM onboarded_properties WHERE property_id = 'PROP-105'
 AND NOT EXISTS (SELECT 1 FROM fp_estimates WHERE property_id = (SELECT id FROM onboarded_properties WHERE property_id = 'PROP-105') AND status = 'approved');
 
 -- PROP-106: Silver Oak Estate - 4 services, 1 vendor assigned
-INSERT INTO fp_estimates (estimate_id, property_id, package_name, title, total_amount, status, payment_status, service_rows, franchise_partner_id, created_by, created_at)
+INSERT INTO fp_estimates (estimate_id, property_id, package_name, title, total_amount, status, payment_status, package_services, franchise_partner_id, created_by, created_at)
 SELECT 
   CONCAT('EST-', LPAD(FLOOR(RAND() * 100000), 5, '0')) as estimate_id,
   id as property_id,
@@ -167,11 +167,11 @@ SELECT
   'approved' as status,
   'paid' as payment_status,
   '[
-    {"service": "Landscaping", "serviceType": "Landscaping", "frequencyType": "Weekly", "frequencyCount": 52, "visits": 52, "amount": 52000},
-    {"service": "Pest Control", "serviceType": "Pest Control", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 24000},
-    {"service": "Plumbing", "serviceType": "Plumbing", "frequencyType": "Quarterly", "frequencyCount": 4, "visits": 4, "amount": 16000},
-    {"service": "Electrical", "serviceType": "Electrical", "frequencyType": "Half-Yearly", "frequencyCount": 2, "visits": 2, "amount": 10000}
-  ]' as service_rows,
+    {"service": "Landscaping", "category": "Landscaping", "frequency": "Weekly", "visits": 52, "amount": 52000},
+    {"service": "Pest Control", "category": "Pest Control", "frequency": "Monthly", "visits": 12, "amount": 24000},
+    {"service": "Plumbing", "category": "Plumbing", "frequency": "Quarterly", "visits": 4, "amount": 16000},
+    {"service": "Electrical", "category": "Electrical", "frequency": "Half-Yearly", "visits": 2, "amount": 10000}
+  ]' as package_services,
   franchise_partner_id,
   1 as created_by,
   NOW()
@@ -179,7 +179,7 @@ FROM onboarded_properties WHERE property_id = 'PROP-106'
 AND NOT EXISTS (SELECT 1 FROM fp_estimates WHERE property_id = (SELECT id FROM onboarded_properties WHERE property_id = 'PROP-106') AND status = 'approved');
 
 -- PROP-107: Maple Gardens - 7 services, 5 vendors assigned (Gated Community)
-INSERT INTO fp_estimates (estimate_id, property_id, package_name, title, total_amount, status, payment_status, service_rows, franchise_partner_id, created_by, created_at)
+INSERT INTO fp_estimates (estimate_id, property_id, package_name, title, total_amount, status, payment_status, package_services, franchise_partner_id, created_by, created_at)
 SELECT 
   CONCAT('EST-', LPAD(FLOOR(RAND() * 100000), 5, '0')) as estimate_id,
   id as property_id,
@@ -189,14 +189,14 @@ SELECT
   'approved' as status,
   'paid' as payment_status,
   '[
-    {"service": "HVAC", "serviceType": "HVAC", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 72000},
-    {"service": "Plumbing", "serviceType": "Plumbing", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 60000},
-    {"service": "Electrical", "serviceType": "Electrical", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 72000},
-    {"service": "Pest Control", "serviceType": "Pest Control", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 48000},
-    {"service": "Deep Cleaning", "serviceType": "Cleaning", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 60000},
-    {"service": "Landscaping", "serviceType": "Landscaping", "frequencyType": "Weekly", "frequencyCount": 52, "visits": 52, "amount": 78000},
-    {"service": "Water Tank", "serviceType": "Water Tank", "frequencyType": "Monthly", "frequencyCount": 12, "visits": 12, "amount": 24000}
-  ]' as service_rows,
+    {"service": "HVAC", "category": "HVAC", "frequency": "Monthly", "visits": 12, "amount": 72000},
+    {"service": "Plumbing", "category": "Plumbing", "frequency": "Monthly", "visits": 12, "amount": 60000},
+    {"service": "Electrical", "category": "Electrical", "frequency": "Monthly", "visits": 12, "amount": 72000},
+    {"service": "Pest Control", "category": "Pest Control", "frequency": "Monthly", "visits": 12, "amount": 48000},
+    {"service": "Deep Cleaning", "category": "Cleaning", "frequency": "Monthly", "visits": 12, "amount": 60000},
+    {"service": "Landscaping", "category": "Landscaping", "frequency": "Weekly", "visits": 52, "amount": 78000},
+    {"service": "Water Tank", "category": "Water Tank", "frequency": "Monthly", "visits": 12, "amount": 24000}
+  ]' as package_services,
   franchise_partner_id,
   1 as created_by,
   NOW()
@@ -204,7 +204,7 @@ FROM onboarded_properties WHERE property_id = 'PROP-107'
 AND NOT EXISTS (SELECT 1 FROM fp_estimates WHERE property_id = (SELECT id FROM onboarded_properties WHERE property_id = 'PROP-107') AND status = 'approved');
 
 -- PROP-108: Crystal Bay - 3 services, no vendors assigned yet
-INSERT INTO fp_estimates (estimate_id, property_id, package_name, title, total_amount, status, payment_status, service_rows, franchise_partner_id, created_by, created_at)
+INSERT INTO fp_estimates (estimate_id, property_id, package_name, title, total_amount, status, payment_status, package_services, franchise_partner_id, created_by, created_at)
 SELECT 
   CONCAT('EST-', LPAD(FLOOR(RAND() * 100000), 5, '0')) as estimate_id,
   id as property_id,
@@ -214,10 +214,10 @@ SELECT
   'approved' as status,
   'paid' as payment_status,
   '[
-    {"service": "Pest Control", "serviceType": "Pest Control", "frequencyType": "Quarterly", "frequencyCount": 4, "visits": 4, "amount": 16000},
-    {"service": "Deep Cleaning", "serviceType": "Cleaning", "frequencyType": "Half-Yearly", "frequencyCount": 2, "visits": 2, "amount": 20000},
-    {"service": "Water Tank", "serviceType": "Water Tank", "frequencyType": "Yearly", "frequencyCount": 1, "visits": 1, "amount": 5000}
-  ]' as service_rows,
+    {"service": "Pest Control", "category": "Pest Control", "frequency": "Quarterly", "visits": 4, "amount": 16000},
+    {"service": "Deep Cleaning", "category": "Cleaning", "frequency": "Half-Yearly", "visits": 2, "amount": 20000},
+    {"service": "Water Tank", "category": "Water Tank", "frequency": "Yearly", "visits": 1, "amount": 5000}
+  ]' as package_services,
   franchise_partner_id,
   1 as created_by,
   NOW()
