@@ -303,9 +303,10 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: Arial, sans-serif; }
-          .header { background: #3a3a3a; padding: 10px 0; text-align: center; width: 100%; }
-          .header-title { color: #D39A1A; font-size: 15px; font-weight: bold; letter-spacing: 1px; display: inline; }
-          .header-subtitle { color: #D39A1A; font-size: 8px; letter-spacing: 2px; display: inline; margin-left: 5px; }
+          .header { background: #3a3a3a; padding: 12px 0; text-align: center; width: 100%; }
+          .header-title { color: #D39A1A; font-size: 16px; font-weight: bold; letter-spacing: 1px; }
+          .header-subtitle { color: #D39A1A; font-size: 8px; letter-spacing: 3px; margin-top: 2px; }
+          .header-line { display: inline-block; width: 20px; height: 1px; background: #D39A1A; vertical-align: middle; }
           .report-title { background: #D39A1A; color: white; text-align: center; padding: 6px 0; font-weight: 600; font-size: 11px; width: 100%; }
           .content { padding: 15px 20px; }
           table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
@@ -321,8 +322,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       </head>
       <body>
         <div class="header">
-          <span class="header-title">XLAND INFRA</span>
-          <span class="header-subtitle">— PVT LTD —</span>
+          <div class="header-title">XLAND INFRA</div>
+          <div class="header-subtitle"><span class="header-line"></span> PVT LTD <span class="header-line"></span></div>
         </div>
         <div class="report-title">SCHEDULE REPORT</div>
         <div class="content">
@@ -1790,11 +1791,15 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               <div ref={scheduleDetailsRef} className="p-5 bg-white">
                 {/* PDF Header with Logo Banner - Full Width */}
                 <div className="mb-5 -mx-5 -mt-5">
-                  <div className="bg-[#3a3a3a] px-5 py-2 flex items-center justify-center gap-3">
-                    <img src="/logo.webp" alt="XLAND INFRA" className="h-8 w-8 object-contain" />
-                    <div className="flex items-center gap-2">
-                      <h1 className="text-[#D39A1A] text-sm font-bold tracking-wider">XLAND INFRA</h1>
-                      <span className="text-[#D39A1A] text-[8px] tracking-[0.12em]">— PVT LTD —</span>
+                  <div className="bg-[#3a3a3a] px-5 py-3 flex items-center justify-center gap-3">
+                    <img src="/logo.webp" alt="XLAND INFRA" className="h-10 w-10 object-contain" />
+                    <div className="flex flex-col items-center">
+                      <h1 className="text-[#D39A1A] text-base font-bold tracking-wider">XLAND INFRA</h1>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="w-4 h-[1px] bg-[#D39A1A]"></span>
+                        <span className="text-[#D39A1A] text-[8px] tracking-[0.15em]">PVT LTD</span>
+                        <span className="w-4 h-[1px] bg-[#D39A1A]"></span>
+                      </div>
                     </div>
                   </div>
                   <div className="bg-[#D39A1A] text-center py-1">
