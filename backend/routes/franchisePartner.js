@@ -1135,15 +1135,15 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
     
     console.log('[Assign Vendor] Property found in:', propertySource, 'ID:', id, 'ServiceType:', serviceType);
 
-    // Verify vendor belongs to this FP (check onboarded_vendors table)
+    // Verify vendor exists and is active (FP can use any active vendor)
     const [vendor] = await pool.execute(
       `SELECT id, owner_name, owner_email, owner_mobile, service_type FROM onboarded_vendors 
-       WHERE (id = ? OR vendor_id = ?) AND franchise_partner_id = ?`,
-      [vendorId, vendorId, req.fpId]
+       WHERE (id = ? OR vendor_id = ?) AND status = 'active'`,
+      [vendorId, vendorId]
     );
 
     if (vendor.length === 0) {
-      return res.status(404).json({ success: false, message: 'Vendor not found' });
+      return res.status(404).json({ success: false, message: 'Vendor not found or inactive' });
     }
     
     // Use numeric id for assignment
