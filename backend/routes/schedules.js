@@ -933,6 +933,19 @@ router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async
     
     console.log('[Property Services] Fetching services for property ID:', propertyId);
 
+    // Resolve property ID - could be numeric DB ID or property code like "PROP-101"
+    let resolvedPropertyId = propertyId;
+    if (isNaN(propertyId)) {
+      const [propRows] = await pool.execute(
+        `SELECT id FROM onboarded_properties WHERE property_id = ? LIMIT 1`,
+        [propertyId]
+      );
+      if (propRows.length > 0) {
+        resolvedPropertyId = propRows[0].id;
+        console.log('[Property Services] Resolved property code to ID:', propertyId, '->', resolvedPropertyId);
+      }
+    }
+
     // Get services from estimate's package_services OR from fp_amc_packages (same as pending properties)
     const [estimates] = await pool.execute(
       `SELECT 
@@ -946,7 +959,7 @@ router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async
        WHERE fe.property_id = ? AND fe.status = 'approved'
        ORDER BY fe.created_at DESC
        LIMIT 1`,
-      [propertyId]
+      [resolvedPropertyId]
     );
     
     console.log('[Property Services] Found estimates:', estimates.length, estimates.length > 0 ? `(estimate_id: ${estimates[0].estimate_id}, package_id: ${estimates[0].package_id}, has package_services: ${!!estimates[0].package_services})` : '(none)');
@@ -984,7 +997,7 @@ router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async
       console.log('[Property Services] Debug - property info:', debugProperty);
     }
 
-    // Get vendor assignments for this property
+    // Get vendor assignments for this property (use resolved ID)
     const [vendorAssignments] = await pool.execute(
       `SELECT pva.service_type, pva.vendor_id, 
               ov.vendor_id as vendor_code,
@@ -994,10 +1007,10 @@ router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async
        FROM property_vendor_assignments pva
        LEFT JOIN onboarded_vendors ov ON ov.id = pva.vendor_id
        WHERE pva.property_id = ? AND pva.is_active = 1`,
-      [propertyId]
+      [resolvedPropertyId]
     );
 
-    // Get scheduling status from property_service_schedules
+    // Get scheduling status from property_service_schedules (use resolved ID)
     const [serviceSchedules] = await pool.execute(
       `SELECT pss.*, 
               ov.vendor_id as vendor_code, 
@@ -1006,7 +1019,7 @@ router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async
        FROM property_service_schedules pss
        LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
        WHERE pss.property_id = ?`,
-      [propertyId]
+      [resolvedPropertyId]
     );
 
     // Build vendor assignment lookup map (by service type, case-insensitive)
