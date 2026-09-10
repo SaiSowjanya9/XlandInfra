@@ -212,6 +212,8 @@ const FPVendors = ({ user }) => {
       'POC Mobile': v.poc_mobile || v.pocMobile || '-',
       'Rate Per Visit': v.rate_per_visit || v.ratePerVisit || 0,
       'Coverage Per Day': v.coverage_per_day || v.coveragePerDay || 0,
+      'Working Hours': (v.working_hours_from || v.workingHoursFrom) && (v.working_hours_to || v.workingHoursTo) 
+        ? `${v.working_hours_from || v.workingHoursFrom} - ${v.working_hours_to || v.workingHoursTo}` : '-',
       'Status': v.status || 'active',
       'Created': v.created_at ? new Date(v.created_at).toLocaleDateString('en-IN') : '-'
     }));
@@ -869,11 +871,11 @@ const FPVendors = ({ user }) => {
                 </div>
               </div>
 
-              {/* Rate & Coverage - Hidden for FP Manager */}
+              {/* Rate, Coverage & Working Hours - Hidden for FP Manager */}
               {!isFPManager && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Rate & Coverage</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Rate, Coverage & Working Hours</h3>
+                  <div className="grid grid-cols-3 gap-4">
                     <div>
                       <p className="text-xs text-gray-500">Rate Per Visit</p>
                       <p className="font-medium">₹{viewVendor.ratePerVisit || viewVendor.rate_per_visit || 0}</p>
@@ -881,6 +883,10 @@ const FPVendors = ({ user }) => {
                     <div>
                       <p className="text-xs text-gray-500">Coverage Per Day</p>
                       <p className="font-medium">{viewVendor.coveragePerDay || viewVendor.coverage_per_day || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Working Hours</p>
+                      <p className="font-medium text-purple-700">{(viewVendor.workingHoursFrom || viewVendor.working_hours_from) && (viewVendor.workingHoursTo || viewVendor.working_hours_to) ? `${viewVendor.workingHoursFrom || viewVendor.working_hours_from} - ${viewVendor.workingHoursTo || viewVendor.working_hours_to}` : '-'}</p>
                     </div>
                   </div>
                 </div>

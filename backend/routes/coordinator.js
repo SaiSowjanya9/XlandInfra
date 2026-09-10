@@ -1739,7 +1739,7 @@ router.get('/vendors', requireCoordinatorScope, async (req, res) => {
               ov.owner_aadhar, ov.owner_country_code,
               ov.manager_name, ov.manager_mobile, ov.manager_email, ov.manager_country_code,
               ov.poc_name, ov.poc_mobile, ov.poc_email, ov.poc_country_code,
-              ov.rate_per_visit, ov.coverage_per_day,
+              ov.rate_per_visit, ov.coverage_per_day, ov.working_hours_from, ov.working_hours_to,
               ov.created_by, ov.created_by_id,
               COALESCE(
                 CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
@@ -1891,12 +1891,9 @@ router.post('/vendors', requireCoordinatorScope, async (req, res) => {
       managerName, managerMobile, managerEmail, managerCountryCode,
       pocName, pocMobile, pocEmail, pocCountryCode,
       ratePerVisit, coveragePerDay,
-      scheduleTime, useCustomTime, customScheduleTime,
+      workingHoursFrom, workingHoursTo,
       gstNumber, panNumber, licenseNumber
     } = req.body;
-
-    // Determine the final schedule time value
-    const finalScheduleTime = useCustomTime ? customScheduleTime : scheduleTime;
 
     const vendorId = `VND-${Date.now()}`;
 
@@ -1913,16 +1910,16 @@ router.post('/vendors', requireCoordinatorScope, async (req, res) => {
         manager_name, manager_mobile, manager_email, manager_country_code,
         poc_name, poc_mobile, poc_email, poc_country_code,
         gst_number, pan_number, license_number,
-        rate_per_visit, coverage_per_day, schedule_time, rating, total_jobs_completed,
+        rate_per_visit, coverage_per_day, working_hours_from, working_hours_to, rating, total_jobs_completed,
         franchise_partner_id, coordinator_id, created_by, created_by_id, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, 'active')`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, 'active')`,
       [
         vendorId, username, serviceType || '', serviceVerified ? 1 : 0, zone || '', areaName || '', division || '',
         ownerName || '', ownerMobile || '', ownerEmail || '', ownerAadhar || '', ownerCountryCode || '+91',
         managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
         pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
         gstNumber || '', panNumber || '', licenseNumber || '',
-        parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0, finalScheduleTime || null,
+        parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0, workingHoursFrom || null, workingHoursTo || null,
         franchisePartnerId, coordinatorId,
         employeeUsername, employeeId
       ]
