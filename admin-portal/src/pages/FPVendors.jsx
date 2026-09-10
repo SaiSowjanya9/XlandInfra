@@ -686,6 +686,8 @@ const FPVendors = ({ user }) => {
                       area: formData.get('area'),
                       rate_per_visit: parseFloat(formData.get('ratePerVisit')) || 0,
                       coverage_per_day: parseInt(formData.get('coveragePerDay')) || 0,
+                      working_hours_from: formData.get('workingHoursFrom') || null,
+                      working_hours_to: formData.get('workingHoursTo') || null,
                       owner_name: formData.get('ownerName'),
                       owner_mobile: formData.get('ownerMobile'),
                       owner_email: formData.get('ownerEmail'),
@@ -747,6 +749,20 @@ const FPVendors = ({ user }) => {
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Coverage Per Day</label>
                     <input name="coveragePerDay" type="number" defaultValue={editVendor.coverage_per_day || editVendor.coveragePerDay || 0} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                  </div>
+                </div>
+                {/* Working Hours */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <label className="block text-xs font-medium text-gray-500 mb-2">Working Hours</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">From</label>
+                      <input name="workingHoursFrom" type="time" defaultValue={editVendor.working_hours_from || editVendor.workingHoursFrom || ''} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">To</label>
+                      <input name="workingHoursTo" type="time" defaultValue={editVendor.working_hours_to || editVendor.workingHoursTo || ''} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                    </div>
                   </div>
                 </div>
               </div>

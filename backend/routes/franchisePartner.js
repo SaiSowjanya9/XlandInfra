@@ -2796,6 +2796,8 @@ router.put('/vendors/:id', requireFPScope, async (req, res) => {
       division: body.division,
       rate_per_visit: body.rate_per_visit || body.ratePerVisit,
       coverage_per_day: body.coverage_per_day || body.coveragePerDay,
+      working_hours_from: body.working_hours_from || body.workingHoursFrom,
+      working_hours_to: body.working_hours_to || body.workingHoursTo,
       owner_name: body.owner_name || body.ownerName,
       owner_mobile: body.owner_mobile || body.ownerMobile,
       owner_email: body.owner_email || body.ownerEmail,
