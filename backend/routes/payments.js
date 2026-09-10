@@ -2829,23 +2829,28 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
         `, [totalPaid, newBalance, invoiceStatus, invoiceStatus, p.invoice_id]);
 
         // Update fp_estimates payment_status to enable scheduling
-        if (p.estimate_id) {
+        // PROPERTY_ID is the PRIMARY link - all records are linked by property
+        if (p.property_id) {
           const fpEstimateStatus = newBalance <= 0 ? 'paid' : 'partial';
+          
+          // Always update by property_id (primary key for all linkages)
           await pool.execute(`
-            UPDATE fp_estimates SET
-              payment_status = ?,
-              updated_at = NOW()
-            WHERE id = ? OR property_id = ?
-          `, [fpEstimateStatus, p.estimate_id, p.property_id]);
-          console.log(`[Payment Verify] Updated fp_estimates payment_status to ${fpEstimateStatus} for estimate ${p.estimate_id}`);
+            UPDATE fp_estimates SET 
+              payment_status = ?, 
+              updated_at = NOW() 
+            WHERE property_id = ? AND status = 'approved'
+          `, [fpEstimateStatus, p.property_id]);
+          
+          console.log(`[Payment Verify] Updated fp_estimates payment_status to ${fpEstimateStatus} for property_id=${p.property_id}`);
         }
 
         // Trigger scheduling workflow when invoice is fully paid
-        if (newBalance <= 0 && p.property_id && p.estimate_id) {
+        // Property ID is required, but estimate ID is optional (can be found by property_id)
+        if (newBalance <= 0 && p.property_id) {
           try {
             await markPaymentCompleted({
               propertyId: p.property_id,
-              estimateId: p.estimate_id,
+              estimateId: p.estimate_id || null,
               invoiceId: p.invoice_id,
               paidAmount: totalPaid,
               paidBy: userName

@@ -813,15 +813,16 @@ async function handlePaymentLinkPaid(payload, webhookId) {
       WHERE id = ?
     `, [newAmountPaid, Math.max(0, newBalance), newPaymentStatus, newStatus, invoice.id]);
 
-    // Also update fp_estimates payment_status if linked to estimate
-    if (invoice.estimate_id) {
+    // Update fp_estimates payment_status - PROPERTY_ID is the PRIMARY link
+    if (invoice.property_id) {
       await connection.execute(`
-        UPDATE fp_estimates SET
-          payment_status = ?,
-          updated_at = NOW()
-        WHERE id = ?
-      `, [newPaymentStatus, invoice.estimate_id]);
-      console.log(`[Webhook] Updated fp_estimates ${invoice.estimate_id} payment_status to ${newPaymentStatus}`);
+        UPDATE fp_estimates SET 
+          payment_status = ?, 
+          updated_at = NOW() 
+        WHERE property_id = ? AND status = 'approved'
+      `, [newPaymentStatus, invoice.property_id]);
+      
+      console.log(`[Webhook] Updated fp_estimates payment_status to ${newPaymentStatus} for property_id=${invoice.property_id}`);
     }
 
     // If fully paid and linked to work order, close it
@@ -836,11 +837,12 @@ async function handlePaymentLinkPaid(payload, webhookId) {
     }
 
     // Trigger scheduling workflow when invoice is fully paid
-    if (newBalance <= 0 && invoice.property_id && invoice.estimate_id) {
+    // Property ID is required, estimate ID is optional (can be found by property_id)
+    if (newBalance <= 0 && invoice.property_id) {
       try {
         await markPaymentCompleted({
           propertyId: invoice.property_id,
-          estimateId: invoice.estimate_id,
+          estimateId: invoice.estimate_id || null,
           invoiceId: invoice.id,
           paidAmount: newAmountPaid,
           paidBy: 'Razorpay Online Payment'
@@ -1877,11 +1879,14 @@ router.post('/verify-payment-callback', async (req, res) => {
                   WHERE id = ?
                 `, [newStatus, newBalanceDue, amountPaid, newStatus, invoice.id]);
 
-                // Also update fp_estimates payment_status if linked to estimate
-                if (invoice.estimate_id) {
+                // Update fp_estimates payment_status - PROPERTY_ID is the PRIMARY link
+                if (invoice.property_id) {
                   await connection.execute(`
-                    UPDATE fp_estimates SET payment_status = ?, updated_at = NOW() WHERE id = ?
-                  `, [newStatus, invoice.estimate_id]);
+                    UPDATE fp_estimates SET 
+                      payment_status = ?, 
+                      updated_at = NOW() 
+                    WHERE property_id = ? AND status = 'approved'
+                  `, [newStatus, invoice.property_id]);
                 }
 
                 await connection.commit();
@@ -2070,11 +2075,14 @@ router.post('/verify-payment-callback', async (req, res) => {
                 WHERE id = ?
               `, [newStatus, newBalanceDue, amountPaid, newStatus, invoice.id]);
 
-              // Also update fp_estimates payment_status if linked to estimate
-              if (invoice.estimate_id) {
+              // Update fp_estimates payment_status - PROPERTY_ID is the PRIMARY link
+              if (invoice.property_id) {
                 await connection.execute(`
-                  UPDATE fp_estimates SET payment_status = ?, updated_at = NOW() WHERE id = ?
-                `, [newStatus, invoice.estimate_id]);
+                  UPDATE fp_estimates SET 
+                    payment_status = ?, 
+                    updated_at = NOW() 
+                  WHERE property_id = ? AND status = 'approved'
+                `, [newStatus, invoice.property_id]);
               }
 
               await connection.commit();
