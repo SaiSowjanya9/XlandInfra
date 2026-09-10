@@ -233,18 +233,12 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
       });
       const invoicesResult = await invoicesRes.json();
       const invoices = invoicesResult.success ? (invoicesResult.data || []) : [];
-      
-      // Filter payments by date range for the trend chart only
-      const payments = allPayments.filter(p => {
-        const paymentDate = new Date(p.paymentDate || p.created_at).toISOString().split('T')[0];
-        return paymentDate >= dateRange.start && paymentDate <= dateRange.end;
-      });
 
       // Calculate stats using ALL payments (not filtered by date)
       const today = new Date().toISOString().split('T')[0];
       
       // Total Invoice Amount
-      const totalInvoiceAmount = invoices.reduce((sum, inv) => sum + (parseFloat(inv.totalAmount) || 0), 0);
+      const totalInvoiceAmount = invoices.reduce((sum, inv) => sum + (parseFloat(inv.totalAmount || inv.total_amount) || 0), 0);
       
       // Amount Collected (paid payments) - from ALL payments
       const allPaidPayments = allPayments.filter(p => p.status === 'paid' || p.status === 'verified');
@@ -255,7 +249,9 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         const payStatus = inv.paymentStatus || inv.payment_status || inv.status;
         return payStatus !== 'paid' && payStatus !== 'cancelled' && payStatus !== 'void';
       });
-      const pendingAmount = pendingInvoices.reduce((sum, inv) => sum + (parseFloat(inv.balanceAmount) || parseFloat(inv.totalAmount) || 0), 0);
+      const pendingAmount = pendingInvoices.reduce((sum, inv) => {
+        return sum + (parseFloat(inv.balanceAmount || inv.balance_amount) || parseFloat(inv.totalAmount || inv.total_amount) || 0);
+      }, 0);
       
       // Overdue Amount
       const overdueInvoices = invoices.filter(inv => {
@@ -264,7 +260,9 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         const dueDate = new Date(inv.dueDate || inv.due_date);
         return dueDate < new Date();
       });
-      const overdueAmount = overdueInvoices.reduce((sum, inv) => sum + (parseFloat(inv.balanceAmount) || parseFloat(inv.totalAmount) || 0), 0);
+      const overdueAmount = overdueInvoices.reduce((sum, inv) => {
+        return sum + (parseFloat(inv.balanceAmount || inv.balance_amount) || parseFloat(inv.totalAmount || inv.total_amount) || 0);
+      }, 0);
       
       // Today's Collections - from ALL payments
       const todaysPayments = allPayments.filter(p => {
@@ -491,11 +489,11 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
     } finally {
       setLoading(false);
     }
-  }, [token, dateRange, selectedFp]);
+  }, [token, selectedFp]);
 
   useEffect(() => {
     fetchDashboardData();
-  }, [token, dateRange, selectedFp]);
+  }, [fetchDashboardData]);
 
   const formatDateRange = () => {
     const start = new Date(dateRange.start);

@@ -2849,6 +2849,29 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
           `, [fpEstimateStatus, effectivePropertyId]);
           
           console.log(`[Payment Verify] Updated fp_estimates payment_status to ${fpEstimateStatus} for property_id=${effectivePropertyId}, rows affected: ${updateResult.affectedRows}`);
+          
+          // Also update onboarded_properties.franchise_partner_id if it's NULL
+          // This ensures the property is linked to the FP for scheduling
+          const [propCheck] = await pool.execute(
+            `SELECT franchise_partner_id FROM onboarded_properties WHERE id = ?`,
+            [effectivePropertyId]
+          );
+          
+          if (propCheck.length > 0 && !propCheck[0].franchise_partner_id) {
+            // Get franchise_partner_id from the estimate
+            const [estCheck] = await pool.execute(
+              `SELECT franchise_partner_id FROM fp_estimates WHERE property_id = ? AND franchise_partner_id IS NOT NULL LIMIT 1`,
+              [effectivePropertyId]
+            );
+            
+            if (estCheck.length > 0 && estCheck[0].franchise_partner_id) {
+              await pool.execute(
+                `UPDATE onboarded_properties SET franchise_partner_id = ? WHERE id = ?`,
+                [estCheck[0].franchise_partner_id, effectivePropertyId]
+              );
+              console.log(`[Payment Verify] Updated property ${effectivePropertyId} franchise_partner_id to ${estCheck[0].franchise_partner_id}`);
+            }
+          }
         } else {
           console.log('[Payment Verify] WARNING: No property_id found - fp_estimates not updated!');
         }

@@ -111,10 +111,30 @@ ON DUPLICATE KEY UPDATE name = VALUES(name);
 -- RENAME TABLE properties TO properties_archived;
 
 -- ============================================
+-- STEP 8: Fix missing franchise_partner_id on properties
+-- Updates properties that have NULL franchise_partner_id from their estimates
+-- ============================================
+UPDATE onboarded_properties op
+SET franchise_partner_id = (
+    SELECT fe.franchise_partner_id 
+    FROM fp_estimates fe 
+    WHERE fe.property_id = op.id 
+      AND fe.franchise_partner_id IS NOT NULL 
+    LIMIT 1
+)
+WHERE op.franchise_partner_id IS NULL
+  AND EXISTS (
+    SELECT 1 FROM fp_estimates fe 
+    WHERE fe.property_id = op.id 
+      AND fe.franchise_partner_id IS NOT NULL
+  );
+
+-- ============================================
 -- NOTES:
 -- After running this migration:
 -- 1. All properties will be in onboarded_properties
 -- 2. The legacy 'properties' table can be archived
 -- 3. Code should only reference onboarded_properties going forward
 -- 4. The UNION queries in schedules.js can be simplified to single table queries
+-- 5. Properties without franchise_partner_id will get it from their estimates
 -- ============================================
