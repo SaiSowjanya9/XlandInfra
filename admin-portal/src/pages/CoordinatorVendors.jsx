@@ -752,6 +752,10 @@ const CoordinatorVendors = ({ user }) => {
                   <p className="font-medium text-gray-900">{selectedVendor.coverage_per_day || '-'}</p>
                 </div>
                 <div>
+                  <p className="text-sm text-gray-500">Working Hours</p>
+                  <p className="font-medium text-purple-700">{selectedVendor.working_hours_from && selectedVendor.working_hours_to ? `${selectedVendor.working_hours_from} - ${selectedVendor.working_hours_to}` : '-'}</p>
+                </div>
+                <div>
                   <p className="text-sm text-gray-500">Created By</p>
                   <p className="font-medium text-gray-900">{selectedVendor.created_by_name || '-'}</p>
                 </div>

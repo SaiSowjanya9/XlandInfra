@@ -687,10 +687,10 @@ const ManagerVendors = ({ user }) => {
                 </div>
               </div>
 
-              {/* Rate & Coverage */}
+              {/* Rate, Coverage & Working Hours */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">{isFPManager ? 'Coverage' : 'Rate & Coverage'}</h3>
-                <div className={`grid ${isFPManager ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">{isFPManager ? 'Coverage & Working Hours' : 'Rate, Coverage & Working Hours'}</h3>
+                <div className={`grid ${isFPManager ? 'grid-cols-2' : 'grid-cols-3'} gap-4`}>
                   {!isFPManager && (
                     <div>
                       <p className="text-xs text-gray-500">Rate Per Visit</p>
@@ -700,6 +700,10 @@ const ManagerVendors = ({ user }) => {
                   <div>
                     <p className="text-xs text-gray-500">Coverage Per Day</p>
                     <p className="font-medium text-gray-900">{selectedVendor.coverage_per_day || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Working Hours</p>
+                    <p className="font-medium text-purple-700">{selectedVendor.working_hours_from && selectedVendor.working_hours_to ? `${selectedVendor.working_hours_from} - ${selectedVendor.working_hours_to}` : '-'}</p>
                   </div>
                 </div>
               </div>
