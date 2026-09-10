@@ -757,24 +757,39 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
 
   const handleSelectSlot = (day, time, status) => {
     if (status === 'booked') return;
+    if (!selectedService) return;
+    
     setSelectedSlot({ date: day, time, status });
     
-    // If we already have planned visits, update the first one with the new slot
-    // but keep other visits' dates intact
-    if (plannedVisits.length > 0) {
-      setPlannedVisits(prev => prev.map((visit, index) => {
-        if (index === 0) {
-          return {
-            ...visit,
-            date: day,
-            dateStr: formatDateFull(day),
-            shortDateStr: formatDateShort(day),
-            time: time,
-            isEdited: true
-          };
-        }
-        return visit;
+    // Regenerate ALL visits starting from the selected date
+    const frequencyConfig = getFrequencyConfig(selectedService.frequency);
+    const expectedVisits = selectedService.visits || frequencyConfig?.visitsPerYear || 12;
+    
+    const schedules = generateScheduleDates(day, selectedService.frequency, expectedVisits);
+    const formattedSchedules = formatSchedulesForDisplay(schedules);
+    
+    const updatedVisits = formattedSchedules.map((schedule, index) => ({
+      ...schedule,
+      time: time,
+      status: 'Planned'
+    }));
+    
+    setPlannedVisits(updatedVisits);
+    
+    // If confirmation modal is open, also update the confirmation schedule
+    if (showConfirmation) {
+      const confirmSchedule = updatedVisits.map((visit, index) => ({
+        visitNumber: visit.visitNumber,
+        targetDate: visit.date,
+        targetDateStr: visit.dateStr || visit.shortDateStr,
+        scheduledDate: visit.date,
+        scheduledDateStr: visit.dateStr || visit.shortDateStr,
+        time: visit.time || time,
+        status: 'pending_schedule',
+        isEdited: false,
+        isManual: false
       }));
+      setConfirmationSchedule(confirmSchedule);
     }
   };
 
