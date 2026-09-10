@@ -592,6 +592,8 @@ router.put('/:id', authenticate, managerOrAdmin, async (req, res) => {
     // Other fields
     const ratePerVisit = body.ratePerVisit || body.rate_per_visit;
     const coveragePerDay = body.coveragePerDay || body.coverage_per_day;
+    const workingHoursFrom = body.workingHoursFrom || body.working_hours_from;
+    const workingHoursTo = body.workingHoursTo || body.working_hours_to;
     const gstNumber = body.gstNumber || body.gst_number;
     const panNumber = body.panNumber || body.pan_number;
     const licenseNumber = body.licenseNumber || body.license_number;
@@ -616,6 +618,8 @@ router.put('/:id', authenticate, managerOrAdmin, async (req, res) => {
     if (pocEmail !== undefined) { updateFields.push('poc_email = ?'); params.push(pocEmail); }
     if (ratePerVisit !== undefined) { updateFields.push('rate_per_visit = ?'); params.push(ratePerVisit); }
     if (coveragePerDay !== undefined) { updateFields.push('coverage_per_day = ?'); params.push(coveragePerDay); }
+    if (workingHoursFrom !== undefined) { updateFields.push('working_hours_from = ?'); params.push(workingHoursFrom); }
+    if (workingHoursTo !== undefined) { updateFields.push('working_hours_to = ?'); params.push(workingHoursTo); }
     if (gstNumber !== undefined) { updateFields.push('gst_number = ?'); params.push(gstNumber); }
     if (panNumber !== undefined) { updateFields.push('pan_number = ?'); params.push(panNumber); }
     if (licenseNumber !== undefined) { updateFields.push('license_number = ?'); params.push(licenseNumber); }
