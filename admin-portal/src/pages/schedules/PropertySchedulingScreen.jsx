@@ -2542,13 +2542,13 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               </div>
             </div>
 
-            {/* Visits Grid */}
-            <div className="p-6 overflow-auto max-h-[70vh]">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {/* Visits Grid - Responsive */}
+            <div className="p-3 sm:p-6 overflow-auto max-h-[70vh]">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
                 {plannedVisits.map((visit, index) => (
                   <div 
                     key={index}
-                    className={`p-4 rounded-lg border-2 ${
+                    className={`p-2 sm:p-4 rounded-lg border-2 ${
                       visit.status === 'Scheduled' || visit.status === 'scheduled'
                         ? 'border-green-200 bg-green-50'
                         : visit.status === 'completed'
@@ -2556,41 +2556,41 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                           : 'border-blue-200 bg-blue-50'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-gray-500">Visit {visit.visitNumber || index + 1}</span>
-                      <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                    <div className="flex items-center justify-between mb-1 sm:mb-2">
+                      <span className="text-[10px] sm:text-xs font-bold text-gray-500">Visit {visit.visitNumber || index + 1}</span>
+                      <span className={`px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-xs rounded-full font-medium ${
                         visit.status === 'Scheduled' || visit.status === 'scheduled'
                           ? 'bg-green-100 text-green-700'
                           : visit.status === 'completed'
                             ? 'bg-gray-100 text-gray-700'
                             : 'bg-blue-100 text-blue-700'
                       }`}>
-                        {visit.status === 'Scheduled' || visit.status === 'scheduled' ? 'Scheduled' : visit.status || 'Planned'}
+                        {visit.status === 'Scheduled' || visit.status === 'scheduled' ? 'Done' : visit.status || 'Plan'}
                       </span>
                     </div>
-                    <p className="font-semibold text-gray-900">{visit.shortDateStr || visit.dateStr}</p>
-                    <p className="text-sm text-gray-600 mt-1">{visit.time}</p>
+                    <p className="font-semibold text-gray-900 text-xs sm:text-base">{visit.shortDateStr || visit.dateStr}</p>
+                    <p className="text-[10px] sm:text-sm text-gray-600 mt-0.5 sm:mt-1">{visit.time}</p>
                     {visit.visitId && (
-                      <p className="text-xs text-gray-400 mt-2 font-mono">{visit.visitId}</p>
+                      <p className="text-[9px] sm:text-xs text-gray-400 mt-1 sm:mt-2 font-mono truncate">{visit.visitId}</p>
                     )}
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-              <div className="text-sm text-gray-500">
+            {/* Modal Footer - Responsive */}
+            <div className="px-3 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-2">
+              <div className="text-xs sm:text-sm text-gray-500">
                 <span className="font-medium text-green-600">{plannedVisits.filter(v => v.status === 'Scheduled' || v.status === 'scheduled').length}</span> scheduled
                 {plannedVisits.filter(v => v.status === 'completed').length > 0 && (
-                  <span className="ml-3">
+                  <span className="ml-2 sm:ml-3">
                     <span className="font-medium text-gray-600">{plannedVisits.filter(v => v.status === 'completed').length}</span> completed
                   </span>
                 )}
               </div>
               <button
                 onClick={() => setShowAllVisitsModal(false)}
-                className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Close
               </button>
@@ -2599,20 +2599,20 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         </div>
       )}
 
-      {/* ===== FINAL REVIEW MODAL - Review All Planned Services ===== */}
+      {/* ===== FINAL REVIEW MODAL - Review All Planned Services - Responsive ===== */}
       {showFinalReview && Object.keys(plannedSchedules).length > 0 && (
-        <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 p-4 pt-8 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 p-2 sm:p-4 pt-2 sm:pt-8 overflow-y-auto">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-5xl max-h-[98vh] sm:max-h-[95vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 px-6 py-5">
+            <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 px-4 sm:px-6 py-3 sm:py-5">
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                    <ListChecks className="w-7 h-7" />
-                    Review All Planned Schedules
+                <div className="min-w-0">
+                  <h2 className="text-lg sm:text-2xl font-bold text-white flex items-center gap-2 sm:gap-3">
+                    <ListChecks className="w-5 h-5 sm:w-7 sm:h-7 flex-shrink-0" />
+                    <span className="truncate">Review All Schedules</span>
                   </h2>
-                  <p className="text-green-100 text-sm mt-1">
-                    Review all {Object.keys(plannedSchedules).length} services before final confirmation
+                  <p className="text-green-100 text-xs sm:text-sm mt-0.5 sm:mt-1">
+                    Review {Object.keys(plannedSchedules).length} services before confirmation
                   </p>
                 </div>
                 <button 
@@ -2620,16 +2620,16 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                     setShowFinalReview(false);
                     setWizardStep(WIZARD_STEPS.SCHEDULING);
                   }}
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                  className="p-1.5 sm:p-2 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0"
                 >
-                  <X className="w-6 h-6 text-white" />
+                  <X className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </button>
               </div>
             </div>
 
-            {/* Services List */}
-            <div className="p-6 overflow-auto max-h-[65vh]">
-              <div className="space-y-6">
+            {/* Services List - Responsive */}
+            <div className="p-3 sm:p-6 overflow-auto max-h-[65vh]">
+              <div className="space-y-4 sm:space-y-6">
                 {Object.entries(plannedSchedules).map(([serviceId, planData], svcIndex) => {
                   const { service, visits } = planData;
                   const totalVisits = visits.length;
@@ -2639,82 +2639,82 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                   return (
                     <div 
                       key={serviceId}
-                      className="border-2 border-gray-200 rounded-xl overflow-hidden"
+                      className="border-2 border-gray-200 rounded-lg sm:rounded-xl overflow-hidden"
                     >
-                      {/* Service Header */}
-                      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-5 py-4 border-b border-gray-200">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
+                      {/* Service Header - Responsive */}
+                      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-3 sm:px-5 py-3 sm:py-4 border-b border-gray-200">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+                          <div className="flex items-center gap-2 sm:gap-4">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base flex-shrink-0">
                               {svcIndex + 1}
                             </div>
-                            <div>
-                              <h3 className="text-lg font-bold text-gray-900">{service.name}</h3>
-                              <p className="text-sm text-gray-500">
+                            <div className="min-w-0">
+                              <h3 className="text-sm sm:text-lg font-bold text-gray-900 truncate">{service.name}</h3>
+                              <p className="text-xs sm:text-sm text-gray-500 truncate">
                                 {service.vendorName} • {service.frequency} • {totalVisits} visits
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1 sm:gap-2 ml-10 sm:ml-0">
                             <button
                               onClick={() => handleEditPlannedService(serviceId)}
-                              className="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-1"
+                              className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm text-blue-600 hover:text-blue-800 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-1"
                             >
-                              <Edit2 className="w-3.5 h-3.5" />
-                              Edit
+                              <Edit2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                              <span className="hidden sm:inline">Edit</span>
                             </button>
                             <button
                               onClick={() => handleRemoveFromPlanned(serviceId)}
-                              className="px-3 py-1.5 text-sm text-red-600 hover:text-red-800 border border-red-300 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1"
+                              className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm text-red-600 hover:text-red-800 border border-red-300 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1"
                             >
-                              <X className="w-3.5 h-3.5" />
-                              Remove
+                              <X className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                              <span className="hidden sm:inline">Remove</span>
                             </button>
                           </div>
                         </div>
                         
-                        {/* Quick Summary */}
-                        <div className="mt-3 flex items-center gap-6 text-sm">
+                        {/* Quick Summary - Responsive */}
+                        <div className="mt-2 sm:mt-3 flex flex-wrap items-center gap-2 sm:gap-6 text-xs sm:text-sm">
                           <span className="flex items-center gap-1 text-gray-600">
-                            <Calendar className="w-4 h-4 text-gray-400" />
-                            First: <strong>{firstVisit?.shortDateStr || firstVisit?.dateStr}</strong>
+                            <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                            First: <strong className="truncate">{firstVisit?.shortDateStr || firstVisit?.dateStr}</strong>
                           </span>
                           <span className="flex items-center gap-1 text-gray-600">
-                            <CalendarDays className="w-4 h-4 text-gray-400" />
-                            Last: <strong>{lastVisit?.shortDateStr || lastVisit?.dateStr}</strong>
+                            <CalendarDays className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                            Last: <strong className="truncate">{lastVisit?.shortDateStr || lastVisit?.dateStr}</strong>
                           </span>
-                          <span className="flex items-center gap-1 text-gray-600">
-                            <Clock className="w-4 h-4 text-gray-400" />
-                            Default Time: <strong>{firstVisit?.time}</strong>
+                          <span className="flex items-center gap-1 text-gray-600 hidden sm:flex">
+                            <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                            Time: <strong>{firstVisit?.time}</strong>
                           </span>
                         </div>
                       </div>
                       
-                      {/* Visits Grid */}
-                      <div className="p-4 bg-gray-50">
-                        <div className="flex gap-2 overflow-x-auto pb-2">
+                      {/* Visits Grid - Responsive */}
+                      <div className="p-2 sm:p-4 bg-gray-50">
+                        <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
                           {visits.slice(0, 12).map((visit, idx) => (
                             <div 
                               key={idx}
-                              className={`flex-shrink-0 w-28 p-2.5 rounded-lg border text-center ${
+                              className={`flex-shrink-0 w-20 sm:w-28 p-1.5 sm:p-2.5 rounded-lg border text-center ${
                                 visit.isEdited 
                                   ? 'border-amber-300 bg-amber-50' 
                                   : 'border-indigo-200 bg-white'
                               }`}
                             >
-                              <p className="text-xs text-gray-500 font-medium">Visit {visit.visitNumber}</p>
-                              <p className="font-semibold text-sm mt-0.5">{visit.shortDateStr || visit.dateStr}</p>
-                              <p className="text-xs text-gray-500">{visit.time}</p>
+                              <p className="text-[10px] sm:text-xs text-gray-500 font-medium">Visit {visit.visitNumber}</p>
+                              <p className="font-semibold text-[10px] sm:text-sm mt-0.5">{visit.shortDateStr || visit.dateStr}</p>
+                              <p className="text-[9px] sm:text-xs text-gray-500">{visit.time}</p>
                               {visit.isEdited && (
-                                <span className="inline-block mt-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded">
-                                  Modified
+                                <span className="inline-block mt-0.5 sm:mt-1 px-1 sm:px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[9px] sm:text-xs rounded">
+                                  Mod
                                 </span>
                               )}
                             </div>
                           ))}
                           {visits.length > 12 && (
-                            <div className="flex-shrink-0 w-28 p-2.5 rounded-lg border border-gray-200 bg-gray-100 flex items-center justify-center">
-                              <span className="text-sm text-gray-500 font-medium">
+                            <div className="flex-shrink-0 w-20 sm:w-28 p-1.5 sm:p-2.5 rounded-lg border border-gray-200 bg-gray-100 flex items-center justify-center">
+                              <span className="text-[10px] sm:text-sm text-gray-500 font-medium">
                                 +{visits.length - 12} more
                               </span>
                             </div>
@@ -2727,43 +2727,43 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="px-6 py-4 bg-gray-100 border-t border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="text-sm">
+            {/* Modal Footer - Responsive */}
+            <div className="px-3 sm:px-6 py-3 sm:py-4 bg-gray-100 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4">
+                <div className="text-xs sm:text-sm text-center sm:text-left">
                   <span className="text-gray-500">Total:</span>
-                  <span className="ml-2 font-bold text-gray-900">
-                    {Object.keys(plannedSchedules).length} services
+                  <span className="ml-1 sm:ml-2 font-bold text-gray-900">
+                    {Object.keys(plannedSchedules).length} svc
                   </span>
-                  <span className="mx-2 text-gray-300">•</span>
+                  <span className="mx-1 sm:mx-2 text-gray-300">•</span>
                   <span className="font-bold text-gray-900">
                     {Object.values(plannedSchedules).reduce((sum, p) => sum + p.visits.length, 0)} visits
                   </span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                   <button
                     onClick={() => {
                       setShowFinalReview(false);
                       setWizardStep(WIZARD_STEPS.SCHEDULING);
                     }}
-                    className="px-5 py-2.5 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+                    className="flex-1 sm:flex-none px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
                   >
-                    Back to Editing
+                    Back
                   </button>
                   <button
                     onClick={handleConfirmAllSchedules}
                     disabled={confirmingAllSchedules || Object.keys(plannedSchedules).length === 0}
-                    className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
+                    className="flex-1 sm:flex-none px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 sm:gap-2 shadow-lg"
                   >
                     {confirmingAllSchedules ? (
                       <>
-                        <RefreshCw className="w-5 h-5 animate-spin" />
-                        Confirming All...
+                        <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                        <span className="hidden sm:inline">Confirming...</span>
                       </>
                     ) : (
                       <>
-                        <CheckCircle className="w-5 h-5" />
-                        Confirm All Schedules
+                        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                        Confirm All
                       </>
                     )}
                   </button>

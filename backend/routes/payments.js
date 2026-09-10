@@ -1436,7 +1436,7 @@ router.post('/invoices/create-from-estimate', authenticate, canEditPayments, asy
 router.post('/invoices/create-generic', authenticate, canEditPayments, async (req, res) => {
   try {
     const fpId = getFPScope(req);
-    const { customerDetails, lineItems, discountPercent, gstPercent, invoiceDate, dueDate, notes, sendEmail } = req.body;
+    const { customerDetails, lineItems, discountPercent, gstPercent, invoiceDate, dueDate, notes, sendEmail, propertyId, propertyCode } = req.body;
 
     // Validate required fields
     if (!customerDetails?.name || !customerDetails?.email) {
@@ -1487,17 +1487,20 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
     const [result] = await pool.execute(`
       INSERT INTO invoices (
         invoice_id, invoice_type, franchise_partner_id,
+        property_id, property_code,
         customer_name, customer_email, customer_phone, customer_address,
         invoice_date, due_date, line_items, 
         subtotal, discount_percentage, discount_amount, 
         tax_percentage, tax_amount, total_amount, 
         amount_paid, balance_amount, status, payment_status,
         created_by, created_by_role, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       invoiceIdGen,
       'generic',
       fpId,
+      propertyId || null,
+      propertyCode || null,
       customerDetails.name,
       customerDetails.email,
       customerDetails.phone || null,
