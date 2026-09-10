@@ -1935,40 +1935,40 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 return (
                   <div 
                     key={rec.id}
-                    className={`p-2.5 rounded-lg border cursor-pointer transition-all ${
+                    className={`flex-shrink-0 w-32 lg:w-full p-2 sm:p-2.5 rounded-lg border cursor-pointer transition-all ${
                       isSelected ? 'border-blue-500 bg-blue-100 ring-2 ring-blue-200' :
                       i === 0 ? 'border-blue-300 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                     onClick={() => handleSelectRecommendedDate(rec)}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <div className={`w-2 h-2 rounded-full ${
+                      <div className="flex items-center gap-1 sm:gap-1.5">
+                        <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full flex-shrink-0 ${
                           rec.type === 'edited' ? 'bg-purple-500' :
                           rec.type === 'recommended' ? 'bg-blue-500' :
                           rec.type === 'available' ? 'bg-green-500' : 'bg-amber-500'
                         }`} />
-                        <span className="font-medium text-xs">{rec.dateStr}</span>
+                        <span className="font-medium text-[10px] sm:text-xs truncate">{rec.dateStr}</span>
                       </div>
-                      {isSelected && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                      {isSelected && <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-600 flex-shrink-0" />}
                     </div>
-                    <p className="text-xs text-gray-600 mt-0.5">{rec.time}</p>
-                    <p className="text-[10px] text-gray-400">• {rec.zone}</p>
+                    <p className="text-[10px] sm:text-xs text-gray-600 mt-0.5">{rec.time}</p>
+                    <p className="text-[9px] sm:text-[10px] text-gray-400 hidden sm:block">• {rec.zone}</p>
                     
-                    <div className="flex items-center justify-between mt-1.5">
-                      <span className={`px-1.5 py-0.5 text-[10px] rounded ${
+                    <div className="flex items-center justify-between mt-1 sm:mt-1.5">
+                      <span className={`px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] rounded whitespace-nowrap ${
                         rec.type === 'edited' ? 'bg-purple-100 text-purple-700' :
                         rec.type === 'recommended' ? 'bg-blue-100 text-blue-700' :
                         rec.type === 'available' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                       }`}>
-                        {rec.type === 'edited' ? 'Edited' : rec.type === 'recommended' ? 'Recommended' : rec.type === 'available' ? 'Available' : 'Limited'}
+                        {rec.type === 'edited' ? 'Edit' : rec.type === 'recommended' ? 'Rec' : rec.type === 'available' ? 'Avail' : 'Ltd'}
                       </span>
                     </div>
                   </div>
                 );
               })}
             </div>
-            <div className="mt-4 space-y-2">
+            <div className="mt-3 sm:mt-4 space-y-2">
               {/* Only show scheduling actions for users with permissions */}
               {permissions.canConfirm ? (
                 <>
@@ -1976,43 +1976,43 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                   <button 
                     onClick={handleUseRecommended}
                     disabled={!recommendedDates.length || !selectedService || selectedService.status === 'Scheduled'}
-                    className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    className="w-full py-2 sm:py-2.5 bg-blue-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                   >
                     {selectedSlot?.date 
-                      ? `Use Selected (${formatDateShort(selectedSlot.date)})` 
-                      : `Use Recommended ${recommendedDates[0]?.dateStr ? `(${recommendedDates[0].dateStr})` : ''}`
+                      ? `Use Selected` 
+                      : `Use Recommended`
                     }
                   </button>
                   
                   <button 
                     onClick={handleCustomizeDates}
                     disabled={!selectedService || selectedService.status === 'Scheduled'}
-                    className="w-full py-2 text-blue-600 text-sm font-medium hover:underline flex items-center justify-center gap-1 disabled:text-gray-400 disabled:cursor-not-allowed"
+                    className="w-full py-1.5 sm:py-2 text-blue-600 text-xs sm:text-sm font-medium hover:underline flex items-center justify-center gap-1 disabled:text-gray-400 disabled:cursor-not-allowed"
                   >
-                    <Edit2 className="w-3 h-3" /> Customize Dates
+                    <Edit2 className="w-3 h-3" /> Customize
                   </button>
                   
                   {/* Show already planned indicator */}
                   {plannedSchedules[selectedService?.id] && (
-                    <div className="mt-2 p-2 bg-indigo-50 rounded-lg border border-indigo-200">
-                      <p className="text-xs text-indigo-700 text-center flex items-center justify-center gap-1">
+                    <div className="mt-2 p-1.5 sm:p-2 bg-indigo-50 rounded-lg border border-indigo-200">
+                      <p className="text-[10px] sm:text-xs text-indigo-700 text-center flex items-center justify-center gap-1">
                         <CheckCircle className="w-3 h-3" />
-                        This service is planned
+                        Planned
                       </p>
                       <button
                         onClick={() => handleRemoveFromPlanned(selectedService.id)}
-                        className="w-full mt-2 text-xs text-indigo-600 hover:text-indigo-800 underline"
+                        className="w-full mt-1 sm:mt-2 text-[10px] sm:text-xs text-indigo-600 hover:text-indigo-800 underline"
                       >
-                        Remove from planned
+                        Remove
                       </button>
                     </div>
                   )}
                 </>
               ) : (
-                <div className="text-center py-4 text-gray-500 text-sm">
-                  <Eye className="w-6 h-6 mx-auto mb-2 text-gray-400" />
-                  <p>View-only mode</p>
-                  <p className="text-xs text-gray-400 mt-1">Contact your manager to schedule services</p>
+                <div className="text-center py-3 sm:py-4 text-gray-500 text-xs sm:text-sm">
+                  <Eye className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-gray-400" />
+                  <p>View-only</p>
+                  <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1 hidden sm:block">Contact manager to schedule</p>
                 </div>
               )}
             </div>
@@ -2022,14 +2022,14 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       
       {/* Selected Service Visit Details */}
       {selectedService && plannedVisits.length > 0 && (
-        <div className="px-6 pb-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-semibold text-gray-900">
+        <div className="px-3 sm:px-4 md:px-6 pb-4 sm:pb-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">
                   {selectedService.name} - Visit Schedule
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-xs sm:text-sm text-gray-500">
                   {selectedService.status === 'Scheduled' 
                     ? `${plannedVisits.length} visits scheduled` 
                     : `${plannedVisits.length} visits planned - Confirm to finalize`
@@ -2039,19 +2039,19 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               {permissions.canEdit && selectedService.status !== 'Scheduled' && (
                 <button 
                   onClick={openRecurrenceModal}
-                  className="flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                  className="flex items-center gap-1 text-xs sm:text-sm text-blue-600 hover:underline flex-shrink-0"
                 >
-                  <Edit2 className="w-3 h-3" /> Edit Recurrence
+                  <Edit2 className="w-3 h-3" /> <span className="hidden sm:inline">Edit</span> Recurrence
                 </button>
               )}
             </div>
             
-            {/* Visit cards */}
-            <div className="flex gap-2 overflow-x-auto pb-2">
+            {/* Visit cards - Responsive grid/scroll */}
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0">
               {plannedVisits.map((visit, i) => (
                 <div 
                   key={`visit-${i}`}
-                  className={`flex-shrink-0 w-32 p-3 rounded-lg border text-center relative cursor-pointer ${
+                  className={`flex-shrink-0 w-24 sm:w-32 p-2 sm:p-3 rounded-lg border text-center relative cursor-pointer ${
                     visit.status === 'Scheduled' || visit.status === 'scheduled' ? 'border-green-300 bg-green-50' : 
                     visit.status === 'Planned' ? 'border-blue-300 bg-blue-50' :
                     visit.isEdited ? 'border-blue-300 bg-blue-50' :
@@ -2063,7 +2063,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                     }
                   }}
                 >
-                  <p className="text-xs text-gray-500">Visit {visit.visitNumber}</p>
+                  <p className="text-[10px] sm:text-xs text-gray-500">Visit {visit.visitNumber}</p>
                   {editingVisitIndex === i && selectedService.status !== 'Scheduled' ? (
                     <div className="mt-1 space-y-1" onClick={(e) => e.stopPropagation()}>
                       <input
@@ -2080,14 +2080,14 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                             handleEditPlannedVisitDate(i, e.target.value);
                           }
                         }}
-                        className="w-full px-1 py-0.5 text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full px-1 py-0.5 text-[10px] sm:text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <select
                         value={visit.time || '10:00 AM'}
                         onChange={(e) => {
                           handleEditPlannedVisitTime(i, e.target.value);
                         }}
-                        className="w-full px-1 py-0.5 text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full px-1 py-0.5 text-[10px] sm:text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
                         {['8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
                           '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM',
@@ -2100,14 +2100,14 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                           e.stopPropagation();
                           setEditingVisitIndex(null);
                         }}
-                        className="w-full mt-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                        className="w-full mt-1 px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
                       >
                         Done
                       </button>
                     </div>
                   ) : (
                     <>
-                      <p className="font-semibold text-sm mt-1 whitespace-nowrap">
+                      <p className="font-semibold text-xs sm:text-sm mt-0.5 sm:mt-1 whitespace-nowrap truncate">
                         {visit.isManual ? (
                           <button className="text-amber-600 hover:text-amber-700 underline">
                             Select
@@ -2116,27 +2116,27 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                           visit.shortDateStr || visit.dateStr
                         )}
                       </p>
-                      <p className="text-xs text-gray-500">{visit.time}</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500">{visit.time}</p>
                     </>
                   )}
-                  <span className={`inline-block mt-2 px-2 py-0.5 text-xs rounded ${
+                  <span className={`inline-block mt-1.5 sm:mt-2 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-xs rounded whitespace-nowrap ${
                     visit.status === 'Scheduled' ? 'bg-green-100 text-green-700' : 
                     visit.status === 'Planned' ? 'bg-blue-100 text-blue-700' :
                     visit.isEdited ? 'bg-blue-100 text-blue-700' :
                     visit.isManual ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'
-                  }`}>{visit.isEdited ? 'Edited' : visit.status}</span>
+                  }`}>{visit.isEdited ? 'Edit' : visit.status === 'Scheduled' ? 'Done' : visit.status}</span>
                 </div>
               ))}
             </div>
             
             {/* Action buttons for wizard flow - only for users with permissions */}
             {permissions.canConfirm && selectedService.status !== 'Scheduled' && plannedVisits.length > 0 && plannedVisits.some(v => v.date) && (
-              <div className="mt-4 flex justify-end">
+              <div className="mt-3 sm:mt-4 flex justify-end">
                 <button
                   onClick={handlePrepareConfirmation}
-                  className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all flex items-center gap-2 shadow-md"
+                  className="px-4 sm:px-6 py-2 sm:py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs sm:text-sm font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all flex items-center gap-1.5 sm:gap-2 shadow-md"
                 >
-                  <Edit2 className="w-4 h-4" />
+                  <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Review & Confirm
                 </button>
               </div>
@@ -2145,129 +2145,122 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         </div>
       )}
 
-      {/* Schedule Confirmation Modal */}
+      {/* Schedule Confirmation Modal - Responsive */}
       {showConfirmation && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-2 sm:p-4 pt-4 sm:pt-20 overflow-y-auto">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-white">Confirm Schedule</h2>
-                  <p className="text-blue-100 text-sm mt-1">
+                <div className="min-w-0">
+                  <h2 className="text-lg sm:text-xl font-bold text-white truncate">Confirm Schedule</h2>
+                  <p className="text-blue-100 text-xs sm:text-sm mt-0.5 sm:mt-1 truncate">
                     {selectedService?.name} – {selectedService?.vendorName}
                   </p>
                 </div>
                 <button 
                   onClick={() => setShowConfirmation(false)}
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                  className="p-1.5 sm:p-2 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0"
                 >
-                  <X className="w-5 h-5 text-white" />
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </button>
               </div>
             </div>
 
-            {/* Schedule Table */}
-            <div className="p-6 overflow-auto max-h-[60vh]">
-              <div className="mb-4">
-                <p className="text-sm text-gray-600">
+            {/* Schedule Table - Scrollable */}
+            <div className="p-3 sm:p-6 overflow-auto max-h-[65vh] sm:max-h-[60vh]">
+              <div className="mb-3 sm:mb-4">
+                <p className="text-xs sm:text-sm text-gray-600">
                   Review the scheduled dates below. You can edit individual dates and times before confirming.
                 </p>
               </div>
 
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Visit</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Target Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Scheduled Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Time</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {confirmationSchedule.map((visit, index) => (
-                    <tr key={index} className={`hover:bg-gray-50 ${visit.isEdited ? 'bg-amber-50' : ''}`}>
-                      <td className="px-4 py-3">
-                        <span className="font-medium text-gray-900">{visit.visitNumber}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-gray-700">{visit.targetDateStr}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {editingVisitIndex === index ? (
-                          <input
-                            type="date"
-                            value={(() => {
-                              if (!visit.scheduledDate) return '';
-                              const d = visit.scheduledDate instanceof Date ? visit.scheduledDate : new Date(visit.scheduledDate);
-                              const year = d.getFullYear();
-                              const month = String(d.getMonth() + 1).padStart(2, '0');
-                              const day = String(d.getDate()).padStart(2, '0');
-                              return `${year}-${month}-${day}`;
-                            })()}
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse min-w-[500px]">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-gray-600 uppercase">#</th>
+                      <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-gray-600 uppercase hidden sm:table-cell">Target</th>
+                      <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-gray-600 uppercase">Date</th>
+                      <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-gray-600 uppercase">Time</th>
+                      <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-gray-600 uppercase hidden sm:table-cell">Status</th>
+                      <th className="px-2 sm:px-4 py-2 sm:py-3 text-center text-[10px] sm:text-xs font-semibold text-gray-600 uppercase">Edit</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {confirmationSchedule.map((visit, index) => (
+                      <tr key={index} className={`hover:bg-gray-50 ${visit.isEdited ? 'bg-amber-50' : ''}`}>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3">
+                          <span className="font-medium text-gray-900 text-xs sm:text-sm">{visit.visitNumber}</span>
+                        </td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 hidden sm:table-cell">
+                          <span className="text-gray-700 text-xs sm:text-sm">{visit.targetDateStr}</span>
+                        </td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3">
+                          {editingVisitIndex === index ? (
+                            <input
+                              type="date"
+                              value={(() => {
+                                if (!visit.scheduledDate) return '';
+                                const d = visit.scheduledDate instanceof Date ? visit.scheduledDate : new Date(visit.scheduledDate);
+                                const year = d.getFullYear();
+                                const month = String(d.getMonth() + 1).padStart(2, '0');
+                                const day = String(d.getDate()).padStart(2, '0');
+                                return `${year}-${month}-${day}`;
+                              })()}
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  handleEditVisitDate(index, e.target.value, visit.time);
+                                }
+                              }}
+                              className="px-1 sm:px-2 py-0.5 sm:py-1 border border-gray-300 rounded text-xs sm:text-sm w-full max-w-[120px]"
+                            />
+                          ) : (
+                            <span className={`font-medium text-xs sm:text-sm ${visit.isEdited ? 'text-amber-700' : 'text-gray-900'}`}>
+                              {visit.scheduledDateStr}
+                              {visit.isEdited && visit.status === 'rescheduled' && (
+                                <span className="text-[10px] sm:text-xs text-gray-500 ml-1 hidden sm:inline">(was {new Date(visit.originalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})</span>
+                              )}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3">
+                          <select
+                            value={visit.time}
                             onChange={(e) => {
-                              if (e.target.value) {
-                                handleEditVisitDate(index, e.target.value, visit.time);
-                              }
+                              const newTime = e.target.value;
+                              setConfirmationSchedule(prev => prev.map((v, i) => 
+                                i === index ? { ...v, time: newTime, isEdited: true } : v
+                              ));
                             }}
-                            className="px-2 py-1 border border-gray-300 rounded text-sm"
-                          />
-                        ) : (
-                          <span className={`font-medium ${visit.isEdited ? 'text-amber-700' : 'text-gray-900'}`}>
-                            {visit.scheduledDateStr}
-                            {visit.isEdited && visit.status === 'rescheduled' && (
-                              <span className="text-xs text-gray-500 ml-1">(was {new Date(visit.originalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})</span>
-                            )}
+                            className="px-1 sm:px-2 py-0.5 sm:py-1 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                          >
+                            {['8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
+                              '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM',
+                              '4:00 PM', '4:30 PM', '5:00 PM'].map(time => (
+                              <option key={time} value={time}>{time}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 hidden sm:table-cell">
+                          <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full ${getStatusColor(visit.status)}`}>
+                            {visit.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                           </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <select
-                          value={visit.time}
-                          onChange={(e) => {
-                            const newTime = e.target.value;
-                            setConfirmationSchedule(prev => prev.map((v, i) => 
-                              i === index ? { ...v, time: newTime, isEdited: true } : v
-                            ));
-                          }}
-                          className="px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                        >
-                          {['8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
-                            '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM',
-                            '4:00 PM', '4:30 PM', '5:00 PM'].map(time => (
-                            <option key={time} value={time}>{time}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(visit.status)}`}>
-                          {visit.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-2">
+                        </td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-center">
                           <button
-                            onClick={() => setEditingVisitIndex(index)}
-                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            onClick={() => setEditingVisitIndex(editingVisitIndex === index ? null : index)}
+                            className="p-1 sm:p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                             title="Edit Date"
                           >
-                            <Edit2 className="w-4 h-4" />
+                            <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </button>
-                          <button
-                            onClick={() => handleOpenReschedule(visit)}
-                            className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors"
-                            title="Reschedule"
-                          >
-                            <Calendar className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
+            </div>
             </div>
 
             {/* Modal Footer */}
