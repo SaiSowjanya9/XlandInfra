@@ -914,6 +914,8 @@ router.get('/', authenticate, async (req, res) => {
     const isFPEmployee = ['manager', 'coordinator', 'supervisor', 'executive'].includes(req.user.role);
     const isFP = isFPOwner || isFPEmployee;
     
+    console.log('Staff request - User:', req.user.id, 'Role:', req.user.role, 'fpId query:', fpId, 'req.fpId:', req.fpId);
+    
     // FP users can only fetch their own team - use req.fpId set by auth middleware
     let effectiveFpId = isFP ? (req.fpId || req.user.franchisePartnerId || req.user.fpId) : fpId;
     
@@ -924,6 +926,7 @@ router.get('/', authenticate, async (req, res) => {
           'SELECT id FROM franchise_partners WHERE user_id = ? OR email = ?',
           [req.user.id, req.user.email]
         );
+        console.log('FP lookup result:', fpRecord);
         if (fpRecord.length > 0) {
           effectiveFpId = fpRecord[0].id;
         }
@@ -931,6 +934,8 @@ router.get('/', authenticate, async (req, res) => {
         console.log('FP lookup error:', e.message);
       }
     }
+    
+    console.log('Effective FP ID:', effectiveFpId);
     
     // If not admin and not FP, deny access
     if (!isAdmin && !isFP) {
@@ -941,34 +946,34 @@ router.get('/', authenticate, async (req, res) => {
     if (effectiveFpId) {
       const allStaff = [];
       
-      // 1. Fetch FP Owner (Franchise Partner)
-      const [fpOwner] = await pool.execute(`
-        SELECT 
-          u.id, u.user_id, u.username, u.email, u.first_name, u.last_name,
-          u.phone, u.role, u.is_active, u.created_at,
-          fp.id as fp_id, fp.owner_name
-        FROM users u
-        LEFT JOIN franchise_partners fp ON u.id = fp.user_id OR u.email = fp.email
-        WHERE (fp.id = ? OR u.franchise_partner_id = ?) AND u.role IN ('franchise_partner', 'franchise')
-        AND u.is_active = 1
-      `, [effectiveFpId, effectiveFpId]);
-      
-      fpOwner.forEach(s => {
-        allStaff.push({
-          id: s.id,
-          oderId: 1,
-          userId: s.user_id || `FP-${String(s.id).padStart(3, '0')}`,
-          username: s.username,
-          email: s.email,
-          firstName: s.first_name || s.owner_name?.split(' ')[0] || '',
-          lastName: s.last_name || s.owner_name?.split(' ').slice(1).join(' ') || '',
-          phone: s.phone,
-          role: 'franchise_partner',
-          roleName: 'Franchise Partner',
-          isActive: true,
-          source: 'fp_owner'
-        });
-      });
+      // 1. Fetch FP Owner (Franchise Partner) from franchise_partners table directly
+      try {
+        const [fpDetails] = await pool.execute(
+          'SELECT id, owner_name, email, phone FROM franchise_partners WHERE id = ?',
+          [effectiveFpId]
+        );
+        console.log('FP Details:', fpDetails);
+        if (fpDetails.length > 0) {
+          const fp = fpDetails[0];
+          const nameParts = (fp.owner_name || '').split(' ');
+          allStaff.push({
+            id: `fp_${fp.id}`,
+            orderId: 1,
+            userId: `FP-${String(fp.id).padStart(3, '0')}`,
+            username: fp.email,
+            email: fp.email,
+            firstName: nameParts[0] || '',
+            lastName: nameParts.slice(1).join(' ') || '',
+            phone: fp.phone,
+            role: 'franchise_partner',
+            roleName: 'Franchise Partner',
+            isActive: true,
+            source: 'fp_owner'
+          });
+        }
+      } catch (e) {
+        console.log('FP owner fetch error:', e.message);
+      }
       
       // 2. Fetch Admin users (operations manager and admin)
       const [admins] = await pool.execute(`
@@ -1007,6 +1012,7 @@ router.get('/', authenticate, async (req, res) => {
       `;
       
       const [fpEmployees] = await pool.execute(fpQuery, [effectiveFpId]);
+      console.log('FP Employees found:', fpEmployees.length);
       
       fpEmployees.forEach(s => {
         let empCode = s.user_id || '';
@@ -1031,6 +1037,7 @@ router.get('/', authenticate, async (req, res) => {
         });
       });
 
+      console.log('Total staff returned:', allStaff.length);
       return res.json({
         success: true,
         data: allStaff
