@@ -2739,7 +2739,13 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
     // Update payment status with additional cash/cheque/bank transfer fields
     const remarks = status === 'paid' ? verificationNotes : rejectionReason;
     const verifierName = receivedBy || userName || null;
-    const verifierId = receivedById || userId || null;
+    // Extract numeric ID from receivedById (handles formats like "fp_1", "1", etc.)
+    let verifierId = receivedById || userId || null;
+    if (verifierId && typeof verifierId === 'string') {
+      // Extract just the number from strings like "fp_1" or use as-is if numeric
+      const numericId = verifierId.replace(/[^0-9]/g, '');
+      verifierId = numericId ? parseInt(numericId, 10) : null;
+    }
     const finalAmount = amountReceived ? parseFloat(amountReceived) : p.amount;
     const paymentDateValue = receivedDate || checkDate || p.payment_date || null;
     
