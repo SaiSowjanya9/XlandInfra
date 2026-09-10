@@ -812,7 +812,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                           <CheckCircle className="w-3.5 h-3.5" />
                           Scheduled
                         </span>
-                      ) : property.assignedVendors < property.totalServices ? (
+                      ) : property.assignedVendors === 0 ? (
                         <button
                           onClick={() => handleAssignVendor(property)}
                           className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-red-100 text-red-600 hover:bg-red-200 transition-colors cursor-pointer"
@@ -820,12 +820,22 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                           Assign Vendor
                         </button>
                       ) : (
-                        <button
-                          onClick={() => handleSchedule(property)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors cursor-pointer"
-                        >
-                          Schedule
-                        </button>
+                        <div className="flex flex-col gap-1.5">
+                          <button
+                            onClick={() => handleSchedule(property)}
+                            className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors cursor-pointer"
+                          >
+                            Schedule
+                          </button>
+                          {property.assignedVendors < property.totalServices && (
+                            <button
+                              onClick={() => handleAssignVendor(property)}
+                              className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors cursor-pointer"
+                            >
+                              + Assign More
+                            </button>
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>
