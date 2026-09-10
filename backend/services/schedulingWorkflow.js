@@ -56,7 +56,7 @@ async function markPaymentCompleted({ propertyId, estimateId, invoiceId, paidAmo
     let franchisePartnerId = null;
 
     const [fpEstimates] = await connection.execute(
-      `SELECT service_rows, franchise_partner_id FROM fp_estimates WHERE id = ? OR property_id = ?`,
+      `SELECT package_services, franchise_partner_id FROM fp_estimates WHERE id = ? OR property_id = ?`,
       [estimateId, propertyId]
     );
     
@@ -64,7 +64,7 @@ async function markPaymentCompleted({ propertyId, estimateId, invoiceId, paidAmo
       estimate = fpEstimates[0];
     } else {
       const [estimates] = await connection.execute(
-        `SELECT service_rows, franchise_partner_id FROM estimates WHERE id = ?`,
+        `SELECT package_services, franchise_partner_id FROM estimates WHERE id = ?`,
         [estimateId]
       );
       if (estimates.length > 0) {
@@ -79,9 +79,9 @@ async function markPaymentCompleted({ propertyId, estimateId, invoiceId, paidAmo
       services = [];
     } else {
       try {
-        services = typeof estimate.service_rows === 'string' 
-          ? JSON.parse(estimate.service_rows || '[]')
-          : (estimate.service_rows || []);
+        services = typeof estimate.package_services === 'string' 
+          ? JSON.parse(estimate.package_services || '[]')
+          : (estimate.package_services || []);
       } catch (e) {
         services = [];
       }

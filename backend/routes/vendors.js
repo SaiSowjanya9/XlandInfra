@@ -1099,7 +1099,7 @@ router.post('/assignments', authenticate, managerOrAdmin, async (req, res) => {
 
     // Get estimate info for frequency
     const [estimateInfo] = await pool.execute(
-      `SELECT fe.id, fe.service_rows FROM fp_estimates fe 
+      `SELECT fe.id, fe.package_services FROM fp_estimates fe 
        WHERE fe.property_id = ? AND fe.status = 'approved' 
        ORDER BY fe.created_at DESC LIMIT 1`,
       [propertyId]
@@ -1108,12 +1108,12 @@ router.post('/assignments', authenticate, managerOrAdmin, async (req, res) => {
     let frequencyType = 'monthly';
     let totalVisits = 12;
     
-    // Try to extract frequency from estimate service_rows
-    if (estimateInfo.length > 0 && estimateInfo[0].service_rows) {
+    // Try to extract frequency from estimate package_services
+    if (estimateInfo.length > 0 && estimateInfo[0].package_services) {
       try {
-        const serviceRows = typeof estimateInfo[0].service_rows === 'string' 
-          ? JSON.parse(estimateInfo[0].service_rows) 
-          : estimateInfo[0].service_rows;
+        const serviceRows = typeof estimateInfo[0].package_services === 'string' 
+          ? JSON.parse(estimateInfo[0].package_services) 
+          : estimateInfo[0].package_services;
         const matchingService = serviceRows.find(s => 
           s.serviceName === assignedServiceType || s.service_name === assignedServiceType
         );
