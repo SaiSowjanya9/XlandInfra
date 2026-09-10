@@ -809,31 +809,19 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Invoice Amount</span>
-                    <div className="flex gap-8">
-                      <span className="text-gray-400">Tax (0%)</span>
-                      <span className="font-medium text-gray-900">{formatCurrency(totalAmount)}</span>
-                    </div>
+                    <span className="font-medium text-gray-900">{formatCurrency(totalAmount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Discount</span>
-                    <div className="flex gap-8">
-                      <span className="text-gray-400">₹0</span>
-                      <span className="font-medium text-gray-900">₹0</span>
-                    </div>
+                    <span className="font-medium text-gray-900">₹0</span>
                   </div>
                   <div className="flex justify-between text-sm border-t border-gray-100 pt-2 mt-2">
                     <span className="text-gray-500">Total Amount</span>
-                    <div className="flex gap-8">
-                      <span className="text-gray-400">Tax Incl.</span>
-                      <span className="font-medium text-gray-900">{formatCurrency(totalAmount)}</span>
-                    </div>
+                    <span className="font-medium text-gray-900">{formatCurrency(totalAmount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Amount Paid</span>
-                    <div className="flex gap-8">
-                      <span className="text-gray-400">₹0</span>
-                      <span className="font-medium text-gray-900">{formatCurrency(totalAmount - balanceAmount)}</span>
-                    </div>
+                    <span className="font-medium text-gray-900">{formatCurrency(totalAmount - balanceAmount)}</span>
                   </div>
                   <div className="flex justify-between items-center border-t-2 border-blue-500 pt-3 mt-3">
                     <span className="text-blue-600 font-semibold">Amount Payable</span>
