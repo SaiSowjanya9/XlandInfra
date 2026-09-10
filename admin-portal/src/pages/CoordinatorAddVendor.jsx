@@ -10,7 +10,8 @@ import {
   ArrowLeft,
   CheckCircle2,
   FileCheck,
-  X
+  X,
+  Clock
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -61,7 +62,10 @@ const initialFormState = {
   pocEmail: '',
   pocCountryCode: '+91',
   ratePerVisit: '',
-  coveragePerDay: ''
+  coveragePerDay: '',
+  scheduleTime: '',
+  useCustomTime: false,
+  customScheduleTime: ''
 };
 
 const CoordinatorAddVendor = ({ user }) => {
@@ -708,6 +712,84 @@ const CoordinatorAddVendor = ({ user }) => {
               {errors.coveragePerDay && <p className="text-xs text-red-500 mt-1">{errors.coveragePerDay}</p>}
               <p className="text-xs text-gray-400 mt-1">Maximum visits/jobs vendor can handle per day</p>
             </div>
+          </div>
+        </div>
+
+        {/* Schedule Time */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <Clock className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Schedule Time</h2>
+              <p className="text-sm text-gray-500">Preferred working hours for the vendor</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="timeType" checked={!formData.useCustomTime} onChange={() => updateField('useCustomTime', false)} className="w-4 h-4 text-purple-600 focus:ring-purple-500" />
+                <span className="text-sm text-gray-700">Select from list</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="timeType" checked={formData.useCustomTime} onChange={() => updateField('useCustomTime', true)} className="w-4 h-4 text-purple-600 focus:ring-purple-500" />
+                <span className="text-sm text-gray-700">Enter custom time</span>
+              </label>
+            </div>
+
+            {!formData.useCustomTime ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Select Schedule Time</label>
+                <select value={formData.scheduleTime} onChange={(e) => updateField('scheduleTime', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-500 focus:outline-none bg-white">
+                  <option value="">Select a time slot</option>
+                  <option value="06:00 AM">06:00 AM</option>
+                  <option value="06:30 AM">06:30 AM</option>
+                  <option value="07:00 AM">07:00 AM</option>
+                  <option value="07:30 AM">07:30 AM</option>
+                  <option value="08:00 AM">08:00 AM</option>
+                  <option value="08:30 AM">08:30 AM</option>
+                  <option value="09:00 AM">09:00 AM</option>
+                  <option value="09:30 AM">09:30 AM</option>
+                  <option value="10:00 AM">10:00 AM</option>
+                  <option value="10:30 AM">10:30 AM</option>
+                  <option value="11:00 AM">11:00 AM</option>
+                  <option value="11:30 AM">11:30 AM</option>
+                  <option value="12:00 PM">12:00 PM</option>
+                  <option value="12:30 PM">12:30 PM</option>
+                  <option value="01:00 PM">01:00 PM</option>
+                  <option value="01:30 PM">01:30 PM</option>
+                  <option value="02:00 PM">02:00 PM</option>
+                  <option value="02:30 PM">02:30 PM</option>
+                  <option value="03:00 PM">03:00 PM</option>
+                  <option value="03:30 PM">03:30 PM</option>
+                  <option value="04:00 PM">04:00 PM</option>
+                  <option value="04:30 PM">04:30 PM</option>
+                  <option value="05:00 PM">05:00 PM</option>
+                  <option value="05:30 PM">05:30 PM</option>
+                  <option value="06:00 PM">06:00 PM</option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1">Select the vendor's preferred working time</p>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Enter Custom Time</label>
+                <input type="time" value={formData.customScheduleTime} onChange={(e) => updateField('customScheduleTime', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-500 focus:outline-none" />
+                <p className="text-xs text-gray-400 mt-1">Enter a specific time for the vendor's schedule</p>
+              </div>
+            )}
+
+            {(formData.scheduleTime || formData.customScheduleTime) && (
+              <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                <p className="text-sm text-purple-700 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  <span>Selected time: <strong>{formData.useCustomTime ? formData.customScheduleTime : formData.scheduleTime}</strong></span>
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

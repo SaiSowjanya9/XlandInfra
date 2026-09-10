@@ -1581,16 +1581,46 @@ router.post('/vendors', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
     const franchisePartnerId = req.franchisePartnerId;
-    const { companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber } = req.body;
+    const { 
+      companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber,
+      serviceType, serviceVerified, zone, areaName, division,
+      ownerName, ownerMobile, ownerEmail, ownerAadhar, ownerCountryCode,
+      managerName, managerMobile, managerEmail, managerCountryCode,
+      pocName, pocMobile, pocEmail, pocCountryCode,
+      ratePerVisit, coveragePerDay,
+      scheduleTime, useCustomTime, customScheduleTime,
+      licenseNumber
+    } = req.body;
+
+    // Determine the final schedule time value
+    const finalScheduleTime = useCustomTime ? customScheduleTime : scheduleTime;
 
     const vendorId = `VND-${Date.now()}`;
+    const username = (ownerEmail || email) ? (ownerEmail || email).split('@')[0] + '_' + Date.now() : `vendor_${Date.now()}`;
 
     const [result] = await pool.query(
-      `INSERT INTO onboarded_vendors (vendor_id, company_name, contact_person, owner_name, email, owner_email, 
-        phone, owner_mobile, alternate_phone, address, city, state, zip_code, gst_number, pan_number, 
-        executive_id, franchise_partner_id, service_type, is_active, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'General', TRUE, 'active')`,
-      [vendorId, companyName, contactPerson || companyName, companyName, email, email, phone, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber, executiveId, franchisePartnerId]
+      `INSERT INTO onboarded_vendors (
+        vendor_id, username, company_name, contact_person, owner_name, email, owner_email, phone, owner_mobile, alternate_phone,
+        address, city, state, zip_code, gst_number, pan_number, license_number,
+        service_type, service_verified, zone, area_name, division,
+        owner_aadhar, owner_country_code,
+        manager_name, manager_mobile, manager_email, manager_country_code,
+        poc_name, poc_mobile, poc_email, poc_country_code,
+        rate_per_visit, coverage_per_day, schedule_time,
+        executive_id, franchise_partner_id, is_active, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, 'active')`,
+      [
+        vendorId, username, companyName || ownerName || '', contactPerson || companyName || ownerName || '', 
+        ownerName || companyName || '', email || ownerEmail || '', ownerEmail || email || '', 
+        phone || ownerMobile || '', ownerMobile || phone || '', alternatePhone || null,
+        address || null, city || null, state || null, zipCode || null, gstNumber || null, panNumber || null, licenseNumber || null,
+        serviceType || 'General', serviceVerified ? 1 : 0, zone || '', areaName || '', division || '',
+        ownerAadhar || '', ownerCountryCode || '+91',
+        managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
+        pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
+        parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0, finalScheduleTime || null,
+        executiveId, franchisePartnerId
+      ]
     );
 
     res.json({
