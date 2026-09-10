@@ -2759,6 +2759,12 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
       }
     }
     
+    console.log('[Payment Verify] Updating payment:', {
+      id, status, finalAmount, paymentDateValue, verifierName, verifierId, 
+      transactionRef, paymentLocation, paymentProof: paymentProof ? 'SET' : 'NULL', 
+      remarksLength: fullRemarks?.length
+    });
+    
     await pool.execute(`
       UPDATE payments SET 
         status = ?,
@@ -2774,6 +2780,8 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
         updated_at = NOW()
       WHERE id = ?
     `, [status, finalAmount, paymentDateValue, verifierName, verifierId, transactionRef, paymentLocation, paymentProof, fullRemarks, id]);
+    
+    console.log('[Payment Verify] Payment updated successfully');
 
     // If payment is marked as paid, update invoice and send receipt
     let newBalance = 0;
@@ -2974,7 +2982,8 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
     });
   } catch (error) {
     console.error('Error verifying payment:', error);
-    res.status(500).json({ success: false, message: 'Error verifying payment', error: error.message });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ success: false, message: 'Error verifying payment: ' + error.message, error: error.message });
   }
 });
 
