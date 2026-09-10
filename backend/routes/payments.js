@@ -2785,16 +2785,13 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
         status = ?,
         amount = ?,
         payment_date = ?,
-        verified_by = ?,
-        verified_by_id = ?,
-        verified_at = NOW(),
+        received_by_name = ?,
+        received_by = ?,
         transaction_id = COALESCE(?, transaction_id),
-        payment_location = ?,
-        payment_proof = COALESCE(?, payment_proof),
         remarks = COALESCE(?, remarks),
         updated_at = NOW()
       WHERE id = ?
-    `, [status, finalAmount, paymentDateValue, verifierName, verifierId, transactionRef || null, paymentLocation || null, paymentProof || null, fullRemarks || null, id]);
+    `, [status, finalAmount, paymentDateValue, verifierName || null, verifierId || null, transactionRef || null, fullRemarks || null, id]);
     
     console.log('[Payment Verify] Payment updated successfully');
 
