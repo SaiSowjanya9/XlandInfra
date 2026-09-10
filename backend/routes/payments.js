@@ -2710,16 +2710,17 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid status. Must be "paid" or "failed".' });
     }
 
-    // Get payment details
+    // Get payment details - also get property_id from invoice as fallback
     let selectQuery = `
       SELECT p.*, 
              i.invoice_id as invoice_code, i.total_amount as invoice_amount,
              i.customer_email as invoice_email, i.customer_name as invoice_customer_name,
+             i.property_id as invoice_property_id,
              prop.community_name as property_name, prop.property_id as property_code,
              i.customer_email, i.customer_phone
       FROM payments p
       LEFT JOIN invoices i ON p.invoice_id = i.id
-      LEFT JOIN onboarded_properties prop ON p.property_id = prop.id
+      LEFT JOIN onboarded_properties prop ON COALESCE(p.property_id, i.property_id) = prop.id
       WHERE p.id = ?
     `;
     const selectParams = [id];
@@ -2830,7 +2831,10 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
 
         // Update fp_estimates payment_status to enable scheduling
         // PROPERTY_ID is the PRIMARY link - all records are linked by property
-        if (p.property_id) {
+        // Use payment's property_id OR invoice's property_id as fallback
+        const effectivePropertyId = p.property_id || p.invoice_property_id;
+        
+        if (effectivePropertyId) {
           const fpEstimateStatus = newBalance <= 0 ? 'paid' : 'partial';
           
           // Always update by property_id (primary key for all linkages)
@@ -2839,23 +2843,25 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
               payment_status = ?, 
               updated_at = NOW() 
             WHERE property_id = ? AND status = 'approved'
-          `, [fpEstimateStatus, p.property_id]);
+          `, [fpEstimateStatus, effectivePropertyId]);
           
-          console.log(`[Payment Verify] Updated fp_estimates payment_status to ${fpEstimateStatus} for property_id=${p.property_id}`);
+          console.log(`[Payment Verify] Updated fp_estimates payment_status to ${fpEstimateStatus} for property_id=${effectivePropertyId}`);
+        } else {
+          console.log('[Payment Verify] WARNING: No property_id found - fp_estimates not updated!');
         }
 
         // Trigger scheduling workflow when invoice is fully paid
         // Property ID is required, but estimate ID is optional (can be found by property_id)
-        if (newBalance <= 0 && p.property_id) {
+        if (newBalance <= 0 && effectivePropertyId) {
           try {
             await markPaymentCompleted({
-              propertyId: p.property_id,
+              propertyId: effectivePropertyId,
               estimateId: p.estimate_id || null,
               invoiceId: p.invoice_id,
               paidAmount: totalPaid,
               paidBy: userName
             });
-            console.log(`Scheduling workflow triggered for property ${p.property_id}`);
+            console.log(`Scheduling workflow triggered for property ${effectivePropertyId}`);
           } catch (scheduleErr) {
             console.error('Error triggering scheduling workflow:', scheduleErr);
             // Don't fail payment verification if scheduling fails
