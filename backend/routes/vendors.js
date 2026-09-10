@@ -1090,10 +1090,12 @@ router.post('/assignments', authenticate, managerOrAdmin, async (req, res) => {
       [propertyId, assignedServiceType]
     );
 
-    // Get property's franchise partner
+    // Get property's franchise partner (check both tables, use fp_estimates for legacy properties)
     const [propFp] = await pool.execute(
-      `SELECT franchise_partner_id FROM onboarded_properties WHERE id = ?`,
-      [propertyId]
+      `SELECT franchise_partner_id FROM onboarded_properties WHERE id = ?
+       UNION
+       SELECT fe.franchise_partner_id FROM fp_estimates fe WHERE fe.property_id = ? LIMIT 1`,
+      [propertyId, propertyId]
     );
     const fpId = propFp.length > 0 ? propFp[0].franchise_partner_id : null;
 
