@@ -482,26 +482,18 @@ const ManagerProperties = ({ user }) => {
     return services;
   };
 
-  // Get vendors filtered by property zone AND service type (only matching service type vendors)
-  const getZoneFilteredVendors = (propertyZone, serviceType = '') => {
-    if (!propertyZone) return vendors;
-    const normalizedZone = propertyZone.toLowerCase().trim();
+  // Get vendors filtered by service type only (global - no zone filtering)
+  const getFilteredVendors = (serviceType = '') => {
     const normalizedService = serviceType.toLowerCase().trim();
     
-    // Filter by zone first
-    const zoneVendors = vendors.filter(v => {
-      const vendorZone = (v.zone_name || v.zone || '').toLowerCase().trim();
-      return vendorZone === normalizedZone || !vendorZone; // Include vendors without zone
-    });
-    
-    // Filter by service type - only show vendors matching the service type
+    // Filter by service type only - no zone filtering (global vendors)
     if (normalizedService) {
-      return zoneVendors.filter(v => {
+      return vendors.filter(v => {
         const vendorService = (v.service_type || v.serviceType || '').toLowerCase().trim();
         return vendorService.includes(normalizedService) || normalizedService.includes(vendorService);
       });
     }
-    return zoneVendors;
+    return vendors;
   };
 
   // Handle vendor selection for a service row
@@ -1693,7 +1685,7 @@ const ManagerProperties = ({ user }) => {
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-sm font-medium text-gray-700">Assign vendors to each service</span>
                     <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
-                      {getZoneFilteredVendors(selectedProperty.zone_name || selectedProperty.zone, '').length} vendor(s) in zone
+                      {vendors.length} vendor(s) available
                     </span>
                   </div>
 
@@ -1711,7 +1703,7 @@ const ManagerProperties = ({ user }) => {
                       <tbody className="divide-y divide-gray-100">
                         {serviceAssignments.map((service, idx) => {
                           // Get vendors sorted by matching service type first
-                          const zoneVendors = getZoneFilteredVendors(selectedProperty.zone_name || selectedProperty.zone, service.serviceType);
+                          const filteredVendors = getFilteredVendors(service.serviceType);
                           const hasSelection = !!service.vendorId;
                           const visits = service.frequency_count ?? service.frequencyCount ?? 0;
                           
@@ -1737,17 +1729,17 @@ const ManagerProperties = ({ user }) => {
                                         : 'border-gray-300 bg-white text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100'
                                     }`}
                                   >
-                                    {zoneVendors.length > 0 ? (
+                                    {filteredVendors.length > 0 ? (
                                       <>
                                         <option value="">-- Select Vendor --</option>
-                                        {zoneVendors.map(v => (
+                                        {filteredVendors.map(v => (
                                           <option key={v.id} value={v.id}>
                                             {v.company_name || v.owner_name || v.name} ({v.service_type || v.serviceType || 'General'})
                                           </option>
                                         ))}
                                       </>
                                     ) : (
-                                      <option value="">No {service.serviceType} vendors in zone</option>
+                                      <option value="">No {service.serviceType} vendors available</option>
                                     )}
                                   </select>
                                   <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-gray-400" />

@@ -613,42 +613,30 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess, portalType }) => 
   // Get the property's zone (normalized for comparison)
   const propertyZoneNormalized = normalizeZone(property?.zone);
 
-  // Get all vendors filtered by property zone only (all vendors in zone available for any service)
-  const getZoneVendors = () => {
+  // Get all vendors globally (no zone filtering - all vendors available for any property)
+  const getAllVendors = () => {
     if (!vendors.length) {
       debug('[FILTER] No vendors loaded!');
       return [];
     }
     
     debug('───────────────────────────────────────────');
-    debug(`[FILTER] Property Zone: "${property?.zone}" → "${propertyZoneNormalized}"`);
-    debug(`[FILTER] Total vendors to check: ${vendors.length}`);
+    debug(`[FILTER] Global vendor list - no zone filtering`);
+    debug(`[FILTER] Total vendors available: ${vendors.length}`);
     
-    // Filter vendors by zone ONLY - all zone vendors available for any service
-    const filtered = vendors.filter(v => {
-      const vendorZoneNormalized = normalizeZone(v.zone_name || v.zone || '');
-      const matchesZone = vendorZoneNormalized === propertyZoneNormalized;
-      
-      // Log each vendor check
-      const zoneMatch = matchesZone ? '✓' : '✗';
-      debug(`[FILTER]   → ${v.ownerName || v.owner_name} | Service: "${v.serviceType || v.service_type}" | Zone: "${vendorZoneNormalized}" ${zoneMatch}`);
-      
-      return matchesZone;
-    });
-    
-    debug(`[FILTER] ═══ RESULT: ${filtered.length} vendors in zone "${property?.zone}" ═══`);
-    return filtered;
+    // Return ALL vendors - no zone filtering (global assignment)
+    return vendors;
   };
 
-  // Memoize zone vendors to avoid recalculating on every render
-  const zoneVendors = getZoneVendors();
+  // Memoize all vendors to avoid recalculating on every render
+  const allVendors = getAllVendors();
 
   // Get vendors filtered by matching service type (only show matching vendors)
   const getFilteredVendors = (serviceType) => {
-    if (!serviceType) return zoneVendors;
+    if (!serviceType) return allVendors;
     const normalizedService = serviceType.toLowerCase().trim();
     
-    return zoneVendors.filter(v => {
+    return allVendors.filter(v => {
       const vendorService = (v.serviceType || v.service_type || '').toLowerCase().trim();
       return vendorService.includes(normalizedService) || normalizedService.includes(vendorService);
     });
@@ -859,7 +847,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess, portalType }) => 
                       <span className="font-semibold text-gray-900">Assign Vendors to Services</span>
                     </div>
                     <span className="text-xs text-purple-600 bg-purple-100 px-2.5 py-1 rounded-full font-medium">
-                      {zoneVendors.length} vendor(s) in {property?.zone || 'zone'}
+                      {allVendors.length} vendor(s) available
                     </span>
                   </div>
                   <table className="w-full text-sm bg-white">
@@ -928,7 +916,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess, portalType }) => 
                                       ))}
                                     </>
                                   ) : (
-                                    <option value="">No {service.serviceType} vendors in zone</option>
+                                    <option value="">No {service.serviceType} vendors available</option>
                                   )}
                                 </select>
                                 <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-gray-400" />
@@ -1002,7 +990,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess, portalType }) => 
         <div className="px-6 py-4 bg-slate-50 border-t border-gray-200 flex items-center justify-between">
           <div className="text-xs text-gray-500">
             {selectedEstimate 
-              ? 'All vendors in this zone are available for any service. Same vendor can be assigned to multiple services.'
+              ? 'All vendors are available for any service. Same vendor can be assigned to multiple services.'
               : 'Create an estimate first to enable vendor assignments'
             }
           </div>

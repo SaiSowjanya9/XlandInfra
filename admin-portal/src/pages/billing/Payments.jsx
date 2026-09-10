@@ -3124,9 +3124,6 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 <table className="w-full">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100">
-                      <th className="px-3 py-3 w-10">
-                        <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                      </th>
                       <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Payment ID</th>
                       <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Invoice</th>
                       <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Customer</th>
@@ -3149,9 +3146,6 @@ const Payments = ({ user, portalType = 'admin' }) => {
 
                       return (
                         <tr key={payment.id} className="hover:bg-gray-50/50">
-                          <td className="px-3 py-3">
-                            <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                          </td>
                           <td className="px-3 py-3 whitespace-nowrap">
                             <button
                               onClick={() => handleViewReceipt(payment)}
