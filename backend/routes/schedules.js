@@ -1303,10 +1303,17 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
       console.log('[Confirm Schedule] Using numeric property ID:', propertyDbId);
     } else {
       // It's an external property code like "PROP-101", resolve to DB ID
-      const [propertyRows] = await pool.execute(
+      // Check both onboarded_properties and properties tables
+      let [propertyRows] = await pool.execute(
         `SELECT id FROM onboarded_properties WHERE property_id = ? LIMIT 1`,
         [propertyId]
       );
+      if (propertyRows.length === 0) {
+        [propertyRows] = await pool.execute(
+          `SELECT id FROM properties WHERE property_id = ? LIMIT 1`,
+          [propertyId]
+        );
+      }
       if (propertyRows.length === 0) {
         console.log('[Confirm Schedule] Error: Property not found:', propertyId);
         return res.status(404).json({
@@ -1318,19 +1325,33 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
       console.log('[Confirm Schedule] Resolved property code', propertyId, 'to DB ID:', propertyDbId);
     }
     
-    // Verify the property exists and get its franchise_partner_id for debugging
-    const [propertyCheck] = await pool.execute(
+    // Verify the property exists - check both onboarded_properties and properties tables
+    let propertyCheck = [];
+    let propertyTable = 'onboarded_properties';
+    
+    // First try onboarded_properties
+    [propertyCheck] = await pool.execute(
       `SELECT id, property_id, franchise_partner_id FROM onboarded_properties WHERE id = ? LIMIT 1`,
       [propertyDbId]
     );
+    
+    // If not found, try properties table
     if (propertyCheck.length === 0) {
-      console.log('[Confirm Schedule] Error: Property DB ID not found:', propertyDbId);
+      [propertyCheck] = await pool.execute(
+        `SELECT id, property_id, franchise_partner_id FROM properties WHERE id = ? LIMIT 1`,
+        [propertyDbId]
+      );
+      propertyTable = 'properties';
+    }
+    
+    if (propertyCheck.length === 0) {
+      console.log('[Confirm Schedule] Error: Property DB ID not found in any table:', propertyDbId);
       return res.status(404).json({
         success: false,
         message: `Property not found with ID: ${propertyDbId}`
       });
     }
-    console.log('[Confirm Schedule] Property verified:', {
+    console.log('[Confirm Schedule] Property verified in', propertyTable, ':', {
       dbId: propertyCheck[0].id,
       propertyCode: propertyCheck[0].property_id,
       franchisePartnerId: propertyCheck[0].franchise_partner_id
