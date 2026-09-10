@@ -289,7 +289,7 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
         (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = op.id AND pss.scheduling_status IN ('scheduled', 'completed')) as scheduledServiceCount,
         (SELECT COUNT(*) FROM scheduled_visits sv WHERE sv.property_id = op.id) as totalScheduledVisits
       FROM onboarded_properties op
-      LEFT JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
+      LEFT JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status IN ('approved', 'converted', 'sent')
       LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id
       LEFT JOIN property_contacts pc ON pc.property_id = op.id
       WHERE op.status = 'active'
@@ -959,7 +959,7 @@ router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async
          COALESCE(fe.package_services, fpamc.services) as package_services
        FROM fp_estimates fe
        LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id
-       WHERE fe.property_id = ? AND fe.status = 'approved'
+       WHERE fe.property_id = ? AND fe.status IN ('approved', 'converted', 'sent')
        ORDER BY fe.created_at DESC
        LIMIT 1`,
       [resolvedPropertyId]
