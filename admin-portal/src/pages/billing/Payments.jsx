@@ -892,9 +892,9 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b bg-white sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <button onClick={currentStep > 1 ? () => setCurrentStep(1) : onClose} className="p-2 hover:bg-gray-100 rounded-lg">
               <ChevronLeft className="w-5 h-5 text-gray-600" />
