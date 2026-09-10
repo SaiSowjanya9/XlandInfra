@@ -2642,7 +2642,7 @@ router.post('/record', authenticate, canEditPayments, paymentCreationLimiter, up
 });
 
 // Archive payment (soft delete)
-router.put('/payments/:id/archive', authenticate, canEditPayments, async (req, res) => {
+router.put('/:id/archive', authenticate, canEditPayments, async (req, res) => {
   try {
     const { id } = req.params;
     const fpId = getFPScope(req);
@@ -2671,7 +2671,7 @@ router.put('/payments/:id/archive', authenticate, canEditPayments, async (req, r
 
 // Update payment
 // Verify payment (update status and send receipt if paid)
-router.put('/payments/:id/verify', authenticate, canEditPayments, async (req, res) => {
+router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
   try {
     const { id } = req.params;
     const fpId = getFPScope(req);
@@ -2990,7 +2990,7 @@ router.put('/payments/:id/verify', authenticate, canEditPayments, async (req, re
   }
 });
 
-router.put('/payments/:id', authenticate, canEditPayments, async (req, res) => {
+router.put('/:id', authenticate, canEditPayments, async (req, res) => {
   try {
     const { id } = req.params;
     const fpId = getFPScope(req);
@@ -3374,7 +3374,7 @@ router.delete('/qr-codes/:id', authenticate, canEditPayments, async (req, res) =
 // ============================================
 
 // Get payment details for receipt
-router.get('/payments/:id/receipt', authenticate, canViewPayments, async (req, res) => {
+router.get('/:id/receipt', authenticate, canViewPayments, async (req, res) => {
   try {
     const { id } = req.params;
     const fpId = getFPScope(req);
@@ -3432,7 +3432,7 @@ router.get('/payments/:id/receipt', authenticate, canViewPayments, async (req, r
 });
 
 // Generate and download receipt PDF
-router.get('/payments/:id/receipt/pdf', authenticate, canViewPayments, async (req, res) => {
+router.get('/:id/receipt/pdf', authenticate, canViewPayments, async (req, res) => {
   try {
     const { id } = req.params;
     const fpId = getFPScope(req);
@@ -3497,7 +3497,7 @@ router.get('/payments/:id/receipt/pdf', authenticate, canViewPayments, async (re
 });
 
 // Send receipt email to customer
-router.post('/payments/:id/receipt/send', authenticate, canEditPayments, async (req, res) => {
+router.post('/:id/receipt/send', authenticate, canEditPayments, async (req, res) => {
   try {
     const { id } = req.params;
     const fpId = getFPScope(req);
