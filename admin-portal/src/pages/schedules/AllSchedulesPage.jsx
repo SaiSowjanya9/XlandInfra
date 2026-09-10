@@ -1078,7 +1078,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             >
               <option value="all">All Services</option>
               {services.map(s => (
-                <option key={s.id || s.name} value={s.name}>{s.name}</option>
+                <option key={s.id || s.service_name || s.name} value={s.service_name || s.name}>{s.service_name || s.name}</option>
               ))}
             </select>
 
@@ -1090,7 +1090,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             >
               <option value="all">All Vendors</option>
               {vendors.map(v => (
-                <option key={v.id || v.name} value={v.name || v.businessName}>{v.name || v.businessName}</option>
+                <option key={v.id || v.vendor_id} value={v.owner_name || v.company_name || v.name || v.businessName}>{v.owner_name || v.company_name || v.name || v.businessName}</option>
               ))}
             </select>
 
@@ -1102,7 +1102,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             >
               <option value="all">All Zones</option>
               {zones.map(z => (
-                <option key={z.id || z.name} value={z.name}>{z.name}</option>
+                <option key={z.id || z.zone_name || z.name} value={z.zone_name || z.name}>{z.zone_name || z.name}</option>
               ))}
             </select>
 
@@ -1239,8 +1239,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                               <span className="text-xs text-gray-600">{completedVisits}/{totalVisits}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1">
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex items-center justify-center gap-1">
                               <button 
                                 onClick={(e) => { e.stopPropagation(); handleScheduleDetails(serviceList[0]?.visits[0]); }}
                                 className="p-1.5 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded border border-emerald-200"

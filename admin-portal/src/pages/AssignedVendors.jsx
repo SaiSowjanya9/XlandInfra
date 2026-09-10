@@ -718,10 +718,10 @@ const AssignedVendors = ({ user }) => {
                 </div>
               </div>
 
-              {/* Rate & Coverage */}
+              {/* Rate, Coverage & Working Hours */}
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Rate & Coverage</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Rate, Coverage & Working Hours</h3>
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <p className="text-xs text-gray-400">Rate Per Visit</p>
                     <p className="text-sm font-medium text-gray-900">₹{viewAssignment.rate_per_visit || viewAssignment.ratePerVisit || 0}</p>
@@ -729,6 +729,10 @@ const AssignedVendors = ({ user }) => {
                   <div>
                     <p className="text-xs text-gray-400">Coverage Per Day</p>
                     <p className="text-sm font-medium text-gray-900">{viewAssignment.coverage_per_day || viewAssignment.coveragePerDay || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Working Hours</p>
+                    <p className="text-sm font-medium text-purple-700">{(viewAssignment.working_hours_from || viewAssignment.workingHoursFrom) && (viewAssignment.working_hours_to || viewAssignment.workingHoursTo) ? `${viewAssignment.working_hours_from || viewAssignment.workingHoursFrom} - ${viewAssignment.working_hours_to || viewAssignment.workingHoursTo}` : '-'}</p>
                   </div>
                 </div>
               </div>
