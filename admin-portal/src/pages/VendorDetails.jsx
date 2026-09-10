@@ -208,7 +208,9 @@ const VendorDetails = () => {
       pocEmail: vendor.pocEmail || vendor.poc_email || '',
       pocCountryCode: vendor.pocCountryCode || vendor.poc_country_code || '+91',
       ratePerVisit: vendor.ratePerVisit || vendor.rate_per_visit || 0,
-      coveragePerDay: vendor.coveragePerDay || vendor.coverage_per_day || 0
+      coveragePerDay: vendor.coveragePerDay || vendor.coverage_per_day || 0,
+      workingHoursFrom: vendor.workingHoursFrom || vendor.working_hours_from || '',
+      workingHoursTo: vendor.workingHoursTo || vendor.working_hours_to || ''
     });
   };
 
@@ -1277,6 +1279,34 @@ const VendorDetails = () => {
                       min="0"
                     />
                   </div>
+                </div>
+
+                {/* Working Hours */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <label className="block text-xs font-medium text-gray-500 mb-2">Working Hours</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">From</label>
+                      <input
+                        type="time"
+                        value={editForm.workingHoursFrom}
+                        onChange={(e) => handleEditFormChange('workingHoursFrom', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">To</label>
+                      <input
+                        type="time"
+                        value={editForm.workingHoursTo}
+                        onChange={(e) => handleEditFormChange('workingHoursTo', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      />
+                    </div>
+                  </div>
+                  {editForm.workingHoursFrom && editForm.workingHoursTo && (
+                    <p className="text-xs text-amber-600 mt-2">Vendor available: {editForm.workingHoursFrom} - {editForm.workingHoursTo}</p>
+                  )}
                 </div>
               </div>
             </div>
