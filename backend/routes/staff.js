@@ -903,12 +903,25 @@ router.post('/set-password', async (req, res) => {
 // ============================================
 
 // Get all staff members
-router.get('/', authenticate, adminOnly, async (req, res) => {
+// Allow admin users OR FP users fetching their own team
+router.get('/', authenticate, async (req, res) => {
   try {
     const { role, isActive, fpId } = req.query;
     
-    // If fpId is provided, fetch from fp_employees table
-    if (fpId) {
+    // Check permissions - either admin or FP user requesting their own team
+    const isAdmin = ['admin', 'operations_manager'].includes(req.user.role);
+    const isFP = ['franchise_partner', 'franchise'].includes(req.user.role);
+    
+    // FP users can only fetch their own team
+    const effectiveFpId = isFP ? req.user.franchisePartnerId : fpId;
+    
+    // If not admin and not FP, deny access
+    if (!isAdmin && !isFP) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    
+    // If fpId is provided (or FP user), fetch from fp_employees table
+    if (effectiveFpId) {
       let fpQuery = `
         SELECT 
           e.id,
@@ -926,7 +939,7 @@ router.get('/', authenticate, adminOnly, async (req, res) => {
         FROM fp_employees e
         WHERE e.franchise_partner_id = ?
       `;
-      const fpParams = [fpId];
+      const fpParams = [effectiveFpId];
 
       if (role) {
         fpQuery += ` AND e.role = ?`;
@@ -965,7 +978,11 @@ router.get('/', authenticate, adminOnly, async (req, res) => {
       });
     }
     
-    // Otherwise fetch from users table (admin staff)
+    // Otherwise fetch from users table (admin staff only)
+    if (!isAdmin) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    
     let query = `
       SELECT u.*, 
              CONCAT(c.first_name, ' ', c.last_name) as created_by_name,
