@@ -17,10 +17,11 @@ import {
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-// Wizard step types
+// Wizard step types - Step-by-step flow
 const WIZARD_STEPS = {
-  SCHEDULING: 'scheduling',
-  REVIEW: 'review'
+  SERVICE_SELECTION: 'service_selection',  // Step 1: Select a service to schedule
+  DATE_SELECTION: 'date_selection',        // Step 2: Select dates for the service
+  REVIEW: 'review'                         // Final: Review all and confirm
 };
 
 // Role-based permissions for scheduling
@@ -77,7 +78,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   
   // Wizard state for step-by-step scheduling
-  const [wizardStep, setWizardStep] = useState(WIZARD_STEPS.SCHEDULING); // 'scheduling' or 'review'
+  const [wizardStep, setWizardStep] = useState(WIZARD_STEPS.SERVICE_SELECTION);
   const [currentServiceIndex, setCurrentServiceIndex] = useState(0);
   
   // Store planned schedules for each service (before final confirmation)
@@ -1468,14 +1469,60 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         </div>
       </div>
 
-      {/* Wizard Progress Bar - Only show for users with scheduling permissions */}
+      {/* Step-by-Step Wizard Progress Header */}
       {permissions.canConfirm && (
-        <div className="px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
-          <div className="flex items-center justify-between mb-2">
+        <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+          {/* Step Indicator */}
+          <div className="flex items-center justify-center mb-4">
             <div className="flex items-center gap-2">
-              <ListChecks className="w-5 h-5 text-blue-600" />
-              <span className="font-semibold text-gray-900">Scheduling Progress</span>
+              {/* Step 1 */}
+              <div className={`flex items-center gap-2 ${wizardStep === WIZARD_STEPS.SERVICE_SELECTION ? 'text-blue-600' : Object.keys(plannedSchedules).length > 0 || wizardStep === WIZARD_STEPS.REVIEW ? 'text-green-600' : 'text-gray-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                  wizardStep === WIZARD_STEPS.SERVICE_SELECTION 
+                    ? 'bg-blue-600 text-white' 
+                    : Object.keys(plannedSchedules).length > 0 || wizardStep === WIZARD_STEPS.REVIEW
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-300 text-gray-600'
+                }`}>
+                  {Object.keys(plannedSchedules).length > 0 || wizardStep === WIZARD_STEPS.REVIEW ? <Check className="w-4 h-4" /> : '1'}
+                </div>
+                <span className="text-sm font-medium">Select Service</span>
+              </div>
+              
+              <div className={`w-12 h-0.5 ${wizardStep !== WIZARD_STEPS.SERVICE_SELECTION ? 'bg-blue-400' : 'bg-gray-300'}`} />
+              
+              {/* Step 2 */}
+              <div className={`flex items-center gap-2 ${wizardStep === WIZARD_STEPS.DATE_SELECTION ? 'text-blue-600' : wizardStep === WIZARD_STEPS.REVIEW ? 'text-green-600' : 'text-gray-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                  wizardStep === WIZARD_STEPS.DATE_SELECTION 
+                    ? 'bg-blue-600 text-white' 
+                    : wizardStep === WIZARD_STEPS.REVIEW
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-300 text-gray-600'
+                }`}>
+                  {wizardStep === WIZARD_STEPS.REVIEW ? <Check className="w-4 h-4" /> : '2'}
+                </div>
+                <span className="text-sm font-medium">Schedule Dates</span>
+              </div>
+              
+              <div className={`w-12 h-0.5 ${wizardStep === WIZARD_STEPS.REVIEW ? 'bg-blue-400' : 'bg-gray-300'}`} />
+              
+              {/* Step 3 */}
+              <div className={`flex items-center gap-2 ${wizardStep === WIZARD_STEPS.REVIEW ? 'text-blue-600' : 'text-gray-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                  wizardStep === WIZARD_STEPS.REVIEW 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-300 text-gray-600'
+                }`}>
+                  3
+                </div>
+                <span className="text-sm font-medium">Review & Confirm</span>
+              </div>
             </div>
+          </div>
+          
+          {/* Progress Stats */}
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 text-sm">
               <span className="flex items-center gap-1 text-amber-600">
                 <Clock className="w-4 h-4" />
@@ -1490,30 +1537,15 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 {getServiceCounts().scheduled} Confirmed
               </span>
             </div>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500"
-              style={{ 
-                width: `${((getServiceCounts().planned + getServiceCounts().scheduled) / getServiceCounts().total) * 100}%` 
-              }}
-            />
-          </div>
-          {allServicesPlanned() && (
-            <div className="mt-2 flex items-center justify-between">
-              <span className="text-sm text-green-700 font-medium flex items-center gap-1">
-                <CheckCircle className="w-4 h-4" />
-                All services are planned! Ready for final review.
-              </span>
-              <button
-                onClick={handleShowFinalReview}
-                className="px-4 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1"
-              >
-                <Eye className="w-4 h-4" />
-                Review & Confirm All
-              </button>
+            <div className="w-48 bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500"
+                style={{ 
+                  width: `${((getServiceCounts().planned + getServiceCounts().scheduled) / Math.max(getServiceCounts().total, 1)) * 100}%` 
+                }}
+              />
             </div>
-          )}
+          </div>
         </div>
       )}
       
