@@ -13,9 +13,9 @@
 -- ============================================
 -- STEP 2: Add missing columns to onboarded_properties if needed
 -- ============================================
-ALTER TABLE onboarded_properties
-ADD COLUMN IF NOT EXISTS legacy_migrated TINYINT(1) DEFAULT 0,
-ADD COLUMN IF NOT EXISTS legacy_id INT DEFAULT NULL;
+-- Note: Using separate ALTER statements and ignoring errors if column exists
+ALTER TABLE onboarded_properties ADD COLUMN legacy_migrated TINYINT(1) DEFAULT 0;
+ALTER TABLE onboarded_properties ADD COLUMN legacy_id INT DEFAULT NULL;
 
 -- ============================================
 -- STEP 3: Migrate legacy properties that don't exist in onboarded_properties
