@@ -2837,15 +2837,26 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
         if (effectivePropertyId) {
           const fpEstimateStatus = newBalance <= 0 ? 'paid' : 'partial';
           
-          // Always update by property_id (primary key for all linkages)
-          await pool.execute(`
+          // Update fp_estimates for any status that can have invoices (approved, converted, sent)
+          const [updateResult] = await pool.execute(`
             UPDATE fp_estimates SET 
               payment_status = ?, 
               updated_at = NOW() 
-            WHERE property_id = ? AND status = 'approved'
+            WHERE property_id = ? AND status IN ('approved', 'converted', 'sent')
           `, [fpEstimateStatus, effectivePropertyId]);
           
-          console.log(`[Payment Verify] Updated fp_estimates payment_status to ${fpEstimateStatus} for property_id=${effectivePropertyId}`);
+          console.log(`[Payment Verify] Updated fp_estimates payment_status to ${fpEstimateStatus} for property_id=${effectivePropertyId}, rows affected: ${updateResult.affectedRows}`);
+          
+          // If no rows updated, try without status filter as fallback
+          if (updateResult.affectedRows === 0) {
+            await pool.execute(`
+              UPDATE fp_estimates SET 
+                payment_status = ?, 
+                updated_at = NOW() 
+              WHERE property_id = ?
+            `, [fpEstimateStatus, effectivePropertyId]);
+            console.log(`[Payment Verify] Fallback update for property_id=${effectivePropertyId}`);
+          }
         } else {
           console.log('[Payment Verify] WARNING: No property_id found - fp_estimates not updated!');
         }

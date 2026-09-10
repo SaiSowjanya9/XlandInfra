@@ -6319,7 +6319,7 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
           (SELECT COUNT(*) FROM scheduled_visits sv WHERE sv.property_id = op.id) as totalScheduledVisits,
           'onboarded' as source
         FROM onboarded_properties op
-        INNER JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
+        INNER JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status IN ('approved', 'converted', 'sent')
         LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id
         LEFT JOIN property_contacts pc ON pc.property_id = op.id
         WHERE op.status = 'active'
@@ -6353,7 +6353,7 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
           (SELECT COUNT(*) FROM scheduled_visits sv WHERE sv.property_id = p.id) as totalScheduledVisits,
           'legacy' as source
         FROM properties p
-        INNER JOIN fp_estimates fe ON fe.property_id = p.id AND fe.status = 'approved'
+        INNER JOIN fp_estimates fe ON fe.property_id = p.id AND fe.status IN ('approved', 'converted', 'sent')
         LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id
         WHERE p.status = 'active'
           AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
