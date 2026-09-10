@@ -1062,8 +1062,27 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       
       console.log('[Confirm Schedule] Service updated to Scheduled:', updatedService);
       
-      // Show success notification - stay on same page
+      // Show success notification
       showToast(`Schedule confirmed successfully! ${result.data?.visitsCreated || confirmationSchedule.length} visits created.`, 'success');
+      
+      // Auto-move to next pending service after a brief delay
+      setTimeout(() => {
+        // Find next pending service (not scheduled, not planned)
+        const nextPendingService = services.find(s => 
+          s.id !== selectedService.id && 
+          s.status !== 'Scheduled' && 
+          s.status !== 'Planned' &&
+          !plannedSchedules[s.id]
+        );
+        
+        if (nextPendingService) {
+          setSelectedService(nextPendingService);
+          setPlannedVisits([]);
+          setSelectedSlot(null);
+          // Vendor availability will be fetched automatically via useEffect when selectedService changes
+          showToast(`Moving to ${nextPendingService.name}...`, 'info');
+        }
+      }, 500);
     } catch (error) {
       console.error('Error confirming schedule:', error);
       showToast(`Error confirming schedule: ${error.message}`, 'error');
