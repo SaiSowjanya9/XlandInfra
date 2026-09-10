@@ -114,16 +114,36 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
     }
   }, [token]);
 
+  // Get API path based on portal type
+  const getApiPath = () => {
+    const pathMap = {
+      'franchise': 'fp',
+      'manager': 'manager',
+      'admin': 'admin',
+      'coordinator': 'coordinator',
+      'supervisor': 'supervisor'
+    };
+    return pathMap[portalType] || 'admin';
+  };
+  const apiPath = getApiPath();
+
   // Fetch real schedules from API
   const fetchSchedules = useCallback(async () => {
     setLoading(true);
     try {
       const year = currentDate.getFullYear();
-      const month = currentDate.getMonth() + 1; // API expects 1-indexed month
+      const month = currentDate.getMonth();
       
-      const response = await fetch(`${API_BASE}/api/schedules/all?limit=500`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      // Get first and last day of the month for the query
+      const startDate = new Date(year, month, 1).toISOString().split('T')[0];
+      const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
+      
+      const response = await fetch(
+        `${API_BASE}/api/${apiPath}/schedules/all?startDate=${startDate}&endDate=${endDate}&limit=500`, 
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
       const result = await response.json();
       
       if (result.success && Array.isArray(result.data)) {
@@ -194,7 +214,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
     } finally {
       setLoading(false);
     }
-  }, [currentDate, token]);
+  }, [currentDate, token, apiPath]);
 
   // Initial load
   useEffect(() => {

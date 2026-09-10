@@ -67,11 +67,29 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
         const data = await response.json();
         const schedulesData = data.data || data.schedules || [];
         
-        // Flatten property-based schedules to visit level
+        // Handle both flat visit format and hierarchical property/service/visit format
         const allVisits = [];
-        schedulesData.forEach(property => {
-          if (property.services && Array.isArray(property.services)) {
-            property.services.forEach(service => {
+        
+        schedulesData.forEach(item => {
+          // Check if item is already a flat visit record (has scheduledDate directly)
+          if (item.scheduledDate || item.scheduled_date || item.targetDate) {
+            // Flat format from /schedules/all endpoint
+            allVisits.push({
+              id: item.id || item.visitId,
+              date: item.scheduledDate || item.scheduled_date || item.targetDate,
+              time: item.scheduledTime || item.scheduled_time_start || '09:00',
+              service: item.serviceName || item.service_name || item.serviceCategory || 'Service',
+              property: item.propertyName || item.property_name,
+              vendor: item.vendorName || item.vendor_name || 'Unassigned',
+              status: item.status || 'scheduled',
+              zone: item.zone,
+              propertyType: item.propertyType || item.property_type,
+              visitNumber: item.visitNumber,
+              totalVisits: item.totalVisits
+            });
+          } else if (item.services && Array.isArray(item.services)) {
+            // Hierarchical format with property -> services -> visits
+            item.services.forEach(service => {
               if (service.visits && Array.isArray(service.visits)) {
                 service.visits.forEach(visit => {
                   allVisits.push({
@@ -79,9 +97,11 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
                     date: visit.scheduledDate || visit.scheduled_date,
                     time: visit.scheduledTime || visit.scheduled_time_start || '09:00',
                     service: service.serviceName || service.service_name || 'Service',
-                    property: property.propertyName || property.property_name,
+                    property: item.propertyName || item.property_name,
                     vendor: service.vendorName || service.vendor_name || 'Unassigned',
-                    status: visit.status || 'scheduled'
+                    status: visit.status || 'scheduled',
+                    zone: item.zone,
+                    propertyType: item.propertyType || item.property_type
                   });
                 });
               }
