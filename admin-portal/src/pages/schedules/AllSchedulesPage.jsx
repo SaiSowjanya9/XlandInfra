@@ -1221,12 +1221,12 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                               }}
                               className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                             >
-                              {serviceList.length} service{serviceList.length > 1 ? 's' : ''}
+                              {serviceList.length}
                             </button>
                           </td>
                           <td className="px-4 py-3">
                             <span className="text-sm font-medium text-gray-900">{totalVisits} visits</span>
-                            <p className="text-xs text-gray-500">{serviceList.length} services</p>
+                            <p className="text-xs text-gray-500">{serviceList.length}</p>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
