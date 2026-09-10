@@ -1318,7 +1318,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Cheque Date *</label>
-                          <input type="text" placeholder="dd/mm/yyyy" value={formatDateIST(paymentDetails.chequeDate)} onChange={(e) => { const formatted = handleISTDateInput(e.target.value); const parsed = parseISTDate(formatted); setPaymentDetails(prev => ({ ...prev, chequeDate: parsed || '', chequeDateDisplay: formatted })); }} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" />
+                          <input type="date" value={paymentDetails.chequeDate || new Date().toISOString().split('T')[0]} onChange={(e) => setPaymentDetails(prev => ({ ...prev, chequeDate: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" />
                         </div>
                       </div>
                       <div>
