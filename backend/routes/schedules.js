@@ -266,8 +266,9 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
     // 1. Approved/paid estimates (payment_status = 'paid')
     // 2. Vendor assignments (from property_vendor_assignments)
     // 3. Not yet fully scheduled (check property_service_schedules and scheduled_visits)
+    // Uses subquery to get only the LATEST paid estimate per property (avoids duplicates)
     let query = `
-      SELECT DISTINCT
+      SELECT 
         op.id,
         op.property_id as propertyId,
         op.community_name as propertyName,
@@ -289,12 +290,16 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
         (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = op.id AND pss.scheduling_status IN ('scheduled', 'completed')) as scheduledServiceCount,
         (SELECT COUNT(*) FROM scheduled_visits sv WHERE sv.property_id = op.id) as totalScheduledVisits
       FROM onboarded_properties op
-      LEFT JOIN fp_estimates fe ON fe.property_id = op.id
+      INNER JOIN (
+        SELECT property_id, MAX(id) as latest_estimate_id
+        FROM fp_estimates 
+        WHERE payment_status IN ('paid', 'partial')
+        GROUP BY property_id
+      ) latest_fe ON latest_fe.property_id = op.id
+      INNER JOIN fp_estimates fe ON fe.id = latest_fe.latest_estimate_id
       LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id
       LEFT JOIN property_contacts pc ON pc.property_id = op.id
       WHERE op.status = 'active'
-        AND fe.id IS NOT NULL
-        AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
     `;
     
     const params = [];
