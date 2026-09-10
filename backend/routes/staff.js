@@ -915,7 +915,22 @@ router.get('/', authenticate, async (req, res) => {
     const isFP = isFPOwner || isFPEmployee;
     
     // FP users can only fetch their own team - use req.fpId set by auth middleware
-    const effectiveFpId = isFP ? (req.fpId || req.user.franchisePartnerId || req.user.fpId) : fpId;
+    let effectiveFpId = isFP ? (req.fpId || req.user.franchisePartnerId || req.user.fpId) : fpId;
+    
+    // For FP owner users, look up their franchise_partner_id from the database
+    if (isFPOwner && !effectiveFpId) {
+      try {
+        const [fpRecord] = await pool.execute(
+          'SELECT id FROM franchise_partners WHERE user_id = ? OR email = ?',
+          [req.user.id, req.user.email]
+        );
+        if (fpRecord.length > 0) {
+          effectiveFpId = fpRecord[0].id;
+        }
+      } catch (e) {
+        console.log('FP lookup error:', e.message);
+      }
+    }
     
     // If not admin and not FP, deny access
     if (!isAdmin && !isFP) {
