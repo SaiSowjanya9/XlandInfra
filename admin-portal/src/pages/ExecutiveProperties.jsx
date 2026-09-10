@@ -1333,42 +1333,19 @@ const ExecutiveProperties = ({ user }) => {
 
             <div className="p-6">
               {(() => {
-                // Filter vendors by property zone - zone is required
-                const propertyZone = (selectedProperty?.zone_name || selectedProperty?.zone || selectedProperty?.zone_id || '').toString().toLowerCase().trim();
+                // Get all vendors/employees (global - no zone filtering)
+                const availableItems = assignType === 'vendor' ? vendors : employees;
                 
-                // If property has NO zone, don't show any vendors
-                if (assignType === 'vendor' && !propertyZone) {
-                  return (
-                    <div className="text-center py-4">
-                      <p className="text-gray-500">This property has no zone assigned</p>
-                      <p className="text-xs text-gray-400 mt-1">Please assign a zone to this property first to see matching vendors</p>
-                    </div>
-                  );
-                }
-                
-                // Filter vendors by EXACT zone match only
-                const zoneFilteredVendors = assignType === 'vendor' 
-                  ? vendors.filter(v => {
-                      const vendorZone = (v.zone_name || v.zone || v.zone_id || '').toString().toLowerCase().trim();
-                      if (!vendorZone) return false;
-                      // Exact zone match - extract numbers for comparison
-                      const propZoneNum = propertyZone.replace(/[^0-9]/g, '');
-                      const vendorZoneNum = vendorZone.replace(/[^0-9]/g, '');
-                      // Match exactly: "Zone 43" === "Zone 43" OR "43" === "43"
-                      return vendorZone === propertyZone || (propZoneNum && vendorZoneNum && propZoneNum === vendorZoneNum);
-                    })
-                  : employees;
-                
-                return zoneFilteredVendors.length === 0 ? (
+                return availableItems.length === 0 ? (
                   <div className="text-center py-4">
                     <p className="text-gray-500">
-                      No {assignType === 'vendor' ? 'vendors' : 'employees'} available for {selectedProperty?.zone_name || selectedProperty?.zone || selectedProperty?.zone_id}
+                      No {assignType === 'vendor' ? 'vendors' : 'employees'} available
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">Add vendors with matching zone to assign them to this property</p>
+                    <p className="text-xs text-gray-400 mt-1">Add {assignType === 'vendor' ? 'vendors' : 'employees'} to assign them to this property</p>
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {zoneFilteredVendors.map((item) => (
+                    {availableItems.map((item) => (
                       <button
                         key={item.id}
                         onClick={() => handleAssign(item.id)}

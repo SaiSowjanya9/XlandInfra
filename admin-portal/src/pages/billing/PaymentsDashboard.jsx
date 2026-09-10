@@ -179,9 +179,15 @@ const DonutChartCount = ({ data, total, size = 130 }) => {
 const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0]
+  // Default to last 365 days for comprehensive data view
+  const [dateRange, setDateRange] = useState(() => {
+    const end = new Date();
+    const start = new Date();
+    start.setFullYear(start.getFullYear() - 1); // Go back 1 year
+    return {
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0]
+    };
   });
   const [dashboardData, setDashboardData] = useState({
     totalInvoiceAmount: 0,
@@ -211,68 +217,80 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
     setLoading(true);
     try {
       // Build query params with optional FP filter
-      const fpParam = selectedFp ? `&fpId=${selectedFp.id}` : '';
+      const fpParam = selectedFp && selectedFp.id !== 'all' ? `&fpId=${selectedFp.id}` : '';
+      const fpQueryOnly = selectedFp && selectedFp.id !== 'all' ? `?fpId=${selectedFp.id}` : '';
       
-      // Fetch payments data
-      const paymentsRes = await fetch(`${API_BASE}/api/payments?startDate=${dateRange.start}&endDate=${dateRange.end}${fpParam}`, {
+      // Fetch ALL payments data (no date filter for dashboard overview)
+      const paymentsRes = await fetch(`${API_BASE}/api/payments?${fpParam.replace('&', '')}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const paymentsResult = await paymentsRes.json();
-      const payments = paymentsResult.success ? (paymentsResult.data || []) : [];
+      const allPayments = paymentsResult.success ? (paymentsResult.data || []) : [];
 
-      // Fetch invoices data
-      const invoicesRes = await fetch(`${API_BASE}/api/payments/invoices${selectedFp ? `?fpId=${selectedFp.id}` : ''}`, {
+      // Fetch ALL invoices data
+      const invoicesRes = await fetch(`${API_BASE}/api/payments/invoices${fpQueryOnly}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const invoicesResult = await invoicesRes.json();
       const invoices = invoicesResult.success ? (invoicesResult.data || []) : [];
+      
+      // Filter payments by date range for the trend chart only
+      const payments = allPayments.filter(p => {
+        const paymentDate = new Date(p.paymentDate || p.created_at).toISOString().split('T')[0];
+        return paymentDate >= dateRange.start && paymentDate <= dateRange.end;
+      });
 
-      // Calculate stats
+      // Calculate stats using ALL payments (not filtered by date)
       const today = new Date().toISOString().split('T')[0];
       
       // Total Invoice Amount
       const totalInvoiceAmount = invoices.reduce((sum, inv) => sum + (parseFloat(inv.totalAmount) || 0), 0);
       
-      // Amount Collected (paid payments)
-      const paidPayments = payments.filter(p => p.status === 'paid');
-      const amountCollected = paidPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+      // Amount Collected (paid payments) - from ALL payments
+      const allPaidPayments = allPayments.filter(p => p.status === 'paid' || p.status === 'verified');
+      const amountCollected = allPaidPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
       
       // Pending Amount (unpaid invoices)
-      const pendingInvoices = invoices.filter(inv => inv.status !== 'paid');
+      const pendingInvoices = invoices.filter(inv => {
+        const payStatus = inv.paymentStatus || inv.payment_status || inv.status;
+        return payStatus !== 'paid' && payStatus !== 'cancelled' && payStatus !== 'void';
+      });
       const pendingAmount = pendingInvoices.reduce((sum, inv) => sum + (parseFloat(inv.balanceAmount) || parseFloat(inv.totalAmount) || 0), 0);
       
       // Overdue Amount
       const overdueInvoices = invoices.filter(inv => {
-        if (inv.status === 'paid') return false;
-        const dueDate = new Date(inv.dueDate);
+        const payStatus = inv.paymentStatus || inv.payment_status || inv.status;
+        if (payStatus === 'paid' || payStatus === 'cancelled' || payStatus === 'void') return false;
+        const dueDate = new Date(inv.dueDate || inv.due_date);
         return dueDate < new Date();
       });
       const overdueAmount = overdueInvoices.reduce((sum, inv) => sum + (parseFloat(inv.balanceAmount) || parseFloat(inv.totalAmount) || 0), 0);
       
-      // Today's Collections
-      const todaysPayments = payments.filter(p => {
-        const paymentDate = new Date(p.paymentDate).toISOString().split('T')[0];
-        return paymentDate === today && p.status === 'paid';
+      // Today's Collections - from ALL payments
+      const todaysPayments = allPayments.filter(p => {
+        const paymentDate = new Date(p.paymentDate || p.payment_date || p.created_at).toISOString().split('T')[0];
+        return paymentDate === today && (p.status === 'paid' || p.status === 'verified');
       });
       const todaysCollections = todaysPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
       
-      // Failed Payments
-      const failedPaymentsList = payments.filter(p => p.status === 'failed');
+      // Failed Payments - from ALL payments
+      const failedPaymentsList = allPayments.filter(p => p.status === 'failed');
       const failedPayments = failedPaymentsList.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
 
-      // Payments by Mode
+      // Payments by Mode - from ALL paid payments
       const modeMap = {
         upi: { label: 'UPI', color: '#10B981' },
         bank_transfer: { label: 'Bank Transfer', color: '#3B82F6' },
         razorpay: { label: 'Razorpay Link', color: '#8B5CF6' },
         debit_credit_card: { label: 'Card / POS', color: '#F59E0B' },
         cash: { label: 'Cash', color: '#6B7280' },
-        check: { label: 'Cheque', color: '#14B8A6' }
+        check: { label: 'Cheque', color: '#14B8A6' },
+        cheque: { label: 'Cheque', color: '#14B8A6' }
       };
       
       const paymentsByModeMap = {};
-      paidPayments.forEach(p => {
-        const method = p.paymentMethod || 'other';
+      allPaidPayments.forEach(p => {
+        const method = p.paymentMethod || p.payment_method || 'other';
         if (!paymentsByModeMap[method]) {
           paymentsByModeMap[method] = 0;
         }
@@ -280,23 +298,25 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
       });
       
       const paymentsByMode = Object.entries(paymentsByModeMap).map(([key, value]) => ({
-        label: modeMap[key]?.label || key,
+        label: modeMap[key]?.label || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
         value,
         color: modeMap[key]?.color || '#9CA3AF',
         percentage: amountCollected > 0 ? ((value / amountCollected) * 100).toFixed(1) : 0
       })).sort((a, b) => b.value - a.value);
 
-      // Payments by Status
+      // Payments by Status - from ALL payments
       const statusColors = {
         paid: '#10B981',
+        verified: '#10B981',
         partially_paid: '#F59E0B',
         failed: '#EF4444',
         refunded: '#6B7280',
-        verification_pending: '#F97316'
+        verification_pending: '#F97316',
+        pending: '#3B82F6'
       };
       
       const paymentsByStatusMap = {};
-      payments.forEach(p => {
+      allPayments.forEach(p => {
         const status = p.status || 'pending';
         if (!paymentsByStatusMap[status]) {
           paymentsByStatusMap[status] = 0;
@@ -304,7 +324,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         paymentsByStatusMap[status] += parseFloat(p.amount) || 0;
       });
       
-      const totalPaymentsAmount = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+      const totalPaymentsAmount = allPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
       const paymentsByStatus = Object.entries(paymentsByStatusMap).map(([key, value]) => ({
         label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
         value,
@@ -334,14 +354,21 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
       const partiallyPaidInvoices = activeInvoices.filter(inv => 
         getPaymentStatus(inv) === 'partially_paid' || inv.status === 'partially_paid'
       ).length;
-      const overdueInvoicesCount = activeInvoices.filter(inv => inv.status === 'overdue').length;
+      // Check if invoice is overdue by due date
+      const overdueInvoicesCount = activeInvoices.filter(inv => {
+        const payStatus = getPaymentStatus(inv);
+        if (payStatus === 'paid' || inv.status === 'paid') return false;
+        const dueDate = new Date(inv.dueDate || inv.due_date);
+        return dueDate < new Date() || inv.status === 'overdue';
+      }).length;
       // Unpaid = all active invoices that are not paid, partially_paid, or overdue
       const unpaidInvoices = activeInvoices.filter(inv => {
         const payStatus = getPaymentStatus(inv);
         const status = inv.status;
         const isPaid = payStatus === 'paid' || status === 'paid';
         const isPartial = payStatus === 'partially_paid' || status === 'partially_paid';
-        const isOverdue = status === 'overdue';
+        const dueDate = new Date(inv.dueDate || inv.due_date);
+        const isOverdue = dueDate < new Date() || status === 'overdue';
         return !isPaid && !isPartial && !isOverdue;
       }).length;
       
@@ -364,9 +391,9 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
       ];
       
       pendingInvoices.forEach(inv => {
-        const dueDate = new Date(inv.dueDate);
+        const dueDate = new Date(inv.dueDate || inv.due_date);
         const daysPastDue = Math.max(0, Math.floor((now - dueDate) / (1000 * 60 * 60 * 24)));
-        const amount = parseFloat(inv.balanceAmount) || parseFloat(inv.totalAmount) || 0;
+        const amount = parseFloat(inv.balanceAmount || inv.balance_amount) || parseFloat(inv.totalAmount || inv.total_amount) || 0;
         
         for (const bucket of agingBuckets) {
           if (daysPastDue >= bucket.min && daysPastDue <= bucket.max) {
@@ -391,29 +418,32 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
       }
       
       invoices.forEach(inv => {
-        const invDate = new Date(inv.invoiceDate).toISOString().split('T')[0];
+        const invDate = new Date(inv.invoiceDate || inv.invoice_date || inv.created_at).toISOString().split('T')[0];
         const dayData = last30Days.find(d => d.date === invDate);
         if (dayData) {
-          dayData.invoiceAmount += parseFloat(inv.totalAmount) || 0;
+          dayData.invoiceAmount += parseFloat(inv.totalAmount || inv.total_amount) || 0;
         }
       });
       
-      paidPayments.forEach(p => {
-        const payDate = new Date(p.paymentDate).toISOString().split('T')[0];
+      // Use allPaidPayments for the trend chart
+      allPaidPayments.forEach(p => {
+        const payDate = new Date(p.paymentDate || p.payment_date || p.created_at).toISOString().split('T')[0];
         const dayData = last30Days.find(d => d.date === payDate);
         if (dayData) {
           dayData.collectedAmount += parseFloat(p.amount) || 0;
         }
       });
 
-      // Top 5 Customers by Collection
+      // Top 5 Customers by Collection - from ALL paid payments
       const customerCollections = {};
-      paidPayments.forEach(p => {
-        const customer = p.customerName || p.propertyName || 'Unknown';
-        if (!customerCollections[customer]) {
-          customerCollections[customer] = 0;
+      allPaidPayments.forEach(p => {
+        const customer = p.customerName || p.customer_name || p.propertyName || p.property_name || 'Unknown';
+        if (customer && customer !== 'Unknown') {
+          if (!customerCollections[customer]) {
+            customerCollections[customer] = 0;
+          }
+          customerCollections[customer] += parseFloat(p.amount) || 0;
         }
-        customerCollections[customer] += parseFloat(p.amount) || 0;
       });
       
       const topCustomers = Object.entries(customerCollections)
@@ -421,17 +451,18 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         .sort((a, b) => b.amount - a.amount)
         .slice(0, 5);
 
-      // Recent Payments (last 5)
-      const recentPayments = [...payments]
-        .sort((a, b) => new Date(b.paymentDate || b.createdAt) - new Date(a.paymentDate || a.createdAt))
+      // Recent Payments (last 5) - from ALL payments
+      const recentPayments = [...allPayments]
+        .filter(p => p.status === 'paid' || p.status === 'verified')
+        .sort((a, b) => new Date(b.paymentDate || b.payment_date || b.created_at) - new Date(a.paymentDate || a.payment_date || a.created_at))
         .slice(0, 5)
         .map(p => ({
           id: p.id,
-          customerName: p.customerName || p.propertyName || 'Unknown',
-          invoiceId: p.invoiceId,
-          paymentMethod: p.paymentMethod,
+          customerName: p.customerName || p.customer_name || p.propertyName || p.property_name || 'Unknown',
+          invoiceId: p.invoiceId || p.invoice_id || p.invoiceCode || p.invoice_code,
+          paymentMethod: p.paymentMethod || p.payment_method,
           amount: parseFloat(p.amount) || 0,
-          paymentDate: p.paymentDate || p.createdAt
+          paymentDate: p.paymentDate || p.payment_date || p.created_at
         }));
 
       setDashboardData({
