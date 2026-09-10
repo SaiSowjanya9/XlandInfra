@@ -517,7 +517,8 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
       const submitData = new FormData();
       submitData.append('invoiceId', selectedInvoice.id || selectedInvoice.invoiceId);
       submitData.append('amount', paymentAmount);
-      submitData.append('paymentMethod', selectedMethod);
+      // Convert 'check' to 'cheque' for database ENUM compatibility
+      submitData.append('paymentMethod', selectedMethod === 'check' ? 'cheque' : selectedMethod);
       submitData.append('paymentDate', paymentDate);
       submitData.append('customerName', selectedInvoice.customerName || '');
       submitData.append('paymentStatus', 'verification_pending');
