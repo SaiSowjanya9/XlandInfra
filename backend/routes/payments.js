@@ -1630,32 +1630,25 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
 
                     <table style="width: 100%; margin-top: 20px; border-collapse: collapse;">
                       <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 10px 0; text-align: left; color: #374151;">Subtotal</td>
-                        <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #374151;">${formatAmount(subtotal)}</td>
+                        <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">Subtotal</td>
+                        <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #374151;">${formatAmount(subtotal)}</td>
                       </tr>
                       ${discountAmount > 0 ? `
                       <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 10px 0; text-align: left; color: #374151;">Discount (${discPct}%)</td>
-                        <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #dc2626;">-${formatAmount(discountAmount)}</td>
+                        <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">Discount</td>
+                        <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #dc2626;">-${formatAmount(discountAmount)}</td>
                       </tr>
                       ` : ''}
                       <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 10px 0; text-align: left; color: #374151;">GST (${taxPct}%)</td>
-                        <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #374151;">${formatAmount(taxAmount)}</td>
+                        <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">GST (${taxPct}%)</td>
+                        <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #374151;">${formatAmount(taxAmount)}</td>
                       </tr>
                       <tr style="border-top: 2px solid #10b981;">
-                        <td style="padding: 14px 0; text-align: left; font-size: 18px; font-weight: bold; color: #10b981;">Grand Total</td>
-                        <td style="padding: 14px 0; text-align: right; font-size: 18px; font-weight: bold; color: #10b981;">${formatAmount(totalAmount)}</td>
+                        <td width="60%" style="padding: 14px 0; text-align: left; font-size: 18px; font-weight: bold; color: #10b981;">Grand Total</td>
+                        <td width="40%" style="padding: 14px 0; text-align: right; font-size: 18px; font-weight: bold; color: #10b981;">${formatAmount(totalAmount)}</td>
                       </tr>
                     </table>
                   </div>
-
-                  ${notes ? `
-                  <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-top: 20px;">
-                    <strong>Notes:</strong><br/>
-                    ${notes}
-                  </div>
-                  ` : ''}
 
                   ${paymentLinkUrl ? `
                   <div style="text-align: center; margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-radius: 12px; border: 1px solid #86efac;">
@@ -2143,36 +2136,36 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
                 </table>
                 ` : ''}
 
-                <div style="margin-top: 20px;">
-                  <div class="amount-row">
-                    <span>Subtotal</span>
-                    <span>${formatAmount(invoice.subtotal)}</span>
-                  </div>
+                <table style="width: 100%; margin-top: 20px; border-collapse: collapse;">
+                  <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">Subtotal</td>
+                    <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #374151;">${formatAmount(invoice.subtotal)}</td>
+                  </tr>
                   ${invoice.discount_amount > 0 ? `
-                  <div class="amount-row">
-                    <span>Discount</span>
-                    <span style="color: #dc2626;">-${formatAmount(invoice.discount_amount)}</span>
-                  </div>
+                  <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">Discount</td>
+                    <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #dc2626;">-${formatAmount(invoice.discount_amount)}</td>
+                  </tr>
                   ` : ''}
-                  <div class="amount-row">
-                    <span>GST (${invoice.tax_percent || 18}%)</span>
-                    <span>${formatAmount(invoice.tax_amount)}</span>
-                  </div>
-                  <div class="amount-row total-row">
-                    <span>Grand Total</span>
-                    <span>${formatAmount(invoice.total_amount)}</span>
-                  </div>
+                  <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">GST (${invoice.tax_percent || 18}%)</td>
+                    <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #374151;">${formatAmount(invoice.tax_amount)}</td>
+                  </tr>
+                  <tr style="border-top: 2px solid #C9A227;">
+                    <td width="60%" style="padding: 14px 0; text-align: left; font-size: 18px; font-weight: bold; color: #C9A227;">Grand Total</td>
+                    <td width="40%" style="padding: 14px 0; text-align: right; font-size: 18px; font-weight: bold; color: #C9A227;">${formatAmount(invoice.total_amount)}</td>
+                  </tr>
                   ${invoice.amount_paid > 0 ? `
-                  <div class="amount-row">
-                    <span>Amount Paid</span>
-                    <span style="color: #16a34a;">${formatAmount(invoice.amount_paid)}</span>
-                  </div>
-                  <div class="amount-row" style="font-weight: bold;">
-                    <span>Balance Due</span>
-                    <span style="color: #dc2626;">${formatAmount(invoice.balance_amount)}</span>
-                  </div>
+                  <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td width="60%" style="padding: 10px 0; text-align: left; color: #16a34a;">Amount Paid</td>
+                    <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #16a34a;">${formatAmount(invoice.amount_paid)}</td>
+                  </tr>
+                  <tr>
+                    <td width="60%" style="padding: 10px 0; text-align: left; font-weight: bold; color: #dc2626;">Balance Due</td>
+                    <td width="40%" style="padding: 10px 0; text-align: right; font-weight: bold; color: #dc2626;">${formatAmount(invoice.balance_amount)}</td>
+                  </tr>
                   ` : ''}
-                </div>
+                </table>
               </div>
 
               <div style="text-align: center; margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-radius: 12px; border: 1px solid #86efac;">
@@ -2184,13 +2177,7 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
                 <p style="margin: 5px 0 0; color: #9ca3af; font-size: 11px;">UPI • Cards • Net Banking • Wallets</p>
               </div>
 
-              ${invoice.notes ? `
-              <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-top: 20px;">
-                <strong>Notes:</strong><br/>
-                ${invoice.notes}
               </div>
-              ` : ''}
-            </div>
             
             <div class="footer">
               <p style="margin: 0; color: #6b7280; font-size: 14px;">Thank you for your business!</p>
