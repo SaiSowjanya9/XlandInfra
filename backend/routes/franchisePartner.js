@@ -2714,8 +2714,12 @@ router.post('/vendors', requireFPScope, async (req, res) => {
       managerName, managerMobile, managerEmail, managerCountryCode,
       pocName, pocMobile, pocEmail, pocCountryCode,
       ratePerVisit, coveragePerDay,
+      scheduleTime, useCustomTime, customScheduleTime,
       gstNumber, panNumber, licenseNumber
     } = req.body;
+
+    // Determine the final schedule time value
+    const finalScheduleTime = useCustomTime ? customScheduleTime : scheduleTime;
 
     const vendorId = `VND-${Date.now()}`;
     const username = ownerEmail ? ownerEmail.split('@')[0] + '_' + Date.now() : `vendor_${Date.now()}`;
@@ -2733,9 +2737,9 @@ router.post('/vendors', requireFPScope, async (req, res) => {
         manager_name, manager_mobile, manager_email, manager_country_code,
         poc_name, poc_mobile, poc_email, poc_country_code,
         gst_number, pan_number, license_number,
-        rate_per_visit, coverage_per_day,
+        rate_per_visit, coverage_per_day, schedule_time,
         franchise_partner_id, created_by, created_by_id, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
       [
         vendorId, username, tempPassword,
         vendorCompanyName, serviceType || '', serviceVerified ? 1 : 0, zone || '', areaName || '', division || '',
@@ -2743,7 +2747,7 @@ router.post('/vendors', requireFPScope, async (req, res) => {
         managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
         pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
         gstNumber || '', panNumber || '', licenseNumber || '',
-        parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0,
+        parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0, finalScheduleTime || null,
         req.fpId, creatorName, req.user.id
       ]
     );

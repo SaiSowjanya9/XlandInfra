@@ -2291,11 +2291,61 @@ const FREQ_CONFIG = {
 
 // Scoring weights for smart recommendation
 const RECOMMENDATION_WEIGHTS = {
+  vendorPreferredTime: 35, // Vendor's preferred schedule time (highest priority)
   sameZoneJobs: 30,        // Vendor has other jobs in same zone (better routing)
   exactTargetDate: 25,     // Exact match with target date
   closestToTarget: 20,     // Proximity to target date
   highAvailability: 15,    // More available slots
   customerPreferred: 10    // Customer's preferred day/time
+};
+
+// Helper function to convert time string to comparable minutes
+const timeToMinutes = (timeStr) => {
+  if (!timeStr) return null;
+  
+  // Handle "HH:MM AM/PM" format
+  const ampmMatch = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (ampmMatch) {
+    let hours = parseInt(ampmMatch[1]);
+    const minutes = parseInt(ampmMatch[2]);
+    const period = ampmMatch[3]?.toUpperCase();
+    
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    
+    return hours * 60 + minutes;
+  }
+  
+  // Handle "HH:MM" 24-hour format
+  const match24 = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+  if (match24) {
+    return parseInt(match24[1]) * 60 + parseInt(match24[2]);
+  }
+  
+  return null;
+};
+
+// Calculate time proximity score (0-100% of weight)
+const getTimeProximityScore = (slotTime, vendorPreferredTime, weight) => {
+  const slotMinutes = timeToMinutes(slotTime);
+  const preferredMinutes = timeToMinutes(vendorPreferredTime);
+  
+  if (slotMinutes === null || preferredMinutes === null) return 0;
+  
+  const diffMinutes = Math.abs(slotMinutes - preferredMinutes);
+  
+  // Exact match = 100% of weight
+  if (diffMinutes === 0) return weight;
+  // Within 30 min = 80% of weight
+  if (diffMinutes <= 30) return Math.round(weight * 0.8);
+  // Within 1 hour = 60% of weight
+  if (diffMinutes <= 60) return Math.round(weight * 0.6);
+  // Within 2 hours = 40% of weight
+  if (diffMinutes <= 120) return Math.round(weight * 0.4);
+  // Within 3 hours = 20% of weight
+  if (diffMinutes <= 180) return Math.round(weight * 0.2);
+  // Beyond 3 hours = 0
+  return 0;
 };
 
 /**
@@ -2345,12 +2395,13 @@ router.get('/recommended-dates', authenticate, canSeeSchedule, async (req, res) 
       };
     });
 
-    // Get vendor max daily visits
+    // Get vendor max daily visits and preferred schedule time
     const [[vendor]] = await pool.execute(
-      `SELECT max_daily_visits, zone as vendor_zone FROM onboarded_vendors WHERE id = ?`,
+      `SELECT max_daily_visits, zone as vendor_zone, schedule_time FROM onboarded_vendors WHERE id = ?`,
       [vendorId]
     );
     const maxDaily = vendor?.max_daily_visits || 5;
+    const vendorScheduleTime = vendor?.schedule_time || null;
 
     // Generate recommended dates for each visit
     const allRecommendations = [];
@@ -2434,11 +2485,24 @@ router.get('/recommended-dates', authenticate, canSeeSchedule, async (req, res) 
           reasons.push('Customer preferred');
         }
         
-        // Determine recommendation level
+        // 6. Vendor preferred schedule time (highest weight!)
+        // Default time slots for recommendations based on vendor's schedule_time
+        let recommendedTimeSlot = '10:00 AM'; // Default
+        let vendorTimeScore = 0;
+        
+        if (vendorScheduleTime) {
+          // Vendor has a preferred time - use it as the recommended slot
+          recommendedTimeSlot = vendorScheduleTime;
+          vendorTimeScore = RECOMMENDATION_WEIGHTS.vendorPreferredTime;
+          score += vendorTimeScore;
+          reasons.push(`Vendor prefers ${vendorScheduleTime}`);
+        }
+        
+        // Determine recommendation level (adjusted thresholds for new weight)
         let recommendation = 'available';
-        if (score >= 60) recommendation = 'highly_recommended';
-        else if (score >= 40) recommendation = 'recommended';
-        else if (score >= 20) recommendation = 'available';
+        if (score >= 80) recommendation = 'highly_recommended';
+        else if (score >= 55) recommendation = 'recommended';
+        else if (score >= 30) recommendation = 'available';
         else recommendation = 'limited';
         
         searchDates.push({
@@ -2451,7 +2515,9 @@ router.get('/recommended-dates', authenticate, canSeeSchedule, async (req, res) 
           availableSlots,
           sameZoneJobs: booking.sameZoneJobs,
           reasons,
-          recommendation
+          recommendation,
+          recommendedTime: recommendedTimeSlot,
+          vendorPreferredTime: vendorScheduleTime
         });
       }
       
@@ -2483,6 +2549,7 @@ router.get('/recommended-dates', authenticate, canSeeSchedule, async (req, res) 
         totalVisits: numVisits,
         zone: zone || null,
         searchWindow: windowDays,
+        vendorPreferredTime: vendorScheduleTime,
         recommendations: allRecommendations,
         scoringWeights: RECOMMENDATION_WEIGHTS
       }

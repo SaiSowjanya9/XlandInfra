@@ -451,6 +451,9 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
           // Convert backend recommendations to frontend format
           const dates = [];
           
+          // Get vendor's preferred time from API response
+          const vendorPreferredTime = result.data.vendorPreferredTime;
+          
           result.data.recommendations.slice(0, 4).forEach((rec, i) => {
             const bestOption = rec.bestOption;
             if (bestOption) {
@@ -471,7 +474,9 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               const zoneJobs = bestOption.sameZoneJobs || 0;
               const zoneName = property?.zone || 'Zone A';
               
-              if (zoneJobs > 0) {
+              if (vendorPreferredTime) {
+                reason = `Vendor prefers ${vendorPreferredTime}`;
+              } else if (zoneJobs > 0) {
                 reason = `Vendor already has ${zoneJobs} ${zoneName} job${zoneJobs > 1 ? 's' : ''} on this date`;
               } else if (bestOption.daysFromTarget === 0) {
                 reason = 'Exact target date based on frequency';
@@ -481,14 +486,14 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 reason = 'Limited availability';
               }
               
-              // Generate time based on availability (default times based on slot)
-              const defaultTimes = ['10:00 AM', '2:00 PM', '9:00 AM', '11:00 AM'];
+              // Use vendor's preferred time if available, otherwise use recommended time from backend
+              const recommendedTime = bestOption.recommendedTime || vendorPreferredTime || '10:00 AM';
               
               dates.push({
                 id: i + 1,
                 date: dateObj,
                 dateStr: formatDateFull(dateObj),
-                time: defaultTimes[i % defaultTimes.length],
+                time: recommendedTime,
                 type: type,
                 reason: reason,
                 vendor: service.vendorName,
@@ -496,7 +501,8 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 score: bestOption.score,
                 availableSlots: bestOption.availableSlots,
                 sameZoneJobs: zoneJobs,
-                daysFromTarget: bestOption.daysFromTarget
+                daysFromTarget: bestOption.daysFromTarget,
+                vendorPreferredTime: vendorPreferredTime
               });
             }
           });
@@ -1868,6 +1874,19 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               <h3 className="font-semibold text-gray-900">Recommended Dates</h3>
               <span className="text-sm text-gray-500">{recommendedDates.length}</span>
             </div>
+            
+            {/* Vendor's Preferred Schedule Time */}
+            {recommendedDates.length > 0 && recommendedDates[0].vendorPreferredTime && (
+              <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <Clock className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm font-medium text-purple-800">Vendor's Preferred Time</span>
+                </div>
+                <p className="text-lg font-bold text-purple-700">{recommendedDates[0].vendorPreferredTime}</p>
+                <p className="text-xs text-purple-600 mt-1">Recommendations prioritize this time slot</p>
+              </div>
+            )}
+            
             <div className="space-y-3">
               {recommendedDates.map((rec, i) => {
                 // Check if this date is currently selected
