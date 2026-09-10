@@ -182,19 +182,19 @@ async function assignVendorToService({
 async function updatePendingPropertySchedule(connection, propertyId, estimateId, franchisePartnerId) {
   // Get total services from estimate
   const [estimate] = await connection.execute(
-    `SELECT service_rows FROM fp_estimates WHERE property_id = ? AND status = 'approved' LIMIT 1`,
+    `SELECT package_services FROM fp_estimates WHERE property_id = ? AND status = 'approved' LIMIT 1`,
     [propertyId]
   );
 
   let totalServices = 0;
-  if (estimate.length > 0 && estimate[0].service_rows) {
+  if (estimate.length > 0 && estimate[0].package_services) {
     try {
-      const services = typeof estimate[0].service_rows === 'string' 
-        ? JSON.parse(estimate[0].service_rows) 
-        : estimate[0].service_rows;
+      const services = typeof estimate[0].package_services === 'string' 
+        ? JSON.parse(estimate[0].package_services) 
+        : estimate[0].package_services;
       totalServices = Array.isArray(services) ? services.length : 0;
     } catch (e) {
-      console.warn('Error parsing service_rows:', e);
+      console.warn('Error parsing package_services:', e);
     }
   }
 
@@ -244,7 +244,7 @@ async function checkAllVendorsAssigned(connection, propertyId) {
   const [[result]] = await connection.execute(
     `SELECT 
        (SELECT COUNT(*) FROM property_vendor_assignments WHERE property_id = ? AND is_active = 1) as assigned,
-       (SELECT JSON_LENGTH(COALESCE(service_rows, '[]')) FROM fp_estimates WHERE property_id = ? AND status = 'approved' LIMIT 1) as total
+       (SELECT JSON_LENGTH(COALESCE(package_services, '[]')) FROM fp_estimates WHERE property_id = ? AND status = 'approved' LIMIT 1) as total
     `,
     [propertyId, propertyId]
   );
@@ -272,7 +272,7 @@ async function createSchedulingNotification(connection, {
   const [property] = await connection.execute(
     `SELECT op.property_id, op.community_name, 
             (SELECT COUNT(*) FROM property_vendor_assignments WHERE property_id = op.id AND is_active = 1) as vendors_assigned,
-            (SELECT JSON_LENGTH(COALESCE(fe.service_rows, '[]')) FROM fp_estimates fe WHERE fe.property_id = op.id AND fe.status = 'approved' LIMIT 1) as total_services
+            (SELECT JSON_LENGTH(COALESCE(fe.package_services, '[]')) FROM fp_estimates fe WHERE fe.property_id = op.id AND fe.status = 'approved' LIMIT 1) as total_services
      FROM onboarded_properties op WHERE op.id = ?`,
     [propertyId]
   );
@@ -341,7 +341,7 @@ async function getPendingPropertiesForScheduling(franchisePartnerId, filters = {
         fe.package_name as packageName,
         fe.total_amount as totalPrice,
         fe.payment_status as paymentStatus,
-        fe.service_rows as serviceRows,
+        fe.package_services as serviceRows,
         pc.name as customerName,
         pc.phone as customerPhone,
         pc.email as customerEmail,
