@@ -89,6 +89,13 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   const [showFinalReview, setShowFinalReview] = useState(false);
   const [confirmingAllSchedules, setConfirmingAllSchedules] = useState(false);
 
+  // Toast notification state
+  const [toast, setToast] = useState(null);
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   function getNextMonday() {
     const today = new Date();
     const day = today.getDay();
@@ -1040,11 +1047,11 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       
       console.log('[Confirm Schedule] Service updated to Scheduled:', updatedService);
       
-      // Show success message - stay on same page
-      alert(`Schedule confirmed successfully! ${result.data?.visitsCreated || confirmationSchedule.length} visits created.`);
+      // Show success notification - stay on same page
+      showToast(`Schedule confirmed successfully! ${result.data?.visitsCreated || confirmationSchedule.length} visits created.`, 'success');
     } catch (error) {
       console.error('Error confirming schedule:', error);
-      alert(`Error confirming schedule: ${error.message}`);
+      showToast(`Error confirming schedule: ${error.message}`, 'error');
     } finally {
       setConfirmingSchedule(false);
     }
@@ -1053,7 +1060,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   // Save draft schedule
   const handleSaveDraft = async () => {
     if (!selectedService || plannedVisits.length === 0) {
-      alert('Please select a service and generate a schedule first');
+      showToast('Please select a service and generate a schedule first', 'error');
       return;
     }
     
@@ -1097,10 +1104,10 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         throw new Error('Failed to save draft');
       }
       
-      alert('Draft saved successfully!');
+      showToast('Draft saved successfully!', 'success');
     } catch (error) {
       console.error('Error saving draft:', error);
-      alert('Error saving draft. Please try again.');
+      showToast('Error saving draft. Please try again.', 'error');
     }
   };
 
@@ -1109,7 +1116,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   // Plan the current service (store locally, don't save to DB yet)
   const handlePlanService = () => {
     if (!selectedService || plannedVisits.length === 0 || !plannedVisits.some(v => v.date)) {
-      alert('Please select dates for this service first');
+      showToast('Please select dates for this service first', 'error');
       return;
     }
     
@@ -1290,9 +1297,9 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       // Show result
       if (errors.length === 0) {
         const totalVisits = results.reduce((sum, r) => sum + r.visitsCreated, 0);
-        alert(`All schedules confirmed successfully!\n${results.length} services scheduled with ${totalVisits} total visits.`);
+        showToast(`All schedules confirmed! ${results.length} services scheduled with ${totalVisits} total visits.`, 'success');
       } else {
-        alert(`Partial success: ${results.length} services scheduled, ${errors.length} failed.\nFailed: ${errors.map(e => e.serviceName).join(', ')}`);
+        showToast(`Partial success: ${results.length} scheduled, ${errors.length} failed.`, 'error');
       }
       
       // Refresh services list
@@ -1300,7 +1307,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       
     } catch (error) {
       console.error('Error confirming all schedules:', error);
-      alert(`Error confirming schedules: ${error.message}`);
+      showToast(`Error confirming schedules: ${error.message}`, 'error');
     } finally {
       setConfirmingAllSchedules(false);
     }
@@ -1423,6 +1430,23 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-[100] px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-top-2 ${
+          toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+        }`}>
+          {toast.type === 'success' ? (
+            <CheckCircle className="w-5 h-5" />
+          ) : (
+            <AlertCircle className="w-5 h-5" />
+          )}
+          <span className="text-sm font-medium">{toast.message}</span>
+          <button onClick={() => setToast(null)} className="ml-2 p-1 hover:bg-white/20 rounded">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+      
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
