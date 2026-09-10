@@ -1472,12 +1472,11 @@ const SupervisorProperties = ({ user }) => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Property Type</label>
                   <select value={editFormData.propertyType || ''} onChange={(e) => setEditFormData({ ...editFormData, propertyType: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <option value="residential">Residential</option>
                     <option value="gated_community">Gated Community</option>
                     <option value="apartment">Apartment</option>
                     <option value="villa">Villa</option>
-                    <option value="plot">Plot</option>
                     <option value="flat">Flat</option>
+                    <option value="plot">Plot</option>
                   </select>
                 </div>
                 <div className="col-span-2">

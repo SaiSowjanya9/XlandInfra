@@ -21,7 +21,6 @@ import {
   IndianRupee,
   Smartphone,
   FileCheck,
-  MoreHorizontal,
   Edit,
   Trash2,
   FileText,
@@ -174,17 +173,23 @@ const CashPaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) =
   const [error, setError] = useState('');
   const token = getAuthToken();
 
-  // Fetch employees on mount
+  // Fetch employees on mount - filter by FP team
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
         setLoadingEmployees(true);
-        const response = await fetch(`${API_BASE}/api/staff`, {
+        // Get FP ID from payment to filter employees to that FP's team only
+        const fpId = payment?.franchisePartnerId || payment?.franchise_partner_id;
+        const url = fpId 
+          ? `${API_BASE}/api/staff?fpId=${fpId}`
+          : `${API_BASE}/api/staff`;
+        const response = await fetch(url, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const result = await response.json();
         if (result.success) {
-          setEmployees((result.data || []).filter(emp => emp.status === 'active'));
+          // Employees are already filtered by active status on backend
+          setEmployees(result.data || []);
         }
       } catch (err) {
         console.error('Error fetching employees:', err);
@@ -192,8 +197,8 @@ const CashPaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) =
         setLoadingEmployees(false);
       }
     };
-    if (isOpen) fetchEmployees();
-  }, [isOpen, token]);
+    if (isOpen && payment) fetchEmployees();
+  }, [isOpen, token, payment]);
 
   // Initialize form data when payment changes
   useEffect(() => {
@@ -751,17 +756,23 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
     'Other'
   ];
 
-  // Fetch employees on mount
+  // Fetch employees on mount - filter by FP team
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
         setLoadingEmployees(true);
-        const response = await fetch(`${API_BASE}/api/staff`, {
+        // Get FP ID from payment to filter employees to that FP's team only
+        const fpId = payment?.franchisePartnerId || payment?.franchise_partner_id;
+        const url = fpId 
+          ? `${API_BASE}/api/staff?fpId=${fpId}`
+          : `${API_BASE}/api/staff`;
+        const response = await fetch(url, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const result = await response.json();
         if (result.success) {
-          setEmployees((result.data || []).filter(emp => emp.status === 'active'));
+          // Employees are already filtered by active status on backend
+          setEmployees(result.data || []);
         }
       } catch (err) {
         console.error('Error fetching employees:', err);
@@ -769,8 +780,8 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
         setLoadingEmployees(false);
       }
     };
-    if (isOpen) fetchEmployees();
-  }, [isOpen, token]);
+    if (isOpen && payment) fetchEmployees();
+  }, [isOpen, token, payment]);
 
   // Initialize form data when payment changes
   useEffect(() => {
@@ -1404,17 +1415,23 @@ const BankTransferVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) 
 
   const [referenceNumber] = useState(generateReferenceNumber);
 
-  // Fetch employees on mount
+  // Fetch employees on mount - filter by FP team
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
         setLoadingEmployees(true);
-        const response = await fetch(`${API_BASE}/api/staff`, {
+        // Get FP ID from payment to filter employees to that FP's team only
+        const fpId = payment?.franchisePartnerId || payment?.franchise_partner_id;
+        const url = fpId 
+          ? `${API_BASE}/api/staff?fpId=${fpId}`
+          : `${API_BASE}/api/staff`;
+        const response = await fetch(url, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const result = await response.json();
         if (result.success) {
-          setEmployees((result.data || []).filter(emp => emp.status === 'active'));
+          // Employees are already filtered by active status on backend
+          setEmployees(result.data || []);
         }
       } catch (err) {
         console.error('Error fetching employees:', err);
@@ -1422,8 +1439,8 @@ const BankTransferVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) 
         setLoadingEmployees(false);
       }
     };
-    if (isOpen) fetchEmployees();
-  }, [isOpen, token]);
+    if (isOpen && payment) fetchEmployees();
+  }, [isOpen, token, payment]);
 
   // Initialize form data when payment changes
   useEffect(() => {
@@ -3007,8 +3024,11 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 className="appearance-none pl-2 sm:pl-4 pr-8 sm:pr-10 py-2 sm:py-2.5 border border-gray-200 rounded-lg text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:border-gray-300"
               >
                 <option value="all">All Types</option>
+                <option value="gated_community">Gated Community</option>
                 <option value="apartment">Apartment</option>
                 <option value="villa">Villa</option>
+                <option value="flat">Flat</option>
+                <option value="plot">Plot</option>
                 <option value="commercial">Commercial</option>
               </select>
               <ChevronDown className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
@@ -3209,55 +3229,6 @@ const Payments = ({ user, portalType = 'admin' }) => {
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
-                              <button
-                                onClick={() => setActionMenuOpen(actionMenuOpen === payment.id ? null : payment.id)}
-                                className="p-1.5 hover:bg-gray-100 rounded-lg"
-                              >
-                                <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                              </button>
-                              {actionMenuOpen === payment.id && (
-                                <div className="absolute right-4 top-12 bg-white border border-gray-200 rounded-xl shadow-lg z-10 py-2 min-w-[160px]">
-                                  {payment.status === 'verification_pending' && (
-                                    <>
-                                      <button 
-                                        onClick={() => {
-                                          setSelectedPaymentForVerify(payment);
-                                          setShowVerifyModal(true);
-                                          setActionMenuOpen(null);
-                                        }}
-                                        className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2 font-medium"
-                                      >
-                                        <CheckCircle className="w-4 h-4" /> Verify Payment
-                                      </button>
-                                      <div className="border-t border-gray-100 my-1"></div>
-                                    </>
-                                  )}
-                                  <button 
-                                    onClick={() => { handleViewReceipt(payment); setActionMenuOpen(null); }}
-                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                  >
-                                    <Eye className="w-4 h-4" /> View Receipt
-                                  </button>
-                                  <button 
-                                    onClick={() => { handleDownloadReceipt(payment); setActionMenuOpen(null); }}
-                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                  >
-                                    <Download className="w-4 h-4" /> Download Receipt
-                                  </button>
-                                  {payment.status === 'paid' && (
-                                    <button 
-                                      onClick={() => { handleSendReceipt(payment); setActionMenuOpen(null); }}
-                                      className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center gap-2"
-                                    >
-                                      <Send className="w-4 h-4" /> Send Receipt
-                                    </button>
-                                  )}
-                                  <div className="border-t border-gray-100 my-1"></div>
-                                  <button className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
-                                    <Trash2 className="w-4 h-4" /> Delete
-                                  </button>
-                                </div>
-                              )}
                             </div>
                           </td>
                         </tr>

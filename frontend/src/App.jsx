@@ -27,6 +27,7 @@ const TermsOfService = lazy(() => import('./pages/legal/TermsOfService'));
 const CookiePolicy = lazy(() => import('./pages/legal/CookiePolicy'));
 const EstimateAction = lazy(() => import('./pages/EstimateAction'));
 const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
+const PublicPayment = lazy(() => import('./pages/PublicPayment'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -372,6 +373,9 @@ function App() {
         
         {/* Estimate Action - Public (for email approve/reject links) */}
         <Route path="/estimate-action/:estimateId" element={<EstimateAction />} />
+        
+        {/* Public Payment - For email payment links (shows payment method selection) */}
+        <Route path="/pay/:invoiceId" element={<Suspense fallback={<PageLoader />}><PublicPayment /></Suspense>} />
         
         {/* Payment Success - Public (Razorpay callback after payment) */}
         <Route path="/payment/success" element={<PaymentSuccess />} />

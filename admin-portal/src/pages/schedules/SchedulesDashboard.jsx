@@ -35,10 +35,12 @@ const PRIORITY_COLORS = {
 
 // Property Type colors
 const PROPERTY_TYPE_COLORS = {
+  'Gated Community': '#10B981',
   'Apartment': '#3B82F6',
   'Villa': '#F59E0B',
+  'Flat': '#EC4899',
+  'Plot': '#F97316',
   'Commercial': '#8B5CF6',
-  'Gated Community': '#10B981',
   'Others': '#6B7280'
 };
 
@@ -390,10 +392,12 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     >
                       <option value="all">All Types</option>
+                      <option value="Gated Community">Gated Community</option>
                       <option value="Apartment">Apartment</option>
                       <option value="Villa">Villa</option>
+                      <option value="Flat">Flat</option>
+                      <option value="Plot">Plot</option>
                       <option value="Commercial">Commercial</option>
-                      <option value="Gated Community">Gated Community</option>
                     </select>
                   </div>
                   <div className="flex gap-2 pt-2">

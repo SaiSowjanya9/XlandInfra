@@ -1014,10 +1014,11 @@ const ManagerProperties = ({ user }) => {
                     onChange={(e) => setFormData({ ...formData, propertyType: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="residential">Residential</option>
-                    <option value="commercial">Commercial</option>
-                    <option value="industrial">Industrial</option>
-                    <option value="mixed">Mixed</option>
+                    <option value="gated_community">Gated Community</option>
+                    <option value="apartment">Apartment</option>
+                    <option value="villa">Villa</option>
+                    <option value="flat">Flat</option>
+                    <option value="plot">Plot</option>
                   </select>
                 </div>
 

@@ -1522,11 +1522,11 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
 
     const insertedId = result.insertId;
 
-    // Create payment link for the invoice
+    // Create payment link for the invoice (stored in DB for later use)
     let paymentLinkUrl = null;
     try {
       const { createPaymentLinkForInvoice } = require('../services/invoiceService');
-      paymentLinkUrl = await createPaymentLinkForInvoice(insertedId, {
+      await createPaymentLinkForInvoice(insertedId, {
         invoice_id: invoiceIdGen,
         customer_name: customerDetails.name,
         customer_email: customerDetails.email,
@@ -1534,6 +1534,9 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
         total_amount: totalAmount,
         balance_amount: totalAmount
       });
+      // Use custom payment page URL instead of direct Razorpay link
+      const frontendUrl = process.env.FRONTEND_URL || 'https://xlandinfra.com';
+      paymentLinkUrl = `${frontendUrl}/pay/${invoiceIdGen}`;
     } catch (plErr) {
       console.error('Failed to create payment link:', plErr.message);
     }
@@ -1979,18 +1982,18 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
       return res.status(400).json({ success: false, message: 'Customer email not found. Please update the invoice with customer email.' });
     }
     
-    // Create actual Razorpay payment link (or use existing one if valid)
-    let paymentLink = invoice.razorpay_short_url;
-    if (!paymentLink || invoice.payment_link_status === 'expired' || invoice.payment_link_status === 'cancelled') {
+    // Create Razorpay payment link if needed (stored in DB for later use)
+    if (!invoice.razorpay_short_url || invoice.payment_link_status === 'expired' || invoice.payment_link_status === 'cancelled') {
       try {
         const { createPaymentLinkForInvoice } = require('../services/invoiceService');
-        paymentLink = await createPaymentLinkForInvoice(id, invoice);
+        await createPaymentLinkForInvoice(id, invoice);
       } catch (plErr) {
         console.error('Failed to create Razorpay payment link:', plErr.message);
-        // Fallback to frontend URL if Razorpay fails
-        paymentLink = `${process.env.FRONTEND_URL || 'https://xlandinfra.com'}/pay/${invoice.invoice_id}`;
       }
     }
+    
+    // Always use custom payment page URL (shows payment method selection)
+    const paymentLink = `${process.env.FRONTEND_URL || 'https://xlandinfra.com'}/pay/${invoice.invoice_id}`;
 
     // Update invoice status to 'sent' and track email sending
     await pool.execute(`
@@ -2228,11 +2231,16 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
              i.invoice_id as invoice_code, i.estimate_id as invoice_estimate_id,
              i.total_amount as invoice_amount, i.balance_amount as invoice_balance,
              i.customer_name as invoice_customer_name, i.customer_email as invoice_customer_email,
-             prop.community_name as property_name, prop.property_id as property_code,
-             prop.property_type as prop_type
+             i.property_code as invoice_property_code,
+             COALESCE(prop.community_name, prop2.community_name, prop3.community_name, fe.property_name) as property_name,
+             COALESCE(prop.property_id, prop2.property_id, i.property_code, fe.property_code) as property_code,
+             COALESCE(prop.property_type, prop2.property_type, prop3.property_type, fe.property_type) as prop_type
       FROM payments p
       LEFT JOIN invoices i ON p.invoice_id = i.id
       LEFT JOIN onboarded_properties prop ON p.property_id = prop.id
+      LEFT JOIN onboarded_properties prop2 ON i.property_id = prop2.id
+      LEFT JOIN onboarded_properties prop3 ON i.property_code = prop3.property_id
+      LEFT JOIN fp_estimates fe ON i.source_estimate_id = fe.estimate_id
       WHERE 1=1
     `;
     const params = [];
@@ -2304,7 +2312,9 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
         proofFilename: p.proof_filename,
         status: p.status,
         recordedBy: p.received_by_name,
+        receivedByName: p.received_by_name,
         receivedByRole: p.received_by_role,
+        franchisePartnerId: p.franchise_partner_id,
         remarks: p.remarks,
         createdAt: p.created_at
       }))

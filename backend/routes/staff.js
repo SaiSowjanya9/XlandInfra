@@ -905,8 +905,67 @@ router.post('/set-password', async (req, res) => {
 // Get all staff members
 router.get('/', authenticate, adminOnly, async (req, res) => {
   try {
-    const { role, isActive } = req.query;
+    const { role, isActive, fpId } = req.query;
     
+    // If fpId is provided, fetch from fp_employees table
+    if (fpId) {
+      let fpQuery = `
+        SELECT 
+          e.id,
+          e.employee_code as user_id,
+          e.username,
+          e.email,
+          e.first_name,
+          e.last_name,
+          e.phone,
+          e.role,
+          e.is_active,
+          e.created_at,
+          e.franchise_partner_id,
+          'fp_employee' as source
+        FROM fp_employees e
+        WHERE e.franchise_partner_id = ?
+      `;
+      const fpParams = [fpId];
+
+      if (role) {
+        fpQuery += ` AND e.role = ?`;
+        fpParams.push(role);
+      }
+
+      if (isActive !== undefined) {
+        fpQuery += ` AND e.is_active = ?`;
+        fpParams.push(isActive === 'true' ? 1 : 0);
+      } else {
+        // Default to active employees only
+        fpQuery += ` AND e.is_active = 1`;
+      }
+
+      fpQuery += ` ORDER BY e.created_at DESC`;
+
+      const [fpEmployees] = await pool.execute(fpQuery, fpParams);
+
+      return res.json({
+        success: true,
+        data: fpEmployees.map(s => ({
+          id: s.id,
+          userId: s.user_id,
+          username: s.username,
+          email: s.email,
+          firstName: s.first_name,
+          lastName: s.last_name,
+          phone: s.phone,
+          role: s.role,
+          roleName: ROLE_NAMES[s.role] || s.role,
+          isActive: s.is_active === 1,
+          franchisePartnerId: s.franchise_partner_id,
+          source: s.source,
+          createdAt: s.created_at
+        }))
+      });
+    }
+    
+    // Otherwise fetch from users table (admin staff)
     let query = `
       SELECT u.*, 
              CONCAT(c.first_name, ' ', c.last_name) as created_by_name,
