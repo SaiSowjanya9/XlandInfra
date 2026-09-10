@@ -61,4 +61,5 @@ Run schema files in order:
 3. `schema_v20_entity_linkage.sql` - Adds receipt_id, invoice_number, property_code columns and receipt_sequence table
 4. `schema_v21_payment_security.sql` - Security logs
 5. `schema_v22_razorpay_fix.sql` - **Required fix for webhook tracking**
-6. `migrations/schema_v25_payment_status_fix.sql` - **Required for offline payment verification (bank transfer, cash, cheque)**
+6. `schema_v25_payment_status_fix.sql` - **Required for offline payment verification (bank transfer, cash, cheque)**
+7. `schema_v27_payment_history_action_fix.sql` - **Required fix for payment_history action column truncation error**
