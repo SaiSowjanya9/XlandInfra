@@ -3018,48 +3018,86 @@ router.get('/fp-portal-links', requireManagerScope, async (req, res) => {
 
 // Get pending properties for scheduling
 // Returns properties that are paid and have vendors assigned but not yet scheduled
+// Supports BOTH onboarded_properties (new) and properties (old) tables
 router.get('/schedules/pending-properties', requireManagerScope, async (req, res) => {
   try {
     const franchisePartnerId = req.franchisePartnerId;
     
     // Query to get properties with:
     // 1. Approved/paid estimates (payment_status = 'paid')
-    // 2. Vendor assignments (from property_vendor_assignments)
-    // 3. Not yet fully scheduled (check property_service_schedules and scheduled_visits)
+    // 2. Not yet fully scheduled (check property_service_schedules and scheduled_visits)
+    // Uses UNION to support both onboarded_properties and properties tables
     const query = `
-      SELECT DISTINCT
-        op.id,
-        op.property_id as propertyId,
-        op.community_name as propertyName,
-        op.property_type as propertyType,
-        op.zone,
-        op.area_name as areaName,
-        op.created_at as addedOn,
-        fe.id as estimateId,
-        fe.estimate_id as estimateCode,
-        fe.package_name as packageName,
-        fe.total_amount as totalPrice,
-        fe.status as estimateStatus,
-        fe.payment_status as paymentStatus,
-        fe.service_rows as serviceRows,
-        pc.name as customerName,
-        pc.phone as customerPhone,
-        pc.email as customerEmail,
-        (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = op.id AND pva.is_active = 1) as assignedVendors,
-        (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = op.id AND pss.scheduling_status IN ('scheduled', 'completed')) as scheduledServiceCount,
-        (SELECT COUNT(*) FROM scheduled_visits sv WHERE sv.property_id = op.id) as totalScheduledVisits
-      FROM onboarded_properties op
-      LEFT JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
-      LEFT JOIN property_contacts pc ON pc.property_id = op.id
-      WHERE op.status = 'active'
-        AND fe.id IS NOT NULL
-        AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
-        AND op.franchise_partner_id = ?
-      HAVING scheduledServiceCount = 0 AND totalScheduledVisits = 0
-      ORDER BY op.created_at DESC
+      SELECT * FROM (
+        -- From onboarded_properties (new table)
+        SELECT DISTINCT
+          op.id,
+          op.property_id as propertyId,
+          op.community_name as propertyName,
+          op.property_type as propertyType,
+          op.zone,
+          op.area_name as areaName,
+          op.created_at as addedOn,
+          op.franchise_partner_id as fpId,
+          fe.id as estimateId,
+          fe.estimate_id as estimateCode,
+          fe.package_name as packageName,
+          fe.total_amount as totalPrice,
+          fe.status as estimateStatus,
+          fe.payment_status as paymentStatus,
+          fe.service_rows as serviceRows,
+          pc.name as customerName,
+          pc.phone as customerPhone,
+          pc.email as customerEmail,
+          (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = op.id AND pva.is_active = 1) as assignedVendors,
+          (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = op.id AND pss.scheduling_status IN ('scheduled', 'completed')) as scheduledServiceCount,
+          (SELECT COUNT(*) FROM scheduled_visits sv WHERE sv.property_id = op.id) as totalScheduledVisits,
+          'onboarded' as source
+        FROM onboarded_properties op
+        INNER JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
+        LEFT JOIN property_contacts pc ON pc.property_id = op.id
+        WHERE op.status = 'active'
+          AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
+          AND op.franchise_partner_id = ?
+        
+        UNION ALL
+        
+        -- From properties (old table) - for backward compatibility
+        SELECT DISTINCT
+          p.id,
+          p.property_id as propertyId,
+          p.name as propertyName,
+          p.property_type as propertyType,
+          p.zone,
+          p.area as areaName,
+          p.created_at as addedOn,
+          p.franchise_partner_id as fpId,
+          fe.id as estimateId,
+          fe.estimate_id as estimateCode,
+          fe.package_name as packageName,
+          fe.total_amount as totalPrice,
+          fe.status as estimateStatus,
+          fe.payment_status as paymentStatus,
+          fe.service_rows as serviceRows,
+          fe.client_name as customerName,
+          fe.client_phone as customerPhone,
+          fe.client_email as customerEmail,
+          (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = p.id AND pva.is_active = 1) as assignedVendors,
+          (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = p.id AND pss.scheduling_status IN ('scheduled', 'completed')) as scheduledServiceCount,
+          (SELECT COUNT(*) FROM scheduled_visits sv WHERE sv.property_id = p.id) as totalScheduledVisits,
+          'legacy' as source
+        FROM properties p
+        INNER JOIN fp_estimates fe ON fe.property_id = p.id AND fe.status = 'approved'
+        WHERE p.status = 'active'
+          AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
+          AND p.franchise_partner_id = ?
+          AND p.id NOT IN (SELECT id FROM onboarded_properties)
+      ) combined
+      WHERE scheduledServiceCount = 0 AND totalScheduledVisits = 0
+      ORDER BY addedOn DESC
     `;
 
-    const [properties] = await pool.execute(query, [franchisePartnerId]);
+    const [properties] = await pool.execute(query, [franchisePartnerId, franchisePartnerId]);
 
     // Parse service rows and calculate service counts
     const processedProperties = properties.map(p => {
