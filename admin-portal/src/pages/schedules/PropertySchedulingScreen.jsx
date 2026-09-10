@@ -451,8 +451,8 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
           // Convert backend recommendations to frontend format
           const dates = [];
           
-          // Get vendor's preferred time from API response
-          const vendorPreferredTime = result.data.vendorPreferredTime;
+          // Get vendor's working hours from API response
+          const vendorWorkingHours = result.data.vendorWorkingHours;
           
           result.data.recommendations.slice(0, 4).forEach((rec, i) => {
             const bestOption = rec.bestOption;
@@ -474,8 +474,8 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               const zoneJobs = bestOption.sameZoneJobs || 0;
               const zoneName = property?.zone || 'Zone A';
               
-              if (vendorPreferredTime) {
-                reason = `Vendor prefers ${vendorPreferredTime}`;
+              if (vendorWorkingHours) {
+                reason = `Vendor works ${vendorWorkingHours.from} - ${vendorWorkingHours.to}`;
               } else if (zoneJobs > 0) {
                 reason = `Vendor already has ${zoneJobs} ${zoneName} job${zoneJobs > 1 ? 's' : ''} on this date`;
               } else if (bestOption.daysFromTarget === 0) {
@@ -486,8 +486,8 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 reason = 'Limited availability';
               }
               
-              // Use vendor's preferred time if available, otherwise use recommended time from backend
-              const recommendedTime = bestOption.recommendedTime || vendorPreferredTime || '10:00 AM';
+              // Use vendor's working hours start time if available, otherwise use recommended time from backend
+              const recommendedTime = bestOption.recommendedTime || (vendorWorkingHours?.from) || '10:00 AM';
               
               dates.push({
                 id: i + 1,
@@ -502,7 +502,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 availableSlots: bestOption.availableSlots,
                 sameZoneJobs: zoneJobs,
                 daysFromTarget: bestOption.daysFromTarget,
-                vendorPreferredTime: vendorPreferredTime
+                vendorWorkingHours: vendorWorkingHours
               });
             }
           });
@@ -1875,15 +1875,15 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               <span className="text-sm text-gray-500">{recommendedDates.length}</span>
             </div>
             
-            {/* Vendor's Preferred Schedule Time */}
-            {recommendedDates.length > 0 && recommendedDates[0].vendorPreferredTime && (
+            {/* Vendor's Working Hours */}
+            {recommendedDates.length > 0 && recommendedDates[0].vendorWorkingHours && (
               <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <Clock className="w-4 h-4 text-purple-600" />
-                  <span className="text-sm font-medium text-purple-800">Vendor's Preferred Time</span>
+                  <span className="text-sm font-medium text-purple-800">Vendor's Working Hours</span>
                 </div>
-                <p className="text-lg font-bold text-purple-700">{recommendedDates[0].vendorPreferredTime}</p>
-                <p className="text-xs text-purple-600 mt-1">Recommendations prioritize this time slot</p>
+                <p className="text-lg font-bold text-purple-700">{recommendedDates[0].vendorWorkingHours.from} - {recommendedDates[0].vendorWorkingHours.to}</p>
+                <p className="text-xs text-purple-600 mt-1">Recommendations prioritize these working hours</p>
               </div>
             )}
             
