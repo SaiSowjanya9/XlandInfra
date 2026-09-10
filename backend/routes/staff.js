@@ -910,10 +910,12 @@ router.get('/', authenticate, async (req, res) => {
     
     // Check permissions - either admin or FP user requesting their own team
     const isAdmin = ['admin', 'operations_manager'].includes(req.user.role);
-    const isFP = ['franchise_partner', 'franchise'].includes(req.user.role);
+    const isFPOwner = ['franchise_partner', 'franchise'].includes(req.user.role);
+    const isFPEmployee = ['manager', 'coordinator', 'supervisor', 'executive'].includes(req.user.role);
+    const isFP = isFPOwner || isFPEmployee;
     
-    // FP users can only fetch their own team
-    const effectiveFpId = isFP ? req.user.franchisePartnerId : fpId;
+    // FP users can only fetch their own team - use req.fpId set by auth middleware
+    const effectiveFpId = isFP ? (req.fpId || req.user.franchisePartnerId || req.user.fpId) : fpId;
     
     // If not admin and not FP, deny access
     if (!isAdmin && !isFP) {
