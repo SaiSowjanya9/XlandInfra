@@ -1469,113 +1469,117 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       
 
       {/* Property Info Card */}
-      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3">
-        <div className="flex flex-wrap items-center gap-4 sm:gap-6 lg:gap-8">
-          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <Building2 className="w-5 h-5 text-gray-400" />
+      <div className="bg-white border-b border-gray-200 px-3 sm:px-4 md:px-6 py-3">
+        <div className="flex items-start gap-3 sm:gap-4">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
           </div>
-          <div className="min-w-0">
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Property ID</p>
-            <p className="text-sm font-semibold text-blue-600">{property?.propertyId || 'PROP-101'}</p>
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Property Name</p>
-            <p className="text-sm font-semibold text-gray-900">{property?.propertyName || 'Green Valley Apartments'}</p>
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Customer</p>
-            <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              {property?.customerName || 'Mr. Ramesh Kumar'}
-              <span className="text-xs text-gray-500 font-normal flex items-center gap-1"><Phone className="w-3 h-3" /> 98765 43210</span>
-            </p>
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Property Type</p>
-            <p className="text-sm font-medium text-gray-700 flex items-center gap-1"><Building2 className="w-3.5 h-3.5 text-gray-400" /> Apartment</p>
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Zone</p>
-            <span className="inline-flex px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-medium rounded border border-blue-200">{property?.zone || 'Zone A'}</span>
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Package</p>
-            <p className="text-sm font-medium text-purple-700">{property?.packageName || 'Apartment Basic AMC'}</p>
+          <div className="flex-1 min-w-0">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-3 sm:gap-4">
+              <div className="min-w-0">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide">Property ID</p>
+                <p className="text-xs sm:text-sm font-semibold text-blue-600 truncate">{property?.propertyId || 'PROP-101'}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide">Property Name</p>
+                <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{property?.propertyName || 'Green Valley Apartments'}</p>
+              </div>
+              <div className="min-w-0 col-span-2 sm:col-span-1">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide">Customer</p>
+                <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate">
+                  {property?.customerName || 'Mr. Ramesh Kumar'}
+                </p>
+                <span className="text-[10px] sm:text-xs text-gray-500 font-normal flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3" /> 98765 43210</span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide">Property Type</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-700 flex items-center gap-1 truncate"><Building2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400 flex-shrink-0" /> Apartment</p>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide">Zone</p>
+                <span className="inline-flex px-1.5 sm:px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] sm:text-xs font-medium rounded border border-blue-200">{property?.zone || 'Zone A'}</span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide">Package</p>
+                <p className="text-xs sm:text-sm font-medium text-purple-700 truncate">{property?.packageName || 'Apartment Basic AMC'}</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Step-by-Step Wizard Progress Header */}
       {permissions.canConfirm && (
-        <div className="px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
-          {/* All in one horizontal line */}
-          <div className="flex items-center justify-between">
+        <div className="px-3 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 overflow-x-auto">
+          {/* Responsive layout - stacks on mobile, horizontal on larger screens */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 lg:gap-4 min-w-max lg:min-w-0">
             {/* Left: Progress Stats */}
-            <div className="flex items-center gap-3 text-sm">
-              <span className="flex items-center gap-1 text-amber-600">
-                <Clock className="w-4 h-4" />
+            <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+              <span className="flex items-center gap-1 text-amber-600 whitespace-nowrap">
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 {getServiceCounts().pending} Pending
               </span>
-              <span className="flex items-center gap-1 text-blue-600">
-                <PlayCircle className="w-4 h-4" />
+              <span className="flex items-center gap-1 text-blue-600 whitespace-nowrap">
+                <PlayCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 {getServiceCounts().planned} Planned
               </span>
-              <span className="flex items-center gap-1 text-green-600">
-                <CheckCircle className="w-4 h-4" />
+              <span className="flex items-center gap-1 text-green-600 whitespace-nowrap">
+                <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 {getServiceCounts().scheduled} Confirmed
               </span>
             </div>
 
             {/* Center: Step Indicator */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               {/* Step 1 */}
-              <div className={`flex items-center gap-1.5 ${wizardStep === WIZARD_STEPS.SERVICE_SELECTION ? 'text-blue-600' : Object.keys(plannedSchedules).length > 0 || wizardStep === WIZARD_STEPS.REVIEW ? 'text-green-600' : 'text-gray-400'}`}>
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+              <div className={`flex items-center gap-1 sm:gap-1.5 ${wizardStep === WIZARD_STEPS.SERVICE_SELECTION ? 'text-blue-600' : Object.keys(plannedSchedules).length > 0 || wizardStep === WIZARD_STEPS.REVIEW ? 'text-green-600' : 'text-gray-400'}`}>
+                <div className={`w-5 h-5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold ${
                   wizardStep === WIZARD_STEPS.SERVICE_SELECTION 
                     ? 'bg-blue-600 text-white' 
                     : Object.keys(plannedSchedules).length > 0 || wizardStep === WIZARD_STEPS.REVIEW
                       ? 'bg-green-500 text-white'
                       : 'bg-gray-300 text-gray-600'
                 }`}>
-                  {Object.keys(plannedSchedules).length > 0 || wizardStep === WIZARD_STEPS.REVIEW ? <Check className="w-3.5 h-3.5" /> : '1'}
+                  {Object.keys(plannedSchedules).length > 0 || wizardStep === WIZARD_STEPS.REVIEW ? <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : '1'}
                 </div>
-                <span className="text-xs font-medium">Select Service</span>
+                <span className="text-[10px] sm:text-xs font-medium hidden sm:inline">Select Service</span>
               </div>
               
-              <div className={`w-8 h-0.5 ${wizardStep !== WIZARD_STEPS.SERVICE_SELECTION ? 'bg-blue-400' : 'bg-gray-300'}`} />
+              <div className={`w-4 sm:w-8 h-0.5 ${wizardStep !== WIZARD_STEPS.SERVICE_SELECTION ? 'bg-blue-400' : 'bg-gray-300'}`} />
               
               {/* Step 2 */}
-              <div className={`flex items-center gap-1.5 ${wizardStep === WIZARD_STEPS.DATE_SELECTION ? 'text-blue-600' : wizardStep === WIZARD_STEPS.REVIEW ? 'text-green-600' : 'text-gray-400'}`}>
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+              <div className={`flex items-center gap-1 sm:gap-1.5 ${wizardStep === WIZARD_STEPS.DATE_SELECTION ? 'text-blue-600' : wizardStep === WIZARD_STEPS.REVIEW ? 'text-green-600' : 'text-gray-400'}`}>
+                <div className={`w-5 h-5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold ${
                   wizardStep === WIZARD_STEPS.DATE_SELECTION 
                     ? 'bg-blue-600 text-white' 
                     : wizardStep === WIZARD_STEPS.REVIEW
                       ? 'bg-green-500 text-white'
                       : 'bg-gray-300 text-gray-600'
                 }`}>
-                  {wizardStep === WIZARD_STEPS.REVIEW ? <Check className="w-3.5 h-3.5" /> : '2'}
+                  {wizardStep === WIZARD_STEPS.REVIEW ? <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : '2'}
                 </div>
-                <span className="text-xs font-medium">Schedule Dates</span>
+                <span className="text-[10px] sm:text-xs font-medium hidden sm:inline">Schedule Dates</span>
               </div>
               
-              <div className={`w-8 h-0.5 ${wizardStep === WIZARD_STEPS.REVIEW ? 'bg-blue-400' : 'bg-gray-300'}`} />
+              <div className={`w-4 sm:w-8 h-0.5 ${wizardStep === WIZARD_STEPS.REVIEW ? 'bg-blue-400' : 'bg-gray-300'}`} />
               
               {/* Step 3 */}
-              <div className={`flex items-center gap-1.5 ${wizardStep === WIZARD_STEPS.REVIEW ? 'text-blue-600' : 'text-gray-400'}`}>
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+              <div className={`flex items-center gap-1 sm:gap-1.5 ${wizardStep === WIZARD_STEPS.REVIEW ? 'text-blue-600' : 'text-gray-400'}`}>
+                <div className={`w-5 h-5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold ${
                   wizardStep === WIZARD_STEPS.REVIEW 
                     ? 'bg-blue-600 text-white' 
                     : 'bg-gray-300 text-gray-600'
                 }`}>
                   3
                 </div>
-                <span className="text-xs font-medium">Review & Confirm</span>
+                <span className="text-[10px] sm:text-xs font-medium hidden sm:inline">Review & Confirm</span>
               </div>
             </div>
 
             {/* Right: Progress Bar */}
-            <div className="w-40 bg-gray-200 rounded-full h-2">
+            <div className="w-24 sm:w-40 bg-gray-200 rounded-full h-1.5 sm:h-2">
               <div 
-                className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500"
+                className="bg-gradient-to-r from-blue-500 to-green-500 h-1.5 sm:h-2 rounded-full transition-all duration-500"
                 style={{ 
                   width: `${((getServiceCounts().planned + getServiceCounts().scheduled) / Math.max(getServiceCounts().total, 1)) * 100}%` 
                 }}
@@ -1587,31 +1591,32 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       
       {/* View-only notice for users without scheduling permissions */}
       {!permissions.canConfirm && (
-        <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
+        <div className="px-3 sm:px-6 py-2 sm:py-3 bg-gray-50 border-b border-gray-200">
           <div className="flex items-center gap-2 text-gray-600">
-            <Eye className="w-5 h-5" />
-            <span className="text-sm">View-only mode - You can view schedules but cannot make changes</span>
+            <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="text-xs sm:text-sm">View-only mode - You can view schedules but cannot make changes</span>
           </div>
         </div>
       )}
 
-      <div className="p-6 flex gap-4 overflow-x-auto">
+      {/* Main Content Area - Responsive 3-column layout */}
+      <div className="p-3 sm:p-4 md:p-6 flex flex-col lg:flex-row gap-3 sm:gap-4 overflow-x-auto">
         {/* Left: Services List with Step-by-Step Progress */}
-        <div className="w-64 min-w-[256px] flex-shrink-0">
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Services to Schedule</h3>
-              <span className="text-sm text-gray-500">{services.length}</span>
+        <div className="w-full lg:w-56 xl:w-64 lg:min-w-[224px] xl:min-w-[256px] flex-shrink-0 order-1 lg:order-none">
+          <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Services to Schedule</h3>
+              <span className="text-xs sm:text-sm text-gray-500">{services.length}</span>
             </div>
             
-            {/* Step-by-step service list */}
-            <div className="space-y-2">
+            {/* Step-by-step service list - horizontal scroll on mobile, vertical on larger screens */}
+            <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 -mx-3 px-3 lg:mx-0 lg:px-0">
               {services.length === 0 ? (
-                <div className="text-center py-8">
-                  <AlertCircle className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                  <p className="text-sm text-gray-500 font-medium">No Services Found</p>
-                  <p className="text-xs text-gray-400 mt-1">This property has no services to schedule yet.</p>
-                  <p className="text-xs text-gray-400">Ensure the estimate is approved and has services defined.</p>
+                <div className="text-center py-6 sm:py-8 w-full">
+                  <AlertCircle className="w-8 h-8 sm:w-10 sm:h-10 text-gray-300 mx-auto mb-2 sm:mb-3" />
+                  <p className="text-xs sm:text-sm text-gray-500 font-medium">No Services Found</p>
+                  <p className="text-[10px] sm:text-xs text-gray-400 mt-1">This property has no services to schedule yet.</p>
+                  <p className="text-[10px] sm:text-xs text-gray-400">Ensure the estimate is approved and has services defined.</p>
                 </div>
               ) : (
                 services.map((service, index) => {
@@ -1636,7 +1641,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                         }
                       }}
                       disabled={isScheduled}
-                      className={`w-full p-3 rounded-lg border-2 text-left transition-all relative ${
+                      className={`flex-shrink-0 w-40 lg:w-full p-2 sm:p-3 rounded-lg border-2 text-left transition-all relative ${
                         isSelected 
                           ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' 
                           : isScheduled
@@ -1646,8 +1651,8 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                               : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      {/* Step number indicator */}
-                      <div className={`absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                      {/* Step number indicator - hidden on mobile */}
+                      <div className={`hidden lg:flex absolute -left-3 top-1/2 -translate-y-1/2 w-5 h-5 sm:w-6 sm:h-6 rounded-full items-center justify-center text-[10px] sm:text-xs font-bold ${
                         isScheduled 
                           ? 'bg-green-500 text-white'
                           : isPlanned
@@ -1659,17 +1664,17 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                         {isScheduled ? <Check className="w-3 h-3" /> : isPlanned ? <Check className="w-3 h-3" /> : index + 1}
                       </div>
                       
-                      <div className="ml-3">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2.5 h-2.5 rounded-full ${
+                      <div className="lg:ml-3">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <div className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full flex-shrink-0 ${
                             isScheduled ? 'bg-green-500' : isPlanned ? 'bg-indigo-500' : 'bg-amber-400'
                           }`} />
-                          <span className="font-medium text-sm">{service.name}</span>
+                          <span className="font-medium text-xs sm:text-sm truncate">{service.name}</span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">{service.vendorName}</p>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-xs text-gray-400">{service.visits} visits</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1 truncate">{service.vendorName}</p>
+                        <div className="flex items-center justify-between mt-1.5 sm:mt-2 gap-1">
+                          <span className="text-[10px] sm:text-xs text-gray-400">{service.visits} visits</span>
+                          <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${
                             isScheduled 
                               ? 'bg-green-100 text-green-700' 
                               : isPlanned
@@ -1680,10 +1685,10 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                           </span>
                         </div>
                         
-                        {/* Show planned visit preview */}
+                        {/* Show planned visit preview - hidden on mobile for space */}
                         {isPlanned && plannedSchedules[service.id] && (
-                          <div className="mt-2 pt-2 border-t border-indigo-200">
-                            <p className="text-xs text-indigo-600">
+                          <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-indigo-200 hidden lg:block">
+                            <p className="text-[10px] sm:text-xs text-indigo-600">
                               {plannedSchedules[service.id].visits.length} visits planned
                             </p>
                           </div>
@@ -1697,12 +1702,12 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             
             {/* Action buttons - only for users with permissions */}
             {permissions.canConfirm && Object.keys(plannedSchedules).length > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
                 <button
                   onClick={handleShowFinalReview}
-                  className="w-full py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white text-sm font-medium rounded-lg hover:from-green-700 hover:to-green-800 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-2 sm:py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white text-xs sm:text-sm font-medium rounded-lg hover:from-green-700 hover:to-green-800 transition-all flex items-center justify-center gap-1.5 sm:gap-2"
                 >
-                  <Eye className="w-4 h-4" />
+                  <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Review All ({Object.keys(plannedSchedules).length})
                 </button>
               </div>
@@ -1711,21 +1716,21 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         </div>
 
         {/* Center: Calendar */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 order-3 lg:order-none">
           <div className="bg-white rounded-xl border border-gray-200">
-            <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-gray-900">Vendor Availability Calendar</h3>
-                  <p className="text-sm text-gray-500">{selectedService?.vendorName} | {property?.zone || 'Zone A'}</p>
+            <div className="p-3 sm:p-4 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Vendor Availability Calendar</h3>
+                  <p className="text-xs sm:text-sm text-gray-500 truncate">{selectedService?.vendorName} | {property?.zone || 'Zone A'}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => navigateWeek(-1)} className="p-1.5 hover:bg-gray-100 rounded-full border border-gray-200">
-                    <ChevronLeft className="w-4 h-4 text-gray-600" />
+                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                  <button onClick={() => navigateWeek(-1)} className="p-1 sm:p-1.5 hover:bg-gray-100 rounded-full border border-gray-200">
+                    <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600" />
                   </button>
                   
                   {/* Individual Date Selectors */}
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-0.5 sm:gap-1">
                     {/* Month Selector */}
                     <select
                       value={currentWeekStart.getMonth()}
@@ -1734,7 +1739,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                         newDate.setMonth(parseInt(e.target.value));
                         setCurrentWeekStart(newDate);
                       }}
-                      className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      className="px-1 sm:px-2 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
                     >
                       {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, i) => (
                         <option key={i} value={i}>{month}</option>
@@ -1749,7 +1754,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                         newDate.setDate(parseInt(e.target.value));
                         setCurrentWeekStart(newDate);
                       }}
-                      className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      className="px-1 sm:px-2 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
                     >
                       {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
                         <option key={day} value={day}>{day}</option>
@@ -1764,7 +1769,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                         newDate.setFullYear(parseInt(e.target.value));
                         setCurrentWeekStart(newDate);
                       }}
-                      className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      className="px-1 sm:px-2 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
                     >
                       {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + i).map(year => (
                         <option key={year} value={year}>{year}</option>
@@ -1772,23 +1777,23 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                     </select>
                   </div>
                   
-                  <button onClick={() => navigateWeek(1)} className="p-1.5 hover:bg-gray-100 rounded-full border border-gray-200">
-                    <ChevronRight className="w-4 h-4 text-gray-600" />
+                  <button onClick={() => navigateWeek(1)} className="p-1 sm:p-1.5 hover:bg-gray-100 rounded-full border border-gray-200">
+                    <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600" />
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Calendar Grid */}
-            <div className="overflow-auto">
-              <table className="w-full">
+            {/* Calendar Grid - Scrollable on mobile */}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px]">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="w-20 px-2 py-3 text-xs font-medium text-gray-500">Time</th>
+                    <th className="w-14 sm:w-20 px-1 sm:px-2 py-2 sm:py-3 text-[10px] sm:text-xs font-medium text-gray-500 sticky left-0 bg-gray-50 z-10">Time</th>
                     {weekDays.map((day, i) => (
-                      <th key={i} className="px-2 py-3 text-center">
-                        <p className="text-xs font-medium text-gray-500">{day.toLocaleDateString('en-US', { weekday: 'short' })}</p>
-                        <p className="text-sm font-semibold">{day.getDate()} {day.toLocaleDateString('en-US', { month: 'short' })}</p>
+                      <th key={i} className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[70px] sm:min-w-[90px]">
+                        <p className="text-[10px] sm:text-xs font-medium text-gray-500">{day.toLocaleDateString('en-US', { weekday: 'short' })}</p>
+                        <p className="text-xs sm:text-sm font-semibold">{day.getDate()} {day.toLocaleDateString('en-US', { month: 'short' })}</p>
                       </th>
                     ))}
                   </tr>
@@ -1796,7 +1801,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 <tbody>
                   {timeSlots.map((time, timeIndex) => (
                     <tr key={time} className="border-t border-gray-100">
-                      <td className="px-2 py-2 text-xs text-gray-500">{time}</td>
+                      <td className="px-1 sm:px-2 py-1 sm:py-2 text-[10px] sm:text-xs text-gray-500 sticky left-0 bg-white z-10">{time}</td>
                       {weekDays.map((day, dayIndex) => {
                         const status = getSlotStatus(day, timeIndex);
                         const isSelected = selectedSlot?.date?.getDate() === day.getDate() && selectedSlot?.time === time;
@@ -1808,12 +1813,12 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                           ? `${day.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} at ${time}\nStatus: Limited availability\nVendor has other commitments nearby`
                           : `${day.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} at ${time}\nStatus: Available\nVendor: ${selectedService?.vendorName || 'N/A'}\nClick to select this slot`;
                         return (
-                          <td key={dayIndex} className="px-1 py-1">
+                          <td key={dayIndex} className="px-0.5 sm:px-1 py-0.5 sm:py-1">
                             <button
                               onClick={() => handleSelectSlot(day, time, status)}
                               disabled={status === 'booked'}
                               title={tooltipText}
-                              className={`w-full px-2 py-1.5 text-xs rounded transition-all ${
+                              className={`w-full px-1 sm:px-2 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded transition-all ${
                                 isSelected ? 'ring-2 ring-blue-500 ring-offset-1 shadow-md' : ''
                               } ${
                                 status === 'recommended' ? 'bg-blue-100 text-blue-700 border border-blue-300 hover:bg-blue-200' :
@@ -1822,12 +1827,13 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                                 'bg-red-50 text-red-400 cursor-not-allowed'
                               }`}
                             >
-                              {time.replace(':00', '')}
+                              <span className="hidden sm:inline">{time.replace(':00', '')}</span>
+                              <span className="sm:hidden">{time.replace(':00 ', '').replace('AM', 'A').replace('PM', 'P')}</span>
                               <br />
-                              <span className="text-[10px]">
-                                {status === 'recommended' ? 'Recommended' : 
-                                 status === 'available' ? 'Available' :
-                                 status === 'limited' ? 'Limited' : 'Booked'}
+                              <span className="text-[8px] sm:text-[10px]">
+                                {status === 'recommended' ? 'Rec' : 
+                                 status === 'available' ? 'Avail' :
+                                 status === 'limited' ? 'Ltd' : 'Busy'}
                               </span>
                             </button>
                           </td>
@@ -1839,49 +1845,49 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               </table>
             </div>
 
-            {/* Legend */}
-            <div className="p-4 border-t border-gray-200 flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-green-100 border border-green-300 rounded" />
-                <span className="text-xs text-gray-600">Available</span>
+            {/* Legend - Responsive wrap */}
+            <div className="p-2 sm:p-4 border-t border-gray-200 flex flex-wrap items-center gap-3 sm:gap-6">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-100 border border-green-300 rounded" />
+                <span className="text-[10px] sm:text-xs text-gray-600">Available</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-blue-100 border border-blue-300 rounded" />
-                <span className="text-xs text-gray-600">Recommended</span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-100 border border-blue-300 rounded" />
+                <span className="text-[10px] sm:text-xs text-gray-600">Recommended</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-red-100 border border-red-300 rounded" />
-                <span className="text-xs text-gray-600">Booked</span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-100 border border-red-300 rounded" />
+                <span className="text-[10px] sm:text-xs text-gray-600">Booked</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-amber-100 border border-amber-300 rounded" />
-                <span className="text-xs text-gray-600">Limited / Busy</span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-amber-100 border border-amber-300 rounded" />
+                <span className="text-[10px] sm:text-xs text-gray-600">Limited</span>
               </div>
             </div>
 
-            {/* Selected Slot Info */}
+            {/* Selected Slot Info - Responsive */}
             {selectedSlot && (
-              <div className="p-4 border-t border-gray-200 bg-blue-50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                      <Calendar className="w-5 h-5 text-white" />
+              <div className="p-2 sm:p-4 border-t border-gray-200 bg-blue-50">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">Selected Slot</p>
-                      <p className="text-sm text-blue-700">
-                        {selectedSlot.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })} at {selectedSlot.time}
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-semibold text-gray-900">Selected Slot</p>
+                      <p className="text-xs sm:text-sm text-blue-700 truncate">
+                        {selectedSlot.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at {selectedSlot.time}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full ${
                       selectedSlot.status === 'recommended' ? 'bg-blue-100 text-blue-700' :
                       selectedSlot.status === 'available' ? 'bg-green-100 text-green-700' :
                       'bg-amber-100 text-amber-700'
                     }`}>
-                      {selectedSlot.status === 'recommended' ? 'Recommended' : 
-                       selectedSlot.status === 'available' ? 'Available' : 'Limited'}
+                      {selectedSlot.status === 'recommended' ? 'Rec' : 
+                       selectedSlot.status === 'available' ? 'Avail' : 'Ltd'}
                     </span>
                     <button 
                       onClick={() => setSelectedSlot(null)}
@@ -1898,26 +1904,27 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         </div>
 
         {/* Right: Recommended Dates */}
-        <div className="w-48 min-w-[192px] flex-shrink-0">
-          <div className="bg-white rounded-xl border border-gray-200 p-3">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-gray-900 text-sm">Recommended Dates</h3>
-              <span className="text-sm text-gray-500">{recommendedDates.length}</span>
+        <div className="w-full lg:w-44 xl:w-48 lg:min-w-[176px] xl:min-w-[192px] flex-shrink-0 order-2 lg:order-none">
+          <div className="bg-white rounded-xl border border-gray-200 p-2 sm:p-3">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <h3 className="font-semibold text-gray-900 text-xs sm:text-sm">Recommended Dates</h3>
+              <span className="text-xs sm:text-sm text-gray-500">{recommendedDates.length}</span>
             </div>
             
             {/* Vendor's Working Hours */}
             {recommendedDates.length > 0 && recommendedDates[0].vendorWorkingHours && (
-              <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                <div className="flex items-center gap-2 mb-1">
-                  <Clock className="w-4 h-4 text-purple-600" />
-                  <span className="text-sm font-medium text-purple-800">Vendor's Working Hours</span>
+              <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+                  <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600" />
+                  <span className="text-xs sm:text-sm font-medium text-purple-800">Vendor Hours</span>
                 </div>
-                <p className="text-lg font-bold text-purple-700">{recommendedDates[0].vendorWorkingHours.from} - {recommendedDates[0].vendorWorkingHours.to}</p>
-                <p className="text-xs text-purple-600 mt-1">Recommendations prioritize these working hours</p>
+                <p className="text-sm sm:text-lg font-bold text-purple-700">{recommendedDates[0].vendorWorkingHours.from} - {recommendedDates[0].vendorWorkingHours.to}</p>
+                <p className="text-[10px] sm:text-xs text-purple-600 mt-0.5 sm:mt-1 hidden sm:block">Recommendations prioritize these working hours</p>
               </div>
             )}
             
-            <div className="space-y-2">
+            {/* Horizontal scroll on mobile, vertical on larger screens */}
+            <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 -mx-2 px-2 lg:mx-0 lg:px-0">
               {recommendedDates.map((rec, i) => {
                 // Check if this date is currently selected
                 const isSelected = selectedSlot && 
