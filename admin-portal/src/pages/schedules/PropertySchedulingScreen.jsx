@@ -1468,52 +1468,64 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         </div>
       </div>
 
-      {/* Wizard Progress Bar */}
-      <div className="px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <ListChecks className="w-5 h-5 text-blue-600" />
-            <span className="font-semibold text-gray-900">Scheduling Progress</span>
+      {/* Wizard Progress Bar - Only show for users with scheduling permissions */}
+      {permissions.canConfirm && (
+        <div className="px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <ListChecks className="w-5 h-5 text-blue-600" />
+              <span className="font-semibold text-gray-900">Scheduling Progress</span>
+            </div>
+            <div className="flex items-center gap-4 text-sm">
+              <span className="flex items-center gap-1 text-amber-600">
+                <Clock className="w-4 h-4" />
+                {getServiceCounts().pending} Pending
+              </span>
+              <span className="flex items-center gap-1 text-blue-600">
+                <PlayCircle className="w-4 h-4" />
+                {getServiceCounts().planned} Planned
+              </span>
+              <span className="flex items-center gap-1 text-green-600">
+                <CheckCircle className="w-4 h-4" />
+                {getServiceCounts().scheduled} Confirmed
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="flex items-center gap-1 text-amber-600">
-              <Clock className="w-4 h-4" />
-              {getServiceCounts().pending} Pending
-            </span>
-            <span className="flex items-center gap-1 text-blue-600">
-              <PlayCircle className="w-4 h-4" />
-              {getServiceCounts().planned} Planned
-            </span>
-            <span className="flex items-center gap-1 text-green-600">
-              <CheckCircle className="w-4 h-4" />
-              {getServiceCounts().scheduled} Confirmed
-            </span>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500"
+              style={{ 
+                width: `${((getServiceCounts().planned + getServiceCounts().scheduled) / getServiceCounts().total) * 100}%` 
+              }}
+            />
+          </div>
+          {allServicesPlanned() && (
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-sm text-green-700 font-medium flex items-center gap-1">
+                <CheckCircle className="w-4 h-4" />
+                All services are planned! Ready for final review.
+              </span>
+              <button
+                onClick={handleShowFinalReview}
+                className="px-4 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1"
+              >
+                <Eye className="w-4 h-4" />
+                Review & Confirm All
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* View-only notice for users without scheduling permissions */}
+      {!permissions.canConfirm && (
+        <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
+          <div className="flex items-center gap-2 text-gray-600">
+            <Eye className="w-5 h-5" />
+            <span className="text-sm">View-only mode - You can view schedules but cannot make changes</span>
           </div>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div 
-            className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500"
-            style={{ 
-              width: `${((getServiceCounts().planned + getServiceCounts().scheduled) / getServiceCounts().total) * 100}%` 
-            }}
-          />
-        </div>
-        {allServicesPlanned() && (
-          <div className="mt-2 flex items-center justify-between">
-            <span className="text-sm text-green-700 font-medium flex items-center gap-1">
-              <CheckCircle className="w-4 h-4" />
-              All services are planned! Ready for final review.
-            </span>
-            <button
-              onClick={handleShowFinalReview}
-              className="px-4 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1"
-            >
-              <Eye className="w-4 h-4" />
-              Review & Confirm All
-            </button>
-          </div>
-        )}
-      </div>
+      )}
 
       <div className="p-6 flex gap-4 overflow-x-auto">
         {/* Left: Services List with Step-by-Step Progress */}
@@ -1615,8 +1627,8 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               )}
             </div>
             
-            {/* Action buttons */}
-            {Object.keys(plannedSchedules).length > 0 && (
+            {/* Action buttons - only for users with permissions */}
+            {permissions.canConfirm && Object.keys(plannedSchedules).length > 0 && (
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <button
                   onClick={handleShowFinalReview}
@@ -1887,51 +1899,62 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               })}
             </div>
             <div className="mt-4 space-y-2">
-              {/* Step 1: Generate visits from selected/recommended date */}
-              <button 
-                onClick={handleUseRecommended}
-                disabled={!recommendedDates.length || !selectedService || selectedService.status === 'Scheduled'}
-                className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-              >
-                {selectedSlot?.date 
-                  ? `Use Selected (${formatDateShort(selectedSlot.date)})` 
-                  : `Use Recommended ${recommendedDates[0]?.dateStr ? `(${recommendedDates[0].dateStr})` : ''}`
-                }
-              </button>
-              
-              {/* Step 2: Plan this service and move to next (shown when visits are generated) */}
-              {plannedVisits.length > 0 && plannedVisits.some(v => v.date) && selectedService?.status !== 'Scheduled' && (
-                <button 
-                  onClick={handlePlanService}
-                  className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-sm font-medium rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all flex items-center justify-center gap-2"
-                >
-                  <Check className="w-4 h-4" />
-                  Plan This Service
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              )}
-              
-              <button 
-                onClick={handleCustomizeDates}
-                disabled={!selectedService || selectedService.status === 'Scheduled'}
-                className="w-full py-2 text-blue-600 text-sm font-medium hover:underline flex items-center justify-center gap-1 disabled:text-gray-400 disabled:cursor-not-allowed"
-              >
-                <Edit2 className="w-3 h-3" /> Customize Dates
-              </button>
-              
-              {/* Show already planned indicator */}
-              {plannedSchedules[selectedService?.id] && (
-                <div className="mt-2 p-2 bg-indigo-50 rounded-lg border border-indigo-200">
-                  <p className="text-xs text-indigo-700 text-center flex items-center justify-center gap-1">
-                    <CheckCircle className="w-3 h-3" />
-                    This service is planned
-                  </p>
-                  <button
-                    onClick={() => handleRemoveFromPlanned(selectedService.id)}
-                    className="w-full mt-2 text-xs text-indigo-600 hover:text-indigo-800 underline"
+              {/* Only show scheduling actions for users with permissions */}
+              {permissions.canConfirm ? (
+                <>
+                  {/* Step 1: Generate visits from selected/recommended date */}
+                  <button 
+                    onClick={handleUseRecommended}
+                    disabled={!recommendedDates.length || !selectedService || selectedService.status === 'Scheduled'}
+                    className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                   >
-                    Remove from planned
+                    {selectedSlot?.date 
+                      ? `Use Selected (${formatDateShort(selectedSlot.date)})` 
+                      : `Use Recommended ${recommendedDates[0]?.dateStr ? `(${recommendedDates[0].dateStr})` : ''}`
+                    }
                   </button>
+                  
+                  {/* Step 2: Plan this service and move to next (shown when visits are generated) */}
+                  {plannedVisits.length > 0 && plannedVisits.some(v => v.date) && selectedService?.status !== 'Scheduled' && (
+                    <button 
+                      onClick={handlePlanService}
+                      className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-sm font-medium rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Check className="w-4 h-4" />
+                      Plan This Service
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  )}
+                  
+                  <button 
+                    onClick={handleCustomizeDates}
+                    disabled={!selectedService || selectedService.status === 'Scheduled'}
+                    className="w-full py-2 text-blue-600 text-sm font-medium hover:underline flex items-center justify-center gap-1 disabled:text-gray-400 disabled:cursor-not-allowed"
+                  >
+                    <Edit2 className="w-3 h-3" /> Customize Dates
+                  </button>
+                  
+                  {/* Show already planned indicator */}
+                  {plannedSchedules[selectedService?.id] && (
+                    <div className="mt-2 p-2 bg-indigo-50 rounded-lg border border-indigo-200">
+                      <p className="text-xs text-indigo-700 text-center flex items-center justify-center gap-1">
+                        <CheckCircle className="w-3 h-3" />
+                        This service is planned
+                      </p>
+                      <button
+                        onClick={() => handleRemoveFromPlanned(selectedService.id)}
+                        className="w-full mt-2 text-xs text-indigo-600 hover:text-indigo-800 underline"
+                      >
+                        Remove from planned
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  <Eye className="w-6 h-6 mx-auto mb-2 text-gray-400" />
+                  <p>View-only mode</p>
+                  <p className="text-xs text-gray-400 mt-1">Contact your manager to schedule services</p>
                 </div>
               )}
             </div>
@@ -1955,7 +1978,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                   }
                 </p>
               </div>
-              {selectedService.status !== 'Scheduled' && (
+              {permissions.canEdit && selectedService.status !== 'Scheduled' && (
                 <button 
                   onClick={openRecurrenceModal}
                   className="flex items-center gap-1 text-sm text-blue-600 hover:underline"
@@ -1977,7 +2000,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                     visit.isManual ? 'border-amber-300 bg-amber-50' : 'border-gray-200'
                   } hover:border-blue-400 hover:bg-blue-50/50`}
                   onClick={() => {
-                    if (visit.status !== 'completed' && visit.status !== 'in_progress' && editingVisitIndex !== i && selectedService.status !== 'Scheduled') {
+                    if (permissions.canEdit && visit.status !== 'completed' && visit.status !== 'in_progress' && editingVisitIndex !== i && selectedService.status !== 'Scheduled') {
                       setEditingVisitIndex(i);
                     }
                   }}
@@ -2048,8 +2071,8 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               ))}
             </div>
             
-            {/* Action buttons for wizard flow */}
-            {selectedService.status !== 'Scheduled' && plannedVisits.length > 0 && plannedVisits.some(v => v.date) && (
+            {/* Action buttons for wizard flow - only for users with permissions */}
+            {permissions.canConfirm && selectedService.status !== 'Scheduled' && plannedVisits.length > 0 && plannedVisits.some(v => v.date) && (
               <div className="mt-4 flex justify-between items-center">
                 {/* Already planned indicator */}
                 {plannedSchedules[selectedService.id] && (
