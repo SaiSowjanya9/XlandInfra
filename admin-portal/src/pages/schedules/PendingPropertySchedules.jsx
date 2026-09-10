@@ -760,8 +760,8 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                     
                     {/* Package */}
                     <td className="px-6 py-4">
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-lg">
-                        <span className="text-sm font-medium text-purple-700">{property.packageName}</span>
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-lg whitespace-nowrap">
+                        <span className="text-sm font-medium text-purple-700 whitespace-nowrap">{property.packageName}</span>
                       </div>
                     </td>
                     
