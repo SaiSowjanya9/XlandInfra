@@ -1005,17 +1005,20 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                   selectedSchedule.status === 'pending' ? 'bg-amber-100 text-amber-700' :
                   selectedSchedule.status === 'cancelled' ? 'bg-red-100 text-red-700' :
                   selectedSchedule.status === 'rescheduled' ? 'bg-orange-100 text-orange-700' :
+                  selectedSchedule.status === 'overdue' ? 'bg-gray-800 text-white' :
                   'bg-blue-100 text-blue-700'
                 }`}>
                   {selectedSchedule.status?.replace('_', ' ')}
                 </span>
-                <span className={`px-3 py-1.5 text-sm font-medium rounded-full capitalize ${
-                  selectedSchedule.type === 'work_order' ? 'bg-indigo-100 text-indigo-700' :
-                  selectedSchedule.type === 'unscheduled' ? 'bg-gray-100 text-gray-700' :
-                  'bg-blue-100 text-blue-700'
-                }`}>
-                  {selectedSchedule.type?.replace('_', ' ')}
-                </span>
+                {/* Only show type badge for work orders or unscheduled */}
+                {(selectedSchedule.type === 'work_order' || selectedSchedule.type === 'unscheduled') && (
+                  <span className={`px-3 py-1.5 text-sm font-medium rounded-full capitalize ${
+                    selectedSchedule.type === 'work_order' ? 'bg-indigo-100 text-indigo-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {selectedSchedule.type?.replace('_', ' ')}
+                  </span>
+                )}
               </div>
 
               {/* Schedule Details */}
