@@ -1361,10 +1361,12 @@ router.post('/vendors/assignments', authenticate, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Property ID and Vendor ID are required' });
     }
 
-    // Verify property exists
+    // Verify property exists (check both tables)
     const [property] = await pool.execute(
-      `SELECT id FROM onboarded_properties WHERE id = ?`,
-      [propertyId]
+      `SELECT id FROM onboarded_properties WHERE id = ?
+       UNION
+       SELECT id FROM properties WHERE id = ?`,
+      [propertyId, propertyId]
     );
 
     if (property.length === 0) {

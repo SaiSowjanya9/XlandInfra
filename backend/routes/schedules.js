@@ -937,8 +937,11 @@ router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async
     let resolvedPropertyId = propertyId;
     if (isNaN(propertyId)) {
       const [propRows] = await pool.execute(
-        `SELECT id FROM onboarded_properties WHERE property_id = ? LIMIT 1`,
-        [propertyId]
+        `SELECT id FROM onboarded_properties WHERE property_id = ? 
+         UNION 
+         SELECT id FROM properties WHERE property_id = ? 
+         LIMIT 1`,
+        [propertyId, propertyId]
       );
       if (propRows.length > 0) {
         resolvedPropertyId = propRows[0].id;

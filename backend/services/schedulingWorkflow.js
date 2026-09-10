@@ -157,8 +157,13 @@ async function assignVendorToService({
     if (vendor.length === 0) throw new Error('Vendor not found');
 
     const [property] = await connection.execute(
-      `SELECT zone, area_name FROM onboarded_properties WHERE id = ?`,
-      [propertyId]
+      `SELECT zone, area_name FROM onboarded_properties WHERE id = ?
+       UNION
+       SELECT COALESCE(fe.zone, '') as zone, COALESCE(p.city, '') as area_name 
+       FROM properties p 
+       LEFT JOIN fp_estimates fe ON fe.property_id = p.id 
+       WHERE p.id = ?`,
+      [propertyId, propertyId]
     );
 
     const vendorName = vendor[0].name;

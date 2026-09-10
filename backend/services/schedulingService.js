@@ -268,13 +268,20 @@ async function createSchedulingNotification(connection, {
 }) {
   const notificationId = generateNotificationId();
   
-  // Get property details for the notification
+  // Get property details for the notification (check both tables)
   const [property] = await connection.execute(
-    `SELECT op.property_id, op.community_name, 
-            (SELECT COUNT(*) FROM property_vendor_assignments WHERE property_id = op.id AND is_active = 1) as vendors_assigned,
-            (SELECT JSON_LENGTH(COALESCE(fe.package_services, '[]')) FROM fp_estimates fe WHERE fe.property_id = op.id AND fe.status = 'approved' LIMIT 1) as total_services
-     FROM onboarded_properties op WHERE op.id = ?`,
-    [propertyId]
+    `SELECT property_id, community_name, vendors_assigned, total_services FROM (
+       SELECT op.property_id, op.community_name, 
+              (SELECT COUNT(*) FROM property_vendor_assignments WHERE property_id = op.id AND is_active = 1) as vendors_assigned,
+              (SELECT JSON_LENGTH(COALESCE(fe.package_services, '[]')) FROM fp_estimates fe WHERE fe.property_id = op.id AND fe.status = 'approved' LIMIT 1) as total_services
+       FROM onboarded_properties op WHERE op.id = ?
+       UNION
+       SELECT p.property_id, p.name as community_name,
+              (SELECT COUNT(*) FROM property_vendor_assignments WHERE property_id = p.id AND is_active = 1) as vendors_assigned,
+              (SELECT JSON_LENGTH(COALESCE(fe.package_services, '[]')) FROM fp_estimates fe WHERE fe.property_id = p.id AND fe.status = 'approved' LIMIT 1) as total_services
+       FROM properties p WHERE p.id = ?
+     ) combined LIMIT 1`,
+    [propertyId, propertyId]
   );
 
   const propertyData = property[0] || {};
