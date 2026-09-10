@@ -698,10 +698,10 @@ const Dashboard = () => {
             <button 
               onClick={handleRefresh}
               disabled={refreshing}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+              title="Refresh"
+              className="p-2 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
             >
-              <RefreshCw className={`w-3.5 h-3.5 text-gray-500 ${refreshing ? 'animate-spin' : ''}`} />
-              <span className="text-xs text-gray-500">Refresh</span>
+              <RefreshCw className={`w-4 h-4 text-gray-500 ${refreshing ? 'animate-spin' : ''}`} />
             </button>
             
             {/* Notification Button */}

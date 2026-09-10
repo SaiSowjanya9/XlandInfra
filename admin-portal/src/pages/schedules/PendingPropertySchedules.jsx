@@ -956,102 +956,52 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
         </div>
       )}
 
-      {/* Services Modal - View all services with vendor assignments */}
+      {/* Services Modal - Simple compact lightbox */}
       {showServicesModal && selectedProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => setShowServicesModal(false)}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowServicesModal(false)}>
           <div 
-            className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
+            className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Service & Vendor Assignments</h2>
-                <p className="text-sm text-gray-500 mt-0.5">{selectedProperty.propertyName} ({selectedProperty.propertyId})</p>
+                <h2 className="text-base font-semibold text-gray-900">Services</h2>
+                <p className="text-xs text-gray-500">{selectedProperty.propertyName}</p>
               </div>
-              <button onClick={() => setShowServicesModal(false)} className="p-2 hover:bg-white rounded-lg transition-colors">
-                <X className="w-5 h-5 text-gray-500" />
+              <button onClick={() => setShowServicesModal(false)} className="p-1.5 hover:bg-white rounded-lg transition-colors">
+                <X className="w-4 h-4 text-gray-500" />
               </button>
             </div>
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
+            <div className="p-4">
               {selectedProperty.services && selectedProperty.services.length > 0 ? (
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-2 text-xs font-semibold text-gray-600 uppercase">Service</th>
-                      <th className="text-center py-3 px-2 text-xs font-semibold text-gray-600 uppercase">Frequency</th>
-                      <th className="text-center py-3 px-2 text-xs font-semibold text-gray-600 uppercase">Visits</th>
-                      <th className="text-left py-3 px-2 text-xs font-semibold text-gray-600 uppercase">Assigned Vendor</th>
-                      <th className="text-center py-3 px-2 text-xs font-semibold text-gray-600 uppercase">Schedule Date</th>
-                      <th className="text-center py-3 px-2 text-xs font-semibold text-gray-600 uppercase">Target Date</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {selectedProperty.services.map((service, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="py-3 px-2">
-                          <div className="flex items-center gap-2">
-                            <Wrench className="w-4 h-4 text-blue-500" />
-                            <span className="font-medium text-gray-900">{service.name}</span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-2 text-center">
-                          <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                            {service.frequency}
-                          </span>
-                        </td>
-                        <td className="py-3 px-2 text-center">
-                          <span className="font-medium text-gray-900">{service.visits}</span>
-                        </td>
-                        <td className="py-3 px-2">
-                          {service.vendorAssigned ? (
-                            <div className="flex items-center gap-2">
-                              <UserCheck className="w-4 h-4 text-green-500" />
-                              <span className="text-sm text-green-700 font-medium">{service.vendorName}</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <AlertTriangle className="w-4 h-4 text-yellow-500" />
-                              <span className="text-sm text-yellow-700">No Vendor Assigned</span>
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-3 px-2 text-center">
-                          {service.scheduleDate ? (
-                            <span className="text-sm text-gray-700">
-                              {new Date(service.scheduleDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-gray-400">Not Set</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-2 text-center">
-                          {service.targetDate ? (
-                            <span className="text-sm text-gray-700">
-                              {new Date(service.targetDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-gray-400">Not Set</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="flex flex-wrap gap-2">
+                  {selectedProperty.services.map((service, index) => (
+                    <div 
+                      key={index} 
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
+                        service.vendorAssigned 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      <Wrench className="w-3.5 h-3.5" />
+                      {service.name}
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p>No services found for this property</p>
+                <div className="text-center py-4 text-gray-500">
+                  <p className="text-sm">No services found</p>
                 </div>
               )}
             </div>
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
-              <div className="text-sm text-gray-600">
-                <span className="font-medium text-green-600">{selectedProperty.assignedVendors}</span> of{' '}
-                <span className="font-medium">{selectedProperty.totalServices}</span> services have vendors assigned
-              </div>
+            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
+              <p className="text-xs text-gray-500">
+                <span className="font-medium text-green-600">{selectedProperty.assignedVendors}</span>/{selectedProperty.totalServices} assigned
+              </p>
               <button
                 onClick={() => setShowServicesModal(false)}
-                className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-300 transition-colors"
               >
                 Close
               </button>
