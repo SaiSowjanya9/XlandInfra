@@ -206,6 +206,13 @@ const FPAddVendor = ({ user }) => {
     if (!formData.ratePerVisit) newErrors.ratePerVisit = 'Rate per visit is required';
     if (!formData.coveragePerDay) newErrors.coveragePerDay = 'Coverage per day is required';
     
+    // Schedule time validation (mandatory)
+    if (formData.useCustomTime) {
+      if (!formData.customScheduleTime) newErrors.scheduleTime = 'Schedule time is required';
+    } else {
+      if (!formData.scheduleTime) newErrors.scheduleTime = 'Schedule time is required';
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -775,12 +782,12 @@ const FPAddVendor = ({ user }) => {
               /* Preset Time Selection */
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Select Schedule Time
+                  Select Schedule Time <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.scheduleTime}
                   onChange={(e) => updateField('scheduleTime', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-500 focus:outline-none bg-white"
+                  className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-500 focus:outline-none bg-white ${errors.scheduleTime ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                 >
                   <option value="">Select a time slot</option>
                   <option value="06:00 AM">06:00 AM</option>
@@ -810,20 +817,22 @@ const FPAddVendor = ({ user }) => {
                   <option value="06:00 PM">06:00 PM</option>
                 </select>
                 <p className="text-xs text-gray-400 mt-1">Select the vendor's preferred working time</p>
+                {errors.scheduleTime && <p className="text-xs text-red-500 mt-1">{errors.scheduleTime}</p>}
               </div>
             ) : (
               /* Custom Time Input */
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Enter Custom Time
+                  Enter Custom Time <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="time"
                   value={formData.customScheduleTime}
                   onChange={(e) => updateField('customScheduleTime', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-500 focus:outline-none"
+                  className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-500 focus:outline-none ${errors.scheduleTime ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                 />
                 <p className="text-xs text-gray-400 mt-1">Enter a specific time for the vendor's schedule</p>
+                {errors.scheduleTime && <p className="text-xs text-red-500 mt-1">{errors.scheduleTime}</p>}
               </div>
             )}
 
