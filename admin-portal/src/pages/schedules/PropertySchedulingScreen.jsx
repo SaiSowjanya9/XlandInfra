@@ -1952,18 +1952,6 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                     }
                   </button>
                   
-                  {/* Step 2: Plan this service and move to next (shown when visits are generated) */}
-                  {plannedVisits.length > 0 && plannedVisits.some(v => v.date) && selectedService?.status !== 'Scheduled' && (
-                    <button 
-                      onClick={handlePlanService}
-                      className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-sm font-medium rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all flex items-center justify-center gap-2"
-                    >
-                      <Check className="w-4 h-4" />
-                      Plan This Service
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  )}
-                  
                   <button 
                     onClick={handleCustomizeDates}
                     disabled={!selectedService || selectedService.status === 'Scheduled'}
@@ -2111,35 +2099,14 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             
             {/* Action buttons for wizard flow - only for users with permissions */}
             {permissions.canConfirm && selectedService.status !== 'Scheduled' && plannedVisits.length > 0 && plannedVisits.some(v => v.date) && (
-              <div className="mt-4 flex justify-between items-center">
-                {/* Already planned indicator */}
-                {plannedSchedules[selectedService.id] && (
-                  <span className="text-sm text-indigo-600 flex items-center gap-1">
-                    <CheckCircle className="w-4 h-4" />
-                    This service is planned and ready for final confirmation
-                  </span>
-                )}
-                
-                <div className="flex gap-3 ml-auto">
-                  {/* Plan This Service - Primary action for wizard flow */}
-                  <button
-                    onClick={handlePlanService}
-                    className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-medium rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all flex items-center gap-2 shadow-md"
-                  >
-                    <Check className="w-4 h-4" />
-                    Plan This Service
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                  
-                  {/* Optional: Direct confirm (bypasses wizard) */}
-                  <button
-                    onClick={handlePrepareConfirmation}
-                    className="px-4 py-2.5 text-gray-600 border border-gray-300 font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                    Review Details
-                  </button>
-                </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={handlePrepareConfirmation}
+                  className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all flex items-center gap-2 shadow-md"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Review & Confirm
+                </button>
               </div>
             )}
           </div>
