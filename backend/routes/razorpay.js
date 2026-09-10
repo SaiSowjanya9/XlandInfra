@@ -877,7 +877,7 @@ async function handlePaymentLinkPaid(payload, webhookId) {
         performed_by_name, performed_by_role,
         razorpay_payment_id, razorpay_receipt_id, payment_method_details
       )
-      VALUES (?, ?, 'razorpay_payment', 'completed', ?, ?, 'Razorpay', 'system', ?, ?, ?)
+      VALUES (?, ?, 'paid', 'completed', ?, ?, 'Razorpay', 'system', ?, ?, ?)
     `, [
       invoice.id, 
       paymentDbId,
