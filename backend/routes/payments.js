@@ -2383,24 +2383,24 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
       paymentId,
       receiptId,
       invoiceId,
-      invoice.invoice_id, // Store invoice number string
-      propertyId || invoice.property_id,
+      invoice.invoice_id || null, // Store invoice number string
+      propertyId || invoice.property_id || null,
       invoice.property_code || invoice.prop_code || null, // Store property code string
-      estimateId || invoice.estimate_id,
+      estimateId || invoice.estimate_id || null,
       invoice.source_estimate_id || null, // Store estimate number string
-      customerId || invoice.customer_id,
-      fpId || invoice.franchise_partner_id,
-      customerName || invoice.customer_name,
+      customerId || invoice.customer_id || null,
+      fpId || invoice.franchise_partner_id || null,
+      customerName || invoice.customer_name || null,
       paymentAmount,
       paymentMethod,
       'manual',
       transactionReference || null,
-      paymentDate,
-      paymentProofUrl,
+      paymentDate || null,
+      paymentProofUrl || null,
       finalPaymentStatus, // Use the requested status (verification_pending for offline payments)
       req.user.id,
-      receivedByName,
-      req.user.role,
+      receivedByName || null,
+      req.user.role || null,
       remarks || null
     ]);
 
@@ -2582,24 +2582,24 @@ router.post('/record', authenticate, canEditPayments, paymentCreationLimiter, up
     `, [
       paymentId,
       invoiceId,
-      invoice.invoice_id,
-      invoice.property_id,
-      invoice.property_code,
-      invoice.source_estimate_id,
-      invoice.customer_id,
-      fpId || invoice.franchise_partner_id,
-      invoice.customer_name,
+      invoice.invoice_id || null,
+      invoice.property_id || null,
+      invoice.property_code || null,
+      invoice.source_estimate_id || null,
+      invoice.customer_id || null,
+      fpId || invoice.franchise_partner_id || null,
+      invoice.customer_name || null,
       paymentAmount,
       paymentMethod,
       'manual',
       transactionReference || null,
       bankName || null,
-      paymentDate,
-      paymentProofUrl,
+      paymentDate || null,
+      paymentProofUrl || null,
       'paid',
       req.user.id,
-      receivedByName,
-      req.user.role,
+      receivedByName || null,
+      req.user.role || null,
       remarks || null
     ]);
 
@@ -2723,14 +2723,14 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
 
     // Update payment status with additional cash/cheque/bank transfer fields
     const remarks = status === 'paid' ? verificationNotes : rejectionReason;
-    const verifierName = receivedBy || userName;
-    const verifierId = receivedById || userId;
+    const verifierName = receivedBy || userName || null;
+    const verifierId = receivedById || userId || null;
     const finalAmount = amountReceived ? parseFloat(amountReceived) : p.amount;
-    const paymentDateValue = receivedDate || checkDate || p.payment_date;
+    const paymentDateValue = receivedDate || checkDate || p.payment_date || null;
     
     // Build the transaction reference based on payment type
     // Priority: UTR number (bank transfer) > Check number (cheque) > Receipt number (cash)
-    const transactionRef = utrNumber || checkNumber || receiptNumber || referenceNumber;
+    const transactionRef = utrNumber || checkNumber || receiptNumber || referenceNumber || null;
     
     // Build remarks with payment details
     let fullRemarks = remarks || '';
@@ -2779,7 +2779,7 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
         remarks = COALESCE(?, remarks),
         updated_at = NOW()
       WHERE id = ?
-    `, [status, finalAmount, paymentDateValue, verifierName, verifierId, transactionRef, paymentLocation, paymentProof, fullRemarks, id]);
+    `, [status, finalAmount, paymentDateValue, verifierName, verifierId, transactionRef || null, paymentLocation || null, paymentProof || null, fullRemarks || null, id]);
     
     console.log('[Payment Verify] Payment updated successfully');
 
