@@ -683,9 +683,11 @@ router.put('/properties/:id', requireFPScope, async (req, res) => {
     if (sourceTable === 'onboarded_properties') {
       tableName = 'onboarded_properties';
     } else {
-      // Check if property exists in properties table
+      // Check if property exists in properties table (use fp_estimates to verify FP ownership)
       const [propCheck] = await pool.execute(
-        'SELECT id FROM properties WHERE id = ? AND franchise_partner_id = ?',
+        `SELECT p.id FROM properties p 
+         INNER JOIN fp_estimates fe ON fe.property_id = p.id 
+         WHERE p.id = ? AND fe.franchise_partner_id = ?`,
         [id, req.fpId]
       );
       
@@ -2556,10 +2558,14 @@ router.post('/vendors/assignments', requireFPScope, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Property ID and Vendor ID are required' });
     }
 
-    // Verify property belongs to this FP
+    // Verify property belongs to this FP (check both onboarded_properties and properties tables)
     const [property] = await pool.execute(
-      `SELECT id FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
-      [propertyId, fpId]
+      `SELECT id FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?
+       UNION
+       SELECT p.id FROM properties p 
+       INNER JOIN fp_estimates fe ON fe.property_id = p.id 
+       WHERE p.id = ? AND fe.franchise_partner_id = ?`,
+      [propertyId, fpId, propertyId, fpId]
     );
 
     if (property.length === 0) {
