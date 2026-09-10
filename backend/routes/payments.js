@@ -2318,6 +2318,8 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
   try {
     await connection.beginTransaction();
 
+    console.log('[Record Payment] Request body:', req.body);
+
     const fpId = getFPScope(req);
     const {
       invoiceId, propertyId, estimateId, customerId, customerName,
@@ -2371,23 +2373,15 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
     const isVerificationPending = finalPaymentStatus === 'verification_pending';
 
     // Insert payment record with full linkage
-    const [result] = await connection.execute(`
-      INSERT INTO payments (
-        payment_id, receipt_id, invoice_id, invoice_number, property_id, property_code,
-        estimate_id, estimate_number, customer_id, franchise_partner_id,
-        customer_name, amount, payment_method, payment_type,
-        transaction_reference, payment_date, payment_proof_url,
-        status, received_by, received_by_name, received_by_role, remarks
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
+    const insertParams = [
       paymentId,
       receiptId,
       invoiceId,
-      invoice.invoice_id || null, // Store invoice number string
+      invoice.invoice_id || null,
       propertyId || invoice.property_id || null,
-      invoice.property_code || invoice.prop_code || null, // Store property code string
+      invoice.property_code || invoice.prop_code || null,
       estimateId || invoice.estimate_id || null,
-      invoice.source_estimate_id || null, // Store estimate number string
+      invoice.source_estimate_id || null,
       customerId || invoice.customer_id || null,
       fpId || invoice.franchise_partner_id || null,
       customerName || invoice.customer_name || null,
@@ -2397,12 +2391,32 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
       transactionReference || null,
       paymentDate || null,
       paymentProofUrl || null,
-      finalPaymentStatus, // Use the requested status (verification_pending for offline payments)
+      finalPaymentStatus,
       req.user.id,
       receivedByName || null,
       req.user.role || null,
       remarks || null
-    ]);
+    ];
+    
+    // Check for undefined values
+    const undefinedIndex = insertParams.findIndex(p => p === undefined);
+    if (undefinedIndex !== -1) {
+      console.error('[Record Payment] Undefined parameter at index:', undefinedIndex, 'Params:', insertParams);
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: `Invalid parameter at position ${undefinedIndex}` });
+    }
+    
+    console.log('[Record Payment] Insert params:', insertParams.map((p, i) => `${i}: ${p === null ? 'NULL' : typeof p}`));
+    
+    const [result] = await connection.execute(`
+      INSERT INTO payments (
+        payment_id, receipt_id, invoice_id, invoice_number, property_id, property_code,
+        estimate_id, estimate_number, customer_id, franchise_partner_id,
+        customer_name, amount, payment_method, payment_type,
+        transaction_reference, payment_date, payment_proof_url,
+        status, received_by, received_by_name, received_by_role, remarks
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, insertParams);
 
     // Only update invoice amounts if payment is NOT verification_pending
     // For verification_pending payments, invoice will be updated when payment is verified
@@ -2504,7 +2518,8 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
   } catch (error) {
     await connection.rollback();
     console.error('Error recording payment:', error);
-    res.status(500).json({ success: false, message: 'Error recording payment', error: error.message });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ success: false, message: 'Error recording payment: ' + error.message, error: error.message });
   } finally {
     connection.release();
   }
