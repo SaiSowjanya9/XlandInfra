@@ -1248,24 +1248,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                               >
                                 <FileText className="w-4 h-4" />
                               </button>
-                              {permissions.canReschedule && (
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleReschedule(serviceList[0]?.visits[0]); }}
-                                  className="p-1.5 text-orange-500 hover:text-orange-700 hover:bg-orange-50 rounded border border-orange-200"
-                                  title="Reschedule"
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                              )}
-                              {permissions.canCancel && (
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleCancelPropertySchedules(property); }}
-                                  className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded border border-red-200"
-                                  title="Cancel All Schedules"
-                                >
-                                  <XCircle className="w-4 h-4" />
-                                </button>
-                              )}
+                              {/* Reschedule and Cancel actions moved to service-level only */}
                             </div>
                           </td>
                         </tr>
