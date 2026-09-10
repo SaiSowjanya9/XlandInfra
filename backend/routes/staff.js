@@ -922,49 +922,52 @@ router.get('/', authenticate, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
     
-    // If fpId is provided (or FP user), fetch from fp_employees table
+    // If fpId is provided (or FP user), fetch FP owner, admins, and FP employees
     if (effectiveFpId) {
-      let fpQuery = `
+      const allStaff = [];
+      
+      // 1. Fetch FP Owner (Franchise Partner)
+      const [fpOwner] = await pool.execute(`
         SELECT 
-          e.id,
-          e.employee_code as user_id,
-          e.username,
-          e.email,
-          e.first_name,
-          e.last_name,
-          e.phone,
-          e.role,
-          e.is_active,
-          e.created_at,
-          e.franchise_partner_id,
-          'fp_employee' as source
-        FROM fp_employees e
-        WHERE e.franchise_partner_id = ?
-      `;
-      const fpParams = [effectiveFpId];
-
-      if (role) {
-        fpQuery += ` AND e.role = ?`;
-        fpParams.push(role);
-      }
-
-      if (isActive !== undefined) {
-        fpQuery += ` AND e.is_active = ?`;
-        fpParams.push(isActive === 'true' ? 1 : 0);
-      } else {
-        // Default to active employees only
-        fpQuery += ` AND e.is_active = 1`;
-      }
-
-      fpQuery += ` ORDER BY e.created_at DESC`;
-
-      const [fpEmployees] = await pool.execute(fpQuery, fpParams);
-
-      return res.json({
-        success: true,
-        data: fpEmployees.map(s => ({
+          u.id, u.user_id, u.username, u.email, u.first_name, u.last_name,
+          u.phone, u.role, u.is_active, u.created_at,
+          fp.id as fp_id, fp.owner_name
+        FROM users u
+        LEFT JOIN franchise_partners fp ON u.id = fp.user_id OR u.email = fp.email
+        WHERE (fp.id = ? OR u.franchise_partner_id = ?) AND u.role IN ('franchise_partner', 'franchise')
+        AND u.is_active = 1
+      `, [effectiveFpId, effectiveFpId]);
+      
+      fpOwner.forEach(s => {
+        allStaff.push({
           id: s.id,
-          userId: s.user_id,
+          oderId: 1,
+          userId: s.user_id || `FP-${String(s.id).padStart(3, '0')}`,
+          username: s.username,
+          email: s.email,
+          firstName: s.first_name || s.owner_name?.split(' ')[0] || '',
+          lastName: s.last_name || s.owner_name?.split(' ').slice(1).join(' ') || '',
+          phone: s.phone,
+          role: 'franchise_partner',
+          roleName: 'Franchise Partner',
+          isActive: true,
+          source: 'fp_owner'
+        });
+      });
+      
+      // 2. Fetch Admin users (operations manager and admin)
+      const [admins] = await pool.execute(`
+        SELECT id, user_id, username, email, first_name, last_name, phone, role, is_active, created_at
+        FROM users
+        WHERE role IN ('admin', 'operations_manager') AND is_active = 1
+        ORDER BY role ASC, first_name ASC
+      `);
+      
+      admins.forEach(s => {
+        allStaff.push({
+          id: s.id,
+          orderId: 2,
+          userId: s.user_id || `ADM-${String(s.id).padStart(3, '0')}`,
           username: s.username,
           email: s.email,
           firstName: s.first_name,
@@ -972,11 +975,50 @@ router.get('/', authenticate, async (req, res) => {
           phone: s.phone,
           role: s.role,
           roleName: ROLE_NAMES[s.role] || s.role,
-          isActive: s.is_active === 1,
+          isActive: true,
+          source: 'admin'
+        });
+      });
+      
+      // 3. Fetch FP Employees
+      let fpQuery = `
+        SELECT 
+          e.id, e.employee_code as user_id, e.username, e.email,
+          e.first_name, e.last_name, e.phone, e.role, e.is_active,
+          e.created_at, e.franchise_partner_id
+        FROM fp_employees e
+        WHERE e.franchise_partner_id = ? AND e.is_active = 1
+        ORDER BY e.first_name ASC
+      `;
+      
+      const [fpEmployees] = await pool.execute(fpQuery, [effectiveFpId]);
+      
+      fpEmployees.forEach(s => {
+        let empCode = s.user_id || '';
+        if (empCode && !empCode.startsWith('EMP-')) {
+          empCode = `EMP-${empCode.toString().padStart(3, '0')}`;
+        }
+        allStaff.push({
+          id: s.id,
+          orderId: 3,
+          oderId: 3,
+          userId: empCode,
+          username: s.username,
+          email: s.email,
+          firstName: s.first_name,
+          lastName: s.last_name,
+          phone: s.phone,
+          role: s.role,
+          roleName: ROLE_NAMES[s.role] || s.role,
+          isActive: true,
           franchisePartnerId: s.franchise_partner_id,
-          source: s.source,
-          createdAt: s.created_at
-        }))
+          source: 'fp_employee'
+        });
+      });
+
+      return res.json({
+        success: true,
+        data: allStaff
       });
     }
     
