@@ -2395,13 +2395,15 @@ router.get('/recommended-dates', authenticate, canSeeSchedule, async (req, res) 
       };
     });
 
-    // Get vendor max daily visits and preferred schedule time
+    // Get vendor max daily visits and working hours
     const [[vendor]] = await pool.execute(
-      `SELECT max_daily_visits, zone as vendor_zone, schedule_time FROM onboarded_vendors WHERE id = ?`,
+      `SELECT max_daily_visits, zone as vendor_zone, working_hours_from, working_hours_to FROM onboarded_vendors WHERE id = ?`,
       [vendorId]
     );
     const maxDaily = vendor?.max_daily_visits || 5;
-    const vendorScheduleTime = vendor?.schedule_time || null;
+    const vendorWorkingHoursFrom = vendor?.working_hours_from || null;
+    const vendorWorkingHoursTo = vendor?.working_hours_to || null;
+    const hasWorkingHours = vendorWorkingHoursFrom && vendorWorkingHoursTo;
 
     // Generate recommended dates for each visit
     const allRecommendations = [];
@@ -2485,17 +2487,17 @@ router.get('/recommended-dates', authenticate, canSeeSchedule, async (req, res) 
           reasons.push('Customer preferred');
         }
         
-        // 6. Vendor preferred schedule time (highest weight!)
-        // Default time slots for recommendations based on vendor's schedule_time
+        // 6. Vendor working hours (highest weight!)
+        // Recommend time within vendor's working hours range
         let recommendedTimeSlot = '10:00 AM'; // Default
         let vendorTimeScore = 0;
         
-        if (vendorScheduleTime) {
-          // Vendor has a preferred time - use it as the recommended slot
-          recommendedTimeSlot = vendorScheduleTime;
+        if (hasWorkingHours) {
+          // Vendor has working hours - recommend start time as the slot
+          recommendedTimeSlot = vendorWorkingHoursFrom;
           vendorTimeScore = RECOMMENDATION_WEIGHTS.vendorPreferredTime;
           score += vendorTimeScore;
-          reasons.push(`Vendor prefers ${vendorScheduleTime}`);
+          reasons.push(`Vendor works ${vendorWorkingHoursFrom} - ${vendorWorkingHoursTo}`);
         }
         
         // Determine recommendation level (adjusted thresholds for new weight)
@@ -2517,7 +2519,7 @@ router.get('/recommended-dates', authenticate, canSeeSchedule, async (req, res) 
           reasons,
           recommendation,
           recommendedTime: recommendedTimeSlot,
-          vendorPreferredTime: vendorScheduleTime
+          vendorWorkingHours: hasWorkingHours ? { from: vendorWorkingHoursFrom, to: vendorWorkingHoursTo } : null
         });
       }
       
@@ -2549,7 +2551,7 @@ router.get('/recommended-dates', authenticate, canSeeSchedule, async (req, res) 
         totalVisits: numVisits,
         zone: zone || null,
         searchWindow: windowDays,
-        vendorPreferredTime: vendorScheduleTime,
+        vendorWorkingHours: hasWorkingHours ? { from: vendorWorkingHoursFrom, to: vendorWorkingHoursTo } : null,
         recommendations: allRecommendations,
         scoringWeights: RECOMMENDATION_WEIGHTS
       }
