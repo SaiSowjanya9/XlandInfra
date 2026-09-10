@@ -48,5 +48,4 @@ CREATE TABLE IF NOT EXISTS receipt_sequence (
 -- =====================================================
 -- Add cheque to payment_method enum if not exists
 -- =====================================================
--- Note: Run this manually if needed
--- ALTER TABLE payments MODIFY COLUMN payment_method ENUM('cash', 'upi_manual', 'upi_online', 'bank_transfer', 'card_pos', 'razorpay', 'credit_card', 'debit_card', 'net_banking', 'wallet', 'cheque') NOT NULL;
+ALTER TABLE payments MODIFY COLUMN payment_method ENUM('cash', 'upi_manual', 'upi_online', 'bank_transfer', 'card_pos', 'razorpay', 'credit_card', 'debit_card', 'net_banking', 'wallet', 'cheque') NOT NULL;
