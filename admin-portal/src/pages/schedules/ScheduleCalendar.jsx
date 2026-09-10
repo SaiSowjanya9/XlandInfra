@@ -106,11 +106,11 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
         setPropertyTypes(result.data);
       } else {
         // Fallback property types
-        setPropertyTypes(['Apartment', 'Villa', 'Gated Community', 'Plot', 'Flat', 'Independent House']);
+        setPropertyTypes(['Gated Community', 'Apartment', 'Villa', 'Flat', 'Plot']);
       }
     } catch (err) {
       console.error('Fetch property types error:', err);
-      setPropertyTypes(['Apartment', 'Villa', 'Gated Community', 'Plot', 'Flat', 'Independent House']);
+      setPropertyTypes(['Gated Community', 'Apartment', 'Villa', 'Flat', 'Plot']);
     }
   }, [token]);
 

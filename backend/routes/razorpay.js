@@ -268,9 +268,9 @@ router.post('/send-payment-link', authenticate, canManagePayments, paymentLinkLi
       WHERE id = ?
     `, [tokenHash, invoiceId]);
 
-    // Build custom payment page URL with unique token (invoice ID hidden in token)
-    const frontendUrl = process.env.FRONTEND_URL || 'https://admin.xlandinfra.com';
-    const customPaymentUrl = `${frontendUrl}/pay?token=${encodeURIComponent(tokenData.token)}`;
+    // Build custom payment page URL with invoice ID
+    const frontendUrl = process.env.FRONTEND_URL || 'https://xlandinfra.com';
+    const customPaymentUrl = `${frontendUrl}/pay/${invoice.invoice_id}`;
 
     // Get email template
     const [templates] = await pool.execute(`
@@ -1276,6 +1276,108 @@ router.post('/verify-qr-token', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to verify token'
+    });
+  }
+});
+
+// ============================================
+// PUBLIC: GET INVOICE BY ID (for email payment links)
+// Simple endpoint that uses razorpay_payment_link_id as token
+// ============================================
+router.get('/public/invoice/:invoiceId', async (req, res) => {
+  try {
+    const { invoiceId } = req.params;
+    const { token } = req.query;
+
+    if (!invoiceId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invoice ID is required'
+      });
+    }
+
+    // Build query - if token provided, verify it matches razorpay_payment_link_id
+    let query = `
+      SELECT 
+        i.id,
+        i.invoice_id,
+        i.property_id,
+        i.property_code,
+        i.property_name,
+        i.customer_name,
+        i.customer_email,
+        i.customer_phone,
+        i.invoice_date,
+        i.due_date,
+        i.subtotal,
+        i.discount_amount,
+        i.tax_amount,
+        i.total_amount,
+        i.balance_amount,
+        i.status,
+        i.payment_status,
+        i.payment_link,
+        i.razorpay_short_url,
+        i.payment_link_status
+      FROM invoices i
+      WHERE i.invoice_id = ?
+    `;
+    const params = [invoiceId];
+
+    // If token provided, add verification (optional extra security)
+    if (token) {
+      query += ` AND i.razorpay_payment_link_id = ?`;
+      params.push(token);
+    }
+
+    const [invoices] = await pool.execute(query, params);
+
+    if (invoices.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invoice not found or payment link has expired'
+      });
+    }
+
+    const invoice = invoices[0];
+
+    // Check invoice status
+    if (invoice.status === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'This invoice has been cancelled'
+      });
+    }
+
+    // Return invoice data
+    res.json({
+      success: true,
+      data: {
+        id: invoice.id,
+        invoiceId: invoice.invoice_id,
+        propertyCode: invoice.property_code,
+        propertyName: invoice.property_name,
+        customerName: invoice.customer_name,
+        customerEmail: invoice.customer_email,
+        customerPhone: invoice.customer_phone,
+        invoiceDate: invoice.invoice_date,
+        dueDate: invoice.due_date,
+        subtotal: parseFloat(invoice.subtotal) || 0,
+        discountAmount: parseFloat(invoice.discount_amount) || 0,
+        taxAmount: parseFloat(invoice.tax_amount) || 0,
+        totalAmount: parseFloat(invoice.total_amount) || 0,
+        balanceAmount: parseFloat(invoice.balance_amount) || parseFloat(invoice.total_amount) || 0,
+        status: invoice.payment_status || invoice.status,
+        paymentLink: invoice.razorpay_short_url || invoice.payment_link,
+        paymentLinkStatus: invoice.payment_link_status
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching public invoice:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to load invoice details'
     });
   }
 });

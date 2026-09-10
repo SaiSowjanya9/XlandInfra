@@ -617,11 +617,11 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
             className="min-w-[130px] flex-shrink-0 px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700 hover:border-gray-400 focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Property Types</option>
+            <option value="Gated Community">Gated Community</option>
             <option value="Apartment">Apartment</option>
             <option value="Villa">Villa</option>
-            <option value="Gated Community">Gated Community</option>
-            <option value="Plot">Plot</option>
             <option value="Flat">Flat</option>
+            <option value="Plot">Plot</option>
           </select>
 
           {/* Zone Filter */}

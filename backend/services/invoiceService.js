@@ -777,8 +777,12 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
     
     const invoice = invoices[0] || {};
     
-    // Create Razorpay payment link
-    const paymentLink = await createPaymentLinkForInvoice(invoiceDbId, invoice);
+    // Create Razorpay payment link (stores in DB for later use)
+    await createPaymentLinkForInvoice(invoiceDbId, invoice);
+    
+    // Link to our custom payment page (shows payment method selection)
+    const frontendUrl = process.env.FRONTEND_URL || 'https://xlandinfra.com';
+    const paymentPageUrl = `${frontendUrl}/pay/${invoiceId}`;
     
     const formatCurrency = (amount) => {
       const num = parseFloat(amount) || 0;
@@ -1092,13 +1096,12 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                 </tr>
                 
                 <!-- Pay Now Button -->
-                ${paymentLink ? `
                 <tr>
                   <td style="padding: 0 30px 20px; text-align: center;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td align="center">
-                          <a href="${paymentLink}" style="display: inline-block; background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.4);">
+                          <a href="${paymentPageUrl}" style="display: inline-block; background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.4);">
                             PAY NOW
                           </a>
                         </td>
@@ -1112,7 +1115,6 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                     </table>
                   </td>
                 </tr>
-                ` : ''}
                 
                 <!-- Terms & Payment Info -->
                 <tr>
