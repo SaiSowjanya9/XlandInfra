@@ -2701,7 +2701,7 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
              i.invoice_id as invoice_code, i.total_amount as invoice_amount,
              i.customer_email as invoice_email, i.customer_name as invoice_customer_name,
              prop.community_name as property_name, prop.property_id as property_code,
-             prop.customer_email, prop.customer_phone
+             i.customer_email, i.customer_phone
       FROM payments p
       LEFT JOIN invoices i ON p.invoice_id = i.id
       LEFT JOIN onboarded_properties prop ON p.property_id = prop.id
@@ -3380,7 +3380,7 @@ router.get('/:id/receipt', authenticate, canViewPayments, async (req, res) => {
       SELECT p.*, 
              i.invoice_id as invoice_code, i.total_amount as invoice_amount,
              prop.community_name as property_name, prop.property_id as property_code,
-             prop.customer_email, prop.customer_phone
+             i.customer_email, i.customer_phone
       FROM payments p
       LEFT JOIN invoices i ON p.invoice_id = i.id
       LEFT JOIN onboarded_properties prop ON p.property_id = prop.id
@@ -3438,7 +3438,7 @@ router.get('/:id/receipt/pdf', authenticate, canViewPayments, async (req, res) =
       SELECT p.*, 
              i.invoice_id as invoice_code, i.total_amount as invoice_amount, i.balance_amount as invoice_balance,
              prop.community_name as property_name, prop.property_id as property_code,
-             prop.customer_email, prop.customer_phone
+             i.customer_email, i.customer_phone
       FROM payments p
       LEFT JOIN invoices i ON p.invoice_id = i.id
       LEFT JOIN onboarded_properties prop ON p.property_id = prop.id
@@ -3503,7 +3503,7 @@ router.post('/:id/receipt/send', authenticate, canEditPayments, async (req, res)
       SELECT p.*, 
              i.invoice_id as invoice_code, i.total_amount as invoice_amount, i.balance_amount as invoice_balance,
              prop.community_name as property_name, prop.property_id as property_code,
-             prop.customer_email, prop.customer_phone
+             i.customer_email, i.customer_phone
       FROM payments p
       LEFT JOIN invoices i ON p.invoice_id = i.id
       LEFT JOIN onboarded_properties prop ON p.property_id = prop.id
