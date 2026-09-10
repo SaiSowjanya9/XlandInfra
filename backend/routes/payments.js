@@ -2776,6 +2776,7 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
     `, [status, finalAmount, paymentDateValue, verifierName, verifierId, transactionRef, paymentLocation, paymentProof, fullRemarks, id]);
 
     // If payment is marked as paid, update invoice and send receipt
+    let newBalance = 0;
     if (status === 'paid') {
       // Update invoice balance and status
       if (p.invoice_id) {
@@ -2788,7 +2789,7 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
           [p.invoice_id, 'paid']
         );
         const totalPaid = parseFloat(paidPayments[0]?.total_paid || 0) + paymentAmount;
-        const newBalance = Math.max(0, invoiceAmount - totalPaid);
+        newBalance = Math.max(0, invoiceAmount - totalPaid);
         const invoiceStatus = newBalance <= 0 ? 'paid' : 'partially_paid';
 
         await pool.execute(`
