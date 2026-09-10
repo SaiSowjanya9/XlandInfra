@@ -476,14 +476,23 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     }
   };
 
+  // Get unique service names from current schedules
+  const getUniqueServices = () => {
+    const serviceSet = new Set();
+    propertySchedules.forEach(s => {
+      if (s.serviceName) serviceSet.add(s.serviceName);
+    });
+    return Array.from(serviceSet).sort();
+  };
+
   // Handle service filter change
   const handleServiceFilterChange = (value) => {
     setServiceFilter(value);
-    if (!value.trim()) {
+    if (!value || value === 'all') {
       setFilteredPropertySchedules(propertySchedules);
     } else {
       const filtered = propertySchedules.filter(s => 
-        s.serviceName?.toLowerCase().includes(value.toLowerCase())
+        s.serviceName === value
       );
       setFilteredPropertySchedules(filtered);
     }
@@ -1760,14 +1769,17 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               <div className="flex items-center gap-3">
                 <label className="text-sm text-gray-600 font-medium">Filter by Service:</label>
                 <div className="relative flex-1 max-w-xs">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Type service name..."
+                  <select
                     value={serviceFilter}
                     onChange={(e) => handleServiceFilterChange(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
-                  />
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 bg-white appearance-none cursor-pointer pr-8"
+                  >
+                    <option value="all">All Services</option>
+                    {getUniqueServices().map(serviceName => (
+                      <option key={serviceName} value={serviceName}>{serviceName}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
                 <span className="text-sm text-gray-500">
                   {filteredPropertySchedules.length} of {propertySchedules.length} schedules
@@ -1807,9 +1819,9 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 </div>
 
                 {/* Filter Applied Indicator */}
-                {serviceFilter && (
+                {serviceFilter && serviceFilter !== 'all' && (
                   <div className="mb-3 text-sm text-gray-600">
-                    <span className="font-medium">Filtered by:</span> "{serviceFilter}" — Showing {filteredPropertySchedules.length} schedule(s)
+                    <span className="font-medium">Filtered by:</span> {serviceFilter} — Showing {filteredPropertySchedules.length} schedule(s)
                   </div>
                 )}
 
@@ -1822,7 +1834,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 ) : filteredPropertySchedules.length === 0 ? (
                   <div className="py-8 text-center">
                     <Calendar className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">No schedules found{serviceFilter ? ` for "${serviceFilter}"` : ''}</p>
+                    <p className="text-sm text-gray-500">No schedules found{serviceFilter && serviceFilter !== 'all' ? ` for "${serviceFilter}"` : ''}</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
