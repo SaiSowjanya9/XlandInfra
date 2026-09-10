@@ -3067,11 +3067,11 @@ router.get('/schedules/pending-properties', requireManagerScope, async (req, res
           p.id,
           p.property_id as propertyId,
           p.name as propertyName,
-          p.property_type as propertyType,
-          p.zone,
-          p.area as areaName,
+          COALESCE(p.property_type, 'residential') as propertyType,
+          COALESCE(fe.zone, '') as zone,
+          COALESCE(p.city, '') as areaName,
           p.created_at as addedOn,
-          p.franchise_partner_id as fpId,
+          fe.franchise_partner_id as fpId,
           fe.id as estimateId,
           fe.estimate_id as estimateCode,
           fe.package_name as packageName,
@@ -3090,7 +3090,7 @@ router.get('/schedules/pending-properties', requireManagerScope, async (req, res
         INNER JOIN fp_estimates fe ON fe.property_id = p.id AND fe.status = 'approved'
         WHERE p.status = 'active'
           AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
-          AND p.franchise_partner_id = ?
+          AND fe.franchise_partner_id = ?
           AND p.id NOT IN (SELECT id FROM onboarded_properties)
       ) combined
       WHERE scheduledServiceCount = 0 AND totalScheduledVisits = 0
