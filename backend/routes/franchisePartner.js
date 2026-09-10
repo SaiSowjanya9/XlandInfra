@@ -6505,7 +6505,7 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
   try {
     // Use req.fpId which is correctly set by attachFPScope middleware
     const franchisePartnerId = req.fpId || req.user?.franchisePartnerId || req.user?.id;
-    const { page = 1, limit = 15, search, status, service, vendor, zone, propertyType } = req.query;
+    const { page = 1, limit = 15, search, status, service, vendor, zone, propertyType, startDate, endDate } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     
     console.log('[FP All Schedules] Query params:', { franchisePartnerId, page, limit, search, status });
@@ -6569,6 +6569,16 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
     // Join on numeric ID first, fallback to property_id string match
     let whereClause = 'WHERE op.franchise_partner_id = ?';
     const params = [franchisePartnerId];
+    
+    // Date range filter for calendar view
+    if (startDate) {
+      whereClause += ' AND sv.scheduled_date >= ?';
+      params.push(startDate);
+    }
+    if (endDate) {
+      whereClause += ' AND sv.scheduled_date <= ?';
+      params.push(endDate);
+    }
     
     // Search filter
     if (search) {

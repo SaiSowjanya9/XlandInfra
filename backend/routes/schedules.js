@@ -2706,11 +2706,21 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
     const userFpId = req.user?.franchisePartnerId || req.user?.fpId;
     const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin' || req.user?.role === 'operations_manager';
     
-    const { page = 1, limit = 15, search, status, service, vendor, zone, propertyType } = req.query;
+    const { page = 1, limit = 15, search, status, service, vendor, zone, propertyType, startDate, endDate } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     
     let whereClause = 'WHERE 1=1';
     const params = [];
+    
+    // Date range filter for calendar view
+    if (startDate) {
+      whereClause += ' AND sv.scheduled_date >= ?';
+      params.push(startDate);
+    }
+    if (endDate) {
+      whereClause += ' AND sv.scheduled_date <= ?';
+      params.push(endDate);
+    }
     
     // FP filter for non-admin users
     if (userFpId && !isAdmin) {

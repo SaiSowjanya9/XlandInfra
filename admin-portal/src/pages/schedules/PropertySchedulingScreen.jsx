@@ -3,7 +3,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, Building2, MapPin, Package, Calendar, CalendarDays, Clock,
   CheckCircle, AlertCircle, Sparkles, User, Wrench, RefreshCw, X, Save,
-  Star, Info, Check, ChevronLeft, ChevronRight, Phone, Edit2, HelpCircle
+  Star, Info, Check, ChevronLeft, ChevronRight, Phone, Edit2, HelpCircle,
+  ArrowRight, Eye, ListChecks, PlayCircle
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { 
@@ -15,6 +16,12 @@ import {
 } from '../../utils/scheduleGenerator';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+
+// Wizard step types
+const WIZARD_STEPS = {
+  SCHEDULING: 'scheduling',
+  REVIEW: 'review'
+};
 
 // Role-based permissions for scheduling
 const getSchedulePermissions = (portalType) => {
@@ -68,6 +75,18 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   // Vendor availability state for calendar
   const [vendorAvailability, setVendorAvailability] = useState({ bookings: {}, maxDaily: 5 });
   const [loadingAvailability, setLoadingAvailability] = useState(false);
+  
+  // Wizard state for step-by-step scheduling
+  const [wizardStep, setWizardStep] = useState(WIZARD_STEPS.SCHEDULING); // 'scheduling' or 'review'
+  const [currentServiceIndex, setCurrentServiceIndex] = useState(0);
+  
+  // Store planned schedules for each service (before final confirmation)
+  // Format: { serviceId: { service: {...}, visits: [...], isPlanned: boolean } }
+  const [plannedSchedules, setPlannedSchedules] = useState({});
+  
+  // Final review and confirmation state
+  const [showFinalReview, setShowFinalReview] = useState(false);
+  const [confirmingAllSchedules, setConfirmingAllSchedules] = useState(false);
 
   function getNextMonday() {
     const today = new Date();
@@ -1074,6 +1093,235 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     }
   };
 
+  // ===== WIZARD FUNCTIONS FOR STEP-BY-STEP SCHEDULING =====
+  
+  // Plan the current service (store locally, don't save to DB yet)
+  const handlePlanService = () => {
+    if (!selectedService || plannedVisits.length === 0 || !plannedVisits.some(v => v.date)) {
+      alert('Please select dates for this service first');
+      return;
+    }
+    
+    const currentServiceId = selectedService.id;
+    
+    // Store the planned schedule for this service
+    setPlannedSchedules(prev => ({
+      ...prev,
+      [currentServiceId]: {
+        service: { ...selectedService },
+        visits: [...plannedVisits],
+        isPlanned: true,
+        plannedAt: new Date()
+      }
+    }));
+    
+    // Update service status in the services array to 'Planned'
+    setServices(prev => prev.map(s => 
+      s.id === currentServiceId ? { ...s, status: 'Planned' } : s
+    ));
+    
+    // Move to next unscheduled service (pass the just-planned service id to avoid race condition)
+    handleMoveToNextService(currentServiceId);
+  };
+  
+  // Move to the next unscheduled service
+  // justPlannedServiceId is passed to handle race condition with state updates
+  const handleMoveToNextService = (justPlannedServiceId = null) => {
+    // Filter services: exclude Scheduled, Planned status, and any in plannedSchedules (plus the just-planned one)
+    const unscheduledServices = services.filter(s => {
+      if (s.status === 'Scheduled' || s.status === 'Planned') return false;
+      if (plannedSchedules[s.id]) return false;
+      if (justPlannedServiceId && s.id === justPlannedServiceId) return false;
+      return true;
+    });
+    
+    if (unscheduledServices.length > 0) {
+      // Find the next service to schedule
+      const currentIdx = services.findIndex(s => s.id === selectedService?.id);
+      let nextService = null;
+      
+      // Look for next unscheduled service after current
+      for (let i = currentIdx + 1; i < services.length; i++) {
+        const svc = services[i];
+        if (svc.status !== 'Scheduled' && svc.status !== 'Planned' && 
+            !plannedSchedules[svc.id] && svc.id !== justPlannedServiceId) {
+          nextService = svc;
+          break;
+        }
+      }
+      
+      // If not found, look from beginning
+      if (!nextService) {
+        for (let i = 0; i < currentIdx; i++) {
+          const svc = services[i];
+          if (svc.status !== 'Scheduled' && svc.status !== 'Planned' && 
+              !plannedSchedules[svc.id] && svc.id !== justPlannedServiceId) {
+            nextService = svc;
+            break;
+          }
+        }
+      }
+      
+      if (nextService) {
+        setSelectedService(nextService);
+        setPlannedVisits([]);
+        setSelectedSlot(null);
+        setCurrentServiceIndex(services.findIndex(s => s.id === nextService.id));
+      }
+    } else {
+      // All services are planned - move to review step
+      setWizardStep(WIZARD_STEPS.REVIEW);
+      setShowFinalReview(true);
+    }
+  };
+  
+  // Get count of services by status
+  const getServiceCounts = () => {
+    const planned = Object.keys(plannedSchedules).length;
+    const scheduled = services.filter(s => s.status === 'Scheduled').length;
+    const pending = services.length - planned - scheduled;
+    return { planned, scheduled, pending, total: services.length };
+  };
+  
+  // Check if all services are planned (ready for final review)
+  const allServicesPlanned = () => {
+    const unplannedServices = services.filter(s => 
+      s.status !== 'Scheduled' && !plannedSchedules[s.id]
+    );
+    return unplannedServices.length === 0 && Object.keys(plannedSchedules).length > 0;
+  };
+  
+  // Start/show final review
+  const handleShowFinalReview = () => {
+    setWizardStep(WIZARD_STEPS.REVIEW);
+    setShowFinalReview(true);
+  };
+  
+  // Confirm all planned schedules at once
+  const handleConfirmAllSchedules = async () => {
+    setConfirmingAllSchedules(true);
+    const token = getAuthToken();
+    
+    try {
+      // Format dates as YYYY-MM-DD to avoid timezone issues
+      const formatDateForAPI = (date) => {
+        if (!date) return null;
+        const d = date instanceof Date ? date : new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
+      const results = [];
+      const errors = [];
+      
+      // Process each planned service
+      for (const [serviceId, planData] of Object.entries(plannedSchedules)) {
+        const { service, visits } = planData;
+        
+        const schedulePayload = {
+          propertyId: propertyId,
+          serviceId: service.id,
+          serviceName: service.name,
+          serviceCategory: service.category,
+          vendorId: service.vendorId,
+          vendorName: service.vendorName,
+          frequency: service.frequency,
+          totalVisits: visits.length,
+          visits: visits.map(visit => ({
+            visitNumber: visit.visitNumber,
+            targetDate: formatDateForAPI(visit.date),
+            scheduledDate: formatDateForAPI(visit.date),
+            time: visit.time,
+            status: visit.isEdited ? 'modified' : 'scheduled',
+            isEdited: visit.isEdited || false
+          }))
+        };
+        
+        try {
+          const response = await fetch(`${API_BASE}/api/schedules/confirm`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(schedulePayload)
+          });
+          
+          const result = await response.json();
+          
+          if (response.ok && result.success) {
+            results.push({
+              serviceId,
+              serviceName: service.name,
+              scheduleId: result.data?.serviceScheduleId,
+              visitsCreated: result.data?.visitsCreated || visits.length
+            });
+            
+            // Update service status in the services array
+            setServices(prev => prev.map(s => 
+              s.id === service.id ? { ...s, status: 'Scheduled', scheduleId: result.data?.serviceScheduleId } : s
+            ));
+          } else {
+            errors.push({ serviceName: service.name, error: result.error || result.message || 'Failed' });
+          }
+        } catch (err) {
+          errors.push({ serviceName: service.name, error: err.message });
+        }
+      }
+      
+      // Clear planned schedules after confirmation
+      setPlannedSchedules({});
+      setShowFinalReview(false);
+      setWizardStep(WIZARD_STEPS.SCHEDULING);
+      
+      // Show result
+      if (errors.length === 0) {
+        const totalVisits = results.reduce((sum, r) => sum + r.visitsCreated, 0);
+        alert(`All schedules confirmed successfully!\n${results.length} services scheduled with ${totalVisits} total visits.`);
+      } else {
+        alert(`Partial success: ${results.length} services scheduled, ${errors.length} failed.\nFailed: ${errors.map(e => e.serviceName).join(', ')}`);
+      }
+      
+      // Refresh services list
+      fetchPropertyDetails();
+      
+    } catch (error) {
+      console.error('Error confirming all schedules:', error);
+      alert(`Error confirming schedules: ${error.message}`);
+    } finally {
+      setConfirmingAllSchedules(false);
+    }
+  };
+  
+  // Edit a planned service (go back to scheduling step)
+  const handleEditPlannedService = (serviceId) => {
+    const planData = plannedSchedules[serviceId];
+    if (planData) {
+      setSelectedService(planData.service);
+      setPlannedVisits(planData.visits);
+      setShowFinalReview(false);
+      setWizardStep(WIZARD_STEPS.SCHEDULING);
+    }
+  };
+  
+  // Remove a service from planned (go back to scheduling)
+  const handleRemoveFromPlanned = (serviceId) => {
+    setPlannedSchedules(prev => {
+      const updated = { ...prev };
+      delete updated[serviceId];
+      return updated;
+    });
+    
+    // Update service status back to Schedule
+    setServices(prev => prev.map(s => 
+      s.id === serviceId ? { ...s, status: 'Schedule' } : s
+    ));
+  };
+  
+  // ===== END WIZARD FUNCTIONS =====
+
   // Reschedule handlers
   const handleOpenReschedule = (visit) => {
     setRescheduleVisit(visit);
@@ -1220,14 +1468,63 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         </div>
       </div>
 
+      {/* Wizard Progress Bar */}
+      <div className="px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <ListChecks className="w-5 h-5 text-blue-600" />
+            <span className="font-semibold text-gray-900">Scheduling Progress</span>
+          </div>
+          <div className="flex items-center gap-4 text-sm">
+            <span className="flex items-center gap-1 text-amber-600">
+              <Clock className="w-4 h-4" />
+              {getServiceCounts().pending} Pending
+            </span>
+            <span className="flex items-center gap-1 text-blue-600">
+              <PlayCircle className="w-4 h-4" />
+              {getServiceCounts().planned} Planned
+            </span>
+            <span className="flex items-center gap-1 text-green-600">
+              <CheckCircle className="w-4 h-4" />
+              {getServiceCounts().scheduled} Confirmed
+            </span>
+          </div>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div 
+            className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500"
+            style={{ 
+              width: `${((getServiceCounts().planned + getServiceCounts().scheduled) / getServiceCounts().total) * 100}%` 
+            }}
+          />
+        </div>
+        {allServicesPlanned() && (
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-sm text-green-700 font-medium flex items-center gap-1">
+              <CheckCircle className="w-4 h-4" />
+              All services are planned! Ready for final review.
+            </span>
+            <button
+              onClick={handleShowFinalReview}
+              className="px-4 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1"
+            >
+              <Eye className="w-4 h-4" />
+              Review & Confirm All
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="p-6 flex gap-4 overflow-x-auto">
-        {/* Left: Services List */}
-        <div className="w-56 min-w-[224px] flex-shrink-0">
+        {/* Left: Services List with Step-by-Step Progress */}
+        <div className="w-64 min-w-[256px] flex-shrink-0">
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Services to Schedule</h3>
               <span className="text-sm text-gray-500">{services.length}</span>
             </div>
+            
+            {/* Step-by-step service list */}
             <div className="space-y-2">
               {services.length === 0 ? (
                 <div className="text-center py-8">
@@ -1237,36 +1534,99 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                   <p className="text-xs text-gray-400">Ensure the estimate is approved and has services defined.</p>
                 </div>
               ) : (
-                services.map(service => (
-                  <button
-                    key={service.id}
-                    onClick={() => setSelectedService(service)}
-                    className={`w-full p-3 rounded-lg border text-left transition-all ${
-                      selectedService?.id === service.id 
-                        ? 'border-blue-500 bg-blue-50' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${
-                        service.status === 'Scheduled' ? 'bg-green-500' : 'bg-gray-300'
-                      }`} />
-                      <span className="font-medium text-sm">{service.name}</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">{service.vendorName}</p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-gray-400">{service.frequency}</span>
-                      <span className="text-xs text-gray-400">{service.visits} visits</span>
-                      <span className={`text-xs px-2 py-0.5 rounded ${
-                        service.status === 'Scheduled' 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-blue-100 text-blue-700'
-                      }`}>{service.status}</span>
-                    </div>
-                  </button>
-                ))
+                services.map((service, index) => {
+                  const isPlanned = plannedSchedules[service.id]?.isPlanned;
+                  const isScheduled = service.status === 'Scheduled';
+                  const isSelected = selectedService?.id === service.id;
+                  const isPending = !isPlanned && !isScheduled;
+                  
+                  return (
+                    <button
+                      key={service.id}
+                      onClick={() => {
+                        if (!isScheduled) {
+                          setSelectedService(service);
+                          // Load planned visits if service was already planned
+                          if (plannedSchedules[service.id]) {
+                            setPlannedVisits(plannedSchedules[service.id].visits);
+                          } else {
+                            setPlannedVisits([]);
+                            setSelectedSlot(null);
+                          }
+                        }
+                      }}
+                      disabled={isScheduled}
+                      className={`w-full p-3 rounded-lg border-2 text-left transition-all relative ${
+                        isSelected 
+                          ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' 
+                          : isScheduled
+                            ? 'border-green-300 bg-green-50 cursor-not-allowed'
+                            : isPlanned
+                              ? 'border-indigo-300 bg-indigo-50 hover:border-indigo-400'
+                              : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {/* Step number indicator */}
+                      <div className={`absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                        isScheduled 
+                          ? 'bg-green-500 text-white'
+                          : isPlanned
+                            ? 'bg-indigo-500 text-white'
+                            : isSelected
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-gray-300 text-gray-600'
+                      }`}>
+                        {isScheduled ? <Check className="w-3 h-3" /> : isPlanned ? <Check className="w-3 h-3" /> : index + 1}
+                      </div>
+                      
+                      <div className="ml-3">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2.5 h-2.5 rounded-full ${
+                            isScheduled ? 'bg-green-500' : isPlanned ? 'bg-indigo-500' : 'bg-amber-400'
+                          }`} />
+                          <span className="font-medium text-sm">{service.name}</span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">{service.vendorName}</p>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-xs text-gray-400">{service.visits} visits</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            isScheduled 
+                              ? 'bg-green-100 text-green-700' 
+                              : isPlanned
+                                ? 'bg-indigo-100 text-indigo-700'
+                                : 'bg-amber-100 text-amber-700'
+                          }`}>
+                            {isScheduled ? 'Confirmed' : isPlanned ? 'Planned' : 'Pending'}
+                          </span>
+                        </div>
+                        
+                        {/* Show planned visit preview */}
+                        {isPlanned && plannedSchedules[service.id] && (
+                          <div className="mt-2 pt-2 border-t border-indigo-200">
+                            <p className="text-xs text-indigo-600">
+                              {plannedSchedules[service.id].visits.length} visits planned
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })
               )}
             </div>
+            
+            {/* Action buttons */}
+            {Object.keys(plannedSchedules).length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <button
+                  onClick={handleShowFinalReview}
+                  className="w-full py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white text-sm font-medium rounded-lg hover:from-green-700 hover:to-green-800 transition-all flex items-center justify-center gap-2"
+                >
+                  <Eye className="w-4 h-4" />
+                  Review All ({Object.keys(plannedSchedules).length})
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1527,9 +1887,10 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               })}
             </div>
             <div className="mt-4 space-y-2">
+              {/* Step 1: Generate visits from selected/recommended date */}
               <button 
                 onClick={handleUseRecommended}
-                disabled={!recommendedDates.length || !selectedService}
+                disabled={!recommendedDates.length || !selectedService || selectedService.status === 'Scheduled'}
                 className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               >
                 {selectedSlot?.date 
@@ -1537,177 +1898,44 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                   : `Use Recommended ${recommendedDates[0]?.dateStr ? `(${recommendedDates[0].dateStr})` : ''}`
                 }
               </button>
+              
+              {/* Step 2: Plan this service and move to next (shown when visits are generated) */}
+              {plannedVisits.length > 0 && plannedVisits.some(v => v.date) && selectedService?.status !== 'Scheduled' && (
+                <button 
+                  onClick={handlePlanService}
+                  className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-sm font-medium rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all flex items-center justify-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  Plan This Service
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
+              
               <button 
                 onClick={handleCustomizeDates}
-                disabled={!selectedService}
+                disabled={!selectedService || selectedService.status === 'Scheduled'}
                 className="w-full py-2 text-blue-600 text-sm font-medium hover:underline flex items-center justify-center gap-1 disabled:text-gray-400 disabled:cursor-not-allowed"
               >
                 <Edit2 className="w-3 h-3" /> Customize Dates
               </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* All Services Schedule Overview */}
-      <div className="px-6 pb-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-semibold text-gray-900">All Services Schedule Overview</h3>
-              <p className="text-sm text-gray-500">
-                {services.filter(s => s.status === 'Scheduled').length} of {services.length} services scheduled
-              </p>
-            </div>
-          </div>
-          
-          {/* Services Grid */}
-          <div className="space-y-3">
-            {services.map((service, index) => {
-              const isSelected = selectedService?.id === service.id;
-              const isScheduled = service.status === 'Scheduled';
-              const frequencyConfig = getFrequencyConfig(service.frequency);
               
-              return (
-                <div 
-                  key={service.id || index}
-                  className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                    isSelected 
-                      ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' 
-                      : isScheduled 
-                        ? 'border-green-300 bg-green-50 hover:border-green-400' 
-                        : 'border-amber-300 bg-amber-50 hover:border-amber-400'
-                  }`}
-                  onClick={() => {
-                    setSelectedService(service);
-                  }}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        isScheduled ? 'bg-green-100' : 'bg-amber-100'
-                      }`}>
-                        {isScheduled ? (
-                          <CheckCircle className="w-5 h-5 text-green-600" />
-                        ) : (
-                          <Clock className="w-5 h-5 text-amber-600" />
-                        )}
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900">{service.name}</h4>
-                        <p className="text-sm text-gray-500">
-                          {service.vendorName || 'Unassigned'} • {service.frequency}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
-                        isScheduled 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-amber-100 text-amber-700'
-                      }`}>
-                        {isScheduled ? (
-                          <>
-                            <CheckCircle className="w-3 h-3" />
-                            Scheduled
-                          </>
-                        ) : (
-                          <>
-                            <AlertCircle className="w-3 h-3" />
-                            Pending
-                          </>
-                        )}
-                      </span>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {service.visits || frequencyConfig?.visitsPerYear || 12} visits
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Show scheduled visits preview or pending message */}
-                  {isScheduled && isSelected && plannedVisits.length > 0 ? (
-                    <div className="mt-3 pt-3 border-t border-green-200">
-                      <p className="text-xs text-green-700 mb-2 font-medium">Scheduled Visits:</p>
-                      <div className="flex gap-2 overflow-x-auto pb-1">
-                        {plannedVisits.slice(0, 6).map((visit, i) => (
-                          <div key={i} className="flex-shrink-0 px-2 py-1 bg-white rounded border border-green-200 text-xs">
-                            <span className="font-medium">{visit.shortDateStr}</span>
-                            <span className="text-gray-400 ml-1">{visit.time}</span>
-                          </div>
-                        ))}
-                        {plannedVisits.length > 6 && (
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowAllVisitsModal(true);
-                            }}
-                            className="flex-shrink-0 px-2 py-1 bg-green-100 rounded text-xs text-green-700 font-medium hover:bg-green-200 transition-colors cursor-pointer"
-                          >
-                            +{plannedVisits.length - 6} more
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ) : isScheduled && !isSelected ? (
-                    <div className="mt-3 pt-3 border-t border-green-200">
-                      <p className="text-xs text-green-600">
-                        <CheckCircle className="w-3 h-3 inline mr-1" />
-                        Click to view scheduled visits
-                      </p>
-                    </div>
-                  ) : !isScheduled && isSelected ? (
-                    <div className="mt-3 pt-3 border-t border-amber-200">
-                      <p className="text-xs text-amber-700 mb-2">
-                        <AlertCircle className="w-3 h-3 inline mr-1" />
-                        Select a date from the calendar above or use recommended dates to schedule this service.
-                      </p>
-                      {plannedVisits.length > 0 && plannedVisits.some(v => v.date) && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePrepareConfirmation();
-                          }}
-                          className="mt-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                        >
-                          <Check className="w-4 h-4" />
-                          Review & Confirm Schedule
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="mt-3 pt-3 border-t border-amber-200">
-                      <p className="text-xs text-amber-600">
-                        <Clock className="w-3 h-3 inline mr-1" />
-                        Scheduling pending - Click to schedule this service
-                      </p>
-                    </div>
-                  )}
+              {/* Show already planned indicator */}
+              {plannedSchedules[selectedService?.id] && (
+                <div className="mt-2 p-2 bg-indigo-50 rounded-lg border border-indigo-200">
+                  <p className="text-xs text-indigo-700 text-center flex items-center justify-center gap-1">
+                    <CheckCircle className="w-3 h-3" />
+                    This service is planned
+                  </p>
+                  <button
+                    onClick={() => handleRemoveFromPlanned(selectedService.id)}
+                    className="w-full mt-2 text-xs text-indigo-600 hover:text-indigo-800 underline"
+                  >
+                    Remove from planned
+                  </button>
                 </div>
-              );
-            })}
-          </div>
-          
-          {/* Summary footer */}
-          {services.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
-              <div className="flex items-center gap-4 text-sm">
-                <span className="flex items-center gap-1 text-green-600">
-                  <CheckCircle className="w-4 h-4" />
-                  {services.filter(s => s.status === 'Scheduled').length} Scheduled
-                </span>
-                <span className="flex items-center gap-1 text-amber-600">
-                  <Clock className="w-4 h-4" />
-                  {services.filter(s => s.status !== 'Scheduled').length} Pending
-                </span>
-              </div>
-              {services.every(s => s.status === 'Scheduled') && (
-                <span className="flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                  <CheckCircle className="w-4 h-4" />
-                  All services scheduled!
-                </span>
               )}
             </div>
-          )}
+          </div>
         </div>
       </div>
       
@@ -1820,16 +2048,37 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               ))}
             </div>
             
-            {/* Confirm button for unscheduled services */}
+            {/* Action buttons for wizard flow */}
             {selectedService.status !== 'Scheduled' && plannedVisits.length > 0 && plannedVisits.some(v => v.date) && (
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={handlePrepareConfirmation}
-                  className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                >
-                  <Check className="w-4 h-4" />
-                  Review & Confirm Schedule
-                </button>
+              <div className="mt-4 flex justify-between items-center">
+                {/* Already planned indicator */}
+                {plannedSchedules[selectedService.id] && (
+                  <span className="text-sm text-indigo-600 flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4" />
+                    This service is planned and ready for final confirmation
+                  </span>
+                )}
+                
+                <div className="flex gap-3 ml-auto">
+                  {/* Plan This Service - Primary action for wizard flow */}
+                  <button
+                    onClick={handlePlanService}
+                    className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-medium rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all flex items-center gap-2 shadow-md"
+                  >
+                    <Check className="w-4 h-4" />
+                    Plan This Service
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                  
+                  {/* Optional: Direct confirm (bypasses wizard) */}
+                  <button
+                    onClick={handlePrepareConfirmation}
+                    className="px-4 py-2.5 text-gray-600 border border-gray-300 font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    Review Details
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -2291,6 +2540,181 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== FINAL REVIEW MODAL - Review All Planned Services ===== */}
+      {showFinalReview && Object.keys(plannedSchedules).length > 0 && (
+        <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 p-4 pt-8 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 px-6 py-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                    <ListChecks className="w-7 h-7" />
+                    Review All Planned Schedules
+                  </h2>
+                  <p className="text-green-100 text-sm mt-1">
+                    Review all {Object.keys(plannedSchedules).length} services before final confirmation
+                  </p>
+                </div>
+                <button 
+                  onClick={() => {
+                    setShowFinalReview(false);
+                    setWizardStep(WIZARD_STEPS.SCHEDULING);
+                  }}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Services List */}
+            <div className="p-6 overflow-auto max-h-[65vh]">
+              <div className="space-y-6">
+                {Object.entries(plannedSchedules).map(([serviceId, planData], svcIndex) => {
+                  const { service, visits } = planData;
+                  const totalVisits = visits.length;
+                  const firstVisit = visits[0];
+                  const lastVisit = visits[visits.length - 1];
+                  
+                  return (
+                    <div 
+                      key={serviceId}
+                      className="border-2 border-gray-200 rounded-xl overflow-hidden"
+                    >
+                      {/* Service Header */}
+                      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-5 py-4 border-b border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
+                              {svcIndex + 1}
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-bold text-gray-900">{service.name}</h3>
+                              <p className="text-sm text-gray-500">
+                                {service.vendorName} • {service.frequency} • {totalVisits} visits
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleEditPlannedService(serviceId)}
+                              className="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-1"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleRemoveFromPlanned(serviceId)}
+                              className="px-3 py-1.5 text-sm text-red-600 hover:text-red-800 border border-red-300 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {/* Quick Summary */}
+                        <div className="mt-3 flex items-center gap-6 text-sm">
+                          <span className="flex items-center gap-1 text-gray-600">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            First: <strong>{firstVisit?.shortDateStr || firstVisit?.dateStr}</strong>
+                          </span>
+                          <span className="flex items-center gap-1 text-gray-600">
+                            <CalendarDays className="w-4 h-4 text-gray-400" />
+                            Last: <strong>{lastVisit?.shortDateStr || lastVisit?.dateStr}</strong>
+                          </span>
+                          <span className="flex items-center gap-1 text-gray-600">
+                            <Clock className="w-4 h-4 text-gray-400" />
+                            Default Time: <strong>{firstVisit?.time}</strong>
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Visits Grid */}
+                      <div className="p-4 bg-gray-50">
+                        <div className="flex gap-2 overflow-x-auto pb-2">
+                          {visits.slice(0, 12).map((visit, idx) => (
+                            <div 
+                              key={idx}
+                              className={`flex-shrink-0 w-28 p-2.5 rounded-lg border text-center ${
+                                visit.isEdited 
+                                  ? 'border-amber-300 bg-amber-50' 
+                                  : 'border-indigo-200 bg-white'
+                              }`}
+                            >
+                              <p className="text-xs text-gray-500 font-medium">Visit {visit.visitNumber}</p>
+                              <p className="font-semibold text-sm mt-0.5">{visit.shortDateStr || visit.dateStr}</p>
+                              <p className="text-xs text-gray-500">{visit.time}</p>
+                              {visit.isEdited && (
+                                <span className="inline-block mt-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded">
+                                  Modified
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                          {visits.length > 12 && (
+                            <div className="flex-shrink-0 w-28 p-2.5 rounded-lg border border-gray-200 bg-gray-100 flex items-center justify-center">
+                              <span className="text-sm text-gray-500 font-medium">
+                                +{visits.length - 12} more
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-gray-100 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="text-sm">
+                  <span className="text-gray-500">Total:</span>
+                  <span className="ml-2 font-bold text-gray-900">
+                    {Object.keys(plannedSchedules).length} services
+                  </span>
+                  <span className="mx-2 text-gray-300">•</span>
+                  <span className="font-bold text-gray-900">
+                    {Object.values(plannedSchedules).reduce((sum, p) => sum + p.visits.length, 0)} visits
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      setShowFinalReview(false);
+                      setWizardStep(WIZARD_STEPS.SCHEDULING);
+                    }}
+                    className="px-5 py-2.5 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Back to Editing
+                  </button>
+                  <button
+                    onClick={handleConfirmAllSchedules}
+                    disabled={confirmingAllSchedules || Object.keys(plannedSchedules).length === 0}
+                    className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
+                  >
+                    {confirmingAllSchedules ? (
+                      <>
+                        <RefreshCw className="w-5 h-5 animate-spin" />
+                        Confirming All...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-5 h-5" />
+                        Confirm All Schedules
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

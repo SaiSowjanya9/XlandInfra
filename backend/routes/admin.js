@@ -4549,11 +4549,21 @@ router.get('/schedules/pending-properties', authenticate, async (req, res) => {
 // Get all schedules (visits) with filtering and pagination - Admin view
 router.get('/schedules/all', authenticate, async (req, res) => {
   try {
-    const { page = 1, limit = 15, search, status, service, vendor, zone, propertyType, fpId } = req.query;
+    const { page = 1, limit = 15, search, status, service, vendor, zone, propertyType, fpId, startDate, endDate } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     
     let whereClause = 'WHERE 1=1';
     const params = [];
+    
+    // Date range filter for calendar view
+    if (startDate) {
+      whereClause += ' AND sv.scheduled_date >= ?';
+      params.push(startDate);
+    }
+    if (endDate) {
+      whereClause += ' AND sv.scheduled_date <= ?';
+      params.push(endDate);
+    }
     
     // Optional FP filter
     if (fpId) {

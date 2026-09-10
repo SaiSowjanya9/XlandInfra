@@ -3185,11 +3185,21 @@ router.get('/schedules/pending-count', requireManagerScope, async (req, res) => 
 router.get('/schedules/all', requireManagerScope, async (req, res) => {
   try {
     const franchisePartnerId = req.franchisePartnerId;
-    const { page = 1, limit = 15, search, status, service, vendor, zone, propertyType } = req.query;
+    const { page = 1, limit = 15, search, status, service, vendor, zone, propertyType, startDate, endDate } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     
     let whereClause = 'WHERE op.franchise_partner_id = ?';
     const params = [franchisePartnerId];
+    
+    // Date range filter for calendar view
+    if (startDate) {
+      whereClause += ' AND sv.scheduled_date >= ?';
+      params.push(startDate);
+    }
+    if (endDate) {
+      whereClause += ' AND sv.scheduled_date <= ?';
+      params.push(endDate);
+    }
     
     // Search filter
     if (search) {
