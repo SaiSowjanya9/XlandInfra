@@ -2263,32 +2263,33 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-              <p className="text-sm text-gray-500">
-                {confirmationSchedule.filter(v => v.isEdited).length} of {confirmationSchedule.length} visits modified
+            {/* Modal Footer - Responsive */}
+            <div className="px-3 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+              <p className="text-xs sm:text-sm text-gray-500 text-center sm:text-left">
+                {confirmationSchedule.filter(v => v.isEdited).length} of {confirmationSchedule.length} modified
               </p>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center justify-end gap-2 sm:gap-3">
                 <button
                   onClick={() => setShowConfirmation(false)}
-                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleConfirmSchedule}
                   disabled={confirmingSchedule}
-                  className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  className="px-4 sm:px-6 py-1.5 sm:py-2 bg-blue-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-1.5 sm:gap-2"
                 >
                   {confirmingSchedule ? (
                     <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Confirming...
+                      <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
+                      <span className="hidden sm:inline">Confirming...</span>
+                      <span className="sm:hidden">...</span>
                     </>
                   ) : (
                     <>
-                      <Check className="w-4 h-4" />
-                      Confirm Schedule
+                      <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      Confirm
                     </>
                   )}
                 </button>
@@ -2298,21 +2299,21 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         </div>
       )}
 
-      {/* Reschedule Modal */}
+      {/* Reschedule Modal - Responsive */}
       {showRescheduleModal && rescheduleVisit && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-2 sm:p-4 pt-4 sm:pt-20 overflow-y-auto">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Reschedule Visit {rescheduleVisit.visitNumber}</h3>
-              <p className="text-sm text-gray-500 mt-1">
+            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Reschedule Visit {rescheduleVisit.visitNumber}</h3>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1">
                 Current: {rescheduleVisit.scheduledDateStr} at {rescheduleVisit.time}
               </p>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
               {/* New Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">New Date</label>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">New Date</label>
                 <input
                   type="date"
                   id="reschedule-date"
@@ -2323,17 +2324,17 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                     const day = String(d.getDate()).padStart(2, '0');
                     return `${year}-${month}-${day}`;
                   })() : ''}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
               {/* New Time */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">New Time</label>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">New Time</label>
                 <select
                   id="reschedule-time"
                   defaultValue={rescheduleVisit.time}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   {['8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', 
                     '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM', 
@@ -2345,20 +2346,20 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
 
               {/* Reason */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Reason (Optional)</label>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Reason (Optional)</label>
                 <input
                   type="text"
                   id="reschedule-reason"
                   placeholder="Customer requested change..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
               {/* Reschedule Scope */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <label className="block text-sm font-medium text-gray-700 mb-3">Reschedule Scope</label>
+              <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">Reschedule Scope</label>
                 <div className="space-y-2">
-                  <label className="flex items-start gap-3 cursor-pointer">
+                  <label className="flex items-start gap-2 sm:gap-3 cursor-pointer">
                     <input
                       type="radio"
                       name="reschedule-scope"
@@ -2368,11 +2369,11 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                       className="mt-0.5"
                     />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">This Visit Only</p>
-                      <p className="text-xs text-gray-500">Only this occurrence will be changed. Future visits remain unchanged.</p>
+                      <p className="text-xs sm:text-sm font-medium text-gray-900">This Visit Only</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500">Only this occurrence will be changed.</p>
                     </div>
                   </label>
-                  <label className="flex items-start gap-3 cursor-pointer">
+                  <label className="flex items-start gap-2 sm:gap-3 cursor-pointer">
                     <input
                       type="radio"
                       name="reschedule-scope"
@@ -2382,25 +2383,25 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                       className="mt-0.5"
                     />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">This and Future Visits</p>
-                      <p className="text-xs text-gray-500">Shift this and all future visits by the same amount.</p>
+                      <p className="text-xs sm:text-sm font-medium text-gray-900">This and Future Visits</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500">Shift this and all future visits.</p>
                     </div>
                   </label>
                 </div>
-                <p className="text-xs text-amber-600 mt-3 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  Default: "This Visit Only" - recommended for customer requests
+                <p className="text-[10px] sm:text-xs text-amber-600 mt-2 sm:mt-3 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                  Default: "This Visit Only"
                 </p>
               </div>
             </div>
 
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+            <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2 sm:gap-3">
               <button
                 onClick={() => {
                   setShowRescheduleModal(false);
                   setRescheduleVisit(null);
                 }}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 Cancel
               </button>
@@ -2411,7 +2412,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                   const reason = document.getElementById('reschedule-reason').value;
                   handleReschedule(newDate, newTime, reason);
                 }}
-                className="px-4 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition-colors"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition-colors"
               >
                 Reschedule
               </button>
@@ -2420,21 +2421,21 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         </div>
       )}
 
-      {/* Edit Recurrence Modal */}
+      {/* Edit Recurrence Modal - Responsive */}
       {showRecurrenceModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-2 sm:p-4 pt-4 sm:pt-20 overflow-y-auto">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Edit Recurrence</h3>
-              <p className="text-sm text-gray-500 mt-1">
+            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Edit Recurrence</h3>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1">
                 Change the frequency and number of visits
               </p>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
               {/* Frequency Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                   Frequency
                 </label>
                 <select
@@ -2448,19 +2449,19 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                       setEditVisitCount(config.visitsPerYear);
                     }
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="monthly">Monthly (12 visits/year)</option>
-                  <option value="every 2 months">Every 2 Months (6 visits/year)</option>
-                  <option value="quarterly">Quarterly (4 visits/year)</option>
-                  <option value="half-yearly">Half-Yearly (2 visits/year)</option>
-                  <option value="yearly">Yearly (1 visit/year)</option>
+                  <option value="monthly">Monthly (12/year)</option>
+                  <option value="every 2 months">Every 2 Months (6/year)</option>
+                  <option value="quarterly">Quarterly (4/year)</option>
+                  <option value="half-yearly">Half-Yearly (2/year)</option>
+                  <option value="yearly">Yearly (1/year)</option>
                 </select>
               </div>
 
               {/* Number of Visits */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                   Number of Visits
                 </label>
                 <input
@@ -2469,74 +2470,74 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                   max="52"
                   value={editVisitCount}
                   onChange={(e) => setEditVisitCount(parseInt(e.target.value) || 1)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Visits will be scheduled starting from the first service date
+                <p className="text-[10px] sm:text-xs text-gray-500 mt-1">
+                  Visits scheduled from first service date
                 </p>
               </div>
 
               {/* Current vs New Preview */}
               {plannedVisits.length > 0 && (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Current Schedule</p>
-                  <p className="text-sm text-gray-800">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3">
+                  <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide mb-0.5 sm:mb-1">Current</p>
+                  <p className="text-xs sm:text-sm text-gray-800">
                     {plannedVisits.length} visits, {selectedService?.frequency || 'monthly'}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    First visit: {plannedVisits[0]?.shortDateStr || plannedVisits[0]?.dateStr}
+                  <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">
+                    First: {plannedVisits[0]?.shortDateStr || plannedVisits[0]?.dateStr}
                   </p>
                 </div>
               )}
               
               {/* New Preview */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-xs text-blue-500 uppercase tracking-wide mb-1">New Schedule</p>
-                <p className="text-sm text-blue-800">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">
+                <p className="text-[10px] sm:text-xs text-blue-500 uppercase tracking-wide mb-0.5 sm:mb-1">New</p>
+                <p className="text-xs sm:text-sm text-blue-800">
                   <strong>{editVisitCount} visits, {editFrequency}</strong>
                 </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  Starting from {selectedSlot ? formatDateShort(selectedSlot.date) : (plannedVisits[0]?.shortDateStr || 'selected date')}
+                <p className="text-[10px] sm:text-xs text-blue-600 mt-0.5 sm:mt-1">
+                  From {selectedSlot ? formatDateShort(selectedSlot.date) : (plannedVisits[0]?.shortDateStr || 'selected date')}
                 </p>
               </div>
             </div>
 
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+            <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2 sm:gap-3">
               <button
                 onClick={() => setShowRecurrenceModal(false)}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleApplyRecurrence}
-                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Apply Changes
+                Apply
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* All Visits Modal */}
+      {/* All Visits Modal - Responsive */}
       {showAllVisitsModal && selectedService && plannedVisits.length > 0 && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-10 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-2 sm:p-4 pt-4 sm:pt-10 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
+            <div className="bg-gradient-to-r from-green-600 to-green-700 px-4 sm:px-6 py-3 sm:py-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-white">All Scheduled Visits</h2>
-                  <p className="text-green-100 text-sm mt-1">
+                <div className="min-w-0">
+                  <h2 className="text-lg sm:text-xl font-bold text-white truncate">All Scheduled Visits</h2>
+                  <p className="text-green-100 text-xs sm:text-sm mt-0.5 sm:mt-1 truncate">
                     {selectedService.name} • {plannedVisits.length} visits
                   </p>
                 </div>
                 <button 
                   onClick={() => setShowAllVisitsModal(false)}
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                  className="p-1.5 sm:p-2 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0"
                 >
-                  <X className="w-5 h-5 text-white" />
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </button>
               </div>
             </div>
