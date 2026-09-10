@@ -1,23 +1,16 @@
--- Schema V26: Add schedule_time column to onboarded_vendors
--- Adds schedule_time field for vendor's preferred working hours
+-- Schema V26: Add working hours columns to onboarded_vendors
+-- Adds working_hours_from and working_hours_to fields for vendor's working hours range
 
 USE xland_pm;
 
--- Add schedule_time column to onboarded_vendors table
--- First check if column exists, if not add it
-SET @dbname = 'xland_pm';
-SET @tablename = 'onboarded_vendors';
-SET @columnname = 'schedule_time';
-SET @preparedStatement = (SELECT IF(
-  (
-    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = @dbname
-    AND TABLE_NAME = @tablename
-    AND COLUMN_NAME = @columnname
-  ) > 0,
-  'SELECT "Column already exists"',
-  'ALTER TABLE onboarded_vendors ADD COLUMN schedule_time VARCHAR(20) DEFAULT NULL AFTER coverage_per_day'
-));
-PREPARE alterIfNotExists FROM @preparedStatement;
-EXECUTE alterIfNotExists;
-DEALLOCATE PREPARE alterIfNotExists;
+-- Add working_hours_from column
+ALTER TABLE onboarded_vendors ADD COLUMN IF NOT EXISTS working_hours_from VARCHAR(10) DEFAULT NULL AFTER coverage_per_day;
+
+-- Add working_hours_to column  
+ALTER TABLE onboarded_vendors ADD COLUMN IF NOT EXISTS working_hours_to VARCHAR(10) DEFAULT NULL AFTER working_hours_from;
+
+-- If schedule_time column exists, migrate data to new columns and drop it
+-- (Run manually if needed:
+--   UPDATE onboarded_vendors SET working_hours_from = schedule_time WHERE schedule_time IS NOT NULL;
+--   ALTER TABLE onboarded_vendors DROP COLUMN schedule_time;
+-- )

@@ -320,11 +320,15 @@ const SupervisorVendors = ({ user }) => {
 
               {/* Coverage */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Coverage</h3>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Coverage & Working Hours</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-500">Coverage Per Day</p>
                     <p className="font-medium text-gray-900">{selectedVendor.coverage_per_day || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Working Hours</p>
+                    <p className="font-medium text-purple-700">{selectedVendor.working_hours_from && selectedVendor.working_hours_to ? `${selectedVendor.working_hours_from} - ${selectedVendor.working_hours_to}` : '-'}</p>
                   </div>
                 </div>
               </div>

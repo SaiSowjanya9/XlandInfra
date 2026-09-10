@@ -1265,7 +1265,8 @@ router.put('/work-orders/:id', authenticate, managerOrAdmin, async (req, res) =>
 router.get('/vendors', async (req, res) => {
   try {
     const [vendors] = await pool.execute(
-      `SELECT id, vendor_id, company_name, owner_name, service_type, phone, email, status 
+      `SELECT id, vendor_id, company_name, owner_name, service_type, phone, email, status,
+              rate_per_visit, coverage_per_day, working_hours_from, working_hours_to, zone, area_name, division
        FROM onboarded_vendors WHERE status = 'active' OR is_active = 1 ORDER BY company_name`
     );
     res.json({ success: true, vendors });

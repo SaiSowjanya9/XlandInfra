@@ -263,6 +263,8 @@ const VendorDetails = () => {
       'POC Email': vendor.pocEmail || vendor.poc_email || '-',
       'Rate Per Visit': `₹${vendor.ratePerVisit || vendor.rate_per_visit || 0}`,
       'Coverage Per Day': vendor.coveragePerDay || vendor.coverage_per_day || 0,
+      'Working Hours': (vendor.workingHoursFrom || vendor.working_hours_from) && (vendor.workingHoursTo || vendor.working_hours_to) 
+        ? `${vendor.workingHoursFrom || vendor.working_hours_from} - ${vendor.workingHoursTo || vendor.working_hours_to}` : '-',
       'Created By': vendor.created_by_name || vendor.createdBy || 'System',
       'Status': vendor.status || 'active',
       'Created': new Date(vendor.createdAt || vendor.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })
@@ -285,6 +287,8 @@ const VendorDetails = () => {
       'Vendor Mobile': (() => { const mobile = v.ownerMobile || v.owner_mobile || v.phone || '-'; return mobile.startsWith('+') ? mobile : `${v.ownerCountryCode || v.owner_country_code || '+91'} ${mobile}`; })(),
       'Rate Per Visit': `₹${v.ratePerVisit || v.rate_per_visit || 0}`,
       'Coverage Per Day': v.coveragePerDay || v.coverage_per_day || 0,
+      'Working Hours': (v.workingHoursFrom || v.working_hours_from) && (v.workingHoursTo || v.working_hours_to) 
+        ? `${v.workingHoursFrom || v.working_hours_from} - ${v.workingHoursTo || v.working_hours_to}` : '-',
       'Created By': v.created_by_name || v.createdBy || 'System',
       'Status': v.status || 'active',
       'Created': new Date(v.createdAt || v.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })
@@ -913,12 +917,13 @@ const VendorDetails = () => {
                   <div><span className="text-xs text-gray-400">Aadhar</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerAadhar || viewVendor.owner_aadhar || '-'}</p></div>
                 </div>
               </div>
-              {/* Rate & Coverage */}
+              {/* Rate, Coverage & Working Hours */}
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-3">Rate & Coverage</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <h3 className="text-sm font-medium text-gray-500 mb-3">Rate, Coverage & Working Hours</h3>
+                <div className="grid grid-cols-3 gap-4">
                   <div><span className="text-xs text-gray-400">Rate Per Visit</span><p className="text-sm font-medium text-gray-900">₹{viewVendor.ratePerVisit || viewVendor.rate_per_visit || 0}</p></div>
                   <div><span className="text-xs text-gray-400">Coverage Per Day</span><p className="text-sm font-medium text-gray-900">{viewVendor.coveragePerDay || viewVendor.coverage_per_day || 0}</p></div>
+                  <div><span className="text-xs text-gray-400">Working Hours</span><p className="text-sm font-medium text-purple-700">{(viewVendor.workingHoursFrom || viewVendor.working_hours_from) && (viewVendor.workingHoursTo || viewVendor.working_hours_to) ? `${viewVendor.workingHoursFrom || viewVendor.working_hours_from} - ${viewVendor.workingHoursTo || viewVendor.working_hours_to}` : '-'}</p></div>
                 </div>
               </div>
               {/* Manager Details */}
