@@ -295,6 +295,7 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
           (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = op.id AND pva.is_active = 1) as assignedVendors,
           (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = op.id AND pss.scheduling_status IN ('scheduled', 'completed')) as scheduledServiceCount,
           (SELECT COUNT(*) FROM scheduled_visits sv WHERE sv.property_id = op.id) as totalScheduledVisits,
+          JSON_LENGTH(COALESCE(fe.package_services, fpamc.services, '[]')) as totalServices,
           'onboarded' as source
         FROM onboarded_properties op
         INNER JOIN (
@@ -333,6 +334,7 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
           (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = p.id AND pva.is_active = 1) as assignedVendors,
           (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = p.id AND pss.scheduling_status IN ('scheduled', 'completed')) as scheduledServiceCount,
           (SELECT COUNT(*) FROM scheduled_visits sv WHERE sv.property_id = p.id) as totalScheduledVisits,
+          JSON_LENGTH(COALESCE(fe.package_services, fpamc.services, '[]')) as totalServices,
           'legacy' as source
         FROM properties p
         INNER JOIN (
@@ -346,7 +348,7 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
         WHERE p.status = 'active'
           AND p.id NOT IN (SELECT id FROM onboarded_properties)
       ) combined
-      WHERE scheduledServiceCount = 0 AND totalScheduledVisits = 0
+      WHERE scheduledServiceCount < totalServices OR totalServices = 0
     `;
     
     // Filter by FP for non-admin users

@@ -167,6 +167,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   const [propertySchedules, setPropertySchedules] = useState([]); // All schedules for the property
   const [filteredPropertySchedules, setFilteredPropertySchedules] = useState([]);
   const [serviceFilter, setServiceFilter] = useState('');
+  const [statusFilterPdf, setStatusFilterPdf] = useState(''); // Status filter for PDF modal
   const [loadingPropertySchedules, setLoadingPropertySchedules] = useState(false);
   const [generatingPDF, setGeneratingPDF] = useState(false);
   const scheduleDetailsRef = useRef(null);
@@ -448,6 +449,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   const handleScheduleDetails = async (schedule) => {
     setScheduleDetailsData(schedule);
     setServiceFilter('');
+    setStatusFilterPdf(''); // Reset status filter
     setShowScheduleDetailsModal(true);
     setLoadingPropertySchedules(true);
     
@@ -485,17 +487,42 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     return Array.from(serviceSet).sort();
   };
 
+  // Get unique statuses from current schedules
+  const getUniqueStatuses = () => {
+    const statusSet = new Set();
+    propertySchedules.forEach(s => {
+      if (s.status) statusSet.add(s.status);
+    });
+    return Array.from(statusSet).sort();
+  };
+
+  // Apply all PDF modal filters (service + status)
+  const applyPdfFilters = (serviceFlt, statusFlt) => {
+    let filtered = [...propertySchedules];
+    
+    // Apply service filter
+    if (serviceFlt && serviceFlt !== 'all') {
+      filtered = filtered.filter(s => s.serviceName === serviceFlt);
+    }
+    
+    // Apply status filter
+    if (statusFlt && statusFlt !== 'all') {
+      filtered = filtered.filter(s => s.status === statusFlt);
+    }
+    
+    setFilteredPropertySchedules(filtered);
+  };
+
   // Handle service filter change
   const handleServiceFilterChange = (value) => {
     setServiceFilter(value);
-    if (!value || value === 'all') {
-      setFilteredPropertySchedules(propertySchedules);
-    } else {
-      const filtered = propertySchedules.filter(s => 
-        s.serviceName === value
-      );
-      setFilteredPropertySchedules(filtered);
-    }
+    applyPdfFilters(value, statusFilterPdf);
+  };
+
+  // Handle status filter change for PDF modal
+  const handleStatusFilterPdfChange = (value) => {
+    setStatusFilterPdf(value);
+    applyPdfFilters(serviceFilter, value);
   };
 
   // Generate and download/print PDF
@@ -1764,24 +1791,48 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               </div>
             </div>
 
-            {/* Service Filter - Outside PDF area */}
+            {/* Filters - Outside PDF area */}
             <div className="px-5 py-3 border-b bg-white">
-              <div className="flex items-center gap-3">
-                <label className="text-sm text-gray-600 font-medium">Filter by Service:</label>
-                <div className="relative flex-1 max-w-xs">
-                  <select
-                    value={serviceFilter}
-                    onChange={(e) => handleServiceFilterChange(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 bg-white appearance-none cursor-pointer pr-8"
-                  >
-                    <option value="all">All Services</option>
-                    {getUniqueServices().map(serviceName => (
-                      <option key={serviceName} value={serviceName}>{serviceName}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <div className="flex items-center flex-wrap gap-4">
+                {/* Service Filter */}
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600 font-medium whitespace-nowrap">Service:</label>
+                  <div className="relative">
+                    <select
+                      value={serviceFilter}
+                      onChange={(e) => handleServiceFilterChange(e.target.value)}
+                      className="w-40 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 bg-white appearance-none cursor-pointer pr-8"
+                    >
+                      <option value="all">All Services</option>
+                      {getUniqueServices().map(serviceName => (
+                        <option key={serviceName} value={serviceName}>{serviceName}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  </div>
                 </div>
-                <span className="text-sm text-gray-500">
+
+                {/* Status Filter */}
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600 font-medium whitespace-nowrap">Status:</label>
+                  <div className="relative">
+                    <select
+                      value={statusFilterPdf}
+                      onChange={(e) => handleStatusFilterPdfChange(e.target.value)}
+                      className="w-36 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 bg-white appearance-none cursor-pointer pr-8"
+                    >
+                      <option value="all">All Status</option>
+                      {getUniqueStatuses().map(status => (
+                        <option key={status} value={status}>
+                          {status === 'scheduled' ? 'Scheduled' : status === 'completed' ? 'Completed' : status === 'cancelled' ? 'Cancelled' : status}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                <span className="text-sm text-gray-500 ml-auto">
                   {filteredPropertySchedules.length} of {propertySchedules.length} schedules
                 </span>
               </div>
@@ -1819,9 +1870,13 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 </div>
 
                 {/* Filter Applied Indicator */}
-                {serviceFilter && serviceFilter !== 'all' && (
+                {((serviceFilter && serviceFilter !== 'all') || (statusFilterPdf && statusFilterPdf !== 'all')) && (
                   <div className="mb-3 text-sm text-gray-600">
-                    <span className="font-medium">Filtered by:</span> {serviceFilter} — Showing {filteredPropertySchedules.length} schedule(s)
+                    <span className="font-medium">Filtered by:</span>{' '}
+                    {serviceFilter && serviceFilter !== 'all' && <span>Service: {serviceFilter}</span>}
+                    {serviceFilter && serviceFilter !== 'all' && statusFilterPdf && statusFilterPdf !== 'all' && <span> | </span>}
+                    {statusFilterPdf && statusFilterPdf !== 'all' && <span>Status: {statusFilterPdf === 'scheduled' ? 'Scheduled' : statusFilterPdf === 'completed' ? 'Completed' : statusFilterPdf === 'cancelled' ? 'Cancelled' : statusFilterPdf}</span>}
+                    {' '}— Showing {filteredPropertySchedules.length} schedule(s)
                   </div>
                 )}
 
@@ -1834,7 +1889,10 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 ) : filteredPropertySchedules.length === 0 ? (
                   <div className="py-8 text-center">
                     <Calendar className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">No schedules found{serviceFilter && serviceFilter !== 'all' ? ` for "${serviceFilter}"` : ''}</p>
+                    <p className="text-sm text-gray-500">
+                      No schedules found
+                      {(serviceFilter && serviceFilter !== 'all') || (statusFilterPdf && statusFilterPdf !== 'all') ? ' with selected filters' : ''}
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-6">
