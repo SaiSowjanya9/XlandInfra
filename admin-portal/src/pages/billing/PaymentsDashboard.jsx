@@ -237,26 +237,38 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
       // Calculate stats using ALL payments (not filtered by date)
       const today = new Date().toISOString().split('T')[0];
       
-      // Total Invoice Amount
-      const totalInvoiceAmount = invoices.reduce((sum, inv) => sum + (parseFloat(inv.totalAmount || inv.total_amount) || 0), 0);
+      // Filter for active invoices only (exclude cancelled, void, draft)
+      const activeInvoices = invoices.filter(inv => {
+        const status = (inv.status || '').toLowerCase();
+        return status !== 'cancelled' && status !== 'void' && status !== 'draft';
+      });
       
-      // Amount Collected (paid payments) - from ALL payments
-      const allPaidPayments = allPayments.filter(p => p.status === 'paid' || p.status === 'verified');
+      // Filter for active payments only (exclude failed, refunded, cancelled)
+      const activePayments = allPayments.filter(p => {
+        const status = (p.status || '').toLowerCase();
+        return status !== 'failed' && status !== 'refunded' && status !== 'cancelled';
+      });
+      
+      // Total Invoice Amount - only from active invoices
+      const totalInvoiceAmount = activeInvoices.reduce((sum, inv) => sum + (parseFloat(inv.totalAmount || inv.total_amount) || 0), 0);
+      
+      // Amount Collected (paid payments) - from active payments only
+      const allPaidPayments = activePayments.filter(p => p.status === 'paid' || p.status === 'verified');
       const amountCollected = allPaidPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
       
-      // Pending Amount (unpaid invoices)
-      const pendingInvoices = invoices.filter(inv => {
+      // Pending Amount (unpaid active invoices)
+      const pendingInvoices = activeInvoices.filter(inv => {
         const payStatus = inv.paymentStatus || inv.payment_status || inv.status;
-        return payStatus !== 'paid' && payStatus !== 'cancelled' && payStatus !== 'void';
+        return payStatus !== 'paid';
       });
       const pendingAmount = pendingInvoices.reduce((sum, inv) => {
         return sum + (parseFloat(inv.balanceAmount || inv.balance_amount) || parseFloat(inv.totalAmount || inv.total_amount) || 0);
       }, 0);
       
-      // Overdue Amount
-      const overdueInvoices = invoices.filter(inv => {
+      // Overdue Amount - from active invoices only
+      const overdueInvoices = activeInvoices.filter(inv => {
         const payStatus = inv.paymentStatus || inv.payment_status || inv.status;
-        if (payStatus === 'paid' || payStatus === 'cancelled' || payStatus === 'void') return false;
+        if (payStatus === 'paid') return false;
         const dueDate = new Date(inv.dueDate || inv.due_date);
         return dueDate < new Date();
       });
@@ -264,14 +276,14 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         return sum + (parseFloat(inv.balanceAmount || inv.balance_amount) || parseFloat(inv.totalAmount || inv.total_amount) || 0);
       }, 0);
       
-      // Today's Collections - from ALL payments
-      const todaysPayments = allPayments.filter(p => {
+      // Today's Collections - from active payments only
+      const todaysPayments = activePayments.filter(p => {
         const paymentDate = new Date(p.paymentDate || p.payment_date || p.created_at).toISOString().split('T')[0];
         return paymentDate === today && (p.status === 'paid' || p.status === 'verified');
       });
       const todaysCollections = todaysPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
       
-      // Failed Payments - from ALL payments
+      // Failed Payments - keep for reference but show 0 if no failures
       const failedPaymentsList = allPayments.filter(p => p.status === 'failed');
       const failedPayments = failedPaymentsList.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
 
@@ -302,19 +314,17 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         percentage: amountCollected > 0 ? ((value / amountCollected) * 100).toFixed(1) : 0
       })).sort((a, b) => b.value - a.value);
 
-      // Payments by Status - from ALL payments
+      // Payments by Status - from active payments only (exclude failed, refunded, cancelled)
       const statusColors = {
         paid: '#10B981',
         verified: '#10B981',
         partially_paid: '#F59E0B',
-        failed: '#EF4444',
-        refunded: '#6B7280',
         verification_pending: '#F97316',
         pending: '#3B82F6'
       };
       
       const paymentsByStatusMap = {};
-      allPayments.forEach(p => {
+      activePayments.forEach(p => {
         const status = p.status || 'pending';
         if (!paymentsByStatusMap[status]) {
           paymentsByStatusMap[status] = 0;
@@ -322,7 +332,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         paymentsByStatusMap[status] += parseFloat(p.amount) || 0;
       });
       
-      const totalPaymentsAmount = allPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+      const totalPaymentsAmount = activePayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
       const paymentsByStatus = Object.entries(paymentsByStatusMap).map(([key, value]) => ({
         label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
         value,
@@ -330,18 +340,13 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         percentage: totalPaymentsAmount > 0 ? ((value / totalPaymentsAmount) * 100).toFixed(1) : 0
       }));
 
-      // Invoices by Payment Status (count based)
+      // Invoices by Payment Status (count based) - using activeInvoices already defined above
       const invoiceStatusColors = {
         paid: '#10B981',
         partially_paid: '#F59E0B',
         unpaid: '#3B82F6',
         overdue: '#EF4444'
       };
-      
-      // Filter out cancelled/void invoices
-      const activeInvoices = invoices.filter(inv => 
-        inv.status !== 'cancelled' && inv.status !== 'void'
-      );
       
       // Helper to get payment status
       const getPaymentStatus = (inv) => inv.paymentStatus || inv.payment_status || '';
@@ -415,7 +420,8 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         });
       }
       
-      invoices.forEach(inv => {
+      // Use activeInvoices for the trend chart (excludes cancelled/void/draft)
+      activeInvoices.forEach(inv => {
         const invDate = new Date(inv.invoiceDate || inv.invoice_date || inv.created_at).toISOString().split('T')[0];
         const dayData = last30Days.find(d => d.date === invDate);
         if (dayData) {
@@ -423,7 +429,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         }
       });
       
-      // Use allPaidPayments for the trend chart
+      // Use allPaidPayments for the trend chart (already filtered from activePayments)
       allPaidPayments.forEach(p => {
         const payDate = new Date(p.paymentDate || p.payment_date || p.created_at).toISOString().split('T')[0];
         const dayData = last30Days.find(d => d.date === payDate);
@@ -432,7 +438,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         }
       });
 
-      // Top 5 Customers by Collection - from ALL paid payments
+      // Top 5 Customers by Collection - from paid payments only
       const customerCollections = {};
       allPaidPayments.forEach(p => {
         const customer = p.customerName || p.customer_name || p.propertyName || p.property_name || 'Unknown';
@@ -449,9 +455,8 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         .sort((a, b) => b.amount - a.amount)
         .slice(0, 5);
 
-      // Recent Payments (last 5) - from ALL payments
-      const recentPayments = [...allPayments]
-        .filter(p => p.status === 'paid' || p.status === 'verified')
+      // Recent Payments (last 5) - from active payments only (paid/verified)
+      const recentPayments = [...allPaidPayments]
         .sort((a, b) => new Date(b.paymentDate || b.payment_date || b.created_at) - new Date(a.paymentDate || a.payment_date || a.created_at))
         .slice(0, 5)
         .map(p => ({
