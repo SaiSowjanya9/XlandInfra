@@ -251,22 +251,13 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
     }
   }, [token]);
 
-  // Fetch zones
-  const fetchZones = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_BASE}/api/onboarding/suggestions/zones`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success && Array.isArray(result.data)) {
-        setZones(result.data);
-      } else if (Array.isArray(result)) {
-        setZones(result);
-      }
-    } catch (err) {
-      console.error('Fetch zones error:', err);
+  // Extract unique zones from schedules data
+  useEffect(() => {
+    if (schedules.length > 0) {
+      const uniqueZones = [...new Set(schedules.map(s => s.zone).filter(Boolean))].sort();
+      setZones(uniqueZones.map(z => ({ name: z, zone_name: z })));
     }
-  }, [token]);
+  }, [schedules]);
 
   // Fetch properties
   const fetchProperties = useCallback(async () => {
@@ -290,11 +281,10 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
     setCalendarDate(new Date());
     fetchSchedules();
     fetchVendors();
-    fetchZones();
     fetchProperties();
     const interval = setInterval(() => fetchSchedules(false), 30000);
     return () => clearInterval(interval);
-  }, [fetchSchedules, fetchVendors, fetchZones, fetchProperties]);
+  }, [fetchSchedules, fetchVendors, fetchProperties]);
 
   // Time slots for Week and Day views (6 AM to 9 PM)
   const timeSlots = [
