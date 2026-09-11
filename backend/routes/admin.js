@@ -4428,6 +4428,7 @@ router.get('/schedules/pending-properties', authenticate, async (req, res) => {
           (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = op.id AND pva.is_active = 1) as assignedVendors,
           (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = op.id AND pss.scheduling_status IN ('scheduled', 'completed')) as scheduledServiceCount,
           (SELECT COUNT(*) FROM scheduled_visits sv WHERE sv.property_id = op.id) as totalScheduledVisits,
+          JSON_LENGTH(COALESCE(fe.package_services, '[]')) as totalServices,
           'onboarded' as source
         FROM onboarded_properties op
         INNER JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
@@ -4460,6 +4461,7 @@ router.get('/schedules/pending-properties', authenticate, async (req, res) => {
           (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = p.id AND pva.is_active = 1) as assignedVendors,
           (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = p.id AND pss.scheduling_status IN ('scheduled', 'completed')) as scheduledServiceCount,
           (SELECT COUNT(*) FROM scheduled_visits sv WHERE sv.property_id = p.id) as totalScheduledVisits,
+          JSON_LENGTH(COALESCE(fe.package_services, '[]')) as totalServices,
           'legacy' as source
         FROM properties p
         INNER JOIN fp_estimates fe ON fe.property_id = p.id AND fe.status = 'approved'
@@ -4467,7 +4469,7 @@ router.get('/schedules/pending-properties', authenticate, async (req, res) => {
           AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
           AND p.id NOT IN (SELECT id FROM onboarded_properties)
       ) combined
-      WHERE scheduledServiceCount = 0 AND totalScheduledVisits = 0
+      WHERE scheduledServiceCount < totalServices OR totalServices = 0
     `;
     
     const params = [];
