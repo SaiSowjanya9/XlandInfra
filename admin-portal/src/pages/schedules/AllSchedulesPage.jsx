@@ -172,6 +172,19 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   const [generatingPDF, setGeneratingPDF] = useState(false);
   const scheduleDetailsRef = useRef(null);
 
+  // Print Preview Modal states (for All Schedules print)
+  const [showPrintPreviewModal, setShowPrintPreviewModal] = useState(false);
+  const [printFilters, setPrintFilters] = useState({
+    propertyId: 'all',
+    propertyName: 'all',
+    service: 'all',
+    vendor: 'all',
+    status: 'all',
+    scheduledDate: 'all',
+    time: 'all'
+  });
+  const [filteredPrintSchedules, setFilteredPrintSchedules] = useState([]);
+
   // Fetch schedules
   const fetchSchedules = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
@@ -286,98 +299,9 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     } catch { return time; }
   };
 
-  // Handle print to PDF
-  const handlePrint = async () => {
-    const dataToExport = schedules;
-    
-    if (dataToExport.length === 0) {
-      showToast('No data to print', 'error');
-      return;
-    }
-
-    // Create print content
-    const printContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title></title>
-        <style>
-          @page { margin: 8mm; margin-top: 0; }
-          * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
-          body { font-family: Arial, sans-serif; }
-          .content { padding: 15px 20px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
-          th { background: #f3f4f6; padding: 8px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; }
-          td { padding: 8px; border: 1px solid #e5e7eb; }
-          .footer { text-align: center; margin-top: 20px; font-size: 10px; color: #9ca3af; }
-        </style>
-      </head>
-      <body>
-        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
-          <tr>
-            <td style="background: #3a3a3a; padding: 15px 0; text-align: center;" bgcolor="#3a3a3a">
-              <table align="center" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="vertical-align: middle; padding-right: 12px;">
-                    <img src="/logo.webp" alt="Logo" width="45" height="45" style="display: block;" />
-                  </td>
-                  <td style="vertical-align: middle; text-align: left;">
-                    <div style="color: #D39A1A; font-size: 20px; font-weight: bold; letter-spacing: 2px; font-family: Arial, sans-serif;">XLAND INFRA</div>
-                    <div style="color: #D39A1A; font-size: 10px; letter-spacing: 2px; margin-top: 2px; font-family: Arial, sans-serif;">— PVT LTD —</div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="background: #D39A1A; color: white; text-align: center; padding: 8px 0; font-weight: 600; font-size: 13px; letter-spacing: 1px; font-family: Arial, sans-serif;" bgcolor="#D39A1A">SCHEDULE REPORT</td>
-          </tr>
-        </table>
-        <div class="content">
-        <table>
-          <thead>
-            <tr>
-              <th>Property ID</th>
-              <th>Property Name</th>
-              <th>Service</th>
-              <th>Vendor</th>
-              <th>Visit</th>
-              <th>Scheduled Date</th>
-              <th>Time</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${dataToExport.map(schedule => `
-              <tr>
-                <td>${schedule.propertyId || ''}</td>
-                <td>${schedule.propertyName || ''}</td>
-                <td>${schedule.serviceName || ''}</td>
-                <td>${schedule.vendorName || ''}</td>
-                <td>${schedule.visitNumber} of ${schedule.totalVisits}</td>
-                <td>${schedule.scheduledDate ? new Date(schedule.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</td>
-                <td>${schedule.scheduledTime || ''}</td>
-                <td><span class="status-${schedule.status === 'completed' ? 'completed' : schedule.status === 'cancelled' ? 'cancelled' : 'scheduled'}">${schedule.status || 'Scheduled'}</span></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        <div class="footer">
-          <p>Generated on ${new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
-          <p>XLAND INFRA Property Management System</p>
-        </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-    }, 250);
+  // Handle print to PDF - Opens print preview modal with filters
+  const handlePrint = () => {
+    openPrintPreviewModal();
   };
 
   // Handle export to CSV
@@ -524,6 +448,188 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     setStatusFilterPdf(value);
     applyPdfFilters(serviceFilter, value);
   };
+
+  // ============ Print Preview Modal Functions ============
+  
+  // Get unique values for print filters
+  const getPrintFilterOptions = (field) => {
+    const values = new Set();
+    schedules.forEach(s => {
+      let val;
+      switch(field) {
+        case 'propertyId': val = s.propertyId; break;
+        case 'propertyName': val = s.propertyName; break;
+        case 'service': val = s.serviceName; break;
+        case 'vendor': val = s.vendorName; break;
+        case 'status': val = s.status; break;
+        case 'scheduledDate': 
+          val = s.scheduledDate ? new Date(s.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+          break;
+        case 'time': val = s.scheduledTime; break;
+        default: val = null;
+      }
+      if (val) values.add(val);
+    });
+    return Array.from(values).sort();
+  };
+
+  // Apply print preview filters
+  const applyPrintFilters = (newFilters) => {
+    let filtered = [...schedules];
+    
+    if (newFilters.propertyId !== 'all') {
+      filtered = filtered.filter(s => s.propertyId === newFilters.propertyId);
+    }
+    if (newFilters.propertyName !== 'all') {
+      filtered = filtered.filter(s => s.propertyName === newFilters.propertyName);
+    }
+    if (newFilters.service !== 'all') {
+      filtered = filtered.filter(s => s.serviceName === newFilters.service);
+    }
+    if (newFilters.vendor !== 'all') {
+      filtered = filtered.filter(s => s.vendorName === newFilters.vendor);
+    }
+    if (newFilters.status !== 'all') {
+      filtered = filtered.filter(s => s.status === newFilters.status);
+    }
+    if (newFilters.scheduledDate !== 'all') {
+      filtered = filtered.filter(s => {
+        const dateStr = s.scheduledDate ? new Date(s.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        return dateStr === newFilters.scheduledDate;
+      });
+    }
+    if (newFilters.time !== 'all') {
+      filtered = filtered.filter(s => s.scheduledTime === newFilters.time);
+    }
+    
+    setFilteredPrintSchedules(filtered);
+  };
+
+  // Handle print filter change
+  const handlePrintFilterChange = (field, value) => {
+    const newFilters = { ...printFilters, [field]: value };
+    setPrintFilters(newFilters);
+    applyPrintFilters(newFilters);
+  };
+
+  // Open print preview modal
+  const openPrintPreviewModal = () => {
+    if (schedules.length === 0) {
+      showToast('No data to print', 'error');
+      return;
+    }
+    // Reset filters and set initial data
+    const resetFilters = {
+      propertyId: 'all',
+      propertyName: 'all',
+      service: 'all',
+      vendor: 'all',
+      status: 'all',
+      scheduledDate: 'all',
+      time: 'all'
+    };
+    setPrintFilters(resetFilters);
+    setFilteredPrintSchedules([...schedules]);
+    setShowPrintPreviewModal(true);
+  };
+
+  // Confirm and print filtered data
+  const confirmPrint = () => {
+    const dataToExport = filteredPrintSchedules;
+    
+    if (dataToExport.length === 0) {
+      showToast('No data to print with current filters', 'error');
+      return;
+    }
+
+    // Create print content
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Schedule Report</title>
+        <style>
+          @page { margin: 8mm; margin-top: 0; }
+          * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+          body { font-family: Arial, sans-serif; }
+          .content { padding: 15px 20px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+          th { background: #f3f4f6; padding: 8px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; }
+          td { padding: 8px; border: 1px solid #e5e7eb; }
+          .footer { text-align: center; margin-top: 20px; font-size: 10px; color: #9ca3af; }
+        </style>
+      </head>
+      <body>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+          <tr>
+            <td style="background: #3a3a3a; padding: 15px 0; text-align: center;" bgcolor="#3a3a3a">
+              <table align="center" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align: middle; padding-right: 12px;">
+                    <img src="/logo.webp" alt="Logo" width="45" height="45" style="display: block;" />
+                  </td>
+                  <td style="vertical-align: middle; text-align: left;">
+                    <div style="color: #D39A1A; font-size: 20px; font-weight: bold; letter-spacing: 2px; font-family: Arial, sans-serif;">XLAND INFRA</div>
+                    <div style="color: #D39A1A; font-size: 10px; letter-spacing: 2px; margin-top: 2px; font-family: Arial, sans-serif;">— PVT LTD —</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background: #D39A1A; color: white; text-align: center; padding: 8px 0; font-weight: 600; font-size: 13px; letter-spacing: 1px; font-family: Arial, sans-serif;" bgcolor="#D39A1A">SCHEDULE REPORT</td>
+          </tr>
+        </table>
+        <div class="content">
+        <table>
+          <thead>
+            <tr>
+              <th>Property ID</th>
+              <th>Property Name</th>
+              <th>Service</th>
+              <th>Vendor</th>
+              <th>Visit</th>
+              <th>Scheduled Date</th>
+              <th>Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${dataToExport.map(schedule => `
+              <tr>
+                <td>${schedule.propertyId || ''}</td>
+                <td>${schedule.propertyName || ''}</td>
+                <td>${schedule.serviceName || ''}</td>
+                <td>${schedule.vendorName || ''}</td>
+                <td>${schedule.visitNumber} of ${schedule.totalVisits}</td>
+                <td>${schedule.scheduledDate ? new Date(schedule.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</td>
+                <td>${schedule.scheduledTime || ''}</td>
+                <td>${schedule.status || 'Scheduled'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="footer">
+          <p>Generated on ${new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+          <p>XLAND INFRA Property Management System</p>
+        </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+    
+    setShowPrintPreviewModal(false);
+  };
+
+  // ============ End Print Preview Modal Functions ============
 
   // Generate and download/print PDF
   const handleDownloadPDF = (printDirect = false) => {
@@ -2270,6 +2376,232 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                   </span>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Print Preview Modal with Filters */}
+      {showPrintPreviewModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b bg-gray-50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gray-700 rounded-lg">
+                  <Printer className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800">Print Preview</h2>
+                  <p className="text-gray-500 text-sm">Filter data before printing</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={confirmPrint}
+                  disabled={filteredPrintSchedules.length === 0}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white text-sm rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print / Save PDF
+                </button>
+                <button
+                  onClick={() => setShowPrintPreviewModal(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Filters Section */}
+            <div className="px-5 py-4 border-b bg-white">
+              <div className="flex items-center gap-2 mb-3">
+                <Filter className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">Filter by:</span>
+                <span className="text-sm text-gray-500 ml-auto">
+                  Showing {filteredPrintSchedules.length} of {schedules.length} schedules
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                {/* Property ID Filter */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 font-medium">Property ID</label>
+                  <div className="relative">
+                    <select
+                      value={printFilters.propertyId}
+                      onChange={(e) => handlePrintFilterChange('propertyId', e.target.value)}
+                      className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white appearance-none cursor-pointer pr-6"
+                    >
+                      <option value="all">All</option>
+                      {getPrintFilterOptions('propertyId').map(val => (
+                        <option key={val} value={val}>{val}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Property Name Filter */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 font-medium">Property Name</label>
+                  <div className="relative">
+                    <select
+                      value={printFilters.propertyName}
+                      onChange={(e) => handlePrintFilterChange('propertyName', e.target.value)}
+                      className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white appearance-none cursor-pointer pr-6"
+                    >
+                      <option value="all">All</option>
+                      {getPrintFilterOptions('propertyName').map(val => (
+                        <option key={val} value={val}>{val}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Service Filter */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 font-medium">Service</label>
+                  <div className="relative">
+                    <select
+                      value={printFilters.service}
+                      onChange={(e) => handlePrintFilterChange('service', e.target.value)}
+                      className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white appearance-none cursor-pointer pr-6"
+                    >
+                      <option value="all">All</option>
+                      {getPrintFilterOptions('service').map(val => (
+                        <option key={val} value={val}>{val}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Vendor Filter */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 font-medium">Vendor</label>
+                  <div className="relative">
+                    <select
+                      value={printFilters.vendor}
+                      onChange={(e) => handlePrintFilterChange('vendor', e.target.value)}
+                      className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white appearance-none cursor-pointer pr-6"
+                    >
+                      <option value="all">All</option>
+                      {getPrintFilterOptions('vendor').map(val => (
+                        <option key={val} value={val}>{val}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Scheduled Date Filter */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 font-medium">Scheduled Date</label>
+                  <div className="relative">
+                    <select
+                      value={printFilters.scheduledDate}
+                      onChange={(e) => handlePrintFilterChange('scheduledDate', e.target.value)}
+                      className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white appearance-none cursor-pointer pr-6"
+                    >
+                      <option value="all">All</option>
+                      {getPrintFilterOptions('scheduledDate').map(val => (
+                        <option key={val} value={val}>{val}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Time Filter */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 font-medium">Time</label>
+                  <div className="relative">
+                    <select
+                      value={printFilters.time}
+                      onChange={(e) => handlePrintFilterChange('time', e.target.value)}
+                      className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white appearance-none cursor-pointer pr-6"
+                    >
+                      <option value="all">All</option>
+                      {getPrintFilterOptions('time').map(val => (
+                        <option key={val} value={val}>{val}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Status Filter */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 font-medium">Status</label>
+                  <div className="relative">
+                    <select
+                      value={printFilters.status}
+                      onChange={(e) => handlePrintFilterChange('status', e.target.value)}
+                      className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white appearance-none cursor-pointer pr-6"
+                    >
+                      <option value="all">All</option>
+                      {getPrintFilterOptions('status').map(val => (
+                        <option key={val} value={val}>
+                          {val === 'scheduled' ? 'Scheduled' : val === 'completed' ? 'Completed' : val === 'cancelled' ? 'Cancelled' : val}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Table Preview */}
+            <div className="overflow-auto max-h-[calc(90vh-280px)]">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100 sticky top-0">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b">Property ID</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b">Property Name</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b">Service</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b">Vendor</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b">Visit</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b">Scheduled Date</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b">Time</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPrintSchedules.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                        No schedules match the selected filters
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredPrintSchedules.map((schedule, idx) => (
+                      <tr key={schedule.id || idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="px-4 py-2 text-gray-800">{schedule.propertyId || '-'}</td>
+                        <td className="px-4 py-2 text-gray-800">{schedule.propertyName || '-'}</td>
+                        <td className="px-4 py-2 text-gray-700">{schedule.serviceName || '-'}</td>
+                        <td className="px-4 py-2 text-gray-700">{schedule.vendorName || '-'}</td>
+                        <td className="px-4 py-2 text-gray-600">{schedule.visitNumber} of {schedule.totalVisits}</td>
+                        <td className="px-4 py-2 text-gray-700">
+                          {schedule.scheduledDate ? new Date(schedule.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
+                        </td>
+                        <td className="px-4 py-2 text-gray-600">{schedule.scheduledTime || '-'}</td>
+                        <td className="px-4 py-2">
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                            schedule.status === 'completed' ? 'bg-green-100 text-green-700' : 
+                            schedule.status === 'cancelled' ? 'bg-red-100 text-red-700' : 
+                            'bg-blue-100 text-blue-700'
+                          }`}>
+                            {schedule.status === 'completed' ? 'Completed' : schedule.status === 'cancelled' ? 'Cancelled' : 'Scheduled'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
