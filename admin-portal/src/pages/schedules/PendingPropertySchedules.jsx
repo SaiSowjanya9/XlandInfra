@@ -1030,7 +1030,11 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
         <VendorAssignmentModal
           property={vendorAssignmentProperty}
           portalType={portalType}
-          onClose={() => setVendorAssignmentProperty(null)}
+          onClose={() => {
+            setVendorAssignmentProperty(null);
+            // Refresh the pending properties list after closing
+            fetchPendingProperties(true);
+          }}
           onSuccess={(message) => {
             console.log('Vendor assignment success:', message);
             setVendorAssignmentProperty(null);
