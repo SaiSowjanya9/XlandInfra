@@ -25,7 +25,7 @@ const WIZARD_STEPS = {
 };
 
 // Role-based permissions for scheduling
-const getSchedulePermissions = (portalGteType) => {
+const getSchedulePermissions = (portalType) => {
   const permissions = {
     admin: { canView: true, canCreate: true, canEdit: true, canReschedule: true, canCancel: true, canAssignVendor: true, canConfirm: true, fullAccess: true },
     operations_manager: { canView: true, canCreate: true, canEdit: true, canReschedule: true, canCancel: true, canAssignVendor: true, canConfirm: true, fullAccess: false },
