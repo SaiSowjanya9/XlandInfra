@@ -227,8 +227,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     try {
       const token = getAuthToken();
       
-      // Fetch zones
-      const zonesRes = await fetch(`${API_BASE}/api/${apiPath}/zones`, {
+      // Fetch zones - only zones that have schedules
+      const zonesRes = await fetch(`${API_BASE}/api/${apiPath}/zones?forSchedules=true`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (zonesRes.ok) {
@@ -237,8 +237,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
         setZones(zonesArray);
       }
 
-      // Fetch vendors
-      const vendorsRes = await fetch(`${API_BASE}/api/${apiPath}/vendors?status=active`, {
+      // Fetch vendors - only vendors that have schedules
+      const vendorsRes = await fetch(`${API_BASE}/api/${apiPath}/vendors?status=active&forSchedules=true`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (vendorsRes.ok) {
@@ -247,8 +247,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
         setVendors(vendorsArray);
       }
 
-      // Fetch services
-      const servicesRes = await fetch(`${API_BASE}/api/${apiPath}/services`, {
+      // Fetch services - only services that have schedules
+      const servicesRes = await fetch(`${API_BASE}/api/${apiPath}/services?forSchedules=true`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (servicesRes.ok) {
