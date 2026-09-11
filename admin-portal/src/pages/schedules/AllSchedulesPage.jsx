@@ -1221,7 +1221,6 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               <option value="all">All Status</option>
               <option value="scheduled">Scheduled</option>
               <option value="upcoming">Upcoming</option>
-              <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
               <option value="rescheduled">Rescheduled</option>
               <option value="cancelled">Cancelled</option>
