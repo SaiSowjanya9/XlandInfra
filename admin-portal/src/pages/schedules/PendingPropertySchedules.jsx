@@ -73,6 +73,21 @@ const formatTime = (dateString) => {
   });
 };
 
+// Normalize property type to consistent display format
+const normalizePropertyType = (type) => {
+  if (!type) return 'Other';
+  const t = type.toLowerCase().trim();
+  if (t === 'gc' || t === 'gated_community' || t.includes('gated')) return 'Gated Community';
+  if (t === 'apt' || t === 'apartment' || t.includes('apartment')) return 'Apartment';
+  if (t === 'villa' || t.includes('villa')) return 'Villa';
+  if (t === 'flat' || t.includes('flat')) return 'Flat';
+  if (t === 'plot' || t.includes('plot')) return 'Plot';
+  if (t === 'independent' || t === 'independent_house' || t.includes('independent')) return 'Independent House';
+  if (t === 'commercial' || t.includes('commercial')) return 'Commercial';
+  // Return with first letter capitalized if no match
+  return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase().replace(/_/g, ' ');
+};
+
 // Property type icons
 const PropertyTypeIcon = ({ type }) => {
   const iconMap = {
@@ -407,7 +422,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
     const rows = dataToExport.map(property => [
       property.propertyId || '',
       property.propertyName || '',
-      property.propertyType || '',
+      normalizePropertyType(property.propertyType),
       property.customerName || '',
       property.zone || '',
       property.totalServices || 0,
@@ -748,7 +763,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                     
                     {/* Property Type */}
                     <td className="px-6 py-4">
-                      <span className="text-sm text-gray-700">{property.propertyType}</span>
+                      <span className="text-sm text-gray-700">{normalizePropertyType(property.propertyType)}</span>
                     </td>
                     
                     {/* Zone */}

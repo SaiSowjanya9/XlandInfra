@@ -9,6 +9,20 @@ import { getAuthToken } from '../../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+// Normalize property type to consistent display format
+const normalizePropertyType = (type) => {
+  if (!type) return 'Other';
+  const t = type.toLowerCase().trim();
+  if (t === 'gc' || t === 'gated_community' || t.includes('gated')) return 'Gated Community';
+  if (t === 'apt' || t === 'apartment' || t.includes('apartment')) return 'Apartment';
+  if (t === 'villa' || t.includes('villa')) return 'Villa';
+  if (t === 'flat' || t.includes('flat')) return 'Flat';
+  if (t === 'plot' || t.includes('plot')) return 'Plot';
+  if (t === 'independent' || t === 'independent_house' || t.includes('independent')) return 'Independent House';
+  if (t === 'commercial' || t.includes('commercial')) return 'Commercial';
+  return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase().replace(/_/g, ' ');
+};
+
 const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
   const navigate = useNavigate();
   const token = getAuthToken();
@@ -184,7 +198,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
             vendor: s.vendorName || 'Unassigned',
             vendorId: s.vendorDbId,
             zone: s.zone || '',
-            propertyType: s.propertyType || '',
+            propertyType: normalizePropertyType(s.propertyType),
             type: type,
             status: status,
             visitNumber: s.visitNumber,

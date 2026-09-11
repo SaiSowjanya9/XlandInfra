@@ -661,7 +661,7 @@ const FPDashboard = ({ user }) => {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {/* Main Date Range Picker */}
           <DateRangeFilter
             startDate={startDate}
@@ -673,7 +673,7 @@ const FPDashboard = ({ user }) => {
               setEndDateDisplay(end ? new Date(end + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/') : '');
             }}
             onRefresh={() => fetchDashboardData(false)}
-            showRefreshButton={true}
+            showRefreshButton={false}
           />
           
           {/* Notification Bell */}
@@ -772,13 +772,13 @@ const FPDashboard = ({ user }) => {
             )}
           </div>
 
-          {/* Refresh Button */}
+          {/* Refresh Button - Icon Only */}
           <button
             onClick={() => fetchDashboardData(false)}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            title="Refresh"
+            className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            <RefreshCw className="w-4 h-4" />
-            <span>Refresh</span>
+            <RefreshCw className="w-5 h-5 text-gray-600" />
           </button>
         </div>
       </div>

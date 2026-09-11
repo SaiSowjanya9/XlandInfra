@@ -55,6 +55,20 @@ const getFirstDayOfMonth = (year, month) => {
   return new Date(year, month, 1).getDay();
 };
 
+// Normalize property type to consistent display format
+const normalizePropertyType = (type) => {
+  if (!type) return 'Other';
+  const t = type.toLowerCase().trim();
+  if (t === 'gc' || t === 'gated_community' || t.includes('gated')) return 'Gated Community';
+  if (t === 'apt' || t === 'apartment' || t.includes('apartment')) return 'Apartment';
+  if (t === 'villa' || t.includes('villa')) return 'Villa';
+  if (t === 'flat' || t.includes('flat')) return 'Flat';
+  if (t === 'plot' || t.includes('plot')) return 'Plot';
+  if (t === 'independent' || t === 'independent_house' || t.includes('independent')) return 'Independent House';
+  if (t === 'commercial' || t.includes('commercial')) return 'Commercial';
+  return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase().replace(/_/g, ' ');
+};
+
 // Status colors
 const statusColors = {
   'scheduled': { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-200' },
@@ -369,13 +383,13 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
               <option value="Zone D">Zone D</option>
             </select>
             
-            {/* Clear Filters */}
+            {/* Refresh Button */}
             <button
               onClick={() => fetchSchedules()}
-              className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors border border-gray-200"
+              title="Refresh"
+              className="p-2.5 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors border border-gray-200"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              <span>Refresh</span>
             </button>
             <button
               onClick={() => {
@@ -520,7 +534,7 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
                   <Building2 className="w-5 h-5 text-gray-400" />
                   <div>
                     <p className="text-sm font-medium text-gray-900">{selectedSchedule.propertyName}</p>
-                    <p className="text-xs text-gray-500">{selectedSchedule.propertyType}</p>
+                    <p className="text-xs text-gray-500">{normalizePropertyType(selectedSchedule.propertyType)}</p>
                   </div>
                 </div>
                 

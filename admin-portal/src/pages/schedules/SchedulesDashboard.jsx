@@ -47,6 +47,20 @@ const PROPERTY_TYPE_COLORS = {
 // Service colors
 const SERVICE_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#EC4899', '#06B6D4', '#6B7280'];
 
+// Normalize property type to consistent display format
+const normalizePropertyType = (type) => {
+  if (!type) return 'Others';
+  const t = type.toLowerCase().trim();
+  if (t === 'gc' || t === 'gated_community' || t.includes('gated')) return 'Gated Community';
+  if (t === 'apt' || t === 'apartment' || t.includes('apartment')) return 'Apartment';
+  if (t === 'villa' || t.includes('villa')) return 'Villa';
+  if (t === 'flat' || t.includes('flat')) return 'Flat';
+  if (t === 'plot' || t.includes('plot')) return 'Plot';
+  if (t === 'independent' || t === 'independent_house' || t.includes('independent')) return 'Independent House';
+  if (t === 'commercial' || t.includes('commercial')) return 'Commercial';
+  return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase().replace(/_/g, ' ');
+};
+
 const getApiPath = (portalType) => {
   const map = { 'franchise': 'fp', 'manager': 'manager', 'admin': 'admin', 'coordinator': 'coordinator', 'supervisor': 'supervisor' };
   return map[portalType] || 'fp';
@@ -247,7 +261,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   const propertyTypeFilteredData = applyPeriodFilter(schedules, propertyTypeFilter);
   const propTypeCounts = {};
   propertyTypeFilteredData.forEach(s => {
-    const pt = s.property_type || s.propertyType || 'Others';
+    const pt = normalizePropertyType(s.property_type || s.propertyType);
     propTypeCounts[pt] = (propTypeCounts[pt] || 0) + 1;
   });
   const propertyTypeData = Object.entries(propTypeCounts)
