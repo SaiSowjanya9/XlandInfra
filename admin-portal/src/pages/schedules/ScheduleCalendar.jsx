@@ -63,20 +63,13 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
   const [propertyTypes, setPropertyTypes] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch zones from API
-  const fetchZones = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_BASE}/api/onboarding/suggestions/zones`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success && Array.isArray(result.data)) {
-        setZones(result.data);
-      }
-    } catch (err) {
-      console.error('Fetch zones error:', err);
+  // Extract unique zones from schedules data
+  useEffect(() => {
+    if (schedules.length > 0) {
+      const uniqueZones = [...new Set(schedules.map(s => s.zone).filter(Boolean))].sort();
+      setZones(uniqueZones.map(z => ({ name: z, zone_name: z })));
     }
-  }, [token]);
+  }, [schedules]);
 
   // Fetch vendors from API
   const fetchVendors = useCallback(async () => {
@@ -232,7 +225,6 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
 
   // Initial load
   useEffect(() => {
-    fetchZones();
     fetchVendors();
     fetchServices();
     fetchPropertyTypes();

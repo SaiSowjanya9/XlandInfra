@@ -230,20 +230,13 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
     }
   }, [token, apiPath]);
 
-  // Fetch zones
-  const fetchZones = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_BASE}/api/onboarding/suggestions/zones`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success && Array.isArray(result.data)) {
-        setZones(result.data);
-      }
-    } catch (err) {
-      console.error('Fetch zones error:', err);
+  // Extract unique zones from properties data
+  useEffect(() => {
+    if (properties.length > 0) {
+      const uniqueZones = [...new Set(properties.map(p => p.zone).filter(Boolean))].sort();
+      setZones(uniqueZones.map(z => ({ name: z, zone_name: z })));
     }
-  }, [token]);
+  }, [properties]);
 
   // Fetch packages - use correct endpoint for each portal
   const fetchPackages = useCallback(async () => {
@@ -299,7 +292,6 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
   // Initial load - run once
   useEffect(() => {
     fetchPendingProperties();
-    fetchZones();
     fetchPackages();
     fetchVendors();
   }, []);
