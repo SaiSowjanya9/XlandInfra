@@ -1571,6 +1571,19 @@ router.post('/customers', requireManagerScope, async (req, res) => {
         ]
       );
 
+      // Insert contact into property_contacts table (for schedules to show customer name)
+      if (contactName) {
+        try {
+          await pool.execute(
+            `INSERT INTO property_contacts (property_id, name, email, phone, country_code)
+             VALUES (?, ?, ?, ?, ?)`,
+            [propertyResult.insertId, contactName, contactEmail || null, contactPhone || null, contactCountryCode || '+91']
+          );
+        } catch (contactErr) {
+          console.error('Property contacts insert failed (non-critical):', contactErr.message);
+        }
+      }
+
       // Also create a record in clients table for Property Management listing
       try {
         await pool.execute(
