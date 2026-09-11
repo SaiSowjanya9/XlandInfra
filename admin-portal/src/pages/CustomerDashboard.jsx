@@ -130,10 +130,10 @@ const CustomerDashboard = ({ user }) => {
         </div>
         <button
           onClick={() => fetchCustomerDashboard(false)}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors text-white"
+          title="Refresh"
+          className="p-2.5 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors text-white"
         >
-          <RefreshCw className="w-4 h-4" />
-          <span>Refresh</span>
+          <RefreshCw className="w-5 h-5" />
         </button>
       </div>
 

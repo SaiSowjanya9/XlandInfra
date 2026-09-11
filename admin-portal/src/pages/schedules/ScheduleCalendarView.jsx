@@ -8,6 +8,20 @@ import { getAuthToken } from '../../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+// Normalize property type to consistent display format
+const normalizePropertyType = (type) => {
+  if (!type) return 'Other';
+  const t = type.toLowerCase().trim();
+  if (t === 'gc' || t === 'gated_community' || t.includes('gated')) return 'Gated Community';
+  if (t === 'apt' || t === 'apartment' || t.includes('apartment')) return 'Apartment';
+  if (t === 'villa' || t.includes('villa')) return 'Villa';
+  if (t === 'flat' || t.includes('flat')) return 'Flat';
+  if (t === 'plot' || t.includes('plot')) return 'Plot';
+  if (t === 'independent' || t === 'independent_house' || t.includes('independent')) return 'Independent House';
+  if (t === 'commercial' || t.includes('commercial')) return 'Commercial';
+  return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase().replace(/_/g, ' ');
+};
+
 // Get API path based on portal type
 const getApiPath = (portalType) => {
   const pathMap = {
@@ -83,7 +97,7 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
               vendor: item.vendorName || item.vendor_name || 'Unassigned',
               status: item.status || 'scheduled',
               zone: item.zone,
-              propertyType: item.propertyType || item.property_type,
+              propertyType: normalizePropertyType(item.propertyType || item.property_type),
               visitNumber: item.visitNumber,
               totalVisits: item.totalVisits
             });
@@ -101,7 +115,7 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
                     vendor: service.vendorName || service.vendor_name || 'Unassigned',
                     status: visit.status || 'scheduled',
                     zone: item.zone,
-                    propertyType: item.propertyType || item.property_type
+                    propertyType: normalizePropertyType(item.propertyType || item.property_type)
                   });
                 });
               }

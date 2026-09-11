@@ -3164,7 +3164,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
                             <span className="text-sm text-gray-600">{payment.propertyCode || '-'}</span>
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap">
-                            <span className="text-sm text-gray-600 capitalize">{(payment.propertyType || '-').replace(/_/g, ' ')}</span>
+                            <span className="text-sm text-gray-600">{formatPropertyType(payment.propertyType)}</span>
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap">
                             <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${method.bg} ${method.color} border ${method.border}`}>
