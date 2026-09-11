@@ -2361,7 +2361,33 @@ router.post('/customer-accounts/:id/resend-activation', requireFPScope, async (r
 router.get('/vendors', requireFPScope, async (req, res) => {
   try {
     console.log('[FP Vendors] Fetching vendors for FP ID:', req.fpId);
-    // Check if include_deleted query param is passed
+    const { forSchedules } = req.query;
+    
+    // If forSchedules=true, only return vendors that have actual scheduled visits
+    if (forSchedules === 'true') {
+      const [scheduleVendors] = await pool.execute(
+        `SELECT DISTINCT ov.id, ov.vendor_id, 
+                COALESCE(ov.company_name, ov.owner_name) as company_name,
+                ov.owner_name, ov.service_type
+         FROM scheduled_visits sv
+         JOIN onboarded_vendors ov ON ov.id = sv.vendor_id
+         JOIN onboarded_properties op ON op.id = sv.property_id
+         WHERE op.franchise_partner_id = ?
+         ORDER BY company_name`,
+        [req.fpId]
+      );
+      
+      return res.json({
+        success: true,
+        data: {
+          own: scheduleVendors,
+          assigned: [],
+          all: scheduleVendors
+        }
+      });
+    }
+    
+    // Default behavior: Check if include_deleted query param is passed
     const includeDeleted = req.query.include_deleted === 'true';
     
     // Fetch vendors for this FP only - exclude deleted/inactive by default
@@ -5525,8 +5551,40 @@ router.get('/export/:type', requireFPScope, async (req, res) => {
 
 router.get('/zones', requireFPScope, async (req, res) => {
   try {
+    const { forSchedules } = req.query;
     const allZoneNames = new Set();
     const combinedZones = [];
+
+    // If forSchedules=true, only return zones that have actual scheduled visits
+    if (forSchedules === 'true') {
+      try {
+        const [scheduleZones] = await pool.execute(
+          `SELECT DISTINCT op.zone 
+           FROM scheduled_visits sv
+           JOIN onboarded_properties op ON op.id = sv.property_id
+           WHERE op.franchise_partner_id = ? 
+           AND op.zone IS NOT NULL AND op.zone != ''
+           ORDER BY op.zone`,
+          [req.fpId]
+        );
+        scheduleZones.forEach(z => {
+          if (z.zone && !allZoneNames.has(z.zone)) {
+            allZoneNames.add(z.zone);
+            combinedZones.push({ id: `schedule-${z.zone}`, name: z.zone });
+          }
+        });
+      } catch (_) {}
+
+      // Sort by name
+      combinedZones.sort((a, b) => a.name.localeCompare(b.name));
+
+      return res.json({
+        success: true,
+        data: combinedZones
+      });
+    }
+
+    // Default behavior: Get all zones from multiple sources
 
     // 1. Get global zones from zones table
     try {
@@ -5605,9 +5663,38 @@ router.get('/zones', requireFPScope, async (req, res) => {
 // ============================================
 router.get('/services', authenticate, attachFPScope, async (req, res) => {
   try {
+    const { forSchedules } = req.query;
     const franchisePartnerId = req.fpId || req.user?.franchisePartnerId || req.user?.id;
+
+    // If forSchedules=true, only return services that have actual scheduled visits
+    if (forSchedules === 'true') {
+      const [scheduleServices] = await pool.execute(`
+        SELECT DISTINCT pss.service_name as name, pss.service_category as category
+        FROM scheduled_visits sv
+        JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+        JOIN onboarded_properties op ON op.id = sv.property_id
+        WHERE op.franchise_partner_id = ?
+          AND pss.service_name IS NOT NULL
+          AND pss.service_name != ''
+        ORDER BY pss.service_name
+      `, [franchisePartnerId]);
+
+      const serviceMap = new Map();
+      scheduleServices.forEach(s => {
+        if (s.name && !serviceMap.has(s.name)) {
+          serviceMap.set(s.name, { id: s.name, name: s.name, category: s.category || s.name });
+        }
+      });
+
+      const uniqueServices = Array.from(serviceMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+
+      return res.json({
+        success: true,
+        data: uniqueServices
+      });
+    }
     
-    // Get unique services from property_service_schedules for this FP's properties
+    // Default behavior: Get unique services from property_service_schedules for this FP's properties
     const [services] = await pool.execute(`
       SELECT DISTINCT pss.service_name as name, pss.service_category as category
       FROM property_service_schedules pss

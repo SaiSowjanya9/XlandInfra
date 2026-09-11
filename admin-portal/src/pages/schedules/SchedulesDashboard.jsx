@@ -96,7 +96,6 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   
   // UI states for header buttons
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showFilterPanel, setShowFilterPanel] = useState(false);
 
   // Period filter helper function
   const applyPeriodFilter = (data, period) => {
@@ -226,19 +225,22 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     return d < today && !['completed', 'cancelled'].includes(getStatus(s));
   });
 
-  // Chart data - Status (with filter)
-  const statusFilteredData = applyPeriodFilter(schedules, statusFilter);
+  // Active schedules (excluding cancelled) for charts
+  const activeSchedules = schedules.filter(s => getStatus(s) !== 'cancelled');
+
+  // Chart data - Status (with filter) - Only active statuses
+  const statusFilteredData = applyPeriodFilter(activeSchedules, statusFilter);
   const statusData = [
     { name: 'Scheduled', value: statusFilteredData.filter(s => ['scheduled', 'upcoming'].includes(getStatus(s))).length, color: STATUS_COLORS.scheduled },
     { name: 'In Progress', value: statusFilteredData.filter(s => getStatus(s) === 'in_progress').length, color: STATUS_COLORS.in_progress },
     { name: 'Completed', value: statusFilteredData.filter(s => getStatus(s) === 'completed').length, color: STATUS_COLORS.completed },
-    { name: 'Cancelled', value: statusFilteredData.filter(s => getStatus(s) === 'cancelled').length, color: STATUS_COLORS.cancelled },
+    { name: 'Rescheduled', value: statusFilteredData.filter(s => getStatus(s) === 'rescheduled').length, color: STATUS_COLORS.rescheduled },
     { name: 'Pending', value: statusFilteredData.filter(s => getStatus(s) === 'pending').length, color: STATUS_COLORS.pending }
   ].filter(d => d.value > 0);
   const statusTotal = statusData.reduce((sum, d) => sum + d.value, 0);
 
-  // Chart data - Service (with filter)
-  const serviceFilteredData = applyPeriodFilter(schedules, serviceFilter);
+  // Chart data - Service (with filter) - Only active schedules
+  const serviceFilteredData = applyPeriodFilter(activeSchedules, serviceFilter);
   const serviceCounts = {};
   serviceFilteredData.forEach(s => {
     const svc = s.service || s.serviceCategory || 'General';
@@ -248,8 +250,8 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     .map(([name, value], i) => ({ name, value, color: SERVICE_COLORS[i % SERVICE_COLORS.length] }))
     .sort((a, b) => b.value - a.value);
 
-  // Chart data - Priority (with filter)
-  const priorityFilteredData = applyPeriodFilter(schedules, priorityFilter);
+  // Chart data - Priority (with filter) - Only active schedules
+  const priorityFilteredData = applyPeriodFilter(activeSchedules, priorityFilter);
   const priorityData = [
     { name: 'High', value: priorityFilteredData.filter(s => (s.priority || '').toLowerCase() === 'high').length, color: PRIORITY_COLORS.high },
     { name: 'Medium', value: priorityFilteredData.filter(s => (s.priority || '').toLowerCase() === 'medium').length, color: PRIORITY_COLORS.medium },
@@ -257,8 +259,8 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   ].filter(d => d.value > 0);
   const priorityTotal = priorityData.reduce((sum, d) => sum + d.value, 0);
 
-  // Chart data - Property Type (with filter)
-  const propertyTypeFilteredData = applyPeriodFilter(schedules, propertyTypeFilter);
+  // Chart data - Property Type (with filter) - Only active schedules
+  const propertyTypeFilteredData = applyPeriodFilter(activeSchedules, propertyTypeFilter);
   const propTypeCounts = {};
   propertyTypeFilteredData.forEach(s => {
     const pt = normalizePropertyType(s.property_type || s.propertyType);
@@ -269,8 +271,8 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     .sort((a, b) => b.value - a.value);
   const propertyTypeTotal = propertyTypeData.reduce((sum, d) => sum + d.value, 0);
 
-  // Trend data (filtered)
-  const trendFilteredData = applyPeriodFilter(schedules, trendFilter);
+  // Trend data (filtered) - Only active schedules
+  const trendFilteredData = applyPeriodFilter(activeSchedules, trendFilter);
   const generateTrendData = () => {
     const days = trendFilter === 'week' ? 7 : trendFilter === 'month' ? 30 : 7;
     const data = [];
@@ -284,20 +286,21 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       });
       data.push({
         date: dateStr,
-        created: daySchedules.length,
+        scheduled: daySchedules.filter(s => ['scheduled', 'upcoming', 'pending'].includes(getStatus(s))).length,
         completed: daySchedules.filter(s => getStatus(s) === 'completed').length,
-        cancelled: daySchedules.filter(s => getStatus(s) === 'cancelled').length
+        inProgress: daySchedules.filter(s => getStatus(s) === 'in_progress').length
       });
     }
     return data;
   };
   const trendData = generateTrendData();
 
-  // Upcoming schedules (filtered)
-  const upcomingFilteredData = applyPeriodFilter(todaysSchedules.concat(upcoming7Days), upcomingFilter);
+  // Upcoming schedules (filtered) - Only active schedules
+  const activeUpcoming = todaysSchedules.concat(upcoming7Days).filter(s => getStatus(s) !== 'cancelled');
+  const upcomingFilteredData = applyPeriodFilter(activeUpcoming, upcomingFilter);
 
-  // Recently created (filtered)
-  const recentFilteredData = applyPeriodFilter(schedules, recentFilter);
+  // Recently created (filtered) - Only active schedules
+  const recentFilteredData = applyPeriodFilter(activeSchedules, recentFilter);
   const recentSchedules = [...recentFilteredData].sort((a, b) => 
     new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0)
   ).slice(0, 5);
@@ -343,100 +346,23 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   return (
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 bg-gray-50 min-h-screen">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Scheduling Dashboard</h1>
           <p className="text-sm text-gray-500">Home &gt; Scheduling &gt; Dashboard</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <DateRangeFilter
             startDate={startDate}
             endDate={endDate}
             onDateChange={(s, e) => { setStartDate(s); setEndDate(e); }}
             onRefresh={fetchSchedules}
           />
-          {/* Filter Button */}
-          <div className="relative">
-            <button 
-              onClick={() => { setShowFilterPanel(!showFilterPanel); setShowNotifications(false); }}
-              className={`p-2 border rounded-lg hover:bg-gray-50 bg-white ${showFilterPanel ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
-            >
-              <Filter className={`w-5 h-5 ${showFilterPanel ? 'text-blue-600' : 'text-gray-600'}`} />
-            </button>
-            {/* Filter Dropdown */}
-            {showFilterPanel && (
-              <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl border border-gray-200 shadow-xl z-50 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-gray-900">Filters</h4>
-                  <button onClick={() => setShowFilterPanel(false)} className="text-gray-400 hover:text-gray-600">&times;</button>
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs font-medium text-gray-500 mb-1 block">Status</label>
-                    <select 
-                      value={statusFilter} 
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    >
-                      <option value="all">All Status</option>
-                      <option value="scheduled">Scheduled</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-gray-500 mb-1 block">Priority</label>
-                    <select 
-                      value={priorityFilter} 
-                      onChange={(e) => setPriorityFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    >
-                      <option value="all">All Priority</option>
-                      <option value="high">High</option>
-                      <option value="medium">Medium</option>
-                      <option value="low">Low</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-gray-500 mb-1 block">Property Type</label>
-                    <select 
-                      value={propertyTypeFilter} 
-                      onChange={(e) => setPropertyTypeFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    >
-                      <option value="all">All Types</option>
-                      <option value="Gated Community">Gated Community</option>
-                      <option value="Apartment">Apartment</option>
-                      <option value="Villa">Villa</option>
-                      <option value="Flat">Flat</option>
-                      <option value="Plot">Plot</option>
-                      <option value="Commercial">Commercial</option>
-                    </select>
-                  </div>
-                  <div className="flex gap-2 pt-2">
-                    <button 
-                      onClick={() => { setStatusFilter('all'); setPriorityFilter('all'); setPropertyTypeFilter('all'); }}
-                      className="flex-1 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-                    >
-                      Reset
-                    </button>
-                    <button 
-                      onClick={() => { setShowFilterPanel(false); fetchSchedules(); }}
-                      className="flex-1 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
           
           {/* Notifications Button */}
           <div className="relative">
             <button 
-              onClick={() => { setShowNotifications(!showNotifications); setShowFilterPanel(false); }}
+              onClick={() => setShowNotifications(!showNotifications)}
               className={`relative p-2 border rounded-lg hover:bg-gray-50 bg-white ${showNotifications ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
             >
               <Bell className={`w-5 h-5 ${showNotifications ? 'text-blue-600' : 'text-gray-600'}`} />
@@ -504,6 +430,17 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
               </div>
             )}
           </div>
+          
+          {/* Refresh Button */}
+          <button 
+            onClick={fetchSchedules}
+            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 bg-white"
+            title="Refresh data"
+          >
+            <RefreshCw className="w-5 h-5 text-gray-600" />
+          </button>
+          
+          {/* New Schedule Button */}
           <button
             onClick={() => navigate(`${getBasePath()}/schedules/pending`)}
             className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"
@@ -511,7 +448,6 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">New Schedule</span>
             <span className="sm:hidden">New</span>
-            <ChevronDown className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -648,18 +584,18 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             <PeriodFilter value={trendFilter} onChange={setTrendFilter} />
           </div>
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs mb-3">
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Created</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Scheduled</span>
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500" /> Completed</span>
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Cancelled</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> In Progress</span>
           </div>
           <ResponsiveContainer width="100%" height={160}>
             <LineChart data={trendData}>
               <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} width={30} />
               <Tooltip />
-              <Line type="monotone" dataKey="created" stroke="#3B82F6" strokeWidth={2} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="scheduled" stroke="#3B82F6" strokeWidth={2} dot={{ r: 3 }} />
               <Line type="monotone" dataKey="completed" stroke="#10B981" strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="cancelled" stroke="#EF4444" strokeWidth={2} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="inProgress" stroke="#F59E0B" strokeWidth={2} dot={{ r: 3 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>

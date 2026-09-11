@@ -1761,6 +1761,35 @@ router.post('/customers', requireManagerScope, async (req, res) => {
 // Get all manager vendors (ZONE-CENTRIC + OWN CREATED)
 router.get('/vendors', requireManagerScope, async (req, res) => {
   try {
+    const { forSchedules } = req.query;
+    const scopeColumn = req.franchisePartnerId ? 'franchise_partner_id' : 'manager_id';
+    const scopeId = req.franchisePartnerId || req.managerId;
+
+    // If forSchedules=true, only return vendors that have actual scheduled visits
+    if (forSchedules === 'true') {
+      const [scheduleVendors] = await pool.execute(
+        `SELECT DISTINCT ov.id, ov.vendor_id, 
+                COALESCE(ov.company_name, ov.owner_name) as company_name,
+                ov.owner_name, ov.service_type
+         FROM scheduled_visits sv
+         JOIN onboarded_vendors ov ON ov.id = sv.vendor_id
+         JOIN onboarded_properties op ON op.id = sv.property_id
+         WHERE op.${scopeColumn} = ?
+         ORDER BY company_name`,
+        [scopeId]
+      );
+      
+      return res.json({
+        success: true,
+        data: {
+          own: scheduleVendors,
+          assigned: [],
+          all: scheduleVendors
+        }
+      });
+    }
+
+    // Default behavior
     const employeeId = getEmployeeIdForZoneLookup(req);
     const creatorEmail = getCreatorIdentifier(req);
     
@@ -1786,7 +1815,7 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
               ov.owner_mobile, ov.owner_mobile as phone, ov.owner_email, ov.owner_email as email,
               ov.owner_aadhar, ov.owner_country_code,
               ov.manager_name, ov.manager_mobile, ov.manager_email, ov.manager_country_code,
-              ov.poc_name, ov.poc_mobile, ov.poc_email, ov.poc_country_code,
+              ov.poc_name, ov.poc_mobile, ov.poc_email, ov.poc_county_code,
               ov.rate_per_visit, ov.coverage_per_day, ov.working_hours_from, ov.working_hours_to,
               ov.created_by, ov.created_by_id,
               COALESCE(
@@ -2724,12 +2753,43 @@ router.post('/addons', requireManagerScope, async (req, res) => {
 
 router.get('/zones', requireManagerScope, async (req, res) => {
   try {
+    const { forSchedules } = req.query;
+    const scopeColumn = req.franchisePartnerId ? 'franchise_partner_id' : 'manager_id';
+    const scopeId = req.franchisePartnerId || req.managerId;
+
+    // If forSchedules=true, only return zones that have actual scheduled visits
+    if (forSchedules === 'true') {
+      const allZoneNames = new Set();
+      const combinedZones = [];
+      
+      try {
+        const [scheduleZones] = await pool.execute(
+          `SELECT DISTINCT op.zone 
+           FROM scheduled_visits sv
+           JOIN onboarded_properties op ON op.id = sv.property_id
+           WHERE op.${scopeColumn} = ? 
+           AND op.zone IS NOT NULL AND op.zone != ''
+           ORDER BY op.zone`,
+          [scopeId]
+        );
+        scheduleZones.forEach(z => {
+          if (z.zone && !allZoneNames.has(z.zone)) {
+            allZoneNames.add(z.zone);
+            combinedZones.push({ id: `schedule-${z.zone}`, name: z.zone });
+          }
+        });
+      } catch (_) {}
+
+      combinedZones.sort((a, b) => a.name.localeCompare(b.name));
+      return res.json({ success: true, data: combinedZones });
+    }
+
+    // Default behavior: Get all zones from multiple sources
+
     // Get global zones
     const [globalZones] = await pool.execute('SELECT id, name FROM zones WHERE is_active = 1');
     
     // Get zones from ACTIVE properties only (FP-scoped or manager-scoped)
-    const scopeColumn = req.franchisePartnerId ? 'franchise_partner_id' : 'manager_id';
-    const scopeId = req.franchisePartnerId || req.managerId;
     const [propertyZones] = await pool.execute(
       `SELECT DISTINCT zone_id as name FROM properties 
        WHERE ${scopeColumn} = ? AND zone_id IS NOT NULL AND zone_id != ''
