@@ -189,7 +189,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
     { path: '/manager/estimates/create', icon: Plus, label: 'Create Estimate' },
     { path: '/manager/estimates', icon: List, label: 'All Estimates' },
     { path: '/manager/estimates/amc', icon: Package, label: 'AMC Packages' },
-    { path: '/manager/estimates/addons', icon: PlusCircle, label: 'Add-ons' },
+    { path: '/manager/estimates/addons', icon: PlusCircle, label: 'Add Service' },
     { path: '/manager/estimates/archived', icon: Archive, label: 'Archived' }
   ];
 

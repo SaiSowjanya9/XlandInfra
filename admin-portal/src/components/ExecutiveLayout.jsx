@@ -68,7 +68,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
     { path: '/executive/estimates/create', icon: Plus, label: 'Create Estimate' },
     { path: '/executive/estimates', icon: List, label: 'All Estimates' },
     { path: '/executive/estimates/amc', icon: Package, label: 'AMC Packages' },
-    { path: '/executive/estimates/addons', icon: PlusCircle, label: 'Add-ons' },
+    { path: '/executive/estimates/addons', icon: PlusCircle, label: 'Add Service' },
     { path: '/executive/estimates/archived', icon: Archive, label: 'Archived' }
   ];
 

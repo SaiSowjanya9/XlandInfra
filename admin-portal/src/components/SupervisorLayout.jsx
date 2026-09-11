@@ -63,7 +63,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
     { path: '/supervisor/estimates/create', icon: Plus, label: 'Create Estimate' },
     { path: '/supervisor/estimates', icon: List, label: 'All Estimates' },
     { path: '/supervisor/estimates/amc', icon: Package, label: 'AMC Packages' },
-    { path: '/supervisor/estimates/addons', icon: PlusCircle, label: 'Add-ons' },
+    { path: '/supervisor/estimates/addons', icon: PlusCircle, label: 'Add Service' },
     { path: '/supervisor/estimates/archived', icon: Archive, label: 'Archived Estimates' }
   ];
 

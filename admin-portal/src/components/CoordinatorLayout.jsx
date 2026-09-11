@@ -72,7 +72,7 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
     { path: '/coordinator/estimates/create', icon: Plus, label: 'Create Estimate' },
     { path: '/coordinator/estimates', icon: List, label: 'All Estimates' },
     { path: '/coordinator/estimates/amc', icon: Package, label: 'AMC Packages' },
-    { path: '/coordinator/estimates/addons', icon: PlusCircle, label: 'Add-ons' },
+    { path: '/coordinator/estimates/addons', icon: PlusCircle, label: 'Add Service' },
     { path: '/coordinator/estimates/archived', icon: Archive, label: 'Archived' }
   ];
 

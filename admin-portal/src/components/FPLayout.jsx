@@ -282,7 +282,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
     { path: '/fp/estimates/create', icon: Plus, label: 'Create Estimate' },
     { path: '/fp/estimates', icon: List, label: 'All Estimates' },
     { path: '/fp/estimates/amc', icon: Package, label: 'AMC Packages' },
-    { path: '/fp/estimates/addons', icon: PlusCircle, label: 'Add-ons' },
+    { path: '/fp/estimates/addons', icon: PlusCircle, label: 'Add Service' },
     { path: '/fp/estimates/archived', icon: Archive, label: 'Archived Estimates' },
   ];
   
