@@ -179,9 +179,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     propertyName: 'all',
     service: 'all',
     vendor: 'all',
-    status: 'all',
-    scheduledDate: 'all',
-    time: 'all'
+    scheduledDate: 'all'
   });
   const [filteredPrintSchedules, setFilteredPrintSchedules] = useState([]);
 
@@ -489,17 +487,11 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     if (newFilters.vendor !== 'all') {
       filtered = filtered.filter(s => s.vendorName === newFilters.vendor);
     }
-    if (newFilters.status !== 'all') {
-      filtered = filtered.filter(s => s.status === newFilters.status);
-    }
     if (newFilters.scheduledDate !== 'all') {
       filtered = filtered.filter(s => {
         const dateStr = s.scheduledDate ? new Date(s.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
         return dateStr === newFilters.scheduledDate;
       });
-    }
-    if (newFilters.time !== 'all') {
-      filtered = filtered.filter(s => s.scheduledTime === newFilters.time);
     }
     
     setFilteredPrintSchedules(filtered);
@@ -507,27 +499,31 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
 
   // Handle print filter change - with linked Property ID and Property Name
   const handlePrintFilterChange = (field, value) => {
-    let newFilters = { ...printFilters, [field]: value };
+    const newFilters = { ...printFilters, [field]: value };
     
     // Link Property ID and Property Name filters
-    if (field === 'propertyId' && value !== 'all') {
-      // Find the property name for this ID
-      const matchingSchedule = schedules.find(s => s.propertyId === value);
-      if (matchingSchedule) {
-        newFilters.propertyName = matchingSchedule.propertyName;
+    if (field === 'propertyId') {
+      if (value !== 'all') {
+        // Find the property name for this ID
+        const matchingSchedule = schedules.find(s => s.propertyId === value);
+        if (matchingSchedule && matchingSchedule.propertyName) {
+          newFilters.propertyName = matchingSchedule.propertyName;
+        }
+      } else {
+        // Reset property name when ID is reset to all
+        newFilters.propertyName = 'all';
       }
-    } else if (field === 'propertyId' && value === 'all') {
-      // Reset property name when ID is reset to all
-      newFilters.propertyName = 'all';
-    } else if (field === 'propertyName' && value !== 'all') {
-      // Find the property ID for this name
-      const matchingSchedule = schedules.find(s => s.propertyName === value);
-      if (matchingSchedule) {
-        newFilters.propertyId = matchingSchedule.propertyId;
+    } else if (field === 'propertyName') {
+      if (value !== 'all') {
+        // Find the property ID for this name
+        const matchingSchedule = schedules.find(s => s.propertyName === value);
+        if (matchingSchedule && matchingSchedule.propertyId) {
+          newFilters.propertyId = matchingSchedule.propertyId;
+        }
+      } else {
+        // Reset property ID when name is reset to all
+        newFilters.propertyId = 'all';
       }
-    } else if (field === 'propertyName' && value === 'all') {
-      // Reset property ID when name is reset to all
-      newFilters.propertyId = 'all';
     }
     
     setPrintFilters(newFilters);
@@ -546,9 +542,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       propertyName: 'all',
       service: 'all',
       vendor: 'all',
-      status: 'all',
-      scheduledDate: 'all',
-      time: 'all'
+      scheduledDate: 'all'
     };
     setPrintFilters(resetFilters);
     setFilteredPrintSchedules([...schedules]);
@@ -2445,7 +2439,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                   Showing {filteredPrintSchedules.length} of {schedules.length} schedules
                 </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                 {/* Property ID Filter */}
                 <div className="flex flex-col gap-1">
                   <label className="text-xs text-gray-500 font-medium">Property ID</label>
@@ -2530,44 +2524,6 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                       <option value="all">All</option>
                       {getPrintFilterOptions('scheduledDate').map(val => (
                         <option key={val} value={val}>{val}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
-                  </div>
-                </div>
-
-                {/* Time Filter */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-500 font-medium">Time</label>
-                  <div className="relative">
-                    <select
-                      value={printFilters.time}
-                      onChange={(e) => handlePrintFilterChange('time', e.target.value)}
-                      className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white appearance-none cursor-pointer pr-6"
-                    >
-                      <option value="all">All</option>
-                      {getPrintFilterOptions('time').map(val => (
-                        <option key={val} value={val}>{val}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
-                  </div>
-                </div>
-
-                {/* Status Filter */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-500 font-medium">Status</label>
-                  <div className="relative">
-                    <select
-                      value={printFilters.status}
-                      onChange={(e) => handlePrintFilterChange('status', e.target.value)}
-                      className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white appearance-none cursor-pointer pr-6"
-                    >
-                      <option value="all">All</option>
-                      {getPrintFilterOptions('status').map(val => (
-                        <option key={val} value={val}>
-                          {val === 'scheduled' ? 'Scheduled' : val === 'completed' ? 'Completed' : val === 'cancelled' ? 'Cancelled' : val}
-                        </option>
                       ))}
                     </select>
                     <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
