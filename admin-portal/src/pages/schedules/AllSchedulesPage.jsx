@@ -505,9 +505,31 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     setFilteredPrintSchedules(filtered);
   };
 
-  // Handle print filter change
+  // Handle print filter change - with linked Property ID and Property Name
   const handlePrintFilterChange = (field, value) => {
-    const newFilters = { ...printFilters, [field]: value };
+    let newFilters = { ...printFilters, [field]: value };
+    
+    // Link Property ID and Property Name filters
+    if (field === 'propertyId' && value !== 'all') {
+      // Find the property name for this ID
+      const matchingSchedule = schedules.find(s => s.propertyId === value);
+      if (matchingSchedule) {
+        newFilters.propertyName = matchingSchedule.propertyName;
+      }
+    } else if (field === 'propertyId' && value === 'all') {
+      // Reset property name when ID is reset to all
+      newFilters.propertyName = 'all';
+    } else if (field === 'propertyName' && value !== 'all') {
+      // Find the property ID for this name
+      const matchingSchedule = schedules.find(s => s.propertyName === value);
+      if (matchingSchedule) {
+        newFilters.propertyId = matchingSchedule.propertyId;
+      }
+    } else if (field === 'propertyName' && value === 'all') {
+      // Reset property ID when name is reset to all
+      newFilters.propertyId = 'all';
+    }
+    
     setPrintFilters(newFilters);
     applyPrintFilters(newFilters);
   };
