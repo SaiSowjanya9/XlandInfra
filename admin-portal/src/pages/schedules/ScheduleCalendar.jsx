@@ -521,7 +521,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
               className="min-w-[100px] max-w-[140px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
             >
               <option value="All Zones">All Zones</option>
-              {zones.map(z => <option key={z} value={z}>{z}</option>)}
+              {zones.map(z => <option key={z.name || z} value={z.name || z}>{z.name || z}</option>)}
             </select>
             
             <select 
@@ -927,7 +927,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                   className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                 >
                   <option value="All Zones">All Zones</option>
-                  {zones.map(z => <option key={z} value={z}>{z}</option>)}
+                  {zones.map(z => <option key={z.name || z} value={z.name || z}>{z.name || z}</option>)}
                 </select>
               </div>
               
