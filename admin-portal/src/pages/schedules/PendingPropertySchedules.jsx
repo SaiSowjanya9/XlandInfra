@@ -166,6 +166,13 @@ const getSchedulePermissions = (portalType) => {
   return permissions[portalType] || permissions.executive;
 };
 
+// Helper to extract zone name from zone (can be string or object)
+const getZoneName = (zone) => {
+  if (!zone) return '';
+  if (typeof zone === 'string') return zone;
+  return zone.name || zone.zone_name || zone.zone || '';
+};
+
 const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
   const navigate = useNavigate();
   const token = getAuthToken();
@@ -220,7 +227,12 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       }
       
       const result = await response.json();
-      setProperties(result.data || []);
+      // Transform properties to ensure zone is a string
+      const transformedProperties = (result.data || []).map(p => ({
+        ...p,
+        zone: getZoneName(p.zone)
+      }));
+      setProperties(transformedProperties);
     } catch (err) {
       console.error('Fetch pending properties error:', err);
       setProperties([]);
@@ -233,7 +245,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
   // Extract unique zones from properties data
   useEffect(() => {
     if (properties.length > 0) {
-      const uniqueZones = [...new Set(properties.map(p => p.zone).filter(Boolean))].sort();
+      const uniqueZones = [...new Set(properties.map(p => getZoneName(p.zone)).filter(Boolean))].sort();
       setZones(uniqueZones.map(z => ({ name: z, zone_name: z })));
     }
   }, [properties]);
