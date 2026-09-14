@@ -1655,18 +1655,18 @@ const Properties = () => {
               </div>
 
               
-              {/* Add-ons */}
+              {/* Additional Services */}
               {selectedEstimate.addons && selectedEstimate.addons.length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100 flex items-center gap-2">
                     <Plus className="w-4 h-4 text-green-600" />
-                    Add-ons ({selectedEstimate.addons.length})
+                    Additional Services ({selectedEstimate.addons.length})
                   </h3>
                   <div className="space-y-2">
                     {selectedEstimate.addons.map((addon, idx) => (
                       <div key={idx} className="p-3 bg-green-50 border border-green-200 rounded-lg">
                         <p className="text-sm font-medium text-gray-800">
-                          {addon.services?.map(s => s.name).join(', ') || `Add-on ${idx + 1}`}
+                          {addon.services?.map(s => s.name).join(', ') || `Service ${idx + 1}`}
                         </p>
                         <p className="text-xs text-gray-500">
                           {addon.services?.map(s => s.frequencyType).join(', ')}
@@ -1674,7 +1674,7 @@ const Properties = () => {
                       </div>
                     ))}
                     <div className="flex justify-between items-center p-3 bg-green-100 border border-green-300 rounded-lg">
-                      <p className="text-sm font-semibold text-green-800">Total Add-ons Price</p>
+                      <p className="text-sm font-semibold text-green-800">Total Services Price</p>
                       <p className="font-bold text-green-700">₹{(selectedEstimate.addonsTotal || selectedEstimate.addons.reduce((sum, a) => sum + (a.totalPrice || 0), 0)).toLocaleString()}</p>
                     </div>
                   </div>
@@ -1693,7 +1693,7 @@ const Properties = () => {
                     <span className="font-medium text-gray-800">₹{(selectedEstimate.packageRate || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Add-ons Total</span>
+                    <span className="text-gray-600">Services Total</span>
                     <span className="font-medium text-gray-800">₹{(selectedEstimate.addonsTotal || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm border-t border-gray-200 pt-2">

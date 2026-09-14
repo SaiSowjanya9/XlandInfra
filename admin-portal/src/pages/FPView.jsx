@@ -202,7 +202,7 @@ const FPView = ({ admin }) => {
     { id: 'employee-zones', label: 'Employee Zones', icon: MapPin },
     { id: 'estimates', label: 'All Estimates', icon: FileText },
     { id: 'amc-packages', label: 'AMC Packages', icon: Package },
-    { id: 'addons', label: 'Add-ons', icon: PlusCircle },
+    { id: 'addons', label: 'Add Service', icon: PlusCircle },
     { id: 'archived', label: 'Archived', icon: Archive },
   ];
 
@@ -486,7 +486,7 @@ const FPView = ({ admin }) => {
       
       case 'addons':
         return renderTable(addons, [
-          { header: 'Add-on Name', key: 'name' },
+          { header: 'Service Name', key: 'name' },
           { header: 'Description', key: 'description' },
           { header: 'Price', key: 'price', render: (r) => `₹${r.price || 0}` },
           { header: 'Created', key: 'created_at', render: (r) => formatDate(r.created_at) },

@@ -426,7 +426,7 @@ const AMCPackage = ({ showToast }) => {
 
         {/* Add-ons Section */}
         <div className="px-6 py-4 border-t border-gray-200">
-          <h3 className="text-sm font-semibold text-green-600 mb-4">Add Services (from Add-ons)</h3>
+          <h3 className="text-sm font-semibold text-green-600 mb-4">Add Services</h3>
           
           {/* Add-on Dropdown */}
           <div className="flex gap-3 mb-4">

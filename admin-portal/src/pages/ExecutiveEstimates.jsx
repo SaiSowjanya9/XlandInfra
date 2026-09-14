@@ -278,7 +278,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   };
 
   const getAddonId = (addon) => (addon.id ?? addon.addonId)?.toString();
-  const getAddonName = (addon) => addon.service_name || addon.name || addon.serviceName || addon.services?.[0]?.name || 'Add-on Service';
+  const getAddonName = (addon) => addon.service_name || addon.name || addon.serviceName || addon.services?.[0]?.name || 'Service';
   const getAddonPrice = (addon) => parseFloat(addon.price ?? addon.totalPrice ?? addon.services?.[0]?.price) || 0;
   const getPackagePrice = (pkg) => parseFloat(pkg?.price ?? pkg?.base_price ?? pkg?.totalPrice ?? pkg?.total_price ?? pkg?.rate ?? pkg?.total_rate) || 0;
 
@@ -428,7 +428,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
     { id: 'list', label: 'All Estimates', icon: List },
     { id: 'create', label: 'Create Estimate', icon: Plus },
     { id: 'amc', label: 'AMC Packages', icon: Package },
-    { id: 'addons', label: 'Add-ons', icon: PlusCircle },
+    { id: 'addons', label: 'Add Service', icon: PlusCircle },
     { id: 'archived', label: 'Archived', icon: Archive }
   ];
 
@@ -570,7 +570,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
         body: JSON.stringify(addonForm)
       });
       const result = await response.json();
-      if (response.ok || result.success) { setMessage({ type: 'success', text: 'Add-on created successfully!' }); setShowModal(false); resetAddonForm(); fetchData(); }
+      if (response.ok || result.success) { setMessage({ type: 'success', text: 'Service created successfully!' }); setShowModal(false); resetAddonForm(); fetchData(); }
       else setMessage({ type: 'error', text: result.message || 'Operation failed' });
     } catch (error) { setMessage({ type: 'error', text: 'Failed to create add-on' }); }
   };
@@ -687,9 +687,9 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
             );
           })()}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Add Service from Add-ons</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Add Service</label>
             <select onChange={(e) => { if (e.target.value) setSelectedAddons([...selectedAddons, e.target.value]); e.target.value = ''; }} className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500">
-              <option value="">+ Select Add-on to add</option>
+              <option value="">+ Select Service to add</option>
               {(() => {
                 const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
                 if (!propertyType) return <option disabled>Select property type first</option>;
@@ -701,11 +701,11 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           </div>
           {selectedAddons.length > 0 && (
             <div className="border border-blue-200 rounded-xl overflow-hidden">
-              <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200"><span className="text-sm font-semibold text-blue-700">Additional Services (Add-ons)</span></div>
+              <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200"><span className="text-sm font-semibold text-blue-700">Additional Services</span></div>
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-blue-100 bg-white"><th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[10%]">Service</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[48%]">Description</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[18%]">Frequency</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[14%]">Visits</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[10%]">Action</th></tr></thead>
                 <tbody className="divide-y divide-gray-100 bg-white">{selectedAddons.map((addonId, idx) => { const addon = addons.find(a => getAddonId(a) === addonId); if (!addon) return null; const freqType = addon.frequency_type || addon.frequencyType || addon.services?.[0]?.frequencyType || 'Monthly'; return (<tr key={idx}><td className="px-3 py-2.5 text-gray-800">{getAddonName(addon)}</td><td className={`px-3 py-2.5 text-gray-600 text-center`}>{decodeHtml(addon.description) || '-'}</td><td className="px-3 py-2.5 text-center text-gray-600">{freqType}</td><td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_count ?? addon.frequencyCount ?? getFrequencyVisits(freqType)}</td><td className="px-3 py-2.5 text-center"><button onClick={() => setSelectedAddons(selectedAddons.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button></td></tr>); })}</tbody>
-                <tfoot className="bg-blue-50 border-t border-blue-200"><tr><td colSpan={4} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td><td className="px-5 py-2.5 text-right font-bold text-blue-700">{formatCurrency(selectedAddons.reduce((sum, id) => sum + getAddonPrice(addons.find(a => getAddonId(a) === id)), 0))}</td></tr></tfoot>
+                <tfoot className="bg-blue-50 border-t border-blue-200"><tr><td colSpan={4} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Services Price</td><td className="px-5 py-2.5 text-right font-bold text-blue-700">{formatCurrency(selectedAddons.reduce((sum, id) => sum + getAddonPrice(addons.find(a => getAddonId(a) === id)), 0))}</td></tr></tfoot>
               </table>
             </div>
           )}
@@ -802,7 +802,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           </button>
           <div className="text-center"><p className="text-xl font-bold text-gray-900">{filteredEstimates.length}</p><p className="text-xs text-gray-500">Active Estimates</p></div>
           <div className="text-center"><p className="text-xl font-bold text-gray-900">{amcPackages.length}</p><p className="text-xs text-gray-500">AMC Packages</p></div>
-          <div className="text-center"><p className="text-xl font-bold text-gray-900">{addons.length}</p><p className="text-xs text-gray-500">Add-ons</p></div>
+          <div className="text-center"><p className="text-xl font-bold text-gray-900">{addons.length}</p><p className="text-xs text-gray-500">Add Service</p></div>
           <div className="text-center"><p className="text-xl font-bold text-gray-900">{archivedEstimates.length}</p><p className="text-xs text-gray-500">Archived</p></div>
         </div>
       </div>
@@ -827,7 +827,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           <Package className="w-4 h-4" />AMC Packages
         </button>
         <button onClick={() => navigate('/executive/estimates/addons')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'addons' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
-          <PlusCircle className="w-4 h-4" />Add-ons
+          <PlusCircle className="w-4 h-4" />Add Service
         </button>
         <button onClick={() => navigate('/executive/estimates/archived')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'archived' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
           <Archive className="w-4 h-4" />Archived
@@ -1403,33 +1403,33 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
               {/* Header */}
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center"><PlusCircle className="w-5 h-5 text-slate-600" /></div>
-                <div><h1 className="text-xl font-bold text-gray-900">Add-ons</h1><p className="text-sm text-gray-500">Create optional services for AMC packages by property type</p></div>
+                <div><h1 className="text-xl font-bold text-gray-900">Add Service</h1><p className="text-sm text-gray-500">Create optional services for AMC packages by property type</p></div>
               </div>
               {/* Tabs */}
               <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
                 <button className="px-5 py-2.5 text-sm font-medium rounded-lg bg-white text-slate-700 shadow-sm">
-                  <div className="flex items-center gap-2"><Layers className="w-4 h-4" />All Add-ons{addons.length > 0 && <span className="px-1.5 py-0.5 bg-slate-600 text-white rounded-full text-xs">{addons.length}</span>}</div>
+                  <div className="flex items-center gap-2"><Layers className="w-4 h-4" />All Services{addons.length > 0 && <span className="px-1.5 py-0.5 bg-slate-600 text-white rounded-full text-xs">{addons.length}</span>}</div>
                 </button>
               </div>
-              {/* All Add-ons Table */}
+              {/* All Services Table */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200">
                   <div className="flex items-center justify-between mb-4">
-                    <div><h3 className="text-lg font-semibold text-gray-800">All Add-ons</h3><p className="text-sm text-gray-500">{addonFilterPropertyType === 'all' ? `${addons.length} add-on(s) available` : `${addons.filter(a => matchPropertyType(a.property_type, addonFilterPropertyType)).length} add-on(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === addonFilterPropertyType)?.label}`}</p></div>
+                    <div><h3 className="text-lg font-semibold text-gray-800">All Services</h3><p className="text-sm text-gray-500">{addonFilterPropertyType === 'all' ? `${addons.length} service(s) available` : `${addons.filter(a => matchPropertyType(a.property_type, addonFilterPropertyType)).length} service(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === addonFilterPropertyType)?.label}`}</p></div>
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     <button onClick={() => setAddonFilterPropertyType('all')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${addonFilterPropertyType === 'all' ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>All{addons.length > 0 && <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${addonFilterPropertyType === 'all' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>{addons.length}</span>}</button>
                     {PROPERTY_TYPE_OPTIONS.map((type) => { const count = addons.filter(a => matchPropertyType(a.property_type, type.id)).length; return (<button key={type.id} onClick={() => setAddonFilterPropertyType(type.id)} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${addonFilterPropertyType === type.id ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>{type.label}{count > 0 && <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${addonFilterPropertyType === type.id ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>{count}</span>}</button>); })}
                   </div>
                 </div>
-                {addons.length === 0 ? (<div className="p-12 text-center"><PlusCircle className="w-12 h-12 mx-auto text-gray-300 mb-3" /><p className="text-gray-500">No add-ons available</p></div>
-                ) : (addonFilterPropertyType === 'all' ? addons : addons.filter(a => matchPropertyType(a.property_type, addonFilterPropertyType))).length === 0 ? (<div className="p-8 text-center"><p className="text-gray-500">No add-ons found for this property type</p><button onClick={() => setAddonFilterPropertyType('all')} className="mt-2 text-sm text-blue-600 hover:underline">Show all add-ons</button></div>
+                {addons.length === 0 ? (<div className="p-12 text-center"><PlusCircle className="w-12 h-12 mx-auto text-gray-300 mb-3" /><p className="text-gray-500">No services available</p></div>
+                ) : (addonFilterPropertyType === 'all' ? addons : addons.filter(a => matchPropertyType(a.property_type, addonFilterPropertyType))).length === 0 ? (<div className="p-8 text-center"><p className="text-gray-500">No services found for this property type</p><button onClick={() => setAddonFilterPropertyType('all')} className="mt-2 text-sm text-blue-600 hover:underline">Show all services</button></div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead className="bg-slate-50 border-b border-gray-200">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Add-on Name</th>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Service Name</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Property Type</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Frequency</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">No.of Visits</th>
@@ -1654,10 +1654,10 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                 );
               })()}
 
-              {/* Add-ons - Horizontal Table */}
+              {/* Additional Services - Horizontal Table */}
               {viewEstimate.addons && viewEstimate.addons.length > 0 && (
                 <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Add-on Services</p>
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Additional Services</p>
                   <div>
                     <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-lg">
                       <div className="col-span-1 text-xs font-semibold text-green-700">#</div>
@@ -1702,7 +1702,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                       })}
                     </div>
                     <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-lg">
-                      <p className="font-semibold text-green-800">Total Add-ons Price</p>
+                      <p className="font-semibold text-green-800">Total Services Price</p>
                       <p className="font-bold text-green-700">{formatCurrency(viewEstimate.addons.reduce((sum, a) => sum + Number(a.price || 0), 0))}</p>
                     </div>
                   </div>
