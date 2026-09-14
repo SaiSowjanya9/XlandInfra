@@ -565,7 +565,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         type: rec.type,
         reason: rec.reason,
         vendor: service?.vendorName || 'Unassigned',
-        zone: property?.zone || 'Zone A'
+        zone: getZoneName(property?.zone) || 'Zone A'
       });
     });
     

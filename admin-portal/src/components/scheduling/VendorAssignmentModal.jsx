@@ -23,6 +23,13 @@ import { getAuthToken } from '../../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+// Helper to extract zone name from zone (can be string or object)
+const getZoneName = (zone) => {
+  if (!zone) return '';
+  if (typeof zone === 'string') return zone;
+  return zone.name || zone.zone_name || zone.zone || '';
+};
+
 const VendorAssignmentModal = ({
   isOpen,
   onClose,
@@ -64,7 +71,7 @@ const VendorAssignmentModal = ({
       const apiPath = getApiPath();
       const params = new URLSearchParams({
         serviceCategory: service.name || service.service || '',
-        zone: property?.zone || ''
+        zone: getZoneName(property?.zone) || ''
       });
 
       const response = await fetch(
@@ -236,7 +243,7 @@ const VendorAssignmentModal = ({
             </div>
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-gray-400" />
-              <span className="text-gray-600">{property?.zone}</span>
+              <span className="text-gray-600">{getZoneName(property?.zone)}</span>
             </div>
             <div className="flex items-center gap-2">
               <Wrench className="w-4 h-4 text-gray-400" />
@@ -332,7 +339,7 @@ const VendorAssignmentModal = ({
                           </span>
                           <span className="flex items-center gap-1">
                             <MapPin className="w-3.5 h-3.5" />
-                            {vendor.zone || 'All Zones'}
+                            {getZoneName(vendor.zone) || 'All Zones'}
                           </span>
                           {vendor.totalJobsCompleted > 0 && (
                             <span className="flex items-center gap-1">
