@@ -1131,7 +1131,7 @@ const CustomerSubmissions = () => {
               className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm"
             >
               <option value="">All Zones</option>
-              {zones.map(z => <option key={z} value={z}>{z}</option>)}
+              {zones.map(z => <option key={typeof z === 'object' ? (z.name || z.zone_name) : z} value={typeof z === 'object' ? (z.name || z.zone_name) : z}>{typeof z === 'object' ? (z.name || z.zone_name) : z}</option>)}
             </select>
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           </div>

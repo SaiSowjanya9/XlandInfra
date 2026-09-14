@@ -651,7 +651,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           >
             <option value="all">All Zones</option>
             {zones.map(zone => (
-              <option key={zone} value={zone}>{zone}</option>
+              <option key={zone.name || zone} value={zone.name || zone}>{zone.name || zone}</option>
             ))}
           </select>
 

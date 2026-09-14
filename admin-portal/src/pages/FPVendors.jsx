@@ -370,7 +370,7 @@ const FPVendors = ({ user }) => {
                     className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
                   >
                     <option value="">All Zones ({getZoneCount('')})</option>
-                    {zones.map(z => <option key={z} value={z}>{z} ({getZoneCount(z)})</option>)}
+                    {zones.map(z => { const zoneName = typeof z === 'object' ? (z.name || z.zone_name) : z; return <option key={zoneName} value={zoneName}>{zoneName} ({getZoneCount(zoneName)})</option>; })}
                   </select>
                   <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                 </div>
