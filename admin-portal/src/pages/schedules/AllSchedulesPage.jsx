@@ -345,7 +345,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       schedule.targetDate || '',
       schedule.scheduledDate || '',
       schedule.scheduledTime || '',
-      schedule.zone || '',
+      getZoneName(schedule.zone) || '',
       schedule.workOrderId || '',
       schedule.status || ''
     ]);

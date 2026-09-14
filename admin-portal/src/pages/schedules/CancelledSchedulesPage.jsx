@@ -92,7 +92,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
     } catch (error) {
       console.error('Error fetching zones:', error);
       // Fallback to zones from data
-      const uniqueZones = [...new Set(cancelledSchedules.map(s => s.zone).filter(Boolean))];
+      const uniqueZones = [...new Set(cancelledSchedules.map(s => getZoneName(s.zone)).filter(Boolean))];
       setZones(uniqueZones);
     }
   };
@@ -251,7 +251,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
       schedule.vendorName || '',
       schedule.scheduledDate || '',
       schedule.scheduledTime || '',
-      schedule.zone || '',
+      getZoneName(schedule.zone) || '',
       schedule.cancelledAt || schedule.cancelledDate || '',
       schedule.cancelledBy || '',
       schedule.cancelReason || schedule.reason || ''

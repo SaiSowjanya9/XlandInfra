@@ -428,7 +428,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       property.propertyName || '',
       normalizePropertyType(property.propertyType),
       property.customerName || '',
-      property.zone || '',
+      getZoneName(property.zone) || '',
       property.totalServices || 0,
       property.assignedVendors || 0,
       property.addedOn || '',
