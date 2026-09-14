@@ -480,10 +480,10 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                 )}
               </div>
 
-              {/* Add-ons - Horizontal Table */}
+              {/* Additional Services - Horizontal Table */}
               {viewEstimate.addons?.length > 0 && (
                 <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm text-gray-500 mb-2">Add-ons</p>
+                  <p className="text-sm text-gray-500 mb-2">Additional Services</p>
                   <div>
                     <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-lg">
                       <div className="col-span-1 text-xs font-semibold text-green-700">#</div>
@@ -494,7 +494,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                     </div>
                     <div className="border border-green-100 divide-y divide-green-50">
                       {viewEstimate.addons.map((addon, idx) => {
-                        const addonName = decodeHtml(addon.name || addon.serviceName || addon.service_name) || 'Add-on';
+                        const addonName = decodeHtml(addon.name || addon.serviceName || addon.service_name) || 'Service';
                         const frequencyCount = addon.frequency_count ?? addon.frequencyCount ?? 1;
                         const frequencyType = addon.frequency_type || addon.frequencyType || 'Monthly';
                         return (
@@ -519,7 +519,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                       })}
                     </div>
                     <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-lg">
-                      <p className="font-semibold text-green-800">Total Add-ons Price</p>
+                      <p className="font-semibold text-green-800">Total Services Price</p>
                       <p className="font-bold text-green-700">₹{viewEstimate.addons.reduce((sum, a) => sum + Number(a.price || 0), 0).toLocaleString()}</p>
                     </div>
                   </div>

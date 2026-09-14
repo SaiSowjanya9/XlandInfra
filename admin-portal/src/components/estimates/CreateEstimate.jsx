@@ -2187,7 +2187,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 {/* Add-on Dropdown - Reduced width */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Add Service from Add-ons
+                    Add Service
                   </label>
                   <div className="relative max-w-sm">
                     <select
@@ -2197,7 +2197,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       }}
                       className="w-full px-4 py-2.5 text-sm border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400 appearance-none bg-white"
                     >
-                      <option value="">+ Select Add-on to add</option>
+                      <option value="">+ Select Service to add</option>
                       {(() => {
                         const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType;
                         const filteredAddons = propertyType 
@@ -2234,7 +2234,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   
                   {availableAddons.length === 0 && !showCustomAddon && (
                     <p className="text-xs text-amber-600 mt-2">
-                      No add-ons available. Create add-ons in the Add-ons section or select "Other" for custom service.
+                      No services available. Create services in the Add Service section or select "Other" for custom service.
                     </p>
                   )}
                 </div>
@@ -2326,7 +2326,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 {selectedAddons.length > 0 && (
                   <div className="bg-blue-50/50 border border-blue-200 rounded-lg overflow-hidden">
                     <div className="px-3 py-2 bg-blue-100/60 border-b border-blue-200">
-                      <p className="text-sm font-semibold text-blue-800">Additional Services (Add-ons)</p>
+                      <p className="text-sm font-semibold text-blue-800">Additional Services</p>
                     </div>
                     {/* Table Header */}
                     <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-white border-b border-blue-100">
@@ -2358,7 +2358,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     ))}
                     {/* Total Row */}
                     <div className="grid grid-cols-12 gap-2 px-3 py-2.5 bg-blue-50 border-t border-blue-200">
-                      <div className="col-span-10 text-sm font-semibold text-blue-800">Total Add-ons Price</div>
+                      <div className="col-span-10 text-sm font-semibold text-blue-800">Total Services Price</div>
                       <div className="col-span-2 text-sm font-bold text-blue-700 text-right">₹{getAddonsTotal().toLocaleString()}</div>
                     </div>
                   </div>
@@ -2808,7 +2808,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               {/* Add-on Dropdown */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Add Service from Add-ons
+                  Add Service
                 </label>
                 <div className="relative max-w-sm">
                   <select
@@ -2818,7 +2818,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     }}
                     className="w-full px-4 py-2.5 text-sm border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400 appearance-none bg-white"
                   >
-                    <option value="">+ Select Add-on to add</option>
+                    <option value="">+ Select Service to add</option>
                     {(() => {
                       const propertyType = estimateForm.propertyType;
                       const filteredAddons = propertyType 
@@ -2855,7 +2855,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 
                 {availableAddons.length === 0 && !directShowCustomAddon && (
                   <p className="text-xs text-amber-600 mt-2">
-                    No add-ons available. Create add-ons in the Add-ons section or select "Other" for custom service.
+                    No services available. Create services in the Add Service section or select "Other" for custom service.
                   </p>
                 )}
               </div>
@@ -2942,7 +2942,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               {directSelectedAddons.length > 0 && (
                 <div className="bg-blue-50/50 border border-blue-200 rounded-lg overflow-hidden">
                   <div className="px-3 py-2 bg-blue-100/60 border-b border-blue-200">
-                    <p className="text-sm font-semibold text-blue-800">Additional Services (Add-ons)</p>
+                    <p className="text-sm font-semibold text-blue-800">Additional Services</p>
                   </div>
                   {/* Table Header */}
                   <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-white border-b border-blue-100">
@@ -2974,7 +2974,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   ))}
                   {/* Total Row */}
                   <div className="grid grid-cols-12 gap-2 px-3 py-2.5 bg-blue-50 border-t border-blue-200">
-                    <div className="col-span-10 text-sm font-semibold text-blue-800">Total Add-ons Price</div>
+                    <div className="col-span-10 text-sm font-semibold text-blue-800">Total Services Price</div>
                     <div className="col-span-2 text-sm font-bold text-blue-700 text-right">₹{getDirectAddonsTotal().toLocaleString()}</div>
                   </div>
                 </div>

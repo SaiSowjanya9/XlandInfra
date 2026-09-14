@@ -96,7 +96,7 @@ const BILLING_DURATIONS = [
 ];
 
 const TAB_TITLES = {
-  'create': 'Create Estimate', 'list': 'All Estimates', 'amc': 'AMC Packages', 'addons': 'Add-ons', 'archived': 'Archived Estimates'
+  'create': 'Create Estimate', 'list': 'All Estimates', 'amc': 'AMC Packages', 'addons': 'Add Service', 'archived': 'Archived Estimates'
 };
 
 const FPEstimates = ({ user, defaultTab = 'list' }) => {
@@ -779,7 +779,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           ) || addonFromList;
         }
         return {
-          name: addonName || 'Add-on',
+          name: addonName || 'Service',
           frequencyType: a.frequency_type || a.frequencyType || addonFromList?.frequency_type || 'One-time',
           frequencyCount: a.frequency_count ?? a.frequencyCount ?? addonFromList?.frequency_count ?? 0,
           description: a.description || addonFromList?.description || ''
@@ -1492,12 +1492,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               })()}
 
               <div className="pt-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Add Service from Add-ons</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Add Service</label>
                 <select 
                   onChange={(e) => { if (e.target.value) setEstimateForm({...estimateForm, selectedAddons: [...estimateForm.selectedAddons, e.target.value]}); e.target.value = ''; }}
                   className="w-full max-w-sm px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
                 >
-                  <option value="">+ Select Add-on to add</option>
+                  <option value="">+ Select Service to add</option>
                   {(() => {
                     // Get property type from selected property, form, or selected AMC package
                     const selectedPkg = amcPackages.find(p => p.id == estimateForm.selectedPackage);
@@ -1512,11 +1512,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </select>
               </div>
 
-              {/* Additional Services (Add-ons) Table - Only show when add-ons selected */}
+              {/* Additional Services Table - Only show when services selected */}
               {estimateForm.selectedAddons.length > 0 && (
                 <div className="border border-blue-200 rounded-xl overflow-hidden">
                   <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200">
-                    <span className="text-sm font-semibold text-blue-700">Additional Services (Add-ons)</span>
+                    <span className="text-sm font-semibold text-blue-700">Additional Services</span>
                   </div>
                   <table className="w-full text-sm">
                     <thead>
@@ -1548,7 +1548,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </tbody>
                     <tfoot className="bg-blue-50 border-t border-blue-200">
                       <tr>
-                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td>
+                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Services Price</td>
                         <td className="px-3 py-2.5 text-right font-bold text-blue-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0))}</td>
                       </tr>
                     </tfoot>
@@ -1848,12 +1848,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               })()}
 
               <div className="pt-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Add Service from Add-ons</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Add Service</label>
                 <select 
                   onChange={(e) => { if (e.target.value) setEstimateForm({...estimateForm, selectedAddons: [...estimateForm.selectedAddons, e.target.value]}); e.target.value = ''; }}
                   className="w-full max-w-sm px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
                 >
-                  <option value="">+ Select Add-on to add</option>
+                  <option value="">+ Select Service to add</option>
                   {(() => {
                     // Get property type from selected property, form, or selected AMC package
                     const selectedPkg = amcPackages.find(p => p.id == estimateForm.selectedPackage);
@@ -1868,11 +1868,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </select>
               </div>
 
-              {/* Additional Services (Add-ons) Table - Only show when add-ons selected */}
+              {/* Additional Services Table - Only show when services selected */}
               {estimateForm.selectedAddons.length > 0 && (
                 <div className="border border-blue-200 rounded-xl overflow-hidden">
                   <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200">
-                    <span className="text-sm font-semibold text-blue-700">Additional Services (Add-ons)</span>
+                    <span className="text-sm font-semibold text-blue-700">Additional Services</span>
                   </div>
                   <table className="w-full text-sm">
                     <thead>
@@ -1904,7 +1904,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </tbody>
                     <tfoot className="bg-blue-50 border-t border-blue-200">
                       <tr>
-                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td>
+                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Services Price</td>
                         <td className="px-3 py-2.5 text-right font-bold text-blue-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0))}</td>
                       </tr>
                     </tfoot>
@@ -3413,7 +3413,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     try {
       const res = await fetch(`${API_BASE}/api/fp/addons`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ property_type: addonSelectedPropertyType, service_name: addonForm.serviceName, frequency_count: !isNaN(parseInt(addonForm.frequencyCount)) ? parseInt(addonForm.frequencyCount) : 1, frequency_type: addonForm.frequencyType, billing_cycle: addonForm.billingCycle, price: parseFloat(addonForm.price), description: addonForm.description || '' }) });
       const result = await res.json();
-      if (res.ok || result.success) { showToast('Add-on created!'); setAddonForm({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' }); setAddonSelectedPropertyType(null); loadData(); setAddonActiveTab('all-addons'); }
+      if (res.ok || result.success) { showToast('Service created!'); setAddonForm({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' }); setAddonSelectedPropertyType(null); loadData(); setAddonActiveTab('all-addons'); }
       else showToast(result.message || 'Failed', 'error');
     } catch (e) { showToast('Failed to create add-on', 'error'); }
   };
@@ -3448,7 +3448,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       });
       const result = await res.json();
       if (res.ok || result.success) {
-        showToast('Add-on updated!');
+        showToast('Service updated!');
         setEditingAddon(null);
         loadData();
       } else {
@@ -3465,11 +3465,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       <div className="flex gap-2">
         {!isFPManager && (
           <button onClick={() => setAddonActiveTab('create')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'create' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-            <Plus className="w-4 h-4" />Create Add-on
+            <Plus className="w-4 h-4" />Create Service
           </button>
         )}
         <button onClick={() => setAddonActiveTab('all-addons')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'all-addons' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-          <Layers className="w-4 h-4" />All Add-ons
+          <Layers className="w-4 h-4" />All Services
           {addons.length > 0 && <span className="px-1.5 py-0.5 bg-gray-700 text-white rounded-full text-xs">{addons.length}</span>}
         </button>
       </div>
@@ -3497,10 +3497,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
           </div>
 
-          {/* Create Add-on Form */}
+          {/* Create Service Form */}
           {addonSelectedPropertyType && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-1">Create Add-on</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-1">Create Service</h3>
               <p className="text-sm text-gray-500 mb-6">For: <span className="font-medium text-indigo-600">{PROPERTY_TYPE_OPTIONS.find(t => t.id === addonSelectedPropertyType)?.label}</span></p>
               
               {/* Form Row - SERVICE | DESCRIPTION | FREQUENCY | VISITS | PRICE | SAVE */}
@@ -3521,7 +3521,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     type="text" 
                     value={addonForm.description} 
                     onChange={(e) => setAddonForm({ ...addonForm, description: e.target.value })} 
-                    placeholder="Add-on description..." 
+                    placeholder="Service description..." 
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400" 
                   />
                 </div>
@@ -3575,14 +3575,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
           )}
 
-          {/* Add-ons List for Selected Property Type */}
+          {/* Services List for Selected Property Type */}
           {addonSelectedPropertyType && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-base font-semibold text-gray-800 mb-1">Add-ons for {PROPERTY_TYPE_OPTIONS.find(t => t.id === addonSelectedPropertyType)?.label}</h3>
+              <h3 className="text-base font-semibold text-gray-800 mb-1">Services for {PROPERTY_TYPE_OPTIONS.find(t => t.id === addonSelectedPropertyType)?.label}</h3>
               <p className="text-sm text-gray-500 mb-4">{addons.filter(a => normalizePropertyType(a.property_type) === addonSelectedPropertyType).length} add-on(s) available</p>
               
               {addons.filter(a => normalizePropertyType(a.property_type) === addonSelectedPropertyType).length === 0 ? (
-                <div className="py-8 text-center text-gray-400">No add-ons created yet for this property type</div>
+                <div className="py-8 text-center text-gray-400">No services created yet for this property type</div>
               ) : (
                 <div className="space-y-3">
                   {addons.filter(a => normalizePropertyType(a.property_type) === addonSelectedPropertyType).map(a => (
@@ -3626,7 +3626,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-gray-900">All Add-ons</h3>
+                <h3 className="font-semibold text-gray-900">All Services</h3>
                 <p className="text-sm text-gray-500">{addons.length} add-on(s) available</p>
               </div>
               <div className="flex gap-2 flex-wrap">
@@ -3650,7 +3650,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             {filteredAddons.length === 0 ? (
               <div className="py-16 text-center">
                 <PlusCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">No add-ons found</p>
+                <p className="text-gray-500">No services found</p>
               </div>
             ) : (
               <div>
@@ -3707,12 +3707,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       )}
 
-      {/* Edit Add-on Modal */}
+      {/* Edit Service Modal */}
       {editingAddon && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-lg m-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Edit Add-on</h2>
+              <h2 className="text-xl font-semibold text-gray-800">Edit Service</h2>
               <button onClick={() => setEditingAddon(null)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
               </button>
@@ -3736,7 +3736,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     type="text"
                     value={editingAddon.description}
                     onChange={(e) => setEditingAddon({ ...editingAddon, description: e.target.value })}
-                    placeholder="Add-on description..."
+                    placeholder="Service description..."
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
                   />
                 </div>
@@ -3929,7 +3929,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center"><FileText className="w-6 h-6 text-indigo-600" /></div>
-              <div><h1 className="text-2xl font-bold text-gray-800">{TAB_TITLES[defaultTab] || 'Estimates'}</h1><p className="text-sm text-gray-500">Create and manage estimates, AMC packages, and add-ons</p></div>
+              <div><h1 className="text-2xl font-bold text-gray-800">{TAB_TITLES[defaultTab] || 'Estimates'}</h1><p className="text-sm text-gray-500">Create and manage estimates, AMC packages, and services</p></div>
             </div>
             <div className="flex items-center gap-6">
               <button onClick={loadData} className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" title="Refresh">
@@ -3937,7 +3937,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               </button>
               <div className="text-center"><p className="text-2xl font-bold text-gray-800">{filteredEstimates.length}</p><p className="text-xs text-gray-500">Active Estimates</p></div>
               <div className="text-center"><p className="text-2xl font-bold text-gray-800">{filteredAmcPackages.length}</p><p className="text-xs text-gray-500">AMC Packages</p></div>
-              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{filteredAddons.length}</p><p className="text-xs text-gray-500">Add-ons</p></div>
+              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{filteredAddons.length}</p><p className="text-xs text-gray-500">Add Service</p></div>
               <div className="text-center"><p className="text-2xl font-bold text-gray-800">{archivedEstimates.length}</p><p className="text-xs text-gray-500">Archived</p></div>
             </div>
           </div>
@@ -4207,7 +4207,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 );
               })()}
 
-              {/* Add-ons - Horizontal Table - Skip for Work Order Estimates */}
+              {/* Additional Services - Horizontal Table - Skip for Work Order Estimates */}
               {viewEstimate.estimate_type !== 'work_order' && (() => {
                 // Parse addons from addons array or addons_data JSON
                 let addonsList = viewEstimate.addons || [];
@@ -4222,7 +4222,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 
                 return (
                 <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Add-on Services</p>
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Additional Services</p>
                   <div>
                     {/* Table Header */}
                     <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-lg">
@@ -4270,9 +4270,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         );
                       })}
                     </div>
-                    {/* Total Add-ons Price */}
+                    {/* Total Services Price */}
                     <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-lg">
-                      <p className="font-semibold text-green-800">Total Add-ons Price</p>
+                      <p className="font-semibold text-green-800">Total Services Price</p>
                       <p className="font-bold text-green-700">{formatCurrency(addonsList.reduce((sum, a) => sum + Number(a.price || a.totalPrice || a.calculatedPrice || 0), 0))}</p>
                     </div>
                   </div>
@@ -4445,7 +4445,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               ) : (
                 <>
                   <div><p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p><select value={editEstimateForm.package_id || ''} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, package_id: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white"><option value="">Select Package</option>{amcPackages.filter(p => normalizePropertyType(getPkgPropertyType(p)) === normalizePropertyType(editEstimate.property_type)).map(pkg => (<option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>))}</select></div>
-                  <div><p className="text-sm font-semibold text-gray-700 mb-3">Add-ons</p><div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">{addons.filter(a => normalizePropertyType(a.property_type) === normalizePropertyType(editEstimate.property_type)).map(addon => { const existing = (editEstimateForm.selectedAddons || []).find(item => item.id === addon.id); const qty = existing?.quantity || 0; return (<div key={addon.id} className="flex items-center justify-between hover:bg-gray-50 p-2 rounded"><span className="text-sm text-gray-700 flex-1">{decodeHtml(addon.service_name)}</span><div className="flex items-center gap-2"><button type="button" onClick={() => { const current = editEstimateForm.selectedAddons || []; if (qty <= 1) { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.filter(item => item.id !== addon.id) }); } else { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.map(item => item.id === addon.id ? { ...item, quantity: item.quantity - 1 } : item) }); } }} className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50" disabled={qty === 0}>-</button><span className="w-6 text-center text-sm font-medium">{qty}</span><button type="button" onClick={() => { const current = editEstimateForm.selectedAddons || []; if (qty === 0) { setEditEstimateForm({ ...editEstimateForm, selectedAddons: [...current, { id: addon.id, quantity: 1 }] }); } else { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.map(item => item.id === addon.id ? { ...item, quantity: item.quantity + 1 } : item) }); } }} className="w-7 h-7 flex items-center justify-center rounded-full border border-amber-500 text-amber-600 hover:bg-amber-50">+</button></div></div>); })}</div></div>
+                  <div><p className="text-sm font-semibold text-gray-700 mb-3">Add Service</p><div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">{addons.filter(a => normalizePropertyType(a.property_type) === normalizePropertyType(editEstimate.property_type)).map(addon => { const existing = (editEstimateForm.selectedAddons || []).find(item => item.id === addon.id); const qty = existing?.quantity || 0; return (<div key={addon.id} className="flex items-center justify-between hover:bg-gray-50 p-2 rounded"><span className="text-sm text-gray-700 flex-1">{decodeHtml(addon.service_name)}</span><div className="flex items-center gap-2"><button type="button" onClick={() => { const current = editEstimateForm.selectedAddons || []; if (qty <= 1) { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.filter(item => item.id !== addon.id) }); } else { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.map(item => item.id === addon.id ? { ...item, quantity: item.quantity - 1 } : item) }); } }} className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50" disabled={qty === 0}>-</button><span className="w-6 text-center text-sm font-medium">{qty}</span><button type="button" onClick={() => { const current = editEstimateForm.selectedAddons || []; if (qty === 0) { setEditEstimateForm({ ...editEstimateForm, selectedAddons: [...current, { id: addon.id, quantity: 1 }] }); } else { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.map(item => item.id === addon.id ? { ...item, quantity: item.quantity + 1 } : item) }); } }} className="w-7 h-7 flex items-center justify-center rounded-full border border-amber-500 text-amber-600 hover:bg-amber-50">+</button></div></div>); })}</div></div>
                 </>
               )}
               <div><p className="text-sm font-semibold text-gray-700 mb-3">Pricing</p><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-medium text-gray-600 mb-1">Discount (%)</label><input type="number" min="0" max="100" value={editEstimateForm.discount_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, discount_percent: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">GST (%)</label><input type="number" min="0" max="100" value={editEstimateForm.gst_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, gst_percent: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div></div><div className="mt-4 bg-gray-50 p-4 rounded-lg space-y-2"><div className="flex justify-between text-sm"><span>Subtotal</span><span>{formatCurrency(calculateEditPricing().subtotal)}</span></div><div className="flex justify-between text-sm"><span>Discount</span><span className="text-red-500">-{formatCurrency(calculateEditPricing().discountAmt)}</span></div><div className="flex justify-between text-sm"><span>GST</span><span>{formatCurrency(calculateEditPricing().gstAmt)}</span></div><div className="flex justify-between font-semibold pt-2 border-t"><span>Total</span><span className="text-amber-600">{formatCurrency(calculateEditPricing().total)}</span></div></div></div>

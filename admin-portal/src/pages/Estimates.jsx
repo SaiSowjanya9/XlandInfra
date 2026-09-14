@@ -23,7 +23,7 @@ const TAB_TITLES = {
   'create': 'Create Estimate',
   'list': 'All Estimates',
   'amc-manager': 'AMC Packages',
-  'addons': 'Add-ons',
+  'addons': 'Add Service',
   'archived': 'Archived Estimates'
 };
 
@@ -276,7 +276,7 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-gray-800">{stats.addons}</p>
-                  <p className="text-xs text-gray-500">Add-ons</p>
+                  <p className="text-xs text-gray-500">Add Service</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-gray-800">{stats.archived}</p>

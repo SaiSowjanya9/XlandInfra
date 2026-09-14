@@ -58,7 +58,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   const [addons, setAddons] = useState([]);
   const [services, setServices] = useState([]);
   const [selectedPropertyType, setSelectedPropertyType] = useState(null);
-  const [filterPropertyType, setFilterPropertyType] = useState('all'); // Filter for All Add-ons tab
+  const [filterPropertyType, setFilterPropertyType] = useState('all'); // Filter for All Services tab
   const [addonForm, setAddonForm] = useState({
     serviceName: '',
     frequencyCount: 12,
@@ -159,7 +159,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
 
     try {
       await createAddon(addonData);
-      showToast('Add-on created!');
+      showToast('Service created!');
       resetForm();
       await loadData();
     } catch (error) {
@@ -198,7 +198,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
           setAddons(prevAddons => prevAddons.filter(a => 
             (a.id !== addon.id) && (a.addonId !== addon.addonId)
           ));
-          showToast('Add-on deleted');
+          showToast('Service deleted');
         } else {
           throw new Error(result.message);
         }
@@ -287,7 +287,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       ));
       setShowEditModal(false);
       setEditingAddon(null);
-      showToast('Add-on updated successfully');
+      showToast('Service updated successfully');
       loadData(); // Refresh to get updated data
     } catch (error) {
       showToast('Failed to update add-on', 'error');
@@ -296,46 +296,42 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
 
   return (
     <div className="space-y-4">
-      {/* Tabs - Create tab hidden for Operations Manager */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+      {/* Header with Add Service button on top right */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+            <Layers className="w-5 h-5 text-green-600" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Add Service</h2>
+            <p className="text-sm text-gray-500">{addons.length} service(s) available</p>
+          </div>
+        </div>
         {!isOpsManager && (
           <button
             onClick={() => setActiveTab('create')}
-            className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${
-              activeTab === 'create'
-                ? 'bg-white text-stone-700 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
+            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
           >
-            <div className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Create Add-on
-            </div>
+            <Plus className="w-4 h-4" />
+            Add Service
           </button>
         )}
-        <button
-          onClick={() => setActiveTab('all-addons')}
-          className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${
-            activeTab === 'all-addons'
-              ? 'bg-white text-stone-700 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4" />
-            All Add-ons
-            {addons.length > 0 && (
-              <span className="px-1.5 py-0.5 bg-stone-600 text-white rounded-full text-xs">
-                {addons.length}
-              </span>
-            )}
-          </div>
-        </button>
       </div>
 
-      {/* Create Add-on Tab */}
+      {/* Create Service Form */}
       {activeTab === 'create' && (
         <div className="space-y-6">
+          {/* Back button and form header */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setActiveTab('all-addons')}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ChevronDown className="w-5 h-5 text-gray-500 rotate-90" />
+            </button>
+            <h3 className="text-lg font-semibold text-gray-800">Create New Service</h3>
+          </div>
+          
           {/* Property Type Selection - Evenly distributed layout */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6">
             <h2 className="text-base font-semibold text-gray-900 mb-2">Select Property Type</h2>
@@ -367,7 +363,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800">Create Add-on</h3>
+                  <h3 className="text-lg font-semibold text-gray-800">Create Service</h3>
                   <p className="text-sm text-gray-500">
                     For: <span className="font-medium text-gray-700">
                       {PROPERTY_TYPE_OPTIONS.find(t => t.id === selectedPropertyType)?.label}
@@ -488,7 +484,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200">
               <div className="px-6 py-4 border-b border-gray-100">
                 <h3 className="text-lg font-semibold text-gray-800">
-                  Add-ons for {PROPERTY_TYPE_OPTIONS.find(t => t.id === selectedPropertyType)?.label}
+                  Services for {PROPERTY_TYPE_OPTIONS.find(t => t.id === selectedPropertyType)?.label}
                 </h3>
                 <p className="text-sm text-gray-500">{filteredAddons.length} add-on(s) available</p>
               </div>
@@ -553,17 +549,17 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         </div>
       )}
 
-      {/* All Add-ons Tab - With Property Type Filter and Table Layout */}
+      {/* All Services Tab - With Property Type Filter and Table Layout */}
       {activeTab === 'all-addons' && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-lg font-semibold text-gray-800">All Add-ons</h3>
+                <h3 className="text-lg font-semibold text-gray-800">Services List</h3>
                 <p className="text-sm text-gray-500">
                   {filterPropertyType === 'all' 
-                    ? `${addons.length} add-on(s) available` 
-                    : `${addons.filter(a => normalizePropertyType(a.propertyType || a.property_type) === filterPropertyType).length} add-on(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
+                    ? `${addons.length} service(s) available` 
+                    : `${addons.filter(a => normalizePropertyType(a.propertyType || a.property_type) === filterPropertyType).length} service(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
                 </p>
               </div>
             </div>
@@ -608,14 +604,16 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
           {addons.length === 0 ? (
             <div className="p-12 text-center">
               <PlusCircle className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500">No add-ons yet</p>
-              <p className="text-sm text-gray-400 mb-4">Create your first add-on in the Create tab</p>
-              <button
-                onClick={() => setActiveTab('create')}
-                className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
-              >
-                Create Add-on
-              </button>
+              <p className="text-gray-500">No services yet</p>
+              <p className="text-sm text-gray-400 mb-4">Click "Add Service" button above to create your first service</p>
+              {!isOpsManager && (
+                <button
+                  onClick={() => setActiveTab('create')}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Add Service
+                </button>
+              )}
             </div>
           ) : (
             <>
@@ -738,12 +736,12 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         </div>
       )}
 
-      {/* Edit Add-on Modal */}
+      {/* Edit Service Modal */}
       {showEditModal && editingAddon && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl animate-in zoom-in-95">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Edit Add-on</h3>
+              <h3 className="text-xl font-bold text-gray-900">Edit Service</h3>
               <button
                 onClick={() => { setShowEditModal(false); setEditingAddon(null); }}
                 className="p-2 hover:bg-gray-100 rounded-lg"

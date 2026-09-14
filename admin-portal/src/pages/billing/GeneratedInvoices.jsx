@@ -1477,7 +1477,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
 
                 const addons = addonItems.map(item => {
                   // Parse addon name and description from description field
-                  const fullDesc = decodeHtmlEntities(item.description || item.name || 'Add-on');
+                  const fullDesc = decodeHtmlEntities(item.description || item.name || 'Service');
                   let addonName = fullDesc;
                   let addonDesc = '-';
                   
@@ -1501,7 +1501,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                   <div className="mt-4">
                     {/* Section Header */}
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-bold text-gray-900 uppercase whitespace-nowrap">Add-ons</span>
+                      <span className="text-xs font-bold text-gray-900 uppercase whitespace-nowrap">Additional Services</span>
                     </div>
                     
                     {/* Addons Table - Compact */}
@@ -1510,7 +1510,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                         <thead>
                           <tr className="bg-[#c9a227]">
                             <th className="w-8 px-2 py-2 text-xs font-semibold text-white text-center">#</th>
-                            <th className="w-28 px-2 py-2 text-xs font-semibold text-white text-left">Add-on</th>
+                            <th className="w-28 px-2 py-2 text-xs font-semibold text-white text-left">Service</th>
                             <th className="px-2 py-2 text-xs font-semibold text-white text-left">Description</th>
                             <th className="w-20 px-2 py-2 text-xs font-semibold text-white text-center">Frequency</th>
                             <th className="w-12 px-2 py-2 text-xs font-semibold text-white text-center">Visits</th>

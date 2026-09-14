@@ -125,7 +125,7 @@ const BILLING_DURATIONS = [
 ];
 
 const TAB_TITLES = {
-  'create': 'Create Estimate', 'list': 'All Estimates', 'amc': 'AMC Packages', 'addons': 'Add-ons', 'archived': 'Archived Estimates'
+  'create': 'Create Estimate', 'list': 'All Estimates', 'amc': 'AMC Packages', 'addons': 'Add Service', 'archived': 'Archived Estimates'
 };
 
 const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
@@ -299,7 +299,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   const showToast = (msg, type = 'success') => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3500); };
   const formatCurrency = (amt) => { const num = parseFloat(amt); return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(isNaN(num) ? 0 : Math.round(num)); };
   const getAddonId = (addon) => (addon.id ?? addon.addonId)?.toString();
-  const getAddonName = (addon) => decodeHtml(addon.service_name || addon.name || addon.serviceName || addon.services?.[0]?.name) || 'Add-on Service';
+  const getAddonName = (addon) => decodeHtml(addon.service_name || addon.name || addon.serviceName || addon.services?.[0]?.name) || 'Service';
   const getAddonPrice = (addon) => parseFloat(addon.price ?? addon.totalPrice ?? addon.services?.[0]?.price) || 0;
   const getPackagePrice = (pkg) => parseFloat(pkg?.price ?? pkg?.base_price ?? pkg?.totalPrice ?? pkg?.total_price ?? pkg?.rate ?? pkg?.total_rate) || 0;
   const getPackageServices = (pkg) => {
@@ -624,7 +624,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
             );
           })()}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Add Service from Add-ons</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Add Service</label>
             <select
               onChange={(e) => {
                 if (e.target.value) {
@@ -634,7 +634,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
               }}
               className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
             >
-              <option value="">+ Select Add-on to add</option>
+              <option value="">+ Select Service to add</option>
               {(() => {
                 // Get property type from selected property, direct form, or selected AMC package
                 const selectedPkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
@@ -650,7 +650,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
           {selectedAddons.length > 0 && (
             <div className="border border-blue-200 rounded-xl overflow-hidden">
               <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200">
-                <span className="text-sm font-semibold text-blue-700">Additional Services (Add-ons)</span>
+                <span className="text-sm font-semibold text-blue-700">Additional Services</span>
               </div>
               <table className="w-full text-sm">
                 <thead>
@@ -682,7 +682,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                 </tbody>
                 <tfoot className="bg-blue-50 border-t border-blue-200">
                   <tr>
-                    <td colSpan={4} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td>
+                    <td colSpan={4} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Services Price</td>
                     <td className="px-5 py-2.5 text-right font-bold text-blue-700">{formatCurrency(selectedAddons.reduce((sum, id) => sum + getAddonPrice(addons.find(a => getAddonId(a) === id)), 0))}</td>
                   </tr>
                 </tfoot>
@@ -1731,7 +1731,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
     try {
       const res = await fetch(`${API_BASE}/api/supervisor/addons`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ property_type: addonSelectedPropertyType, service_name: addonForm.serviceName, frequency_count: parseInt(addonForm.frequencyCount) || 1, frequency_type: addonForm.frequencyType, billing_cycle: addonForm.billingCycle, price: parseFloat(addonForm.price), description: addonForm.description || '' }) });
       const result = await res.json();
-      if (result.success) { showToast('Add-on created!'); setAddonForm({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' }); setAddonSelectedPropertyType(null); loadData(); setAddonActiveTab('all-addons'); }
+      if (result.success) { showToast('Service created!'); setAddonForm({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' }); setAddonSelectedPropertyType(null); loadData(); setAddonActiveTab('all-addons'); }
       else showToast(result.message || 'Failed', 'error');
     } catch (e) { showToast('Failed to create add-on', 'error'); }
   };
@@ -1739,17 +1739,17 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
 
   const renderAddons = () => (
     <div className="space-y-6">
-      <div className="flex items-center gap-3"><div className="w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center"><PlusCircle className="w-5 h-5 text-stone-600" /></div><div><h2 className="text-xl font-bold text-gray-900">Add-ons</h2><p className="text-sm text-gray-500">View available add-ons for AMC packages</p></div></div>
-      {/* Tabs - Create Add-on hidden for all managers */}
+      <div className="flex items-center gap-3"><div className="w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center"><PlusCircle className="w-5 h-5 text-stone-600" /></div><div><h2 className="text-xl font-bold text-gray-900">Add Service</h2><p className="text-sm text-gray-500">View available services for AMC packages</p></div></div>
+      {/* Tabs - Create Service hidden for all managers */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-        <button onClick={() => setAddonActiveTab('all-addons')} className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${addonActiveTab === 'all-addons' ? 'bg-white text-stone-700 shadow-sm' : 'text-gray-600'}`}><Layers className="w-4 h-4" />All Add-ons{addons.length > 0 && <span className="px-1.5 py-0.5 bg-stone-600 text-white rounded-full text-xs">{addons.length}</span>}</button>
+        <button onClick={() => setAddonActiveTab('all-addons')} className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${addonActiveTab === 'all-addons' ? 'bg-white text-stone-700 shadow-sm' : 'text-gray-600'}`}><Layers className="w-4 h-4" />All Services{addons.length > 0 && <span className="px-1.5 py-0.5 bg-stone-600 text-white rounded-full text-xs">{addons.length}</span>}</button>
       </div>
       {addonActiveTab === 'create' && (
         <div className="space-y-6">
           <div className="bg-white rounded-xl border border-gray-200 p-6"><h3 className="text-base font-semibold text-gray-900 mb-2">Select Property Type</h3><p className="text-sm text-gray-500 mb-4">Choose the property type this package will be configured for</p><div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">{PROPERTY_TYPE_OPTIONS.map(t => <button key={t.id} onClick={() => setAddonSelectedPropertyType(t.id)} className={`px-4 py-3 rounded-lg border text-sm font-medium text-center ${addonSelectedPropertyType === t.id ? 'border-slate-400 bg-slate-100 text-slate-800' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}>{t.label}</button>)}</div></div>
           {addonSelectedPropertyType && (
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100"><h3 className="text-lg font-semibold text-gray-800">Create Add-on</h3><p className="text-sm text-gray-500">For: <span className="font-medium text-gray-700">{PROPERTY_TYPE_OPTIONS.find(t => t.id === addonSelectedPropertyType)?.label}</span></p></div>
+              <div className="px-6 py-4 border-b border-gray-100"><h3 className="text-lg font-semibold text-gray-800">Create Service</h3><p className="text-sm text-gray-500">For: <span className="font-medium text-gray-700">{PROPERTY_TYPE_OPTIONS.find(t => t.id === addonSelectedPropertyType)?.label}</span></p></div>
               <div className="p-6">
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-3"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Service Name</label><input type="text" value={addonForm.serviceName} onChange={(e) => setAddonForm({ ...addonForm, serviceName: e.target.value })} placeholder="Service name" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" /></div>
@@ -1767,8 +1767,8 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
       )}
       {addonActiveTab === 'all-addons' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-4"><div className="flex items-center justify-between"><div><h3 className="font-semibold text-gray-900">All Add-ons</h3><p className="text-sm text-gray-500">{addons.length} add-on(s) available</p></div><div className="flex gap-2 flex-wrap"><button onClick={() => setAddonFilterPropertyType('all')} className={`px-3 py-1.5 text-sm rounded-lg ${addonFilterPropertyType === 'all' ? 'bg-stone-700 text-white' : 'bg-gray-100 text-gray-700'}`}>All{addons.length > 0 && <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${addonFilterPropertyType === 'all' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'}`}>{addons.length}</span>}</button>{PROPERTY_TYPE_OPTIONS.map(t => { const count = addons.filter(a => matchPropertyType(a.property_type, t.id)).length; return <button key={t.id} onClick={() => setAddonFilterPropertyType(t.id)} className={`px-3 py-1.5 text-sm rounded-lg ${addonFilterPropertyType === t.id ? 'bg-stone-700 text-white' : 'bg-gray-100 text-gray-700'}`}>{t.label}{count > 0 && <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${addonFilterPropertyType === t.id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'}`}>{count}</span>}</button>; })}</div></div></div>
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{filteredAddons.length === 0 ? <div className="py-16 text-center"><p className="text-gray-500">No add-ons found</p></div> : <table className="w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Add-on Name</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Property Type</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Frequency</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">No.of visits</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Total Rate</th><th className="px-4 py-3 text-center font-medium text-gray-600 uppercase text-xs">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{filteredAddons.map(a => <tr key={a.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-medium">{a.service_name || a.name || 'Unnamed Add-on'}</td><td className="px-4 py-3 text-gray-500">{getPropertyTypeLabel(a.property_type) || 'GC'}</td><td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${(a.frequency_type || 'Monthly') === 'Monthly' ? 'bg-blue-100 text-blue-700' : (a.frequency_type || '') === 'Quarterly' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>{a.frequency_type || 'Monthly'}</span></td><td className="px-4 py-3 text-gray-600">{a.frequency_count ?? 1}x</td><td className="px-4 py-3 font-semibold">{formatCurrency(a.price)}</td><td className="px-4 py-3"><div className="flex items-center justify-center"><button onClick={() => setViewAddon(a)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details"><Eye className="w-4 h-4" /></button></div></td></tr>)}</tbody></table>}</div>
+          <div className="bg-white rounded-xl border border-gray-200 p-4"><div className="flex items-center justify-between"><div><h3 className="font-semibold text-gray-900">All Services</h3><p className="text-sm text-gray-500">{addons.length} service(s) available</p></div><div className="flex gap-2 flex-wrap"><button onClick={() => setAddonFilterPropertyType('all')} className={`px-3 py-1.5 text-sm rounded-lg ${addonFilterPropertyType === 'all' ? 'bg-stone-700 text-white' : 'bg-gray-100 text-gray-700'}`}>All{addons.length > 0 && <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${addonFilterPropertyType === 'all' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'}`}>{addons.length}</span>}</button>{PROPERTY_TYPE_OPTIONS.map(t => { const count = addons.filter(a => matchPropertyType(a.property_type, t.id)).length; return <button key={t.id} onClick={() => setAddonFilterPropertyType(t.id)} className={`px-3 py-1.5 text-sm rounded-lg ${addonFilterPropertyType === t.id ? 'bg-stone-700 text-white' : 'bg-gray-100 text-gray-700'}`}>{t.label}{count > 0 && <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${addonFilterPropertyType === t.id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'}`}>{count}</span>}</button>; })}</div></div></div>
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{filteredAddons.length === 0 ? <div className="py-16 text-center"><p className="text-gray-500">No services found</p></div> : <table className="w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Service Name</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Property Type</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Frequency</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">No.of visits</th><th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Total Rate</th><th className="px-4 py-3 text-center font-medium text-gray-600 uppercase text-xs">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{filteredAddons.map(a => <tr key={a.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-medium">{a.service_name || a.name || 'Unnamed Service'}</td><td className="px-4 py-3 text-gray-500">{getPropertyTypeLabel(a.property_type) || 'GC'}</td><td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${(a.frequency_type || 'Monthly') === 'Monthly' ? 'bg-blue-100 text-blue-700' : (a.frequency_type || '') === 'Quarterly' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>{a.frequency_type || 'Monthly'}</span></td><td className="px-4 py-3 text-gray-600">{a.frequency_count ?? 1}x</td><td className="px-4 py-3 font-semibold">{formatCurrency(a.price)}</td><td className="px-4 py-3"><div className="flex items-center justify-center"><button onClick={() => setViewAddon(a)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details"><Eye className="w-4 h-4" /></button></div></td></tr>)}</tbody></table>}</div>
         </div>
       )}
     </div>
@@ -1804,7 +1804,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center"><FileText className="w-6 h-6 text-indigo-600" /></div>
-              <div><h1 className="text-2xl font-bold text-gray-800">{TAB_TITLES[defaultTab] || 'Estimates'}</h1><p className="text-sm text-gray-500">Create and manage estimates, AMC packages, and add-ons</p></div>
+              <div><h1 className="text-2xl font-bold text-gray-800">{TAB_TITLES[defaultTab] || 'Estimates'}</h1><p className="text-sm text-gray-500">Create and manage estimates, AMC packages, and services</p></div>
             </div>
             <div className="flex items-center gap-6">
               <button onClick={loadData} className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" title="Refresh">
@@ -1812,7 +1812,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
               </button>
               <div className="text-center"><p className="text-2xl font-bold text-gray-800">{filteredEstimates.length}</p><p className="text-xs text-gray-500">Active Estimates</p></div>
               <div className="text-center"><p className="text-2xl font-bold text-gray-800">{filteredAmcPackages.length}</p><p className="text-xs text-gray-500">AMC Packages</p></div>
-              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{filteredAddons.length}</p><p className="text-xs text-gray-500">Add-ons</p></div>
+              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{filteredAddons.length}</p><p className="text-xs text-gray-500">Add Service</p></div>
               <div className="text-center"><p className="text-2xl font-bold text-gray-800">{archivedEstimates.length}</p><p className="text-xs text-gray-500">Archived</p></div>
             </div>
           </div>
@@ -1833,7 +1833,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
               <Package className="w-4 h-4" />AMC Packages
             </button>
             <button onClick={() => navigate('/supervisor/estimates/addons')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'addons' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
-              <PlusCircle className="w-4 h-4" />Add-ons
+              <PlusCircle className="w-4 h-4" />Add Service
             </button>
             <button onClick={() => navigate('/supervisor/estimates/archived')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'archived' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
               <Archive className="w-4 h-4" />Archived
@@ -2039,10 +2039,10 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                 );
               })()}
 
-              {/* Add-ons - Horizontal Table */}
+              {/* Additional Services - Horizontal Table */}
               {viewEstimate.addons && viewEstimate.addons.length > 0 && (
                 <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Add-on Services</p>
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Additional Services</p>
                   <div>
                     <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-lg">
                       <div className="col-span-1 text-xs font-semibold text-green-700">#</div>
@@ -2087,7 +2087,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                       })}
                     </div>
                     <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-lg">
-                      <p className="font-semibold text-green-800">Total Add-ons Price</p>
+                      <p className="font-semibold text-green-800">Total Services Price</p>
                       <p className="font-bold text-green-700">₹{viewEstimate.addons.reduce((sum, a) => sum + Number(a.price || 0), 0).toLocaleString()}</p>
                     </div>
                   </div>
@@ -2232,12 +2232,12 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       )}
 
-      {/* View Add-on Modal */}
+      {/* View Service Modal */}
       {viewAddon && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
           <div className="bg-white rounded-xl w-full max-w-md max-h-[95vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800">Add-on Details</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800">Service Details</h3>
               <button onClick={() => setViewAddon(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-4 sm:p-6 space-y-4">

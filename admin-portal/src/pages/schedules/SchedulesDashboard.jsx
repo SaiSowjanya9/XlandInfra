@@ -151,20 +151,44 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     return map[portalType] || '/fp';
   };
 
-  // Fetch schedules
+  // Fetch schedules from the portal-specific endpoint
   const fetchSchedules = useCallback(async () => {
     setLoading(true);
     try {
+      const apiPath = getApiPath(portalType);
       const params = new URLSearchParams();
+      params.append('limit', '500'); // Get more records for dashboard
       if (selectedFp && selectedFp.id !== 'all') params.append('fpId', selectedFp.id);
       
-      const response = await fetch(`${API_BASE}/api/schedules${params.toString() ? '?' + params : ''}`, {
+      const response = await fetch(`${API_BASE}/api/${apiPath}/schedules/all?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
       if (response.ok) {
         const result = await response.json();
-        setSchedules(result.data || []);
+        // Handle both array response and object with data property
+        const schedulesData = Array.isArray(result) ? result : (result.data || result.schedules || []);
+        // Transform to match expected format
+        const transformedSchedules = schedulesData.map(s => ({
+          id: s.id,
+          title: s.serviceName || s.title || 'Service Visit',
+          service: s.serviceName || s.service || 'General',
+          serviceCategory: s.serviceCategory || s.service_category,
+          property_name: s.propertyName || s.property_name,
+          propertyName: s.propertyName || s.property_name,
+          property_type: s.propertyType || s.property_type,
+          propertyType: s.propertyType || s.property_type,
+          startDate: s.scheduledDate || s.scheduled_date || s.start_date,
+          start_date: s.scheduledDate || s.scheduled_date || s.start_date,
+          status: s.status || 'scheduled',
+          priority: s.priority || 'medium',
+          zone: s.zone,
+          vendorName: s.vendorName || s.vendor_name,
+          visitNumber: s.visitNumber || s.visit_number,
+          totalVisits: s.totalVisits || s.total_visits,
+          createdAt: s.createdAt || s.created_at
+        }));
+        setSchedules(transformedSchedules);
       } else {
         setSchedules([]);
       }
@@ -174,33 +198,36 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     } finally {
       setLoading(false);
     }
-  }, [token, selectedFp]);
+  }, [token, selectedFp, portalType]);
 
-  // Fetch pending properties
+  // Fetch pending properties using portal-specific endpoint
   const fetchPendingProperties = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/schedules/pending-properties`, {
+      const apiPath = getApiPath(portalType);
+      const response = await fetch(`${API_BASE}/api/${apiPath}/schedules/pending-properties`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
         const result = await response.json();
-        setPendingProperties(result.data || []);
+        // Handle both array response and object with data property
+        const propertiesData = Array.isArray(result) ? result : (result.data || result.properties || []);
+        setPendingProperties(propertiesData);
       }
     } catch (err) {
       console.error('Pending properties error:', err);
     }
-  }, [token]);
+  }, [token, portalType]);
 
   useEffect(() => {
     fetchSchedules();
     fetchPendingProperties();
-  }, [token, selectedFp]);
+  }, [fetchSchedules, fetchPendingProperties]);
   
   // Separate interval to avoid re-creating on every render
   useEffect(() => {
     const interval = setInterval(fetchSchedules, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchSchedules]);
 
   // Calculate stats
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -231,11 +258,11 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   // Chart data - Status (with filter) - Only active statuses
   const statusFilteredData = applyPeriodFilter(activeSchedules, statusFilter);
   const statusData = [
-    { name: 'Scheduled', value: statusFilteredData.filter(s => ['scheduled', 'upcoming'].includes(getStatus(s))).length, color: STATUS_COLORS.scheduled },
+    { name: 'Scheduled', value: statusFilteredData.filter(s => ['scheduled', 'upcoming', 'work_order_created'].includes(getStatus(s))).length, color: STATUS_COLORS.scheduled },
     { name: 'In Progress', value: statusFilteredData.filter(s => getStatus(s) === 'in_progress').length, color: STATUS_COLORS.in_progress },
     { name: 'Completed', value: statusFilteredData.filter(s => getStatus(s) === 'completed').length, color: STATUS_COLORS.completed },
     { name: 'Rescheduled', value: statusFilteredData.filter(s => getStatus(s) === 'rescheduled').length, color: STATUS_COLORS.rescheduled },
-    { name: 'Pending', value: statusFilteredData.filter(s => getStatus(s) === 'pending').length, color: STATUS_COLORS.pending }
+    { name: 'Pending', value: statusFilteredData.filter(s => ['pending', 'pending_schedule'].includes(getStatus(s))).length, color: STATUS_COLORS.pending }
   ].filter(d => d.value > 0);
   const statusTotal = statusData.reduce((sum, d) => sum + d.value, 0);
 
@@ -318,11 +345,14 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     const colors = {
       scheduled: 'bg-blue-100 text-blue-700',
       upcoming: 'bg-blue-100 text-blue-700',
+      work_order_created: 'bg-purple-100 text-purple-700',
       in_progress: 'bg-amber-100 text-amber-700',
       completed: 'bg-green-100 text-green-700',
       cancelled: 'bg-red-100 text-red-700',
       pending: 'bg-gray-100 text-gray-700',
-      rescheduled: 'bg-purple-100 text-purple-700'
+      pending_schedule: 'bg-gray-100 text-gray-700',
+      rescheduled: 'bg-purple-100 text-purple-700',
+      overdue: 'bg-red-100 text-red-700'
     };
     const s = (status || '').toLowerCase().replace(/\s+/g, '_');
     return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[s] || colors.pending}`}>{status || 'Pending'}</span>;
