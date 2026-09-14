@@ -217,22 +217,25 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
     setLoading(true);
     try {
       // Build query params with optional FP filter
-      const fpParam = selectedFp && selectedFp.id !== 'all' ? `&fpId=${selectedFp.id}` : '';
-      const fpQueryOnly = selectedFp && selectedFp.id !== 'all' ? `?fpId=${selectedFp.id}` : '';
+      const params = new URLSearchParams();
+      if (selectedFp && selectedFp.id !== 'all') {
+        params.append('fpId', selectedFp.id);
+      }
+      const queryString = params.toString();
       
       // Fetch ALL payments data (no date filter for dashboard overview)
-      const paymentsRes = await fetch(`${API_BASE}/api/payments?${fpParam.replace('&', '')}`, {
+      const paymentsRes = await fetch(`${API_BASE}/api/payments${queryString ? '?' + queryString : ''}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const paymentsResult = await paymentsRes.json();
-      const allPayments = paymentsResult.success ? (paymentsResult.data || []) : [];
+      const allPayments = paymentsResult.success ? (paymentsResult.data || []) : (Array.isArray(paymentsResult) ? paymentsResult : []);
 
       // Fetch ALL invoices data
-      const invoicesRes = await fetch(`${API_BASE}/api/payments/invoices${fpQueryOnly}`, {
+      const invoicesRes = await fetch(`${API_BASE}/api/payments/invoices${queryString ? '?' + queryString : ''}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const invoicesResult = await invoicesRes.json();
-      const invoices = invoicesResult.success ? (invoicesResult.data || []) : [];
+      const invoices = invoicesResult.success ? (invoicesResult.data || []) : (Array.isArray(invoicesResult) ? invoicesResult : []);
 
       // Calculate stats using ALL payments (not filtered by date)
       const today = new Date().toISOString().split('T')[0];
