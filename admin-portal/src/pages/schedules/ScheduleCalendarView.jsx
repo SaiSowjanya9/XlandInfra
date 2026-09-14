@@ -8,6 +8,13 @@ import { getAuthToken } from '../../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+// Helper to extract zone name from zone (can be string or object)
+const getZoneName = (zone) => {
+  if (!zone) return '';
+  if (typeof zone === 'string') return zone;
+  return zone.name || zone.zone_name || zone.zone || '';
+};
+
 // Normalize property type to consistent display format
 const normalizePropertyType = (type) => {
   if (!type) return 'Other';
@@ -96,7 +103,7 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
               property: item.propertyName || item.property_name,
               vendor: item.vendorName || item.vendor_name || 'Unassigned',
               status: item.status || 'scheduled',
-              zone: item.zone,
+              zone: getZoneName(item.zone),
               propertyType: normalizePropertyType(item.propertyType || item.property_type),
               visitNumber: item.visitNumber,
               totalVisits: item.totalVisits
@@ -114,7 +121,7 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
                     property: item.propertyName || item.property_name,
                     vendor: service.vendorName || service.vendor_name || 'Unassigned',
                     status: visit.status || 'scheduled',
-                    zone: item.zone,
+                    zone: getZoneName(item.zone),
                     propertyType: normalizePropertyType(item.propertyType || item.property_type)
                   });
                 });
