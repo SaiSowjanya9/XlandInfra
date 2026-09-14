@@ -552,7 +552,7 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
                 
                 <div className="flex items-center gap-3">
                   <MapPin className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm text-gray-700">{selectedSchedule.zone}</span>
+                  <span className="text-sm text-gray-700">{getZoneName(selectedSchedule.zone)}</span>
                 </div>
                 
                 <div className="flex items-center gap-3">

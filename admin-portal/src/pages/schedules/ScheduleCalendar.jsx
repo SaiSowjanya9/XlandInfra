@@ -715,7 +715,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                             <span className="text-sm text-gray-500">{schedule.time}</span>
                           </div>
                           <div className="text-sm text-gray-600 mt-1">{schedule.property}</div>
-                          <div className="text-sm text-gray-500">{schedule.vendor} • {schedule.zone}</div>
+                          <div className="text-sm text-gray-500">{schedule.vendor} • {getZoneName(schedule.zone)}</div>
                         </div>
                       ))}
                     </div>
@@ -1033,7 +1033,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                   <MapPin className="w-4 h-4 text-green-600 mt-0.5" />
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">Zone</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedSchedule.zone}</p>
+                    <p className="text-sm font-medium text-gray-900">{getZoneName(selectedSchedule.zone)}</p>
                   </div>
                 </div>
 
