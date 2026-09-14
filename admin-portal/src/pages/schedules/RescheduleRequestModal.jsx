@@ -7,6 +7,13 @@ import { getAuthToken } from '../../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+// Helper to extract zone name from zone (can be string or object)
+const getZoneName = (zone) => {
+  if (!zone) return '';
+  if (typeof zone === 'string') return zone;
+  return zone.name || zone.zone_name || zone.zone || '';
+};
+
 /**
  * Reschedule Request Modal
  * Displays current schedule, vendor availability, and allows manager to select new date/time
@@ -39,7 +46,7 @@ const RescheduleRequestModal = ({
       
       const response = await fetch(
         `${API_BASE}/api/schedules/vendor/${request.vendorId}/availability?` +
-        `startDate=${requestedDate}&days=7&zone=${request.zone || ''}`,
+        `startDate=${requestedDate}&days=7&zone=${getZoneName(request.zone) || ''}`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       

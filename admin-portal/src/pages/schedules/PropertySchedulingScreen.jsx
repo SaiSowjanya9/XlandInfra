@@ -490,7 +490,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               // Generate clear reason text based on zone jobs
               let reason = '';
               const zoneJobs = bestOption.sameZoneJobs || 0;
-              const zoneName = property?.zone || 'Zone A';
+              const zoneName = getZoneName(property?.zone) || 'Zone A';
               
               if (vendorWorkingHours) {
                 reason = `Vendor works ${vendorWorkingHours.from} - ${vendorWorkingHours.to}`;
@@ -1538,7 +1538,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide">Zone</p>
-                <span className="inline-flex px-1.5 sm:px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] sm:text-xs font-medium rounded border border-blue-200">{property?.zone || 'Zone A'}</span>
+                <span className="inline-flex px-1.5 sm:px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] sm:text-xs font-medium rounded border border-blue-200">{getZoneName(property?.zone) || 'Zone A'}</span>
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide">Package</p>
@@ -1763,7 +1763,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                 <div className="min-w-0">
                   <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Vendor Availability Calendar</h3>
-                  <p className="text-xs sm:text-sm text-gray-500 truncate">{selectedService?.vendorName} | {property?.zone || 'Zone A'}</p>
+                  <p className="text-xs sm:text-sm text-gray-500 truncate">{selectedService?.vendorName} | {getZoneName(property?.zone) || 'Zone A'}</p>
                 </div>
                 <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                   <button onClick={() => navigateWeek(-1)} className="p-1 sm:p-1.5 hover:bg-gray-100 rounded-full border border-gray-200">
