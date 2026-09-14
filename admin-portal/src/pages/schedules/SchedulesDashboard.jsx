@@ -178,6 +178,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
           propertyName: s.propertyName || s.property_name,
           property_type: s.propertyType || s.property_type,
           propertyType: s.propertyType || s.property_type,
+          scheduledDate: s.scheduledDate || s.scheduled_date || s.start_date,
           startDate: s.scheduledDate || s.scheduled_date || s.start_date,
           start_date: s.scheduledDate || s.scheduled_date || s.start_date,
           status: s.status || 'scheduled',
@@ -235,28 +236,46 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   
   const getStatus = (s) => (s.status || '').toLowerCase();
   
+  // Helper to get schedule date
+  const getScheduleDate = (s) => {
+    const dateStr = s.scheduledDate || s.scheduled_date || s.startDate || s.start_date;
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+  
   const todaysSchedules = schedules.filter(s => {
-    const d = new Date(s.startDate || s.start_date); d.setHours(0, 0, 0, 0);
-    return d.getTime() === today.getTime();
+    const d = getScheduleDate(s);
+    return d && d.getTime() === today.getTime() && !['completed', 'cancelled'].includes(getStatus(s));
   });
   
   const upcoming7Days = schedules.filter(s => {
-    const d = new Date(s.startDate || s.start_date); d.setHours(0, 0, 0, 0);
-    return d > today && d <= next7Days;
+    const d = getScheduleDate(s);
+    return d && d > today && d <= next7Days && !['completed', 'cancelled'].includes(getStatus(s));
   });
+  
+  // Pending schedules - status is pending/pending_schedule
+  const pendingSchedules = schedules.filter(s => ['pending', 'pending_schedule'].includes(getStatus(s)));
   
   const rescheduleRequests = schedules.filter(s => getStatus(s) === 'rescheduled');
   const cancelledSchedules = schedules.filter(s => getStatus(s) === 'cancelled');
+  const completedSchedules = schedules.filter(s => getStatus(s) === 'completed');
+  const inProgressSchedules = schedules.filter(s => getStatus(s) === 'in_progress');
+  
   const overdueSchedules = schedules.filter(s => {
-    const d = new Date(s.startDate || s.start_date); d.setHours(0, 0, 0, 0);
-    return d < today && !['completed', 'cancelled'].includes(getStatus(s));
+    const d = getScheduleDate(s);
+    return d && d < today && !['completed', 'cancelled'].includes(getStatus(s));
   });
 
-  // Active schedules (excluding cancelled) for charts
-  const activeSchedules = schedules.filter(s => getStatus(s) !== 'cancelled');
+  // Active schedules (excluding cancelled and completed) for relevant charts
+  const activeSchedules = schedules.filter(s => !['cancelled', 'completed'].includes(getStatus(s)));
+  
+  // All non-cancelled schedules for status charts
+  const allActiveSchedules = schedules.filter(s => getStatus(s) !== 'cancelled');
 
-  // Chart data - Status (with filter) - Only active statuses
-  const statusFilteredData = applyPeriodFilter(activeSchedules, statusFilter);
+  // Chart data - Status (with filter) - Use all non-cancelled schedules to show complete picture
+  const statusFilteredData = applyPeriodFilter(allActiveSchedules, statusFilter);
   const statusData = [
     { name: 'Scheduled', value: statusFilteredData.filter(s => ['scheduled', 'upcoming', 'work_order_created'].includes(getStatus(s))).length, color: STATUS_COLORS.scheduled },
     { name: 'In Progress', value: statusFilteredData.filter(s => getStatus(s) === 'in_progress').length, color: STATUS_COLORS.in_progress },
@@ -266,8 +285,8 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   ].filter(d => d.value > 0);
   const statusTotal = statusData.reduce((sum, d) => sum + d.value, 0);
 
-  // Chart data - Service (with filter) - Only active schedules
-  const serviceFilteredData = applyPeriodFilter(activeSchedules, serviceFilter);
+  // Chart data - Service (with filter) - All non-cancelled schedules
+  const serviceFilteredData = applyPeriodFilter(allActiveSchedules, serviceFilter);
   const serviceCounts = {};
   serviceFilteredData.forEach(s => {
     const svc = s.service || s.serviceCategory || 'General';
@@ -277,8 +296,8 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     .map(([name, value], i) => ({ name, value, color: SERVICE_COLORS[i % SERVICE_COLORS.length] }))
     .sort((a, b) => b.value - a.value);
 
-  // Chart data - Priority (with filter) - Only active schedules
-  const priorityFilteredData = applyPeriodFilter(activeSchedules, priorityFilter);
+  // Chart data - Priority (with filter) - All non-cancelled schedules
+  const priorityFilteredData = applyPeriodFilter(allActiveSchedules, priorityFilter);
   const priorityData = [
     { name: 'High', value: priorityFilteredData.filter(s => (s.priority || '').toLowerCase() === 'high').length, color: PRIORITY_COLORS.high },
     { name: 'Medium', value: priorityFilteredData.filter(s => (s.priority || '').toLowerCase() === 'medium').length, color: PRIORITY_COLORS.medium },
@@ -286,8 +305,8 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   ].filter(d => d.value > 0);
   const priorityTotal = priorityData.reduce((sum, d) => sum + d.value, 0);
 
-  // Chart data - Property Type (with filter) - Only active schedules
-  const propertyTypeFilteredData = applyPeriodFilter(activeSchedules, propertyTypeFilter);
+  // Chart data - Property Type (with filter) - All non-cancelled schedules
+  const propertyTypeFilteredData = applyPeriodFilter(allActiveSchedules, propertyTypeFilter);
   const propTypeCounts = {};
   propertyTypeFilteredData.forEach(s => {
     const pt = normalizePropertyType(s.property_type || s.propertyType);
@@ -298,24 +317,35 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     .sort((a, b) => b.value - a.value);
   const propertyTypeTotal = propertyTypeData.reduce((sum, d) => sum + d.value, 0);
 
-  // Trend data (filtered) - Only active schedules
-  const trendFilteredData = applyPeriodFilter(activeSchedules, trendFilter);
+  // Trend data (filtered) - Shows past 3 days + today + next 3 days for better visualization
+  const trendFilteredData = applyPeriodFilter(allActiveSchedules, trendFilter);
   const generateTrendData = () => {
-    const days = trendFilter === 'week' ? 7 : trendFilter === 'month' ? 30 : 7;
+    // Show 3 days before and 3 days after today for a balanced view
+    const pastDays = 3;
+    const futureDays = 3;
     const data = [];
-    for (let i = days - 1; i >= 0; i--) {
+    
+    for (let i = -pastDays; i <= futureDays; i++) {
       const date = new Date();
-      date.setDate(date.getDate() - i);
+      date.setDate(date.getDate() + i);
+      date.setHours(0, 0, 0, 0);
       const dateStr = date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+      
+      // Filter schedules for this specific date
       const daySchedules = trendFilteredData.filter(s => {
-        const sDate = new Date(s.startDate || s.start_date || s.createdAt);
-        return sDate.toDateString() === date.toDateString();
+        const scheduledDate = s.scheduledDate || s.scheduled_date || s.startDate || s.start_date;
+        if (!scheduledDate) return false;
+        const sDate = new Date(scheduledDate);
+        sDate.setHours(0, 0, 0, 0);
+        return sDate.getTime() === date.getTime();
       });
+      
+      const status = getStatus;
       data.push({
         date: dateStr,
-        scheduled: daySchedules.filter(s => ['scheduled', 'upcoming', 'pending'].includes(getStatus(s))).length,
-        completed: daySchedules.filter(s => getStatus(s) === 'completed').length,
-        inProgress: daySchedules.filter(s => getStatus(s) === 'in_progress').length
+        scheduled: daySchedules.filter(s => ['scheduled', 'upcoming', 'pending', 'pending_schedule', 'work_order_created'].includes(status(s))).length,
+        completed: daySchedules.filter(s => status(s) === 'completed').length,
+        inProgress: daySchedules.filter(s => status(s) === 'in_progress').length
       });
     }
     return data;
@@ -487,7 +517,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         {[
           { label: "Today's", sublabel: "Schedules", value: todaysSchedules.length, icon: CalendarDays, color: '#3B82F6', bg: '#DBEAFE', link: 'View Today', path: '/schedules/calendar' },
           { label: 'Upcoming', sublabel: '(7 Days)', value: upcoming7Days.length, icon: Clock, color: '#F59E0B', bg: '#FEF3C7', link: 'View Upcoming', path: '/schedules/calendar' },
-          { label: 'Pending', sublabel: 'Schedules', value: pendingProperties.length, icon: Building2, color: '#8B5CF6', bg: '#EDE9FE', link: 'View Pending', path: '/schedules/pending' },
+          { label: 'Pending', sublabel: 'Schedules', value: pendingSchedules.length, icon: Building2, color: '#8B5CF6', bg: '#EDE9FE', link: 'View Pending', path: '/schedules/pending' },
           { label: 'Reschedule', sublabel: 'Requests', value: rescheduleRequests.length, icon: RotateCcw, color: '#EC4899', bg: '#FCE7F3', link: 'View Requests', path: '/schedules/reschedule-requests' },
           { label: 'Cancelled', sublabel: 'Schedules', value: cancelledSchedules.length, icon: XCircle, color: '#EF4444', bg: '#FEE2E2', link: 'View Cancelled', path: '/schedules/cancelled' },
           { label: 'Overdue', sublabel: 'Schedules', value: overdueSchedules.length, icon: AlertTriangle, color: '#DC2626', bg: '#FEE2E2', link: 'View Overdue', path: '/schedules/all' }
@@ -621,11 +651,14 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
           <ResponsiveContainer width="100%" height={160}>
             <LineChart data={trendData}>
               <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} width={30} />
-              <Tooltip />
-              <Line type="monotone" dataKey="scheduled" stroke="#3B82F6" strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="completed" stroke="#10B981" strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="inProgress" stroke="#F59E0B" strokeWidth={2} dot={{ r: 3 }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} width={30} allowDecimals={false} domain={[0, 'auto']} />
+              <Tooltip 
+                contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                formatter={(value, name) => [value, name === 'scheduled' ? 'Scheduled' : name === 'completed' ? 'Completed' : 'In Progress']}
+              />
+              <Line type="monotone" dataKey="scheduled" stroke="#3B82F6" strokeWidth={2} dot={{ r: 4, fill: '#3B82F6' }} activeDot={{ r: 6 }} />
+              <Line type="monotone" dataKey="completed" stroke="#10B981" strokeWidth={2} dot={{ r: 4, fill: '#10B981' }} activeDot={{ r: 6 }} />
+              <Line type="monotone" dataKey="inProgress" stroke="#F59E0B" strokeWidth={2} dot={{ r: 4, fill: '#F59E0B' }} activeDot={{ r: 6 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
