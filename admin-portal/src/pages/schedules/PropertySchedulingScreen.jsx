@@ -38,6 +38,13 @@ const getSchedulePermissions = (portalType) => {
   return permissions[portalType] || permissions.executive;
 };
 
+// Helper to extract zone name from zone (can be string or object)
+const getZoneName = (zone) => {
+  if (!zone) return '';
+  if (typeof zone === 'string') return zone;
+  return zone.name || zone.zone_name || zone.zone || '';
+};
+
 const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   const { propertyId } = useParams();
   const navigate = useNavigate();
@@ -448,7 +455,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         frequency: service.frequency || 'monthly',
         startDate: startDate.toISOString().split('T')[0],
         totalVisits: 4, // Get recommendations for first 4 visits
-        zone: property?.zone || '',
+        zone: getZoneName(property?.zone) || '',
         searchWindow: 3
       });
 

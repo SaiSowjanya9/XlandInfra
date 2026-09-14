@@ -79,6 +79,13 @@ const statusColors = {
   'pending': { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200' }
 };
 
+// Helper to extract zone name from zone (can be string or object)
+const getZoneName = (zone) => {
+  if (!zone) return '';
+  if (typeof zone === 'string') return zone;
+  return zone.name || zone.zone_name || zone.zone || '';
+};
+
 const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
   const navigate = useNavigate();
   const token = getAuthToken();
@@ -139,7 +146,12 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
       }
       
       const result = await response.json();
-      setSchedules(result.data || []);
+      // Transform schedules to ensure zone is a string
+      const transformedSchedules = (result.data || []).map(s => ({
+        ...s,
+        zone: getZoneName(s.zone)
+      }));
+      setSchedules(transformedSchedules);
     } catch (err) {
       console.error('Fetch schedules error:', err);
       setSchedules([]);

@@ -82,7 +82,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
   const schedulesSubItems = [
     { path: '/supervisor/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
     { path: '/supervisor/schedules/all', icon: List, label: 'All Schedules' },
-    { path: '/supervisor/schedules/schedule-service', icon: Calendar, label: 'Schedule Service' },
+    
   ];
 
   const isVendorActive = vendorSubItems.some(item => location.pathname === item.path);

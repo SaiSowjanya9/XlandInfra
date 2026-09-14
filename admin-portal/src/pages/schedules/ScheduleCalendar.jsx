@@ -63,10 +63,17 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
   const [propertyTypes, setPropertyTypes] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Helper to extract zone name from zone (can be string or object)
+  const getZoneName = (zone) => {
+    if (!zone) return '';
+    if (typeof zone === 'string') return zone;
+    return zone.name || zone.zone_name || zone.zone || '';
+  };
+
   // Extract unique zones from schedules data
   useEffect(() => {
     if (schedules.length > 0) {
-      const uniqueZones = [...new Set(schedules.map(s => s.zone).filter(Boolean))].sort();
+      const uniqueZones = [...new Set(schedules.map(s => getZoneName(s.zone)).filter(Boolean))].sort();
       setZones(uniqueZones.map(z => ({ name: z, zone_name: z })));
     }
   }, [schedules]);
@@ -86,40 +93,18 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
     }
   }, [token]);
 
-  // Fetch services from API
-  const fetchServices = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_BASE}/api/services`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success && Array.isArray(result.data)) {
-        const serviceNames = [...new Set(result.data.map(s => s.name || s.serviceName || s.service_name).filter(Boolean))];
-        setServices(serviceNames);
-      }
-    } catch (err) {
-      console.error('Fetch services error:', err);
+  // Extract services from schedules data (no separate API needed)
+  useEffect(() => {
+    if (schedules.length > 0) {
+      const uniqueServices = [...new Set(schedules.map(s => s.serviceName || s.service || s.title).filter(Boolean))].sort();
+      setServices(uniqueServices);
     }
-  }, [token]);
+  }, [schedules]);
 
-  // Fetch property types from API
-  const fetchPropertyTypes = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_BASE}/api/onboarding/suggestions/property-types`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success && Array.isArray(result.data)) {
-        setPropertyTypes(result.data);
-      } else {
-        // Fallback property types
-        setPropertyTypes(['Gated Community', 'Apartment', 'Villa', 'Flat', 'Plot']);
-      }
-    } catch (err) {
-      console.error('Fetch property types error:', err);
-      setPropertyTypes(['Gated Community', 'Apartment', 'Villa', 'Flat', 'Plot']);
-    }
-  }, [token]);
+  // Use fallback property types (no API endpoint available)
+  useEffect(() => {
+    setPropertyTypes(['Gated Community', 'Apartment', 'Villa', 'Flat', 'Plot']);
+  }, []);
 
   // Get API path based on portal type
   const getApiPath = () => {
@@ -190,7 +175,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
             propertyId: s.propertyId,
             vendor: s.vendorName || 'Unassigned',
             vendorId: s.vendorDbId,
-            zone: s.zone || '',
+            zone: getZoneName(s.zone) || '',
             propertyType: normalizePropertyType(s.propertyType),
             type: type,
             status: status,
@@ -226,9 +211,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
   // Initial load
   useEffect(() => {
     fetchVendors();
-    fetchServices();
-    fetchPropertyTypes();
-  }, []);
+  }, [fetchVendors]);
   
   // Fetch schedules when date changes
   useEffect(() => {

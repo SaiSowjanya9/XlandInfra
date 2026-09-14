@@ -34,6 +34,13 @@ const getApiPath = (portalType) => {
   return pathMap[portalType] || 'admin';
 };
 
+// Helper to extract zone name from zone (can be string or object)
+const getZoneName = (zone) => {
+  if (!zone) return '';
+  if (typeof zone === 'string') return zone;
+  return zone.name || zone.zone_name || zone.zone || '';
+};
+
 const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
   const navigate = useNavigate();
   const permissions = getSchedulePermissions(portalType);

@@ -66,6 +66,13 @@ const getApiPath = (portalType) => {
   return map[portalType] || 'fp';
 };
 
+// Helper to extract zone name from zone (can be string or object)
+const getZoneName = (zone) => {
+  if (!zone) return '';
+  if (typeof zone === 'string') return zone;
+  return zone.name || zone.zone_name || zone.zone || '';
+};
+
 const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 const formatTime = (d) => d ? new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
 
@@ -183,7 +190,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
           start_date: s.scheduledDate || s.scheduled_date || s.start_date,
           status: s.status || 'scheduled',
           priority: s.priority || 'medium',
-          zone: s.zone,
+          zone: getZoneName(s.zone),
           vendorName: s.vendorName || s.vendor_name,
           visitNumber: s.visitNumber || s.visit_number,
           totalVisits: s.totalVisits || s.total_visits,
