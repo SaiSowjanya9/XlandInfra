@@ -1370,7 +1370,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1">
                               <MapPin className="w-3 h-3 text-gray-400" />
-                              <span className="text-sm text-gray-700">{property.zone || '-'}</span>
+                              <span className="text-sm text-gray-700">{getZoneName(property.zone) || '-'}</span>
                             </div>
                           </td>
                           <td className="px-4 py-3">
@@ -1527,7 +1527,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 uppercase tracking-wide">Zone</label>
-                    <p className="text-sm text-gray-700">{selectedSchedule.zone || '-'}</p>
+                    <p className="text-sm text-gray-700">{getZoneName(selectedSchedule.zone) || '-'}</p>
                   </div>
                 </div>
                 <div className="space-y-4">
@@ -1993,7 +1993,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                     <span><span className="text-gray-500">Property:</span> <span className="font-medium text-gray-800">{scheduleDetailsData.propertyId}</span></span>
                     <span><span className="text-gray-500">Name:</span> <span className="font-medium text-gray-800">{scheduleDetailsData.propertyName}</span></span>
                     <span><span className="text-gray-500">Customer:</span> <span className="text-gray-700">{scheduleDetailsData.customerName || '-'}</span></span>
-                    <span><span className="text-gray-500">Zone:</span> <span className="text-gray-700">{scheduleDetailsData.zone || '-'}</span></span>
+                    <span><span className="text-gray-500">Zone:</span> <span className="text-gray-700">{getZoneName(scheduleDetailsData.zone) || '-'}</span></span>
                   </div>
                 </div>
 

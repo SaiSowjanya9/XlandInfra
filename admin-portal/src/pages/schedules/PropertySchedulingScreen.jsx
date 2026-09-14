@@ -1994,7 +1994,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                       {isSelected && <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-600 flex-shrink-0" />}
                     </div>
                     <p className="text-[10px] sm:text-xs text-gray-600 mt-0.5">{rec.time}</p>
-                    <p className="text-[9px] sm:text-[10px] text-gray-400 hidden sm:block">• {rec.zone}</p>
+                    <p className="text-[9px] sm:text-[10px] text-gray-400 hidden sm:block">• {getZoneName(rec.zone)}</p>
                     
                     <div className="flex items-center justify-between mt-1 sm:mt-1.5">
                       <span className={`px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] rounded whitespace-nowrap ${

@@ -773,7 +773,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                     {/* Zone */}
                     <td className="px-6 py-4">
                       <span className="inline-flex px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 rounded-full whitespace-nowrap">
-                        {property.zone}
+                        {getZoneName(property.zone)}
                       </span>
                     </td>
                     
