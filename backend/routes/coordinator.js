@@ -33,7 +33,7 @@ const generateActivationToken = () => {
   return crypto.randomBytes(32).toString('hex');
 };
 const { authenticate } = require('../middleware/auth');
-const { fetchScheduleStats, derivedStatusFilter } = require('../utils/scheduleStats');
+const { fetchScheduleStats, fetchScheduledVendors, derivedStatusFilter } = require('../utils/scheduleStats');
 const {
   attachCoordinatorScope,
   requireCoordinatorScope,
@@ -1727,6 +1727,19 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
 // =====================================================
 router.get('/vendors', requireCoordinatorScope, async (req, res) => {
   try {
+    // Schedule filters only offer vendors that actually appear in existing schedules
+    if (req.query.forSchedules === 'true') {
+      const franchisePartnerId = req.user?.franchisePartnerId;
+      const scheduleVendors = franchisePartnerId
+        ? await fetchScheduledVendors({
+            whereClause: 'WHERE op.franchise_partner_id = ?',
+            params: [franchisePartnerId],
+            label: 'Coordinator Schedule Vendors'
+          })
+        : [];
+      return res.json({ success: true, data: scheduleVendors });
+    }
+    
     const employeeId = getEmployeeIdForZoneLookup(req);
     const creatorEmail = getCreatorIdentifier(req);
     

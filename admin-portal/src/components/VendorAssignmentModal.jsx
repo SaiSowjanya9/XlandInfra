@@ -204,7 +204,8 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess, portalType }) => 
       const apiBase = getApiBasePath();
       const propertyId = property?.id || property?.propertyId;
       
-      const response = await fetch(`${API_BASE}${apiBase}/assignments/property/${propertyId}`, {
+      // Portal routes expose this under /vendors/assignments/property/:id
+      const response = await fetch(`${API_BASE}${apiBase}/vendors/assignments/property/${propertyId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

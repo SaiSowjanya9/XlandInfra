@@ -27,8 +27,22 @@ The VPS runs MySQL 8, which does **not** support MariaDB's
 `backend/database/` use that syntax and therefore fail to apply on MySQL 8.
 
 For new migrations, check `information_schema` and use dynamic SQL instead —
-see `backend/database/migrations/schema_v29_fix_column_drift.sql` for the
-pattern. This keeps migrations idempotent and safe to re-run.
+see `backend/database/migrations/schema_v29_fix_column_drift.sql` and
+`schema_v30_estimates_drift.sql` for the pattern. This keeps migrations
+idempotent and safe to re-run.
+
+Apply a migration to the local database with the MySQL 8 client (the repo's
+`run_migrations.js` / `run-migration.js` scripts read `DB_*`, i.e. production
+variables, so they must not be used for local work):
+
+```bash
+set -a; source <(grep -E '^LOCAL_DB_' backend/.env); set +a
+mysql -h "$LOCAL_DB_HOST" -u "$LOCAL_DB_USER" -p"$LOCAL_DB_PASSWORD" \
+  "$LOCAL_DB_NAME" < backend/database/migrations/<file>.sql
+```
+
+On Windows the client lives at
+`C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe`.
 
 ## Frontend API Conventions
 

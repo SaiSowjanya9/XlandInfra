@@ -254,7 +254,12 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
       });
       if (vendorsRes.ok) {
         const data = await vendorsRes.json();
-        const vendorsArray = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : (Array.isArray(data.vendors) ? data.vendors : []));
+        // Portals wrap vendors differently: array, { data }, { vendors } or { data: { all } }
+        const vendorsArray = Array.isArray(data) ? data
+          : Array.isArray(data.data) ? data.data
+          : Array.isArray(data.vendors) ? data.vendors
+          : Array.isArray(data.data?.all) ? data.data.all
+          : [];
         setVendors(vendorsArray);
       }
 
@@ -1259,9 +1264,11 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Vendors</option>
-              {vendors.map(v => (
-                <option key={v.id || v.vendor_id} value={v.owner_name || v.company_name || v.name || v.businessName}>{v.owner_name || v.company_name || v.name || v.businessName}</option>
-              ))}
+              {/* Company name first, so the option matches the vendor shown on the rows */}
+              {vendors.map(v => {
+                const label = v.company_name || v.owner_name || v.name || v.businessName;
+                return <option key={v.id || v.vendor_id} value={label}>{label}</option>;
+              })}
             </select>
 
             {/* Zone Filter */}

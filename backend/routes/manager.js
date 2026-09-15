@@ -31,7 +31,8 @@ const generateActivationToken = () => {
   return crypto.randomBytes(32).toString('hex');
 };
 const { authenticate, generateToken } = require('../middleware/auth');
-const { fetchScheduleStats, derivedStatusFilter } = require('../utils/scheduleStats');
+const { fetchScheduleStats, fetchScheduledVendors, derivedStatusFilter } = require('../utils/scheduleStats');
+const { resolveVendor, upsertPropertyVendorAssignment } = require('../utils/vendorAssignments');
 const {
   orNull, isRecentlyAdded, formatPaymentStatus, fetchServiceVendorMap, mapPendingServices
 } = require('../utils/pendingProperties');
@@ -1784,26 +1785,13 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
 
     // If forSchedules=true, only return vendors that have actual scheduled visits
     if (forSchedules === 'true') {
-      const [scheduleVendors] = await pool.execute(
-        `SELECT DISTINCT ov.id, ov.vendor_id, 
-                COALESCE(ov.company_name, ov.owner_name) as company_name,
-                ov.owner_name, ov.service_type
-         FROM scheduled_visits sv
-         JOIN onboarded_vendors ov ON ov.id = sv.vendor_id
-         JOIN onboarded_properties op ON op.id = sv.property_id
-         WHERE op.${scopeColumn} = ?
-         ORDER BY company_name`,
-        [scopeId]
-      );
-      
-      return res.json({
-        success: true,
-        data: {
-          own: scheduleVendors,
-          assigned: [],
-          all: scheduleVendors
-        }
+      const scheduleVendors = await fetchScheduledVendors({
+        whereClause: `WHERE op.${scopeColumn} = ?`,
+        params: [scopeId],
+        label: 'Manager Schedule Vendors'
       });
+      
+      return res.json({ success: true, data: scheduleVendors });
     }
 
     // Default behavior
@@ -1922,6 +1910,99 @@ router.get('/vendors/assignments/property/:propertyId', requireManagerScope, asy
   } catch (error) {
     console.error('Get property vendor assignments error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch property assignments', error: error.message });
+  }
+});
+
+// Assign a vendor to one service of a property
+router.post('/vendors/assignments', requireManagerScope, async (req, res) => {
+  try {
+    const { propertyId, vendorId, serviceType } = req.body;
+    const franchisePartnerId = req.franchisePartnerId;
+
+    if (!propertyId || !vendorId) {
+      return res.status(400).json({ success: false, message: 'Property ID and Vendor ID are required' });
+    }
+
+    // Property must be within the manager's franchise partner
+    const [property] = await pool.execute(
+      `SELECT id FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?
+       UNION
+       SELECT p.id FROM properties p
+       INNER JOIN fp_estimates fe ON fe.property_id = p.id
+       WHERE p.id = ? AND fe.franchise_partner_id = ?`,
+      [propertyId, franchisePartnerId, propertyId, franchisePartnerId]
+    );
+
+    if (property.length === 0) {
+      return res.status(404).json({ success: false, message: 'Property not found or access denied' });
+    }
+
+    const vendor = await resolveVendor(vendorId, { activeOnly: true });
+    if (!vendor) {
+      return res.status(404).json({ success: false, message: 'Vendor not found or inactive' });
+    }
+
+    const { alreadyActive } = await upsertPropertyVendorAssignment({
+      propertyId,
+      vendorId: vendor.id,
+      serviceType,
+      assignedBy: req.user?.id
+    });
+
+    const vendorName = vendor.company_name || vendor.owner_name;
+    res.json({
+      success: true,
+      message: alreadyActive
+        ? 'Vendor already assigned to this service'
+        : `Vendor ${vendorName} assigned successfully`
+    });
+  } catch (error) {
+    console.error('Create vendor assignment error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create assignment', error: error.message });
+  }
+});
+
+// Change the vendor on an existing assignment
+router.put('/vendors/assignments/:id', requireManagerScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { vendorId, vendor_id } = req.body;
+    const newVendorId = vendorId || vendor_id;
+    const franchisePartnerId = req.franchisePartnerId;
+
+    if (!newVendorId) {
+      return res.status(400).json({ success: false, message: 'Vendor ID is required' });
+    }
+
+    const [assignment] = await pool.execute(
+      `SELECT pva.id, pva.property_id, pva.service_type FROM property_vendor_assignments pva
+       LEFT JOIN properties p ON pva.property_id = p.id
+       LEFT JOIN onboarded_properties op ON pva.property_id = op.id
+       WHERE pva.id = ? AND (p.franchise_partner_id = ? OR op.franchise_partner_id = ?)`,
+      [id, franchisePartnerId, franchisePartnerId]
+    );
+
+    if (assignment.length === 0) {
+      return res.status(404).json({ success: false, message: 'Assignment not found' });
+    }
+
+    const vendor = await resolveVendor(newVendorId, { activeOnly: true });
+    if (!vendor) {
+      return res.status(404).json({ success: false, message: 'Vendor not found or inactive' });
+    }
+
+    // Reuse the assign path so the service schedule is kept in step
+    await upsertPropertyVendorAssignment({
+      propertyId: assignment[0].property_id,
+      vendorId: vendor.id,
+      serviceType: assignment[0].service_type,
+      assignedBy: req.user?.id
+    });
+
+    res.json({ success: true, message: 'Assignment updated successfully' });
+  } catch (error) {
+    console.error('Update assignment error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update assignment', error: error.message });
   }
 });
 
