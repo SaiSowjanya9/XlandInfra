@@ -4,7 +4,7 @@ import {
   ArrowLeft, Building2, MapPin, Package, Calendar, CalendarDays, Clock,
   CheckCircle, AlertCircle, Sparkles, User, Wrench, RefreshCw, X, Save,
   Star, Info, Check, ChevronLeft, ChevronRight, Phone, Edit2, HelpCircle,
-  ArrowRight, Eye, ListChecks, PlayCircle
+  ArrowRight, Eye, ListChecks, PlayCircle, Lock
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { 
@@ -1696,6 +1696,8 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                   const isSelected = selectedService?.id === service.id;
                   const isPending = !isPlanned && !isScheduled;
                   
+                  // Scheduled is checked before selected below, so a service turns light
+                  // green and locked the moment it is confirmed instead of staying highlighted
                   return (
                     <button
                       key={service.id}
@@ -1712,11 +1714,12 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                         }
                       }}
                       disabled={isScheduled}
+                      title={isScheduled ? `${service.name} is already scheduled` : undefined}
                       className={`flex-shrink-0 w-40 lg:w-full p-2 sm:p-3 rounded-lg border-2 text-left transition-all relative ${
-                        isSelected 
-                          ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' 
-                          : isScheduled
-                            ? 'border-green-300 bg-green-50 cursor-not-allowed'
+                        isScheduled
+                          ? `border-green-400 bg-green-50 cursor-not-allowed ${isSelected ? 'ring-2 ring-green-200' : ''}`
+                          : isSelected
+                            ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
                             : isPlanned
                               ? 'border-indigo-300 bg-indigo-50 hover:border-indigo-400'
                               : 'border-gray-200 hover:border-gray-300'
@@ -1745,14 +1748,15 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                         <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1 truncate">{service.vendorName}</p>
                         <div className="flex items-center justify-between mt-1.5 sm:mt-2 gap-1">
                           <span className="text-[10px] sm:text-xs text-gray-400">{service.visits} visits</span>
-                          <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${
+                          <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium whitespace-nowrap flex items-center gap-1 ${
                             isScheduled 
                               ? 'bg-green-100 text-green-700' 
                               : isPlanned
                                 ? 'bg-indigo-100 text-indigo-700'
                                 : 'bg-amber-100 text-amber-700'
                           }`}>
-                            {isScheduled ? 'Confirmed' : isPlanned ? 'Planned' : 'Pending'}
+                            {isScheduled && <Lock className="w-2.5 h-2.5" />}
+                            {isScheduled ? 'Scheduled' : isPlanned ? 'Planned' : 'Pending'}
                           </span>
                         </div>
                         
@@ -2905,17 +2909,41 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             <div className="px-3 sm:px-6 py-3 sm:py-4 bg-gray-100 border-t border-gray-200">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4">
                 <div className="text-xs sm:text-sm text-center sm:text-left">
-                  <span className="text-gray-500">To confirm:</span>
-                  <span className="ml-1 sm:ml-2 font-bold text-gray-900">
-                    {plannedReviewServices.length} svc
-                  </span>
-                  <span className="mx-1 sm:mx-2 text-gray-300">•</span>
-                  <span className="font-bold text-gray-900">
-                    {Object.values(plannedSchedules).reduce((sum, p) => sum + p.visits.length, 0)} visits
-                  </span>
+                  {plannedReviewServices.length > 0 && (
+                    <>
+                      <span className="text-gray-500">To confirm:</span>
+                      <span className="ml-1 sm:ml-2 font-bold text-gray-900">
+                        {plannedReviewServices.length} service{plannedReviewServices.length === 1 ? '' : 's'}
+                      </span>
+                      <span className="mx-1 sm:mx-2 text-gray-300">•</span>
+                      <span className="font-bold text-gray-900">
+                        {Object.values(plannedSchedules).reduce((sum, p) => sum + p.visits.length, 0)} visits
+                      </span>
+                    </>
+                  )}
+                  {/* What is already on the property, so the footer reflects the real totals */}
+                  {confirmedReviewServices.length > 0 && (
+                    <span className={plannedReviewServices.length > 0 ? 'block sm:inline sm:ml-3' : ''}>
+                      <span className="text-gray-500">Confirmed:</span>
+                      <span className="ml-1 sm:ml-2 font-bold text-green-700">
+                        {confirmedReviewServices.length} service{confirmedReviewServices.length === 1 ? '' : 's'}
+                      </span>
+                      <span className="mx-1 sm:mx-2 text-gray-300">•</span>
+                      <span className="font-bold text-green-700">
+                        {confirmedReviewServices.reduce(
+                          (sum, s) => sum + (reviewVisitsByService[s.id]?.length || parseInt(s.visits) || 0), 0
+                        )} visits
+                      </span>
+                    </span>
+                  )}
                   {plannedReviewServices.length === 0 && confirmedReviewServices.length > 0 && (
-                    <span className="block sm:inline sm:ml-2 text-green-700 font-medium">
-                      All services confirmed
+                    <span className="block sm:inline sm:ml-3 text-green-700 font-medium">
+                      Nothing left to confirm
+                    </span>
+                  )}
+                  {servicesWithoutVendor.length > 0 && (
+                    <span className="block sm:inline sm:ml-3 text-amber-600">
+                      {servicesWithoutVendor.length} without vendor
                     </span>
                   )}
                 </div>
