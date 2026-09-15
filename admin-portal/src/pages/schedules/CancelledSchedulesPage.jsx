@@ -143,11 +143,11 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
     const pathMap = {
       'franchise': '/fp',
       'manager': '/manager',
-      'admin': '/admin',
+      'admin': '/employee',
       'coordinator': '/coordinator',
       'supervisor': '/supervisor'
     };
-    return pathMap[portalType] || '/admin';
+    return pathMap[portalType] || '/employee';
   };
 
   const getCancelledByBadge = (role) => {

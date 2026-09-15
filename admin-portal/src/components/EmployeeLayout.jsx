@@ -36,6 +36,10 @@ import {
   Wallet,
   History,
   Calendar,
+  CalendarDays,
+  CalendarClock,
+  RefreshCcw,
+  Ban,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useFP } from '../contexts/FPContext';
@@ -177,7 +181,11 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   // Schedules sub-items
   const schedulesSubItems = [
     { path: '/employee/schedules/dashboard', icon: BarChart3, label: 'Dashboard' },
-    
+    { path: '/employee/schedules/pending', icon: CalendarClock, label: 'Pending Property', subLabel: 'Schedules' },
+    { path: '/employee/schedules/all', icon: List, label: 'All Schedules' },
+    { path: '/employee/schedules/calendar', icon: CalendarDays, label: 'Calendar' },
+    { path: '/employee/schedules/reschedule-requests', icon: RefreshCcw, label: 'Rescheduled Requests' },
+    { path: '/employee/schedules/cancelled', icon: Ban, label: 'Cancelled Schedules' },
   ];
 
   const isBillingPaymentsSectionActive = billingPaymentsSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/employee/billing');

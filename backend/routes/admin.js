@@ -4549,6 +4549,127 @@ router.get('/schedules/pending-properties', authenticate, async (req, res) => {
   }
 });
 
+// ============================================
+// ZONES - Get zones for filter dropdowns (Admin view - all FPs)
+// ============================================
+router.get('/zones', authenticate, async (req, res) => {
+  try {
+    const { forSchedules, fpId } = req.query;
+    const allZoneNames = new Set();
+    const combinedZones = [];
+
+    // If forSchedules=true, only return zones that have actual scheduled visits
+    if (forSchedules === 'true') {
+      const params = [];
+      let fpFilter = '';
+      if (fpId) {
+        fpFilter = ' AND op.franchise_partner_id = ?';
+        params.push(fpId);
+      }
+      const [scheduleZones] = await pool.execute(
+        `SELECT DISTINCT op.zone
+         FROM scheduled_visits sv
+         JOIN onboarded_properties op ON op.id = sv.property_id
+         WHERE op.zone IS NOT NULL AND op.zone != ''${fpFilter}
+         ORDER BY op.zone`,
+        params
+      );
+      scheduleZones.forEach(z => {
+        if (z.zone && !allZoneNames.has(z.zone)) {
+          allZoneNames.add(z.zone);
+          combinedZones.push({ id: `schedule-${z.zone}`, name: z.zone });
+        }
+      });
+
+      combinedZones.sort((a, b) => a.name.localeCompare(b.name));
+      return res.json({ success: true, data: combinedZones });
+    }
+
+    // Default behavior: global zones + zones referenced by properties across all FPs
+    try {
+      const [globalZones] = await pool.execute('SELECT id, name FROM zones WHERE is_active = 1');
+      globalZones.forEach(z => {
+        if (!allZoneNames.has(z.name)) {
+          allZoneNames.add(z.name);
+          combinedZones.push({ id: z.id, name: z.name });
+        }
+      });
+    } catch (_) {}
+
+    try {
+      const [fpZones] = await pool.execute('SELECT id, name FROM fp_zones WHERE is_active = 1 ORDER BY name');
+      fpZones.forEach(z => {
+        if (!allZoneNames.has(z.name)) {
+          allZoneNames.add(z.name);
+          combinedZones.push({ id: `fp-${z.id}`, name: z.name });
+        }
+      });
+    } catch (_) {}
+
+    try {
+      const [onboardedZones] = await pool.execute(
+        `SELECT DISTINCT zone FROM onboarded_properties WHERE zone IS NOT NULL AND zone != ''
+         AND (status = 'active' OR status IS NULL)`
+      );
+      onboardedZones.forEach(z => {
+        if (z.zone && !allZoneNames.has(z.zone)) {
+          allZoneNames.add(z.zone);
+          combinedZones.push({ id: `onboarded-${z.zone}`, name: z.zone });
+        }
+      });
+    } catch (_) {}
+
+    combinedZones.sort((a, b) => a.name.localeCompare(b.name));
+    res.json({ success: true, data: combinedZones });
+  } catch (error) {
+    console.error('Get admin zones error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch zones', error: error.message });
+  }
+});
+
+// ============================================
+// SERVICES - Get unique services for filter dropdowns (Admin view - all FPs)
+// ============================================
+router.get('/services', authenticate, async (req, res) => {
+  try {
+    const { forSchedules, fpId } = req.query;
+    const params = [];
+    let fpFilter = '';
+    if (fpId) {
+      fpFilter = ' AND op.franchise_partner_id = ?';
+      params.push(fpId);
+    }
+
+    const query = forSchedules === 'true'
+      ? `SELECT DISTINCT pss.service_name as name, pss.service_category as category
+         FROM scheduled_visits sv
+         JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+         JOIN onboarded_properties op ON op.id = sv.property_id
+         WHERE pss.service_name IS NOT NULL AND pss.service_name != ''${fpFilter}
+         ORDER BY pss.service_name`
+      : `SELECT DISTINCT pss.service_name as name, pss.service_category as category
+         FROM property_service_schedules pss
+         JOIN onboarded_properties op ON op.id = pss.property_id
+         WHERE pss.service_name IS NOT NULL AND pss.service_name != ''${fpFilter}
+         ORDER BY pss.service_name`;
+
+    const [services] = await pool.execute(query, params);
+
+    const serviceMap = new Map();
+    services.forEach(s => {
+      if (s.name && !serviceMap.has(s.name)) {
+        serviceMap.set(s.name, { id: s.name, name: s.name, category: s.category || s.name });
+      }
+    });
+
+    const uniqueServices = Array.from(serviceMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+    res.json({ success: true, data: uniqueServices });
+  } catch (error) {
+    console.error('Get admin services error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch services', error: error.message });
+  }
+});
+
 // Get all schedules (visits) with filtering and pagination - Admin view
 router.get('/schedules/all', authenticate, async (req, res) => {
   try {

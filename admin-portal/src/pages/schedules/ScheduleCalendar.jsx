@@ -33,11 +33,11 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
     const pathMap = {
       'franchise': '/fp',
       'manager': '/manager',
-      'admin': '/admin',
+      'admin': '/employee',
       'coordinator': '/coordinator',
       'supervisor': '/supervisor'
     };
-    return pathMap[portalType] || '/admin';
+    return pathMap[portalType] || '/employee';
   };
   const [viewMode, setViewMode] = useState('Month');
   const [schedules, setSchedules] = useState([]);
