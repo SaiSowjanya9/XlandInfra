@@ -1078,12 +1078,16 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       
       // Auto-move to next pending service after a brief delay
       setTimeout(() => {
-        // Find next pending service (not scheduled, not planned)
-        const nextPendingService = services.find(s => 
+        // Work from the updated list - state may not have flushed yet
+        const updatedServices = services.map(s => s.id === selectedService.id ? updatedService : s);
+
+        // Find next pending service (not scheduled, not planned, and it has a vendor)
+        const nextPendingService = updatedServices.find(s => 
           s.id !== selectedService.id && 
           s.status !== 'Scheduled' && 
           s.status !== 'Planned' &&
-          !plannedSchedules[s.id]
+          !plannedSchedules[s.id] &&
+          serviceHasVendor(s)
         );
         
         if (nextPendingService) {
@@ -1092,6 +1096,9 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
           setSelectedSlot(null);
           // Vendor availability will be fetched automatically via useEffect when selectedService changes
           showToast(`Moving to ${nextPendingService.name}...`, 'info');
+        } else {
+          // Last service done - land on the property level Review & Confirm step
+          handleShowFinalReview(updatedServices);
         }
       }, 500);
     } catch (error) {
@@ -1264,12 +1271,14 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   const readyForFinalReview = schedulableServices.length > 0 &&
     schedulableServices.every(s => s.status === 'Scheduled' || !!plannedSchedules[s.id]);
 
-  // Start/show final review - pulls in the saved visits of already confirmed services
-  const handleShowFinalReview = async () => {
+  // Start/show final review - pulls in the saved visits of already confirmed services.
+  // servicesOverride lets a caller pass a freshly updated list when state has not flushed yet.
+  const handleShowFinalReview = async (servicesOverride = null) => {
     setWizardStep(WIZARD_STEPS.REVIEW);
     setShowFinalReview(true);
 
-    const alreadyConfirmed = schedulableServices.filter(s => s.status === 'Scheduled');
+    const list = Array.isArray(servicesOverride) ? servicesOverride.filter(serviceHasVendor) : schedulableServices;
+    const alreadyConfirmed = list.filter(s => s.status === 'Scheduled');
     if (alreadyConfirmed.length === 0) return;
 
     setLoadingReviewVisits(true);
