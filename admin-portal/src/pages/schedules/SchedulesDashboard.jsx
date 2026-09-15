@@ -559,24 +559,27 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
         </div>
 
-        {/* Service Bar Chart */}
+        {/* Service Donut Chart */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 overflow-hidden">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Schedules by Service</h3>
             <PeriodFilter value={serviceFilter} onChange={setServiceFilter} />
           </div>
-          <div className="space-y-2">
-            {serviceData.length > 0 ? serviceData.slice(0, 5).map((d, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="w-14 text-[10px] text-gray-600 truncate flex-shrink-0">{d.name}</span>
-                <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden min-w-0">
-                  <div className="h-full rounded-full transition-all" style={{ width: `${(d.value / Math.max(...serviceData.map(x => x.value), 1)) * 100}%`, backgroundColor: d.color }} />
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0">
+              <DonutChart data={serviceData.slice(0, 6)} size={90} strokeWidth={16} centerValue={serviceData.reduce((sum, d) => sum + d.value, 0)} centerLabel="Total" />
+            </div>
+            <div className="space-y-1 text-xs min-w-0 flex-1 max-h-[90px] overflow-y-auto">
+              {serviceData.length > 0 ? serviceData.slice(0, 6).map((d, i) => (
+                <div key={i} className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+                  <span className="text-gray-600 truncate text-[10px]">{d.name}</span>
+                  <span className="font-medium text-gray-900 text-[10px] flex-shrink-0 ml-auto">{d.value}</span>
                 </div>
-                <span className="text-[10px] font-medium w-4 text-right flex-shrink-0">{d.value}</span>
-              </div>
-            )) : (
-              <p className="text-xs text-gray-400 text-center py-4">No data</p>
-            )}
+              )) : (
+                <p className="text-xs text-gray-400 text-center py-4">No data</p>
+              )}
+            </div>
           </div>
         </div>
 
