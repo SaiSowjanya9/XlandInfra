@@ -381,6 +381,7 @@ function App() {
                     <Route path="estimates/list" element={<Estimates admin={user} defaultTab="list" />} />
                     <Route path="estimates/amc-manager" element={<Estimates admin={user} defaultTab="amc-manager" />} />
                     <Route path="estimates/addons" element={<Estimates admin={user} defaultTab="addons" />} />
+                    <Route path="estimates/add-service" element={<Estimates admin={user} defaultTab="add-service" />} />
                     <Route path="estimates/archived" element={<Estimates admin={user} defaultTab="archived" />} />
                     <Route path="billing/dashboard" element={<PaymentsDashboard user={user} portalType="employee" />} />
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="employee" />} />
