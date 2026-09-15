@@ -55,7 +55,6 @@ const formatTime = (d) => d ? new Date(d).toLocaleTimeString('en-IN', { hour: '2
 
 const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   const navigate = useNavigate();
-  const token = getAuthToken();
   const { selectedFp } = useFP();
   
   const [loading, setLoading] = useState(true);
@@ -143,6 +142,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       setLoading(true);
     }
     try {
+      const token = getAuthToken(); // Get token inside callback to avoid re-render loops
       const apiPath = getApiPath(portalType);
       const params = new URLSearchParams();
       params.append('limit', '500'); // Get more records for dashboard
@@ -188,11 +188,12 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       setLoading(false);
       initialLoadDoneRef.current = true;
     }
-  }, [token, selectedFp, portalType]);
+  }, [selectedFp, portalType]);
 
   // Fetch pending properties using portal-specific endpoint
   const fetchPendingProperties = useCallback(async () => {
     try {
+      const token = getAuthToken(); // Get token inside callback to avoid re-render loops
       const apiPath = getApiPath(portalType);
       const response = await fetch(`${API_BASE}/api/${apiPath}/schedules/pending-properties`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -206,7 +207,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     } catch (err) {
       console.error('Pending properties error:', err);
     }
-  }, [token, portalType]);
+  }, [portalType]);
 
   useEffect(() => {
     fetchSchedules();
