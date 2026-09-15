@@ -79,79 +79,21 @@ CALL xland_fix_vendor_assignments();
 DROP PROCEDURE IF EXISTS xland_fix_vendor_assignments;
 
 -- ============================================
--- Fix the vendor assignment triggers from schema_v22
+-- Remove the vendor assignment triggers from schema_v22
 --
 -- Their bodies read fp_estimates.service_rows, but that table stores the
 -- services in package_services. The column does not exist, so AFTER INSERT
 -- aborted with "Unknown column 'service_rows' in 'field list'" and the whole
 -- assignment INSERT was rolled back - the second reason Assign Vendor could
 -- never save.
+--
+-- They are dropped rather than rebuilt on purpose: CREATE TRIGGER on a server
+-- with binary logging enabled requires SUPER
+-- (ER_BINLOG_CREATE_ROUTINE_NEED_SUPER / errno 1419), which the application's
+-- database user does not have. backend/utils/vendorAssignments.js now keeps
+-- pending_property_schedules in step from the application after every
+-- assignment, so no trigger is needed.
 -- ============================================
 
 DROP TRIGGER IF EXISTS after_vendor_assignment_insert;
 DROP TRIGGER IF EXISTS after_vendor_assignment_update;
-
-DELIMITER $$
-
-CREATE TRIGGER after_vendor_assignment_insert
-AFTER INSERT ON property_vendor_assignments
-FOR EACH ROW
-BEGIN
-  DECLARE prop_fp_id INT;
-  DECLARE est_id INT;
-  DECLARE total_svc INT;
-  DECLARE assigned_cnt INT;
-
-  -- Get property's FP and estimate
-  SELECT op.franchise_partner_id, fe.id INTO prop_fp_id, est_id
-  FROM onboarded_properties op
-  LEFT JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
-  WHERE op.id = NEW.property_id
-  LIMIT 1;
-
-  -- Count total services from the estimate
-  SELECT JSON_LENGTH(COALESCE(package_services, '[]')) INTO total_svc
-  FROM fp_estimates WHERE property_id = NEW.property_id AND status = 'approved'
-  LIMIT 1;
-
-  -- Count assigned vendors
-  SELECT COUNT(*) INTO assigned_cnt
-  FROM property_vendor_assignments
-  WHERE property_id = NEW.property_id AND is_active = 1;
-
-  -- Only track properties that exist in onboarded_properties
-  IF prop_fp_id IS NOT NULL THEN
-    INSERT INTO pending_property_schedules (property_id, estimate_id, total_services, vendors_assigned, franchise_partner_id, scheduling_status)
-    VALUES (NEW.property_id, est_id, COALESCE(total_svc, 0), assigned_cnt, prop_fp_id,
-      CASE WHEN assigned_cnt >= COALESCE(total_svc, 0) THEN 'pending_schedule' ELSE 'pending_vendor' END
-    )
-    ON DUPLICATE KEY UPDATE
-      vendors_assigned = assigned_cnt,
-      scheduling_status = CASE WHEN assigned_cnt >= total_services THEN 'pending_schedule' ELSE 'pending_vendor' END,
-      updated_at = NOW();
-  END IF;
-END $$
-
-CREATE TRIGGER after_vendor_assignment_update
-AFTER UPDATE ON property_vendor_assignments
-FOR EACH ROW
-BEGIN
-  DECLARE assigned_cnt INT;
-  DECLARE total_svc INT;
-
-  SELECT COUNT(*) INTO assigned_cnt
-  FROM property_vendor_assignments
-  WHERE property_id = NEW.property_id AND is_active = 1;
-
-  SELECT total_services INTO total_svc
-  FROM pending_property_schedules
-  WHERE property_id = NEW.property_id;
-
-  UPDATE pending_property_schedules SET
-    vendors_assigned = assigned_cnt,
-    scheduling_status = CASE WHEN assigned_cnt >= COALESCE(total_svc, 0) THEN 'pending_schedule' ELSE 'pending_vendor' END,
-    updated_at = NOW()
-  WHERE property_id = NEW.property_id;
-END $$
-
-DELIMITER ;
