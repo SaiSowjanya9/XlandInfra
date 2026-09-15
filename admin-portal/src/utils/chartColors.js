@@ -68,9 +68,52 @@ export const PROPERTY_TYPE_COLORS = {
 };
 
 // =============================================================================
-// SERVICE COLORS - Warm/earthy palette (distinct from Property Types which use cool tones)
+// SERVICE COLORS - Fallback array (use getServiceColor() for consistent hashing)
 // =============================================================================
-export const SERVICE_COLORS = ['#16A34A', '#0369A1', '#A855F7', '#F97316', '#06B6D4', '#E11D48', '#84CC16', '#64748B'];
+export const SERVICE_COLORS = ['#EA580C', '#DC2626', '#CA8A04', '#9333EA', '#BE185D', '#B45309', '#7C2D12', '#64748B'];
+
+/**
+ * Generate a consistent color for any service name using hash-based HSL.
+ * Same service name always gets the same color. Avoids status colors (greens/blues).
+ * @param {string} serviceName - The service name
+ * @returns {string} Hex color code
+ */
+export const getServiceColor = (serviceName) => {
+  if (!serviceName) return '#64748B';
+  
+  // Hash the service name to get a consistent number
+  let hash = 0;
+  for (let i = 0; i < serviceName.length; i++) {
+    hash = serviceName.charCodeAt(i) + ((hash << 5) - hash);
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  
+  // Use hue ranges that avoid green (90-150) and blue (180-240) which are for status/property
+  // Available ranges: 0-89 (reds/oranges/yellows), 260-360 (purples/pinks/reds)
+  const hueRanges = [[0, 89], [260, 360]];
+  const rangeIndex = Math.abs(hash) % 2;
+  const range = hueRanges[rangeIndex];
+  const hue = range[0] + (Math.abs(hash >> 8) % (range[1] - range[0]));
+  
+  // Keep saturation high (60-80%) and lightness medium (45-55%) for vibrant, readable colors
+  const saturation = 60 + (Math.abs(hash >> 16) % 20);
+  const lightness = 45 + (Math.abs(hash >> 24) % 10);
+  
+  return hslToHex(hue, saturation, lightness);
+};
+
+// Helper to convert HSL to Hex
+const hslToHex = (h, s, l) => {
+  s /= 100;
+  l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+};
 
 // =============================================================================
 // PAYMENT/INVOICE STATUS COLORS - Distinct palette for financial status
@@ -172,6 +215,7 @@ export default {
   BAR_CHART_COLORS,
   CATEGORY_COLORS,
   getConsistentColor,
+  getServiceColor,
   createStatusDataArray,
   createEstimateTypeDataArray
 };
