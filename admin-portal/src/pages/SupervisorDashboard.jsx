@@ -17,6 +17,7 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import EstimatesOverviewBlocks from '../components/EstimatesOverviewBlocks';
 import DateRangeFilter from '../components/common/DateRangeFilter';
+import { WORK_ORDER_STATUS_COLORS, STATUS_COLORS, PROPERTY_TYPE_COLORS } from '../utils/chartColors';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -131,12 +132,12 @@ const SupervisorDashboard = ({ user }) => {
   const totalWorkOrders = dateFilteredWorkOrders.length;
   
   const pieData = [
-    { name: 'Pending', value: pendingWO, color: '#F59E0B' },
-    { name: 'Assigned', value: assignedWO, color: '#3B82F6' },
-    { name: 'In Progress', value: inProgressWO, color: '#8B5CF6' },
-    { name: 'Completed', value: completedWO, color: '#10B981' },
-    { name: 'Closed', value: closedWO, color: '#6B7280' },
-    { name: 'Cancelled', value: cancelledWO, color: '#EF4444' },
+    { name: 'Pending', value: pendingWO, color: WORK_ORDER_STATUS_COLORS.pending },
+    { name: 'Assigned', value: assignedWO, color: WORK_ORDER_STATUS_COLORS.assigned },
+    { name: 'In Progress', value: inProgressWO, color: WORK_ORDER_STATUS_COLORS.in_progress },
+    { name: 'Completed', value: completedWO, color: WORK_ORDER_STATUS_COLORS.completed },
+    { name: 'Closed', value: closedWO, color: WORK_ORDER_STATUS_COLORS.closed },
+    { name: 'Cancelled', value: cancelledWO, color: WORK_ORDER_STATUS_COLORS.cancelled },
   ].filter(item => item.value > 0);
 
   // Computed real-time stats from actual data arrays
@@ -165,13 +166,13 @@ const SupervisorDashboard = ({ user }) => {
   if ((est.direct_other || 0) > 0) stackedBarData.unshift({ name: 'Other', direct: est.direct_other || 0, property: 0 });
   const totalEstimates = directCount + propertyCount;
 
-  // Estimates by status data
+  // Estimates by status data - using centralized colors
   const estStatus = stats?.estimatesByStatus || {};
   const statusData = [
-    { name: 'Draft', direct: estStatus.direct_draft || 0, property: estStatus.prop_draft || 0, color: '#6B7280' },
-    { name: 'Sent', direct: estStatus.direct_sent || 0, property: estStatus.prop_sent || 0, color: '#3B82F6' },
-    { name: 'Approved', direct: estStatus.direct_approved || 0, property: estStatus.prop_approved || 0, color: '#10B981' },
-    { name: 'Rejected', direct: estStatus.direct_rejected || 0, property: estStatus.prop_rejected || 0, color: '#EF4444' },
+    { name: 'Draft', direct: estStatus.direct_draft || 0, property: estStatus.prop_draft || 0, color: STATUS_COLORS.Draft },
+    { name: 'Sent', direct: estStatus.direct_sent || 0, property: estStatus.prop_sent || 0, color: STATUS_COLORS.Sent },
+    { name: 'Approved', direct: estStatus.direct_approved || 0, property: estStatus.prop_approved || 0, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', direct: estStatus.direct_rejected || 0, property: estStatus.prop_rejected || 0, color: STATUS_COLORS.Rejected },
   ];
 
   // Properties by Type data with time filter
@@ -203,14 +204,13 @@ const SupervisorDashboard = ({ user }) => {
   };
 
   const propertyTypeData = (() => {
-    const colors = { 'Gated Community': '#3B82F6', 'Apartment': '#8B5CF6', 'Villa': '#10B981', 'Flat': '#F59E0B', 'Plot': '#EF4444', 'Other': '#6B7280' };
     // Initialize default types with 0 to always show labels
     const typeCounts = { 'Gated Community': 0, 'Apartment': 0, 'Villa': 0, 'Flat': 0, 'Plot': 0 };
     filteredProperties.forEach(p => {
       const type = normalizePropertyType(p.property_type || p.propertyType || p.type);
       typeCounts[type] = (typeCounts[type] || 0) + 1;
     });
-    return Object.entries(typeCounts).map(([name, value]) => ({ name, value, color: colors[name] || '#6B7280' })).sort((a, b) => b.value - a.value);
+    return Object.entries(typeCounts).map(([name, value]) => ({ name, value, color: PROPERTY_TYPE_COLORS[name] || '#78716C' })).sort((a, b) => b.value - a.value);
   })();
   const totalPropertiesCount = filteredProperties.length;
 

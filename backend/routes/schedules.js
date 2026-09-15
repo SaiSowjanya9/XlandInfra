@@ -3136,4 +3136,269 @@ router.post('/scheduler/run', authenticate, adminOnly, async (req, res) => {
   }
 });
 
+// ============================================
+// AUTO-RENEWAL ENDPOINTS
+// ============================================
+
+const { 
+  processRenewals, 
+  approveRenewal, 
+  declineRenewal, 
+  getPendingRenewals 
+} = require('../services/autoRenewalService');
+
+// Get pending renewals (Admin/FP/Manager)
+router.get('/renewals', authenticate, canSeeSchedule, async (req, res) => {
+  try {
+    const { status = 'pending_approval', propertyId, limit = 50 } = req.query;
+    const userFpId = req.user?.franchisePartnerId || req.user?.fpId;
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin';
+
+    const renewals = await getPendingRenewals({
+      status,
+      propertyId,
+      franchisePartnerId: isAdmin ? null : userFpId,
+      limit: parseInt(limit)
+    });
+
+    res.json({
+      success: true,
+      data: renewals.map(r => ({
+        id: r.id,
+        renewalId: r.renewal_id,
+        originalSeriesId: r.original_series_id,
+        originalSeriesCode: r.original_series_code,
+        propertyId: r.property_id,
+        propertyName: r.property_name,
+        propertyCode: r.property_code,
+        serviceName: r.service_name,
+        serviceCategory: r.service_category,
+        vendorId: r.vendor_id,
+        vendorName: r.vendor_name,
+        vendorCompany: r.vendor_company,
+        frequency: r.frequency,
+        totalVisits: r.total_visits,
+        renewalStartDate: r.renewal_start_date,
+        renewalEndDate: r.renewal_end_date,
+        status: r.status,
+        triggerType: r.trigger_type,
+        customerResponse: r.customer_response,
+        customerName: r.customer_name,
+        customerEmail: r.customer_email,
+        daysUntilExpiry: r.days_until_expiry,
+        originalStartDate: r.original_start_date,
+        originalEndDate: r.original_end_date,
+        completedVisits: r.completed_visits,
+        originalTotalVisits: r.original_total_visits,
+        createdAt: r.created_at
+      })),
+      total: renewals.length
+    });
+  } catch (error) {
+    console.error('Error fetching renewals:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching renewals',
+      error: error.message
+    });
+  }
+});
+
+// Get single renewal details
+router.get('/renewals/:id', authenticate, canSeeSchedule, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const [renewals] = await pool.execute(`
+      SELECT 
+        sr.*,
+        ss.series_id as original_series_code,
+        ss.contract_start_date as original_start_date,
+        ss.contract_end_date as original_end_date,
+        ss.completed_visits,
+        ss.total_visits as original_total_visits,
+        ss.preferred_day_of_week,
+        ss.preferred_time_slot,
+        op.community_name as property_name,
+        op.property_id as property_code,
+        op.zone,
+        op.address as property_address,
+        op.city,
+        ov.company_name as vendor_company,
+        ov.owner_name as vendor_contact,
+        ov.owner_mobile as vendor_phone,
+        pc.name as customer_name,
+        pc.email as customer_email,
+        pc.phone as customer_phone,
+        DATEDIFF(ss.contract_end_date, CURDATE()) as days_until_expiry
+      FROM schedule_renewals sr
+      JOIN schedule_series ss ON sr.original_series_id = ss.id
+      LEFT JOIN onboarded_properties op ON sr.property_id = op.id
+      LEFT JOIN onboarded_vendors ov ON sr.vendor_id = ov.id
+      LEFT JOIN property_contacts pc ON pc.property_id = op.id AND pc.is_primary = 1
+      WHERE sr.id = ? OR sr.renewal_id = ?
+    `, [id, id]);
+
+    if (renewals.length === 0) {
+      return res.status(404).json({ success: false, message: 'Renewal not found' });
+    }
+
+    // Get renewal history
+    const [history] = await pool.execute(`
+      SELECT * FROM schedule_renewal_history 
+      WHERE renewal_id = ? 
+      ORDER BY changed_at DESC
+    `, [renewals[0].id]);
+
+    res.json({
+      success: true,
+      data: {
+        ...renewals[0],
+        history
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching renewal details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching renewal details',
+      error: error.message
+    });
+  }
+});
+
+// Approve renewal (Admin/FP/Manager)
+router.post('/renewals/:id/approve', authenticate, canMakeSchedule, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const approvedBy = req.user?.id || 1;
+    const approverType = req.user?.role === 'admin' ? 'admin' : 'fp';
+
+    const result = await approveRenewal(id, approvedBy, approverType);
+
+    res.json({
+      success: true,
+      message: 'Renewal approved successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error approving renewal:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error approving renewal'
+    });
+  }
+});
+
+// Decline renewal (Admin/FP/Manager)
+router.post('/renewals/:id/decline', authenticate, canMakeSchedule, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const declinedBy = req.user?.id || 1;
+    const declinerType = req.user?.role === 'admin' ? 'admin' : 'fp';
+
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'Decline reason is required'
+      });
+    }
+
+    const result = await declineRenewal(id, declinedBy, reason, declinerType);
+
+    res.json({
+      success: true,
+      message: 'Renewal declined',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error declining renewal:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error declining renewal'
+    });
+  }
+});
+
+// Manually trigger renewal processing (Admin only)
+router.post('/renewals/process', authenticate, adminOnly, async (req, res) => {
+  try {
+    console.log(`📋 Manual renewal processing triggered by user: ${req.user?.email || req.user?.id}`);
+    const result = await processRenewals();
+
+    res.json({
+      success: true,
+      message: `Renewal processing completed. Created ${result.renewalsCreated.length} renewals.`,
+      data: {
+        renewalsCreated: result.renewalsCreated.length,
+        notificationsSent: result.notificationsSent.length,
+        errors: result.errors.length,
+        details: result
+      }
+    });
+  } catch (error) {
+    console.error('Error processing renewals manually:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error processing renewals',
+      error: error.message
+    });
+  }
+});
+
+// Get renewal statistics
+router.get('/renewals/stats/summary', authenticate, canSeeSchedule, async (req, res) => {
+  try {
+    const userFpId = req.user?.franchisePartnerId || req.user?.fpId;
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin';
+
+    let fpFilter = '';
+    const params = [];
+    if (userFpId && !isAdmin) {
+      fpFilter = 'AND sr.franchise_partner_id = ?';
+      params.push(userFpId);
+    }
+
+    const [[stats]] = await pool.execute(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'pending_approval' THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
+        SUM(CASE WHEN status = 'auto_approved' THEN 1 ELSE 0 END) as autoApproved,
+        SUM(CASE WHEN status = 'declined' THEN 1 ELSE 0 END) as declined,
+        SUM(CASE WHEN status = 'expired' THEN 1 ELSE 0 END) as expired
+      FROM schedule_renewals sr
+      WHERE 1=1 ${fpFilter}
+    `, params);
+
+    // Get upcoming expirations (series without renewal)
+    const [upcomingExpirations] = await pool.execute(`
+      SELECT COUNT(*) as count
+      FROM schedule_series ss
+      WHERE ss.status = 'active'
+        AND ss.auto_renewal_enabled = TRUE
+        AND ss.renewed_to_series_id IS NULL
+        AND DATEDIFF(ss.contract_end_date, CURDATE()) <= 30
+        AND DATEDIFF(ss.contract_end_date, CURDATE()) > 0
+        ${userFpId && !isAdmin ? 'AND ss.franchise_partner_id = ?' : ''}
+    `, userFpId && !isAdmin ? [userFpId] : []);
+
+    res.json({
+      success: true,
+      data: {
+        ...stats,
+        upcomingExpirations: upcomingExpirations[0]?.count || 0
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching renewal stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching renewal statistics',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

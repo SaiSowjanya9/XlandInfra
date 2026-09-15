@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFP } from '../../contexts/FPContext';
 import {
@@ -12,40 +12,17 @@ import {
 import DonutChart from '../../components/common/DonutChart';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { getAuthToken } from '../../utils/safeStorage';
+import { 
+  SCHEDULE_STATUS_COLORS, 
+  PRIORITY_COLORS, 
+  PROPERTY_TYPE_COLORS, 
+  SERVICE_COLORS 
+} from '../../utils/chartColors';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-// Status colors
-const STATUS_COLORS = {
-  pending: '#6B7280',
-  scheduled: '#3B82F6',
-  upcoming: '#3B82F6',
-  in_progress: '#F59E0B',
-  completed: '#10B981',
-  rescheduled: '#8B5CF6',
-  cancelled: '#EF4444'
-};
-
-// Priority colors
-const PRIORITY_COLORS = {
-  high: '#EF4444',
-  medium: '#F59E0B',
-  low: '#10B981'
-};
-
-// Property Type colors
-const PROPERTY_TYPE_COLORS = {
-  'Gated Community': '#10B981',
-  'Apartment': '#3B82F6',
-  'Villa': '#F59E0B',
-  'Flat': '#EC4899',
-  'Plot': '#F97316',
-  'Commercial': '#8B5CF6',
-  'Others': '#6B7280'
-};
-
-// Service colors
-const SERVICE_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#EC4899', '#06B6D4', '#6B7280'];
+// Alias for backward compatibility within this file
+const STATUS_COLORS = SCHEDULE_STATUS_COLORS;
 
 // Normalize property type to consistent display format
 const normalizePropertyType = (type) => {

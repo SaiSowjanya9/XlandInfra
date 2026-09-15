@@ -31,6 +31,7 @@ import { PendingSchedulesBadge, usePendingSchedulesCount } from '../components/s
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
+import { WORK_ORDER_STATUS_COLORS, STATUS_COLORS, PRIORITY_COLORS, PROPERTY_TYPE_COLORS, PAYMENT_STATUS_COLORS } from '../utils/chartColors';
 
 const ManagerDashboard = ({ user }) => {
   const navigate = useNavigate();
@@ -401,12 +402,12 @@ const ManagerDashboard = ({ user }) => {
   
   // Work Order Status data for chart
   const woStatusData = [
-    { name: 'Pending', value: pendingWO, color: '#F59E0B' },
-    { name: 'Assigned', value: assignedWO, color: '#3B82F6' },
-    { name: 'In Progress', value: inProgressWO, color: '#8B5CF6' },
-    { name: 'Completed', value: completedWO, color: '#10B981' },
-    { name: 'Closed', value: closedWO, color: '#6B7280' },
-    { name: 'Cancelled', value: cancelledWO, color: '#EF4444' },
+    { name: 'Pending', value: pendingWO, color: WORK_ORDER_STATUS_COLORS.pending },
+    { name: 'Assigned', value: assignedWO, color: WORK_ORDER_STATUS_COLORS.assigned },
+    { name: 'In Progress', value: inProgressWO, color: WORK_ORDER_STATUS_COLORS.in_progress },
+    { name: 'Completed', value: completedWO, color: WORK_ORDER_STATUS_COLORS.completed },
+    { name: 'Closed', value: closedWO, color: WORK_ORDER_STATUS_COLORS.closed },
+    { name: 'Cancelled', value: cancelledWO, color: WORK_ORDER_STATUS_COLORS.cancelled },
   ];
   
   // Keep backward compatibility
@@ -431,22 +432,22 @@ const ManagerDashboard = ({ user }) => {
   const priorityTotal = priorityFilteredWO.length;
   
   const priorityData = [
-    { name: 'Low', value: lowPriorityWO, color: '#10B981' },
-    { name: 'Medium', value: mediumPriorityWO, color: '#F59E0B' },
-    { name: 'High', value: highPriorityWO, color: '#EF4444' },
+    { name: 'Low', value: lowPriorityWO, color: PRIORITY_COLORS.low },
+    { name: 'Medium', value: mediumPriorityWO, color: PRIORITY_COLORS.medium },
+    { name: 'High', value: highPriorityWO, color: PRIORITY_COLORS.high },
     ...(urgentPriorityWO > 0 ? [{ name: 'Urgent', value: urgentPriorityWO, color: '#7C3AED' }] : []),
     ...(unassignedPriorityWO > 0 ? [{ name: 'Unassigned', value: unassignedPriorityWO, color: '#9CA3AF' }] : []),
   ];
 
   // Work Orders by Property Type data (using property type filtered data)
-  const propertyTypeColors = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444'];
+
   const propertyTypeCounts = propertyTypeFilteredWO.reduce((acc, wo) => {
     const type = wo.property_type || wo.propertyType || 'Other';
     acc[type] = (acc[type] || 0) + 1;
     return acc;
   }, {});
   const woPropertyTypeData = Object.entries(propertyTypeCounts)
-    .map(([name, value], index) => ({ name, value, color: propertyTypeColors[index % propertyTypeColors.length] }))
+    .map(([name, value]) => ({ name, value, color: PROPERTY_TYPE_COLORS[name] || '#78716C' }))
     .sort((a, b) => b.value - a.value);
 
   // Stacked bar chart data - Property types with Direct vs Property-based breakdown
@@ -470,13 +471,13 @@ const ManagerDashboard = ({ user }) => {
   
   const totalEstimates = directCount + propertyCount;
 
-  // Estimates by status data
+  // Estimates by status data - using centralized colors
   const estStatus = stats?.estimatesByStatus || {};
   const statusData = [
-    { name: 'Draft', direct: estStatus.direct_draft || 0, property: estStatus.prop_draft || 0, color: '#6B7280' },
-    { name: 'Sent', direct: estStatus.direct_sent || 0, property: estStatus.prop_sent || 0, color: '#3B82F6' },
-    { name: 'Approved', direct: estStatus.direct_approved || 0, property: estStatus.prop_approved || 0, color: '#10B981' },
-    { name: 'Rejected', direct: estStatus.direct_rejected || 0, property: estStatus.prop_rejected || 0, color: '#EF4444' },
+    { name: 'Draft', direct: estStatus.direct_draft || 0, property: estStatus.prop_draft || 0, color: STATUS_COLORS.Draft },
+    { name: 'Sent', direct: estStatus.direct_sent || 0, property: estStatus.prop_sent || 0, color: STATUS_COLORS.Sent },
+    { name: 'Approved', direct: estStatus.direct_approved || 0, property: estStatus.prop_approved || 0, color: STATUS_COLORS.Approved },
+    { name: 'Rejected', direct: estStatus.direct_rejected || 0, property: estStatus.prop_rejected || 0, color: STATUS_COLORS.Rejected },
   ];
 
   // Properties by Type data with time filter
@@ -528,15 +529,6 @@ const ManagerDashboard = ({ user }) => {
   };
 
   const propertyTypeData = (() => {
-    const colors = {
-      'Gated Community': '#3B82F6',
-      'Apartment': '#8B5CF6',
-      'Villa': '#10B981',
-      'Flat': '#F59E0B',
-      'Plot': '#EF4444',
-      'Other': '#6B7280'
-    };
-    
     // Initialize all default types with 0
     const typeCounts = {
       'Gated Community': 0,
@@ -555,7 +547,7 @@ const ManagerDashboard = ({ user }) => {
       .map(([name, value]) => ({ 
         name, 
         value, 
-        color: colors[name] || '#6B7280' 
+        color: PROPERTY_TYPE_COLORS[name] || '#78716C' 
       }))
       .sort((a, b) => b.value - a.value);
   })();
@@ -964,13 +956,13 @@ const ManagerDashboard = ({ user }) => {
               </div>
               <div className="space-y-3">
                 {(() => {
-                  // Default property types to always show
+                  // Default property types to always show - using centralized colors
                   const defaultTypes = [
-                    { name: 'Gated Community', color: '#3B82F6' },
-                    { name: 'Apartment', color: '#8B5CF6' },
-                    { name: 'Villa', color: '#10B981' },
-                    { name: 'Plot', color: '#F59E0B' },
-                    { name: 'Flat', color: '#EF4444' },
+                    { name: 'Gated Community', color: PROPERTY_TYPE_COLORS['Gated Community'] },
+                    { name: 'Apartment', color: PROPERTY_TYPE_COLORS['Apartment'] },
+                    { name: 'Villa', color: PROPERTY_TYPE_COLORS['Villa'] },
+                    { name: 'Plot', color: PROPERTY_TYPE_COLORS['Plot'] },
+                    { name: 'Flat', color: PROPERTY_TYPE_COLORS['Flat'] },
                   ];
                   
                   // Merge with actual data
@@ -1083,10 +1075,10 @@ const ManagerDashboard = ({ user }) => {
                   const total = invoices.length;
                   
                   const invoiceStatusData = [
-                    { name: 'Paid', value: statusCounts.paid, color: '#22C55E' },
-                    { name: 'Partially Paid', value: statusCounts.partially_paid, color: '#3B82F6' },
-                    { name: 'Unpaid', value: statusCounts.unpaid, color: '#F59E0B' },
-                    { name: 'Overdue', value: statusCounts.overdue, color: '#EF4444' },
+                    { name: 'Paid', value: statusCounts.paid, color: PAYMENT_STATUS_COLORS.paid },
+                    { name: 'Partially Paid', value: statusCounts.partially_paid, color: PAYMENT_STATUS_COLORS.partially_paid },
+                    { name: 'Unpaid', value: statusCounts.unpaid, color: PAYMENT_STATUS_COLORS.unpaid },
+                    { name: 'Overdue', value: statusCounts.overdue, color: PAYMENT_STATUS_COLORS.overdue },
                   ];
 
                   return (

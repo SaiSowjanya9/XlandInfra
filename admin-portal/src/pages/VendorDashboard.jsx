@@ -3,6 +3,7 @@ import { safeStorage } from '../utils/safeStorage';
 import { Building2, FileText, Users, Briefcase, TrendingUp, ArrowUpRight, Clock, CheckCircle2, ClipboardList, RefreshCw, ArrowRight, Star } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import DateRangeFilter from '../components/common/DateRangeFilter';
+import { WORK_ORDER_STATUS_COLORS } from '../utils/chartColors';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -69,12 +70,12 @@ const VendorDashboard = ({ user }) => {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
-  // Pie chart data
+  // Pie chart data - using centralized colors
   const workOrdersByStatus = stats.byStatus || {};
   const pieData = [
-    { name: 'Assigned', value: workOrdersByStatus.assigned || 0, color: '#F59E0B' },
-    { name: 'In Progress', value: workOrdersByStatus.in_progress || 0, color: '#3B82F6' },
-    { name: 'Completed', value: (workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0) + (workOrdersByStatus.verified || 0), color: '#10B981' },
+    { name: 'Assigned', value: workOrdersByStatus.assigned || 0, color: WORK_ORDER_STATUS_COLORS.assigned },
+    { name: 'In Progress', value: workOrdersByStatus.in_progress || 0, color: WORK_ORDER_STATUS_COLORS.in_progress },
+    { name: 'Completed', value: (workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0) + (workOrdersByStatus.verified || 0), color: WORK_ORDER_STATUS_COLORS.completed },
   ].filter(item => item.value > 0);
 
   const totalWorkOrders = stats.total || 0;
