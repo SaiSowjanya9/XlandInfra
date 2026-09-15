@@ -14,7 +14,6 @@ import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { getAuthToken } from '../../utils/safeStorage';
 import { 
   SCHEDULE_STATUS_COLORS, 
-  PRIORITY_COLORS, 
   PROPERTY_TYPE_COLORS, 
   getServiceColor 
 } from '../../utils/chartColors';
@@ -67,7 +66,6 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   // Chart filter states
   const [statusFilter, setStatusFilter] = useState('all');
   const [serviceFilter, setServiceFilter] = useState('all');
-  const [priorityFilter, setPriorityFilter] = useState('all');
   const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
   
   // Table filter states
@@ -285,15 +283,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   const serviceData = Object.entries(serviceCounts)
     .map(([name, value]) => ({ name, value, color: getServiceColor(name) }))
     .sort((a, b) => b.value - a.value);
-
-  // Chart data - Priority (with filter) - All non-cancelled schedules
-  const priorityFilteredData = applyPeriodFilter(allActiveSchedules, priorityFilter);
-  const priorityData = [
-    { name: 'High', value: priorityFilteredData.filter(s => (s.priority || '').toLowerCase() === 'high').length, color: PRIORITY_COLORS.high },
-    { name: 'Medium', value: priorityFilteredData.filter(s => (s.priority || '').toLowerCase() === 'medium').length, color: PRIORITY_COLORS.medium },
-    { name: 'Low', value: priorityFilteredData.filter(s => (s.priority || '').toLowerCase() === 'low').length, color: PRIORITY_COLORS.low }
-  ].filter(d => d.value > 0);
-  const priorityTotal = priorityData.reduce((sum, d) => sum + d.value, 0);
+  const serviceTotal = serviceData.reduce((sum, d) => sum + d.value, 0);
 
   // Chart data - Property Type (with filter) - All non-cancelled schedules
   const propertyTypeFilteredData = applyPeriodFilter(allActiveSchedules, propertyTypeFilter);
@@ -559,50 +549,30 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
         </div>
 
-        {/* Service Donut Chart */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 overflow-hidden">
+        {/* Service Donut Chart - expanded, grows with the number of services */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4 overflow-hidden sm:col-span-2">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Schedules by Service</h3>
             <PeriodFilter value={serviceFilter} onChange={setServiceFilter} />
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex-shrink-0">
-              <DonutChart data={serviceData.slice(0, 6)} size={90} strokeWidth={16} centerValue={serviceData.reduce((sum, d) => sum + d.value, 0)} centerLabel="Total" />
+          {serviceData.length > 0 ? (
+            <div className="flex items-center gap-5">
+              <div className="flex-shrink-0">
+                <DonutChart data={serviceData} size={170} strokeWidth={28} centerValue={serviceTotal} centerLabel="Total" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-1.5 text-xs min-w-0 flex-1 max-h-[170px] overflow-y-auto pr-1">
+                {serviceData.map((d, i) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+                    <span className="text-gray-600 truncate" title={d.name}>{d.name}</span>
+                    <span className="font-medium text-gray-900 flex-shrink-0 ml-auto">{d.value} ({serviceTotal ? Math.round((d.value / serviceTotal) * 100) : 0}%)</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="space-y-1 text-xs min-w-0 flex-1 max-h-[90px] overflow-y-auto">
-              {serviceData.length > 0 ? serviceData.slice(0, 6).map((d, i) => (
-                <div key={i} className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
-                  <span className="text-gray-600 truncate text-[10px]">{d.name}</span>
-                  <span className="font-medium text-gray-900 text-[10px] flex-shrink-0 ml-auto">{d.value}</span>
-                </div>
-              )) : (
-                <p className="text-xs text-gray-400 text-center py-4">No data</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Priority Donut */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 overflow-hidden">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-900">Schedules by Priority</h3>
-            <PeriodFilter value={priorityFilter} onChange={setPriorityFilter} />
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex-shrink-0">
-              <DonutChart data={priorityData} size={90} strokeWidth={16} centerValue={priorityTotal} centerLabel="Total" />
-            </div>
-            <div className="space-y-1.5 text-xs min-w-0 flex-1">
-              {priorityData.map((d, i) => (
-                <div key={i} className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
-                  <span className="text-gray-600 truncate">{d.name}</span>
-                  <span className="font-medium text-gray-900 text-[10px] flex-shrink-0 ml-auto">{d.value} ({priorityTotal ? Math.round((d.value / priorityTotal) * 100) : 0}%)</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          ) : (
+            <p className="text-xs text-gray-400 text-center py-16">No data</p>
+          )}
         </div>
 
         {/* Property Type Donut */}
