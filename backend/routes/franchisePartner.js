@@ -12,6 +12,10 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../config/database');
 const { authenticate, generateToken } = require('../middleware/auth');
+const { fetchScheduleStats, derivedStatusFilter } = require('../utils/scheduleStats');
+const {
+  orNull, isRecentlyAdded, formatPaymentStatus, fetchServiceVendorMap, mapPendingServices
+} = require('../utils/pendingProperties');
 const { ROLES, ROLE_NAMES, isFranchisePartner } = require('../config/roles');
 const { 
   attachFPScope, 
@@ -6427,7 +6431,7 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
           p.id,
           p.property_id as propertyId,
           p.name as propertyName,
-          COALESCE(p.property_type, 'residential') as propertyType,
+          p.property_type as propertyType,
           COALESCE(fe.zone, '') as zone,
           COALESCE(p.city, '') as areaName,
           p.created_at as addedOn,
@@ -6468,26 +6472,8 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
     const [properties] = await pool.execute(query, [franchisePartnerId, franchisePartnerId]);
     console.log('[FP Pending Properties] Found', properties.length, 'pending properties');
 
-    // Get all property IDs to fetch their vendor assignments
-    const propertyIds = properties.map(p => p.id);
-    
-    // Fetch vendor assignments for all properties
-    let vendorAssignments = [];
-    if (propertyIds.length > 0) {
-      const [assignments] = await pool.execute(
-        `SELECT pva.property_id, pva.service_type,
-                pva.vendor_id, COALESCE(ov.company_name, ov.owner_name) as vendor_name,
-                pss.start_date, pss.end_date
-         FROM property_vendor_assignments pva
-         LEFT JOIN onboarded_vendors ov ON ov.id = pva.vendor_id
-         LEFT JOIN property_service_schedules pss ON pss.property_id = pva.property_id 
-           AND LOWER(pss.service_name) = LOWER(pva.service_type)
-         WHERE pva.property_id IN (${propertyIds.map(() => '?').join(',')})
-           AND pva.is_active = 1`,
-        propertyIds
-      );
-      vendorAssignments = assignments;
-    }
+    // Real per-service vendor details for all properties in one round trip
+    const serviceVendorMap = await fetchServiceVendorMap(properties.map(p => p.id));
 
     // Parse service rows and calculate service counts with vendor info
     const processedProperties = properties.map(p => {
@@ -6504,68 +6490,30 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
         }
       }
       
-      // Get vendor assignments for this property
-      const propertyVendors = vendorAssignments.filter(va => va.property_id === p.id);
-      
-      // Build vendor lookup map (by service type, case-insensitive)
-      const vendorMap = {};
-      propertyVendors.forEach(va => {
-        const key = (va.service_type || '').toLowerCase().trim();
-        vendorMap[key] = {
-          vendorId: va.vendor_id,
-          vendorName: va.vendor_name,
-          startDate: va.start_date,
-          endDate: va.end_date
-        };
-      });
-      
-      // Count how many services have vendors assigned
-      let vendorAssignedCount = 0;
-      const mappedServices = services.map(s => {
-        const serviceName = s.service || s.name || s.serviceType || 'Unknown';
-        const serviceKey = serviceName.toLowerCase().trim();
-        const vendorInfo = vendorMap[serviceKey];
-        
-        if (vendorInfo?.vendorId) {
-          vendorAssignedCount++;
-        }
-        
-        return {
-          name: serviceName,
-          frequency: s.frequencyType || 'Monthly',
-          frequencyCount: s.frequencyCount || 1,
-          visits: s.frequencyCount || 1,
-          vendorAssigned: !!vendorInfo?.vendorId,
-          vendorName: vendorInfo?.vendorName || null,
-          scheduleDate: vendorInfo?.startDate || null,
-          targetDate: vendorInfo?.endDate || null
-        };
-      });
-      
-      const assignedVendors = vendorAssignedCount;
+      const mappedServices = mapPendingServices(services, p.id, serviceVendorMap);
+      const assignedVendors = mappedServices.filter(s => s.vendorAssigned).length;
       const pendingServices = Math.max(0, totalServices - assignedVendors);
       
       return {
         id: p.id,
         propertyId: p.propertyId,
         propertyName: p.propertyName,
-        customerName: p.customerName || 'N/A',
-        customerPhone: p.customerPhone || '',
-        customerEmail: p.customerEmail || '',
-        propertyType: p.propertyType || 'Apartment',
-        zone: p.zone || 'Zone A',
-        areaName: p.areaName,
-        packageName: p.packageName || 'Custom Package',
-        packageType: 'AMC',
+        customerName: orNull(p.customerName),
+        customerPhone: orNull(p.customerPhone),
+        customerEmail: orNull(p.customerEmail),
+        propertyType: orNull(p.propertyType),
+        zone: orNull(p.zone),
+        areaName: orNull(p.areaName),
+        packageName: orNull(p.packageName),
         estimateId: p.estimateId,
         estimateCode: p.estimateCode,
         totalPrice: p.totalPrice,
         totalServices: totalServices,
         assignedVendors: assignedVendors,
         pendingServices: pendingServices,
-        paymentStatus: p.paymentStatus === 'paid' ? 'Paid' : 'Partial',
+        paymentStatus: formatPaymentStatus(p.paymentStatus),
         addedOn: p.addedOn,
-        isNew: true,
+        isNew: isRecentlyAdded(p.addedOn),
         services: mappedServices
       };
     });
@@ -6690,10 +6638,15 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
       params.push(searchTerm, searchTerm, searchTerm, searchTerm);
     }
     
-    // Status filter
+    // Status filter - 'upcoming' and 'overdue' are derived from the date, not stored statuses
     if (status && status !== 'all') {
-      whereClause += ' AND sv.status = ?';
-      params.push(status);
+      const derived = derivedStatusFilter(status);
+      if (derived) {
+        whereClause += derived;
+      } else {
+        whereClause += ' AND sv.status = ?';
+        params.push(status);
+      }
     }
     
     // Service filter
@@ -6750,6 +6703,10 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
         sv.scheduled_date as scheduledDate,
         sv.scheduled_time_start as scheduledTime,
         sv.original_date as originalDate,
+        sv.rescheduled_at as rescheduledAt,
+        sv.reschedule_reason as rescheduleReason,
+        sv.created_at as createdAt,
+        sv.updated_at as updatedAt,
         sv.status,
         sv.work_order_id as workOrderId,
         pss.service_name as serviceName,
@@ -6791,54 +6748,36 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
     }
     console.log('[FP All Schedules] Found schedules:', schedules.length);
     
-    // Calculate stats
-    const statsWhereClause = 'WHERE op.franchise_partner_id = ?';
+    // Stats scope - same filters as the list, minus the status filter so the other cards stay visible
+    let statsWhereClause = 'WHERE op.franchise_partner_id = ?';
     const statsParams = [franchisePartnerId];
-    
-    let statsQuery = `
-      SELECT sv.status, COUNT(*) as count
-      FROM scheduled_visits sv
-      JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
-      LEFT JOIN onboarded_vendors ov ON (ov.id = pss.vendor_id OR ov.vendor_id = pss.vendor_id)
-      ${statsWhereClause}
-      GROUP BY sv.status
-    `;
-    
-    let statusCounts = [];
-    try {
-      const [result] = await pool.execute(statsQuery, statsParams);
-      statusCounts = result;
-    } catch (statsErr) {
-      console.log('[FP All Schedules] Stats query failed:', statsErr.message);
-      // Return empty stats if query fails
+    if (search) {
+      statsWhereClause += ` AND (op.property_id LIKE ? OR op.community_name LIKE ? OR pss.service_name LIKE ? OR ov.company_name LIKE ?)`;
+      const searchTerm = `%${search}%`;
+      statsParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
+    }
+    if (service && service !== 'all') {
+      statsWhereClause += ' AND pss.service_name = ?';
+      statsParams.push(service);
+    }
+    if (vendor && vendor !== 'all') {
+      statsWhereClause += ' AND (ov.company_name = ? OR ov.owner_name = ?)';
+      statsParams.push(vendor, vendor);
+    }
+    if (zone && zone !== 'all') {
+      statsWhereClause += ' AND op.zone = ?';
+      statsParams.push(zone);
+    }
+    if (propertyType && propertyType !== 'all') {
+      statsWhereClause += ' AND op.property_type = ?';
+      statsParams.push(propertyType);
     }
     
-    const stats = {
-      total: 0,
-      scheduled: 0,
-      upcoming: 0,
-      workOrderCreated: 0,
-      inProgress: 0,
-      completed: 0,
-      rescheduled: 0,
-      cancelled: 0,
-      overdue: 0
-    };
-    
-    statusCounts.forEach(s => {
-      const count = parseInt(s.count);
-      stats.total += count;
-      switch(s.status) {
-        case 'scheduled': stats.scheduled = count; break;
-        case 'upcoming': stats.upcoming = count; break;
-        case 'work_order_created': stats.workOrderCreated = count; break;
-        case 'in_progress': stats.inProgress = count; break;
-        case 'completed': stats.completed = count; break;
-        case 'rescheduled': stats.rescheduled = count; break;
-        case 'cancelled': stats.cancelled = count; break;
-        case 'overdue': stats.overdue = count; break;
-      }
+    const stats = await fetchScheduleStats({
+      whereClause: statsWhereClause,
+      params: statsParams,
+      vendorJoinOn: '(ov.id = pss.vendor_id OR ov.vendor_id = pss.vendor_id)',
+      label: 'FP All Schedules'
     });
     
     // Format the response
@@ -6863,6 +6802,10 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
       scheduledTime: s.scheduledTime,
       originalDate: s.originalDate,
       isRescheduled: s.originalDate !== null,
+      rescheduledAt: s.rescheduledAt,
+      rescheduleReason: s.rescheduleReason,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
       zone: s.zone,
       workOrderId: s.workOrderCode,
       workOrderStatus: s.workOrderStatus,

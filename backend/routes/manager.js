@@ -31,6 +31,10 @@ const generateActivationToken = () => {
   return crypto.randomBytes(32).toString('hex');
 };
 const { authenticate, generateToken } = require('../middleware/auth');
+const { fetchScheduleStats, derivedStatusFilter } = require('../utils/scheduleStats');
+const {
+  orNull, isRecentlyAdded, formatPaymentStatus, fetchServiceVendorMap, mapPendingServices
+} = require('../utils/pendingProperties');
 const { ROLES, ROLE_NAMES, isManager } = require('../config/roles');
 const { 
   attachManagerScope, 
@@ -3148,7 +3152,7 @@ router.get('/schedules/pending-properties', requireManagerScope, async (req, res
           p.id,
           p.property_id as propertyId,
           p.name as propertyName,
-          COALESCE(p.property_type, 'residential') as propertyType,
+          p.property_type as propertyType,
           COALESCE(fe.zone, '') as zone,
           COALESCE(p.city, '') as areaName,
           p.created_at as addedOn,
@@ -3181,6 +3185,9 @@ router.get('/schedules/pending-properties', requireManagerScope, async (req, res
 
     const [properties] = await pool.execute(query, [franchisePartnerId, franchisePartnerId]);
 
+    // Real per-service vendor details, so service rows are not all reported as unassigned
+    const serviceVendorMap = await fetchServiceVendorMap(properties.map(p => p.id));
+
     // Parse service rows and calculate service counts
     const processedProperties = properties.map(p => {
       let services = [];
@@ -3203,31 +3210,23 @@ router.get('/schedules/pending-properties', requireManagerScope, async (req, res
         id: p.id,
         propertyId: p.propertyId,
         propertyName: p.propertyName,
-        customerName: p.customerName || 'N/A',
-        customerPhone: p.customerPhone || '',
-        customerEmail: p.customerEmail || '',
-        propertyType: p.propertyType || 'Apartment',
-        zone: p.zone || 'Zone A',
-        areaName: p.areaName,
-        packageName: p.packageName || 'Custom Package',
-        packageType: 'AMC',
+        customerName: orNull(p.customerName),
+        customerPhone: orNull(p.customerPhone),
+        customerEmail: orNull(p.customerEmail),
+        propertyType: orNull(p.propertyType),
+        zone: orNull(p.zone),
+        areaName: orNull(p.areaName),
+        packageName: orNull(p.packageName),
         estimateId: p.estimateId,
         estimateCode: p.estimateCode,
         totalPrice: p.totalPrice,
         totalServices: totalServices,
         assignedVendors: Math.min(assignedVendors, totalServices),
         pendingServices: pendingServices,
-        paymentStatus: p.paymentStatus === 'paid' ? 'Paid' : 'Partial',
+        paymentStatus: formatPaymentStatus(p.paymentStatus),
         addedOn: p.addedOn,
-        isNew: true,
-        services: services.map(s => ({
-          name: s.service || s.name || s.serviceType,
-          frequency: s.frequencyType || 'Monthly',
-          frequencyCount: s.frequencyCount || 1,
-          visits: s.frequencyCount || 1,
-          vendorAssigned: false,
-          vendorName: null
-        }))
+        isNew: isRecentlyAdded(p.addedOn),
+        services: mapPendingServices(services, p.id, serviceVendorMap)
       };
     });
 
@@ -3290,10 +3289,15 @@ router.get('/schedules/all', requireManagerScope, async (req, res) => {
       params.push(searchTerm, searchTerm, searchTerm, searchTerm);
     }
     
-    // Status filter
+    // Status filter - 'upcoming' and 'overdue' are derived from the date, not stored statuses
     if (status && status !== 'all') {
-      whereClause += ' AND sv.status = ?';
-      params.push(status);
+      const derived = derivedStatusFilter(status);
+      if (derived) {
+        whereClause += derived;
+      } else {
+        whereClause += ' AND sv.status = ?';
+        params.push(status);
+      }
     }
     
     // Service filter
@@ -3349,6 +3353,10 @@ router.get('/schedules/all', requireManagerScope, async (req, res) => {
         sv.scheduled_date as scheduledDate,
         sv.scheduled_time_start as scheduledTime,
         sv.original_date as originalDate,
+        sv.rescheduled_at as rescheduledAt,
+        sv.reschedule_reason as rescheduleReason,
+        sv.created_at as createdAt,
+        sv.updated_at as updatedAt,
         sv.status,
         sv.work_order_id as workOrderId,
         pss.service_name as serviceName,
@@ -3387,50 +3395,35 @@ router.get('/schedules/all', requireManagerScope, async (req, res) => {
       console.log('[Manager All Schedules] Main query failed:', queryErr.message);
     }
     
-    // Calculate stats
-    const statsQuery = `
-      SELECT sv.status, COUNT(*) as count
-      FROM scheduled_visits sv
-      JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
-      LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
-      WHERE op.franchise_partner_id = ?
-      GROUP BY sv.status
-    `;
-    
-    let statusCounts = [];
-    try {
-      const [result] = await pool.execute(statsQuery, [franchisePartnerId]);
-      statusCounts = result;
-    } catch (statsErr) {
-      console.log('[Manager All Schedules] Stats query failed:', statsErr.message);
+    // Stats scope - same filters as the list, minus the status filter so the other cards stay visible
+    let statsWhereClause = 'WHERE op.franchise_partner_id = ?';
+    const statsParams = [franchisePartnerId];
+    if (search) {
+      statsWhereClause += ` AND (op.property_id LIKE ? OR op.community_name LIKE ? OR pss.service_name LIKE ? OR ov.company_name LIKE ?)`;
+      const searchTerm = `%${search}%`;
+      statsParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
+    }
+    if (service && service !== 'all') {
+      statsWhereClause += ' AND pss.service_name = ?';
+      statsParams.push(service);
+    }
+    if (vendor && vendor !== 'all') {
+      statsWhereClause += ' AND (ov.company_name = ? OR ov.owner_name = ?)';
+      statsParams.push(vendor, vendor);
+    }
+    if (zone && zone !== 'all') {
+      statsWhereClause += ' AND op.zone = ?';
+      statsParams.push(zone);
+    }
+    if (propertyType && propertyType !== 'all') {
+      statsWhereClause += ' AND op.property_type = ?';
+      statsParams.push(propertyType);
     }
     
-    const stats = {
-      total: 0,
-      scheduled: 0,
-      upcoming: 0,
-      workOrderCreated: 0,
-      inProgress: 0,
-      completed: 0,
-      rescheduled: 0,
-      cancelled: 0,
-      overdue: 0
-    };
-    
-    statusCounts.forEach(s => {
-      const count = parseInt(s.count);
-      stats.total += count;
-      switch(s.status) {
-        case 'scheduled': stats.scheduled = count; break;
-        case 'upcoming': stats.upcoming = count; break;
-        case 'work_order_created': stats.workOrderCreated = count; break;
-        case 'in_progress': stats.inProgress = count; break;
-        case 'completed': stats.completed = count; break;
-        case 'rescheduled': stats.rescheduled = count; break;
-        case 'cancelled': stats.cancelled = count; break;
-        case 'overdue': stats.overdue = count; break;
-      }
+    const stats = await fetchScheduleStats({
+      whereClause: statsWhereClause,
+      params: statsParams,
+      label: 'Manager All Schedules'
     });
     
     // Format the response
@@ -3453,6 +3446,10 @@ router.get('/schedules/all', requireManagerScope, async (req, res) => {
       scheduledTime: s.scheduledTime,
       originalDate: s.originalDate,
       isRescheduled: s.originalDate !== null,
+      rescheduledAt: s.rescheduledAt,
+      rescheduleReason: s.rescheduleReason,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
       zone: s.zone,
       workOrderId: s.workOrderCode,
       workOrderStatus: s.workOrderStatus,

@@ -415,7 +415,8 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
       case 'completed': return 'bg-green-100 border-l-green-500';
       case 'rescheduled': return 'bg-orange-100 border-l-orange-500';
       case 'cancelled': return 'bg-red-100 border-l-red-500';
-      case 'overdue': return 'bg-gray-800 border-l-gray-800';
+      // Overdue reads as inactive/disabled rather than a solid dark block
+      case 'overdue': return 'bg-gray-100 border-l-gray-300 text-gray-400';
       default: return 'bg-gray-100 border-l-gray-500';
     }
   };
@@ -855,7 +856,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                 { color: 'bg-green-500', label: 'Completed' },
                 { color: 'bg-orange-500', label: 'Rescheduled' },
                 { color: 'bg-red-500', label: 'Cancelled' },
-                { color: 'bg-gray-800', label: 'Overdue' }
+                { color: 'bg-gray-300', label: 'Overdue' }
               ].map(item => (
                 <div key={item.label} className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full ${item.color}`} />
@@ -994,7 +995,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                   selectedSchedule.status === 'pending' ? 'bg-amber-100 text-amber-700' :
                   selectedSchedule.status === 'cancelled' ? 'bg-red-100 text-red-700' :
                   selectedSchedule.status === 'rescheduled' ? 'bg-orange-100 text-orange-700' :
-                  selectedSchedule.status === 'overdue' ? 'bg-gray-800 text-white' :
+                  selectedSchedule.status === 'overdue' ? 'bg-gray-100 text-gray-400' :
                   'bg-blue-100 text-blue-700'
                 }`}>
                   {selectedSchedule.status?.replace('_', ' ')}

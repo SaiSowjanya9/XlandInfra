@@ -343,9 +343,9 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       });
     }
     
-    // Property type filter
+    // Property type filter - options are display names, the stored value is a raw code
     if (propertyTypeFilter !== 'all') {
-      filtered = filtered.filter(p => p.propertyType === propertyTypeFilter);
+      filtered = filtered.filter(p => p.propertyType && normalizePropertyType(p.propertyType) === propertyTypeFilter);
     }
     
     // Zone filter
@@ -423,22 +423,26 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       'Property Type',
       'Customer Name',
       'Zone',
+      'Package',
       'Total Services',
       'Assigned Vendors',
+      'Services Without Vendor',
       'Added On',
-      'Status'
+      'Payment Status'
     ];
 
     const rows = dataToExport.map(property => [
       property.propertyId || '',
       property.propertyName || '',
-      normalizePropertyType(property.propertyType),
+      property.propertyType ? normalizePropertyType(property.propertyType) : '',
       property.customerName || '',
       getZoneName(property.zone) || '',
+      property.packageName || '',
       property.totalServices || 0,
       property.assignedVendors || 0,
+      property.pendingServices || 0,
       property.addedOn || '',
-      property.status || ''
+      property.paymentStatus || ''
     ]);
 
     const csvContent = [
@@ -767,27 +771,35 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                     
                     {/* Property Name */}
                     <td className="px-6 py-4">
-                      <p className="text-sm font-semibold text-gray-900">{property.propertyName}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{property.customerName || 'N/A'}</p>
+                      <p className="text-sm font-semibold text-gray-900">{property.propertyName || '-'}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{property.customerName || '-'}</p>
                     </td>
                     
                     {/* Property Type */}
                     <td className="px-6 py-4">
-                      <span className="text-sm text-gray-700">{normalizePropertyType(property.propertyType)}</span>
+                      <span className="text-sm text-gray-700">{property.propertyType ? normalizePropertyType(property.propertyType) : '-'}</span>
                     </td>
                     
                     {/* Zone */}
                     <td className="px-6 py-4">
-                      <span className="inline-flex px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 rounded-full whitespace-nowrap">
-                        {getZoneName(property.zone)}
-                      </span>
+                      {getZoneName(property.zone) ? (
+                        <span className="inline-flex px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 rounded-full whitespace-nowrap">
+                          {getZoneName(property.zone)}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
                     </td>
                     
                     {/* Package */}
                     <td className="px-6 py-4">
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-lg whitespace-nowrap">
-                        <span className="text-sm font-medium text-purple-700 whitespace-nowrap">{property.packageName}</span>
-                      </div>
+                      {property.packageName ? (
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-lg whitespace-nowrap">
+                          <span className="text-sm font-medium text-purple-700 whitespace-nowrap">{property.packageName}</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
                     </td>
                     
                     {/* Services */}
@@ -1010,7 +1022,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                       }`}
                     >
                       <Wrench className="w-3.5 h-3.5" />
-                      {service.name}
+                      {service.name || '-'}
                     </div>
                   ))}
                 </div>
