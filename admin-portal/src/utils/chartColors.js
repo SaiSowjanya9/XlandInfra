@@ -73,46 +73,40 @@ export const PROPERTY_TYPE_COLORS = {
 export const SERVICE_COLORS = ['#EA580C', '#DC2626', '#CA8A04', '#9333EA', '#BE185D', '#B45309', '#7C2D12', '#64748B'];
 
 /**
- * Generate a consistent color for any service name using hash-based HSL.
- * Same service name always gets the same color. Avoids status colors (greens/blues).
+ * Generate a consistent SUBTLE color for any service name using hash-based HSL.
+ * Same service name always gets the same color. Uses muted, professional tones.
  * @param {string} serviceName - The service name
  * @returns {string} Hex color code
  */
 export const getServiceColor = (serviceName) => {
-  if (!serviceName) return '#64748B';
+  if (!serviceName) return '#94A3B8'; // Slate-400
   
-  // Hash the service name to get a consistent number
+  // Predefined subtle color palette (muted, professional colors)
+  const subtleColors = [
+    '#6366F1', // Indigo-500
+    '#8B5CF6', // Violet-500
+    '#A855F7', // Purple-500
+    '#EC4899', // Pink-500
+    '#F43F5E', // Rose-500
+    '#F97316', // Orange-500
+    '#EAB308', // Yellow-500
+    '#84CC16', // Lime-500
+    '#22C55E', // Green-500
+    '#14B8A6', // Teal-500
+    '#06B6D4', // Cyan-500
+    '#0EA5E9', // Sky-500
+    '#3B82F6', // Blue-500
+    '#64748B', // Slate-500
+  ];
+  
+  // Hash the service name to get a consistent index
   let hash = 0;
   for (let i = 0; i < serviceName.length; i++) {
     hash = serviceName.charCodeAt(i) + ((hash << 5) - hash);
-    hash = hash & hash; // Convert to 32bit integer
+    hash = hash & hash;
   }
   
-  // Use hue ranges that avoid green (90-150) and blue (180-240) which are for status/property
-  // Available ranges: 0-89 (reds/oranges/yellows), 260-360 (purples/pinks/reds)
-  const hueRanges = [[0, 89], [260, 360]];
-  const rangeIndex = Math.abs(hash) % 2;
-  const range = hueRanges[rangeIndex];
-  const hue = range[0] + (Math.abs(hash >> 8) % (range[1] - range[0]));
-  
-  // Keep saturation high (60-80%) and lightness medium (45-55%) for vibrant, readable colors
-  const saturation = 60 + (Math.abs(hash >> 16) % 20);
-  const lightness = 45 + (Math.abs(hash >> 24) % 10);
-  
-  return hslToHex(hue, saturation, lightness);
-};
-
-// Helper to convert HSL to Hex
-const hslToHex = (h, s, l) => {
-  s /= 100;
-  l /= 100;
-  const a = s * Math.min(l, 1 - l);
-  const f = n => {
-    const k = (n + h / 30) % 12;
-    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-    return Math.round(255 * color).toString(16).padStart(2, '0');
-  };
-  return `#${f(0)}${f(8)}${f(4)}`;
+  return subtleColors[Math.abs(hash) % subtleColors.length];
 };
 
 // =============================================================================
