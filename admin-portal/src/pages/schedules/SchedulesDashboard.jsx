@@ -16,7 +16,7 @@ import {
   SCHEDULE_STATUS_COLORS, 
   PRIORITY_COLORS, 
   PROPERTY_TYPE_COLORS, 
-  SERVICE_COLORS 
+  getServiceColor 
 } from '../../utils/chartColors';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -283,7 +283,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     serviceCounts[svc] = (serviceCounts[svc] || 0) + 1;
   });
   const serviceData = Object.entries(serviceCounts)
-    .map(([name, value], i) => ({ name, value, color: SERVICE_COLORS[i % SERVICE_COLORS.length] }))
+    .map(([name, value]) => ({ name, value, color: getServiceColor(name) }))
     .sort((a, b) => b.value - a.value);
 
   // Chart data - Priority (with filter) - All non-cancelled schedules
