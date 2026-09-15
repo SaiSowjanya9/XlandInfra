@@ -2404,12 +2404,16 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     {/* Services Table with Description column */}
                     <div className="bg-white rounded border border-blue-100 overflow-hidden">
                       {/* Table Header */}
-                      <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-blue-100/50 border-b border-blue-200">
-                        <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Service</div>
-                        <div className="col-span-5 text-xs font-semibold text-blue-800 uppercase text-center">Description</div>
-                        <div className="col-span-3 text-xs font-semibold text-blue-800 uppercase">Frequency</div>
-                        <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Visits</div>
-                      </div>
+                      <table className="w-full table-fixed">
+                        <thead>
+                          <tr className="bg-blue-100/50 border-b border-blue-200">
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800 uppercase w-[12%]">Service</th>
+                            <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[53%]">Description</th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800 uppercase w-[20%]">Frequency</th>
+                            <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[15%]">Visits</th>
+                          </tr>
+                        </thead>
+                        <tbody>
                       {/* Table Body */}
                       {(() => {
                         // Parse serviceRows from package data
@@ -2424,14 +2428,16 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                         }
                         
                         return services.filter(s => (s.service || s.name)?.trim()).map((service, idx) => (
-                          <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                            <div className="col-span-2 text-sm font-medium text-gray-800">{service.service || service.name}</div>
-                            <div className={`col-span-5 text-xs text-gray-500 ${!service.description ? 'text-center' : ''}`}>{decodeHtml(service.description) || '-'}</div>
-                            <div className="col-span-3 text-sm text-gray-600">{service.frequencyType || service.frequency_type || 'Monthly'}</div>
-                            <div className="col-span-2 text-sm text-gray-600 text-center">{service.frequency_count ?? service.frequencyCount ?? service.visits ?? 0}</div>
-                          </div>
+                          <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                            <td className="px-3 py-2.5 text-sm font-medium text-gray-800">{service.service || service.name}</td>
+                            <td className={`px-3 py-2.5 text-xs text-gray-500 break-words whitespace-normal ${!service.description ? 'text-center' : ''}`}>{decodeHtml(service.description) || '-'}</td>
+                            <td className="px-3 py-2.5 text-sm text-gray-600">{service.frequencyType || service.frequency_type || 'Monthly'}</td>
+                            <td className="px-3 py-2.5 text-sm text-gray-600 text-center">{service.frequency_count ?? service.frequencyCount ?? service.visits ?? 0}</td>
+                          </tr>
                         ));
                       })()}
+                        </tbody>
+                      </table>
                       {/* Total Row */}
                       <div className="flex justify-between px-3 py-2.5 bg-blue-50 border-t border-blue-200">
                         <div>
@@ -2591,39 +2597,47 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     <div className="px-3 py-2 bg-blue-100/60 border-b border-blue-200">
                       <p className="text-sm font-semibold text-blue-800">Additional Services</p>
                     </div>
-                    {/* Table Header */}
-                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-white border-b border-blue-100">
-                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Service</div>
-                      <div className="col-span-5 text-xs font-semibold text-blue-800 uppercase text-center">Description</div>
-                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Frequency</div>
-                      <div className="col-span-1 text-xs font-semibold text-blue-800 uppercase text-center">Visits</div>
-                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Action</div>
-                    </div>
-                    {/* Table Body */}
-                    {selectedAddons.map((addon) => (
-                      addon.services?.map((service, sIdx) => (
-                        <div key={`${addon.addonId}-${sIdx}`} className="grid grid-cols-12 gap-2 px-3 py-2.5 bg-white border-b border-gray-100 last:border-0 hover:bg-blue-50/30">
-                          <div className="col-span-2 text-sm font-medium text-gray-800">{service.name}</div>
-                          <div className="col-span-5 text-xs text-gray-500 break-all whitespace-normal text-center overflow-hidden">{decodeHtml(service.description || addon.description) || '-'}</div>
-                          <div className="col-span-2 text-sm text-gray-600">{service.frequencyType || 'Monthly'}</div>
-                          <div className="col-span-1 text-sm text-gray-600 text-center">{service.frequency || 1}</div>
-                          <div className="col-span-2 text-center">
-                            <button
-                              onClick={() => handleRemoveAddon(addon.addonId)}
-                              className="p-1 text-red-500 hover:bg-red-100 rounded transition-colors"
-                              title="Remove"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    ))}
-                    {/* Total Row */}
-                    <div className="grid grid-cols-12 gap-2 px-3 py-2.5 bg-blue-50 border-t border-blue-200">
-                      <div className="col-span-10 text-sm font-semibold text-blue-800">Total Services Price</div>
-                      <div className="col-span-2 text-sm font-bold text-blue-700 text-right">₹{getAddonsTotal().toLocaleString()}</div>
-                    </div>
+                    <table className="w-full table-fixed">
+                      {/* Table Header */}
+                      <thead>
+                        <tr className="bg-white border-b border-blue-100">
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800 uppercase w-[10%]">Service</th>
+                          <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[48%]">Description</th>
+                          <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[18%]">Frequency</th>
+                          <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[14%]">Visits</th>
+                          <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[10%]">Action</th>
+                        </tr>
+                      </thead>
+                      {/* Table Body */}
+                      <tbody>
+                        {selectedAddons.map((addon) => (
+                          addon.services?.map((service, sIdx) => (
+                            <tr key={`${addon.addonId}-${sIdx}`} className="bg-white border-b border-gray-100 last:border-0 hover:bg-blue-50/30">
+                              <td className="px-3 py-2.5 text-sm font-medium text-gray-800">{service.name}</td>
+                              <td className="px-3 py-2.5 text-xs text-gray-500 break-words whitespace-normal text-center">{decodeHtml(service.description || addon.description) || '-'}</td>
+                              <td className="px-3 py-2.5 text-sm text-gray-600 text-center">{service.frequencyType || 'Monthly'}</td>
+                              <td className="px-3 py-2.5 text-sm text-gray-600 text-center">{service.frequency || 1}</td>
+                              <td className="px-3 py-2.5 text-center">
+                                <button
+                                  onClick={() => handleRemoveAddon(addon.addonId)}
+                                  className="p-1 text-red-500 hover:bg-red-100 rounded transition-colors"
+                                  title="Remove"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        ))}
+                      </tbody>
+                      {/* Total Row */}
+                      <tfoot className="bg-blue-50 border-t border-blue-200">
+                        <tr>
+                          <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-800">Total Services Price</td>
+                          <td className="px-3 py-2.5 text-sm font-bold text-blue-700 text-right">₹{getAddonsTotal().toLocaleString()}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
                   </div>
                 )}
 
@@ -3203,12 +3217,16 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   {/* Services Table with Description column */}
                   <div className="bg-white rounded border border-blue-100 overflow-hidden">
                     {/* Table Header */}
-                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-blue-100/50 border-b border-blue-200">
-                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Service</div>
-                      <div className="col-span-5 text-xs font-semibold text-blue-800 uppercase text-center">Description</div>
-                      <div className="col-span-3 text-xs font-semibold text-blue-800 uppercase">Frequency</div>
-                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Visits</div>
-                    </div>
+                    <table className="w-full table-fixed">
+                      <thead>
+                        <tr className="bg-blue-100/50 border-b border-blue-200">
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800 uppercase w-[12%]">Service</th>
+                          <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[53%]">Description</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800 uppercase w-[20%]">Frequency</th>
+                          <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[15%]">Visits</th>
+                        </tr>
+                      </thead>
+                      <tbody>
                     {/* Table Body */}
                     {(() => {
                       // Parse serviceRows from package data
@@ -3223,14 +3241,16 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       }
                       
                       return services.filter(s => (s.service || s.name)?.trim()).map((service, idx) => (
-                        <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                          <div className="col-span-2 text-sm font-medium text-gray-800">{service.service || service.name}</div>
-                          <div className={`col-span-5 text-xs text-gray-500 ${!service.description ? 'text-center' : ''}`}>{decodeHtml(service.description) || '-'}</div>
-                          <div className="col-span-3 text-sm text-gray-600">{service.frequencyType || service.frequency_type || 'Monthly'}</div>
-                          <div className="col-span-2 text-sm text-gray-600 text-center">{service.frequency_count ?? service.frequencyCount ?? service.visits ?? 0}</div>
-                        </div>
+                        <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                          <td className="px-3 py-2.5 text-sm font-medium text-gray-800">{service.service || service.name}</td>
+                          <td className={`px-3 py-2.5 text-xs text-gray-500 break-words whitespace-normal ${!service.description ? 'text-center' : ''}`}>{decodeHtml(service.description) || '-'}</td>
+                          <td className="px-3 py-2.5 text-sm text-gray-600">{service.frequencyType || service.frequency_type || 'Monthly'}</td>
+                          <td className="px-3 py-2.5 text-sm text-gray-600 text-center">{service.frequency_count ?? service.frequencyCount ?? service.visits ?? 0}</td>
+                        </tr>
                       ));
                     })()}
+                      </tbody>
+                    </table>
                     {/* Total Row */}
                     <div className="flex justify-between px-3 py-2.5 bg-blue-50 border-t border-blue-200">
                       <div>
@@ -3385,39 +3405,47 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   <div className="px-3 py-2 bg-blue-100/60 border-b border-blue-200">
                     <p className="text-sm font-semibold text-blue-800">Additional Services</p>
                   </div>
-                  {/* Table Header */}
-                  <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-white border-b border-blue-100">
-                    <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Service</div>
-                    <div className="col-span-5 text-xs font-semibold text-blue-800 uppercase text-center">Description</div>
-                    <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Frequency</div>
-                    <div className="col-span-1 text-xs font-semibold text-blue-800 uppercase text-center">Visits</div>
-                    <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Action</div>
-                  </div>
-                  {/* Table Body */}
-                  {directSelectedAddons.map((addon) => (
-                    addon.services?.map((service, sIdx) => (
-                      <div key={`${addon.addonId}-${sIdx}`} className="grid grid-cols-12 gap-2 px-3 py-2.5 bg-white border-b border-gray-100 last:border-0 hover:bg-blue-50/30">
-                        <div className="col-span-2 text-sm font-medium text-gray-800">{service.name}</div>
-                        <div className="col-span-5 text-xs text-gray-500 break-all whitespace-normal text-center overflow-hidden">{decodeHtml(service.description || addon.description) || '-'}</div>
-                        <div className="col-span-2 text-sm text-gray-600">{service.frequencyType || 'Monthly'}</div>
-                        <div className="col-span-1 text-sm text-gray-600 text-center">{service.frequency || 1}</div>
-                        <div className="col-span-2 text-center">
-                          <button
-                            onClick={() => handleDirectRemoveAddon(addon.addonId)}
-                            className="p-1 text-red-500 hover:bg-red-100 rounded transition-colors"
-                            title="Remove"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  ))}
-                  {/* Total Row */}
-                  <div className="grid grid-cols-12 gap-2 px-3 py-2.5 bg-blue-50 border-t border-blue-200">
-                    <div className="col-span-10 text-sm font-semibold text-blue-800">Total Services Price</div>
-                    <div className="col-span-2 text-sm font-bold text-blue-700 text-right">₹{getDirectAddonsTotal().toLocaleString()}</div>
-                  </div>
+                  <table className="w-full table-fixed">
+                    {/* Table Header */}
+                    <thead>
+                      <tr className="bg-white border-b border-blue-100">
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800 uppercase w-[10%]">Service</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[48%]">Description</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[18%]">Frequency</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[14%]">Visits</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[10%]">Action</th>
+                      </tr>
+                    </thead>
+                    {/* Table Body */}
+                    <tbody>
+                      {directSelectedAddons.map((addon) => (
+                        addon.services?.map((service, sIdx) => (
+                          <tr key={`${addon.addonId}-${sIdx}`} className="bg-white border-b border-gray-100 last:border-0 hover:bg-blue-50/30">
+                            <td className="px-3 py-2.5 text-sm font-medium text-gray-800">{service.name}</td>
+                            <td className="px-3 py-2.5 text-xs text-gray-500 break-words whitespace-normal text-center">{decodeHtml(service.description || addon.description) || '-'}</td>
+                            <td className="px-3 py-2.5 text-sm text-gray-600 text-center">{service.frequencyType || 'Monthly'}</td>
+                            <td className="px-3 py-2.5 text-sm text-gray-600 text-center">{service.frequency || 1}</td>
+                            <td className="px-3 py-2.5 text-center">
+                              <button
+                                onClick={() => handleDirectRemoveAddon(addon.addonId)}
+                                className="p-1 text-red-500 hover:bg-red-100 rounded transition-colors"
+                                title="Remove"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ))}
+                    </tbody>
+                    {/* Total Row */}
+                    <tfoot className="bg-blue-50 border-t border-blue-200">
+                      <tr>
+                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-800">Total Services Price</td>
+                        <td className="px-3 py-2.5 text-sm font-bold text-blue-700 text-right">₹{getDirectAddonsTotal().toLocaleString()}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
               )}
 
@@ -4041,7 +4069,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               {selectedPackage && (
                 <div className="p-4 bg-blue-50 rounded-lg">
                   <h3 className="text-sm font-semibold text-blue-800 mb-2">AMC Package</h3>
-                  <p className="text-sm text-blue-700">{getPackageName(selectedPackage)}</p>
+                  <p className="text-sm text-blue-700 capitalize">{(selectedPackage.billing_duration || selectedPackage.billingDuration || 'Yearly').replace('-', ' ')} Billing</p>
                   <p className="text-lg font-bold text-blue-700 mt-1">₹{getNormalizedPackagePrice(selectedPackage).toLocaleString()}</p>
                 </div>
               )}
@@ -4050,27 +4078,35 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               {selectedAddons.length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-800 mb-3">Additional Services</h3>
-                  <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="w-full table-fixed border border-gray-200 rounded-lg overflow-hidden">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">#</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Service</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Frequency</th>
-                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">Visits</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 w-[8%]">#</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 w-[20%]">Service</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 w-[40%]">Description</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 w-[20%]">Frequency</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 w-[12%]">Visits</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {selectedAddons.map((addon, idx) => (
                         addon.services?.map((svc, sIdx) => (
                           <tr key={`${addon.addonId}-${sIdx}`}>
-                            <td className="px-3 py-2 text-sm">{idx + 1}</td>
+                            <td className="px-3 py-2 text-sm text-center">{idx + 1}</td>
                             <td className="px-3 py-2 text-sm font-medium">{svc.name}</td>
-                            <td className="px-3 py-2 text-sm">{svc.frequencyType || 'Monthly'}</td>
+                            <td className="px-3 py-2 text-xs text-gray-500 break-words whitespace-normal text-center">{decodeHtml(svc.description || addon.description) || '-'}</td>
+                            <td className="px-3 py-2 text-sm text-center">{svc.frequencyType || 'Monthly'}</td>
                             <td className="px-3 py-2 text-sm text-center">{svc.frequency || 1}</td>
                           </tr>
                         ))
                       ))}
                     </tbody>
+                    <tfoot className="bg-gray-50 border-t border-gray-200">
+                      <tr>
+                        <td colSpan={4} className="px-3 py-2 text-sm font-semibold text-gray-700">Total Services Price</td>
+                        <td className="px-3 py-2 text-sm font-bold text-gray-800 text-right">₹{getAddonsTotal().toLocaleString()}</td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               )}

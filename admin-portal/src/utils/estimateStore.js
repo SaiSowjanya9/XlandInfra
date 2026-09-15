@@ -575,6 +575,42 @@ export const calculateEstimateTotal = (estimate) => {
 };
 
 // ============================================
+// Excel export field helpers
+// ============================================
+
+// Estimates come from several tables/routes, so every field has a few possible keys
+export const getEstimateContactPhone = (est) =>
+  est.client_phone || est.clientPhone || est.customer_phone || est.customerPhone || est.phone || '';
+
+export const getEstimateAddress = (est) =>
+  est.address || est.property_address || est.propertyAddress || '';
+
+export const getEstimateCity = (est) => est.city || est.property_city || '';
+
+export const getEstimateZone = (est) => est.zone || est.zone_name || est.zoneName || '';
+
+export const getEstimateUnits = (est) =>
+  est.total_units ?? est.totalUnits ?? est.number_of_units ?? est.numberOfUnits ?? '';
+
+// Flatten add-ons into a single cell: "Deep Cleaning (Monthly - 12 visits); Pest Control (Quarterly - 4 visits)"
+export const formatAddonsForExport = (est) => {
+  let addons = est.addons || est.addons_data || est.addonsData;
+  if (typeof addons === 'string') {
+    try { addons = JSON.parse(addons); } catch (e) { return ''; }
+  }
+  if (!Array.isArray(addons) || addons.length === 0) return '';
+  return addons.map((addon, idx) => {
+    if (!addon || typeof addon !== 'object') return `Service ${idx + 1}`;
+    const name = addon.name || addon.service_name || addon.serviceName || `Service ${idx + 1}`;
+    const frequencyType = addon.frequency_type || addon.frequencyType || '';
+    const frequencyCount = addon.frequency_count ?? addon.frequencyCount ?? '';
+    if (frequencyType && frequencyCount !== '') return `${name} (${frequencyType} - ${frequencyCount} visits)`;
+    if (frequencyType) return `${name} (${frequencyType})`;
+    return name;
+  }).join('; ');
+};
+
+// ============================================
 // AMC Templates CRUD
 // ============================================
 

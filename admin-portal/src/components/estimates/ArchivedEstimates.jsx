@@ -424,8 +424,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                   <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
                     <div className="flex justify-between items-center">
                       <div>
-                        <p className="font-semibold text-indigo-900">{viewEstimate.packageName || viewEstimate.package_name}</p>
-                        <p className="text-xs text-indigo-600">{viewEstimate.billing_duration ? viewEstimate.billing_duration.charAt(0).toUpperCase() + viewEstimate.billing_duration.slice(1).replace('-', ' ') : 'Yearly'} Billing</p>
+                        <p className="font-semibold text-indigo-900">{viewEstimate.billing_duration ? viewEstimate.billing_duration.charAt(0).toUpperCase() + viewEstimate.billing_duration.slice(1).replace('-', ' ') : 'Yearly'} Billing</p>
                       </div>
                       <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.packagePrice || viewEstimate.package_price || 0).toLocaleString()}</p>
                     </div>
@@ -461,7 +460,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                               <p className="font-medium text-gray-800 text-sm">{decodeHtml(service.name || service.service)}</p>
                             </div>
                             <div className="col-span-4 overflow-hidden">
-                              <p className="text-xs text-gray-500 break-all whitespace-normal">{decodeHtml(service.description) || '-'}</p>
+                              <p className={`text-xs text-gray-500 break-words whitespace-normal ${!service.description ? 'text-center' : ''}`}>{decodeHtml(service.description) || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-indigo-600">{service.frequencyType || 'Monthly'}</p>
@@ -506,7 +505,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                               <p className="font-medium text-gray-800 text-sm">{addonName}</p>
                             </div>
                             <div className="col-span-4 overflow-hidden">
-                              <p className="text-xs text-gray-500 break-all whitespace-normal">{decodeHtml(addon.description) || '-'}</p>
+                              <p className={`text-xs text-gray-500 break-words whitespace-normal ${!addon.description ? 'text-center' : ''}`}>{decodeHtml(addon.description) || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>

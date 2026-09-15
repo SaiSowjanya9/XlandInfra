@@ -1,10 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
-import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
+import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link, ChevronLeft, ChevronRight, ArrowLeft, Download } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { exportEstimateToPDF } from '../utils/pdfExport';
+import {
+  getEstimateContactPhone, getEstimateAddress, getEstimateCity, getEstimateZone,
+  getEstimateUnits, formatAddonsForExport
+} from '../utils/estimateStore';
+import * as XLSX from 'xlsx';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -791,6 +796,41 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedEstimates = filteredEstimates.slice(startIndex, endIndex);
 
+  // Export all estimates to Excel
+  const exportAllEstimates = () => {
+    if (filteredEstimates.length === 0) {
+      setMessage({ type: 'error', text: 'No estimates to export' });
+      return;
+    }
+    const exportData = filteredEstimates.map(e => ({
+      'Estimate ID': e.estimate_id || '-',
+      'Type': e.estimate_type === 'work_order' ? 'Work Order' : e.estimate_type === 'property_based' || e.estimate_type === 'property-based' ? 'Property Based' : 'Direct',
+      'Work Order ID': e.work_order_id || '-',
+      'Customer Name': e.client_name || '-',
+      'Phone': getEstimateContactPhone(e) || '-',
+      'Property': e.property_name || '-',
+      'Property Type': e.property_type || '-',
+      'Address': getEstimateAddress(e) || '-',
+      'City': getEstimateCity(e) || '-',
+      'Zone': getEstimateZone(e) || '-',
+      'No. of Units': getEstimateUnits(e) || '-',
+      'AMC Package': e.package_name || '-',
+      'Add-on Services': formatAddonsForExport(e) || '-',
+      'Subtotal': e.subtotal || 0,
+      'Discount': e.discount_amount || 0,
+      'GST': e.gst_amount || 0,
+      'Total': e.total_amount || 0,
+      'Status': getStatusLabel(e.status),
+      'Created By': e.created_by_name || '-',
+      'Created Date': formatDateIST(e.created_at)
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Estimates');
+    XLSX.writeFile(wb, `All_Estimates_${new Date().toISOString().split('T')[0]}.xlsx`);
+    setMessage({ type: 'success', text: 'Estimates exported successfully' });
+  };
+
   return (
     <div className="space-y-6">
       
@@ -843,6 +883,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="flex gap-4">
                 <div className="flex-1 relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="text" placeholder="Search by Property ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" /></div>
                 <button onClick={() => setShowFilters(!showFilters)} className={`px-4 py-2.5 rounded-lg border font-medium flex items-center gap-2 ${showFilters ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}><Filter className="w-4 h-4" />Filters</button>
+                <button onClick={exportAllEstimates} className="px-4 py-2.5 bg-emerald-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-emerald-700 transition-colors"><Download className="w-4 h-4" />Export All</button>
               </div>
               {showFilters && (
                 <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
