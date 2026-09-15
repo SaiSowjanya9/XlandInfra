@@ -1559,6 +1559,75 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
   }
 });
 
+// Admin-triggered credential reset - generates a new temporary password and emails it
+router.post('/:id/reset-password', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [existing] = await pool.execute(
+      `SELECT id, user_id, username, email, first_name, last_name, role FROM users WHERE id = ?`,
+      [id]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'Staff member not found' });
+    }
+
+    const user = existing[0];
+    const tempPassword = generateTempPassword();
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+    await pool.execute(
+      `UPDATE users SET password_hash = ?, must_change_password = TRUE WHERE id = ?`,
+      [passwordHash, id]
+    );
+
+    // Keep the franchise_partners login in sync for FP users
+    if (user.role === 'franchise_partner' || user.role === 'franchise') {
+      try {
+        await pool.execute(
+          `UPDATE franchise_partners SET password_hash = ?, must_change_password = TRUE WHERE email = ?`,
+          [passwordHash, user.email]
+        );
+      } catch (fpError) {
+        console.error('Error syncing franchise partner password:', fpError);
+      }
+    }
+
+    let emailSent = false;
+    try {
+      const emailResult = await sendEmployeeWelcomeEmail({
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name || '',
+        username: user.username,
+        tempPassword,
+        role: user.role,
+        userId: user.user_id,
+        loginUrl: ADMIN_PORTAL_URL
+      });
+      emailSent = emailResult.success;
+    } catch (emailError) {
+      console.error('Failed to send password reset email:', emailError);
+    }
+
+    res.json({
+      success: true,
+      message: emailSent
+        ? `Temporary password sent to ${user.email}. The user must change it on first login.`
+        : 'Password was reset but the email notification could not be sent.',
+      data: { emailSent }
+    });
+  } catch (error) {
+    console.error('Error resetting staff password:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error resetting password',
+      error: error.message
+    });
+  }
+});
+
 // Delete staff member (permanent delete) - handles both users and fp_employees tables
 router.delete('/:id', authenticate, adminOnly, async (req, res) => {
   try {

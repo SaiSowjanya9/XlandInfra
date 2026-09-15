@@ -4,6 +4,8 @@
 
 import { safeStorage, safeJSONParse } from './safeStorage';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const USER_STORAGE_KEY = 'pm_users';
 const CURRENT_USER_KEY = 'pm_current_user';
 const AUTH_TOKEN_KEY = 'pm_auth_token';
@@ -82,7 +84,7 @@ export const authenticateUser = async (username, password, role = null) => {
 
   try {
     // Authenticate via unified employee login API
-    const response = await fetch('/api/employee/login', {
+    const response = await fetch(`${API_BASE}/api/employee/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
