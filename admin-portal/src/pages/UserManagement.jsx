@@ -5,7 +5,7 @@ import {
   Edit2, Trash2, ToggleLeft, ToggleRight, X, Eye, EyeOff,
   Phone, Mail, Filter, Building2,
   UserPlus, CheckCircle, XCircle, MapPin, AlertCircle,
-  Landmark, Percent, Send, Key, Loader2
+  Landmark, Percent, Send, Key, Loader2, RefreshCw
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -28,6 +28,7 @@ const UserManagement = () => {
   const [submitting, setSubmitting] = useState(false);
   const [createdUser, setCreatedUser] = useState(null);
   const [visiblePasswords, setVisiblePasswords] = useState({});
+  const [resettingUserId, setResettingUserId] = useState(null);
 
   const token = getAuthToken();
 
@@ -84,12 +85,12 @@ const UserManagement = () => {
             username: u.username,
             email: u.email,
             name: `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+            visiblePassword: u.visiblePassword,
             firstName: u.firstName,
             lastName: u.lastName,
             phone: u.phone,
             role: u.role,
             roleName: u.roleName,
-            visiblePassword: u.visiblePassword,
             mustChangePassword: u.mustChangePassword,
             status: u.isActive ? 'active' : 'inactive',
             isActive: u.isActive,
@@ -210,7 +211,7 @@ const UserManagement = () => {
           updates.password = formData.password;
         }
         
-        const response = await fetch(`/api/staff/${editingUser.id}`, {
+        const response = await fetch(`${API_BASE}/api/staff/${editingUser.id}`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -295,7 +296,7 @@ const UserManagement = () => {
   const handleToggleStatus = async (user) => {
     try {
       const newStatus = user.status === 'active' ? false : true;
-      const response = await fetch(`/api/staff/${user.id}`, {
+      const response = await fetch(`${API_BASE}/api/staff/${user.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -320,7 +321,7 @@ const UserManagement = () => {
 
   const handleDelete = async (user) => {
     try {
-      const response = await fetch(`/api/staff/${user.id}`, {
+      const response = await fetch(`${API_BASE}/api/staff/${user.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -360,11 +361,35 @@ const UserManagement = () => {
     return labels[role] || role;
   };
 
-  const togglePasswordVisibility = (userId) => {
+  const togglePasswordVisibility = (key) => {
     setVisiblePasswords(prev => ({
       ...prev,
-      [userId]: !prev[userId]
+      [key]: !prev[key]
     }));
+  };
+
+  const handleResetPassword = async (user) => {
+    setResettingUserId(user.id);
+    try {
+      const response = await fetch(`${API_BASE}/api/staff/${user.id}/reset-password`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        showToast(result.message, result.data?.emailSent ? 'success' : 'error');
+        loadUsers();
+      } else {
+        showToast(result.message || 'Failed to reset password', 'error');
+      }
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      showToast('Failed to reset password', 'error');
+    } finally {
+      setResettingUserId(null);
+    }
   };
 
   return (
@@ -526,29 +551,41 @@ const UserManagement = () => {
                     </span>
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap hidden lg:table-cell">
-                    {user.visiblePassword ? (
-                      <div className="flex items-center gap-1">
-                        <code className={`text-xs px-2 py-1 rounded font-mono ${
-                          user.mustChangePassword 
-                            ? 'bg-amber-50 text-amber-700 border border-amber-200' 
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {visiblePasswords[user.id] ? user.visiblePassword : '••••••••'}
-                        </code>
-                        <button
-                          onClick={() => togglePasswordVisibility(user.id)}
-                          className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                          title={visiblePasswords[user.id] ? 'Hide password' : 'Show password'}
-                        >
-                          {visiblePasswords[user.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                        {user.mustChangePassword && (
-                          <span className="text-[10px] text-amber-600 font-medium">(Temp)</span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-gray-400 italic">Changed by user</span>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {user.visiblePassword ? (
+                        <>
+                          <code className={`text-xs px-2 py-1 rounded font-mono ${
+                            user.mustChangePassword
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {visiblePasswords[user.id] ? user.visiblePassword : '••••••••'}
+                          </code>
+                          <button
+                            onClick={() => togglePasswordVisibility(user.id)}
+                            className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                            title={visiblePasswords[user.id] ? 'Hide password' : 'Show password'}
+                          >
+                            {visiblePasswords[user.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                          {user.mustChangePassword && (
+                            <span className="text-[10px] text-amber-600 font-medium">(Temp)</span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">Not recorded</span>
+                      )}
+                      <button
+                        onClick={() => handleResetPassword(user)}
+                        disabled={resettingUserId === user.id}
+                        className="p-1 text-gray-400 hover:text-primary-600 transition-colors disabled:opacity-50"
+                        title="Reset password and email a new temporary one"
+                      >
+                        {resettingUserId === user.id
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <RefreshCw className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap hidden md:table-cell">
                     <div className="space-y-0.5">
@@ -1079,17 +1116,14 @@ const UserManagement = () => {
                       <span className="text-sm text-gray-600">Current Password:</span>
                       <div className="flex items-center gap-2">
                         <code className={`text-sm px-3 py-1.5 rounded font-mono ${
-                          viewingUser.mustChangePassword 
-                            ? 'bg-amber-100 text-amber-800' 
+                          viewingUser.mustChangePassword
+                            ? 'bg-amber-100 text-amber-800'
                             : 'bg-white text-gray-800 border border-gray-200'
                         }`}>
                           {visiblePasswords[`view_${viewingUser.id}`] ? viewingUser.visiblePassword : '••••••••••••'}
                         </code>
                         <button
-                          onClick={() => setVisiblePasswords(prev => ({
-                            ...prev,
-                            [`view_${viewingUser.id}`]: !prev[`view_${viewingUser.id}`]
-                          }))}
+                          onClick={() => togglePasswordVisibility(`view_${viewingUser.id}`)}
                           className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-white/50 rounded transition-colors"
                           title={visiblePasswords[`view_${viewingUser.id}`] ? 'Hide password' : 'Show password'}
                         >
@@ -1098,14 +1132,26 @@ const UserManagement = () => {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500 italic">User has set their own password</p>
+                    <p className="text-sm text-gray-500 italic">
+                      No password on record for this user. Reset it to generate and email a new one.
+                    </p>
                   )}
                   {viewingUser.mustChangePassword && (
-                    <p className="text-xs text-amber-700 flex items-center gap-1 mt-2">
+                    <p className="text-xs text-amber-700 flex items-center gap-1">
                       <AlertCircle className="w-3.5 h-3.5" />
                       This is a temporary password. User must change it on first login.
                     </p>
                   )}
+                  <button
+                    onClick={() => handleResetPassword(viewingUser)}
+                    disabled={resettingUserId === viewingUser.id}
+                    className="mt-1 px-3 py-2 text-sm bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2 transition-colors disabled:opacity-50"
+                  >
+                    {resettingUserId === viewingUser.id
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <RefreshCw className="w-4 h-4" />}
+                    Reset Password
+                  </button>
                 </div>
               </div>
 
