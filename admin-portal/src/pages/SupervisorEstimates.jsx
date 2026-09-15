@@ -1237,6 +1237,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
           <div className="relative w-72"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input type="text" placeholder="Search by Property ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm" /></div>
           <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 hover:bg-gray-50"><Filter className="w-4 h-4" />Filters<ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} /></button>
           <button onClick={exportAllEstimates} className="px-4 py-2 bg-emerald-600 text-white rounded-lg flex items-center gap-2 hover:bg-emerald-700 transition-colors text-sm font-medium"><Download className="w-4 h-4" />Export All</button>
+          <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterCategory('all'); setFilterFromDate(''); setFilterToDate(''); setFilterFromDateDisplay(''); setFilterToDateDisplay(''); }} className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-colors text-sm font-medium whitespace-nowrap"><X className="w-4 h-4" />Clear all filters</button>
         </div>
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-gray-200">
@@ -1291,7 +1292,6 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
               </div>
             </div>
-            <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterCategory('all'); setFilterFromDate(''); setFilterToDate(''); setFilterFromDateDisplay(''); setFilterToDateDisplay(''); }} className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium">Clear all filters</button>
           </div>
         )}
       </div>

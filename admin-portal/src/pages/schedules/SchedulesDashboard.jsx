@@ -23,6 +23,9 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 // Alias for backward compatibility within this file
 const STATUS_COLORS = SCHEDULE_STATUS_COLORS;
 
+// Property types always shown in the Property Type chart, even with a count of 0
+const PROPERTY_TYPES = ['Gated Community', 'Apartment', 'Villa', 'Flat', 'Plot', 'Independent House', 'Commercial'];
+
 // Normalize property type to consistent display format
 const normalizePropertyType = (type) => {
   if (!type) return 'Others';
@@ -50,7 +53,17 @@ const getZoneName = (zone) => {
 };
 
 const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-const formatTime = (d) => d ? new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+
+// scheduled_time_start comes back as a TIME string (HH:MM:SS), not a timestamp
+const formatTimeOfDay = (t) => {
+  if (!t) return '-';
+  const [hours, minutes] = String(t).split(':');
+  const h = parseInt(hours);
+  if (isNaN(h)) return '-';
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const displayHour = h % 12 === 0 ? 12 : h % 12;
+  return `${displayHour}:${minutes || '00'} ${suffix}`;
+};
 
 const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   const navigate = useNavigate();
@@ -79,8 +92,9 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   // UI states for header buttons
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // Period filter helper function
-  const applyPeriodFilter = (data, period) => {
+  // Period filter helper function. getDate lets a card filter on its own timestamp
+  // (e.g. Recently Created filters on when the visit was created, not when it is due).
+  const applyPeriodFilter = (data, period, getDate) => {
     if (period === 'all') return data;
     
     const now = new Date();
@@ -107,7 +121,9 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     }
     
     return data.filter(item => {
-      const itemDate = new Date(item.startDate || item.start_date || item.createdAt);
+      const raw = getDate ? getDate(item) : (item.startDate || item.start_date || item.createdAt || item.addedOn);
+      if (!raw) return false;
+      const itemDate = new Date(raw);
       return itemDate >= filterDate && itemDate <= now;
     });
   };
@@ -157,8 +173,10 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         // Transform to match expected format
         const transformedSchedules = schedulesData.map(s => ({
           id: s.id,
-          title: s.serviceName || s.title || 'Service Visit',
-          service: s.serviceName || s.service || 'General',
+          visitId: s.visitId || s.visit_id,
+          propertyCode: s.propertyId || s.property_id,
+          title: s.serviceName || s.title || null,
+          service: s.serviceName || s.service || null,
           serviceCategory: s.serviceCategory || s.service_category,
           property_name: s.propertyName || s.property_name,
           propertyName: s.propertyName || s.property_name,
@@ -167,13 +185,17 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
           scheduledDate: s.scheduledDate || s.scheduled_date || s.start_date,
           startDate: s.scheduledDate || s.scheduled_date || s.start_date,
           start_date: s.scheduledDate || s.scheduled_date || s.start_date,
+          scheduledTime: s.scheduledTime || s.scheduled_time,
           status: s.status || 'scheduled',
-          priority: s.priority || 'medium',
           zone: getZoneName(s.zone),
           vendorName: s.vendorName || s.vendor_name,
           visitNumber: s.visitNumber || s.visit_number,
           totalVisits: s.totalVisits || s.total_visits,
-          createdAt: s.createdAt || s.created_at
+          originalDate: s.originalDate || s.original_date,
+          rescheduledAt: s.rescheduledAt || s.rescheduled_at,
+          rescheduleReason: s.rescheduleReason || s.reschedule_reason,
+          createdAt: s.createdAt || s.created_at,
+          updatedAt: s.updatedAt || s.updated_at
         }));
         setSchedules(transformedSchedules);
       } else {
@@ -256,21 +278,27 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     return d && d < today && !['completed', 'cancelled'].includes(getStatus(s));
   });
 
-  // Active schedules (excluding cancelled and completed) for relevant charts
-  const activeSchedules = schedules.filter(s => !['cancelled', 'completed'].includes(getStatus(s)));
-  
   // All non-cancelled schedules for status charts
   const allActiveSchedules = schedules.filter(s => getStatus(s) !== 'cancelled');
 
   // Chart data - Status (with filter) - Use all non-cancelled schedules to show complete picture
   const statusFilteredData = applyPeriodFilter(allActiveSchedules, statusFilter);
+  // Pending work never reaches scheduled_visits, so it comes from the pending properties feed:
+  // one entry per property still awaiting scheduling, and pendingServices per property still
+  // awaiting a vendor.
+  const pendingPropertiesFiltered = applyPeriodFilter(pendingProperties, statusFilter);
+  const pendingCount = statusFilteredData.filter(s => ['pending', 'pending_schedule'].includes(getStatus(s))).length
+    + pendingPropertiesFiltered.length;
+  const toAssignVendorCount = pendingPropertiesFiltered.reduce((sum, p) => sum + (p.pendingServices || 0), 0);
+  // Every status stays in the list, so a status with no schedules still shows as 0
   const statusData = [
     { name: 'Scheduled', value: statusFilteredData.filter(s => ['scheduled', 'upcoming', 'work_order_created'].includes(getStatus(s))).length, color: STATUS_COLORS.scheduled },
     { name: 'In Progress', value: statusFilteredData.filter(s => getStatus(s) === 'in_progress').length, color: STATUS_COLORS.in_progress },
     { name: 'Completed', value: statusFilteredData.filter(s => getStatus(s) === 'completed').length, color: STATUS_COLORS.completed },
     { name: 'Rescheduled', value: statusFilteredData.filter(s => getStatus(s) === 'rescheduled').length, color: STATUS_COLORS.rescheduled },
-    { name: 'Pending', value: statusFilteredData.filter(s => ['pending', 'pending_schedule'].includes(getStatus(s))).length, color: STATUS_COLORS.pending }
-  ].filter(d => d.value > 0);
+    { name: 'Pending', value: pendingCount, color: STATUS_COLORS.pending },
+    { name: 'To Assign Vendor', value: toAssignVendorCount, color: '#EA580C' }
+  ];
   const statusTotal = statusData.reduce((sum, d) => sum + d.value, 0);
 
   // Chart data - Service (with filter) - All non-cancelled schedules
@@ -292,9 +320,14 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     const pt = normalizePropertyType(s.property_type || s.propertyType);
     propTypeCounts[pt] = (propTypeCounts[pt] || 0) + 1;
   });
-  const propertyTypeData = Object.entries(propTypeCounts)
-    .map(([name, value]) => ({ name, value, color: PROPERTY_TYPE_COLORS[name] || '#6B7280' }))
-    .sort((a, b) => b.value - a.value);
+  // Always list every known property type - a type with no schedules must still show as 0
+  const propertyTypeData = [
+    ...PROPERTY_TYPES.map(name => ({ name, value: propTypeCounts[name] || 0, color: PROPERTY_TYPE_COLORS[name] || '#6B7280' })),
+    // Any unexpected type coming from the data (e.g. 'Others') is appended when it has schedules
+    ...Object.entries(propTypeCounts)
+      .filter(([name, value]) => value > 0 && !PROPERTY_TYPES.includes(name))
+      .map(([name, value]) => ({ name, value, color: PROPERTY_TYPE_COLORS[name] || '#6B7280' }))
+  ].sort((a, b) => b.value - a.value);
   const propertyTypeTotal = propertyTypeData.reduce((sum, d) => sum + d.value, 0);
 
   // Trend data (filtered) - Shows past 3 days + today + next 3 days for better visualization
@@ -320,12 +353,11 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         return sDate.getTime() === date.getTime();
       });
       
-      const status = getStatus;
       data.push({
         date: dateStr,
-        scheduled: daySchedules.filter(s => ['scheduled', 'upcoming', 'pending', 'pending_schedule', 'work_order_created'].includes(status(s))).length,
-        completed: daySchedules.filter(s => status(s) === 'completed').length,
-        inProgress: daySchedules.filter(s => status(s) === 'in_progress').length
+        scheduled: daySchedules.filter(s => ['scheduled', 'confirmed', 'work_order_created'].includes(getStatus(s))).length,
+        completed: daySchedules.filter(s => getStatus(s) === 'completed').length,
+        inProgress: daySchedules.filter(s => getStatus(s) === 'in_progress').length
       });
     }
     return data;
@@ -336,14 +368,14 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   const activeUpcoming = todaysSchedules.concat(upcoming7Days).filter(s => getStatus(s) !== 'cancelled');
   const upcomingFilteredData = applyPeriodFilter(activeUpcoming, upcomingFilter);
 
-  // Recently created (filtered) - Only active schedules
-  const recentFilteredData = applyPeriodFilter(activeSchedules, recentFilter);
+  // Recently created (filtered) - newest first by real creation timestamp, cancelled excluded
+  const recentFilteredData = applyPeriodFilter(allActiveSchedules, recentFilter, s => s.createdAt);
   const recentSchedules = [...recentFilteredData].sort((a, b) => 
-    new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0)
+    new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
   ).slice(0, 5);
 
-  // Reschedule requests (filtered)
-  const rescheduleFilteredData = applyPeriodFilter(rescheduleRequests, rescheduleFilter);
+  // Reschedule requests (filtered on when the move was made)
+  const rescheduleFilteredData = applyPeriodFilter(rescheduleRequests, rescheduleFilter, s => s.rescheduledAt || s.scheduledDate);
 
   // Overdue schedules (filtered)
   const overdueFilteredData = applyPeriodFilter(overdueSchedules, overdueFilter);
@@ -366,12 +398,6 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
     };
     const s = (status || '').toLowerCase().replace(/\s+/g, '_');
     return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[s] || colors.pending}`}>{status || 'Pending'}</span>;
-  };
-
-  const PriorityBadge = ({ priority }) => {
-    const colors = { high: 'bg-red-100 text-red-700', medium: 'bg-amber-100 text-amber-700', low: 'bg-green-100 text-green-700' };
-    const p = (priority || 'medium').toLowerCase();
-    return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[p] || colors.medium}`}>{priority || 'Medium'}</span>;
   };
 
   if (loading) {
@@ -426,30 +452,30 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
                     </div>
                   ) : (
                     <>
-                      {overdueSchedules.slice(0, 3).map((s, i) => (
-                        <div key={`overdue-${i}`} className="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`${getBasePath()}/schedules/all`)}>
+                      {overdueSchedules.slice(0, 3).map((s) => (
+                        <div key={`overdue-${s.id}`} className="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`${getBasePath()}/schedules/all`)}>
                           <div className="flex items-start gap-3">
                             <div className="p-1.5 bg-red-100 rounded-lg mt-0.5">
                               <AlertTriangle className="w-4 h-4 text-red-600" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">{s.propertyName || s.property_name || 'Property'}</p>
-                              <p className="text-xs text-red-600">Overdue: {s.serviceName || s.service_name || 'Service'}</p>
-                              <p className="text-xs text-gray-400">{formatDate(s.scheduled_date)}</p>
+                              <p className="text-sm font-medium text-gray-900 truncate">{s.propertyName || '-'}</p>
+                              <p className="text-xs text-red-600 truncate">Overdue: {s.service || '-'}</p>
+                              <p className="text-xs text-gray-400">{formatDate(s.scheduledDate)}</p>
                             </div>
                           </div>
                         </div>
                       ))}
-                      {rescheduleRequests.slice(0, 3).map((s, i) => (
-                        <div key={`reschedule-${i}`} className="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`${getBasePath()}/schedules/reschedule-requests`)}>
+                      {rescheduleRequests.slice(0, 3).map((s) => (
+                        <div key={`reschedule-${s.id}`} className="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`${getBasePath()}/schedules/reschedule-requests`)}>
                           <div className="flex items-start gap-3">
                             <div className="p-1.5 bg-pink-100 rounded-lg mt-0.5">
                               <RotateCcw className="w-4 h-4 text-pink-600" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">{s.propertyName || s.property_name || 'Property'}</p>
-                              <p className="text-xs text-pink-600">Reschedule Request</p>
-                              <p className="text-xs text-gray-400">{s.serviceName || s.service_name || 'Service'}</p>
+                              <p className="text-sm font-medium text-gray-900 truncate">{s.propertyName || '-'}</p>
+                              <p className="text-xs text-pink-600 truncate">Rescheduled: {s.service || '-'}</p>
+                              <p className="text-xs text-gray-400">{formatDate(s.originalDate)} &rarr; {formatDate(s.scheduledDate)}</p>
                             </div>
                           </div>
                         </div>
@@ -537,11 +563,11 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             <div className="flex-shrink-0">
               <DonutChart data={statusData} size={90} strokeWidth={16} centerValue={statusTotal} centerLabel="Total" />
             </div>
-            <div className="space-y-1.5 text-xs min-w-0 flex-1">
+            <div className="space-y-1 text-xs min-w-0 flex-1 max-h-[170px] overflow-y-auto pr-1">
               {statusData.map((d, i) => (
                 <div key={i} className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
-                  <span className="text-gray-600 truncate flex-1">{d.name}</span>
+                  <span className="text-gray-600 truncate flex-1" title={d.name}>{d.name}</span>
                   <span className="font-medium text-gray-900 text-[10px] flex-shrink-0">{d.value}</span>
                 </div>
               ))}
@@ -585,11 +611,11 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             <div className="flex-shrink-0">
               <DonutChart data={propertyTypeData} size={90} strokeWidth={16} centerValue={propertyTypeTotal} centerLabel="Total" />
             </div>
-            <div className="space-y-1.5 text-xs min-w-0 flex-1">
-              {propertyTypeData.slice(0, 4).map((d, i) => (
+            <div className="space-y-1 text-xs min-w-0 flex-1 max-h-[170px] overflow-y-auto pr-1">
+              {propertyTypeData.map((d, i) => (
                 <div key={i} className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
-                  <span className="text-gray-600 truncate flex-1">{d.name}</span>
+                  <span className="text-gray-600 truncate flex-1" title={d.name}>{d.name}</span>
                   <span className="font-medium text-gray-900 text-[10px] flex-shrink-0">{d.value} ({propertyTypeTotal ? Math.round((d.value / propertyTypeTotal) * 100) : 0}%)</span>
                 </div>
               ))}
@@ -636,12 +662,15 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             </div>
           </div>
           <div className="space-y-2 max-h-48 overflow-y-auto">
-            {upcomingFilteredData.slice(0, 4).map((s, i) => (
-              <div key={i} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg">
-                <div className="text-xs text-gray-500 w-16 flex-shrink-0">{formatTime(s.startDate || s.start_date) || '09:00 AM'}</div>
+            {upcomingFilteredData.slice(0, 4).map((s) => (
+              <div key={s.id} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg">
+                <div className="text-xs text-gray-500 w-24 flex-shrink-0">
+                  <p>{formatDate(s.scheduledDate)}</p>
+                  <p className="text-[10px] text-gray-400">{formatTimeOfDay(s.scheduledTime)}</p>
+                </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{s.title}</p>
-                  <p className="text-xs text-gray-500 truncate">{s.property_name || s.propertyName}</p>
+                  <p className="text-sm font-medium text-gray-900 truncate">{s.title || '-'}</p>
+                  <p className="text-xs text-gray-500 truncate">{s.propertyName || '-'}</p>
                 </div>
                 <StatusBadge status={s.status} />
               </div>
@@ -672,14 +701,14 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {pendingFilteredData.slice(0, 4).map((p, i) => (
-                  <tr key={i}>
+                {pendingFilteredData.slice(0, 4).map((p) => (
+                  <tr key={p.id}>
                     <td className="py-2 pr-2">
-                      <p className="font-medium text-gray-900">{p.property_id || `PROP-${100 + i}`}</p>
-                      <p className="text-gray-500 truncate max-w-[120px]">{p.property_name}</p>
+                      <p className="font-medium text-gray-900">{p.propertyId || '-'}</p>
+                      <p className="text-gray-500 truncate max-w-[120px]">{p.propertyName || '-'}</p>
                     </td>
-                    <td className="py-2 px-2 text-center">{p.total_services || 0}</td>
-                    <td className="py-2 px-2 text-center">{p.vendors_assigned || 0}/{p.total_services || 0}</td>
+                    <td className="py-2 px-2 text-center">{p.totalServices || 0}</td>
+                    <td className="py-2 px-2 text-center">{p.assignedVendors || 0}/{p.totalServices || 0}</td>
                     <td className="py-2 pl-2 text-right">
                       <button onClick={() => navigate(`${getBasePath()}/schedules/pending`)} className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded text-xs hover:bg-blue-100 font-medium">Schedule</button>
                     </td>
@@ -709,21 +738,21 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             <table className="w-full text-xs min-w-[320px]">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-100">
-                  <th className="pb-2 pr-2">Schedule ID</th>
+                  <th className="pb-2 pr-2">Visit ID</th>
                   <th className="pb-2 px-2">Property</th>
                   <th className="pb-2 px-2">Service</th>
                   <th className="pb-2 px-2">Status</th>
-                  <th className="pb-2 pl-2">Priority</th>
+                  <th className="pb-2 pl-2">Created</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {recentSchedules.map((s, i) => (
-                  <tr key={i}>
-                    <td className="py-2.5 pr-2 font-medium text-gray-900 whitespace-nowrap">SCH-{2100 + i}</td>
-                    <td className="py-2.5 px-2 text-gray-600 truncate max-w-[80px]">{s.property_name || s.propertyName}</td>
-                    <td className="py-2.5 px-2 text-gray-600 whitespace-nowrap">{s.service || 'General'}</td>
+                {recentSchedules.map((s) => (
+                  <tr key={s.id}>
+                    <td className="py-2.5 pr-2 font-medium text-gray-900 whitespace-nowrap">{s.visitId || '-'}</td>
+                    <td className="py-2.5 px-2 text-gray-600 truncate max-w-[80px]">{s.propertyName || '-'}</td>
+                    <td className="py-2.5 px-2 text-gray-600 whitespace-nowrap">{s.service || '-'}</td>
                     <td className="py-2.5 px-2"><StatusBadge status={s.status} /></td>
-                    <td className="py-2.5 pl-2"><PriorityBadge priority={s.priority} /></td>
+                    <td className="py-2.5 pl-2 text-gray-600 whitespace-nowrap">{formatDate(s.createdAt)}</td>
                   </tr>
                 ))}
                 {recentSchedules.length === 0 && (
@@ -747,26 +776,28 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             <table className="w-full text-xs min-w-[280px]">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-100">
-                  <th className="pb-2 pr-2">REQ ID</th>
+                  <th className="pb-2 pr-2">Visit ID</th>
                   <th className="pb-2 px-2">Property</th>
-                  <th className="pb-2 px-2">Requested On</th>
-                  <th className="pb-2 pl-2">Status</th>
+                  <th className="pb-2 px-2">Original</th>
+                  <th className="pb-2 px-2">Moved To</th>
+                  <th className="pb-2 pl-2">Rescheduled On</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {rescheduleFilteredData.slice(0, 4).map((s, i) => (
-                  <tr key={i}>
-                    <td className="py-2.5 pr-2 font-medium text-gray-900 whitespace-nowrap">REQ-{100 + i}</td>
+                {rescheduleFilteredData.slice(0, 4).map((s) => (
+                  <tr key={s.id}>
+                    <td className="py-2.5 pr-2 font-medium text-gray-900 whitespace-nowrap">{s.visitId || '-'}</td>
                     <td className="py-2.5 px-2">
-                      <p className="text-gray-900 truncate max-w-[100px]">{s.property_name || s.propertyName}</p>
-                      <p className="text-gray-500 truncate max-w-[100px]">{s.service || 'Service'}</p>
+                      <p className="text-gray-900 truncate max-w-[100px]">{s.propertyName || '-'}</p>
+                      <p className="text-gray-500 truncate max-w-[100px]">{s.service || '-'}</p>
                     </td>
-                    <td className="py-2.5 px-2 text-gray-600 whitespace-nowrap">{formatDate(s.updatedAt || s.updated_at)}</td>
-                    <td className="py-2.5 pl-2"><span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium whitespace-nowrap">Pending</span></td>
+                    <td className="py-2.5 px-2 text-gray-600 whitespace-nowrap">{formatDate(s.originalDate)}</td>
+                    <td className="py-2.5 px-2 text-orange-600 whitespace-nowrap">{formatDate(s.scheduledDate)}</td>
+                    <td className="py-2.5 pl-2 text-gray-600 whitespace-nowrap" title={s.rescheduleReason || ''}>{formatDate(s.rescheduledAt)}</td>
                   </tr>
                 ))}
                 {rescheduleFilteredData.length === 0 && (
-                  <tr><td colSpan="4" className="py-6 text-center text-gray-400">No reschedule requests</td></tr>
+                  <tr><td colSpan="5" className="py-6 text-center text-gray-400">No reschedule requests</td></tr>
                 )}
               </tbody>
             </table>
@@ -786,30 +817,34 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             <table className="w-full text-xs min-w-[280px]">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-100">
-                  <th className="pb-2 pr-2">Schedule ID</th>
+                  <th className="pb-2 pr-2">Visit ID</th>
                   <th className="pb-2 px-2">Property</th>
                   <th className="pb-2 px-2">Due Date</th>
+                  <th className="pb-2 px-2">Status</th>
                   <th className="pb-2 pl-2 text-right">Overdue By</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {overdueFilteredData.slice(0, 4).map((s, i) => {
-                  const dueDate = new Date(s.startDate || s.start_date);
-                  const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
+                {overdueFilteredData.slice(0, 4).map((s) => {
+                  const dueDate = getScheduleDate(s);
+                  const daysOverdue = dueDate ? Math.floor((today - dueDate) / (1000 * 60 * 60 * 24)) : null;
                   return (
-                    <tr key={i}>
-                      <td className="py-2.5 pr-2 font-medium text-gray-900 whitespace-nowrap">SCH-{2000 + i}</td>
+                    <tr key={s.id}>
+                      <td className="py-2.5 pr-2 font-medium text-gray-900 whitespace-nowrap">{s.visitId || '-'}</td>
                       <td className="py-2.5 px-2">
-                        <p className="text-gray-900 truncate max-w-[100px]">{s.property_name || s.propertyName}</p>
-                        <p className="text-gray-500 truncate max-w-[100px]">{s.service || s.title}</p>
+                        <p className="text-gray-900 truncate max-w-[100px]">{s.propertyName || '-'}</p>
+                        <p className="text-gray-500 truncate max-w-[100px]">{s.service || '-'}</p>
                       </td>
-                      <td className="py-2.5 px-2 text-gray-600 whitespace-nowrap">{formatDate(s.startDate || s.start_date)}</td>
-                      <td className="py-2.5 pl-2 text-red-600 font-medium text-right whitespace-nowrap">{daysOverdue} Days</td>
+                      <td className="py-2.5 px-2 text-gray-600 whitespace-nowrap">{formatDate(s.scheduledDate)}</td>
+                      <td className="py-2.5 px-2"><StatusBadge status={s.status} /></td>
+                      <td className="py-2.5 pl-2 text-red-600 font-medium text-right whitespace-nowrap">
+                        {daysOverdue === null ? '-' : `${daysOverdue} ${daysOverdue === 1 ? 'Day' : 'Days'}`}
+                      </td>
                     </tr>
                   );
                 })}
                 {overdueFilteredData.length === 0 && (
-                  <tr><td colSpan="4" className="py-6 text-center text-gray-400">No overdue schedules</td></tr>
+                  <tr><td colSpan="5" className="py-6 text-center text-gray-400">No overdue schedules</td></tr>
                 )}
               </tbody>
             </table>

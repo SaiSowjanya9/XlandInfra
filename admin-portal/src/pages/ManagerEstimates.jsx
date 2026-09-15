@@ -1542,6 +1542,14 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">Export</span>
             </button>
+            <button
+              onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterCategory('all'); setFilterFromDate(''); setFilterToDate(''); setFilterFromDateDisplay(''); setFilterToDateDisplay(''); }}
+              className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg flex items-center gap-2 hover:bg-gray-50 whitespace-nowrap"
+              title="Clear all filters"
+            >
+              <X className="w-4 h-4" />
+              <span className="hidden sm:inline">Clear all filters</span>
+            </button>
           </div>
         </div>
         {showFilters && (
@@ -1597,7 +1605,6 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
               </div>
             </div>
-            <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterCategory('all'); setFilterFromDate(''); setFilterToDate(''); setFilterFromDateDisplay(''); setFilterToDateDisplay(''); }} className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium">Clear all filters</button>
           </div>
         )}
       </div>

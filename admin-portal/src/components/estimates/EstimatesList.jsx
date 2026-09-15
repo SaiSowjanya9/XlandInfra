@@ -682,6 +682,13 @@ const EstimatesList = ({
             <Download className="w-4 h-4" />
             Export All
           </button>
+          <button
+            onClick={clearFilters}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors text-sm font-medium whitespace-nowrap"
+          >
+            <X className="w-4 h-4" />
+            Clear all filters
+          </button>
           {/* Archive Selected button - only visible when items are selected and not ops manager */}
           {!isOpsManager && selectedEstimates.length > 0 && (
             <button
@@ -789,12 +796,6 @@ const EstimatesList = ({
                 </div>
               </div>
             </div>
-            <button
-              onClick={clearFilters}
-              className="mt-3 text-sm text-indigo-600 hover:text-indigo-700"
-            >
-              Clear all filters
-            </button>
           </div>
         )}
       </div>

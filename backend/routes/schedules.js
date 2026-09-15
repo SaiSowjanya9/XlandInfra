@@ -7,6 +7,8 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
+const { fetchScheduleStats, derivedStatusFilter } = require('../utils/scheduleStats');
+const { orNull, isRecentlyAdded, formatPaymentStatus } = require('../utils/pendingProperties');
 const { 
   adminOnly,
   managerOrAdmin,
@@ -316,7 +318,7 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
           p.id,
           p.property_id as propertyId,
           p.name as propertyName,
-          COALESCE(p.property_type, 'residential') as propertyType,
+          p.property_type as propertyType,
           COALESCE(fe.zone, '') as zone,
           COALESCE(p.city, '') as areaName,
           p.created_at as addedOn,
@@ -404,23 +406,22 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
         id: p.id,
         propertyId: p.propertyId,
         propertyName: p.propertyName,
-        customerName: p.customerName || 'N/A',
-        customerPhone: p.customerPhone || '',
-        customerEmail: p.customerEmail || '',
-        propertyType: p.propertyType || 'Apartment',
-        zone: p.zone || 'Zone A',
-        areaName: p.areaName,
-        packageName: p.packageName || 'Custom Package',
-        packageType: 'AMC',
+        customerName: orNull(p.customerName),
+        customerPhone: orNull(p.customerPhone),
+        customerEmail: orNull(p.customerEmail),
+        propertyType: orNull(p.propertyType),
+        zone: orNull(p.zone),
+        areaName: orNull(p.areaName),
+        packageName: orNull(p.packageName),
         estimateId: p.estimateId,
         estimateCode: p.estimateCode,
         totalPrice: p.totalPrice,
         totalServices: totalServices,
         assignedVendors: Math.min(assignedVendors, totalServices),
         pendingServices: pendingServices,
-        paymentStatus: p.paymentStatus === 'paid' ? 'Paid' : 'Partial',
+        paymentStatus: formatPaymentStatus(p.paymentStatus),
         addedOn: p.addedOn,
-        isNew: true, // Mark as new for UI badge
+        isNew: isRecentlyAdded(p.addedOn),
         services: services.map(s => {
           const serviceName = s.service || s.name || s.serviceType;
           // Find matching service schedule for dates and vendor
@@ -2875,10 +2876,15 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
       params.push(searchTerm, searchTerm, searchTerm, searchTerm);
     }
     
-    // Status filter
+    // Status filter - 'upcoming' and 'overdue' are derived from the date, not stored statuses
     if (status && status !== 'all') {
-      whereClause += ' AND sv.status = ?';
-      params.push(status);
+      const derived = derivedStatusFilter(status);
+      if (derived) {
+        whereClause += derived;
+      } else {
+        whereClause += ' AND sv.status = ?';
+        params.push(status);
+      }
     }
     
     // Service filter
@@ -2933,6 +2939,10 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
         sv.scheduled_date as scheduledDate,
         sv.scheduled_time_start as scheduledTime,
         sv.original_date as originalDate,
+        sv.rescheduled_at as rescheduledAt,
+        sv.reschedule_reason as rescheduleReason,
+        sv.created_at as createdAt,
+        sv.updated_at as updatedAt,
         sv.status,
         sv.work_order_id as workOrderId,
         pss.service_name as serviceName,
@@ -2993,52 +3003,10 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
     if (zone && zone !== 'all') statsWhereClause += ' AND op.zone = ?';
     if (propertyType && propertyType !== 'all') statsWhereClause += ' AND op.property_type = ?';
     
-    const statsQueryFinal = `
-      SELECT sv.status, COUNT(*) as count
-      FROM scheduled_visits sv
-      JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
-      JOIN onboarded_properties op ON op.id = sv.property_id
-      LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
-      ${statsWhereClause}
-      GROUP BY sv.status
-    `;
-    
-    let statusCounts = [];
-    try {
-      const [result] = await pool.execute(statsQueryFinal, baseParams);
-      statusCounts = result;
-    } catch (statsErr) {
-      console.log('[All Schedules] Stats query failed, trying string match:', statsErr.message);
-      const altStats = statsQueryFinal.replace('op.id = CAST(sv.property_id AS UNSIGNED)', 'op.property_id = sv.property_id');
-      const [altResult] = await pool.execute(altStats, baseParams);
-      statusCounts = altResult;
-    }
-    
-    const stats = {
-      total: 0,
-      scheduled: 0,
-      upcoming: 0,
-      workOrderCreated: 0,
-      inProgress: 0,
-      completed: 0,
-      rescheduled: 0,
-      cancelled: 0,
-      overdue: 0
-    };
-    
-    statusCounts.forEach(s => {
-      const count = parseInt(s.count);
-      stats.total += count;
-      switch(s.status) {
-        case 'scheduled': stats.scheduled = count; break;
-        case 'upcoming': stats.upcoming = count; break;
-        case 'work_order_created': stats.workOrderCreated = count; break;
-        case 'in_progress': stats.inProgress = count; break;
-        case 'completed': stats.completed = count; break;
-        case 'rescheduled': stats.rescheduled = count; break;
-        case 'cancelled': stats.cancelled = count; break;
-        case 'overdue': stats.overdue = count; break;
-      }
+    const stats = await fetchScheduleStats({
+      whereClause: statsWhereClause,
+      params: baseParams,
+      label: 'All Schedules'
     });
     
     // Format the response
@@ -3061,6 +3029,10 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
       scheduledTime: s.scheduledTime,
       originalDate: s.originalDate,
       isRescheduled: s.originalDate !== null,
+      rescheduledAt: s.rescheduledAt,
+      rescheduleReason: s.rescheduleReason,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
       zone: s.zone,
       workOrderId: s.workOrderCode,
       workOrderStatus: s.workOrderStatus,
