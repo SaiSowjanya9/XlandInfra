@@ -10,6 +10,7 @@ import CreateEstimate from '../components/estimates/CreateEstimate';
 import EstimatesList from '../components/estimates/EstimatesList';
 import AMCPackageManager from '../components/estimates/AMCPackageManager';
 import AddonsManager from '../components/estimates/AddonsManager';
+import AddServicePage from '../components/estimates/AddServicePage';
 import ArchivedEstimates from '../components/estimates/ArchivedEstimates';
 import { useFP } from '../contexts/FPContext';
 
@@ -23,7 +24,8 @@ const TAB_TITLES = {
   'create': 'Create Estimate',
   'list': 'All Estimates',
   'amc-manager': 'AMC Packages',
-  'addons': 'Add Service',
+  'addons': 'All Services',
+  'add-service': 'Add Service',
   'archived': 'Archived Estimates'
 };
 
@@ -178,6 +180,15 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
       case 'addons':
         return (
           <AddonsManager admin={admin} showToast={showToast} selectedFp={selectedFp} onRefresh={handleRefresh} />
+        );
+      case 'add-service':
+        return (
+          <AddServicePage 
+            admin={admin} 
+            showToast={showToast} 
+            onBack={() => navigate('/employee/estimates/addons')}
+            onSave={handleRefresh}
+          />
         );
       case 'archived':
         return (

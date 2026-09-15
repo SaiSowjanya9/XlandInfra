@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../../utils/safeStorage';
-import { Trash2, PlusCircle, ChevronDown, Plus, Layers, Edit2, X } from 'lucide-react';
+import { Trash2, PlusCircle, ChevronDown, Plus, Layers, Edit2, X, Settings } from 'lucide-react';
 import {
   getAddons, createAddon, deleteAddon, updateAddon, fetchAddons,
   getServices, FREQUENCY_TYPES, FREQUENCY_COUNT_MAP
@@ -52,6 +53,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   // Check if user is Operations Manager (restricted access - view only)
   const isOpsManager = admin?.role === 'operations_manager';
   const token = getAuthToken();
+  const navigate = useNavigate();
   
   // Operations Manager defaults to 'all-addons' tab (no create access)
   const [activeTab, setActiveTab] = useState(isOpsManager ? 'all-addons' : 'create'); // 'create' or 'all-addons'
@@ -308,13 +310,22 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
           </div>
         </div>
         {!isOpsManager && (
-          <button
-            onClick={() => setActiveTab('create')}
-            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            Add Service
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setActiveTab('create')}
+              className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Quick Add
+            </button>
+            <button
+              onClick={() => navigate('/employee/estimates/add-service')}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+            >
+              <Settings className="w-4 h-4" />
+              Advanced Service
+            </button>
+          </div>
         )}
       </div>
 

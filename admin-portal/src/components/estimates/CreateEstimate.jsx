@@ -5,7 +5,8 @@ import {
   Building2, User, Phone, Mail, Search, FileText, 
   Home, LayoutGrid, Layers, TreePine, Map, Briefcase,
   Package, Send, Plus, Trash2, Lock, ChevronDown, FolderOpen, ExternalLink, ArrowLeft,
-  ClipboardList, Loader2, AlertCircle, CheckCircle, Calendar, Tag, Image, Download, Eye, X
+  ClipboardList, Loader2, AlertCircle, CheckCircle, Calendar, Tag, Image, Download, Eye, X,
+  Save, Pencil, Info, MoreVertical, ChevronRight, Import
 } from 'lucide-react';
 import { useFP } from '../../contexts/FPContext';
 import PhoneInput from '../common/PhoneInput';
@@ -22,6 +23,16 @@ import { getPackageId, getPackageName, getPackagePrice as getNormalizedPackagePr
 
 // Subcategory options for services
 const SUBCATEGORIES = ['Maintenance', 'Cleaning', 'Security', 'Landscaping', 'Utilities', 'Other'];
+
+// Method options for services (Image 1 design)
+const METHOD_OPTIONS = [
+  { value: 'quantity_based', label: 'Quantity Based', color: 'bg-blue-100 text-blue-700' },
+  { value: 'capacity_slab', label: 'Capacity Slab', color: 'bg-purple-100 text-purple-700' },
+  { value: 'fixed_price', label: 'Fixed Price', color: 'bg-green-100 text-green-700' },
+  { value: 'area_based', label: 'Area Based', color: 'bg-orange-100 text-orange-700' },
+  { value: 'fixed_visit_custom', label: 'Fixed Visit + Custom Work', color: 'bg-pink-100 text-pink-700' },
+  { value: 'manpower', label: 'Manpower', color: 'bg-teal-100 text-teal-700' }
+];
 
 const PROPERTY_ICONS = {
   APT: Home,
@@ -246,6 +257,14 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   const [directGstRate, setDirectGstRate] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [emailError, setEmailError] = useState('');
+  
+  // New UI state for revamped design (Image 1)
+  const [estimateStructure, setEstimateStructure] = useState('package'); // 'package' or 'custom'
+  const [showPreview, setShowPreview] = useState(false);
+  const [activeTab, setActiveTab] = useState('notes'); // 'notes', 'terms', 'attachments'
+  const [termsConditions, setTermsConditions] = useState('');
+  const [customerNotes, setCustomerNotes] = useState('');
+  const [attachments, setAttachments] = useState([]);
   
   // Work Order Estimate States
   const [workOrderIdInput, setWorkOrderIdInput] = useState('');
@@ -1405,91 +1424,158 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Back Arrow - Show when estimate type is selected */}
-      {estimateType && (
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleBackFromEstimate}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
-            title="Go back (Esc)"
-          >
-            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-            <span className="text-sm font-medium">Back</span>
-          </button>
-          <span className="text-gray-300">|</span>
-          <h2 className="text-lg font-semibold text-gray-800">
-            {estimateType === 'property' 
-              ? (selectedProperty ? 'Property Estimate Form' : 'Select Property')
-              : estimateType === 'work_order'
-              ? (workOrderData ? 'Work Order Estimate Review' : 'Work Order Estimate')
-              : 'Direct Estimate Form'}
-          </h2>
-        </div>
-      )}
-
-      {/* Estimate Type Selection - Hidden after user starts typing/interacting */}
-      {!hasStartedTyping && (
-        <div className={`bg-white rounded-xl p-6 shadow-sm border border-gray-100 transition-all duration-300 ${estimateType ? 'opacity-100' : 'opacity-100'}`}>
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Estimate Type</h3>
-          <div className={`grid gap-4 ${isOpsManager ? 'grid-cols-1 max-w-md' : 'grid-cols-3'}`}>
-            {/* Property-Based Estimate - Hidden for Operations Manager */}
-            {!isOpsManager && (
-              <button
-                onClick={() => { setEstimateType('property'); }}
-                className={`p-6 rounded-xl border-2 transition-all ${
-                  estimateType === 'property'
-                    ? 'border-gray-400 bg-gray-50'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <Building2 className={`w-8 h-8 mx-auto mb-3 ${estimateType === 'property' ? 'text-gray-700' : 'text-gray-400'}`} />
-                <p className="font-medium text-gray-800">Property-Based Estimate</p>
-                <p className="text-sm text-gray-500 mt-1">Enter Property ID to auto-fill details</p>
-              </button>
-            )}
+    <div className="min-h-screen bg-gray-50">
+      {/* New Header Design (Image 1 Style) */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-10">
+        <div className="flex items-center justify-between">
+          {/* Left: Title and Breadcrumb */}
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">Create Estimate</h1>
+            <div className="flex items-center text-sm text-gray-500 mt-1">
+              <span>Estimates</span>
+              <ChevronRight className="w-4 h-4 mx-1" />
+              <span className="text-gray-900">Create Estimate</span>
+            </div>
+          </div>
+          
+          {/* Right: Action Buttons */}
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => { setEstimateType('direct'); setHasStartedTyping(true); }}
-              className={`p-6 rounded-xl border-2 transition-all ${
-                estimateType === 'direct'
-                  ? 'border-gray-400 bg-gray-50'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+              onClick={handleSave}
+              disabled={isSubmitting}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              <Save className="w-4 h-4" />
+              Save Draft
+            </button>
+            <button
+              onClick={() => setShowPreview(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              <Eye className="w-4 h-4" />
+              Preview
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isSubmitting}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+            >
+              <Send className="w-4 h-4" />
+              Send Estimate
+            </button>
+          </div>
+        </div>
+        
+        {/* Estimate Type Toggle Buttons */}
+        <div className="flex items-center gap-2 mt-4">
+          {!isOpsManager && (
+            <button
+              onClick={() => { setEstimateType('property'); setHasStartedTyping(false); }}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                estimateType === 'property'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              <User className={`w-8 h-8 mx-auto mb-3 ${estimateType === 'direct' ? 'text-gray-700' : 'text-gray-400'}`} />
-              <p className="font-medium text-gray-800">Direct-Based Estimate</p>
-              <p className="text-sm text-gray-500 mt-1">Enter customer details manually</p>
+              Property-Based
             </button>
-            {/* Work Order Estimate - Hidden for Operations Manager */}
-            {!isOpsManager && (
+          )}
+          <button
+            onClick={() => { setEstimateType('direct'); setHasStartedTyping(true); }}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              estimateType === 'direct'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            Direct Estimate
+          </button>
+          {!isOpsManager && (
+            <button
+              onClick={() => { 
+                setEstimateType('work_order'); 
+                setHasStartedTyping(true);
+                setWorkOrderStep('input');
+                setWorkOrderData(null);
+                setWorkOrderError('');
+                setWorkOrderIdInput('');
+                fetchCompletedWorkOrders();
+              }}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                estimateType === 'work_order'
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Work Order
+            </button>
+          )}
+          
+          {/* Back button when type is selected */}
+          {estimateType && hasStartedTyping && (
+            <button
+              onClick={handleBackFromEstimate}
+              className="ml-4 flex items-center gap-2 text-gray-500 hover:text-gray-700 text-sm"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </button>
+          )}
+        </div>
+      </div>
+      
+      {/* Legacy Estimate Type Selection - Show only when no type selected */}
+      {!estimateType && !hasStartedTyping && (
+        <div className="p-6">
+          <div className={`bg-white rounded-xl p-6 shadow-sm border border-gray-100 transition-all duration-300`}>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Estimate Type</h3>
+            <div className={`grid gap-4 ${isOpsManager ? 'grid-cols-1 max-w-md' : 'grid-cols-3'}`}>
+              {!isOpsManager && (
+                <button
+                  onClick={() => { setEstimateType('property'); }}
+                  className="p-6 rounded-xl border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all"
+                >
+                  <Building2 className="w-8 h-8 mx-auto mb-3 text-gray-400" />
+                  <p className="font-medium text-gray-800">Property-Based Estimate</p>
+                  <p className="text-sm text-gray-500 mt-1">Enter Property ID to auto-fill details</p>
+                </button>
+              )}
               <button
-                onClick={() => { 
-                  setEstimateType('work_order'); 
-                  setHasStartedTyping(true);
-                  setWorkOrderStep('input');
-                  setWorkOrderData(null);
-                  setWorkOrderError('');
-                  setWorkOrderIdInput('');
-                  fetchCompletedWorkOrders(); // Fetch pending work orders for selection
-                }}
-                className={`p-6 rounded-xl border-2 transition-all ${
-                  estimateType === 'work_order'
-                    ? 'border-orange-400 bg-orange-50'
-                    : 'border-gray-200 hover:border-orange-300 hover:bg-orange-50'
-                }`}
+                onClick={() => { setEstimateType('direct'); setHasStartedTyping(true); }}
+                className="p-6 rounded-xl border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all"
               >
-                <ClipboardList className={`w-8 h-8 mx-auto mb-3 ${estimateType === 'work_order' ? 'text-orange-600' : 'text-gray-400'}`} />
-                <p className="font-medium text-gray-800">Work Order Estimate</p>
-                <p className="text-sm text-gray-500 mt-1">Create estimate from existing Work Order</p>
+                <User className="w-8 h-8 mx-auto mb-3 text-gray-400" />
+                <p className="font-medium text-gray-800">Direct-Based Estimate</p>
+                <p className="text-sm text-gray-500 mt-1">Enter customer details manually</p>
               </button>
-            )}
+              {!isOpsManager && (
+                <button
+                  onClick={() => { 
+                    setEstimateType('work_order'); 
+                    setHasStartedTyping(true);
+                    setWorkOrderStep('input');
+                    setWorkOrderData(null);
+                    setWorkOrderError('');
+                    setWorkOrderIdInput('');
+                    fetchCompletedWorkOrders();
+                  }}
+                  className="p-6 rounded-xl border-2 border-gray-200 hover:border-orange-300 hover:bg-orange-50 transition-all"
+                >
+                  <ClipboardList className="w-8 h-8 mx-auto mb-3 text-gray-400" />
+                  <p className="font-medium text-gray-800">Work Order Estimate</p>
+                  <p className="text-sm text-gray-500 mt-1">Create estimate from existing Work Order</p>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* FP Shared Resources - Aggregated from all FPs, only show before selecting estimate type */}
-      {!estimateType && admin && allFpPortalLinks.length > 0 && allFpPortalLinks.map((fp) => (
-        <div key={fp.fpId} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      {/* Main Content Area */}
+      <div className="p-6">
+        {/* FP Shared Resources - Aggregated from all FPs, only show before selecting estimate type */}
+        {!estimateType && admin && allFpPortalLinks.length > 0 && allFpPortalLinks.map((fp) => (
+          <div key={fp.fpId} className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
           <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-5 py-3 border-b border-gray-200">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gray-100 rounded-lg">
@@ -1545,13 +1631,190 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
         </div>
       )}
 
-      {/* Property-based Estimate Form */}
+      {/* Property-based Estimate Form - Two Column Layout */}
       {estimateType === 'property' && (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-          {/* Estimate Details Header */}
-          <div className="px-6 py-3 bg-gray-100 border-b border-gray-200">
-            <h3 className="text-base font-semibold text-gray-800">Estimate Details</h3>
-          </div>
+        <div className="flex gap-6">
+          {/* Left Column - Main Form */}
+          <div className="flex-1 space-y-4">
+            {/* Property Info Card - Compact horizontal layout (Image 1 style) */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="grid grid-cols-5 gap-4">
+                {/* Property ID Search */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Property ID <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={propertyIdInput}
+                      onChange={(e) => handlePropertyIdChange(e.target.value)}
+                      onFocus={() => {
+                        setShowPropertySuggestions(true);
+                        setHasStartedTyping(true);
+                      }}
+                      onBlur={() => setTimeout(() => setShowPropertySuggestions(false), 200)}
+                      placeholder="PROP-101"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                    />
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    
+                    {showPropertySuggestions && propertyIdInput && filteredProperties.length > 0 && (
+                      <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {filteredProperties.slice(0, 8).map((prop) => {
+                          const Icon = PROPERTY_ICONS[prop.entryType] || Building2;
+                          return (
+                            <button
+                              key={prop.propertyId}
+                              onClick={() => handlePropertySelect(prop)}
+                              className="w-full p-3 text-left hover:bg-blue-50 flex items-center gap-3"
+                            >
+                              <Icon className="w-4 h-4 text-gray-400" />
+                              <div>
+                                <p className="font-medium text-gray-800 text-sm">{prop.propertyId}</p>
+                                <p className="text-xs text-gray-500">{prop.communityName}</p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Property Name */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Property Name</label>
+                  <input
+                    type="text"
+                    value={estimateForm.propertyName}
+                    readOnly
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700"
+                  />
+                </div>
+                
+                {/* Property Type */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Property Type</label>
+                  <input
+                    type="text"
+                    value={estimateForm.entryType || estimateForm.propertyType}
+                    readOnly
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700"
+                  />
+                </div>
+                
+                {/* Customer */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Customer</label>
+                  <input
+                    type="text"
+                    value={estimateForm.customerName || estimateForm.propertyName}
+                    readOnly
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700"
+                  />
+                </div>
+                
+                {/* Zone */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Zone</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={estimateForm.zone}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700"
+                    />
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Estimate Structure Card (Image 1 style) */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <h3 className="text-sm font-semibold text-gray-800 mb-4">Estimate Structure</h3>
+              <div className="flex items-center gap-6">
+                {/* Select AMC Package Option */}
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="estimateStructure"
+                    value="package"
+                    checked={estimateStructure === 'package'}
+                    onChange={() => setEstimateStructure('package')}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-blue-600">Select AMC Package</p>
+                    <p className="text-xs text-gray-500">Choose a pre-built AMC package and customize</p>
+                  </div>
+                </label>
+                
+                {/* Build Custom Services Option */}
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="estimateStructure"
+                    value="custom"
+                    checked={estimateStructure === 'custom'}
+                    onChange={() => setEstimateStructure('custom')}
+                    className="w-4 h-4 text-gray-600"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Build Custom Services</p>
+                    <p className="text-xs text-gray-500">Add individual services as per requirement</p>
+                  </div>
+                </label>
+                
+                {/* Package Dropdown - Show when AMC Package is selected */}
+                {estimateStructure === 'package' && selectedProperty && (
+                  <div className="flex items-center gap-3 ml-auto">
+                    <label className="text-sm font-medium text-gray-700">
+                      Select AMC Package <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={getPackageId(selectedPackage) || ''}
+                      onChange={(e) => handlePackageSelect(e.target.value)}
+                      className="px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 min-w-[200px]"
+                    >
+                      <option value="">Select Package</option>
+                      {(() => {
+                        const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType;
+                        const filteredPkgs = propertyType 
+                          ? availablePackages.filter(pkg => {
+                              const pkgType = (getPackagePropertyType(pkg) || '').toUpperCase();
+                              const searchType = propertyType.toUpperCase();
+                              return pkgType === searchType || 
+                                (['GC', 'GATED_COMMUNITY', 'GATED COMMUNITY'].includes(pkgType) && ['GC', 'GATED_COMMUNITY', 'GATED COMMUNITY'].includes(searchType)) ||
+                                (['APT', 'APARTMENT', 'APARTMENTS'].includes(pkgType) && ['APT', 'APARTMENT', 'APARTMENTS'].includes(searchType));
+                            })
+                          : availablePackages;
+                        
+                        return filteredPkgs.map(pkg => (
+                          <option key={getPackageId(pkg)} value={getPackageId(pkg)}>
+                            {getPackageName(pkg)} - ₹{getNormalizedPackagePrice(pkg).toLocaleString()}
+                          </option>
+                        ));
+                      })()}
+                    </select>
+                    {selectedPackage && (
+                      <button className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                        <Eye className="w-4 h-4" />
+                        View Package Details
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Original Property Form Content */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+              {/* Estimate Details Header */}
+              <div className="px-6 py-3 bg-gray-100 border-b border-gray-200">
+                <h3 className="text-base font-semibold text-gray-800">Estimate Details</h3>
+              </div>
           
           <div className="px-6 py-4">
             {/* Property ID Search */}
@@ -2462,11 +2725,189 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               {/* Footer Note */}
               <div className="px-6 py-3 border-t border-gray-200 bg-white">
                 <p className="text-xs text-gray-500">
-                  * Currency: INR (₹) | GST: 2% applied on total | Fields marked with * are mandatory
+                  * Currency: INR (₹) | GST applied on total | Fields marked with * are mandatory
                 </p>
               </div>
             </>
           )}
+          </div>
+          
+          {/* Bottom Tabs Section - Notes, Terms, Attachments */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="flex border-b border-gray-200">
+              <button
+                onClick={() => setActiveTab('notes')}
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'notes'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Notes
+              </button>
+              <button
+                onClick={() => setActiveTab('terms')}
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'terms'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Terms & Conditions
+              </button>
+              <button
+                onClick={() => setActiveTab('attachments')}
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'attachments'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Attachments
+              </button>
+            </div>
+            
+            <div className="p-4 flex gap-4">
+              {/* Left: Tab Content */}
+              <div className="flex-1">
+                {activeTab === 'notes' && (
+                  <textarea
+                    value={estimateForm.notes}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, notes: e.target.value })}
+                    placeholder="Add a note for this estimate..."
+                    rows={4}
+                    maxLength={500}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 resize-none"
+                  />
+                )}
+                {activeTab === 'terms' && (
+                  <textarea
+                    value={termsConditions}
+                    onChange={(e) => setTermsConditions(e.target.value)}
+                    placeholder="Add terms and conditions..."
+                    rows={4}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 resize-none"
+                  />
+                )}
+                {activeTab === 'attachments' && (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    <p className="text-sm text-gray-500">Drag and drop files here or click to upload</p>
+                  </div>
+                )}
+                <p className="text-right text-xs text-gray-400 mt-1">
+                  {activeTab === 'notes' ? `${(estimateForm.notes || '').length}/500` : ''}
+                </p>
+              </div>
+              
+              {/* Right: Customer Notes */}
+              <div className="w-80">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Customer Notes (Internal Only)</h4>
+                <textarea
+                  value={customerNotes}
+                  onChange={(e) => setCustomerNotes(e.target.value)}
+                  placeholder="Add internal notes..."
+                  rows={4}
+                  maxLength={300}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 resize-none"
+                />
+                <p className="text-right text-xs text-gray-400 mt-1">{customerNotes.length}/300</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Right Sidebar - Pricing Summary (Image 1 style) */}
+        <div className="w-80 space-y-4 flex-shrink-0">
+          {/* Pricing Summary Card */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sticky top-24">
+            <h3 className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              Pricing Summary
+              <Info className="w-4 h-4 text-gray-400" />
+            </h3>
+            
+            <div className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Service Subtotal</span>
+                <span className="font-medium text-gray-800">₹{calculateSubTotal().toLocaleString()}</span>
+              </div>
+              
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Package Discount</span>
+                <span className="font-medium text-green-600">{discount || '5'}%</span>
+              </div>
+              
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Discount Amount</span>
+                <span className="font-medium text-red-500">- ₹{getDiscountAmount().toLocaleString()}</span>
+              </div>
+              
+              <div className="flex justify-between text-sm border-t border-gray-100 pt-3">
+                <span className="text-gray-600">Package Price</span>
+                <span className="font-medium text-gray-800">₹{(calculateSubTotal() - getDiscountAmount()).toLocaleString()}</span>
+              </div>
+              
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">GST ({gstRate || '18'}%)</span>
+                <span className="font-medium text-gray-800">₹{calculateGST().toLocaleString()}</span>
+              </div>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
+                <div className="flex justify-between">
+                  <span className="text-sm text-blue-800">Grand Total <span className="text-xs">(Incl. GST)</span></span>
+                  <span className="text-lg font-bold text-blue-700">₹{calculateTotal().toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Package Details Card */}
+          {selectedPackage && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <h3 className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                Package Details
+                <Info className="w-4 h-4 text-gray-400" />
+              </h3>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-gray-500">Package Name</label>
+                  <p className="text-sm font-medium text-gray-800">{getPackageName(selectedPackage)}</p>
+                </div>
+                
+                <div>
+                  <label className="text-xs text-gray-500">Description</label>
+                  <p className="text-sm text-gray-600">
+                    {selectedPackage.description || `Standard AMC package for ${getPackagePropertyType(selectedPackage) || 'properties'} with essential services.`}
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="text-xs text-gray-500">Services Included</label>
+                  <p className="text-sm font-medium text-gray-800">
+                    {(() => {
+                      const serviceRows = selectedPackage.service_rows || selectedPackage.serviceRows;
+                      if (serviceRows) {
+                        const services = typeof serviceRows === 'string' ? JSON.parse(serviceRows) : serviceRows;
+                        return services.filter(s => (s.service || s.name)?.trim()).length;
+                      }
+                      return selectedPackage.services?.length || 0;
+                    })()}
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="text-xs text-gray-500">Default Discount</label>
+                  <p className="text-sm font-medium text-gray-800">{selectedPackage.default_discount || '5'}%</p>
+                </div>
+                
+                <div>
+                  <label className="text-xs text-gray-500">Applicable For</label>
+                  <p className="text-sm font-medium text-gray-800">{getPackagePropertyType(selectedPackage) || 'All Properties'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
         </div>
       )}
 
@@ -3555,6 +3996,134 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      </div>
+      {/* End Main Content Area */}
+
+      {/* Preview Modal */}
+      {showPreview && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-800">Estimate Preview</h2>
+              <button
+                onClick={() => setShowPreview(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Property/Customer Info */}
+              <div className="grid grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="text-xs text-gray-500">Property ID</label>
+                  <p className="text-sm font-medium">{estimateForm.propertyId || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">Property Name</label>
+                  <p className="text-sm font-medium">{estimateForm.propertyName || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">Property Type</label>
+                  <p className="text-sm font-medium">{estimateForm.entryType || estimateForm.propertyType || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">Customer</label>
+                  <p className="text-sm font-medium">{estimateForm.customerName || '-'}</p>
+                </div>
+              </div>
+              
+              {/* Selected Package */}
+              {selectedPackage && (
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h3 className="text-sm font-semibold text-blue-800 mb-2">AMC Package</h3>
+                  <p className="text-sm text-blue-700">{getPackageName(selectedPackage)}</p>
+                  <p className="text-lg font-bold text-blue-700 mt-1">₹{getNormalizedPackagePrice(selectedPackage).toLocaleString()}</p>
+                </div>
+              )}
+              
+              {/* Selected Add-ons */}
+              {selectedAddons.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3">Additional Services</h3>
+                  <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">#</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Service</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Frequency</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">Visits</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {selectedAddons.map((addon, idx) => (
+                        addon.services?.map((svc, sIdx) => (
+                          <tr key={`${addon.addonId}-${sIdx}`}>
+                            <td className="px-3 py-2 text-sm">{idx + 1}</td>
+                            <td className="px-3 py-2 text-sm font-medium">{svc.name}</td>
+                            <td className="px-3 py-2 text-sm">{svc.frequencyType || 'Monthly'}</td>
+                            <td className="px-3 py-2 text-sm text-center">{svc.frequency || 1}</td>
+                          </tr>
+                        ))
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              
+              {/* Pricing Summary */}
+              <div className="flex justify-end">
+                <div className="w-72 space-y-2 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal</span>
+                    <span>₹{calculateSubTotal().toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Discount ({discount || '0'}%)</span>
+                    <span className="text-red-500">- ₹{getDiscountAmount().toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>GST ({gstRate || '18'}%)</span>
+                    <span>₹{calculateGST().toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-base font-bold border-t pt-2">
+                    <span>Grand Total</span>
+                    <span>₹{calculateTotal().toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Notes */}
+              {estimateForm.notes && (
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-2">Notes</h3>
+                  <p className="text-sm text-gray-600">{estimateForm.notes}</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={() => setShowPreview(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setShowPreview(false);
+                  handleSave();
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+              >
+                Send Estimate
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
