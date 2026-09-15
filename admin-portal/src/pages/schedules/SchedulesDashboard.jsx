@@ -131,7 +131,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   );
 
   const getBasePath = () => {
-    const map = { 'franchise': '/fp', 'manager': '/manager', 'admin': '/admin', 'coordinator': '/coordinator', 'supervisor': '/supervisor' };
+    const map = { 'franchise': '/fp', 'manager': '/manager', 'admin': '/employee', 'coordinator': '/coordinator', 'supervisor': '/supervisor' };
     return map[portalType] || '/fp';
   };
 

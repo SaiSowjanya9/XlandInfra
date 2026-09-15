@@ -461,7 +461,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
   const handleSchedule = (property) => {
     setSelectedProperty(property);
     // Navigate to property scheduling screen with property context
-    const basePath = portalType === 'franchise' ? '/fp' : portalType === 'manager' ? '/manager' : portalType === 'coordinator' ? '/coordinator' : portalType === 'supervisor' ? '/supervisor' : '';
+    const basePath = portalType === 'franchise' ? '/fp' : portalType === 'manager' ? '/manager' : portalType === 'coordinator' ? '/coordinator' : portalType === 'supervisor' ? '/supervisor' : '/employee';
     navigate(`${basePath}/schedules/property/${property.id}`, { state: { property } });
   };
 
