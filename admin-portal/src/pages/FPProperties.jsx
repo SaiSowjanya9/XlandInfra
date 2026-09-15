@@ -135,7 +135,7 @@ const FPProperties = ({ user }) => {
     try {
       // Pass status filter to API
       const statusParam = statusFilter ? `?status=${statusFilter}` : '';
-      const response = await fetch(`/api/fp/properties${statusParam}`, {
+      const response = await fetch(`${API_BASE}/api/fp/properties${statusParam}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -246,7 +246,7 @@ const FPProperties = ({ user }) => {
     setLoadingEstimates(true);
     setServiceAssignments([]);
     try {
-      const response = await fetch(`/api/fp/estimates?property_id=${propertyId}`, {
+      const response = await fetch(`${API_BASE}/api/fp/estimates?property_id=${propertyId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -404,7 +404,7 @@ const FPProperties = ({ user }) => {
       const failedServices = [];
       
       for (const assignment of assignmentsToSave) {
-        const response = await fetch(`/api/fp/properties/${selectedProperty.id}/assign-vendor`, {
+        const response = await fetch(`${API_BASE}/api/fp/properties/${selectedProperty.id}/assign-vendor`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -638,7 +638,7 @@ const FPProperties = ({ user }) => {
   // Soft delete - move to inactive
   const handleDeleteProperty = async (property) => {
     try {
-      const response = await fetch(`/api/fp/properties/${property.id}`, {
+      const response = await fetch(`${API_BASE}/api/fp/properties/${property.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -658,7 +658,7 @@ const FPProperties = ({ user }) => {
   // Restore - move back to active
   const handleRestoreProperty = async (property) => {
     try {
-      const response = await fetch(`/api/fp/properties/${property.id}/restore`, {
+      const response = await fetch(`${API_BASE}/api/fp/properties/${property.id}/restore`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -677,7 +677,7 @@ const FPProperties = ({ user }) => {
   // Permanent delete - remove from database
   const handlePermanentDeleteProperty = async (property) => {
     try {
-      const response = await fetch(`/api/fp/properties/${property.id}/permanent`, {
+      const response = await fetch(`${API_BASE}/api/fp/properties/${property.id}/permanent`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -908,7 +908,7 @@ const FPProperties = ({ user }) => {
       const contactPhone = primaryContact.phone ? `${primaryContact.countryCode || '+91'}${primaryContact.phone}` : editFormData.contactPhone || '';
       const contactEmail = primaryContact.email || editFormData.contactEmail || '';
       
-      const response = await fetch(`/api/fp/properties/${editFormData.id}`, {
+      const response = await fetch(`${API_BASE}/api/fp/properties/${editFormData.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

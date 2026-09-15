@@ -135,7 +135,7 @@ const ManagerEmployees = ({ user }) => {
     if (!window.confirm('Are you sure you want to delete this employee?')) return;
 
     try {
-      const response = await fetch(`/api/manager/employees/${id}`, {
+      const response = await fetch(`${API_BASE}/api/manager/employees/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

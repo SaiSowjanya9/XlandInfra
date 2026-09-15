@@ -316,7 +316,7 @@ const ManagerCustomers = ({ user, defaultTab = 'list' }) => {
     e.stopPropagation();
     if (!window.confirm('Are you sure you want to delete this zone?')) return;
     try {
-      const res = await fetch(`/api/manager/zones/${zoneId}`, {
+      const res = await fetch(`${API_BASE}/api/manager/zones/${zoneId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

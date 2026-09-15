@@ -302,7 +302,7 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
 
   const handleDeleteZone = async (zoneId, e) => {
     e.stopPropagation(); if (!window.confirm('Delete this zone?')) return;
-    try { const res = await fetch(`/api/coordinator/zones/${zoneId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) fetchZones(); } catch (e) {}
+    try { const res = await fetch(`${API_BASE}/api/coordinator/zones/${zoneId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) fetchZones(); } catch (e) {}
   };
 
   useEffect(() => {

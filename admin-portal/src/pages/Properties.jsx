@@ -210,7 +210,7 @@ const Properties = () => {
   // Delete handler
   const handleDelete = async (id) => {
     try {
-      const response = await fetch(`/api/onboarding/${id}`, {
+      const response = await fetch(`${API_BASE}/api/onboarding/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -374,7 +374,7 @@ const Properties = () => {
   // Save edit
   const handleSaveEdit = async () => {
     try {
-      const response = await fetch(`/api/onboarding/${editFormData.id}`, {
+      const response = await fetch(`${API_BASE}/api/onboarding/${editFormData.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -404,7 +404,7 @@ const Properties = () => {
     setSelectedEstimate(null);
     // Load estimates for this property from API
     try {
-      const response = await fetch(`/api/estimates?propertyId=${property.propertyId || property.property_id}`, {
+      const response = await fetch(`${API_BASE}/api/estimates?propertyId=${property.propertyId || property.property_id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();

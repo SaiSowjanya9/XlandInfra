@@ -74,7 +74,7 @@ const CoordinatorProperties = ({ user }) => {
   const fetchPropertyEstimates = async (propertyId) => {
     setLoadingEstimates(true);
     try {
-      const response = await fetch(`/api/coordinator/estimates?property_id=${propertyId}`, {
+      const response = await fetch(`${API_BASE}/api/coordinator/estimates?property_id=${propertyId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -132,7 +132,7 @@ const CoordinatorProperties = ({ user }) => {
     try {
       // Pass status filter to API
       const statusParam = statusFilter ? `?status=${statusFilter}` : '';
-      const response = await fetch(`/api/coordinator/properties${statusParam}`, {
+      const response = await fetch(`${API_BASE}/api/coordinator/properties${statusParam}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -216,7 +216,7 @@ const CoordinatorProperties = ({ user }) => {
     if (!window.confirm('Are you sure you want to delete this property?')) return;
     
     try {
-      const response = await fetch(`/api/coordinator/properties/${propertyId}`, {
+      const response = await fetch(`${API_BASE}/api/coordinator/properties/${propertyId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -298,7 +298,7 @@ const CoordinatorProperties = ({ user }) => {
       // Auto-save zone if it's new
       if (editFormData.zone) await autoSaveZone(editFormData.zone);
       
-      const response = await fetch(`/api/coordinator/properties/${editFormData.id}`, {
+      const response = await fetch(`${API_BASE}/api/coordinator/properties/${editFormData.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

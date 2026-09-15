@@ -417,7 +417,7 @@ const FPWorkOrders = ({ user }) => {
     e.stopPropagation();
     if (!window.confirm('Delete this category?')) return;
     try {
-      const res = await fetch(`/api/fp/categories/${categoryId}`, {
+      const res = await fetch(`${API_BASE}/api/fp/categories/${categoryId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -437,7 +437,7 @@ const FPWorkOrders = ({ user }) => {
     e.stopPropagation();
     if (!window.confirm('Delete this subcategory?')) return;
     try {
-      const res = await fetch(`/api/fp/subcategories/${subcategoryId}`, {
+      const res = await fetch(`${API_BASE}/api/fp/subcategories/${subcategoryId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -463,7 +463,7 @@ const FPWorkOrders = ({ user }) => {
 
   const handleStatusUpdate = async (id, newStatus) => {
     try {
-      const response = await fetch(`/api/fp/work-orders/${id}/status`, {
+      const response = await fetch(`${API_BASE}/api/fp/work-orders/${id}/status`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -687,7 +687,7 @@ const FPWorkOrders = ({ user }) => {
     }
 
     try {
-      const response = await fetch(`/api/fp/work-orders/${workOrderId}/status`, {
+      const response = await fetch(`${API_BASE}/api/fp/work-orders/${workOrderId}/status`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -744,7 +744,7 @@ const FPWorkOrders = ({ user }) => {
     if (!window.confirm('Are you sure you want to delete this work order?')) return;
     
     try {
-      const response = await fetch(`/api/fp/work-orders/${workOrderId}`, {
+      const response = await fetch(`${API_BASE}/api/fp/work-orders/${workOrderId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -794,7 +794,7 @@ const FPWorkOrders = ({ user }) => {
     if (!selectedWorkOrder) return;
     
     try {
-      const response = await fetch(`/api/fp/work-orders/${selectedWorkOrder.id}`, {
+      const response = await fetch(`${API_BASE}/api/fp/work-orders/${selectedWorkOrder.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

@@ -46,7 +46,7 @@ const FPEmployees = ({ user }) => {
     setLoading(true);
     try {
       const [empResponse, zoneResponse] = await Promise.all([
-        fetch(`/api/fp/employees?status=${statusFilter}`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/fp/employees?status=${statusFilter}`, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(`${API_BASE}/api/fp/zones`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
       
@@ -78,7 +78,7 @@ const FPEmployees = ({ user }) => {
 
   const handleDeactivate = async (employee) => {
     try {
-      const response = await fetch(`/api/fp/employees/${employee.id}/status`, {
+      const response = await fetch(`${API_BASE}/api/fp/employees/${employee.id}/status`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -100,7 +100,7 @@ const FPEmployees = ({ user }) => {
 
   const handleReactivate = async (employee) => {
     try {
-      const response = await fetch(`/api/fp/employees/${employee.id}/status`, {
+      const response = await fetch(`${API_BASE}/api/fp/employees/${employee.id}/status`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -122,7 +122,7 @@ const FPEmployees = ({ user }) => {
 
   const handleDelete = async (employee) => {
     try {
-      const response = await fetch(`/api/fp/employees/${employee.id}`, {
+      const response = await fetch(`${API_BASE}/api/fp/employees/${employee.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

@@ -83,7 +83,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
 
   const handleRestoreEstimate = async (estimateId) => {
     try {
-      const response = await fetch(`/api/estimates-sync/${estimateId}/restore`, { method: 'PUT' });
+      const response = await fetch(`${API_BASE}/api/estimates-sync/${estimateId}/restore`, { method: 'PUT' });
       const result = await response.json();
       if (result.success) {
         showToast('Estimate restored');
@@ -97,7 +97,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
 
   const handleDeletePermanent = async (estimateId) => {
     try {
-      const response = await fetch(`/api/estimates-sync/archived/${estimateId}`, { method: 'DELETE' });
+      const response = await fetch(`${API_BASE}/api/estimates-sync/archived/${estimateId}`, { method: 'DELETE' });
       const result = await response.json();
       if (result.success) {
         showToast('Estimate deleted permanently');

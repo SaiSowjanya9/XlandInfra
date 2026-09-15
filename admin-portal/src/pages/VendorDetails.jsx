@@ -144,7 +144,7 @@ const VendorDetails = () => {
 
   const handleDelete = async (id) => {
     try {
-      const response = await fetch(`/api/vendors/${id}/permanent`, {
+      const response = await fetch(`${API_BASE}/api/vendors/${id}/permanent`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -164,7 +164,7 @@ const VendorDetails = () => {
 
   const handleSoftDelete = async (id) => {
     try {
-      const response = await fetch(`/api/vendors/${id}`, {
+      const response = await fetch(`${API_BASE}/api/vendors/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -218,7 +218,7 @@ const VendorDetails = () => {
     if (!editVendor) return;
     setSaving(true);
     try {
-      const response = await fetch(`/api/vendors/${editVendor.id || editVendor.vendorId}`, {
+      const response = await fetch(`${API_BASE}/api/vendors/${editVendor.id || editVendor.vendorId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -813,7 +813,7 @@ const VendorDetails = () => {
                                 <button
                                   onClick={async () => {
                                     try {
-                                      const response = await fetch(`/api/vendors/${vendor.id || vendor.vendorId}/restore`, {
+                                      const response = await fetch(`${API_BASE}/api/vendors/${vendor.id || vendor.vendorId}/restore`, {
                                         method: 'PUT',
                                         headers: { 'Authorization': `Bearer ${token}` }
                                       });

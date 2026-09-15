@@ -149,7 +149,7 @@ const EmployeeDetails = () => {
 
   const handleDeactivate = async (employee) => {
     try {
-      const response = await fetch(`/api/staff/${employee.id}/status`, {
+      const response = await fetch(`${API_BASE}/api/staff/${employee.id}/status`, {
         method: 'PATCH',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -178,7 +178,7 @@ const EmployeeDetails = () => {
 
   const handleReactivate = async (employee) => {
     try {
-      const response = await fetch(`/api/staff/${employee.id}/status`, {
+      const response = await fetch(`${API_BASE}/api/staff/${employee.id}/status`, {
         method: 'PATCH',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -207,7 +207,7 @@ const EmployeeDetails = () => {
 
   const handleDelete = async (employee) => {
     try {
-      const response = await fetch(`/api/staff/${employee.id}`, {
+      const response = await fetch(`${API_BASE}/api/staff/${employee.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

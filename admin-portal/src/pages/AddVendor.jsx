@@ -163,7 +163,7 @@ const AddVendor = ({ admin }) => {
   const handleDeleteServiceType = async (serviceId, serviceName) => {
     if (!window.confirm(`Delete "${serviceName}" service type?`)) return;
     try {
-      const res = await fetch(`/api/admin/service-types/${serviceId}`, {
+      const res = await fetch(`${API_BASE}/api/admin/service-types/${serviceId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

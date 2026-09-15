@@ -365,7 +365,7 @@ const EstimatesList = ({
 
   const handleSendEstimate = async (estimate) => {
     try {
-      const response = await fetch(`/api/estimates-sync/${estimate.estimateId}/send`, {
+      const response = await fetch(`${API_BASE}/api/estimates-sync/${estimate.estimateId}/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -385,7 +385,7 @@ const EstimatesList = ({
 
   const handleArchiveEstimate = async (estimateId) => {
     try {
-      const response = await fetch(`/api/estimates-sync/${estimateId}/archive`, { method: 'PUT' });
+      const response = await fetch(`${API_BASE}/api/estimates-sync/${estimateId}/archive`, { method: 'PUT' });
       const result = await response.json();
       if (result.success) {
         showToast('Estimate archived');

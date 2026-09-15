@@ -2,7 +2,8 @@ import { safeStorage, getAuthToken } from './safeStorage';
 // Property store – talks to backend API (/api/onboarding)
 // Notifications remain in localStorage (UI-only concern)
 
-const API_BASE = '/api/onboarding';
+const API_ROOT = import.meta.env.VITE_API_URL || '';
+const API_BASE = `${API_ROOT}/api/onboarding`;
 const NOTIFICATION_KEY = 'xland_notifications';
 
 // ============================================
@@ -126,7 +127,7 @@ const createCustomerAccounts = async (contacts, propertyData, createdBy) => {
       console.log('📧 Valid email found, calling /api/customers/create for:', contact.email);
       try {
         const token = getAuthToken();
-        const res = await fetch('/api/customers/create', {
+        const res = await fetch(`${API_ROOT}/api/customers/create`, {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',

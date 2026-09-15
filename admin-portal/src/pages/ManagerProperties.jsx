@@ -144,7 +144,7 @@ const ManagerProperties = ({ user }) => {
       // Pass status filter to properties API
       const statusParam = statusFilter ? `?status=${statusFilter}` : '';
       const [propRes, zoneRes, divRes, vendRes, empRes] = await Promise.all([
-        fetch(`/api/manager/properties${statusParam}`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/manager/properties${statusParam}`, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(`${API_BASE}/api/manager/zones`, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(`${API_BASE}/api/manager/divisions`, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(`${API_BASE}/api/manager/vendors`, { headers: { 'Authorization': `Bearer ${token}` } }),
@@ -237,7 +237,7 @@ const ManagerProperties = ({ user }) => {
     if (!window.confirm('Are you sure you want to delete this property?')) return;
 
     try {
-      const response = await fetch(`/api/manager/properties/${id}`, {
+      const response = await fetch(`${API_BASE}/api/manager/properties/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -329,7 +329,7 @@ const ManagerProperties = ({ user }) => {
     setLoadingEstimates(true);
     setServiceAssignments([]);
     try {
-      const response = await fetch(`/api/manager/estimates?property_id=${propertyId}`, {
+      const response = await fetch(`${API_BASE}/api/manager/estimates?property_id=${propertyId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -518,7 +518,7 @@ const ManagerProperties = ({ user }) => {
       // Save each assignment
       let successCount = 0;
       for (const assignment of assignmentsToSave) {
-        const response = await fetch(`/api/manager/properties/${selectedProperty.id}/assign-vendor`, {
+        const response = await fetch(`${API_BASE}/api/manager/properties/${selectedProperty.id}/assign-vendor`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

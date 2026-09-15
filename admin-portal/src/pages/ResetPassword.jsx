@@ -45,7 +45,7 @@ const ResetPassword = () => {
 
   const validateToken = async () => {
     try {
-      const response = await fetch(`/api/staff/verify-reset-token/${token}`);
+      const response = await fetch(`${API_BASE}/api/staff/verify-reset-token/${token}`);
       const result = await response.json();
 
       if (result.success) {

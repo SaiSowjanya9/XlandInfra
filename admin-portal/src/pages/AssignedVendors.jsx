@@ -216,7 +216,7 @@ const AssignedVendors = ({ user }) => {
 
   const handleRemoveServiceAssignment = async (assignment) => {
     try {
-      const response = await fetch(`/api/vendors/service-assignments/${assignment.id}`, {
+      const response = await fetch(`${API_BASE}/api/vendors/service-assignments/${assignment.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

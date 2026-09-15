@@ -75,7 +75,7 @@ const ExecutiveProperties = ({ user }) => {
   const fetchPropertyEstimates = async (propertyId) => {
     setLoadingEstimates(true);
     try {
-      const response = await fetch(`/api/executive/estimates?property_id=${propertyId}`, {
+      const response = await fetch(`${API_BASE}/api/executive/estimates?property_id=${propertyId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -133,7 +133,7 @@ const ExecutiveProperties = ({ user }) => {
     try {
       // Pass status filter to API
       const statusParam = statusFilter ? `?status=${statusFilter}` : '';
-      const response = await fetch(`/api/executive/properties${statusParam}`, {
+      const response = await fetch(`${API_BASE}/api/executive/properties${statusParam}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -217,7 +217,7 @@ const ExecutiveProperties = ({ user }) => {
     if (!window.confirm('Are you sure you want to delete this property?')) return;
     
     try {
-      const response = await fetch(`/api/executive/properties/${propertyId}`, {
+      const response = await fetch(`${API_BASE}/api/executive/properties/${propertyId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -299,7 +299,7 @@ const ExecutiveProperties = ({ user }) => {
       // Auto-save zone if it's new
       if (editFormData.zone) await autoSaveZone(editFormData.zone);
       
-      const response = await fetch(`/api/executive/properties/${editFormData.id}`, {
+      const response = await fetch(`${API_BASE}/api/executive/properties/${editFormData.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -91,7 +91,7 @@ const QRManagement = () => {
   const fetchAnalytics = async (qrId, silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const response = await fetch(`/api/qr/analytics/${qrId}?period=${period}`);
+      const response = await fetch(`${API_BASE}/api/qr/analytics/${qrId}?period=${period}`);
       const result = await response.json();
       if (result.success) {
         setAnalytics(result.data);
@@ -125,7 +125,7 @@ const QRManagement = () => {
 
   const handleUpdateQR = async (id, formData) => {
     try {
-      const response = await fetch(`/api/qr/codes/${id}`, {
+      const response = await fetch(`${API_BASE}/api/qr/codes/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

@@ -148,7 +148,7 @@ const CoordinatorVendors = ({ user }) => {
     if (!window.confirm('Are you sure you want to delete this vendor?')) return;
 
     try {
-      const response = await fetch(`/api/coordinator/vendors/${vendor.id}`, {
+      const response = await fetch(`${API_BASE}/api/coordinator/vendors/${vendor.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

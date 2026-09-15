@@ -302,7 +302,7 @@ const ExecutiveCustomers = ({ user, defaultTab = 'list' }) => {
 
   const handleDeleteZone = async (zoneId, e) => {
     e.stopPropagation(); if (!window.confirm('Delete this zone?')) return;
-    try { const res = await fetch(`/api/executive/zones/${zoneId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) fetchZones(); } catch (e) {}
+    try { const res = await fetch(`${API_BASE}/api/executive/zones/${zoneId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) fetchZones(); } catch (e) {}
   };
 
   useEffect(() => {

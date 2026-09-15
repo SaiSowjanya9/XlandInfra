@@ -9,6 +9,8 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const EMPLOYEE_ROLES = [
   { value: 'manager', label: 'Manager' },
   { value: 'coordinator', label: 'Coordinator' },
@@ -38,7 +40,7 @@ const FPEditEmployee = ({ user }) => {
   useEffect(() => {
     const fetchEmployee = async () => {
       try {
-        const response = await fetch(`/api/fp/employees/${id}`, {
+        const response = await fetch(`${API_BASE}/api/fp/employees/${id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const result = await response.json();
@@ -88,7 +90,7 @@ const FPEditEmployee = ({ user }) => {
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await fetch(`/api/fp/employees/${id}`, {
+      const response = await fetch(`${API_BASE}/api/fp/employees/${id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

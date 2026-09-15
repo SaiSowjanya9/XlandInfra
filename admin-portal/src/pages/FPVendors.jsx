@@ -505,7 +505,7 @@ const FPVendors = ({ user }) => {
                             <button
                               onClick={async () => {
                                 try {
-                                  const response = await fetch(`/api/fp/vendors/${vendor.id}/restore`, {
+                                  const response = await fetch(`${API_BASE}/api/fp/vendors/${vendor.id}/restore`, {
                                     method: 'PUT',
                                     headers: { 'Authorization': `Bearer ${token}` }
                                   });
@@ -585,7 +585,7 @@ const FPVendors = ({ user }) => {
               <button
                 onClick={async () => {
                   try {
-                    const response = await fetch(`/api/fp/vendors/${permanentDeleteConfirm.id}/permanent`, {
+                    const response = await fetch(`${API_BASE}/api/fp/vendors/${permanentDeleteConfirm.id}/permanent`, {
                       method: 'DELETE',
                       headers: { 'Authorization': `Bearer ${token}` }
                     });
@@ -628,7 +628,7 @@ const FPVendors = ({ user }) => {
               <button
                 onClick={async () => {
                   try {
-                    const response = await fetch(`/api/fp/vendors/${deleteConfirm.id}`, {
+                    const response = await fetch(`${API_BASE}/api/fp/vendors/${deleteConfirm.id}`, {
                       method: 'DELETE',
                       headers: { 'Authorization': `Bearer ${token}` }
                     });
@@ -674,7 +674,7 @@ const FPVendors = ({ user }) => {
                 e.preventDefault();
                 const formData = new FormData(e.target);
                 try {
-                  const response = await fetch(`/api/fp/vendors/${editVendor.id}`, {
+                  const response = await fetch(`${API_BASE}/api/fp/vendors/${editVendor.id}`, {
                     method: 'PUT',
                     headers: {
                       'Authorization': `Bearer ${token}`,

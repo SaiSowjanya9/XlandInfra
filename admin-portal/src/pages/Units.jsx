@@ -79,7 +79,7 @@ const Units = ({ admin }) => {
   const handleDelete = async (id) => {
     if (!confirm('Delete this unit?')) return;
     try {
-      const response = await fetch(`/api/admin/units/${id}`, { method: 'DELETE' });
+      const response = await fetch(`${API_BASE}/api/admin/units/${id}`, { method: 'DELETE' });
       const result = await response.json();
       if (result.success) {
         setSuccess('Unit deleted');
