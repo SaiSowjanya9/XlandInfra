@@ -98,6 +98,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const token = getAuthToken();
   const apiPath = getApiPath(portalType);
   const datePickerRef = useRef(null);
+  const initialLoadDoneRef = useRef(false);
 
   // Close date picker when clicking outside
   useEffect(() => {
@@ -119,8 +120,12 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
 
   // Fetch estimates data
   const fetchEstimates = useCallback(async (showRefreshSpinner = false) => {
-    if (showRefreshSpinner) setRefreshing(true);
-    else setLoading(true);
+    if (showRefreshSpinner) {
+      setRefreshing(true);
+    } else if (!initialLoadDoneRef.current) {
+      // Only show loading spinner on initial load, not on silent refreshes
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -141,6 +146,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      initialLoadDoneRef.current = true;
     }
   }, [token, apiPath]);
 
@@ -1188,6 +1194,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   strokeWidth={2}
                   dot={{ fill: '#5B8DEF', r: 4 }}
                   activeDot={{ r: 6 }}
+                  isAnimationActive={false}
                 />
                 <Line 
                   type="monotone" 
@@ -1197,6 +1204,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   strokeWidth={2}
                   dot={{ fill: '#14B8A6', r: 4 }}
                   activeDot={{ r: 6 }}
+                  isAnimationActive={false}
                 />
                 <Line 
                   type="monotone" 
@@ -1206,6 +1214,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   strokeWidth={2}
                   dot={{ fill: '#F97316', r: 4 }}
                   activeDot={{ r: 6 }}
+                  isAnimationActive={false}
                 />
               </LineChart>
             </ResponsiveContainer>

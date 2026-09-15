@@ -183,6 +183,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const initialLoadDoneRef = useRef(false);
   const [properties, setProperties] = useState([]);
   const [zones, setZones] = useState([]);
   const [packages, setPackages] = useState([]);
@@ -212,8 +213,12 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
 
   // Fetch pending properties
   const fetchPendingProperties = useCallback(async (showRefreshSpinner = false) => {
-    if (showRefreshSpinner) setRefreshing(true);
-    else setLoading(true);
+    if (showRefreshSpinner) {
+      setRefreshing(true);
+    } else if (!initialLoadDoneRef.current) {
+      // Only show loading spinner on initial load, not on silent refreshes
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -239,6 +244,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      initialLoadDoneRef.current = true;
     }
   }, [token, apiPath]);
 

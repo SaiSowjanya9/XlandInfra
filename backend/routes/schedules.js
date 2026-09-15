@@ -3086,4 +3086,54 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
   }
 });
 
+// ============================================
+// WORK ORDER SCHEDULER ENDPOINTS
+// ============================================
+
+const { runManually, getSchedulerStatus } = require('../services/workOrderScheduler');
+
+// Get scheduler status (Admin only)
+router.get('/scheduler/status', authenticate, adminOnly, async (req, res) => {
+  try {
+    const status = getSchedulerStatus();
+    res.json({
+      success: true,
+      data: status
+    });
+  } catch (error) {
+    console.error('Error getting scheduler status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting scheduler status',
+      error: error.message
+    });
+  }
+});
+
+// Manually trigger work order generation (Admin only)
+router.post('/scheduler/run', authenticate, adminOnly, async (req, res) => {
+  try {
+    console.log(`📋 Manual scheduler trigger by user: ${req.user?.email || req.user?.id}`);
+    const result = await runManually();
+    
+    res.json({
+      success: true,
+      message: `Work order generation completed. Created ${result.workOrdersCreated.length} work orders.`,
+      data: {
+        workOrdersCreated: result.workOrdersCreated.length,
+        notificationsSent: result.notificationsSent.length,
+        errors: result.errors.length,
+        details: result
+      }
+    });
+  } catch (error) {
+    console.error('Error running scheduler manually:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error running scheduler',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

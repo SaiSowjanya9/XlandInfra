@@ -83,6 +83,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
   const token = getAuthToken();
   const apiPath = getApiPath(portalType);
   const datePickerRef = useRef(null);
+  const initialLoadDoneRef = useRef(false);
   
   // FP Context for admin portal
   const { fpList, selectedFp, selectFp, loading: fpLoading } = useFP();
@@ -150,8 +151,12 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
 
   // Fetch work orders
   const fetchWorkOrders = useCallback(async (showRefreshSpinner = false) => {
-    if (showRefreshSpinner) setRefreshing(true);
-    else setLoading(true);
+    if (showRefreshSpinner) {
+      setRefreshing(true);
+    } else if (!initialLoadDoneRef.current) {
+      // Only show loading spinner on initial load, not on silent refreshes
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -181,6 +186,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      initialLoadDoneRef.current = true;
     }
   }, [token, apiPath, isAdminPortal, selectedFp]);
 
@@ -1127,6 +1133,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                         dataKey={cat}
                         fill={categoryColors[index % categoryColors.length]}
                         radius={[2, 2, 0, 0]}
+                        isAnimationActive={false}
                       />
                     ))}
                   </BarChart>
@@ -1173,9 +1180,9 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                     boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
                   }}
                 />
-                <Line type="monotone" dataKey="Created" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6', strokeWidth: 0, r: 4 }} />
-                <Line type="monotone" dataKey="Completed" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981', strokeWidth: 0, r: 4 }} />
-                <Line type="monotone" dataKey="Cancelled" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444', strokeWidth: 0, r: 4 }} />
+                <Line type="monotone" dataKey="Created" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6', strokeWidth: 0, r: 4 }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="Completed" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981', strokeWidth: 0, r: 4 }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="Cancelled" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444', strokeWidth: 0, r: 4 }} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -1239,6 +1246,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                       outerRadius={48}
                       dataKey="value"
                       strokeWidth={0}
+                      isAnimationActive={false}
                     >
                       {slaData.data.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />

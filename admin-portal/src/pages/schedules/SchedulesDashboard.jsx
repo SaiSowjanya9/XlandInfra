@@ -84,6 +84,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   const [loading, setLoading] = useState(true);
   const [schedules, setSchedules] = useState([]);
   const [pendingProperties, setPendingProperties] = useState([]);
+  const initialLoadDoneRef = useRef(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   
@@ -160,7 +161,10 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
 
   // Fetch schedules from the portal-specific endpoint
   const fetchSchedules = useCallback(async () => {
-    setLoading(true);
+    // Only show loading spinner on initial load, not on silent refreshes
+    if (!initialLoadDoneRef.current) {
+      setLoading(true);
+    }
     try {
       const apiPath = getApiPath(portalType);
       const params = new URLSearchParams();
@@ -205,6 +209,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       setSchedules([]);
     } finally {
       setLoading(false);
+      initialLoadDoneRef.current = true;
     }
   }, [token, selectedFp, portalType]);
 
@@ -663,9 +668,9 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
                 contentStyle={{ fontSize: 12, borderRadius: 8 }}
                 formatter={(value, name) => [value, name === 'scheduled' ? 'Scheduled' : name === 'completed' ? 'Completed' : 'In Progress']}
               />
-              <Line type="monotone" dataKey="scheduled" stroke="#3B82F6" strokeWidth={2} dot={{ r: 4, fill: '#3B82F6' }} activeDot={{ r: 6 }} />
-              <Line type="monotone" dataKey="completed" stroke="#10B981" strokeWidth={2} dot={{ r: 4, fill: '#10B981' }} activeDot={{ r: 6 }} />
-              <Line type="monotone" dataKey="inProgress" stroke="#F59E0B" strokeWidth={2} dot={{ r: 4, fill: '#F59E0B' }} activeDot={{ r: 6 }} />
+              <Line type="monotone" dataKey="scheduled" stroke="#3B82F6" strokeWidth={2} dot={{ r: 4, fill: '#3B82F6' }} activeDot={{ r: 6 }} isAnimationActive={false} />
+              <Line type="monotone" dataKey="completed" stroke="#10B981" strokeWidth={2} dot={{ r: 4, fill: '#10B981' }} activeDot={{ r: 6 }} isAnimationActive={false} />
+              <Line type="monotone" dataKey="inProgress" stroke="#F59E0B" strokeWidth={2} dot={{ r: 4, fill: '#F59E0B' }} activeDot={{ r: 6 }} isAnimationActive={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>

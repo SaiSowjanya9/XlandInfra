@@ -848,7 +848,7 @@ const ManagerDashboard = ({ user }) => {
                   }}
                   formatter={(value) => [`${value} properties`, 'Count']}
                 />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={32} fillOpacity={0.85}>
+                <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={32} fillOpacity={0.85} isAnimationActive={false}>
                   {propertyTypeData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
