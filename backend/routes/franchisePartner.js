@@ -3447,23 +3447,23 @@ router.put('/employees/:id', requireFPScope, async (req, res) => {
       tempPassword = generateTempPassword();
       const passwordHash = await bcrypt.hash(tempPassword, 10);
       
-      // Update fp_employees table with new email and password (no plaintext storage)
+      // Update fp_employees table with new email and password
       await pool.execute(
         `UPDATE fp_employees SET 
           first_name = ?, last_name = ?, email = ?, phone = ?, 
           country_code = ?, aadhaar = ?, role = ?, password_hash = ?, 
-          must_change_password = TRUE, updated_at = NOW()
+          visible_password = ?, must_change_password = TRUE, updated_at = NOW()
          WHERE id = ? AND franchise_partner_id = ?`,
-        [firstName, lastName, email, phone, countryCode || '+91', aadhaar || null, role || 'field_staff', passwordHash, id, req.fpId]
+        [firstName, lastName, email, phone, countryCode || '+91', aadhaar || null, role || 'field_staff', passwordHash, tempPassword, id, req.fpId]
       );
       
       // Also update linked user account if exists
       if (currentEmployee.user_id) {
         await pool.execute(
           `UPDATE users SET first_name = ?, last_name = ?, email = ?, phone = ?, 
-           password_hash = ?, must_change_password = TRUE,
+           password_hash = ?, visible_password = ?, must_change_password = TRUE,
            username = ? WHERE id = ?`,
-          [firstName, lastName, email, phone, passwordHash, email, currentEmployee.user_id]
+          [firstName, lastName, email, phone, passwordHash, tempPassword, email, currentEmployee.user_id]
         );
       }
       
