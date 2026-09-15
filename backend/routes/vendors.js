@@ -907,7 +907,7 @@ router.get('/assignments', authenticate, managerOrAdmin, async (req, res) => {
         COALESCE(ov.company_name, ov.owner_name) as vendor_name, ov.vendor_id as vendor_code, COALESCE(pva.service_type, ov.service_type) as service_type,
         COALESCE(ov.phone, ov.owner_mobile) as vendor_phone, COALESCE(ov.email, ov.owner_email) as vendor_email, ov.owner_aadhar,
         ov.owner_name, ov.owner_mobile, ov.owner_email,
-        COALESCE(ov.zone_name, ov.zone) as zone_name, COALESCE(ov.area, ov.area_name) as area, ov.rate_per_visit, ov.coverage_per_day,
+        ov.zone as zone_name, ov.area_name as area, ov.rate_per_visit, ov.coverage_per_day,
         ov.manager_name, ov.manager_mobile, ov.manager_email,
         ov.poc_name, ov.poc_mobile, ov.poc_email,
         CASE WHEN pva.is_active = 1 THEN 'active' ELSE 'removed' END as status
@@ -975,7 +975,7 @@ router.get('/assignments/property/:propertyId', authenticate, managerOrAdmin, as
         ov.vendor_id as vendor_code, 
         COALESCE(ov.company_name, ov.owner_name) as vendor_name, 
         COALESCE(ov.service_type) as vendor_service_type,
-        COALESCE(ov.zone_name, ov.zone) as zone_name
+        ov.zone as zone_name
        FROM property_vendor_assignments pva
        JOIN onboarded_vendors ov ON pva.vendor_id = ov.id
        WHERE pva.property_id = ? AND pva.is_active = 1

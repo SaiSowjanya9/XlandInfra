@@ -2457,7 +2457,7 @@ router.get('/vendors/assignments/property/:propertyId', requireFPScope, async (r
         ov.vendor_id as vendor_code, 
         COALESCE(ov.company_name, ov.owner_name) as vendor_name, 
         ov.service_type as vendor_service_type,
-        COALESCE(ov.zone_name, ov.zone) as zone_name
+        ov.zone as zone_name
        FROM property_vendor_assignments pva
        JOIN onboarded_vendors ov ON pva.vendor_id = ov.id
        WHERE pva.property_id = ? AND pva.is_active = 1
