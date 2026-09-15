@@ -1872,11 +1872,17 @@ router.get('/estimates', requireExecutiveScope, async (req, res) => {
                   CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
                   CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
                   e.created_by_name
-                ) as created_by_name
+                ) as created_by_name,
+                COALESCE(NULLIF(e.zone, ''), op.zone, p.zone_id) as zone,
+                COALESCE(NULLIF(e.city, ''), op.city, p.city) as city,
+                COALESCE(NULLIF(e.address, ''), op.address, p.address) as address,
+                COALESCE(e.total_units, op.total_units, p.total_units) as total_units
          FROM fp_estimates e
          LEFT JOIN fp_employees fpe ON e.created_by_name = fpe.email OR e.created_by_name = fpe.username
          LEFT JOIN users u ON e.created_by_name = u.email
          LEFT JOIN fp_amc_packages fpamc ON e.package_id = fpamc.id
+         LEFT JOIN onboarded_properties op ON e.property_id = op.id
+         LEFT JOIN properties p ON e.property_id = p.id AND op.id IS NULL
          WHERE e.franchise_partner_id = ? AND ${isArchived ? 'e.is_archived = 1' : '(e.is_archived = 0 OR e.is_archived IS NULL)'}${propertyClause}
          ORDER BY e.created_at DESC`,
         [franchisePartnerId, ...propertyParams]

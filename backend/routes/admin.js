@@ -2096,10 +2096,16 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
                         fe.estimate_type as estimateType, fe.property_type as propertyType,
                         fe.total_amount as totalPrice, fe.archived_at as archivedAt, fe.created_at as createdAt,
                         fpamc.services as packageServices,
-                        COALESCE(fe.amc_package_description, fpamc.description) as amc_package_description
+                        COALESCE(fe.amc_package_description, fpamc.description) as amc_package_description,
+                        COALESCE(NULLIF(fe.zone, ''), op.zone, p.zone_id) as zone,
+                        COALESCE(NULLIF(fe.city, ''), op.city, p.city) as city,
+                        COALESCE(NULLIF(fe.address, ''), op.address, p.address) as address,
+                        COALESCE(fe.total_units, op.total_units, p.total_units) as total_units
                  FROM fp_estimates fe
                  LEFT JOIN franchise_partners fp ON fe.franchise_partner_id = fp.id
                  LEFT JOIN fp_amc_packages fpamc ON fe.package_id = fpamc.id
+                 LEFT JOIN onboarded_properties op ON fe.property_id = op.id
+                 LEFT JOIN properties p ON fe.property_id = p.id AND op.id IS NULL
                  WHERE fe.is_archived = 1 ORDER BY fe.created_at DESC`;
       } else {
         query = `SELECT fe.*, 'fp_estimates' as source_table, fp.fp_code, fp.company_name as fp_name,
@@ -2107,10 +2113,16 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
                         fe.estimate_type as estimateType, fe.property_type as propertyType,
                         fe.total_amount as totalPrice, fe.archived_at as archivedAt, fe.created_at as createdAt,
                         fpamc.services as packageServices,
-                        COALESCE(fe.amc_package_description, fpamc.description) as amc_package_description
+                        COALESCE(fe.amc_package_description, fpamc.description) as amc_package_description,
+                        COALESCE(NULLIF(fe.zone, ''), op.zone, p.zone_id) as zone,
+                        COALESCE(NULLIF(fe.city, ''), op.city, p.city) as city,
+                        COALESCE(NULLIF(fe.address, ''), op.address, p.address) as address,
+                        COALESCE(fe.total_units, op.total_units, p.total_units) as total_units
                  FROM fp_estimates fe
                  LEFT JOIN franchise_partners fp ON fe.franchise_partner_id = fp.id
                  LEFT JOIN fp_amc_packages fpamc ON fe.package_id = fpamc.id
+                 LEFT JOIN onboarded_properties op ON fe.property_id = op.id
+                 LEFT JOIN properties p ON fe.property_id = p.id AND op.id IS NULL
                  WHERE (fe.is_archived = 0 OR fe.is_archived IS NULL) ORDER BY fe.created_at DESC`;
       }
       const [results] = await pool.execute(query);

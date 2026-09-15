@@ -10,7 +10,11 @@ import {
 const ITEMS_PER_PAGE = 10;
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
-import { FREQUENCY_TYPES, FREQUENCY_COUNT_MAP } from '../utils/estimateStore';
+import {
+  FREQUENCY_TYPES, FREQUENCY_COUNT_MAP,
+  getEstimateContactPhone, getEstimateAddress, getEstimateCity, getEstimateZone,
+  getEstimateUnits, formatAddonsForExport
+} from '../utils/estimateStore';
 import { getAuthToken } from '../utils/safeStorage';
 import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
 import * as XLSX from 'xlsx';
@@ -2515,10 +2519,16 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       'Estimate ID': e.estimate_id || '-',
       'Type': e.estimate_type === 'work_order' ? 'Work Order' : e.estimate_type === 'property_based' || e.estimate_type === 'property-based' ? 'Property Based' : 'Direct',
       'Work Order ID': e.work_order_id || '-',
-      'Client Name': e.client_name || '-',
+      'Customer Name': e.client_name || '-',
+      'Phone': getEstimateContactPhone(e) || '-',
       'Property': e.property_name || '-',
       'Property Type': e.property_type || '-',
+      'Address': getEstimateAddress(e) || '-',
+      'City': getEstimateCity(e) || '-',
+      'Zone': getEstimateZone(e) || '-',
+      'No. of Units': getEstimateUnits(e) || '-',
       'AMC Package': e.package_name || '-',
+      'Add-on Services': formatAddonsForExport(e) || '-',
       'Subtotal': e.subtotal || 0,
       'Discount': e.discount || 0,
       'GST': e.gst || 0,

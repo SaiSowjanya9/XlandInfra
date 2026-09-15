@@ -9,7 +9,11 @@ import {
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
-import { FREQUENCY_TYPES, FREQUENCY_COUNT_MAP } from '../utils/estimateStore';
+import {
+  FREQUENCY_TYPES, FREQUENCY_COUNT_MAP,
+  getEstimateContactPhone, getEstimateAddress, getEstimateCity, getEstimateZone,
+  getEstimateUnits, formatAddonsForExport
+} from '../utils/estimateStore';
 
 const ITEMS_PER_PAGE = 10;
 import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
@@ -321,20 +325,23 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     const exportData = estimatesToExport.map(est => ({
       'Estimate ID': est.estimate_id || '',
       'Customer Name': est.client_name || '',
-      'Phone': est.client_phone || '',
+      'Phone': getEstimateContactPhone(est),
       'Email': est.client_email || '',
       'Property Code': est.property_code || '',
       'Property Name': est.property_name || '',
       'Property Type': getPropertyTypeLabel(est.property_type),
       'Type': est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property Based' : 'Direct',
+      'No. of Units': getEstimateUnits(est),
       'Package': est.package_name || '',
+      'Add-on Services': formatAddonsForExport(est),
       'Subtotal': parseFloat(est.subtotal) || 0,
       'Discount %': parseFloat(est.discount_percent) || 0,
       'GST %': parseFloat(est.gst_percent) || 0,
       'Total Amount': parseFloat(est.total_amount) || 0,
       'Status': getStatusLabel(est.status),
-      'Zone': est.zone || '',
-      'City': est.city || '',
+      'Address': getEstimateAddress(est),
+      'Zone': getEstimateZone(est),
+      'City': getEstimateCity(est),
       'Created By': est.created_by_name || '',
       'Created Date': formatDateIST(est.created_at)
     }));
@@ -2668,7 +2675,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
                 <div className="bg-gray-50 p-3 rounded-lg">
                   <p className="text-xs text-gray-500">No. of Visits</p>
-                  <p className="font-medium">{viewAddon.frequency_count}x</p>
+                  <p className="font-medium">{viewAddon.frequency_count}</p>
                 </div>
                 <div className="bg-gray-50 p-3 rounded-lg">
                   <p className="text-xs text-gray-500">Billing Cycle</p>

@@ -8,7 +8,9 @@ import {
 const ITEMS_PER_PAGE = 10;
 import {
   searchEstimates, updateEstimate, deleteEstimate, calculateEstimateTotal,
-  PROPERTY_TYPES, ESTIMATE_STATUSES, normalizePropertyType
+  PROPERTY_TYPES, ESTIMATE_STATUSES, normalizePropertyType,
+  getEstimateContactPhone, getEstimateAddress, getEstimateCity, getEstimateZone,
+  getEstimateUnits, formatAddonsForExport
 } from '../../utils/estimateStore';
 import { exportEstimateToPDF } from '../../utils/pdfExport';
 import * as XLSX from 'xlsx';
@@ -344,10 +346,16 @@ const EstimatesList = ({
         ? 'Property Based' 
         : 'Direct',
       'Work Order ID': e.work_order_id || '-',
-      'Client Name': e.clientName || e.client_name || '-',
+      'Customer Name': e.clientName || e.client_name || '-',
+      'Phone': getEstimateContactPhone(e) || '-',
       'Property': e.propertyName || e.property_name || '-',
       'Property Type': e.propertyType || e.property_type || '-',
+      'Address': getEstimateAddress(e) || '-',
+      'City': getEstimateCity(e) || '-',
+      'Zone': getEstimateZone(e) || '-',
+      'No. of Units': getEstimateUnits(e) || '-',
       'AMC Package': e.packageName || e.package_name || '-',
+      'Add-on Services': formatAddonsForExport(e) || '-',
       'Subtotal': e.subtotal || 0,
       'Discount': e.discount || 0,
       'GST': e.gst || 0,
