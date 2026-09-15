@@ -23,8 +23,9 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 // Alias for backward compatibility within this file
 const STATUS_COLORS = SCHEDULE_STATUS_COLORS;
 
-// Property types always shown in the Property Type chart, even with a count of 0
-const PROPERTY_TYPES = ['Gated Community', 'Apartment', 'Villa', 'Flat', 'Plot', 'Independent House', 'Commercial'];
+// Property categories always shown in the Property Type chart, even with a count of 0.
+// Anything outside this list is only listed when it actually has schedules.
+const PROPERTY_TYPES = ['Gated Community', 'Apartment', 'Villa', 'Flat', 'Plot'];
 
 // Normalize property type to consistent display format
 const normalizePropertyType = (type) => {
@@ -173,7 +174,6 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         // Transform to match expected format
         const transformedSchedules = schedulesData.map(s => ({
           id: s.id,
-          visitId: s.visitId || s.visit_id,
           propertyCode: s.propertyId || s.property_id,
           title: s.serviceName || s.title || null,
           service: s.serviceName || s.service || null,
@@ -565,9 +565,10 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             </div>
             <div className="space-y-1 text-xs min-w-0 flex-1 max-h-[170px] overflow-y-auto pr-1">
               {statusData.map((d, i) => (
-                <div key={i} className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
-                  <span className="text-gray-600 truncate flex-1" title={d.name}>{d.name}</span>
+                <div key={i} className="flex items-start gap-1.5">
+                  <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: d.color }} />
+                  {/* Status names are shown in full - they wrap instead of being cut off */}
+                  <span className="text-gray-600 flex-1 leading-tight break-words">{d.name}</span>
                   <span className="font-medium text-gray-900 text-[10px] flex-shrink-0">{d.value}</span>
                 </div>
               ))}
@@ -588,10 +589,11 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-1.5 text-xs min-w-0 flex-1 max-h-[170px] overflow-y-auto pr-1">
                 {serviceData.map((d, i) => (
-                  <div key={i} className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
-                    <span className="text-gray-600 truncate" title={d.name}>{d.name}</span>
-                    <span className="font-medium text-gray-900 flex-shrink-0 ml-auto">{d.value} ({serviceTotal ? Math.round((d.value / serviceTotal) * 100) : 0}%)</span>
+                  <div key={i} className="flex items-start gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: d.color }} />
+                    {/* Long service names wrap onto a second line instead of being cut off */}
+                    <span className="text-gray-600 flex-1 min-w-0 leading-tight break-words">{d.name}</span>
+                    <span className="font-medium text-gray-900 flex-shrink-0 whitespace-nowrap">{d.value} ({serviceTotal ? Math.round((d.value / serviceTotal) * 100) : 0}%)</span>
                   </div>
                 ))}
               </div>
@@ -607,16 +609,17 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             <h3 className="text-sm font-semibold text-gray-900">Schedules by Property Type</h3>
             <PeriodFilter value={propertyTypeFilter} onChange={setPropertyTypeFilter} />
           </div>
-          <div className="flex items-center gap-3">
+          {/* Stacked so each legend row gets the full card width - type names are long */}
+          <div className="flex flex-col items-center gap-3">
             <div className="flex-shrink-0">
-              <DonutChart data={propertyTypeData} size={90} strokeWidth={16} centerValue={propertyTypeTotal} centerLabel="Total" />
+              <DonutChart data={propertyTypeData} size={110} strokeWidth={18} centerValue={propertyTypeTotal} centerLabel="Total" />
             </div>
-            <div className="space-y-1 text-xs min-w-0 flex-1 max-h-[170px] overflow-y-auto pr-1">
+            <div className="space-y-1 text-xs w-full">
               {propertyTypeData.map((d, i) => (
-                <div key={i} className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
-                  <span className="text-gray-600 truncate flex-1" title={d.name}>{d.name}</span>
-                  <span className="font-medium text-gray-900 text-[10px] flex-shrink-0">{d.value} ({propertyTypeTotal ? Math.round((d.value / propertyTypeTotal) * 100) : 0}%)</span>
+                <div key={i} className="flex items-start gap-1.5">
+                  <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: d.color }} />
+                  <span className="text-gray-600 flex-1 min-w-0 leading-tight break-words">{d.name}</span>
+                  <span className="font-medium text-gray-900 text-[10px] flex-shrink-0 whitespace-nowrap">{d.value} ({propertyTypeTotal ? Math.round((d.value / propertyTypeTotal) * 100) : 0}%)</span>
                 </div>
               ))}
             </div>
@@ -738,7 +741,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             <table className="w-full text-xs min-w-[320px]">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-100">
-                  <th className="pb-2 pr-2">Visit ID</th>
+                  <th className="pb-2 pr-2">Property ID</th>
                   <th className="pb-2 px-2">Property</th>
                   <th className="pb-2 px-2">Service</th>
                   <th className="pb-2 px-2">Status</th>
@@ -748,7 +751,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
               <tbody className="divide-y divide-gray-100">
                 {recentSchedules.map((s) => (
                   <tr key={s.id}>
-                    <td className="py-2.5 pr-2 font-medium text-gray-900 whitespace-nowrap">{s.visitId || '-'}</td>
+                    <td className="py-2.5 pr-2 font-medium text-gray-900 whitespace-nowrap">{s.propertyCode || '-'}</td>
                     <td className="py-2.5 px-2 text-gray-600 truncate max-w-[80px]">{s.propertyName || '-'}</td>
                     <td className="py-2.5 px-2 text-gray-600 whitespace-nowrap">{s.service || '-'}</td>
                     <td className="py-2.5 px-2"><StatusBadge status={s.status} /></td>
@@ -776,7 +779,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             <table className="w-full text-xs min-w-[280px]">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-100">
-                  <th className="pb-2 pr-2">Visit ID</th>
+                  <th className="pb-2 pr-2">Property ID</th>
                   <th className="pb-2 px-2">Property</th>
                   <th className="pb-2 px-2">Original</th>
                   <th className="pb-2 px-2">Moved To</th>
@@ -786,7 +789,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
               <tbody className="divide-y divide-gray-100">
                 {rescheduleFilteredData.slice(0, 4).map((s) => (
                   <tr key={s.id}>
-                    <td className="py-2.5 pr-2 font-medium text-gray-900 whitespace-nowrap">{s.visitId || '-'}</td>
+                    <td className="py-2.5 pr-2 font-medium text-gray-900 whitespace-nowrap">{s.propertyCode || '-'}</td>
                     <td className="py-2.5 px-2">
                       <p className="text-gray-900 truncate max-w-[100px]">{s.propertyName || '-'}</p>
                       <p className="text-gray-500 truncate max-w-[100px]">{s.service || '-'}</p>
@@ -817,7 +820,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             <table className="w-full text-xs min-w-[280px]">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-100">
-                  <th className="pb-2 pr-2">Visit ID</th>
+                  <th className="pb-2 pr-2">Property ID</th>
                   <th className="pb-2 px-2">Property</th>
                   <th className="pb-2 px-2">Due Date</th>
                   <th className="pb-2 px-2">Status</th>
@@ -830,7 +833,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
                   const daysOverdue = dueDate ? Math.floor((today - dueDate) / (1000 * 60 * 60 * 24)) : null;
                   return (
                     <tr key={s.id}>
-                      <td className="py-2.5 pr-2 font-medium text-gray-900 whitespace-nowrap">{s.visitId || '-'}</td>
+                      <td className="py-2.5 pr-2 font-medium text-gray-900 whitespace-nowrap">{s.propertyCode || '-'}</td>
                       <td className="py-2.5 px-2">
                         <p className="text-gray-900 truncate max-w-[100px]">{s.propertyName || '-'}</p>
                         <p className="text-gray-500 truncate max-w-[100px]">{s.service || '-'}</p>
