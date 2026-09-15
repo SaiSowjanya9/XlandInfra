@@ -3,7 +3,8 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
 const { authenticate, generateToken } = require('../middleware/auth');
-const { fetchScheduleStats, derivedStatusFilter } = require('../utils/scheduleStats');
+const { fetchScheduleStats, fetchScheduledVendors, derivedStatusFilter } = require('../utils/scheduleStats');
+const { resolveVendor, upsertPropertyVendorAssignment } = require('../utils/vendorAssignments');
 const {
   orNull, isRecentlyAdded, formatPaymentStatus, fetchServiceVendorMap, mapPendingServices
 } = require('../utils/pendingProperties');
@@ -1268,6 +1269,18 @@ router.put('/work-orders/:id', authenticate, managerOrAdmin, async (req, res) =>
 // Get vendors list for admin
 router.get('/vendors', async (req, res) => {
   try {
+    const { forSchedules, fpId } = req.query;
+
+    // Schedule filters only offer vendors that actually appear in existing schedules
+    if (forSchedules === 'true') {
+      const vendors = await fetchScheduledVendors({
+        whereClause: fpId ? 'WHERE op.franchise_partner_id = ?' : 'WHERE 1=1',
+        params: fpId ? [fpId] : [],
+        label: 'Admin Schedule Vendors'
+      });
+      return res.json({ success: true, data: vendors, vendors });
+    }
+
     const [vendors] = await pool.execute(
       `SELECT id, vendor_id, company_name, owner_name, service_type, phone, email, status,
               rate_per_visit, coverage_per_day, working_hours_from, working_hours_to, zone, area_name, division
@@ -1357,6 +1370,44 @@ router.get('/vendors/assignments', async (req, res) => {
   }
 });
 
+// Get the active vendor assignments of one property (used by the Assign Vendor modal)
+router.get('/vendors/assignments/property/:propertyId', authenticate, async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+
+    const [assignments] = await pool.execute(
+      `SELECT pva.id, pva.property_id, pva.vendor_id, pva.service_type, pva.assigned_at, pva.is_active,
+              ov.vendor_id as vendor_code,
+              COALESCE(ov.company_name, ov.owner_name) as vendor_name,
+              ov.service_type as vendor_service_type,
+              COALESCE(ov.zone_name, ov.zone) as zone_name
+       FROM property_vendor_assignments pva
+       JOIN onboarded_vendors ov ON pva.vendor_id = ov.id
+       WHERE pva.property_id = ? AND pva.is_active = 1
+       ORDER BY pva.service_type`,
+      [propertyId]
+    );
+
+    res.json({
+      success: true,
+      data: assignments.map(a => ({
+        id: a.id,
+        propertyId: a.property_id,
+        vendorId: a.vendor_code,
+        vendorDbId: a.vendor_id,
+        vendorName: a.vendor_name,
+        serviceType: a.service_type,
+        vendorServiceType: a.vendor_service_type,
+        zoneName: a.zone_name,
+        assignedAt: a.assigned_at
+      }))
+    });
+  } catch (error) {
+    console.error('Get property vendor assignments error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch property assignments', error: error.message });
+  }
+});
+
 // Create vendor assignment (Admin can assign any vendor to any property)
 router.post('/vendors/assignments', authenticate, async (req, res) => {
   try {
@@ -1379,52 +1430,26 @@ router.post('/vendors/assignments', authenticate, async (req, res) => {
     }
 
     // Verify vendor exists (check both numeric id and string vendor_id)
-    const [vendor] = await pool.execute(
-      `SELECT id, company_name, owner_name FROM onboarded_vendors WHERE id = ? OR vendor_id = ?`,
-      [vendorId, vendorId]
-    );
+    const vendor = await resolveVendor(vendorId);
 
-    if (vendor.length === 0) {
+    if (!vendor) {
       return res.status(404).json({ success: false, message: 'Vendor not found' });
     }
-    
-    // Use numeric id for assignments
-    const numericVendorId = vendor[0].id;
 
-    // Check if assignment already exists
-    const [existing] = await pool.execute(
-      `SELECT id, is_active FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND service_type = ?`,
-      [propertyId, numericVendorId, serviceType || null]
-    );
+    const { alreadyActive } = await upsertPropertyVendorAssignment({
+      propertyId,
+      vendorId: vendor.id,
+      serviceType,
+      assignedBy: req.user?.id
+    });
 
-    if (existing.length > 0) {
-      if (existing[0].is_active) {
-        return res.json({ success: true, message: 'Vendor already assigned to this service' });
-      }
-      // Reactivate existing assignment
-      await pool.execute(
-        `UPDATE property_vendor_assignments SET is_active = 1, assigned_at = NOW(), assigned_by = ? WHERE id = ?`,
-        [req.user.id, existing[0].id]
-      );
-    } else {
-      // Deactivate previous assignments for this service
-      if (serviceType) {
-        await pool.execute(
-          `UPDATE property_vendor_assignments SET is_active = 0 WHERE property_id = ? AND service_type = ? AND is_active = 1`,
-          [propertyId, serviceType]
-        );
-      }
-
-      // Create new assignment (use numeric vendor id)
-      await pool.execute(
-        `INSERT INTO property_vendor_assignments (property_id, vendor_id, service_type, assigned_by, assigned_at, is_active)
-         VALUES (?, ?, ?, ?, NOW(), 1)`,
-        [propertyId, numericVendorId, serviceType || null, req.user.id]
-      );
-    }
-
-    const vendorName = vendor[0].company_name || vendor[0].owner_name;
-    res.json({ success: true, message: `Vendor ${vendorName} assigned successfully` });
+    const vendorName = vendor.company_name || vendor.owner_name;
+    res.json({
+      success: true,
+      message: alreadyActive
+        ? 'Vendor already assigned to this service'
+        : `Vendor ${vendorName} assigned successfully`
+    });
   } catch (error) {
     console.error('Create vendor assignment error:', error);
     res.status(500).json({ success: false, message: 'Failed to create assignment', error: error.message });

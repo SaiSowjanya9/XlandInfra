@@ -860,10 +860,12 @@ const initOnboardingTables = async () => {
         id INT AUTO_INCREMENT PRIMARY KEY,
         property_id INT NOT NULL,
         vendor_id INT NOT NULL,
+        service_type VARCHAR(255) NULL,
         assigned_by INT,
         assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         is_active BOOLEAN DEFAULT TRUE,
-        UNIQUE KEY unique_property_vendor (property_id, vendor_id),
+        -- Vendors are assigned per service, so uniqueness must include the service
+        UNIQUE KEY unique_property_vendor_service (property_id, vendor_id, service_type),
         INDEX idx_pva_property (property_id),
         INDEX idx_pva_vendor (vendor_id)
       )

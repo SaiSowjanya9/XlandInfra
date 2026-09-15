@@ -273,10 +273,13 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   const completedSchedules = schedules.filter(s => getStatus(s) === 'completed');
   const inProgressSchedules = schedules.filter(s => getStatus(s) === 'in_progress');
   
-  const overdueSchedules = schedules.filter(s => {
+  // Past its due date and still open - single source of truth for every overdue count
+  const isPastDue = (s) => {
     const d = getScheduleDate(s);
-    return d && d < today && !['completed', 'cancelled'].includes(getStatus(s));
-  });
+    return !!d && d < today && !['completed', 'cancelled'].includes(getStatus(s));
+  };
+  
+  const overdueSchedules = schedules.filter(isPastDue);
 
   // All non-cancelled schedules for status charts
   const allActiveSchedules = schedules.filter(s => getStatus(s) !== 'cancelled');
@@ -290,12 +293,18 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   const pendingCount = statusFilteredData.filter(s => ['pending', 'pending_schedule'].includes(getStatus(s))).length
     + pendingPropertiesFiltered.length;
   const toAssignVendorCount = pendingPropertiesFiltered.reduce((sum, p) => sum + (p.pendingServices || 0), 0);
+  // Overdue is derived from the due date, using the same rule as the Overdue card above.
+  // Overdue visits are counted only once - they are excluded from their own status bucket
+  // so the slices stay disjoint and the donut total remains meaningful.
+  const overdueFilteredForChart = statusFilteredData.filter(s => isPastDue(s));
+  const onTimeStatusData = statusFilteredData.filter(s => !isPastDue(s));
   // Every status stays in the list, so a status with no schedules still shows as 0
   const statusData = [
-    { name: 'Scheduled', value: statusFilteredData.filter(s => ['scheduled', 'upcoming', 'work_order_created'].includes(getStatus(s))).length, color: STATUS_COLORS.scheduled },
-    { name: 'In Progress', value: statusFilteredData.filter(s => getStatus(s) === 'in_progress').length, color: STATUS_COLORS.in_progress },
-    { name: 'Completed', value: statusFilteredData.filter(s => getStatus(s) === 'completed').length, color: STATUS_COLORS.completed },
-    { name: 'Rescheduled', value: statusFilteredData.filter(s => getStatus(s) === 'rescheduled').length, color: STATUS_COLORS.rescheduled },
+    { name: 'Scheduled', value: onTimeStatusData.filter(s => ['scheduled', 'confirmed', 'work_order_created'].includes(getStatus(s))).length, color: STATUS_COLORS.scheduled },
+    { name: 'In Progress', value: onTimeStatusData.filter(s => getStatus(s) === 'in_progress').length, color: STATUS_COLORS.in_progress },
+    { name: 'Completed', value: onTimeStatusData.filter(s => getStatus(s) === 'completed').length, color: STATUS_COLORS.completed },
+    { name: 'Rescheduled', value: onTimeStatusData.filter(s => getStatus(s) === 'rescheduled').length, color: STATUS_COLORS.rescheduled },
+    { name: 'Overdue', value: overdueFilteredForChart.length, color: '#DC2626' },
     { name: 'Pending', value: pendingCount, color: STATUS_COLORS.pending },
     { name: 'To Assign Vendor', value: toAssignVendorCount, color: '#EA580C' }
   ];

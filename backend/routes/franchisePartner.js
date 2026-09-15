@@ -12,7 +12,8 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../config/database');
 const { authenticate, generateToken } = require('../middleware/auth');
-const { fetchScheduleStats, derivedStatusFilter } = require('../utils/scheduleStats');
+const { fetchScheduleStats, fetchScheduledVendors, derivedStatusFilter } = require('../utils/scheduleStats');
+const { resolveVendor, upsertPropertyVendorAssignment } = require('../utils/vendorAssignments');
 const {
   orNull, isRecentlyAdded, formatPaymentStatus, fetchServiceVendorMap, mapPendingServices
 } = require('../utils/pendingProperties');
@@ -2369,26 +2370,13 @@ router.get('/vendors', requireFPScope, async (req, res) => {
     
     // If forSchedules=true, only return vendors that have actual scheduled visits
     if (forSchedules === 'true') {
-      const [scheduleVendors] = await pool.execute(
-        `SELECT DISTINCT ov.id, ov.vendor_id, 
-                COALESCE(ov.company_name, ov.owner_name) as company_name,
-                ov.owner_name, ov.service_type
-         FROM scheduled_visits sv
-         JOIN onboarded_vendors ov ON ov.id = sv.vendor_id
-         JOIN onboarded_properties op ON op.id = sv.property_id
-         WHERE op.franchise_partner_id = ?
-         ORDER BY company_name`,
-        [req.fpId]
-      );
-      
-      return res.json({
-        success: true,
-        data: {
-          own: scheduleVendors,
-          assigned: [],
-          all: scheduleVendors
-        }
+      const scheduleVendors = await fetchScheduledVendors({
+        whereClause: 'WHERE op.franchise_partner_id = ?',
+        params: [req.fpId],
+        label: 'FP Schedule Vendors'
       });
+      
+      return res.json({ success: true, data: scheduleVendors });
     }
     
     // Default behavior: Check if include_deleted query param is passed
@@ -2604,52 +2592,26 @@ router.post('/vendors/assignments', requireFPScope, async (req, res) => {
 
     // Verify vendor exists and is active (FP can use any available vendor)
     // Check both numeric id and string vendor_id
-    const [vendor] = await pool.execute(
-      `SELECT id, company_name, owner_name FROM onboarded_vendors WHERE (id = ? OR vendor_id = ?) AND status = 'active'`,
-      [vendorId, vendorId]
-    );
+    const vendor = await resolveVendor(vendorId, { activeOnly: true });
 
-    if (vendor.length === 0) {
+    if (!vendor) {
       return res.status(404).json({ success: false, message: 'Vendor not found or inactive' });
     }
-    
-    // Use the numeric id for the assignment
-    const numericVendorId = vendor[0].id;
 
-    // Check if assignment already exists (use numeric vendor id)
-    const [existing] = await pool.execute(
-      `SELECT id, is_active FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND service_type = ?`,
-      [propertyId, numericVendorId, serviceType || null]
-    );
+    const { alreadyActive } = await upsertPropertyVendorAssignment({
+      propertyId,
+      vendorId: vendor.id,
+      serviceType,
+      assignedBy: req.user?.id
+    });
 
-    if (existing.length > 0) {
-      if (existing[0].is_active) {
-        return res.json({ success: true, message: 'Vendor already assigned to this service' });
-      }
-      // Reactivate existing assignment
-      await pool.execute(
-        `UPDATE property_vendor_assignments SET is_active = 1, assigned_at = NOW(), assigned_by = ? WHERE id = ?`,
-        [req.user.id, existing[0].id]
-      );
-    } else {
-      // Deactivate previous assignments for this service
-      if (serviceType) {
-        await pool.execute(
-          `UPDATE property_vendor_assignments SET is_active = 0 WHERE property_id = ? AND service_type = ? AND is_active = 1`,
-          [propertyId, serviceType]
-        );
-      }
-
-      // Create new assignment (use numeric vendor id)
-      await pool.execute(
-        `INSERT INTO property_vendor_assignments (property_id, vendor_id, service_type, assigned_by, assigned_at, is_active)
-         VALUES (?, ?, ?, ?, NOW(), 1)`,
-        [propertyId, numericVendorId, serviceType || null, req.user.id]
-      );
-    }
-
-    const vendorName = vendor[0].company_name || vendor[0].owner_name;
-    res.json({ success: true, message: `Vendor ${vendorName} assigned successfully` });
+    const vendorName = vendor.company_name || vendor.owner_name;
+    res.json({
+      success: true,
+      message: alreadyActive
+        ? 'Vendor already assigned to this service'
+        : `Vendor ${vendorName} assigned successfully`
+    });
   } catch (error) {
     console.error('Create vendor assignment error:', error);
     res.status(500).json({ success: false, message: 'Failed to create assignment', error: error.message });
@@ -2669,7 +2631,7 @@ router.put('/vendors/assignments/:id', requireFPScope, async (req, res) => {
 
     // Verify assignment belongs to FP (check via property OR vendor ownership)
     const [assignment] = await pool.execute(
-      `SELECT pva.id, pva.property_id, pva.vendor_id FROM property_vendor_assignments pva
+      `SELECT pva.id, pva.property_id, pva.vendor_id, pva.service_type FROM property_vendor_assignments pva
        LEFT JOIN properties p ON pva.property_id = p.id
        LEFT JOIN onboarded_properties op ON pva.property_id = op.id
        LEFT JOIN onboarded_vendors v ON pva.vendor_id = v.id
@@ -2681,21 +2643,20 @@ router.put('/vendors/assignments/:id', requireFPScope, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Assignment not found' });
     }
 
-    // Verify new vendor belongs to this FP
-    const [vendor] = await pool.execute(
-      `SELECT id FROM onboarded_vendors WHERE id = ? AND franchise_partner_id = ?`,
-      [newVendorId, req.fpId]
-    );
+    // Any active vendor may be used, matching the assign endpoint above
+    const vendor = await resolveVendor(newVendorId, { activeOnly: true });
 
-    if (vendor.length === 0) {
-      return res.status(404).json({ success: false, message: 'Vendor not found' });
+    if (!vendor) {
+      return res.status(404).json({ success: false, message: 'Vendor not found or inactive' });
     }
 
-    // Update the assignment
-    await pool.execute(
-      `UPDATE property_vendor_assignments SET vendor_id = ?, assigned_at = NOW() WHERE id = ?`,
-      [newVendorId, id]
-    );
+    // Reuse the assign path so the service schedule is kept in step
+    await upsertPropertyVendorAssignment({
+      propertyId: assignment[0].property_id,
+      vendorId: vendor.id,
+      serviceType: assignment[0].service_type,
+      assignedBy: req.user?.id
+    });
 
     res.json({ success: true, message: 'Assignment updated successfully' });
   } catch (error) {

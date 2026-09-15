@@ -74,6 +74,46 @@ const fetchScheduleStats = async ({
 };
 
 /**
+ * Vendors that appear in existing schedules, for the All Schedules vendor filter.
+ *
+ * The vendor shown on a schedule row comes from property_service_schedules, with
+ * scheduled_visits.vendor_id as a fallback - resolving it any other way lists
+ * vendors that never appear in the table (or none at all, since sv.vendor_id is
+ * frequently null).
+ *
+ * @param {Object} options
+ * @param {string} options.whereClause - Scope filter, e.g. "WHERE op.franchise_partner_id = ?".
+ * @param {Array} options.params - Params for the where clause, in order.
+ * @param {string} options.label - Log prefix used when the query fails.
+ * @returns {Promise<Array>} [{ id, vendor_id, company_name, owner_name, service_type }]
+ */
+const fetchScheduledVendors = async ({
+  whereClause = 'WHERE 1=1',
+  params = [],
+  label = 'Schedule Vendors'
+} = {}) => {
+  const query = `
+    SELECT DISTINCT ov.id, ov.vendor_id,
+           COALESCE(ov.company_name, ov.owner_name) as company_name,
+           ov.owner_name, ov.service_type
+    FROM scheduled_visits sv
+    JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+    JOIN onboarded_properties op ON op.id = sv.property_id
+    JOIN onboarded_vendors ov ON ov.id = COALESCE(pss.vendor_id, sv.vendor_id)
+    ${whereClause}
+    ORDER BY company_name
+  `;
+
+  try {
+    const [vendors] = await pool.execute(query, params);
+    return vendors;
+  } catch (err) {
+    console.log(`[${label}] Scheduled vendors query failed:`, err.message);
+    return [];
+  }
+};
+
+/**
  * SQL fragment for the list/count queries so a status filter of 'upcoming' or
  * 'overdue' matches the same visits the corresponding stat card counted.
  * Returns null for real statuses, which the caller then binds as a parameter.
@@ -88,4 +128,4 @@ const derivedStatusFilter = (status) => {
   return null;
 };
 
-module.exports = { fetchScheduleStats, derivedStatusFilter };
+module.exports = { fetchScheduleStats, fetchScheduledVendors, derivedStatusFilter };
