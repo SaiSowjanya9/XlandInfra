@@ -14,6 +14,7 @@
 const cron = require('node-cron');
 const { pool } = require('../config/database');
 const { sendEmail, getWorkOrderNotificationRecipients } = require('./emailService');
+const { processRenewals, getRenewalStats } = require('./autoRenewalService');
 
 // ID Generators
 const generateId = (prefix) => `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -543,8 +544,9 @@ function initScheduler() {
 
   // Schedule for 6:00 AM daily
   cron.schedule('0 6 * * *', async () => {
-    console.log('⏰ [6:00 AM] Running scheduled work order generation...');
+    console.log('⏰ [6:00 AM] Running scheduled tasks...');
     await generateScheduledWorkOrders();
+    await processRenewals(); // Auto-renewal processing
   }, {
     scheduled: true,
     timezone: 'Asia/Kolkata' // Indian Standard Time
@@ -552,8 +554,9 @@ function initScheduler() {
 
   // Schedule for 6:00 PM daily
   cron.schedule('0 18 * * *', async () => {
-    console.log('⏰ [6:00 PM] Running scheduled work order generation...');
+    console.log('⏰ [6:00 PM] Running scheduled tasks...');
     await generateScheduledWorkOrders();
+    await processRenewals(); // Auto-renewal processing
   }, {
     scheduled: true,
     timezone: 'Asia/Kolkata' // Indian Standard Time
@@ -561,6 +564,7 @@ function initScheduler() {
 
   isSchedulerRunning = true;
   console.log('✅ Work Order Scheduler initialized successfully');
+  console.log('✅ Auto-Renewal Processor initialized');
   console.log('🕐 Next runs: 6:00 AM and 6:00 PM IST\n');
 }
 
@@ -580,10 +584,11 @@ function getSchedulerStatus() {
     isRunning: isSchedulerRunning,
     lastRunTime: lastRunTime ? lastRunTime.toISOString() : null,
     stats: schedulerStats,
+    renewalStats: getRenewalStats(),
     schedule: {
       times: ['6:00 AM IST', '6:00 PM IST'],
       timezone: 'Asia/Kolkata',
-      description: 'Creates work orders 7 days before scheduled services'
+      description: 'Creates work orders 7 days before scheduled services & processes auto-renewals'
     }
   };
 }

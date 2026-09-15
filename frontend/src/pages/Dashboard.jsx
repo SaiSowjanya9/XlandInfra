@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock, Clock, CheckCircle, AlertCircle, Loader2, Eye, ChevronRight, Wrench, User, Phone, Mail, MapPin, Paperclip, Image, FileText, X, Truck, RefreshCw, Bell, BellRing, CheckCheck } from 'lucide-react';
+import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock, Clock, CheckCircle, AlertCircle, Loader2, Eye, ChevronRight, Wrench, User, Phone, Mail, MapPin, Paperclip, Image, FileText, X, Truck, RefreshCw, Bell, BellRing, CheckCheck, RotateCcw, ThumbsUp, ThumbsDown } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 const UPLOADS_BASE_URL = '';
@@ -15,6 +15,9 @@ const Dashboard = ({ user }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [renewals, setRenewals] = useState([]);
+  const [renewalsLoading, setRenewalsLoading] = useState(false);
+  const [processingRenewal, setProcessingRenewal] = useState(null);
   const modalRef = useRef(null);
   const overlayRef = useRef(null);
   const notificationRef = useRef(null);
@@ -103,6 +106,86 @@ const Dashboard = ({ user }) => {
     }
   };
 
+  const fetchRenewals = async () => {
+    try {
+      setRenewalsLoading(true);
+      const token = localStorage.getItem('customerToken');
+      if (!token) return;
+
+      const response = await fetch(`${API_BASE_URL}/api/customers/renewals?status=pending_approval`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setRenewals(result.data || []);
+      }
+    } catch (err) {
+      console.error('Renewals fetch error:', err);
+    } finally {
+      setRenewalsLoading(false);
+    }
+  };
+
+  const handleApproveRenewal = async (renewalId) => {
+    try {
+      setProcessingRenewal(renewalId);
+      const token = localStorage.getItem('customerToken');
+      const response = await fetch(`${API_BASE_URL}/api/customers/renewals/${renewalId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setRenewals(prev => prev.filter(r => r.id !== renewalId));
+        alert('Renewal approved successfully!');
+      } else {
+        alert(result.message || 'Failed to approve renewal');
+      }
+    } catch (err) {
+      console.error('Error approving renewal:', err);
+      alert('Error approving renewal');
+    } finally {
+      setProcessingRenewal(null);
+    }
+  };
+
+  const handleDeclineRenewal = async (renewalId) => {
+    const reason = prompt('Please provide a reason for declining (optional):');
+    try {
+      setProcessingRenewal(renewalId);
+      const token = localStorage.getItem('customerToken');
+      const response = await fetch(`${API_BASE_URL}/api/customers/renewals/${renewalId}/decline`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason: reason || 'Customer declined' })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setRenewals(prev => prev.filter(r => r.id !== renewalId));
+        alert('Renewal declined.');
+      } else {
+        alert(result.message || 'Failed to decline renewal');
+      }
+    } catch (err) {
+      console.error('Error declining renewal:', err);
+      alert('Error declining renewal');
+    } finally {
+      setProcessingRenewal(null);
+    }
+  };
+
   const fetchDashboard = async () => {
     try {
       const token = localStorage.getItem('customerToken');
@@ -135,6 +218,7 @@ const Dashboard = ({ user }) => {
   useEffect(() => {
     fetchDashboard();
     fetchNotifications();
+    fetchRenewals();
   }, []);
 
   const menuItems = [
@@ -451,6 +535,70 @@ const Dashboard = ({ user }) => {
                   <Eye className="w-5 h-5 text-dark-500 group-hover:text-gold-400 transition-colors mt-1" />
                 </div>
               </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pending Renewals Section */}
+      {renewals.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <RotateCcw className="w-5 h-5 text-gold-400" />
+              Service Renewals
+            </h2>
+            <span className="px-2 py-1 bg-gold-500/20 text-gold-400 text-xs font-medium rounded-full">
+              {renewals.length} Pending
+            </span>
+          </div>
+          <div className="grid gap-4">
+            {renewals.map((renewal) => (
+              <div
+                key={renewal.id}
+                className="bg-gradient-to-r from-gold-500/10 to-gold-600/5 border border-gold-500/30 rounded-xl p-4"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-medium text-gold-400">{renewal.serviceName}</span>
+                      {renewal.daysUntilExpiry !== null && renewal.daysUntilExpiry <= 7 && (
+                        <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full">
+                          Expires in {renewal.daysUntilExpiry} days
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-white font-medium text-sm mb-1">
+                      Renewal Period: {new Date(renewal.renewalStartDate).toLocaleDateString('en-IN')} - {new Date(renewal.renewalEndDate).toLocaleDateString('en-IN')}
+                    </p>
+                    <p className="text-dark-400 text-xs">
+                      {renewal.totalVisits} visits ({renewal.frequency}) | Vendor: {renewal.vendorCompany || renewal.vendorName || 'TBA'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleApproveRenewal(renewal.id)}
+                      disabled={processingRenewal === renewal.id}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {processingRenewal === renewal.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <ThumbsUp className="w-4 h-4" />
+                      )}
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => handleDeclineRenewal(renewal.id)}
+                      disabled={processingRenewal === renewal.id}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-dark-700 hover:bg-dark-600 text-dark-300 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      <ThumbsDown className="w-4 h-4" />
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         </div>

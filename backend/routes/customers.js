@@ -2559,4 +2559,133 @@ router.put('/notifications/mark-all-read', authenticateCustomer, async (req, res
   }
 });
 
+// ============================================
+// CUSTOMER RENEWALS
+// ============================================
+
+const { approveRenewal, declineRenewal } = require('../services/autoRenewalService');
+
+// Get pending renewals for customer's property
+router.get('/renewals', authenticateCustomer, async (req, res) => {
+  try {
+    const propertyId = req.customer.propertyId;
+    const { status } = req.query;
+
+    let statusFilter = '';
+    if (status) {
+      statusFilter = `AND sr.status = '${status}'`;
+    }
+
+    const [renewals] = await pool.execute(`
+      SELECT 
+        sr.*,
+        ss.series_id as original_series_code,
+        ss.contract_end_date as original_end_date,
+        ss.completed_visits,
+        ss.total_visits as original_total_visits,
+        ov.company_name as vendor_company,
+        ov.owner_name as vendor_contact,
+        DATEDIFF(ss.contract_end_date, CURDATE()) as days_until_expiry
+      FROM schedule_renewals sr
+      JOIN schedule_series ss ON sr.original_series_id = ss.id
+      LEFT JOIN onboarded_vendors ov ON sr.vendor_id = ov.id
+      WHERE sr.property_id = ? ${statusFilter}
+      ORDER BY sr.created_at DESC
+      LIMIT 20
+    `, [propertyId]);
+
+    res.json({
+      success: true,
+      data: renewals.map(r => ({
+        id: r.id,
+        renewalId: r.renewal_id,
+        serviceName: r.service_name,
+        serviceCategory: r.service_category,
+        vendorName: r.vendor_name,
+        vendorCompany: r.vendor_company,
+        frequency: r.frequency,
+        totalVisits: r.total_visits,
+        renewalStartDate: r.renewal_start_date,
+        renewalEndDate: r.renewal_end_date,
+        status: r.status,
+        triggerType: r.trigger_type,
+        customerResponse: r.customer_response,
+        daysUntilExpiry: r.days_until_expiry,
+        originalEndDate: r.original_end_date,
+        completedVisits: r.completed_visits,
+        originalTotalVisits: r.original_total_visits,
+        createdAt: r.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching customer renewals:', error);
+    res.status(500).json({ success: false, message: 'Error fetching renewals', error: error.message });
+  }
+});
+
+// Approve renewal (Customer)
+router.post('/renewals/:id/approve', authenticateCustomer, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const propertyId = req.customer.propertyId;
+
+    // Verify renewal belongs to this customer's property
+    const [renewal] = await pool.execute(
+      `SELECT id FROM schedule_renewals WHERE (id = ? OR renewal_id = ?) AND property_id = ?`,
+      [id, id, propertyId]
+    );
+
+    if (renewal.length === 0) {
+      return res.status(404).json({ success: false, message: 'Renewal not found' });
+    }
+
+    const result = await approveRenewal(renewal[0].id, req.customer.id, 'customer');
+
+    res.json({
+      success: true,
+      message: 'Renewal approved successfully! Your service will continue seamlessly.',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error approving renewal:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error approving renewal'
+    });
+  }
+});
+
+// Decline renewal (Customer)
+router.post('/renewals/:id/decline', authenticateCustomer, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const propertyId = req.customer.propertyId;
+
+    // Verify renewal belongs to this customer's property
+    const [renewal] = await pool.execute(
+      `SELECT id FROM schedule_renewals WHERE (id = ? OR renewal_id = ?) AND property_id = ?`,
+      [id, id, propertyId]
+    );
+
+    if (renewal.length === 0) {
+      return res.status(404).json({ success: false, message: 'Renewal not found' });
+    }
+
+    const result = await declineRenewal(renewal[0].id, req.customer.id, reason || 'Customer declined', 'customer');
+
+    res.json({
+      success: true,
+      message: 'Renewal declined. Your current service will end as scheduled.',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error declining renewal:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error declining renewal'
+    });
+  }
+});
+
 module.exports = router;

@@ -8,29 +8,6 @@
  */
 
 // =============================================================================
-// ESTIMATE STATUS COLORS - Used for Draft, Sent, Approved, Rejected
-// =============================================================================
-export const STATUS_COLORS = {
-  Draft: '#5B8DEF',     // Blue
-  Sent: '#FBBF24',      // Yellow/Amber
-  Approved: '#14B8A6',  // Teal
-  Rejected: '#EF4444'   // Red
-};
-
-// =============================================================================
-// SCHEDULE STATUS COLORS - Used for schedule states
-// =============================================================================
-export const SCHEDULE_STATUS_COLORS = {
-  pending: '#6B7280',      // Gray
-  scheduled: '#3B82F6',    // Blue
-  upcoming: '#3B82F6',     // Blue
-  in_progress: '#F59E0B',  // Amber
-  completed: '#10B981',    // Green
-  rescheduled: '#8B5CF6',  // Purple
-  cancelled: '#EF4444'     // Red
-};
-
-// =============================================================================
 // WORK ORDER STATUS COLORS - Used for work order states
 // =============================================================================
 export const WORK_ORDER_STATUS_COLORS = {
@@ -71,24 +48,6 @@ export const PROPERTY_TYPE_COLORS = {
 // SERVICE COLORS - Distinct palette avoiding status colors
 // =============================================================================
 export const SERVICE_COLORS = ['#0891B2', '#DB2777', '#7C3AED', '#059669', '#CA8A04', '#9333EA', '#0284C7', '#78716C'];
-
-// =============================================================================
-// PAYMENT/INVOICE STATUS COLORS - Distinct palette for financial status
-// =============================================================================
-export const PAYMENT_STATUS_COLORS = {
-  paid: '#22C55E',           // Green-500
-  partially_paid: '#0EA5E9', // Sky-500 (distinct from blue)
-  unpaid: '#EAB308',         // Yellow-500 (distinct from amber)
-  overdue: '#DC2626',        // Red-600 (darker red)
-  cancelled: '#78716C'       // Stone (gray)
-};
-
-// Estimate type colors - used in "Estimates by Estimate Type" charts
-export const ESTIMATE_TYPE_COLORS = {
-  'Direct Estimates': '#8B5CF6',  // Purple
-  'Property-Based': '#06B6D4',    // Cyan
-  'Work Order': '#F97316'         // Orange
-};
 
 // Bar chart colors - used for horizontal bar charts (categories)
 export const BAR_CHART_COLORS = ['#0891B2', '#DB2777', '#7C3AED', '#059669', '#CA8A04'];
@@ -137,41 +96,12 @@ export const getConsistentColor = (name) => {
   return BAR_CHART_COLORS[colorIndex];
 };
 
-/**
- * Helper function to create status data array with consistent colors
- * @param {Object} counts - Object with Draft, Sent, Approved, Rejected counts
- * @returns {Array} Array of { name, value, color } objects for chart consumption
- */
-export const createStatusDataArray = (counts) => [
-  { name: 'Draft', value: counts.Draft || 0, color: STATUS_COLORS.Draft },
-  { name: 'Sent', value: counts.Sent || 0, color: STATUS_COLORS.Sent },
-  { name: 'Approved', value: counts.Approved || 0, color: STATUS_COLORS.Approved },
-  { name: 'Rejected', value: counts.Rejected || 0, color: STATUS_COLORS.Rejected }
-];
-
-/**
- * Helper function to create estimate type data array with consistent colors
- * @param {Object} counts - Object with Direct, PropertyBased, WorkOrder counts
- * @returns {Array} Array of { name, value, color } objects for chart consumption
- */
-export const createEstimateTypeDataArray = (counts) => [
-  { name: 'Direct Estimates', value: counts.Direct || 0, color: ESTIMATE_TYPE_COLORS['Direct Estimates'] },
-  { name: 'Property-Based', value: counts.PropertyBased || 0, color: ESTIMATE_TYPE_COLORS['Property-Based'] },
-  { name: 'Work Order', value: counts.WorkOrder || 0, color: ESTIMATE_TYPE_COLORS['Work Order'] }
-];
-
 export default {
-  STATUS_COLORS,
-  SCHEDULE_STATUS_COLORS,
   WORK_ORDER_STATUS_COLORS,
   PRIORITY_COLORS,
   PROPERTY_TYPE_COLORS,
   SERVICE_COLORS,
-  PAYMENT_STATUS_COLORS,
-  ESTIMATE_TYPE_COLORS,
   BAR_CHART_COLORS,
   CATEGORY_COLORS,
-  getConsistentColor,
-  createStatusDataArray,
-  createEstimateTypeDataArray
+  getConsistentColor
 };

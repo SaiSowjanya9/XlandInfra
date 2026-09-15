@@ -1,16 +1,9 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { useNavigate } from 'react-router-dom';
+import { WORK_ORDER_STATUS_COLORS } from '../utils/chartColors';
 
-// Work order status colors - modern, vibrant palette
-const STATUS_COLORS = {
-  pending: '#F59E0B',      // Amber
-  under_review: '#F97316', // Orange
-  assigned: '#3B82F6',     // Blue
-  in_progress: '#8B5CF6',  // Purple
-  completed: '#10B981',    // Emerald
-  cancelled: '#EF4444',    // Red
-  closed: '#6B7280',       // Gray
-};
+// Use centralized colors
+const STATUS_COLORS = WORK_ORDER_STATUS_COLORS;
 
 const STATUS_LABELS = {
   pending: 'Pending',
