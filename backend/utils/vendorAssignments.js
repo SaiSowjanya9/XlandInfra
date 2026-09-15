@@ -39,87 +39,95 @@ const indexExists = async (table, indexName) => {
 /**
  * schema_v22 created after_vendor_assignment_insert with a body that reads
  * fp_estimates.service_rows - a column that does not exist (the services live in
- * package_services). The trigger therefore aborted every INSERT into
- * property_vendor_assignments. Recreate it with the correct column.
+ * package_services). The trigger aborted every INSERT into
+ * property_vendor_assignments, so it has to go.
+ *
+ * It is dropped rather than rebuilt: CREATE TRIGGER on a server with binary
+ * logging enabled needs SUPER (ER_BINLOG_CREATE_ROUTINE_NEED_SUPER), which an
+ * application user does not have. syncPendingPropertySchedule below keeps
+ * pending_property_schedules up to date from the application instead, so no
+ * database-side trigger is required.
  */
-const repairAssignmentTriggers = async () => {
+const dropBrokenAssignmentTriggers = async () => {
   const [triggers] = await pool.execute(
     `SELECT trigger_name, action_statement FROM information_schema.triggers
      WHERE trigger_schema = DATABASE()
        AND event_object_table = 'property_vendor_assignments'`
   );
 
-  const broken = triggers.some(t => (t.ACTION_STATEMENT || t.action_statement || '').includes('service_rows'));
-  const insertTriggerMissing = !triggers.some(
-    t => (t.TRIGGER_NAME || t.trigger_name) === 'after_vendor_assignment_insert'
+  const broken = triggers.filter(t =>
+    (t.ACTION_STATEMENT || t.action_statement || '').includes('service_rows')
   );
-  if (!broken && !insertTriggerMissing) return;
+  if (broken.length === 0) return;
 
-  await pool.query(`DROP TRIGGER IF EXISTS after_vendor_assignment_insert`);
-  await pool.query(`DROP TRIGGER IF EXISTS after_vendor_assignment_update`);
+  for (const trigger of broken) {
+    const name = trigger.TRIGGER_NAME || trigger.trigger_name;
+    await pool.query(`DROP TRIGGER IF EXISTS \`${name}\``);
+    console.log(`  ✅ Dropped broken trigger ${name} (referenced fp_estimates.service_rows)`);
+  }
+};
 
-  await pool.query(`
-    CREATE TRIGGER after_vendor_assignment_insert
-    AFTER INSERT ON property_vendor_assignments
-    FOR EACH ROW
-    BEGIN
-      DECLARE prop_fp_id INT;
-      DECLARE est_id INT;
-      DECLARE total_svc INT;
-      DECLARE assigned_cnt INT;
+/**
+ * Keep pending_property_schedules in step with the assignments of one property.
+ * This is what the dropped triggers used to do; doing it here needs no special
+ * database privileges. Mirrors the status rules in services/schedulingService.js.
+ */
+const syncPendingPropertySchedule = async (propertyId) => {
+  try {
+    const [[property]] = await pool.execute(
+      `SELECT op.id, op.franchise_partner_id,
+              fe.id as estimate_id,
+              JSON_LENGTH(COALESCE(fe.package_services, '[]')) as total_services
+       FROM onboarded_properties op
+       LEFT JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
+       WHERE op.id = ?
+       ORDER BY fe.id DESC
+       LIMIT 1`,
+      [propertyId]
+    );
 
-      SELECT op.franchise_partner_id, fe.id INTO prop_fp_id, est_id
-      FROM onboarded_properties op
-      LEFT JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
-      WHERE op.id = NEW.property_id
-      LIMIT 1;
+    // Only onboarded properties are tracked in this table
+    if (!property) return;
 
-      SELECT JSON_LENGTH(COALESCE(package_services, '[]')) INTO total_svc
-      FROM fp_estimates WHERE property_id = NEW.property_id AND status = 'approved'
-      LIMIT 1;
+    const [[counts]] = await pool.execute(
+      `SELECT
+         (SELECT COUNT(*) FROM property_vendor_assignments
+           WHERE property_id = ? AND is_active = 1) as assigned,
+         (SELECT COUNT(*) FROM property_service_schedules
+           WHERE property_id = ? AND scheduling_status IN ('scheduled', 'completed')) as scheduled`,
+      [propertyId, propertyId]
+    );
 
-      SELECT COUNT(*) INTO assigned_cnt
-      FROM property_vendor_assignments
-      WHERE property_id = NEW.property_id AND is_active = 1;
+    const totalServices = parseInt(property.total_services) || 0;
+    const assigned = parseInt(counts?.assigned) || 0;
+    const scheduled = parseInt(counts?.scheduled) || 0;
 
-      IF prop_fp_id IS NOT NULL THEN
-        INSERT INTO pending_property_schedules (property_id, estimate_id, total_services, vendors_assigned, franchise_partner_id, scheduling_status)
-        VALUES (NEW.property_id, est_id, COALESCE(total_svc, 0), assigned_cnt, prop_fp_id,
-          CASE WHEN assigned_cnt >= COALESCE(total_svc, 0) THEN 'pending_schedule' ELSE 'pending_vendor' END
-        )
-        ON DUPLICATE KEY UPDATE
-          vendors_assigned = assigned_cnt,
-          scheduling_status = CASE WHEN assigned_cnt >= total_services THEN 'pending_schedule' ELSE 'pending_vendor' END,
-          updated_at = NOW();
-      END IF;
-    END
-  `);
+    let schedulingStatus = 'pending_vendor';
+    if (totalServices > 0 && assigned >= totalServices) {
+      schedulingStatus = scheduled >= totalServices ? 'fully_scheduled'
+        : scheduled > 0 ? 'partially_scheduled'
+        : 'pending_schedule';
+    }
 
-  await pool.query(`
-    CREATE TRIGGER after_vendor_assignment_update
-    AFTER UPDATE ON property_vendor_assignments
-    FOR EACH ROW
-    BEGIN
-      DECLARE assigned_cnt INT;
-      DECLARE total_svc INT;
-
-      SELECT COUNT(*) INTO assigned_cnt
-      FROM property_vendor_assignments
-      WHERE property_id = NEW.property_id AND is_active = 1;
-
-      SELECT total_services INTO total_svc
-      FROM pending_property_schedules
-      WHERE property_id = NEW.property_id;
-
-      UPDATE pending_property_schedules SET
-        vendors_assigned = assigned_cnt,
-        scheduling_status = CASE WHEN assigned_cnt >= COALESCE(total_svc, 0) THEN 'pending_schedule' ELSE 'pending_vendor' END,
-        updated_at = NOW()
-      WHERE property_id = NEW.property_id;
-    END
-  `);
-
-  console.log('  ✅ Rebuilt property_vendor_assignments triggers (service_rows -> package_services)');
+    await pool.execute(
+      `INSERT INTO pending_property_schedules
+         (property_id, estimate_id, total_services, vendors_assigned, services_scheduled,
+          scheduling_status, franchise_partner_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         estimate_id = VALUES(estimate_id),
+         total_services = VALUES(total_services),
+         vendors_assigned = VALUES(vendors_assigned),
+         services_scheduled = VALUES(services_scheduled),
+         scheduling_status = VALUES(scheduling_status),
+         updated_at = NOW()`,
+      [propertyId, property.estimate_id || null, totalServices, assigned, scheduled,
+        schedulingStatus, property.franchise_partner_id || null]
+    );
+  } catch (err) {
+    // Never fail an assignment because this summary table could not be updated
+    console.log('[Vendor Assignments] Could not sync pending_property_schedules:', err.message);
+  }
 };
 
 const ensureVendorAssignmentSchema = () => {
@@ -147,7 +155,7 @@ const ensureVendorAssignmentSchema = () => {
           console.log(`  ✅ Added ${SERVICE_UNIQUE_KEY}`);
         }
 
-        await repairAssignmentTriggers();
+        await dropBrokenAssignmentTriggers();
       } catch (err) {
         // Repairing needs ALTER/TRIGGER rights, which a production DB user may not
         // have. Never block the assignment on it - the write below reports the real
@@ -197,6 +205,7 @@ const upsertPropertyVendorAssignment = async ({ propertyId, vendorId, serviceTyp
       `UPDATE property_vendor_assignments SET is_active = 1, assigned_at = NOW(), assigned_by = ? WHERE id = ?`,
       [assignedBy || null, existing[0].id]
     );
+    await syncPendingPropertySchedule(propertyId);
     return { created: false, alreadyActive: false };
   }
 
@@ -229,11 +238,14 @@ const upsertPropertyVendorAssignment = async ({ propertyId, vendorId, serviceTyp
     }
   }
 
+  await syncPendingPropertySchedule(propertyId);
+
   return { created: true, alreadyActive: false };
 };
 
 module.exports = {
   ensureVendorAssignmentSchema,
   resolveVendor,
-  upsertPropertyVendorAssignment
+  upsertPropertyVendorAssignment,
+  syncPendingPropertySchedule
 };
