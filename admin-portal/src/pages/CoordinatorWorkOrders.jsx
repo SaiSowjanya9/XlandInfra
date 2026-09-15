@@ -274,7 +274,7 @@ const CoordinatorWorkOrders = ({ user }) => {
     }
 
     try {
-      const response = await fetch(`/api/coordinator/work-orders/${id}/status`, {
+      const response = await fetch(`${API_BASE}/api/coordinator/work-orders/${id}/status`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -337,7 +337,7 @@ const CoordinatorWorkOrders = ({ user }) => {
     }
 
     try {
-      const response = await fetch(`/api/coordinator/work-orders/${workOrderId}/status`, {
+      const response = await fetch(`${API_BASE}/api/coordinator/work-orders/${workOrderId}/status`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -362,7 +362,7 @@ const CoordinatorWorkOrders = ({ user }) => {
     if (!window.confirm('Are you sure you want to delete this work order?')) return;
     
     try {
-      const response = await fetch(`/api/coordinator/work-orders/${workOrderId}`, {
+      const response = await fetch(`${API_BASE}/api/coordinator/work-orders/${workOrderId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -454,7 +454,7 @@ const CoordinatorWorkOrders = ({ user }) => {
     if (!selectedWorkOrder) return;
     
     try {
-      const response = await fetch(`/api/coordinator/work-orders/${selectedWorkOrder.id}`, {
+      const response = await fetch(`${API_BASE}/api/coordinator/work-orders/${selectedWorkOrder.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -494,7 +494,7 @@ const CoordinatorWorkOrders = ({ user }) => {
     if (!selectedWorkOrder) return;
 
     try {
-      const response = await fetch(`/api/coordinator/work-orders/${selectedWorkOrder.id}/assign-vendor`, {
+      const response = await fetch(`${API_BASE}/api/coordinator/work-orders/${selectedWorkOrder.id}/assign-vendor`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -522,7 +522,7 @@ const CoordinatorWorkOrders = ({ user }) => {
     if (!selectedWorkOrder) return;
 
     try {
-      const response = await fetch(`/api/coordinator/work-orders/${selectedWorkOrder.id}/assign-employee`, {
+      const response = await fetch(`${API_BASE}/api/coordinator/work-orders/${selectedWorkOrder.id}/assign-employee`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

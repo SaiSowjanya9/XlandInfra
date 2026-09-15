@@ -89,7 +89,7 @@ const Residents = ({ admin }) => {
     if (!confirm('Are you sure you want to delete this resident?')) return;
 
     try {
-      const response = await fetch(`/api/admin/residents/${id}`, {
+      const response = await fetch(`${API_BASE}/api/admin/residents/${id}`, {
         method: 'DELETE'
       });
       const result = await response.json();

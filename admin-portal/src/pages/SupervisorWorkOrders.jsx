@@ -322,7 +322,7 @@ const SupervisorWorkOrders = ({ user }) => {
     }
 
     try {
-      const response = await fetch(`/api/supervisor/work-orders/${workOrder.id}/status`, {
+      const response = await fetch(`${API_BASE}/api/supervisor/work-orders/${workOrder.id}/status`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus, closingNotes: closingNotesValue })
@@ -382,7 +382,7 @@ const SupervisorWorkOrders = ({ user }) => {
     }
 
     try {
-      const response = await fetch(`/api/supervisor/work-orders/${workOrderId}/status`, {
+      const response = await fetch(`${API_BASE}/api/supervisor/work-orders/${workOrderId}/status`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -407,7 +407,7 @@ const SupervisorWorkOrders = ({ user }) => {
     if (!window.confirm('Are you sure you want to delete this work order?')) return;
     
     try {
-      const response = await fetch(`/api/supervisor/work-orders/${workOrderId}`, {
+      const response = await fetch(`${API_BASE}/api/supervisor/work-orders/${workOrderId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -494,7 +494,7 @@ const SupervisorWorkOrders = ({ user }) => {
     if (!selectedWorkOrder) return;
     
     try {
-      const response = await fetch(`/api/supervisor/work-orders/${selectedWorkOrder.id}`, {
+      const response = await fetch(`${API_BASE}/api/supervisor/work-orders/${selectedWorkOrder.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1452,7 +1452,7 @@ const SupervisorWorkOrders = ({ user }) => {
                       return;
                     }
                     try {
-                      const response = await fetch(`/api/supervisor/work-orders/${selectedWorkOrder.id}/status`, {
+                      const response = await fetch(`${API_BASE}/api/supervisor/work-orders/${selectedWorkOrder.id}/status`, {
                         method: 'PATCH',
                         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status: 'cancelled', cancelNote })

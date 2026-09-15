@@ -1073,7 +1073,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     setSendingEmail(true);
     
     try {
-      const response = await fetch(`/api/estimates-sync/${lastCreatedEstimate.estimateId}/send`, {
+      const response = await fetch(`${API_BASE}/api/estimates-sync/${lastCreatedEstimate.estimateId}/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });

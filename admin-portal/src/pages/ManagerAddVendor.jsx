@@ -112,7 +112,7 @@ const ManagerAddVendor = ({ user }) => {
     e.stopPropagation();
     if (!window.confirm(`Delete "${serviceName}" service type?`)) return;
     try {
-      const res = await fetch(`/api/admin/service-types/${serviceId}`, {
+      const res = await fetch(`${API_BASE}/api/admin/service-types/${serviceId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -144,7 +144,7 @@ const ManagerAddVendor = ({ user }) => {
 
   const handleDeleteZone = async (zoneId, e) => {
     e.stopPropagation(); if (!window.confirm('Delete this zone?')) return;
-    try { const res = await fetch(`/api/manager/zones/${zoneId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) fetchZones(); } catch (e) {}
+    try { const res = await fetch(`${API_BASE}/api/manager/zones/${zoneId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) fetchZones(); } catch (e) {}
   };
 
   const filteredZones = zoneSuggestions.filter(z =>

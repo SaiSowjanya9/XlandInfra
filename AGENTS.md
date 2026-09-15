@@ -1,8 +1,34 @@
 # XlandInfra Project Conventions
 
+## Git Conventions
+
+- Commit messages must NOT include generated-by or co-authored-by trailers.
+
 ## Deployment Context
 
 - **MySQL database name on the VPS:** `xland_pm`
+
+### Local Development Setup
+
+Local development is fully independent of production — never point a local
+frontend at `https://xlandinfra.com`, or local edits will mutate live data.
+
+- `backend/.env` uses the `LOCAL_DB_*` variables (not `DB_*`); `DB_*` only
+  applies when `NODE_ENV=production`.
+- Local database: `customer_portal_local`. The backend creates the database,
+  its tables and default users (`admin` / `Password@123`) on boot.
+- `admin-portal/.env` and `.env.local` must use `VITE_API_URL=http://localhost:5000`.
+  Only `.env.production` points at `https://xlandinfra.com`.
+
+### Database Migration Syntax
+
+The VPS runs MySQL 8, which does **not** support MariaDB's
+`ADD COLUMN IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS`. Many older files in
+`backend/database/` use that syntax and therefore fail to apply on MySQL 8.
+
+For new migrations, check `information_schema` and use dynamic SQL instead —
+see `backend/database/migrations/schema_v29_fix_column_drift.sql` for the
+pattern. This keeps migrations idempotent and safe to re-run.
 
 ## Frontend API Conventions
 

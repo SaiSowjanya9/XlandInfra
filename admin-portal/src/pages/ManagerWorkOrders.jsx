@@ -308,7 +308,7 @@ const ManagerWorkOrders = ({ user }) => {
     }
 
     try {
-      const response = await fetch(`/api/manager/work-orders/${id}/status`, {
+      const response = await fetch(`${API_BASE}/api/manager/work-orders/${id}/status`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -362,7 +362,7 @@ const ManagerWorkOrders = ({ user }) => {
     }
 
     try {
-      const response = await fetch(`/api/manager/work-orders/${workOrderId}/status`, {
+      const response = await fetch(`${API_BASE}/api/manager/work-orders/${workOrderId}/status`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -399,7 +399,7 @@ const ManagerWorkOrders = ({ user }) => {
     if (!window.confirm('Are you sure you want to delete this work order?')) return;
     
     try {
-      const response = await fetch(`/api/manager/work-orders/${workOrderId}`, {
+      const response = await fetch(`${API_BASE}/api/manager/work-orders/${workOrderId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -491,7 +491,7 @@ const ManagerWorkOrders = ({ user }) => {
     if (!selectedWorkOrder) return;
     
     try {
-      const response = await fetch(`/api/manager/work-orders/${selectedWorkOrder.id}`, {
+      const response = await fetch(`${API_BASE}/api/manager/work-orders/${selectedWorkOrder.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1733,7 +1733,7 @@ const ManagerWorkOrders = ({ user }) => {
                       return;
                     }
                     try {
-                      const response = await fetch(`/api/manager/work-orders/${showCancelModal.id}/status`, {
+                      const response = await fetch(`${API_BASE}/api/manager/work-orders/${showCancelModal.id}/status`, {
                         method: 'PATCH',
                         headers: {
                           'Authorization': `Bearer ${token}`,

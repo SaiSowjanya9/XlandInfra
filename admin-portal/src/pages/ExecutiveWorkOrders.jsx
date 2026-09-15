@@ -311,7 +311,7 @@ const ExecutiveWorkOrders = ({ user }) => {
     }
 
     try {
-      const response = await fetch(`/api/executive/work-orders/${workOrderId}/status`, {
+      const response = await fetch(`${API_BASE}/api/executive/work-orders/${workOrderId}/status`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus, closingNotes: closingNotesValue })

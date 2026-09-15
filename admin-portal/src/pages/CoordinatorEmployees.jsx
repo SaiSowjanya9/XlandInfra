@@ -127,7 +127,7 @@ const CoordinatorEmployees = ({ user }) => {
         }
       } else {
         // For standalone coordinator, fetch from API
-        const response = await fetch(`/api/coordinator/employees/${id}`, {
+        const response = await fetch(`${API_BASE}/api/coordinator/employees/${id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const result = await response.json();
@@ -186,7 +186,7 @@ const CoordinatorEmployees = ({ user }) => {
     if (!window.confirm('Are you sure you want to delete this employee?')) return;
 
     try {
-      const response = await fetch(`/api/coordinator/employees/${id}`, {
+      const response = await fetch(`${API_BASE}/api/coordinator/employees/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

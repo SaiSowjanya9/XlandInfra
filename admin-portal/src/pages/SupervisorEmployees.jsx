@@ -66,7 +66,7 @@ const SupervisorEmployees = ({ user }) => {
   const handleDelete = async (employee) => {
     if (!window.confirm('Are you sure you want to delete this employee?')) return;
     try {
-      const response = await fetch(`/api/supervisor/employees/${employee.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch(`${API_BASE}/api/supervisor/employees/${employee.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       const result = await response.json();
       if (result.success) { setMessage({ type: 'success', text: 'Employee deleted successfully!' }); fetchData(); }
       else setMessage({ type: 'error', text: result.message || 'Delete failed' });
@@ -90,7 +90,7 @@ const SupervisorEmployees = ({ user }) => {
 
   const viewEmployeeDetails = async (employee) => {
     try {
-      const response = await fetch(`/api/supervisor/employees/${employee.id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch(`${API_BASE}/api/supervisor/employees/${employee.id}`, { headers: { 'Authorization': `Bearer ${token}` } });
       const result = await response.json();
       if (result.success) { setSelectedEmployee(result.data); setShowDetailModal(true); }
     } catch (error) {

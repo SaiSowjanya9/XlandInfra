@@ -23,7 +23,7 @@ import {
   XCircle,
 } from 'lucide-react';
 
-const API_BASE = '/api';
+const API_BASE = `${import.meta.env.VITE_API_URL || ''}/api`;
 
 const CustomerWorkOrder = ({ user }) => {
   const [activeView, setActiveView] = useState('create'); // 'create' | 'history'

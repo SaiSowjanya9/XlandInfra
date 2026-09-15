@@ -209,7 +209,7 @@ const EmployeeManagement = () => {
           updates.password = formData.password;
         }
         
-        const response = await fetch(`/api/staff/${editingEmployee.id}`, {
+        const response = await fetch(`${API_BASE}/api/staff/${editingEmployee.id}`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -276,7 +276,7 @@ const EmployeeManagement = () => {
 
   const handleToggleStatus = async (employee) => {
     try {
-      const response = await fetch(`/api/staff/${employee.id}`, {
+      const response = await fetch(`${API_BASE}/api/staff/${employee.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -301,7 +301,7 @@ const EmployeeManagement = () => {
 
   const handleDelete = async (employee) => {
     try {
-      const response = await fetch(`/api/staff/${employee.id}`, {
+      const response = await fetch(`${API_BASE}/api/staff/${employee.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

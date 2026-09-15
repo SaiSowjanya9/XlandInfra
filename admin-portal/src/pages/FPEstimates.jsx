@@ -552,7 +552,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     }
 
     try {
-      const res = await fetch(`/api/fp/portal-links/${form.id}`, {
+      const res = await fetch(`${API_BASE}/api/fp/portal-links/${form.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -2888,7 +2888,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       else showToast(result.message || 'Failed', 'error');
     } catch (e) { showToast('Failed to save package', 'error'); }
   };
-  const handleDeleteAmcPackage = async (id) => { if (!window.confirm('Delete this package?')) return; try { const res = await fetch(`/api/fp/amc-packages/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
+  const handleDeleteAmcPackage = async (id) => { if (!window.confirm('Delete this package?')) return; try { const res = await fetch(`${API_BASE}/api/fp/amc-packages/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
   const handleAddServiceRow = () => setAmcForm({ ...amcForm, serviceRows: [...amcForm.serviceRows, { service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }] });
   const handleUpdateServiceRow = (i, f, v) => { 
     const rows = [...amcForm.serviceRows]; 
@@ -3417,7 +3417,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       else showToast(result.message || 'Failed', 'error');
     } catch (e) { showToast('Failed to create add-on', 'error'); }
   };
-  const handleDeleteAddon = async (id) => { if (!window.confirm('Delete this add-on?')) return; try { const res = await fetch(`/api/fp/addons/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
+  const handleDeleteAddon = async (id) => { if (!window.confirm('Delete this add-on?')) return; try { const res = await fetch(`${API_BASE}/api/fp/addons/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
 
   const openEditAddon = (addon) => {
     setEditingAddon({
@@ -3434,7 +3434,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const handleUpdateAddon = async () => {
     if (!editingAddon) return;
     try {
-      const res = await fetch(`/api/fp/addons/${editingAddon.id}`, {
+      const res = await fetch(`${API_BASE}/api/fp/addons/${editingAddon.id}`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -254,7 +254,7 @@ const FPEmployeeZones = ({ user }) => {
       // If ALL zones are selected, save as 'all' so new zones are auto-included
       const zonesToSave = isAllAvailableSelected() ? 'all' : selectedZones;
       
-      const response = await fetch(`/api/fp/employees/${selectedEmployee.id}/zones`, {
+      const response = await fetch(`${API_BASE}/api/fp/employees/${selectedEmployee.id}/zones`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

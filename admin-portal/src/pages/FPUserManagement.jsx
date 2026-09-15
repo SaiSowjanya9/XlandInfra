@@ -202,7 +202,7 @@ const FPUserManagement = ({ user }) => {
           updates.password = formData.password;
         }
         
-        const response = await fetch(`/api/fp/staff/${editingUser.id}`, {
+        const response = await fetch(`${API_BASE}/api/fp/staff/${editingUser.id}`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -270,7 +270,7 @@ const FPUserManagement = ({ user }) => {
   const handleToggleStatus = async (user) => {
     try {
       const newStatus = user.status === 'active' ? false : true;
-      const response = await fetch(`/api/fp/staff/${user.id}`, {
+      const response = await fetch(`${API_BASE}/api/fp/staff/${user.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -295,7 +295,7 @@ const FPUserManagement = ({ user }) => {
 
   const handleDelete = async (user) => {
     try {
-      const response = await fetch(`/api/fp/staff/${user.id}`, {
+      const response = await fetch(`${API_BASE}/api/fp/staff/${user.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
