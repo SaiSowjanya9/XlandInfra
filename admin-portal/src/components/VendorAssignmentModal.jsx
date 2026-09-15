@@ -718,7 +718,9 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess, portalType }) => 
           if (result.success) {
             successCount++;
           } else {
-            errorMessages.push(`${assignment.serviceType}: ${result.message || 'Failed to assign'}`);
+            // Include the server detail - a generic message hides the real cause
+            const detail = result.error && result.error !== result.message ? ` (${result.error})` : '';
+            errorMessages.push(`${assignment.serviceType}: ${result.message || 'Failed to assign'}${detail}`);
           }
         } catch (err) {
           errorMessages.push(`${assignment.serviceType}: ${err.message}`);
@@ -744,7 +746,8 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess, portalType }) => 
           if (result.success) {
             successCount++;
           } else {
-            errorMessages.push(`${assignment.serviceType}: ${result.message || 'Failed to update'}`);
+            const detail = result.error && result.error !== result.message ? ` (${result.error})` : '';
+            errorMessages.push(`${assignment.serviceType}: ${result.message || 'Failed to update'}${detail}`);
           }
         } catch (err) {
           errorMessages.push(`${assignment.serviceType}: ${err.message}`);

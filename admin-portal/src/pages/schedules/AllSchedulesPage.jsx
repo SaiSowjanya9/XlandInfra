@@ -53,7 +53,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   const initialLoadDoneRef = useRef(false);
   const [totalCount, setTotalCount] = useState(0);
   const [stats, setStats] = useState({
-    total: 0, scheduled: 0, upcoming: 0, workOrderCreated: 0,
+    total: 0, scheduled: 0, upcoming: 0, today: 0, workOrderCreated: 0,
     inProgress: 0, completed: 0, rescheduled: 0, cancelled: 0, overdue: 0
   });
   
@@ -1139,10 +1139,13 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     }
   };
 
-  // Stats cards based on document Section 12 statuses
+  // Stat cards. Total counts active visits (cancelled excluded) and equals
+  // Scheduled + In Progress + Completed + Rescheduled; Scheduled in turn splits
+  // by due date into Overdue + Today + Upcoming.
   const statsCards = [
     { label: 'Total', value: stats.total || 0, icon: CalendarDays, color: 'bg-blue-500' },
     { label: 'Scheduled', value: stats.scheduled || 0, icon: Calendar, color: 'bg-blue-500' },
+    { label: 'Today', value: stats.today || 0, icon: CalendarDays, color: 'bg-teal-500' },
     { label: 'Upcoming', value: stats.upcoming || 0, icon: Clock3, color: 'bg-indigo-500' },
     { label: 'In Progress', value: stats.inProgress || 0, icon: RefreshCw, color: 'bg-amber-500' },
     { label: 'Completed', value: stats.completed || 0, icon: CheckCircle, color: 'bg-green-500' },
@@ -1199,7 +1202,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
 
       <div className="p-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-7 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3 mb-6">
           {statsCards.map((stat, index) => (
             <div key={index} className="bg-white rounded-xl border border-gray-200 p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -1225,7 +1228,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                   placeholder="Search by Property ID, Name, Service..."
                   value={filters.search}
                   onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 />
               </div>
             </div>
@@ -1234,10 +1237,11 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             <select
               value={filters.status}
               onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700 hover:border-gray-400 focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Status</option>
               <option value="scheduled">Scheduled</option>
+              <option value="today">Today</option>
               <option value="upcoming">Upcoming</option>
               <option value="completed">Completed</option>
               <option value="rescheduled">Rescheduled</option>
@@ -1249,7 +1253,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             <select
               value={filters.service}
               onChange={(e) => setFilters({ ...filters, service: e.target.value })}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700 hover:border-gray-400 focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Services</option>
               {services.map(s => (
@@ -1261,7 +1265,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             <select
               value={filters.vendor}
               onChange={(e) => setFilters({ ...filters, vendor: e.target.value })}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700 hover:border-gray-400 focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Vendors</option>
               {/* Company name first, so the option matches the vendor shown on the rows */}
@@ -1275,7 +1279,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             <select
               value={filters.zone}
               onChange={(e) => setFilters({ ...filters, zone: e.target.value })}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700 hover:border-gray-400 focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Zones</option>
               {zones.map(z => (

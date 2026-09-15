@@ -14,10 +14,24 @@
 
 const { pool } = require('../config/database');
 
+// The business runs on IST, so "today" must be the Indian date even when the
+// server clock is UTC - otherwise between 00:00 and 05:30 IST yesterday's visits
+// are counted as due today instead of overdue.
+const IST_OFFSET_MINUTES = 330;
+const istToday = () => new Date(Date.now() + IST_OFFSET_MINUTES * 60 * 1000)
+  .toISOString()
+  .slice(0, 10);
+
+// Visits still awaiting work. The date buckets (overdue / today / upcoming) split
+// exactly this set, so they add up to the Scheduled card instead of overlapping
+// with the In Progress, Completed and Rescheduled cards.
+const OPEN_STATUSES = `('scheduled', 'confirmed', 'work_order_created', 'missed')`;
+
 const emptyScheduleStats = () => ({
   total: 0,
   scheduled: 0,
   upcoming: 0,
+  today: 0,
   workOrderCreated: 0,
   inProgress: 0,
   completed: 0,
@@ -43,17 +57,20 @@ const fetchScheduleStats = async ({
 } = {}) => {
   const stats = emptyScheduleStats();
 
+  // COUNT(DISTINCT sv.id) - the vendor join can match more than one row per visit,
+  // and SUM(CASE ...) would then count the same visit several times.
   const query = `
     SELECT
-      SUM(CASE WHEN sv.status <> 'cancelled' THEN 1 ELSE 0 END) as total,
-      SUM(CASE WHEN sv.status IN ('scheduled', 'confirmed', 'upcoming', 'work_order_created') THEN 1 ELSE 0 END) as scheduled,
-      SUM(CASE WHEN sv.status = 'work_order_created' THEN 1 ELSE 0 END) as workOrderCreated,
-      SUM(CASE WHEN sv.status = 'in_progress' THEN 1 ELSE 0 END) as inProgress,
-      SUM(CASE WHEN sv.status = 'completed' THEN 1 ELSE 0 END) as completed,
-      SUM(CASE WHEN sv.status = 'rescheduled' THEN 1 ELSE 0 END) as rescheduled,
-      SUM(CASE WHEN sv.status = 'cancelled' THEN 1 ELSE 0 END) as cancelled,
-      SUM(CASE WHEN sv.status NOT IN ('completed', 'cancelled') AND sv.scheduled_date > CURDATE() THEN 1 ELSE 0 END) as upcoming,
-      SUM(CASE WHEN sv.status NOT IN ('completed', 'cancelled') AND sv.scheduled_date < CURDATE() THEN 1 ELSE 0 END) as overdue
+      COUNT(DISTINCT CASE WHEN sv.status <> 'cancelled' THEN sv.id END) as total,
+      COUNT(DISTINCT CASE WHEN sv.status IN ${OPEN_STATUSES} THEN sv.id END) as scheduled,
+      COUNT(DISTINCT CASE WHEN sv.status = 'work_order_created' THEN sv.id END) as workOrderCreated,
+      COUNT(DISTINCT CASE WHEN sv.status = 'in_progress' THEN sv.id END) as inProgress,
+      COUNT(DISTINCT CASE WHEN sv.status = 'completed' THEN sv.id END) as completed,
+      COUNT(DISTINCT CASE WHEN sv.status = 'rescheduled' THEN sv.id END) as rescheduled,
+      COUNT(DISTINCT CASE WHEN sv.status = 'cancelled' THEN sv.id END) as cancelled,
+      COUNT(DISTINCT CASE WHEN sv.status IN ${OPEN_STATUSES} AND sv.scheduled_date > ? THEN sv.id END) as upcoming,
+      COUNT(DISTINCT CASE WHEN sv.status IN ${OPEN_STATUSES} AND sv.scheduled_date = ? THEN sv.id END) as today,
+      COUNT(DISTINCT CASE WHEN sv.status IN ${OPEN_STATUSES} AND sv.scheduled_date < ? THEN sv.id END) as overdue
     FROM scheduled_visits sv
     JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
     JOIN onboarded_properties op ON op.id = sv.property_id
@@ -62,7 +79,9 @@ const fetchScheduleStats = async ({
   `;
 
   try {
-    const [[counts]] = await pool.execute(query, params);
+    const today = istToday();
+    // Placeholders bind in order of appearance: the three SELECT dates precede the scope params
+    const [[counts]] = await pool.execute(query, [today, today, today, ...params]);
     Object.keys(stats).forEach(key => {
       stats[key] = parseInt(counts?.[key]) || 0;
     });
@@ -119,11 +138,16 @@ const fetchScheduledVendors = async ({
  * Returns null for real statuses, which the caller then binds as a parameter.
  */
 const derivedStatusFilter = (status) => {
+  // Date generated here as YYYY-MM-DD, so it is safe to inline
+  const today = istToday();
   if (status === 'upcoming') {
-    return ` AND sv.scheduled_date > CURDATE() AND sv.status NOT IN ('completed', 'cancelled')`;
+    return ` AND sv.scheduled_date > '${today}' AND sv.status IN ${OPEN_STATUSES}`;
+  }
+  if (status === 'today') {
+    return ` AND sv.scheduled_date = '${today}' AND sv.status IN ${OPEN_STATUSES}`;
   }
   if (status === 'overdue') {
-    return ` AND sv.scheduled_date < CURDATE() AND sv.status NOT IN ('completed', 'cancelled')`;
+    return ` AND sv.scheduled_date < '${today}' AND sv.status IN ${OPEN_STATUSES}`;
   }
   return null;
 };
