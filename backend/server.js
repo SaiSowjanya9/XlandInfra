@@ -48,6 +48,7 @@ const employeeRouter = require('./routes/employee');
 const { router: qrRouter, initializePool: initQRPool } = require('./routes/qr');
 const addonsRouter = require('./routes/addons');
 const { startCleanupScheduler } = require('./utils/workOrderCleanup');
+const { initScheduler: initWorkOrderScheduler } = require('./services/workOrderScheduler');
 const amcPackagesRouter = require('./routes/amcPackages');
 const estimatesSyncRouter = require('./routes/estimatesSync');
 const paymentsRouter = require('./routes/payments');
@@ -251,6 +252,10 @@ const startServer = async () => {
     console.log('✅ QR Management System initialized');
     // Start work order cleanup scheduler (auto-delete closed/cancelled after 30 days)
     startCleanupScheduler();
+    
+    // Start work order auto-generation scheduler (creates work orders 7 days before scheduled services)
+    // Runs at 6:00 AM and 6:00 PM daily (IST)
+    initWorkOrderScheduler();
   } else {
     console.log('⚠️ Database mode: Demo (no MySQL connection)');
     console.log('   To enable database, update .env with valid MySQL credentials');

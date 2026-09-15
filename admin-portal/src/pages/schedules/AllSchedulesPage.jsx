@@ -50,6 +50,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [schedules, setSchedules] = useState([]);
+  const initialLoadDoneRef = useRef(false);
   const [totalCount, setTotalCount] = useState(0);
   const [stats, setStats] = useState({
     total: 0, scheduled: 0, upcoming: 0, workOrderCreated: 0,
@@ -192,8 +193,12 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
 
   // Fetch schedules
   const fetchSchedules = useCallback(async (showRefresh = false) => {
-    if (showRefresh) setRefreshing(true);
-    else setLoading(true);
+    if (showRefresh) {
+      setRefreshing(true);
+    } else if (!initialLoadDoneRef.current) {
+      // Only show loading spinner on initial load, not on silent refreshes
+      setLoading(true);
+    }
     
     try {
       const token = getAuthToken();
@@ -224,6 +229,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      initialLoadDoneRef.current = true;
     }
   }, [currentPage, filters, apiPath, itemsPerPage]);
 

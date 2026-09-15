@@ -214,6 +214,7 @@ const CustomerDashboard = ({ user }) => {
                   outerRadius={80}
                   paddingAngle={pieData.length > 1 ? 3 : 0}
                   dataKey="value"
+                  isAnimationActive={false}
                 >
                   {(pieData.length > 0 ? pieData : [{ name: 'No Data', value: 1, color: '#374151' }]).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />

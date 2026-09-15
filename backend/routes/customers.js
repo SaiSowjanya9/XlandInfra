@@ -38,6 +38,57 @@ const generateActivationToken = () => {
   return crypto.randomBytes(32).toString('hex');
 };
 
+// Customer authentication middleware
+const authenticateCustomer = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = verifyToken(token);
+    } catch (err) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    }
+
+    const customerId = decoded.id;
+    if (!customerId) {
+      return res.status(401).json({ success: false, message: 'Customer ID not found in token' });
+    }
+
+    // Get customer details
+    const [customer] = await pool.execute(
+      `SELECT id, customer_id, email, first_name, last_name, property_id, property_code, property_name, is_active
+       FROM customer_accounts WHERE id = ? AND is_active = 1`,
+      [customerId]
+    );
+
+    if (customer.length === 0) {
+      return res.status(401).json({ success: false, message: 'Customer not found or inactive' });
+    }
+
+    // Attach customer info to request
+    req.customer = {
+      id: customer[0].id,
+      customerId: customer[0].customer_id,
+      email: customer[0].email,
+      firstName: customer[0].first_name,
+      lastName: customer[0].last_name,
+      propertyId: customer[0].property_id,
+      propertyCode: customer[0].property_code,
+      propertyName: customer[0].property_name
+    };
+
+    next();
+  } catch (error) {
+    console.error('Customer authentication error:', error);
+    return res.status(500).json({ success: false, message: 'Authentication error' });
+  }
+};
+
 // Initialize database tables and columns
 const initializeDatabase = async () => {
   try {
@@ -2366,6 +2417,145 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
   } catch (error) {
     console.error('Error recording offline payment intent:', error);
     res.status(500).json({ success: false, message: 'Error recording payment intent', error: error.message });
+  }
+});
+
+// ============================================
+// CUSTOMER NOTIFICATIONS
+// ============================================
+
+// Get notifications for customer
+router.get('/notifications', authenticateCustomer, async (req, res) => {
+  try {
+    const customerId = req.customer.id;
+    const propertyId = req.customer.propertyId;
+    const { limit = 20, unreadOnly = false } = req.query;
+
+    // Get notifications for this customer's property
+    // Also include notifications targeted at 'customer' role for this franchise partner
+    const [notifications] = await pool.execute(`
+      SELECT 
+        pn.id,
+        pn.notification_id,
+        pn.type,
+        pn.title,
+        pn.message,
+        pn.reference_type,
+        pn.reference_id,
+        pn.action_url,
+        pn.is_read,
+        pn.read_at,
+        pn.priority,
+        pn.created_at
+      FROM portal_notifications pn
+      LEFT JOIN onboarded_properties op ON op.franchise_partner_id = pn.franchise_partner_id
+      WHERE (
+        (pn.role_type = 'customer' AND op.id = ?)
+        OR (pn.role_type = 'customer' AND pn.reference_type = 'work_order' AND EXISTS (
+          SELECT 1 FROM work_orders wo WHERE wo.id = pn.reference_id AND wo.property_id = ?
+        ))
+      )
+      ${unreadOnly === 'true' ? 'AND pn.is_read = FALSE' : ''}
+      ORDER BY pn.created_at DESC
+      LIMIT ?
+    `, [propertyId, propertyId, parseInt(limit)]);
+
+    // Get unread count
+    const [[{ unreadCount }]] = await pool.execute(`
+      SELECT COUNT(*) as unreadCount
+      FROM portal_notifications pn
+      LEFT JOIN onboarded_properties op ON op.franchise_partner_id = pn.franchise_partner_id
+      WHERE (
+        (pn.role_type = 'customer' AND op.id = ?)
+        OR (pn.role_type = 'customer' AND pn.reference_type = 'work_order' AND EXISTS (
+          SELECT 1 FROM work_orders wo WHERE wo.id = pn.reference_id AND wo.property_id = ?
+        ))
+      )
+      AND pn.is_read = FALSE
+    `, [propertyId, propertyId]);
+
+    res.json({
+      success: true,
+      data: {
+        notifications: notifications.map(n => ({
+          id: n.id,
+          notificationId: n.notification_id,
+          type: n.type,
+          title: n.title,
+          message: n.message,
+          referenceType: n.reference_type,
+          referenceId: n.reference_id,
+          actionUrl: n.action_url,
+          isRead: !!n.is_read,
+          readAt: n.read_at,
+          priority: n.priority,
+          createdAt: n.created_at
+        })),
+        unreadCount
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching customer notifications:', error);
+    res.status(500).json({ success: false, message: 'Error fetching notifications', error: error.message });
+  }
+});
+
+// Mark notification as read
+router.put('/notifications/:id/read', authenticateCustomer, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const propertyId = req.customer.propertyId;
+
+    // Verify the notification belongs to this customer's property
+    const [notification] = await pool.execute(`
+      SELECT pn.id FROM portal_notifications pn
+      LEFT JOIN onboarded_properties op ON op.franchise_partner_id = pn.franchise_partner_id
+      WHERE pn.id = ? AND (
+        (pn.role_type = 'customer' AND op.id = ?)
+        OR (pn.role_type = 'customer' AND pn.reference_type = 'work_order' AND EXISTS (
+          SELECT 1 FROM work_orders wo WHERE wo.id = pn.reference_id AND wo.property_id = ?
+        ))
+      )
+    `, [id, propertyId, propertyId]);
+
+    if (notification.length === 0) {
+      return res.status(404).json({ success: false, message: 'Notification not found' });
+    }
+
+    await pool.execute(
+      `UPDATE portal_notifications SET is_read = TRUE, read_at = NOW() WHERE id = ?`,
+      [id]
+    );
+
+    res.json({ success: true, message: 'Notification marked as read' });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({ success: false, message: 'Error updating notification', error: error.message });
+  }
+});
+
+// Mark all notifications as read
+router.put('/notifications/mark-all-read', authenticateCustomer, async (req, res) => {
+  try {
+    const propertyId = req.customer.propertyId;
+
+    // Mark all customer notifications for this property as read
+    await pool.execute(`
+      UPDATE portal_notifications pn
+      LEFT JOIN onboarded_properties op ON op.franchise_partner_id = pn.franchise_partner_id
+      SET pn.is_read = TRUE, pn.read_at = NOW()
+      WHERE pn.is_read = FALSE AND (
+        (pn.role_type = 'customer' AND op.id = ?)
+        OR (pn.role_type = 'customer' AND pn.reference_type = 'work_order' AND EXISTS (
+          SELECT 1 FROM work_orders wo WHERE wo.id = pn.reference_id AND wo.property_id = ?
+        ))
+      )
+    `, [propertyId, propertyId]);
+
+    res.json({ success: true, message: 'All notifications marked as read' });
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+    res.status(500).json({ success: false, message: 'Error updating notifications', error: error.message });
   }
 });
 

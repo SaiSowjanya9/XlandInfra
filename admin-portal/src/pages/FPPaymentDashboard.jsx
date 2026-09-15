@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   CreditCard,
   DollarSign,
@@ -24,6 +24,7 @@ const FPPaymentDashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [error, setError] = useState(null);
+  const initialLoadDoneRef = useRef(false);
   
   // Date filter state
   const [startDate, setStartDate] = useState('');
@@ -32,7 +33,10 @@ const FPPaymentDashboard = ({ user }) => {
   const token = getAuthToken();
 
   const fetchDashboard = async () => {
-    setLoading(true);
+    // Only show loading spinner on initial load, not on silent refreshes
+    if (!initialLoadDoneRef.current) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const response = await fetch(`${API_BASE}/api/payments/dashboard`, {
@@ -49,6 +53,7 @@ const FPPaymentDashboard = ({ user }) => {
       setError('Failed to connect to server');
     } finally {
       setLoading(false);
+      initialLoadDoneRef.current = true;
     }
   };
 

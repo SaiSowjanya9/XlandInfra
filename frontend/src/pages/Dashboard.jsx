@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock, Clock, CheckCircle, AlertCircle, Loader2, Eye, ChevronRight, Wrench, User, Phone, Mail, MapPin, Paperclip, Image, FileText, X, Truck, RefreshCw } from 'lucide-react';
+import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock, Clock, CheckCircle, AlertCircle, Loader2, Eye, ChevronRight, Wrench, User, Phone, Mail, MapPin, Paperclip, Image, FileText, X, Truck, RefreshCw, Bell, BellRing, CheckCheck } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 const UPLOADS_BASE_URL = '';
@@ -11,8 +11,13 @@ const Dashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
   const modalRef = useRef(null);
   const overlayRef = useRef(null);
+  const notificationRef = useRef(null);
 
   useEffect(() => {
     if (selectedWorkOrder) {
@@ -23,6 +28,80 @@ const Dashboard = ({ user }) => {
       }, 10);
     }
   }, [selectedWorkOrder]);
+
+  // Close notifications dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      setNotificationsLoading(true);
+      const token = localStorage.getItem('customerToken');
+      if (!token) return;
+
+      const response = await fetch(`${API_BASE_URL}/api/customers/notifications?limit=10`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setNotifications(result.data.notifications || []);
+        setUnreadCount(result.data.unreadCount || 0);
+      }
+    } catch (err) {
+      console.error('Notifications fetch error:', err);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
+
+  const markNotificationAsRead = async (notificationId) => {
+    try {
+      const token = localStorage.getItem('customerToken');
+      await fetch(`${API_BASE_URL}/api/customers/notifications/${notificationId}/read`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      // Update local state
+      setNotifications(prev => prev.map(n => 
+        n.id === notificationId ? { ...n, isRead: true } : n
+      ));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    try {
+      const token = localStorage.getItem('customerToken');
+      await fetch(`${API_BASE_URL}/api/customers/notifications/mark-all-read`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      // Update local state
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Error marking all notifications as read:', err);
+    }
+  };
 
   const fetchDashboard = async () => {
     try {
@@ -55,6 +134,7 @@ const Dashboard = ({ user }) => {
 
   useEffect(() => {
     fetchDashboard();
+    fetchNotifications();
   }, []);
 
   const menuItems = [
@@ -130,13 +210,114 @@ const Dashboard = ({ user }) => {
             <p className="text-dark-400 text-sm mt-1">Property ID: <span className="text-gold-400 font-medium">{user.propertyCode}</span></p>
           )}
         </div>
-        <button
-          onClick={fetchDashboard}
-          className="flex items-center gap-2 px-4 py-2 bg-dark-800 border border-dark-600 rounded-lg hover:bg-dark-700 transition-colors text-white"
-        >
-          <RefreshCw className="w-4 h-4" />
-          <span>Refresh</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Notifications Bell */}
+          <div ref={notificationRef} className="relative">
+            <button
+              onClick={() => {
+                setShowNotifications(!showNotifications);
+                if (!showNotifications) fetchNotifications();
+              }}
+              className="relative flex items-center justify-center w-10 h-10 bg-dark-800 border border-dark-600 rounded-lg hover:bg-dark-700 transition-colors text-white"
+            >
+              {unreadCount > 0 ? (
+                <BellRing className="w-5 h-5 text-gold-400" />
+              ) : (
+                <Bell className="w-5 h-5" />
+              )}
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs font-bold flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* Notifications Dropdown */}
+            {showNotifications && (
+              <div className="absolute right-0 top-12 w-80 sm:w-96 bg-dark-800 border border-dark-600 rounded-xl shadow-2xl z-50 overflow-hidden">
+                <div className="flex items-center justify-between p-4 border-b border-dark-600">
+                  <h3 className="text-white font-semibold flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-gold-400" />
+                    Notifications
+                  </h3>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={markAllNotificationsAsRead}
+                      className="text-xs text-gold-400 hover:text-gold-300 flex items-center gap-1"
+                    >
+                      <CheckCheck className="w-3 h-3" />
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                
+                <div className="max-h-80 overflow-y-auto">
+                  {notificationsLoading ? (
+                    <div className="flex items-center justify-center p-8">
+                      <Loader2 className="w-6 h-6 text-gold-400 animate-spin" />
+                    </div>
+                  ) : notifications.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <Bell className="w-10 h-10 text-dark-500 mx-auto mb-2" />
+                      <p className="text-dark-400 text-sm">No notifications yet</p>
+                    </div>
+                  ) : (
+                    notifications.map((notification) => (
+                      <button
+                        key={notification.id}
+                        onClick={() => {
+                          if (!notification.isRead) {
+                            markNotificationAsRead(notification.id);
+                          }
+                          if (notification.actionUrl) {
+                            navigate(notification.actionUrl);
+                          }
+                          setShowNotifications(false);
+                        }}
+                        className={`w-full text-left p-4 border-b border-dark-700 hover:bg-dark-700/50 transition-colors ${
+                          !notification.isRead ? 'bg-gold-500/5' : ''
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                            !notification.isRead ? 'bg-gold-400' : 'bg-dark-500'
+                          }`} />
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium ${
+                              !notification.isRead ? 'text-white' : 'text-dark-300'
+                            }`}>
+                              {notification.title}
+                            </p>
+                            <p className="text-xs text-dark-400 mt-1 line-clamp-2">
+                              {notification.message}
+                            </p>
+                            <p className="text-xs text-dark-500 mt-2">
+                              {new Date(notification.createdAt).toLocaleString('en-IN', {
+                                day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Refresh Button */}
+          <button
+            onClick={() => {
+              fetchDashboard();
+              fetchNotifications();
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-dark-800 border border-dark-600 rounded-lg hover:bg-dark-700 transition-colors text-white"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats Row - 4 cards */}

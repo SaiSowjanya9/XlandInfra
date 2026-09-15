@@ -157,6 +157,7 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const initialLoadDoneRef = useRef(false);
   const [schedules, setSchedules] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [zones, setZones] = useState([]);
@@ -205,8 +206,12 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
 
   // Fetch schedules
   const fetchSchedules = useCallback(async (showRefreshSpinner = false) => {
-    if (showRefreshSpinner) setRefreshing(true);
-    else setLoading(true);
+    if (showRefreshSpinner) {
+      setRefreshing(true);
+    } else if (!initialLoadDoneRef.current) {
+      // Only show loading spinner on initial load, not on silent refreshes
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -238,6 +243,7 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      initialLoadDoneRef.current = true;
     }
   }, [token]);
 
