@@ -68,9 +68,9 @@ export const PROPERTY_TYPE_COLORS = {
 };
 
 // =============================================================================
-// SERVICE COLORS - Distinct palette avoiding status colors
+// SERVICE COLORS - Warm/earthy palette (distinct from Property Types which use cool tones)
 // =============================================================================
-export const SERVICE_COLORS = ['#0891B2', '#DB2777', '#7C3AED', '#059669', '#CA8A04', '#9333EA', '#0284C7', '#78716C'];
+export const SERVICE_COLORS = ['#16A34A', '#0369A1', '#A855F7', '#F97316', '#06B6D4', '#E11D48', '#84CC16', '#64748B'];
 
 // =============================================================================
 // PAYMENT/INVOICE STATUS COLORS - Distinct palette for financial status
