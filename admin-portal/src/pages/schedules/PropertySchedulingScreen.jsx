@@ -95,6 +95,10 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   // Final review and confirmation state
   const [showFinalReview, setShowFinalReview] = useState(false);
   const [confirmingAllSchedules, setConfirmingAllSchedules] = useState(false);
+  // Saved visits of services that are already confirmed, keyed by service id,
+  // so the final review can show the whole property in one place
+  const [reviewVisitsByService, setReviewVisitsByService] = useState({});
+  const [loadingReviewVisits, setLoadingReviewVisits] = useState(false);
 
   // Toast notification state
   const [toast, setToast] = useState(null);
@@ -1250,10 +1254,35 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
     return unplannedServices.length === 0 && Object.keys(plannedSchedules).length > 0;
   };
   
-  // Start/show final review
-  const handleShowFinalReview = () => {
+  // A service can only be scheduled once it has a vendor
+  const serviceHasVendor = (s) => !!(s.vendorId || (s.vendorName && s.vendorName !== 'Unassigned'));
+  const schedulableServices = services.filter(serviceHasVendor);
+  const servicesWithoutVendor = services.filter(s => !serviceHasVendor(s));
+  const plannedReviewServices = schedulableServices.filter(s => plannedSchedules[s.id]);
+  const confirmedReviewServices = schedulableServices.filter(s => s.status === 'Scheduled' && !plannedSchedules[s.id]);
+  // Every schedulable service either has dates planned or is already confirmed
+  const readyForFinalReview = schedulableServices.length > 0 &&
+    schedulableServices.every(s => s.status === 'Scheduled' || !!plannedSchedules[s.id]);
+
+  // Start/show final review - pulls in the saved visits of already confirmed services
+  const handleShowFinalReview = async () => {
     setWizardStep(WIZARD_STEPS.REVIEW);
     setShowFinalReview(true);
+
+    const alreadyConfirmed = schedulableServices.filter(s => s.status === 'Scheduled');
+    if (alreadyConfirmed.length === 0) return;
+
+    setLoadingReviewVisits(true);
+    try {
+      const entries = await Promise.all(
+        alreadyConfirmed.map(async (s) => [s.id, (await loadSavedVisits(s)) || []])
+      );
+      setReviewVisitsByService(Object.fromEntries(entries));
+    } catch (err) {
+      console.error('Error loading confirmed visits for review:', err);
+    } finally {
+      setLoadingReviewVisits(false);
+    }
   };
   
   // Confirm all planned schedules at once
@@ -1333,7 +1362,8 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       // Clear planned schedules after confirmation
       setPlannedSchedules({});
       setShowFinalReview(false);
-      setWizardStep(WIZARD_STEPS.SCHEDULING);
+      setReviewVisitsByService({});
+      setWizardStep(WIZARD_STEPS.DATE_SELECTION);
       
       // Show result
       if (errors.length === 0) {
@@ -1361,7 +1391,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       setSelectedService(planData.service);
       setPlannedVisits(planData.visits);
       setShowFinalReview(false);
-      setWizardStep(WIZARD_STEPS.SCHEDULING);
+      setWizardStep(WIZARD_STEPS.DATE_SELECTION);
     }
   };
   
@@ -1741,16 +1771,34 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               )}
             </div>
             
-            {/* Action buttons - only for users with permissions */}
-            {permissions.canConfirm && Object.keys(plannedSchedules).length > 0 && (
+            {/* Final step - reachable once every service with a vendor has dates or is confirmed */}
+            {permissions.canConfirm && (Object.keys(plannedSchedules).length > 0 || readyForFinalReview) && (
               <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
                 <button
                   onClick={handleShowFinalReview}
-                  className="w-full py-2 sm:py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white text-xs sm:text-sm font-medium rounded-lg hover:from-green-700 hover:to-green-800 transition-all flex items-center justify-center gap-1.5 sm:gap-2"
+                  className={`w-full py-2 sm:py-2.5 text-white text-xs sm:text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 ${
+                    readyForFinalReview
+                      ? 'bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 shadow-md'
+                      : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
+                  }`}
                 >
                   <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  Review All ({Object.keys(plannedSchedules).length})
+                  Review &amp; Confirm ({schedulableServices.length})
                 </button>
+                {readyForFinalReview ? (
+                  <p className="mt-1.5 text-[10px] sm:text-xs text-green-700 text-center">
+                    All services with a vendor are ready
+                  </p>
+                ) : (
+                  <p className="mt-1.5 text-[10px] sm:text-xs text-gray-500 text-center">
+                    {schedulableServices.filter(s => s.status !== 'Scheduled' && !plannedSchedules[s.id]).length} service(s) still need dates
+                  </p>
+                )}
+                {servicesWithoutVendor.length > 0 && (
+                  <p className="mt-1 text-[10px] sm:text-xs text-amber-600 text-center">
+                    {servicesWithoutVendor.length} service(s) skipped - no vendor assigned
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -2641,7 +2689,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       )}
 
       {/* ===== FINAL REVIEW MODAL - Review All Planned Services - Responsive ===== */}
-      {showFinalReview && Object.keys(plannedSchedules).length > 0 && (
+      {showFinalReview && (
         <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 p-2 sm:p-4 pt-2 sm:pt-8 overflow-y-auto">
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-5xl max-h-[98vh] sm:max-h-[95vh] overflow-hidden">
             {/* Modal Header */}
@@ -2650,16 +2698,18 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 <div className="min-w-0">
                   <h2 className="text-lg sm:text-2xl font-bold text-white flex items-center gap-2 sm:gap-3">
                     <ListChecks className="w-5 h-5 sm:w-7 sm:h-7 flex-shrink-0" />
-                    <span className="truncate">Review All Schedules</span>
+                    <span className="truncate">Review &amp; Confirm - {property?.propertyId || property?.property_id || 'Property'}</span>
                   </h2>
                   <p className="text-green-100 text-xs sm:text-sm mt-0.5 sm:mt-1">
-                    Review {Object.keys(plannedSchedules).length} services before confirmation
+                    {plannedReviewServices.length} to confirm
+                    {confirmedReviewServices.length > 0 && ` • ${confirmedReviewServices.length} already confirmed`}
+                    {servicesWithoutVendor.length > 0 && ` • ${servicesWithoutVendor.length} without vendor`}
                   </p>
                 </div>
                 <button 
                   onClick={() => {
                     setShowFinalReview(false);
-                    setWizardStep(WIZARD_STEPS.SCHEDULING);
+                    setWizardStep(WIZARD_STEPS.DATE_SELECTION);
                   }}
                   className="p-1.5 sm:p-2 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0"
                 >
@@ -2765,6 +2815,89 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                     </div>
                   );
                 })}
+
+                {/* Services already confirmed - read only, so the whole property is in one view */}
+                {confirmedReviewServices.length > 0 && (
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2 sm:mb-3">
+                      Already confirmed
+                    </h3>
+                    <div className="space-y-3 sm:space-y-4">
+                      {confirmedReviewServices.map((service) => {
+                        const visits = reviewVisitsByService[service.id] || [];
+                        return (
+                          <div key={service.id} className="border-2 border-green-200 rounded-lg sm:rounded-xl overflow-hidden">
+                            <div className="bg-green-50 px-3 sm:px-5 py-3 sm:py-4 border-b border-green-200">
+                              <div className="flex items-center gap-2 sm:gap-4">
+                                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <Check className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                                </div>
+                                <div className="min-w-0">
+                                  <h4 className="text-sm sm:text-lg font-bold text-gray-900 truncate">{service.name}</h4>
+                                  <p className="text-xs sm:text-sm text-gray-500 truncate">
+                                    {service.vendorName} • {service.frequency} • {visits.length || service.visits} visits
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="p-2 sm:p-4 bg-gray-50">
+                              {loadingReviewVisits && visits.length === 0 ? (
+                                <p className="text-xs text-gray-400 py-2">Loading visit dates...</p>
+                              ) : visits.length === 0 ? (
+                                <p className="text-xs text-gray-400 py-2">No visit dates found for this service</p>
+                              ) : (
+                                <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
+                                  {visits.slice(0, 12).map((visit, idx) => (
+                                    <div key={idx} className="flex-shrink-0 w-20 sm:w-28 p-1.5 sm:p-2.5 rounded-lg border border-green-200 bg-white text-center">
+                                      <p className="text-[10px] sm:text-xs text-gray-500 font-medium">Visit {visit.visitNumber}</p>
+                                      <p className="font-semibold text-[10px] sm:text-sm mt-0.5">{visit.shortDateStr || visit.dateStr}</p>
+                                      <p className="text-[9px] sm:text-xs text-gray-500">{visit.time}</p>
+                                    </div>
+                                  ))}
+                                  {visits.length > 12 && (
+                                    <div className="flex-shrink-0 w-20 sm:w-28 p-1.5 sm:p-2.5 rounded-lg border border-gray-200 bg-gray-100 flex items-center justify-center">
+                                      <span className="text-[10px] sm:text-sm text-gray-500 font-medium">+{visits.length - 12} more</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Services that cannot be scheduled yet */}
+                {servicesWithoutVendor.length > 0 && (
+                  <div className="border-2 border-amber-200 bg-amber-50 rounded-lg sm:rounded-xl p-3 sm:p-4">
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-semibold text-amber-800">
+                          Not included - no vendor assigned
+                        </h4>
+                        <p className="text-xs text-amber-700 mt-0.5">
+                          Assign a vendor to these services to schedule them:
+                        </p>
+                        <ul className="mt-1.5 space-y-0.5">
+                          {servicesWithoutVendor.map(s => (
+                            <li key={s.id} className="text-xs text-amber-800">
+                              • {s.name} ({s.frequency}, {s.visits} visits)
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {plannedReviewServices.length === 0 && confirmedReviewServices.length === 0 && (
+                  <p className="text-sm text-gray-500 text-center py-8">
+                    Nothing to review yet - plan dates for a service first.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -2772,39 +2905,45 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             <div className="px-3 sm:px-6 py-3 sm:py-4 bg-gray-100 border-t border-gray-200">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4">
                 <div className="text-xs sm:text-sm text-center sm:text-left">
-                  <span className="text-gray-500">Total:</span>
+                  <span className="text-gray-500">To confirm:</span>
                   <span className="ml-1 sm:ml-2 font-bold text-gray-900">
-                    {Object.keys(plannedSchedules).length} svc
+                    {plannedReviewServices.length} svc
                   </span>
                   <span className="mx-1 sm:mx-2 text-gray-300">•</span>
                   <span className="font-bold text-gray-900">
                     {Object.values(plannedSchedules).reduce((sum, p) => sum + p.visits.length, 0)} visits
                   </span>
+                  {plannedReviewServices.length === 0 && confirmedReviewServices.length > 0 && (
+                    <span className="block sm:inline sm:ml-2 text-green-700 font-medium">
+                      All services confirmed
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                   <button
                     onClick={() => {
                       setShowFinalReview(false);
-                      setWizardStep(WIZARD_STEPS.SCHEDULING);
+                      setWizardStep(WIZARD_STEPS.DATE_SELECTION);
                     }}
                     className="flex-1 sm:flex-none px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
                   >
-                    Back
+                    {plannedReviewServices.length === 0 ? 'Close' : 'Back'}
                   </button>
                   <button
                     onClick={handleConfirmAllSchedules}
-                    disabled={confirmingAllSchedules || Object.keys(plannedSchedules).length === 0}
+                    disabled={confirmingAllSchedules || plannedReviewServices.length === 0}
+                    title={plannedReviewServices.length === 0 ? 'Every service with a vendor is already confirmed' : undefined}
                     className="flex-1 sm:flex-none px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 sm:gap-2 shadow-lg"
                   >
                     {confirmingAllSchedules ? (
                       <>
                         <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                        <span className="hidden sm:inline">Confirming...</span>
+                        <span className="hidden sm:inline">Generating schedule...</span>
                       </>
                     ) : (
                       <>
                         <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-                        Confirm All
+                        Confirm All &amp; Generate Schedule
                       </>
                     )}
                   </button>

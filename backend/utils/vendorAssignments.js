@@ -149,10 +149,13 @@ const ensureVendorAssignmentSchema = () => {
 
         await repairAssignmentTriggers();
       } catch (err) {
-        console.log('[Vendor Assignments] Schema check failed:', err.message);
+        // Repairing needs ALTER/TRIGGER rights, which a production DB user may not
+        // have. Never block the assignment on it - the write below reports the real
+        // problem if the schema is genuinely unusable.
+        console.log('[Vendor Assignments] Schema check could not complete:', err.message);
+        console.log('[Vendor Assignments] Apply backend/database/migrations/schema_v31_vendor_assignment_service.sql as a privileged user.');
         // Let the next request retry rather than caching the failure
         schemaReadyPromise = null;
-        throw err;
       }
     })();
   }
@@ -180,7 +183,7 @@ const resolveVendor = async (vendorId, { activeOnly = false } = {}) => {
  * @returns {Promise<{ created: boolean, alreadyActive: boolean }>}
  */
 const upsertPropertyVendorAssignment = async ({ propertyId, vendorId, serviceType, assignedBy }) => {
-  await ensureVendorAssignmentSchema();
+  await ensureVendorAssignmentSchema().catch(() => {});
 
   const [existing] = await pool.execute(
     `SELECT id, is_active FROM property_vendor_assignments

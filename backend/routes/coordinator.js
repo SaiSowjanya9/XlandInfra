@@ -2922,7 +2922,7 @@ router.get('/schedules/all', requireCoordinatorScope, async (req, res) => {
     
     // Get total count - handle both numeric and string property_id
     const countQuery = `
-      SELECT COUNT(*) as total
+      SELECT COUNT(DISTINCT sv.id) as total
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
       JOIN onboarded_properties op ON op.id = sv.property_id
@@ -2973,7 +2973,7 @@ router.get('/schedules/all', requireCoordinatorScope, async (req, res) => {
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
       JOIN onboarded_properties op ON op.id = sv.property_id
-      LEFT JOIN property_contacts pc ON pc.property_id = op.id
+      LEFT JOIN property_contacts pc ON pc.id = (SELECT pc2.id FROM property_contacts pc2 WHERE pc2.property_id = op.id ORDER BY pc2.id LIMIT 1)
       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
       ${whereClause}

@@ -6381,7 +6381,7 @@ router.get('/schedules/pending-properties', authenticate, attachFPScope, async (
         ) latest_fe ON latest_fe.property_id = op.id
         INNER JOIN fp_estimates fe ON fe.id = latest_fe.latest_estimate_id
         LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id
-        LEFT JOIN property_contacts pc ON pc.property_id = op.id
+        LEFT JOIN property_contacts pc ON pc.id = (SELECT pc2.id FROM property_contacts pc2 WHERE pc2.property_id = op.id ORDER BY pc2.id LIMIT 1)
         WHERE op.status = 'active'
           AND op.franchise_partner_id = ?
         
@@ -6636,11 +6636,11 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
     
     // Get total count - scheduled_visits.property_id is always the numeric onboarded_properties.id
     const countQuery = `
-      SELECT COUNT(*) as total
+      SELECT COUNT(DISTINCT sv.id) as total
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
       JOIN onboarded_properties op ON op.id = sv.property_id
-      LEFT JOIN onboarded_vendors ov ON (ov.id = pss.vendor_id OR ov.vendor_id = pss.vendor_id)
+      LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       ${whereClause}
     `;
     console.log('[FP All Schedules] Count params:', params);
@@ -6689,8 +6689,8 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
       JOIN onboarded_properties op ON op.id = sv.property_id
-      LEFT JOIN property_contacts pc ON pc.property_id = op.id
-      LEFT JOIN onboarded_vendors ov ON (ov.id = pss.vendor_id OR ov.vendor_id = pss.vendor_id)
+      LEFT JOIN property_contacts pc ON pc.id = (SELECT pc2.id FROM property_contacts pc2 WHERE pc2.property_id = op.id ORDER BY pc2.id LIMIT 1)
+      LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
       ${whereClause}
       ORDER BY sv.scheduled_date DESC, sv.scheduled_time_start ASC
@@ -6737,7 +6737,7 @@ router.get('/schedules/all', authenticate, attachFPScope, async (req, res) => {
     const stats = await fetchScheduleStats({
       whereClause: statsWhereClause,
       params: statsParams,
-      vendorJoinOn: '(ov.id = pss.vendor_id OR ov.vendor_id = pss.vendor_id)',
+      vendorJoinOn: 'ov.id = pss.vendor_id',
       label: 'FP All Schedules'
     });
     
