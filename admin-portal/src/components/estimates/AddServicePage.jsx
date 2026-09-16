@@ -77,6 +77,22 @@ const Toggle = ({ label, hint, checked, onChange }) => (
   </div>
 );
 
+export const findCapacitySlab = (slabs, capacity) => {
+  if (capacity == null || String(capacity).trim() === '' || !Number.isInteger(Number(capacity))) return undefined;
+  return slabs?.find(slab => slab.capacityFrom !== '' && Number(capacity) >= Number(slab.capacityFrom) &&
+    (slab.capacityTo === null || (slab.capacityTo !== '' && Number(capacity) <= Number(slab.capacityTo))));
+};
+
+export const getServiceSchedule = (service, capacity, frequency) => {
+  const slab = service.pricing_method === 'capacity_slab' ? findCapacitySlab(service.capacity_slabs, capacity) : null;
+  const defaultFrequency = slab?.defaultFrequency ?? service.default_frequency;
+  const defaultVisits = slab?.defaultVisitsPerYear ?? (defaultFrequency === service.default_frequency
+    ? service.default_visits_per_year : FREQUENCY_OPTIONS.find(item => item.value === defaultFrequency)?.defaultVisits);
+  const selectedFrequency = frequency ?? defaultFrequency;
+  return { frequency: selectedFrequency, visits: selectedFrequency === defaultFrequency
+    ? defaultVisits : FREQUENCY_OPTIONS.find(item => item.value === selectedFrequency)?.defaultVisits };
+};
+
 const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
   const { selectedFp } = useFP();
   const token = getAuthToken();
@@ -125,7 +141,8 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
     { id: 3, capacityFrom: 11, capacityTo: 15, vendorRate: 1000, isCustomQuote: false },
     { id: 4, capacityFrom: 16, capacityTo: 20, vendorRate: 1250, isCustomQuote: false },
     { id: 5, capacityFrom: 21, capacityTo: null, vendorRate: null, isCustomQuote: true }
-  ]);
+  ].map(slab => ({ ...slab, defaultFrequency: 'Monthly', defaultVisitsPerYear: 12 })));
+  const [exampleCapacity, setExampleCapacity] = useState('10');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const setField = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
@@ -133,7 +150,10 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
     if (!service) return;
     const fields = { serviceName: 'service_name', category: 'category', pricingMethod: 'pricing_method', unit: 'unit', applicablePropertyTypes: 'applicable_property_types', ratePerUnit: 'rate_per_unit', defaultFrequency: 'default_frequency', defaultVisitsPerYear: 'default_visits_per_year', allowFrequencyOverride: 'allow_frequency_override', allowManualVisits: 'allow_manual_visits', defaultMarkupPercentage: 'default_markup_percentage', description: 'description', monthlyRate: 'monthly_rate', billingPeriod: 'billing_period', periodMonths: 'period_months', fixedPrice: 'fixed_price', ratePerQuantity: 'rate_per_quantity', ratePerCapacity: 'rate_per_capacity', visitCharge: 'visit_charge', customWorkRate: 'custom_work_rate' };
     setFormData(prev => Object.fromEntries(Object.entries(prev).map(([field, value]) => [field, service[fields[field]] ?? value])));
-    if (service.capacity_slabs) setCapacitySlabs(service.capacity_slabs.map((slab, index) => ({ ...slab, id: index + 1 })));
+    if (service.capacity_slabs) setCapacitySlabs(service.capacity_slabs.map((slab, index) => {
+      const schedule = getServiceSchedule({ ...service, capacity_slabs: [slab] }, slab.capacityFrom);
+      return { ...slab, id: index + 1, defaultFrequency: schedule.frequency, defaultVisitsPerYear: schedule.visits };
+    }));
   }, [service]);
 
   useEffect(() => {
@@ -154,6 +174,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
   // Update unit options when pricing method changes
   const changePricingMethod = (pricingMethod) => {
     setFormData(prev => ({ ...prev, pricingMethod, unit: UNIT_OPTIONS[pricingMethod][0] }));
+    setActiveSection('basic-information');
   };
 
   // Update visits when frequency changes
@@ -178,7 +199,8 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
       const last = prev[prev.length - 1];
       const openEnded = last?.capacityTo === null;
       const start = openEnded ? Number(last.capacityFrom) : Number(last?.capacityTo ?? -1) + 1;
-      const slab = { id: Math.max(0, ...prev.map(item => item.id)) + 1, capacityFrom: start, capacityTo: start + 49, vendorRate: '', isCustomQuote: false };
+      const slab = { id: Math.max(0, ...prev.map(item => item.id)) + 1, capacityFrom: start, capacityTo: start + 49, vendorRate: '', isCustomQuote: false,
+        defaultFrequency: last?.defaultFrequency ?? formData.defaultFrequency, defaultVisitsPerYear: last?.defaultVisitsPerYear ?? formData.defaultVisitsPerYear };
       return openEnded
         ? [...prev.slice(0, -1), slab, { ...last, capacityFrom: start + 50 }]
         : [...prev, slab];
@@ -187,7 +209,8 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
 
   // Update capacity slab
   const updateCapacitySlab = (id, field, value) => {
-    setCapacitySlabs(prev => prev.map(slab => slab.id === id ? { ...slab, [field]: value } : slab));
+    setCapacitySlabs(prev => prev.map(slab => slab.id === id ? { ...slab, [field]: value,
+      ...(field === 'defaultFrequency' ? { defaultVisitsPerYear: FREQUENCY_OPTIONS.find(item => item.value === value).defaultVisits } : {}) } : slab));
   };
 
   // Delete capacity slab
@@ -199,7 +222,8 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
   // Calculate example pricing
   const calculateExamplePricing = () => {
     const exampleArea = 10000; // Example: 10,000 Sq Ft
-    const vendorCost = Number(formData.ratePerUnit) * exampleArea * Number(formData.defaultVisitsPerYear);
+    const quantity = isFixedPrice ? 1 : isCapacityBased ? 10 : exampleArea;
+    const vendorCost = Number(formData[rateField]) * quantity * Number(formData.defaultVisitsPerYear);
     return { vendorCost, customerPrice: vendorCost * (1 + Number(formData.defaultMarkupPercentage) / 100) };
   };
 
@@ -246,7 +270,9 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
           capacityFrom: Number(slab.capacityFrom),
           capacityTo: slab.capacityTo === null ? null : Number(slab.capacityTo),
           vendorRate: slab.isCustomQuote ? null : Number(slab.vendorRate),
-          isCustomQuote: slab.isCustomQuote
+          isCustomQuote: slab.isCustomQuote,
+          defaultFrequency: slab.defaultFrequency,
+          defaultVisitsPerYear: Number(slab.defaultVisitsPerYear)
         })) : null,
         // Manpower fields
         monthly_rate: Number(formData.monthlyRate),
@@ -271,11 +297,32 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
     }
   };
 
-  const rateField = { area_based: 'ratePerUnit', quantity_based: 'ratePerQuantity', capacity_based: 'ratePerCapacity' }[formData.pricingMethod];
+  const isFixedPrice = formData.pricingMethod === 'fixed_price';
+  const isCapacityBased = formData.pricingMethod === 'capacity_based';
+  const isCapacitySlab = formData.pricingMethod === 'capacity_slab';
+  const isRatePricing = formData.pricingMethod === 'area_based' || isCapacityBased || isFixedPrice;
+  const rateField = { fixed_price: 'fixedPrice', area_based: 'ratePerUnit', quantity_based: 'ratePerQuantity', capacity_based: 'ratePerCapacity' }[formData.pricingMethod];
+  const formSections = isRatePricing || isCapacitySlab
+    ? [sections[0], ['pricing-configuration', `${getFormulaText()} Configuration`], ['markup', 'Markup']]
+    : sections;
+  const examplePricing = isRatePricing && formData[rateField] !== '' ? calculateExamplePricing() : null;
+  const currency = value => value == null ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value);
   const numberInput = (field, props = {}) => (
     <input type="number" min="0" step="0.01" required value={formData[field]}
       onChange={event => setField(field, event.target.value)} className={inputClass} {...props} />
   );
+  const slabLabel = slab => `${slab.capacityFrom}${slab.capacityTo === null ? '+' : `–${slab.capacityTo}`} ${formData.unit}`;
+  const previewSlab = findCapacitySlab(capacitySlabs, exampleCapacity);
+  const validCapacity = exampleCapacity.trim() !== '' && Number.isInteger(Number(exampleCapacity)) && Number(exampleCapacity) >= 0 && Number(exampleCapacity) <= 1e9;
+  const slabPreviewMessage = !validCapacity ? 'Enter a whole-number capacity between 0 and 1,000,000,000.'
+    : Number(exampleCapacity) < Number(capacitySlabs[0]?.capacityFrom) ? 'Capacity is below the first configured slab.'
+    : !previewSlab || previewSlab.isCustomQuote ? 'Custom quote required for this capacity.'
+    : previewSlab.vendorRate === '' || previewSlab.vendorRate == null || Number(previewSlab.vendorRate) < 0 || Number(previewSlab.defaultVisitsPerYear) < 1 ? 'Enter a valid slab rate and visit count to see example pricing.' : '';
+  const slabVendorCost = slabPreviewMessage ? null : Number(previewSlab.vendorRate) * Number(previewSlab.defaultVisitsPerYear);
+  const toggleManualVisits = () => {
+    if (formData.allowManualVisits) setCapacitySlabs(prev => prev.map(slab => ({ ...slab, defaultVisitsPerYear: FREQUENCY_OPTIONS.find(item => item.value === slab.defaultFrequency).defaultVisits })));
+    setFormData(prev => ({ ...prev, allowManualVisits: !prev.allowManualVisits, defaultVisitsPerYear: prev.allowManualVisits ? FREQUENCY_OPTIONS.find(item => item.value === prev.defaultFrequency).defaultVisits : prev.defaultVisitsPerYear }));
+  };
 
   if (admin?.role === 'operations_manager') {
     return <div className="rounded-xl border bg-white p-6 text-sm text-slate-600">Service configuration is read-only for your role.</div>;
@@ -290,7 +337,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
             <ChevronLeft className="h-5 w-5 text-slate-500" />
           </button>
           <div>
-            <h1 className="text-xl font-semibold">{service ? 'Edit Service' : 'Add Service'}</h1>
+            <h1 className="text-xl font-semibold">{service ? 'Edit Service' : 'Add Service'} — {getFormulaText()}</h1>
             <p className="mt-1 text-xs text-slate-500">Master Data <span className="mx-2">›</span> Service Master <span className="mx-2">›</span> {service ? 'Edit Service' : 'Add Service'}</p>
             <p className="mt-1 text-xs text-slate-500">{service ? (service.franchise_partner_id ? `For FP ${service.franchise_partner_id}` : 'Available to all FPs') : selectedFp?.id && selectedFp.id !== 'all' ? `For ${selectedFp.companyName || selectedFp.fpId || `FP ${selectedFp.id}`}` : 'Available to all FPs'}</p>
           </div>
@@ -304,7 +351,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
         </div>
       </header>
       <nav aria-label="Service form sections" className="flex gap-4 overflow-x-auto rounded-xl border border-slate-200 bg-white px-4 sm:gap-8">
-        {sections.map(([id, label], index) => (
+        {formSections.map(([id, label], index) => (
           <a key={id} href={`#${id}`} onClick={() => setActiveSection(id)} aria-current={activeSection === id ? 'location' : undefined}
             className={`flex shrink-0 items-center gap-2 border-b-2 py-4 text-xs font-semibold ${activeSection === id ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
             <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] text-white ${activeSection === id ? 'bg-blue-600' : 'bg-slate-300'}`}>{index + 1}</span>{label}
@@ -332,23 +379,56 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
                 <Field label="Pricing Method *"><select value={formData.pricingMethod} onChange={event => changePricingMethod(event.target.value)} className={inputClass}>{PRICING_METHODS.map(method => <option key={method.value} value={method.value}>{method.label}</option>)}</select></Field>
                 {/* Primary Input */}
                 {/* Unit */}
-                <Field label="Unit *"><select value={formData.unit} onChange={event => setField('unit', event.target.value)} className={inputClass}>{UNIT_OPTIONS[formData.pricingMethod].map(unit => <option key={unit}>{unit}</option>)}</select></Field>
+                <Field label={isCapacityBased || isCapacitySlab ? 'Capacity Unit *' : 'Unit *'}><select value={formData.unit} onChange={event => setField('unit', event.target.value)} className={inputClass}>{UNIT_OPTIONS[formData.pricingMethod].map(unit => <option key={unit}>{unit}</option>)}</select></Field>
               </div>
               {categoryError && <div role="alert" className="mt-3 text-sm text-red-600">{categoryError} <button type="button" onClick={() => setCategoryAttempt(value => value + 1)} className="font-semibold underline">Retry</button></div>}
             </div>
-            <div className="border-t border-slate-100 p-5 sm:p-6">
-              <h2 className="mb-5 text-sm font-semibold text-blue-600">Default Frequency</h2>
+            {/* Capacity Slab Configuration */}
+            {isCapacitySlab && <div id="pricing-configuration" className="scroll-mt-6 border-t border-slate-100 p-5 sm:p-6">
+              <h2 className="mb-5 text-sm font-semibold text-blue-600">Capacity Slab Configuration</h2>
+              <div className="overflow-x-auto rounded-lg border border-slate-200">
+                <table className="w-full min-w-[1000px] text-left text-xs">
+                  <thead className="border-b border-slate-200 bg-slate-50 text-slate-500"><tr>
+                    <th className="px-3 py-3">Slab Name</th><th className="px-3 py-3">Capacity From</th><th className="px-3 py-3">Capacity To</th><th className="px-3 py-3">Unit</th><th className="px-3 py-3">Rate Per Visit (₹)</th><th className="px-3 py-3">Default Frequency</th><th className="px-3 py-3">Default Visits Per Year</th><th className="px-3 py-3 text-center">Action</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-slate-100">{capacitySlabs.map((slab, index) => <tr key={slab.id}>
+                    <td className="whitespace-nowrap px-3 py-3 font-medium text-slate-700">{slabLabel(slab)}</td>
+                    <td className="px-3 py-3"><input aria-label={`Slab ${index + 1} capacity from`} type="number" min="0" max={1e9} step="1" required value={slab.capacityFrom} onChange={event => updateCapacitySlab(slab.id, 'capacityFrom', event.target.value)} className={`${inputClass} min-w-[100px]`} /></td>
+                    <td className="px-3 py-3"><div className="space-y-2">
+                      {slab.capacityTo !== null && <input aria-label={`Slab ${index + 1} capacity to`} type="number" min={slab.capacityFrom} max={1e9} step="1" required value={slab.capacityTo} onChange={event => updateCapacitySlab(slab.id, 'capacityTo', event.target.value)} className={`${inputClass} min-w-[100px]`} />}
+                      {index === capacitySlabs.length - 1 && <label className="flex items-center gap-2 text-xs text-slate-500"><input type="checkbox" checked={slab.capacityTo === null} onChange={event => updateCapacitySlab(slab.id, 'capacityTo', event.target.checked ? null : Number(slab.capacityFrom) + 49)} className="accent-blue-600" />Above (no limit)</label>}
+                    </div></td>
+                    <td className="px-3 py-3 text-slate-500">{formData.unit}</td>
+                    <td className="px-3 py-3"><div className="space-y-2">
+                      {!slab.isCustomQuote && <input aria-label={`Slab ${index + 1} vendor rate`} type="number" min="0" max={1e9} step="0.01" required value={slab.vendorRate ?? ''} onChange={event => updateCapacitySlab(slab.id, 'vendorRate', event.target.value)} className={`${inputClass} min-w-[130px]`} />}
+                      <label className="flex items-center gap-2 text-xs text-slate-500"><input type="checkbox" checked={slab.isCustomQuote} onChange={event => updateCapacitySlab(slab.id, 'isCustomQuote', event.target.checked)} className="accent-blue-600" />Custom Quote</label>
+                    </div></td>
+                    <td className="px-3 py-3"><select aria-label={`Slab ${index + 1} default frequency`} value={slab.defaultFrequency} onChange={event => updateCapacitySlab(slab.id, 'defaultFrequency', event.target.value)} className={`${inputClass} min-w-[145px]`}>{FREQUENCY_OPTIONS.map(item => <option key={item.value}>{item.value}</option>)}</select></td>
+                    <td className="px-3 py-3"><input aria-label={`Slab ${index + 1} default visits per year`} type="number" min="1" max="366" step="1" required readOnly={!formData.allowManualVisits} value={slab.defaultVisitsPerYear} onChange={event => updateCapacitySlab(slab.id, 'defaultVisitsPerYear', event.target.value)} className={`${inputClass} min-w-[90px] ${!formData.allowManualVisits ? 'bg-slate-50' : ''}`} /></td>
+                    <td className="px-3 py-3 text-center"><button type="button" aria-label={`Delete slab ${index + 1}`} disabled={capacitySlabs.length === 1} onClick={() => deleteCapacitySlab(slab.id)} className="rounded p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button></td>
+                  </tr>)}</tbody>
+                </table>
+              </div>
+              <button type="button" onClick={addCapacitySlab} disabled={capacitySlabs.length >= 100} className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg border border-blue-200 px-4 py-2.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:opacity-50"><Plus className="h-4 w-4" />Add Slab</button>
+            </div>}
+            <div id={isRatePricing ? 'pricing-configuration' : undefined} className="scroll-mt-6 border-t border-slate-100 p-5 sm:p-6">
+              <h2 className="mb-5 text-sm font-semibold text-blue-600">{isRatePricing ? `${getFormulaText()} Configuration` : isCapacitySlab ? 'Fallback Frequency & Estimate Overrides' : 'Default Frequency'}</h2>
               <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-4">
+                {/* Fixed Price Fields */}
+                {isRatePricing && <Field label={isFixedPrice ? 'Fixed Rate per Visit (₹) *' : `Rate per ${formData.unit} (₹) *`} hint={isFixedPrice ? 'Vendor charge for one visit' : `Vendor charge per ${formData.unit} per visit`}>{numberInput(rateField, { max: 1e9 })}</Field>}
                 {/* Default Frequency */}
-                <Field label="Default Frequency *" hint="Default visit frequency for this service"><select value={formData.defaultFrequency} onChange={event => changeFrequency(event.target.value)} className={inputClass}>{FREQUENCY_OPTIONS.map(frequency => <option key={frequency.value}>{frequency.value}</option>)}</select></Field>
+                <Field label="Default Frequency *" hint={isCapacitySlab ? 'Used when capacity is above the configured slabs' : 'Default visit frequency for this service'}><select value={formData.defaultFrequency} onChange={event => changeFrequency(event.target.value)} className={inputClass}>{FREQUENCY_OPTIONS.map(frequency => <option key={frequency.value}>{frequency.value}</option>)}</select></Field>
                 {/* Default Visits Per Year */}
                 <Field label="Default Visits Per Year *" hint={formData.allowManualVisits ? 'Manual visit count enabled' : 'Based on selected frequency'}>{numberInput('defaultVisitsPerYear', { min: 1, max: 366, step: 1, readOnly: !formData.allowManualVisits, className: `${inputClass} ${!formData.allowManualVisits ? 'bg-slate-50' : ''}` })}</Field>
                 {/* Allow Frequency Override */}
                 <Toggle label="Allow Frequency Override" hint="Allow override while creating estimate" checked={formData.allowFrequencyOverride} onChange={() => setField('allowFrequencyOverride', !formData.allowFrequencyOverride)} />
-                <Toggle label="Allow Manual Visits" hint="Allow manual number of visits" checked={formData.allowManualVisits} onChange={() => setFormData(prev => ({ ...prev, allowManualVisits: !prev.allowManualVisits, defaultVisitsPerYear: prev.allowManualVisits ? FREQUENCY_OPTIONS.find(item => item.value === prev.defaultFrequency).defaultVisits : prev.defaultVisitsPerYear }))} />
+                <Toggle label="Allow Manual Visits" hint="Allow manual number of visits" checked={formData.allowManualVisits} onChange={toggleManualVisits} />
               </div>
-              {/* 3. Markup & Margin */}
-              <div className="mt-6 grid gap-5 sm:grid-cols-2">
+            </div>
+            {/* 3. Markup & Margin */}
+            <div id="markup" className="scroll-mt-6 border-t border-slate-100 p-5 sm:p-6">
+              <h2 className="mb-5 text-sm font-semibold text-blue-600">Default Markup</h2>
+              <div className="grid gap-5 sm:grid-cols-2">
                 {/* Default Markup Percentage */}
                 <Field label="Default Markup Percentage (%) *" hint="Applied on total actual cost">{numberInput('defaultMarkupPercentage', { max: 1000 })}</Field>
               </div>
@@ -374,10 +454,37 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
               <p className="mt-1 text-right text-xs text-slate-400">{formData.description.length}/500</p>
             </section>
             {/* Pricing Preview (Example) */}
+            {isRatePricing && <section className="rounded-xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-4 text-sm font-semibold">Pricing Preview (Example)</h2>
+              <dl className="space-y-3 text-xs text-slate-600">
+                <div className="flex justify-between gap-3"><dt>{isFixedPrice ? 'Fixed Rate per Visit' : `Rate per ${formData.unit} per Visit`}</dt><dd className="font-medium text-slate-800">{currency(formData[rateField] === '' ? null : Number(formData[rateField]))}</dd></div>
+                {!isFixedPrice && <div className="flex justify-between gap-3"><dt>Total {isCapacityBased ? 'Capacity' : 'Area'} ({formData.unit})</dt><dd className="font-medium text-slate-800">{isCapacityBased ? '10' : '10,000'}</dd></div>}
+                <div className="flex justify-between gap-3"><dt>Visits Per Year</dt><dd className="font-medium text-slate-800">{formData.defaultVisitsPerYear}</dd></div>
+                <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(examplePricing?.vendorCost)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage}%</dd></div>
+                <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(examplePricing?.customerPrice)}</dd></div>
+              </dl>
+              <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, with no XLAND operating cost or tax. Final customer pricing uses the {isFixedPrice ? 'visits and operating costs' : `actual ${isCapacityBased ? 'capacity' : 'area'}, visits and operating costs`} entered in the estimate.</p>
+            </section>}
+            {isCapacitySlab && <section className="rounded-xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-4 text-sm font-semibold">Pricing Preview (Example)</h2>
+              <Field label={`Entered Capacity (${formData.unit})`}><input inputMode="numeric" value={exampleCapacity} onChange={event => setExampleCapacity(event.target.value)} className={inputClass} /></Field>
+              <dl className="mt-4 space-y-3 text-xs text-slate-600">
+                <div className="flex justify-between gap-3"><dt>Matching Slab</dt><dd className="font-medium text-slate-800">{previewSlab ? slabLabel(previewSlab) : '—'}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Rate Per Visit</dt><dd className="font-medium text-slate-800">{currency(slabVendorCost == null ? null : Number(previewSlab.vendorRate))}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Frequency</dt><dd className="font-medium text-slate-800">{previewSlab?.defaultFrequency ?? '—'}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Visits Per Year</dt><dd className="font-medium text-slate-800">{previewSlab?.defaultVisitsPerYear ?? '—'}</dd></div>
+                <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(slabVendorCost)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage}%</dd></div>
+                <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(slabVendorCost == null ? null : slabVendorCost * (1 + Number(formData.defaultMarkupPercentage) / 100))}</dd></div>
+              </dl>
+              {slabPreviewMessage && <p className="mt-3 text-xs text-amber-700">{slabPreviewMessage}</p>}
+              <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, with no XLAND operating cost or tax. Final customer pricing uses the actual capacity, visits and operating costs entered in the estimate.</p>
+            </section>}
           </aside>
         </div>
         {/* 2. Method-Specific Configuration */}
-        <section id="pricing-configuration" className="scroll-mt-6 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+        {!isRatePricing && !isCapacitySlab && <section id="pricing-configuration" className="scroll-mt-6 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
           <h2 className="mb-5 text-sm font-semibold">{getFormulaText()} Configuration</h2>
           {/* Info Box */}
           {/* Area Based / Quantity Based / Capacity Based Fields */}
@@ -385,8 +492,6 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
             {/* Rate per Unit */}
             <Field label={`Vendor Rate (₹) per ${formData.unit} per Visit *`}>{numberInput(rateField)}</Field>
           </div>}
-          {/* Fixed Price Fields */}
-          {formData.pricingMethod === 'fixed_price' && <div className="max-w-sm"><Field label="Fixed Vendor Price (₹) per Visit *">{numberInput('fixedPrice')}</Field></div>}
           {/* Manpower Fields */}
           {formData.pricingMethod === 'manpower' && <div className="grid gap-5 sm:grid-cols-3">
             <Field label={`Monthly Vendor Rate (₹) per ${formData.unit} *`}>{numberInput('monthlyRate')}</Field>
@@ -398,32 +503,8 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
             <Field label="Default Extra Material / Custom Work Cost (₹)" hint="One-off cost; can be changed in the estimate">{numberInput('customWorkRate')}</Field>
           </div>}
           {formData.pricingMethod === 'custom_quote' && <p className="text-sm text-slate-500">{getConfigInfoText()}</p>}
-          {/* Capacity Slab Configuration */}
-          {formData.pricingMethod === 'capacity_slab' && <>
-            <div className="overflow-x-auto rounded-lg border border-slate-200">
-              <table className="w-full min-w-[680px] text-left text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500"><tr>
-                  <th className="px-3 py-3">#</th><th className="px-3 py-3">Capacity From ({formData.unit})</th><th className="px-3 py-3">Capacity To ({formData.unit})</th><th className="px-3 py-3">Vendor Rate (₹) Per Visit</th><th className="px-3 py-3 text-center">Action</th>
-                </tr></thead>
-                <tbody className="divide-y divide-slate-100">{capacitySlabs.map((slab, index) => <tr key={slab.id}>
-                  <td className="px-3 py-3 text-slate-500">{index + 1}</td>
-                  <td className="px-3 py-3"><input aria-label={`Slab ${index + 1} capacity from`} type="number" min="0" step="1" required value={slab.capacityFrom} onChange={event => updateCapacitySlab(slab.id, 'capacityFrom', event.target.value)} className={`${inputClass} min-w-[100px]`} /></td>
-                  <td className="px-3 py-3"><div className="space-y-2">
-                    {slab.capacityTo !== null && <input aria-label={`Slab ${index + 1} capacity to`} type="number" min={slab.capacityFrom} step="1" required value={slab.capacityTo} onChange={event => updateCapacitySlab(slab.id, 'capacityTo', event.target.value)} className={`${inputClass} min-w-[100px]`} />}
-                    {index === capacitySlabs.length - 1 && <label className="flex items-center gap-2 text-xs text-slate-500"><input type="checkbox" checked={slab.capacityTo === null} onChange={event => updateCapacitySlab(slab.id, 'capacityTo', event.target.checked ? null : Number(slab.capacityFrom) + 49)} className="accent-blue-600" />Above (no limit)</label>}
-                  </div></td>
-                  <td className="px-3 py-3"><div className="space-y-2">
-                    {!slab.isCustomQuote && <input aria-label={`Slab ${index + 1} vendor rate`} type="number" min="0" step="0.01" required value={slab.vendorRate ?? ''} onChange={event => updateCapacitySlab(slab.id, 'vendorRate', event.target.value)} className={`${inputClass} min-w-[130px]`} />}
-                    <label className="flex items-center gap-2 text-xs text-slate-500"><input type="checkbox" checked={slab.isCustomQuote} onChange={event => updateCapacitySlab(slab.id, 'isCustomQuote', event.target.checked)} className="accent-blue-600" />Custom Quote</label>
-                  </div></td>
-                  <td className="px-3 py-3 text-center"><button type="button" aria-label={`Delete slab ${index + 1}`} disabled={capacitySlabs.length === 1} onClick={() => deleteCapacitySlab(slab.id)} className="rounded p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button></td>
-                </tr>)}</tbody>
-              </table>
-            </div>
-            <button type="button" onClick={addCapacitySlab} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-blue-200 py-2.5 text-xs font-semibold text-blue-600 hover:bg-blue-50"><Plus className="h-4 w-4" />Add Slab</button>
-          </>}
           {/* Formula Preview */}
-        </section>
+        </section>}
       </fieldset>
     </form>
   );

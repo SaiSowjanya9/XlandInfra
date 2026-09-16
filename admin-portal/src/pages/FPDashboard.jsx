@@ -568,7 +568,7 @@ const FPDashboard = ({ user }) => {
   return (
     <div className="space-y-6">
       {/* Header with Stats Cards - Single Row Layout */}
-      <div className="flex items-center justify-between gap-4 flex-nowrap overflow-visible">
+      <div className="flex flex-col gap-4 overflow-visible">
         <div className="flex items-center gap-6 flex-nowrap">
           <div className="shrink-0 min-w-max">
             <h1 className="text-2xl font-bold text-gray-900 whitespace-nowrap">
@@ -652,7 +652,7 @@ const FPDashboard = ({ user }) => {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0 self-end w-fit">
           {/* Main Date Range Picker */}
           <DateRangeFilter
             startDate={startDate}

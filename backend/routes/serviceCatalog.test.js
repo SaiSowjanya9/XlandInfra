@@ -133,4 +133,89 @@ test('catalog API permissions, persistence contract, quoting and estimate valida
     assert.equal((await request('/estimates', 'POST', { ...estimate, discount: 1000, totalPrice: 6777 })).status, 200);
     assert.equal((await request('/estimates', 'POST', { ...estimate, addons: [estimate.addons[0], estimate.addons[0]] })).status, 400);
   });
+  await t.test('area-based settings persist, reload, edit and quote without minimum-margin approval', async () => {
+    const areaConfig = { ...config, service_name: 'Area Based Maintenance', pricing_method: 'area_based', unit: 'Sq Ft',
+      rate_per_unit: 1.2, default_frequency: 'Every 2 Months', default_visits_per_year: 6, default_markup_percentage: 40 };
+    const created = await request('/catalog', 'POST', areaConfig);
+    assert.equal(created.status, 201);
+    const id = created.data.id;
+    const saved = (await request('/catalog')).data.find(item => item.id === id);
+    assert.equal(saved.rate_per_unit, 1.2);
+    assert.equal(saved.default_frequency, 'Every 2 Months');
+    assert.equal(saved.default_visits_per_year, 6);
+    assert.equal(saved.default_markup_percentage, 40);
+    assert.equal(saved.rate_per_quantity, undefined);
+    assert.equal(saved.minimum_margin_percentage, undefined);
+    const quoted = await request(`/catalog/${id}/quote`, 'POST', { property_type: 'APT', area: 10000 });
+    assert.equal(quoted.status, 200);
+    assert.equal(quoted.data.vendorCost, 72000);
+    assert.equal(quoted.data.totalPrice, 100800);
+    assert.equal(quoted.data.marginPercentage, 28.57);
+    const updated = await request(`/catalog/${id}`, 'PUT', { ...areaConfig, rate_per_unit: 2, default_markup_percentage: 0 });
+    assert.equal(updated.status, 200);
+    const revised = await request(`/catalog/${id}/quote`, 'POST', { property_type: 'APT', area: 10000 });
+    assert.equal(revised.data.totalPrice, 120000);
+    assert.equal(revised.data.profit, 0);
+  });
+  await t.test('capacity-based services persist, reload, quote and switch methods with the correct rate', async () => {
+    const capacityConfig = { ...config, service_name: 'Capacity Based Maintenance', pricing_method: 'capacity_based', unit: 'KL',
+      rate_per_capacity: 450, default_frequency: 'Half-Yearly', default_visits_per_year: 2, default_markup_percentage: 30 };
+    const created = await request('/catalog', 'POST', capacityConfig);
+    assert.equal(created.status, 201);
+    const id = created.data.id;
+    const saved = (await request('/catalog')).data.find(item => item.id === id);
+    assert.equal(saved.rate_per_capacity, 450);
+    assert.equal(saved.unit, 'KL');
+    assert.equal(saved.default_frequency, 'Half-Yearly');
+    assert.equal(saved.default_visits_per_year, 2);
+    assert.equal(saved.default_markup_percentage, 30);
+    assert.equal(saved.rate_per_quantity, undefined);
+    assert.equal(saved.minimum_margin_percentage, undefined);
+    const quoted = await request(`/catalog/${id}/quote`, 'POST', { property_type: 'APT', capacity: 10 });
+    assert.equal(quoted.status, 200);
+    assert.equal(quoted.data.vendorCost, 9000);
+    assert.equal(quoted.data.totalPrice, 11700);
+    assert.equal(quoted.data.marginPercentage, 23.08);
+    const updated = await request(`/catalog/${id}`, 'PUT', { ...capacityConfig, pricing_method: 'area_based', unit: 'Sq Ft', rate_per_unit: 1.2 });
+    assert.equal(updated.status, 200);
+    assert.equal(updated.data.rate_per_capacity, undefined);
+    const areaQuote = await request(`/catalog/${id}/quote`, 'POST', { property_type: 'APT', area: 10000 });
+    assert.equal(areaQuote.data.vendorCost, 24000);
+    assert.equal((await request(`/catalog/${id}`, 'PUT', { ...capacityConfig, default_markup_percentage: 0 })).status, 200);
+    const revised = await request(`/catalog/${id}/quote`, 'POST', { property_type: 'APT', capacity: 10 });
+    assert.equal(revised.data.totalPrice, 9000);
+    assert.equal(revised.data.profit, 0);
+  });
+  await t.test('slab schedules persist and drive quoted and saved estimate snapshots', async () => {
+    const slabConfig = { ...config, service_name: 'Slab Generator Maintenance', pricing_method: 'capacity_slab', unit: 'KVA',
+      allow_frequency_override: false, default_markup_percentage: 30, capacity_slabs: [
+        { capacityFrom: 0, capacityTo: 50, vendorRate: 1600, defaultFrequency: 'Monthly', defaultVisitsPerYear: 12 },
+        { capacityFrom: 51, capacityTo: 100, vendorRate: 2300, defaultFrequency: 'Quarterly', defaultVisitsPerYear: 4 }
+      ] };
+    const created = await request('/catalog', 'POST', slabConfig);
+    assert.equal(created.status, 201);
+    const id = created.data.id;
+    const saved = (await request('/catalog')).data.find(item => item.id === id);
+    assert.equal(saved.capacity_slabs[1].defaultFrequency, 'Quarterly');
+    assert.equal(saved.capacity_slabs[1].defaultVisitsPerYear, 4);
+    const quoted = await request(`/catalog/${id}/quote`, 'POST', { property_type: 'APT', capacity: 75 });
+    assert.equal(quoted.status, 200);
+    assert.equal(quoted.data.frequency, 'Quarterly');
+    assert.equal(quoted.data.vendorCost, 9200);
+    assert.equal(quoted.data.totalPrice, 11960);
+    assert.equal((await request(`/catalog/${id}/quote`, 'POST', { property_type: 'APT', capacity: 75, frequency: 'Monthly' })).status, 400);
+    assert.equal((await request(`/catalog/${id}/quote`, 'POST', { property_type: 'APT', capacity: 101 })).data.requiresCustomQuote, true);
+    const estimate = await request('/catalog/custom-estimates', 'POST', { fpId: 8, property_id: 3,
+      rows: [{ service_id: id, vendor_id: 4, inputs: { capacity: 75 } }], discount_percentage: 0, gst_percentage: 0, notes: '' });
+    assert.equal(estimate.status, 201);
+    assert.equal(estimate.data.summary.total, 11960);
+    const addon = JSON.parse(estimateInserts.at(-1)[11])[0];
+    assert.equal(addon.frequency_type, 'Quarterly');
+    assert.equal(addon.frequency_count, 4);
+    assert.equal(addon.pricingSnapshot.vendorCost, 9200);
+    const updatedSlabs = slabConfig.capacity_slabs.map(slab => ({ ...slab, defaultFrequency: 'Half-Yearly', defaultVisitsPerYear: 2 }));
+    assert.equal((await request(`/catalog/${id}`, 'PUT', { ...slabConfig, capacity_slabs: updatedSlabs })).status, 200);
+    assert.equal((await request(`/catalog/${id}/quote`, 'POST', { property_type: 'APT', capacity: 75 })).data.vendorCost, 4600);
+    assert.equal((await request(`/catalog/${id}`, 'PUT', { ...slabConfig, capacity_slabs: [{ ...updatedSlabs[0], defaultVisitsPerYear: 12 }] })).status, 400);
+  });
 });

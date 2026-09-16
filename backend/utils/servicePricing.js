@@ -56,12 +56,19 @@ const validateService = input => {
   }
   if (config.pricing_method === 'capacity_slab') {
     if (!Array.isArray(input.capacity_slabs) || !input.capacity_slabs.length || input.capacity_slabs.length > 100) fail('Configure between 1 and 100 capacity slabs.');
-    config.capacity_slabs = input.capacity_slabs.map((slab, index) => ({
-      capacityFrom: number(slab?.capacityFrom, `Slab ${index + 1} capacity from`, 0, 1e9, true),
-      capacityTo: slab?.capacityTo === null ? null : number(slab?.capacityTo, `Slab ${index + 1} capacity to`, 0, 1e9, true),
-      isCustomQuote: boolean(slab?.isCustomQuote ?? false, 'Custom quote'),
-      vendorRate: slab?.isCustomQuote === true ? null : number(slab?.vendorRate, `Slab ${index + 1} vendor rate`)
-    }));
+    config.capacity_slabs = input.capacity_slabs.map((slab, index) => {
+      const defaultFrequency = slab?.defaultFrequency ?? config.default_frequency;
+      if (!Object.hasOwn(FREQUENCIES, defaultFrequency)) fail(`Slab ${index + 1} must have a valid default frequency.`);
+      const defaultVisitsPerYear = number(slab?.defaultVisitsPerYear ?? (defaultFrequency === config.default_frequency ? config.default_visits_per_year : FREQUENCIES[defaultFrequency]), `Slab ${index + 1} default visits per year`, 1, 366, true);
+      if (!config.allow_manual_visits && defaultVisitsPerYear !== FREQUENCIES[defaultFrequency]) fail(`Slab ${index + 1} visits must match its frequency when manual visits are disabled.`);
+      return {
+        capacityFrom: number(slab?.capacityFrom, `Slab ${index + 1} capacity from`, 0, 1e9, true),
+        capacityTo: slab?.capacityTo === null ? null : number(slab?.capacityTo, `Slab ${index + 1} capacity to`, 0, 1e9, true),
+        isCustomQuote: boolean(slab?.isCustomQuote ?? false, 'Custom quote'),
+        vendorRate: slab?.isCustomQuote === true ? null : number(slab?.vendorRate, `Slab ${index + 1} vendor rate`),
+        defaultFrequency, defaultVisitsPerYear
+      };
+    });
     config.capacity_slabs.forEach((slab, index, slabs) => {
       if (slab.capacityTo !== null && slab.capacityTo < slab.capacityFrom) fail(`Slab ${index + 1} upper capacity must not be less than its lower capacity.`);
       if (slab.capacityTo === null && index !== slabs.length - 1) fail('Only the last slab can have no upper limit.');
@@ -74,10 +81,18 @@ const validateService = input => {
 const calculateServiceQuote = (config, input = {}, role) => {
   const propertyType = normalizePropertyType(input.property_type);
   if (!config.applicable_property_types.includes(propertyType)) fail('This service is not available for the selected property type.');
-  const frequency = input.frequency ?? config.default_frequency;
+  let capacity, slab;
+  if (config.pricing_method === 'capacity_slab') {
+    capacity = number(input.capacity, 'Capacity', 0, 1e9, true);
+    if (capacity < config.capacity_slabs[0].capacityFrom) fail('Capacity is below the first configured slab.');
+    slab = config.capacity_slabs.find(item => capacity >= item.capacityFrom && (item.capacityTo === null || capacity <= item.capacityTo));
+  }
+  const defaultFrequency = slab?.defaultFrequency ?? config.default_frequency;
+  const configuredVisits = slab?.defaultVisitsPerYear ?? (defaultFrequency === config.default_frequency ? config.default_visits_per_year : FREQUENCIES[defaultFrequency]);
+  const frequency = input.frequency ?? defaultFrequency;
   if (!Object.hasOwn(FREQUENCIES, frequency)) fail('Select a valid frequency.');
-  if (!config.allow_frequency_override && frequency !== config.default_frequency) fail('Frequency override is disabled for this service.');
-  const defaultVisits = frequency === config.default_frequency ? config.default_visits_per_year : FREQUENCIES[frequency];
+  if (!config.allow_frequency_override && frequency !== defaultFrequency) fail('Frequency override is disabled for this service.');
+  const defaultVisits = frequency === defaultFrequency ? configuredVisits : FREQUENCIES[frequency];
   const visits = input.visits === undefined ? defaultVisits : number(input.visits, 'Visits', 1, 366, true);
   if (!config.allow_manual_visits && visits !== defaultVisits) fail('Manual visits are disabled for this service.');
   const inputs = { property_type: propertyType, frequency, visits };
@@ -95,9 +110,7 @@ const calculateServiceQuote = (config, input = {}, role) => {
       inputs.capacity = number(input.capacity, 'Capacity', 0.01, 1e9);
       vendorCost = inputs.capacity * config.rate_per_capacity * visits; break;
     case 'capacity_slab': {
-      inputs.capacity = number(input.capacity, 'Capacity', 0, 1e9, true);
-      if (inputs.capacity < config.capacity_slabs[0].capacityFrom) fail('Capacity is below the first configured slab.');
-      const slab = config.capacity_slabs.find(item => inputs.capacity >= item.capacityFrom && (item.capacityTo === null || inputs.capacity <= item.capacityTo));
+      inputs.capacity = capacity;
       requiresCustomQuote = !slab || slab.isCustomQuote;
       if (!requiresCustomQuote) vendorCost = slab.vendorRate * visits;
       break;
