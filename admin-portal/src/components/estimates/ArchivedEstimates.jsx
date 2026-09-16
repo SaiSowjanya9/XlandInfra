@@ -59,7 +59,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
         url = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/estimates?archived=true`;
       } else {
         // Fallback to default
-        const response = await fetch(`${API_BASE}/api/estimates-sync?archived=true`);
+        const response = await fetch(`${API_BASE}/api/estimates-sync?archived=true`, { headers: { Authorization: `Bearer ${token}` } });
         const result = await response.json();
         if (result.success) {
           setArchivedEstimates(result.data || []);

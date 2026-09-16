@@ -11,6 +11,7 @@ import EstimatesList from '../components/estimates/EstimatesList';
 import AMCPackageManager from '../components/estimates/AMCPackageManager';
 import AddonsManager from '../components/estimates/AddonsManager';
 import AddServicePage from '../components/estimates/AddServicePage';
+import CustomEstimateBuilder from '../components/estimates/CustomEstimateBuilder';
 import ArchivedEstimates from '../components/estimates/ArchivedEstimates';
 import { useFP } from '../contexts/FPContext';
 
@@ -38,6 +39,7 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
   const [amcPackagesCount, setAmcPackagesCount] = useState(0);
   const [addonsCount, setAddonsCount] = useState(0);
   const [estimateTypeFilter, setEstimateTypeFilter] = useState('all');
+  const [createMode, setCreateMode] = useState('package');
   const [stats, setStats] = useState({
     estimates: 0,
     archived: 0,
@@ -156,11 +158,16 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
     switch (defaultTab) {
       case 'create':
         return (
-          <CreateEstimate
-            admin={admin}
-            onSuccess={handleEstimateCreated}
-            showToast={showToast}
-          />
+          <div className="space-y-5">
+            {admin?.role === 'admin' && <fieldset className="flex flex-wrap gap-5 rounded-xl border border-slate-200 bg-white px-5 py-4">
+              <legend className="sr-only">Estimate Type</legend>
+              <label className="flex cursor-pointer items-center gap-3 text-sm text-slate-700"><input type="radio" name="create-estimate-mode" checked={createMode === 'package'} onChange={() => setCreateMode('package')} className="accent-blue-600" /><span><span className="block font-semibold">Package Estimate</span><span className="text-xs text-slate-400">Select an AMC package</span></span></label>
+              <label className="flex cursor-pointer items-center gap-3 text-sm text-slate-700"><input type="radio" name="create-estimate-mode" checked={createMode === 'custom'} onChange={() => setCreateMode('custom')} className="accent-blue-600" /><span><span className="block font-semibold">Custom Estimate</span><span className="text-xs text-slate-400">Add individual services</span></span></label>
+            </fieldset>}
+            {createMode === 'custom' && admin?.role === 'admin'
+              ? <CustomEstimateBuilder key={selectedFp?.id} selectedFp={selectedFp} showToast={showToast} onSuccess={handleEstimateCreated} />
+              : <CreateEstimate admin={admin} onSuccess={handleEstimateCreated} showToast={showToast} />}
+          </div>
         );
       case 'list':
         return (
@@ -209,7 +216,7 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
       {/* Content Container - Single consistent wrapper */}
       <div className="max-w-7xl mx-auto px-6 py-6">
         {/* Header Card - Aligned with content below */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-4">
+        <div className={`bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-4 ${defaultTab === 'add-service' ? 'hidden' : ''}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">

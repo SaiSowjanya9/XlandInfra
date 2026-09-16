@@ -340,7 +340,7 @@ const EstimatesList = ({
     }
     const exportData = filteredEstimates.map(e => ({
       'Estimate ID': e.estimateId || e.estimate_id || '-',
-      'Type': e.estimateType === 'work_order' || e.estimateType === 'work-order' 
+      'Type': e.estimateType === 'custom' ? 'Custom Estimate' : e.estimateType === 'work_order' || e.estimateType === 'work-order'
         ? 'Work Order' 
         : e.estimateType === 'property_based' || e.estimateType === 'property-based' 
         ? 'Property Based' 
@@ -716,6 +716,7 @@ const EstimatesList = ({
                   <option value="all">All Estimates</option>
                   <option value="property-based">Property ID Based</option>
                   <option value="direct">Direct Estimate</option>
+                  <option value="custom">Custom Estimate</option>
                   <option value="work-order">Work Order Estimate</option>
                 </select>
               </div>
@@ -874,7 +875,7 @@ const EstimatesList = ({
                             ? 'bg-blue-100 text-blue-700' 
                             : 'bg-purple-100 text-purple-700'
                         }`}>
-                          {estimate.estimateType === 'work_order' || estimate.estimateType === 'work-order'
+                          {estimate.estimateType === 'custom' ? 'Custom Estimate' : estimate.estimateType === 'work_order' || estimate.estimateType === 'work-order'
                             ? 'Work Order'
                             : estimate.estimateType === 'property-based' || estimate.estimateType === 'property_based' || estimate.propertyId 
                             ? 'Property' 
