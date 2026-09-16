@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ServiceCatalogList from './ServiceCatalogList';
 import { getAuthToken } from '../../utils/safeStorage';
 import { Trash2, PlusCircle, ChevronDown, Plus, Layers, Edit2, X, Settings } from 'lucide-react';
 import {
@@ -323,11 +324,13 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
               className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
             >
               <Settings className="w-4 h-4" />
-              Advanced Service
+              Add Service
             </button>
           </div>
         )}
       </div>
+
+      <ServiceCatalogList key={selectedFp?.id} fpId={selectedFp?.id} admin={admin} showToast={showToast} />
 
       {/* Create Service Form */}
       {activeTab === 'create' && (

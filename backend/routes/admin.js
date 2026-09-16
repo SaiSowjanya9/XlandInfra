@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+router.use('/service-catalog', require('./serviceCatalog').router);
 const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
 const { authenticate, generateToken } = require('../middleware/auth');

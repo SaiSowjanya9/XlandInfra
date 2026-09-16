@@ -171,7 +171,7 @@ export const getEstimates = (status = 'all', includeArchived = false) => {
 // Async function to fetch estimates from API
 export const fetchEstimates = async () => {
   try {
-    const response = await fetch(`${EST_API_URL}/api/estimates-sync`);
+    const response = await fetch(`${EST_API_URL}/api/estimates-sync`, { headers: { Authorization: `Bearer ${getAuthToken()}` } });
     const result = await response.json();
     if (result.success) {
       estimatesCache = result.data || [];
@@ -201,7 +201,7 @@ export const createEstimate = async (estimateData) => {
   try {
     const response = await fetch(`${EST_API_URL}/api/estimates-sync`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getAuthToken()}` },
       body: JSON.stringify(estimateData)
     });
     const result = await response.json();

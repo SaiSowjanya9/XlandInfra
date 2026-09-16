@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useFP } from '../../contexts/FPContext';
 import PhoneInput from '../common/PhoneInput';
+import ServiceCatalogPicker from './ServiceCatalogPicker';
 import AutocompleteInput from '../common/AutocompleteInput';
 import { 
   createEstimate, calculateEstimateTotal, getServices, PROPERTY_TYPES,
@@ -585,7 +586,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   // Get total add-ons price
   const getAddonsTotal = () => {
     const total = selectedAddons.reduce((sum, addon) => {
-      const addonTotal = addon.services?.reduce((s, service) => {
+      const addonTotal = addon.catalogServiceId ? addon.totalPrice : addon.services?.reduce((s, service) => {
         const price = parseFloat(service.price) || 0;
         const frequency = parseInt(service.frequency) || 1;
         return s + (price * frequency);
@@ -775,7 +776,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   // Direct Estimate - Get add-ons total
   const getDirectAddonsTotal = () => {
     const total = directSelectedAddons.reduce((sum, addon) => {
-      const addonTotal = addon.services?.reduce((s, service) => {
+      const addonTotal = addon.catalogServiceId ? addon.totalPrice : addon.services?.reduce((s, service) => {
         const price = parseFloat(service.price) || 0;
         const frequency = parseInt(service.frequency) || 1;
         return s + (price * frequency);
@@ -948,6 +949,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     }
 
     const estimateData = {
+      catalogScopeId: selectedFp?.id || 'all',
       estimateType: estimateType === 'property' ? 'property-based' : 'direct',
       services: allServices,
       notes: estimateForm.notes,
@@ -993,6 +995,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       if (selectedAddons.length > 0) {
         estimateData.addons = selectedAddons.map(a => ({
           addonId: a.addonId,
+          ...(a.catalogServiceId ? { catalogServiceId: a.catalogServiceId, pricingInputs: a.pricingInputs } : {}),
           services: a.services,
           totalPrice: a.totalPrice,
           description: a.description || ''
@@ -1037,6 +1040,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       if (directSelectedAddons.length > 0) {
         estimateData.addons = directSelectedAddons.map(a => ({
           addonId: a.addonId,
+          ...(a.catalogServiceId ? { catalogServiceId: a.catalogServiceId, pricingInputs: a.pricingInputs } : {}),
           services: a.services,
           totalPrice: a.totalPrice,
           description: a.description || ''
@@ -1054,7 +1058,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Save estimate error:', error);
-      showToast?.('Failed to save estimate', 'error');
+      showToast?.(error.message || 'Failed to save estimate', 'error');
     }
   };
 
@@ -2453,6 +2457,13 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
 
               {/* Additional Services Section - Blue themed, attached under AMC Package */}
               <div className="px-6 py-4 border-t border-gray-100">
+                {admin?.role === 'admin' && <ServiceCatalogPicker
+                  key={`property-${selectedFp?.id}-${selectedProperty?.propertyId}-${selectedProperty?.entryType}`}
+                  fpId={selectedFp?.id}
+                  propertyType={selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType}
+                  selectedAddons={selectedAddons}
+                  onAdd={addon => setSelectedAddons(prev => prev.some(item => item.addonId === addon.addonId) ? prev : [...prev, addon])}
+                />}
                 {/* Add-on Dropdown - Reduced width */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -3266,6 +3277,13 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
 
             {/* Additional Services Section - Add-ons */}
             <div className="px-6 py-4 border-t border-gray-100">
+              {admin?.role === 'admin' && <ServiceCatalogPicker
+                key={`direct-${selectedFp?.id}-${estimateForm.propertyType}`}
+                fpId={selectedFp?.id}
+                propertyType={estimateForm.propertyType}
+                selectedAddons={directSelectedAddons}
+                onAdd={addon => setDirectSelectedAddons(prev => prev.some(item => item.addonId === addon.addonId) ? prev : [...prev, addon])}
+              />}
               {/* Add-on Dropdown */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">

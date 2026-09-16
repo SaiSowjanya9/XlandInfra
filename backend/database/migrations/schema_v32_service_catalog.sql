@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS service_catalog (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  service_name VARCHAR(150) NOT NULL,
+  scope_id INT UNSIGNED NOT NULL DEFAULT 0,
+  configuration JSON NOT NULL,
+  created_by INT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_service_catalog_name_scope (service_name, scope_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -72,6 +72,19 @@ For detailed UI and behavior rules, see the files in `.devin/rules/`:
 - `estimates.md` — estimate creation, tables, view modals, and PDF exports
 - `work-orders.md` — work order forms, status options, and subcategory loading
 
+## Service Catalog and Custom Estimates
+
+- Keep Service Name, but do not add Service ID, Status, Primary Input, Service Code, tags, included/excluded panels, or slab explanation panels to the service form.
+- Do not offer Commercial in the service catalog or custom-estimate property selectors.
+- There is no minimum-margin field, threshold, approval rule, or save restriction. Profit and actual margin are informational only.
+- Service pricing: vendor cost + XLAND operating cost = actual cost; apply markup to actual cost. Margin is profit divided by customer price, not markup percentage.
+- Capacity slabs accept consecutive whole-number ranges, including a first range beginning at 1 for lift capacity in Persons. Above-range capacity requires a custom quote.
+- Custom estimates do not require an AMC package. The internal service table may show vendor costs, operating costs, customer prices, and margin; customer previews must not expose internal costs or profit.
+- `schema_v32_service_catalog.sql` creates the catalog and is also applied during backend table initialization. Existing deployments need the earlier estimate schema migrations as usual.
+- Frontend verification: run `npm run build` in `admin-portal`.
+- Pricing/API tests (no database needed): from the repository root run `node --test backend/utils/servicePricing.test.js backend/routes/serviceCatalog.test.js`.
+- Optional local MySQL integration: run `node --test backend/utils/serviceCatalog.mysql.test.js` with `RUN_LOCAL_MYSQL_TESTS=1` and `NODE_ENV=development`. It verifies the local database name/host, applies the additive catalog migration, and rolls back its test records.
+
 ## Module Skills
 
 For reusable task instructions for major modules, see `.devin/skills/`:

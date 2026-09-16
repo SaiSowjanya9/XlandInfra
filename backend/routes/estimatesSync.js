@@ -2,10 +2,12 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const db = require('../config/database');
+const { authenticate } = require('../middleware/auth');
+const { adminOnly } = require('../middleware/rbac');
 const { sendEstimateEmail, sendEstimateActionNotification } = require('../services/emailService');
 
 // GET all estimates (supports ?archived=true for archived estimates)
-router.get('/', async (req, res) => {
+router.get('/', authenticate, adminOnly, async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.json({ success: true, data: [] });
@@ -119,7 +121,7 @@ router.get('/', async (req, res) => {
 });
 
 // CREATE estimate
-router.post('/', async (req, res) => {
+router.post('/', require('./serviceCatalog').validateCatalogEstimate, async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
