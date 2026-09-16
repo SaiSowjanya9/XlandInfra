@@ -42,8 +42,8 @@ const normalizePropertyType = (type) => {
 };
 
 const getApiPath = (portalType) => {
-  const map = { 'franchise': 'fp', 'manager': 'manager', 'admin': 'admin', 'coordinator': 'coordinator', 'supervisor': 'supervisor' };
-  return map[portalType] || 'fp';
+  const map = { 'franchise': 'fp', 'manager': 'manager', 'admin': 'admin', 'employee': 'admin', 'coordinator': 'coordinator', 'supervisor': 'supervisor' };
+  return map[portalType] || 'admin';
 };
 
 // Helper to extract zone name from zone (can be string or object)

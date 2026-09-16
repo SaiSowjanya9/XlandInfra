@@ -133,6 +133,64 @@ const fetchScheduledVendors = async ({
 };
 
 /**
+ * Services that appear in existing schedules, for the All Schedules service filter.
+ *
+ * @returns {Promise<Array>} [{ id, name, category }]
+ */
+const fetchScheduledServices = async ({
+  whereClause = 'WHERE 1=1',
+  params = [],
+  label = 'Schedule Services'
+} = {}) => {
+  const query = `
+    SELECT DISTINCT pss.service_name as name, pss.service_category as category
+    FROM scheduled_visits sv
+    JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+    JOIN onboarded_properties op ON op.id = sv.property_id
+    ${whereClause}
+    ORDER BY pss.service_name
+  `;
+
+  try {
+    const [rows] = await pool.execute(query, params);
+    return rows
+      .filter(r => r.name)
+      .map(r => ({ id: r.name, name: r.name, category: r.category || r.name }));
+  } catch (err) {
+    console.log(`[${label}] Scheduled services query failed:`, err.message);
+    return [];
+  }
+};
+
+/**
+ * Zones that appear in existing schedules, for the All Schedules zone filter.
+ *
+ * @returns {Promise<Array>} [{ id, name }]
+ */
+const fetchScheduledZones = async ({
+  whereClause = 'WHERE 1=1',
+  params = [],
+  label = 'Schedule Zones'
+} = {}) => {
+  const query = `
+    SELECT DISTINCT op.zone as name
+    FROM scheduled_visits sv
+    JOIN onboarded_properties op ON op.id = sv.property_id
+    ${whereClause}
+      AND op.zone IS NOT NULL AND op.zone != ''
+    ORDER BY op.zone
+  `;
+
+  try {
+    const [rows] = await pool.execute(query, params);
+    return rows.map(r => ({ id: `schedule-${r.name}`, name: r.name }));
+  } catch (err) {
+    console.log(`[${label}] Scheduled zones query failed:`, err.message);
+    return [];
+  }
+};
+
+/**
  * SQL fragment for the list/count queries so a status filter of 'upcoming' or
  * 'overdue' matches the same visits the corresponding stat card counted.
  * Returns null for real statuses, which the caller then binds as a parameter.
@@ -152,4 +210,10 @@ const derivedStatusFilter = (status) => {
   return null;
 };
 
-module.exports = { fetchScheduleStats, fetchScheduledVendors, derivedStatusFilter };
+module.exports = {
+  fetchScheduleStats,
+  fetchScheduledVendors,
+  fetchScheduledServices,
+  fetchScheduledZones,
+  derivedStatusFilter
+};

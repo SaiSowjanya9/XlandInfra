@@ -112,6 +112,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
       'franchise': 'fp',
       'manager': 'manager',
       'admin': 'admin',
+      'employee': 'admin',
       'coordinator': 'coordinator',
       'supervisor': 'supervisor'
     };
