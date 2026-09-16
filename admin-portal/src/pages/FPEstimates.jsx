@@ -191,6 +191,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [estimateType, setEstimateType] = useState(null);
   const [propertyIdInput, setPropertyIdInput] = useState('');
   const [selectedProperty, setSelectedProperty] = useState(null);
+  const [showPropertySuggestions, setShowPropertySuggestions] = useState(false);
   // FP Manager defaults to 'all-packages' (no create access)
   const [amcActiveTab, setAmcActiveTab] = useState(isFPManager ? 'all-packages' : 'create');
   const [selectedPropertyType, setSelectedPropertyType] = useState(null);
@@ -1201,102 +1202,132 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       )}
 
-      {/* Property-Based Estimate Form */}
-      {estimateType === 'property-based' && (
-        <div className="space-y-6">
-          {/* Estimate Details */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-semibold text-gray-900">Estimate Details</h2>
-            </div>
-            <div className="p-6 space-y-6">
-              {/* Property ID Search */}
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1.5">Property ID <span className="text-red-500">*</span></label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input 
-                    type="text" 
-                    value={propertyIdInput} 
-                    onChange={(e) => { 
-                      const v = e.target.value.trim();
-                      setPropertyIdInput(v); 
-                      const m = properties.find(p => p.property_id?.toLowerCase() === v.toLowerCase()); 
-                      if (m) {
-                        const totalUnits = computeTotalUnits(m);
-                        setSelectedProperty({ ...m, total_units: totalUnits, units: totalUnits });
-                      } else {
-                        setSelectedProperty(null);
-                      }
-                    }} 
-                    placeholder="GC-DMMN-20260520" 
-                    className="w-full pl-10 pr-4 py-2.5 border-2 border-blue-500 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-600 text-sm"
-                  />
+      {/* Property-Based Estimate Form - Two column layout */}
+      {estimateType === 'property-based' && (() => {
+        const propertyTypeRaw = selectedProperty?.property_type || selectedProperty?.entry_type || '';
+        const customerName = selectedProperty?.contact_person || selectedProperty?.contact_name || selectedProperty?.customer_name || '';
+        const applyProperty = (m) => {
+          const totalUnits = computeTotalUnits(m);
+          setSelectedProperty({ ...m, total_units: totalUnits, units: totalUnits });
+        };
+        const q = propertyIdInput.toLowerCase();
+        const propertySuggestions = q
+          ? properties.filter(p => p.property_id?.toLowerCase().includes(q) || (p.name || p.community_name || p.property_name || '').toLowerCase().includes(q)).slice(0, 8)
+          : [];
+        const selectedPkg = getSelectedPackage();
+        const pkgServices = selectedPkg?.parsedServices || [];
+        const pkgPrice = parseFloat(selectedPkg?.price) || 0;
+        const selectedAddonRows = estimateForm.selectedAddons
+          .map((id, idx) => ({ idx, addon: addons.find(a => a.id == id || a.id === parseInt(id)) }))
+          .filter(r => r.addon);
+        const addonsTotal = selectedAddonRows.reduce((sum, r) => sum + (parseFloat(r.addon.price) || 0), 0);
+        const pricing = calculatePricing();
+        let pkgSvcData = selectedPkg?.services;
+        if (typeof pkgSvcData === 'string') { try { pkgSvcData = JSON.parse(pkgSvcData); } catch(e) { pkgSvcData = {}; } }
+        const billingDuration = pkgSvcData?.billing_duration || selectedPkg?.billing_duration || (selectedPkg ? getPackageBillingDuration(selectedPkg) : '') || 'yearly';
+        const readOnlyCls = 'w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700';
+        return (
+        <div className="flex flex-col xl:flex-row gap-6">
+          {/* Left column - main form */}
+          <div className="flex-1 min-w-0 space-y-4">
+            {/* Property header - details auto-populate from Property ID */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Property ID <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={propertyIdInput}
+                      onChange={(e) => {
+                        const v = e.target.value.trim();
+                        setPropertyIdInput(v);
+                        setShowPropertySuggestions(true);
+                        const m = properties.find(p => p.property_id?.toLowerCase() === v.toLowerCase());
+                        if (m) applyProperty(m); else setSelectedProperty(null);
+                      }}
+                      onFocus={() => setShowPropertySuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowPropertySuggestions(false), 200)}
+                      placeholder="GC-DMMN-20260520"
+                      className="w-full pl-3 pr-9 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 text-sm"
+                    />
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    {showPropertySuggestions && !selectedProperty && propertySuggestions.length > 0 && (
+                      <div className="absolute z-20 w-full min-w-[260px] mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+                        {propertySuggestions.map(p => (
+                          <button
+                            key={p.id || p.property_id}
+                            type="button"
+                            onClick={() => { setPropertyIdInput(p.property_id); applyProperty(p); setShowPropertySuggestions(false); }}
+                            className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center gap-3"
+                          >
+                            <Building2 className="w-4 h-4 text-gray-400 shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-800 truncate">{p.property_id}</p>
+                              <p className="text-xs text-gray-500 truncate">{p.name || p.community_name || p.property_name || '-'}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Property Name</label>
+                  <input type="text" value={selectedProperty?.name || selectedProperty?.community_name || selectedProperty?.property_name || ''} readOnly placeholder="Auto-filled" className={readOnlyCls} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Property Type</label>
+                  <input type="text" value={propertyTypeRaw ? getPropertyTypeLabel(propertyTypeRaw) : ''} readOnly placeholder="Auto-filled" className={readOnlyCls} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Customer</label>
+                  <input type="text" value={customerName} readOnly placeholder="Auto-filled" className={readOnlyCls} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Zone</label>
+                  <input type="text" value={selectedProperty?.zone_name || selectedProperty?.zoneName || selectedProperty?.zone || ''} readOnly placeholder="Auto-filled" className={readOnlyCls} />
                 </div>
               </div>
+            </div>
 
-              {/* Auto-populated fields */}
-              {selectedProperty && (
-                <>
+            {/* Property Details - remaining auto-populated fields */}
+            {selectedProperty && (
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-gray-800">Property Details</h3>
+                  <span className="text-xs text-gray-400">Auto-filled from property record</span>
+                </div>
+                <div className="p-5 space-y-4">
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Contact Name</label>
-                      <input type="text" value={selectedProperty.contact_person || selectedProperty.contact_name || selectedProperty.customer_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Property ID</label>
-                      <input type="text" value={selectedProperty.property_id || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Entry Type</label>
-                      <input type="text" value={selectedProperty.entry_type || selectedProperty.property_type?.substring(0,2).toUpperCase() || 'GC'} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Zone</label>
-                      <input type="text" value={selectedProperty.zone_name || selectedProperty.zoneName || selectedProperty.zone || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Area</label>
-                      <input type="text" value={selectedProperty.area || selectedProperty.area_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Community Name</label>
-                      <input type="text" value={selectedProperty.name || selectedProperty.community_name || selectedProperty.property_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Property Type</label>
-                      <input type="text" value={selectedProperty.property_type || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Units</label>
-                      <input type="text" value={selectedProperty.units || selectedProperty.total_units || '1'} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">City</label>
-                      <input type="text" value={selectedProperty.city || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Address</label>
-                      <input type="text" value={selectedProperty.address || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
-                    </div>
-                    <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">Contact Phone</label>
-                      <input type="text" value={selectedProperty.contact_phone || selectedProperty.phone || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                      <input type="text" value={selectedProperty.contact_phone || selectedProperty.phone || ''} readOnly className={readOnlyCls} />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">Contact Email</label>
-                      <input type="text" value={selectedProperty.contact_email || selectedProperty.email || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                      <input type="text" value={selectedProperty.contact_email || selectedProperty.email || ''} readOnly className={readOnlyCls} />
                     </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Area</label>
+                      <input type="text" value={selectedProperty.area || selectedProperty.area_name || ''} readOnly className={readOnlyCls} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">City</label>
+                      <input type="text" value={selectedProperty.city || ''} readOnly className={readOnlyCls} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Units</label>
+                      <input type="text" value={selectedProperty.units || selectedProperty.total_units || '1'} readOnly className={readOnlyCls} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Address</label>
+                    <input type="text" value={selectedProperty.address || ''} readOnly className={readOnlyCls} />
                   </div>
 
                   {/* Unit Details - Property Type Specific */}
-                  <div className="bg-slate-50 rounded-lg p-4 mt-4">
+                  <div className="bg-slate-50 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <Building2 className="w-4 h-4 text-slate-600" />
                       <span className="text-sm font-medium text-slate-700">Unit Details</span>
@@ -1415,214 +1446,191 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       }
                     })()}
                   </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* AMC Package */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-semibold text-gray-900">AMC Package</h2>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1.5">Select AMC Package <span className="text-red-500">*</span></label>
-                <select 
-                  value={estimateForm.selectedPackage} 
-                  onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value})}
-                  className="w-full max-w-md px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
-                >
-                  <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
-                  {(() => {
-                    const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType;
-                    const searchType = normalizePropertyType(propertyType);
-                    const filteredPkgs = searchType ? amcPackages.filter(pkg => getPkgPropertyType(pkg) === searchType) : [];
-                    if (!searchType) return <option disabled>Select property type first</option>;
-                    if (searchType && filteredPkgs.length === 0) return <option disabled>No packages for {propertyType}</option>;
-                    return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>);
-                  })()}
-                </select>
+                </div>
               </div>
+            )}
 
-              {/* Package Details Card */}
-              {(() => {
-                const pkg = getSelectedPackage();
-                if (!pkg) return null;
-                const services = pkg.parsedServices || [];
-                let svcData = pkg.services;
-                if (typeof svcData === 'string') { try { svcData = JSON.parse(svcData); } catch(e) { svcData = {}; } }
-                const billingDuration = svcData?.billing_duration || pkg.billing_duration || 'monthly';
-                return (
-                  <div className="border border-blue-200 rounded-xl overflow-hidden bg-blue-50/30">
-                    <div className="px-5 py-3 flex items-center gap-3">
-                      <Package className="w-5 h-5 text-blue-600" />
-                      <span className="font-semibold text-gray-900">{decodeHtml(pkg.name)}</span>
-                      <span className="px-2 py-0.5 bg-slate-700 text-white text-xs rounded font-mono">{pkg.package_code || `AMC-${pkg.id}`}</span>
-                    </div>
-                    <table className="w-full text-sm bg-white">
-                      <thead>
-                        <tr className="border-y border-blue-100">
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[12%]">Service</th>
-                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[53%]">Description</th>
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[20%]">Frequency</th>
-                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[15%]">Visits</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {services.length > 0 ? services.map((svc, idx) => {
-                          const freqType = svc.frequencyType || svc.frequency_type || 'Monthly';
-                          const visits = svc.frequency_count ?? svc.frequencyCount ?? (FREQUENCY_COUNT_MAP?.[freqType] ?? 0);
-                          return (
-                            <tr key={idx} className="align-top">
-                              <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(svc.service || svc.name) || '-'}</td>
-                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</td>
-                              <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
-                              <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
-                            </tr>
-                          );
-                        }) : <tr><td colSpan={4} className="px-3 py-3 text-center text-gray-400">No services in package</td></tr>}
-                      </tbody>
-                    </table>
-                    <div className="px-5 py-3 bg-blue-50 border-t border-blue-100">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-semibold text-blue-700">Total Package Price</span>
-                        <span className="text-lg font-bold text-gray-900">{formatCurrency(pkg.price)}</span>
-                      </div>
-                      <div className="text-xs text-blue-600 mt-1">Service Period: <span className="capitalize whitespace-nowrap">{billingDuration?.replace('-', ' ')}</span></div>
-                    </div>
-                  </div>
-                );
-              })()}
+            {/* AMC Package */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-800">AMC Package</h3>
+                  <p className="text-xs text-gray-500">Choose a pre-built AMC package for this property</p>
+                </div>
+                <div className="sm:ml-auto flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Select AMC Package <span className="text-red-500">*</span></label>
+                  <select
+                    value={estimateForm.selectedPackage}
+                    onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value})}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white min-w-[240px]"
+                  >
+                    <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
+                    {(() => {
+                      const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType;
+                      const searchType = normalizePropertyType(propertyType);
+                      const filteredPkgs = searchType ? amcPackages.filter(pkg => getPkgPropertyType(pkg) === searchType) : [];
+                      if (!searchType) return <option disabled>Select property first</option>;
+                      if (filteredPkgs.length === 0) return <option disabled>No packages for {propertyType}</option>;
+                      return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>);
+                    })()}
+                  </select>
+                </div>
+              </div>
+            </div>
 
-              <div className="pt-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Add Service</label>
-                <select 
+            {/* Services - package services + added services in one table */}
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center gap-3">
+                <h3 className="text-sm font-semibold text-gray-800">Services ({pkgServices.length + selectedAddonRows.length})</h3>
+                <select
                   onChange={(e) => { if (e.target.value) setEstimateForm({...estimateForm, selectedAddons: [...estimateForm.selectedAddons, e.target.value]}); e.target.value = ''; }}
-                  className="w-full max-w-sm px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
+                  className="sm:ml-auto px-3 py-2 border border-blue-600 text-blue-700 bg-white rounded-lg text-sm font-medium min-w-[220px]"
                 >
-                  <option value="">+ Select Service to add</option>
+                  <option value="">+ Add Service</option>
                   {(() => {
-                    // Get property type from selected property, form, or selected AMC package
-                    const selectedPkg = amcPackages.find(p => p.id == estimateForm.selectedPackage);
-                    const pkgPropertyType = selectedPkg?.property_type;
-                    const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType || pkgPropertyType;
+                    const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType || selectedPkg?.property_type;
                     const searchType = normalizePropertyType(propertyType);
-                    if (!searchType) return <option disabled>Select property type first</option>;
+                    if (!searchType) return <option disabled>Select property first</option>;
                     const filteredAddons = addons.filter(addon => normalizePropertyType(addon.property_type) === searchType);
                     if (filteredAddons.length === 0) return <option disabled>No add-ons for {propertyType}</option>;
                     return filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{decodeHtml(addon.service_name)}</option>);
                   })()}
                 </select>
               </div>
-
-              {/* Additional Services Table - Only show when services selected */}
-              {estimateForm.selectedAddons.length > 0 && (
-                <div className="border border-blue-200 rounded-xl overflow-hidden">
-                  <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200">
-                    <span className="text-sm font-semibold text-blue-700">Additional Services</span>
-                  </div>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-blue-100 bg-white">
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[10%]">Service</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[48%]">Description</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[18%]">Frequency</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[14%]">Visits</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[10%]">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 bg-white">
-                      {estimateForm.selectedAddons.map((id, idx) => {
-                        const addon = addons.find(a => a.id == id || a.id === parseInt(id));
-                        if (!addon) return null;
-                        const visits = addon.frequency_count ?? (FREQUENCY_COUNT_MAP?.[addon.frequency_type] ?? 0);
-                        return (
-                          <tr key={idx} className="align-top">
-                            <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(addon.service_name)}</td>
-                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{decodeHtml(addon.description || addon.services?.[0]?.description) || '-'}</td>
-                            <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type || 'Monthly'}</td>
-                            <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
-                            <td className="px-3 py-2.5 text-center">
-                              <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, i) => i !== idx)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
+              {pkgServices.length === 0 && selectedAddonRows.length === 0 ? (
+                <div className="py-10 text-center text-sm text-gray-400">Select an AMC package to see its services, or add services individually</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase w-[5%]">#</th>
+                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase w-[22%]">Service</th>
+                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase w-[41%]">Description</th>
+                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase w-[12%]">Frequency</th>
+                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase w-[10%]">Visits</th>
+                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase w-[10%]">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {pkgServices.map((svc, idx) => {
+                      const freqType = svc.frequencyType || svc.frequency_type || 'Monthly';
+                      const visits = svc.frequency_count ?? svc.frequencyCount ?? (FREQUENCY_COUNT_MAP?.[freqType] ?? 0);
+                      const desc = decodeHtml(svc.description)?.trim();
+                      return (
+                        <tr key={`pkg-${idx}`} className="align-top">
+                          <td className="px-3 py-2.5 text-center text-gray-500">{idx + 1}</td>
+                          <td className="px-3 py-2.5">
+                            <p className="font-medium text-gray-800">{decodeHtml(svc.service || svc.name) || '-'}</p>
+                            <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-50 text-blue-700 border border-blue-100">Package</span>
+                          </td>
+                          <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!desc ? 'text-center' : ''}`}>{desc || '-'}</td>
+                          <td className="px-3 py-2.5 text-center text-gray-600">{freqType}</td>
+                          <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
+                          <td className="px-3 py-2.5 text-center text-gray-300">-</td>
+                        </tr>
+                      );
+                    })}
+                    {selectedAddonRows.map(({ addon, idx }, i) => {
+                      const freqType = addon.frequency_type || 'Monthly';
+                      const visits = addon.frequency_count ?? (FREQUENCY_COUNT_MAP?.[freqType] ?? 0);
+                      const desc = decodeHtml(addon.description || addon.services?.[0]?.description)?.trim();
+                      return (
+                        <tr key={`addon-${idx}`} className="align-top">
+                          <td className="px-3 py-2.5 text-center text-gray-500">{pkgServices.length + i + 1}</td>
+                          <td className="px-3 py-2.5">
+                            <p className="font-medium text-gray-800">{decodeHtml(addon.service_name)}</p>
+                            <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-50 text-amber-700 border border-amber-100">Add-on</span>
+                          </td>
+                          <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!desc ? 'text-center' : ''}`}>{desc || '-'}</td>
+                          <td className="px-3 py-2.5 text-center text-gray-600">{freqType}</td>
+                          <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
+                          <td className="px-3 py-2.5 text-center">
+                            <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, j) => j !== idx)})} className="text-red-400 hover:text-red-600" title="Remove service"><Trash2 className="w-4 h-4" /></button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  {selectedAddonRows.length > 0 && (
                     <tfoot className="bg-blue-50 border-t border-blue-200">
                       <tr>
-                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Services Price</td>
-                        <td className="px-3 py-2.5 text-right font-bold text-blue-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0))}</td>
+                        <td colSpan={5} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td>
+                        <td className="px-3 py-2.5 text-right font-bold text-blue-700 whitespace-nowrap">{formatCurrency(addonsTotal)}</td>
                       </tr>
                     </tfoot>
-                  </table>
-                </div>
+                  )}
+                </table>
               )}
+            </div>
 
+            {/* Notes */}
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-800">Notes</h3>
+              </div>
+              <div className="p-5">
+                <textarea
+                  value={estimateForm.description}
+                  onChange={(e) => setEstimateForm({...estimateForm, description: e.target.value})}
+                  placeholder="Add a note for this estimate..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm resize-y min-h-[90px]"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Price Summary */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-semibold text-gray-900">Price Summary</h2>
+          {/* Right column - pricing & package summary */}
+          <div className="w-full xl:w-80 shrink-0 space-y-4">
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h3 className="text-sm font-semibold text-gray-800 mb-4">Pricing Summary</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between"><span className="text-gray-500">Package Price</span><span className="font-medium text-gray-800">{formatCurrency(pkgPrice)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Add-ons</span><span className="font-medium text-gray-800">{formatCurrency(addonsTotal)}</span></div>
+                <div className="flex justify-between border-t border-gray-100 pt-3"><span className="text-gray-600">Service Subtotal</span><span className="font-semibold text-gray-900">{formatCurrency(pricing.subtotal)}</span></div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Discount (%)</span>
+                  <input type="number" value={estimateForm.discount} onChange={(e) => setEstimateForm({...estimateForm, discount: parseFloat(e.target.value) || 0})} className="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-right" min="0" max="100" />
+                </div>
+                <div className="flex justify-between"><span className="text-gray-500">Discount Amount</span><span className="text-red-600">- {formatCurrency(pricing.discountAmt)}</span></div>
+                <div className="flex justify-between items-center border-t border-gray-100 pt-3">
+                  <span className="text-gray-500">GST (%)</span>
+                  <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: e.target.value === '' ? '' : parseFloat(e.target.value)})} className="w-20 px-2 py-1 border border-blue-300 bg-blue-50 rounded text-sm text-right text-blue-700" placeholder="0" />
+                </div>
+                <div className="flex justify-between"><span className="text-gray-500">GST Amount</span><span className="text-gray-800">+ {formatCurrency(pricing.gstAmt)}</span></div>
+                <div className="mt-2 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
+                  <p className="text-xs font-medium text-blue-700">Grand Total (Incl. GST)</p>
+                  <p className="text-xl font-bold text-blue-800">{formatCurrency(pricing.total)}</p>
+                </div>
+              </div>
             </div>
-            <div className="p-6">
-              {(() => {
-                const pricing = calculatePricing();
-                return (
-                  <div className="max-w-md ml-auto space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Sub Total</span>
-                      <span className="font-medium">{formatCurrency(pricing.subtotal)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Discount (%)</span>
-                      <div className="flex items-center gap-2">
-                        <input type="number" value={estimateForm.discount} onChange={(e) => setEstimateForm({...estimateForm, discount: parseFloat(e.target.value) || 0})} className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" min="0" max="100" />
-                        <span className="text-gray-500">- {formatCurrency(pricing.discountAmt)}</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">GST (%)</span>
-                      <div className="flex items-center gap-2">
-                        <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: e.target.value === '' ? '' : parseFloat(e.target.value)})} className="w-16 px-2 py-1 border border-blue-300 bg-blue-50 rounded text-sm text-center text-blue-700" placeholder="0" />
-                        <span className="text-gray-500">+ {formatCurrency(pricing.gstAmt)}</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center bg-slate-800 text-white px-4 py-3 rounded-lg mt-4">
-                      <span className="font-medium">Total Amount</span>
-                      <span className="text-lg font-bold">{formatCurrency(pricing.total)}</span>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
 
-          {/* Description / Notes - Under Price Summary */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-semibold text-gray-900">Description / Notes</h2>
-            </div>
-            <div className="p-6">
-              <textarea 
-                value={estimateForm.description} 
-                onChange={(e) => setEstimateForm({...estimateForm, description: e.target.value})}
-                placeholder="Add any additional notes or description for this estimate..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm resize-y min-h-[100px]"
-              />
-            </div>
-          </div>
+            {selectedPkg && (
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <h3 className="text-sm font-semibold text-gray-800 mb-4">Package Details</h3>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between gap-3"><span className="text-gray-500">Billing</span><span className="font-medium text-gray-800 capitalize text-right">{String(billingDuration).replace('-', ' ')} Billing</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-500">Package Price</span><span className="font-medium text-gray-800">{formatCurrency(pkgPrice)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-500">Services Included</span><span className="font-medium text-gray-800">{pkgServices.length}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-500">Applicable For</span><span className="font-medium text-gray-800 text-right">{getPropertyTypeLabel(getPkgPropertyType(selectedPkg))}</span></div>
+                  {selectedPkg.description && (
+                    <div className="pt-1">
+                      <p className="text-gray-500 mb-1">Description</p>
+                      <p className="text-xs text-gray-700 leading-relaxed break-words">{decodeHtml(selectedPkg.description)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3">
-            <button onClick={handleBackFromEstimate} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Back</button>
-            <button onClick={handleSaveEstimate} disabled={savingEstimate} className={`px-6 py-2.5 rounded-lg text-sm font-medium ${savingEstimate ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"} text-white`}>{savingEstimate ? "Saving..." : "Save"}</button>
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button onClick={handleBackFromEstimate} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Back</button>
+              <button onClick={handleSaveEstimate} disabled={savingEstimate} className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white ${savingEstimate ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>{savingEstimate ? 'Saving...' : 'Save'}</button>
+            </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Direct-Based Estimate Form */}
       {estimateType === 'direct' && (
