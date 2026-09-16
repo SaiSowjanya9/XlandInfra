@@ -3,7 +3,7 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
 const { authenticate, generateToken } = require('../middleware/auth');
-const { fetchScheduleStats, fetchScheduledVendors, derivedStatusFilter } = require('../utils/scheduleStats');
+const { fetchScheduleStats, fetchScheduledVendors, derivedStatusFilter, fetchScheduledServices, fetchScheduledZones } = require('../utils/scheduleStats');
 const { resolveVendor, upsertPropertyVendorAssignment } = require('../utils/vendorAssignments');
 const {
   orNull, isRecentlyAdded, formatPaymentStatus, fetchServiceVendorMap, mapPendingServices
@@ -4860,10 +4860,10 @@ router.get('/schedules/all', authenticate, async (req, res) => {
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
       ${whereClause}
       ORDER BY sv.scheduled_date DESC, sv.scheduled_time_start ASC
-      LIMIT ? OFFSET ?
+      LIMIT ${parseInt(limit) || 15} OFFSET ${offset}
     `;
     
-    params.push(parseInt(limit), offset);
+    
     let schedules = [];
     try {
       const [result] = await pool.execute(query, params);

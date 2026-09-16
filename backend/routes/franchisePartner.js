@@ -9,13 +9,14 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const multer = require('multer');
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
+const {
+  v4: uuidv4 } = require('uuid');
 const { pool } = require('../config/database');
 const { authenticate, generateToken } = require('../middleware/auth');
 const { fetchScheduleStats, fetchScheduledVendors, derivedStatusFilter } = require('../utils/scheduleStats');
 const { resolveVendor, upsertPropertyVendorAssignment } = require('../utils/vendorAssignments');
 const {
-  orNull, isRecentlyAdded, formatPaymentStatus, fetchServiceVendorMap, mapPendingServices
+  orNull, isRecentlyAdded, formatPaymentStatus, fetchServiceVendorMap, mapPendingServices, fetchPendingPropertiesForFp
 } = require('../utils/pendingProperties');
 const { ROLES, ROLE_NAMES, isFranchisePartner } = require('../config/roles');
 const { 
@@ -6334,164 +6335,11 @@ router.get('/work-orders/approaching-deletion/count', requireFPScope, async (req
 // Supports BOTH onboarded_properties (new) and properties (old) tables
 router.get('/schedules/pending-properties', authenticate, attachFPScope, async (req, res) => {
   try {
-    // Use req.fpId which is correctly set by attachFPScope middleware
-    const franchisePartnerId = req.fpId || req.user?.franchisePartnerId || req.user?.id;
-    
-    console.log('[FP Pending Properties] Starting with FP ID:', franchisePartnerId);
-    console.log('[FP Pending Properties] User info:', { userId: req.user?.id, role: req.user?.role, fpId: req.fpId });
-    
-    // Query to get properties with:
-    // 1. Paid estimates (payment_status = 'paid' or 'partial')
-    // 2. Not yet fully scheduled (check property_service_schedules for 'scheduled' or 'completed' status)
-    // Uses UNION to support both onboarded_properties and properties tables
-    // Uses subquery to get only the LATEST paid estimate per property (avoids duplicates)
-    const query = `
-      SELECT * FROM (
-        -- From onboarded_properties (new table)
-        SELECT 
-          op.id,
-          op.property_id as propertyId,
-          op.community_name as propertyName,
-          op.property_type as propertyType,
-          op.zone,
-          op.area_name as areaName,
-          op.created_at as addedOn,
-          op.franchise_partner_id as fpId,
-          fe.id as estimateId,
-          fe.estimate_id as estimateCode,
-          fe.package_name as packageName,
-          fe.total_amount as totalPrice,
-          fe.status as estimateStatus,
-          fe.payment_status as paymentStatus,
-          COALESCE(fe.package_services, fpamc.services) as serviceRows,
-          pc.name as customerName,
-          pc.phone as customerPhone,
-          pc.email as customerEmail,
-          (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = op.id AND pva.is_active = 1) as assignedVendors,
-          (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = op.id AND pss.scheduling_status IN ('scheduled', 'completed')) as scheduledServiceCount,
-          (SELECT COUNT(*) FROM scheduled_visits sv WHERE sv.property_id = op.id) as totalScheduledVisits,
-          JSON_LENGTH(COALESCE(fe.package_services, fpamc.services, '[]')) as totalServices,
-          'onboarded' as source
-        FROM onboarded_properties op
-        INNER JOIN (
-          SELECT property_id, MAX(id) as latest_estimate_id
-          FROM fp_estimates 
-          WHERE payment_status IN ('paid', 'partial')
-          GROUP BY property_id
-        ) latest_fe ON latest_fe.property_id = op.id
-        INNER JOIN fp_estimates fe ON fe.id = latest_fe.latest_estimate_id
-        LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id
-        LEFT JOIN property_contacts pc ON pc.id = (SELECT pc2.id FROM property_contacts pc2 WHERE pc2.property_id = op.id ORDER BY pc2.id LIMIT 1)
-        WHERE op.status = 'active'
-          AND op.franchise_partner_id = ?
-        
-        UNION ALL
-        
-        -- From properties (old table) - for backward compatibility
-        SELECT 
-          p.id,
-          p.property_id as propertyId,
-          p.name as propertyName,
-          p.property_type as propertyType,
-          COALESCE(fe.zone, '') as zone,
-          COALESCE(p.city, '') as areaName,
-          p.created_at as addedOn,
-          fe.franchise_partner_id as fpId,
-          fe.id as estimateId,
-          fe.estimate_id as estimateCode,
-          fe.package_name as packageName,
-          fe.total_amount as totalPrice,
-          fe.status as estimateStatus,
-          fe.payment_status as paymentStatus,
-          COALESCE(fe.package_services, fpamc.services) as serviceRows,
-          fe.client_name as customerName,
-          fe.client_phone as customerPhone,
-          fe.client_email as customerEmail,
-          (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = p.id AND pva.is_active = 1) as assignedVendors,
-          (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = p.id AND pss.scheduling_status IN ('scheduled', 'completed')) as scheduledServiceCount,
-          (SELECT COUNT(*) FROM scheduled_visits sv WHERE sv.property_id = p.id) as totalScheduledVisits,
-          JSON_LENGTH(COALESCE(fe.package_services, fpamc.services, '[]')) as totalServices,
-          'legacy' as source
-        FROM properties p
-        INNER JOIN (
-          SELECT property_id, MAX(id) as latest_estimate_id
-          FROM fp_estimates 
-          WHERE payment_status IN ('paid', 'partial')
-          GROUP BY property_id
-        ) latest_fe_p ON latest_fe_p.property_id = p.id
-        INNER JOIN fp_estimates fe ON fe.id = latest_fe_p.latest_estimate_id
-        LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id
-        WHERE p.status = 'active'
-          AND fe.franchise_partner_id = ?
-          AND p.id NOT IN (SELECT id FROM onboarded_properties)
-      ) combined
-      WHERE scheduledServiceCount < totalServices OR totalServices = 0
-      ORDER BY addedOn DESC
-    `;
-
-    console.log('[FP Pending Properties] Executing query with FP ID:', franchisePartnerId);
-    const [properties] = await pool.execute(query, [franchisePartnerId, franchisePartnerId]);
-    console.log('[FP Pending Properties] Found', properties.length, 'pending properties');
-
-    // Real per-service vendor details for all properties in one round trip
-    const serviceVendorMap = await fetchServiceVendorMap(properties.map(p => p.id));
-
-    // Parse service rows and calculate service counts with vendor info
-    const processedProperties = properties.map(p => {
-      let services = [];
-      let totalServices = 0;
-      
-      // Parse service_rows JSON
-      if (p.serviceRows) {
-        try {
-          services = typeof p.serviceRows === 'string' ? JSON.parse(p.serviceRows) : p.serviceRows;
-          totalServices = Array.isArray(services) ? services.length : 0;
-        } catch (e) {
-          console.warn('Error parsing service rows:', e);
-        }
-      }
-      
-      const mappedServices = mapPendingServices(services, p.id, serviceVendorMap);
-      const assignedVendors = mappedServices.filter(s => s.vendorAssigned).length;
-      const pendingServices = Math.max(0, totalServices - assignedVendors);
-      
-      return {
-        id: p.id,
-        propertyId: p.propertyId,
-        propertyName: p.propertyName,
-        customerName: orNull(p.customerName),
-        customerPhone: orNull(p.customerPhone),
-        customerEmail: orNull(p.customerEmail),
-        propertyType: orNull(p.propertyType),
-        zone: orNull(p.zone),
-        areaName: orNull(p.areaName),
-        packageName: orNull(p.packageName),
-        estimateId: p.estimateId,
-        estimateCode: p.estimateCode,
-        totalPrice: p.totalPrice,
-        totalServices: totalServices,
-        assignedVendors: assignedVendors,
-        pendingServices: pendingServices,
-        paymentStatus: formatPaymentStatus(p.paymentStatus),
-        addedOn: p.addedOn,
-        isNew: isRecentlyAdded(p.addedOn),
-        services: mappedServices
-      };
-    });
-
-    res.json({
-      success: true,
-      data: processedProperties
-    });
+    const data = await fetchPendingPropertiesForFp(req.fpId || req.user?.franchisePartnerId);
+    res.json({ success: true, data });
   } catch (error) {
-    console.error('[FP Pending Properties] Error:', error.message);
-    console.error('[FP Pending Properties] Stack:', error.stack);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching pending properties',
-      error: error.message,
-      code: error.code
-    });
+    console.error('Error fetching pending properties for scheduling:', error);
+    res.status(500).json({ success: false, message: 'Error fetching pending properties', error: error.message });
   }
 });
 

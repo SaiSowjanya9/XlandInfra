@@ -2968,10 +2968,10 @@ router.get('/all', authenticate, canSeeSchedule, async (req, res) => {
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
       ${whereClause}
       ORDER BY sv.scheduled_date DESC, sv.scheduled_time_start ASC
-      LIMIT ? OFFSET ?
+      LIMIT ${parseInt(limit) || 15} OFFSET ${offset}
     `;
     
-    params.push(parseInt(limit), offset);
+    
     
     let schedules = [];
     try {

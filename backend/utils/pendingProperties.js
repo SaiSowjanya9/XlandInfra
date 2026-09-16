@@ -147,11 +147,140 @@ const mapPendingServices = (services, propertyId, vendorMap) => {
   });
 };
 
+/**
+ * Properties of one franchise partner that are paid but not fully scheduled yet.
+ * Shared by the FP, Manager, Coordinator and Supervisor portals so every portal
+ * shows the same rows, counts and per-service vendor state.
+ *
+ * @param {number} franchisePartnerId
+ * @returns {Promise<Array>} rows in the shape the Pending Property Schedules page expects
+ */
+const fetchPendingPropertiesForFp = async (franchisePartnerId) => {
+  if (!franchisePartnerId) return [];
+
+  // Covers both onboarded_properties (current) and properties (legacy)
+  const query = `
+    SELECT * FROM (
+      SELECT DISTINCT
+        op.id,
+        op.property_id as propertyId,
+        op.community_name as propertyName,
+        op.property_type as propertyType,
+        op.zone,
+        op.area_name as areaName,
+        op.created_at as addedOn,
+        op.franchise_partner_id as fpId,
+        fe.id as estimateId,
+        fe.estimate_id as estimateCode,
+        fe.package_name as packageName,
+        fe.total_amount as totalPrice,
+        fe.status as estimateStatus,
+        fe.payment_status as paymentStatus,
+        fe.package_services as serviceRows,
+        pc.name as customerName,
+        pc.phone as customerPhone,
+        pc.email as customerEmail,
+        (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = op.id AND pva.is_active = 1) as assignedVendors,
+        (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = op.id AND pss.scheduling_status IN ('scheduled', 'completed')) as scheduledServiceCount,
+        (SELECT COUNT(*) FROM scheduled_visits sv WHERE sv.property_id = op.id) as totalScheduledVisits,
+        JSON_LENGTH(COALESCE(fe.package_services, '[]')) as totalServices,
+        'onboarded' as source
+      FROM onboarded_properties op
+      INNER JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
+      LEFT JOIN property_contacts pc ON pc.id = (SELECT pc2.id FROM property_contacts pc2 WHERE pc2.property_id = op.id ORDER BY pc2.id LIMIT 1)
+      WHERE op.status = 'active'
+        AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
+        AND op.franchise_partner_id = ?
+
+      UNION ALL
+
+      SELECT DISTINCT
+        p.id,
+        p.property_id as propertyId,
+        p.name as propertyName,
+        p.property_type as propertyType,
+        COALESCE(fe.zone, '') as zone,
+        COALESCE(p.city, '') as areaName,
+        p.created_at as addedOn,
+        fe.franchise_partner_id as fpId,
+        fe.id as estimateId,
+        fe.estimate_id as estimateCode,
+        fe.package_name as packageName,
+        fe.total_amount as totalPrice,
+        fe.status as estimateStatus,
+        fe.payment_status as paymentStatus,
+        fe.package_services as serviceRows,
+        fe.client_name as customerName,
+        fe.client_phone as customerPhone,
+        fe.client_email as customerEmail,
+        (SELECT COUNT(*) FROM property_vendor_assignments pva WHERE pva.property_id = p.id AND pva.is_active = 1) as assignedVendors,
+        (SELECT COUNT(*) FROM property_service_schedules pss WHERE pss.property_id = p.id AND pss.scheduling_status IN ('scheduled', 'completed')) as scheduledServiceCount,
+        (SELECT COUNT(*) FROM scheduled_visits sv WHERE sv.property_id = p.id) as totalScheduledVisits,
+        JSON_LENGTH(COALESCE(fe.package_services, '[]')) as totalServices,
+        'legacy' as source
+      FROM properties p
+      INNER JOIN fp_estimates fe ON fe.property_id = p.id AND fe.status = 'approved'
+      WHERE p.status = 'active'
+        AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
+        AND fe.franchise_partner_id = ?
+        AND p.id NOT IN (SELECT id FROM onboarded_properties)
+    ) combined
+    WHERE scheduledServiceCount < totalServices OR totalServices = 0
+    ORDER BY addedOn DESC
+  `;
+
+  const [properties] = await pool.execute(query, [franchisePartnerId, franchisePartnerId]);
+
+  // Real per-service vendor details, so service rows are not all reported as unassigned
+  const serviceVendorMap = await fetchServiceVendorMap(properties.map(p => p.id));
+
+  return properties.map(p => {
+    let services = [];
+    let totalServices = 0;
+
+    if (p.serviceRows) {
+      try {
+        services = typeof p.serviceRows === 'string' ? JSON.parse(p.serviceRows) : p.serviceRows;
+        totalServices = Array.isArray(services) ? services.length : 0;
+      } catch (e) {
+        console.warn('Error parsing service rows:', e.message);
+      }
+    }
+
+    const assignedVendors = p.assignedVendors || 0;
+
+    return {
+      id: p.id,
+      propertyId: p.propertyId,
+      propertyName: p.propertyName,
+      customerName: orNull(p.customerName),
+      customerPhone: orNull(p.customerPhone),
+      customerEmail: orNull(p.customerEmail),
+      propertyType: orNull(p.propertyType),
+      zone: orNull(p.zone),
+      areaName: orNull(p.areaName),
+      packageName: orNull(p.packageName),
+      estimateId: p.estimateId,
+      estimateCode: p.estimateCode,
+      totalPrice: p.totalPrice,
+      totalServices,
+      assignedVendors: Math.min(assignedVendors, totalServices),
+      pendingServices: Math.max(0, totalServices - assignedVendors),
+      paymentStatus: formatPaymentStatus(p.paymentStatus),
+      addedOn: p.addedOn,
+      fpId: p.fpId,
+      isNew: isRecentlyAdded(p.addedOn),
+      services: mapPendingServices(services, p.id, serviceVendorMap)
+    };
+  });
+};
+
 module.exports = {
   NEW_PROPERTY_WINDOW_DAYS,
   orNull,
   isRecentlyAdded,
   formatPaymentStatus,
   fetchServiceVendorMap,
-  mapPendingServices
+  mapPendingServices,
+  fetchPendingPropertiesForFp
 };

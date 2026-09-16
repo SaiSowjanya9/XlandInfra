@@ -67,7 +67,8 @@ const generateActivationToken = () => {
   return crypto.randomBytes(32).toString('hex');
 };
 const { authenticate } = require('../middleware/auth');
-const { fetchScheduleStats, fetchScheduledVendors, derivedStatusFilter } = require('../utils/scheduleStats');
+const { fetchScheduleStats, fetchScheduledVendors, derivedStatusFilter, fetchScheduledServices, fetchScheduledZones } = require('../utils/scheduleStats');
+const { fetchPendingPropertiesForFp } = require('../utils/pendingProperties');
 const {
   attachSupervisorScope,
   requireSupervisorScope,
@@ -2588,6 +2589,19 @@ router.post('/addons', requireSupervisorScope, async (req, res) => {
 // =====================================================
 router.get('/zones', requireSupervisorScope, async (req, res) => {
   try {
+    // Schedule filters only offer zones that actually appear in existing schedules
+    if (req.query.forSchedules === 'true') {
+      const franchisePartnerId = req.user?.franchisePartnerId || req.franchisePartnerId;
+      const scheduleZones = franchisePartnerId
+        ? await fetchScheduledZones({
+            whereClause: 'WHERE op.franchise_partner_id = ?',
+            params: [franchisePartnerId],
+            label: 'Supervisor Schedule Zones'
+          })
+        : [];
+      return res.json({ success: true, data: scheduleZones });
+    }
+
     // Get global zones
     const [globalZones] = await pool.query('SELECT id, name FROM zones WHERE is_active = 1');
     
@@ -2933,6 +2947,34 @@ router.get('/fp-portal-links', requireSupervisorScope, async (req, res) => {
 
 // ==================== SCHEDULING ROUTES ====================
 
+// Pending Property Schedules - same feed as the FP, Manager and Admin portals
+router.get('/schedules/pending-properties', requireSupervisorScope, async (req, res) => {
+  try {
+    const franchisePartnerId = req.user?.franchisePartnerId || req.franchisePartnerId;
+    const data = await fetchPendingPropertiesForFp(franchisePartnerId);
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching pending properties for scheduling:', error);
+    res.status(500).json({ success: false, message: 'Error fetching pending properties', error: error.message });
+  }
+});
+
+// Services for the schedule filters
+router.get('/services', requireSupervisorScope, async (req, res) => {
+  try {
+    const franchisePartnerId = req.user?.franchisePartnerId || req.franchisePartnerId;
+    const data = await fetchScheduledServices({
+      whereClause: 'WHERE op.franchise_partner_id = ?',
+      params: [franchisePartnerId],
+      label: 'Supervisor Schedule Services'
+    });
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Get supervisor services error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch services', error: error.message });
+  }
+});
+
 // Get all schedules (visits) with filtering and pagination
 router.get('/schedules/all', requireSupervisorScope, async (req, res) => {
   try {
@@ -3053,10 +3095,10 @@ router.get('/schedules/all', requireSupervisorScope, async (req, res) => {
       LEFT JOIN work_orders wo ON wo.id = sv.work_order_id
       ${whereClause}
       ORDER BY sv.scheduled_date DESC, sv.scheduled_time_start ASC
-      LIMIT ? OFFSET ?
+      LIMIT ${parseInt(limit) || 15} OFFSET ${offset}
     `;
     
-    params.push(parseInt(limit), offset);
+    
     let schedules = [];
     try {
       const [result] = await pool.execute(query, params);
