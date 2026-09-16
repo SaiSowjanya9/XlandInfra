@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Edit2, Loader2, Plus, Save, Trash2, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
-import { FREQUENCY_OPTIONS, PRICING_METHODS, PROPERTY_TYPES } from './AddServicePage';
+import { FREQUENCY_OPTIONS, PRICING_METHODS, PROPERTY_TYPES, getServiceSchedule } from './AddServicePage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const inputClass = 'mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500';
@@ -48,7 +48,11 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
     return () => { clearTimeout(timer); controller.abort(); };
   }, [service, inputs, property]);
 
-  const updateInput = (name, value) => { setQuote(null); setInputs(prev => ({ ...prev, [name]: value })); };
+  const updateInput = (name, value) => {
+    setQuote(null);
+    setInputs(prev => ({ ...prev, [name]: value, ...(name === 'capacity' && service.pricing_method === 'capacity_slab'
+      ? { ...getServiceSchedule(service, value), custom_quote: undefined } : {}) }));
+  };
   const selectService = id => {
     const selected = services.find(item => String(item.id) === id);
     setServiceId(id);
@@ -74,7 +78,7 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
         <Field label="Frequency *"><select value={inputs.frequency} disabled={!service.allow_frequency_override} onChange={event => {
           const frequency = event.target.value;
           setQuote(null);
-          setInputs(prev => ({ ...prev, frequency, visits: frequency === service.default_frequency ? service.default_visits_per_year : FREQUENCY_OPTIONS.find(item => item.value === frequency).defaultVisits }));
+          setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity, frequency) }));
         }} className={inputClass}>{FREQUENCY_OPTIONS.map(item => <option key={item.value}>{item.value}</option>)}</select></Field>
         <Field label="Visits Per Year"><input type="number" min="1" max="366" step="1" readOnly={!service.allow_manual_visits} value={inputs.visits} onChange={event => updateInput('visits', event.target.value)} className={`${inputClass} ${!service.allow_manual_visits ? 'bg-slate-50' : ''}`} /><span className="mt-1 block text-[10px] font-normal text-slate-400">{service.allow_manual_visits ? 'Manual visits allowed' : 'Auto calculated'}</span></Field>
         {service.pricing_method === 'fixed_visit_custom' && <Field label="One-off Custom Work Cost (₹)"><input type="number" min="0" step="0.01" value={inputs.custom_work_cost} onChange={event => updateInput('custom_work_cost', event.target.value)} className={inputClass} /></Field>}

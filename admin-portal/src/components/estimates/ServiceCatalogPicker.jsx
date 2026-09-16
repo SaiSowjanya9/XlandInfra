@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, Plus, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
-import { FREQUENCY_OPTIONS, PRICING_METHODS } from './AddServicePage';
+import { FREQUENCY_OPTIONS, PRICING_METHODS, getServiceSchedule } from './AddServicePage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const inputClass = 'w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500';
@@ -48,7 +48,11 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd }) => 
     setRequiresQuote(item?.pricing_method === 'custom_quote');
     setInputs(item ? { frequency: item.default_frequency, visits: item.default_visits_per_year, custom_work_cost: item.custom_work_rate ?? 0 } : {});
   };
-  const setInput = (field, value) => setInputs(prev => ({ ...prev, [field]: value }));
+  const setInput = (field, value) => {
+    if (field === 'capacity' && service.pricing_method === 'capacity_slab') setRequiresQuote(false);
+    setInputs(prev => ({ ...prev, [field]: value, ...(field === 'capacity' && service.pricing_method === 'capacity_slab'
+      ? { ...getServiceSchedule(service, value), custom_quote: undefined } : {}) }));
+  };
   const addService = async () => {
     if (!service || saving) return;
     setSaving(true);
@@ -98,10 +102,10 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd }) => 
         {service && <div className="mt-4">
           <div className="mb-4 flex items-center justify-between gap-2"><span className="rounded bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700">{PRICING_METHODS.find(item => item.value === service.pricing_method)?.label}</span><button type="button" onClick={() => selectService('')} aria-label="Cancel service selection" className="p-1 text-slate-500"><X className="h-4 w-4" /></button></div>
           <div className="grid gap-4 sm:grid-cols-3">
-            {input && <label className="block text-xs font-medium text-slate-600">{input[1]} ({service.unit}) *<input aria-label={`${input[1]} (${service.unit})`} type="number" min={service.pricing_method === 'capacity_slab' ? 0 : input[2]} step={input[2]} value={inputs[input[0]] ?? ''} onChange={event => { setInput(input[0], event.target.value); if (service.pricing_method === 'capacity_slab') { setRequiresQuote(false); setInput('custom_quote', ''); } }} className={`${inputClass} mt-2`} /></label>}
+            {input && <label className="block text-xs font-medium text-slate-600">{input[1]} ({service.unit}) *<input aria-label={`${input[1]} (${service.unit})`} type="number" min={service.pricing_method === 'capacity_slab' ? 0 : input[2]} step={input[2]} value={inputs[input[0]] ?? ''} onChange={event => setInput(input[0], event.target.value)} className={`${inputClass} mt-2`} /></label>}
             <label className="block text-xs font-medium text-slate-600">Frequency<select disabled={!service.allow_frequency_override || saving} value={inputs.frequency} onChange={event => {
               const frequency = event.target.value;
-              setInputs(prev => ({ ...prev, frequency, visits: frequency === service.default_frequency ? service.default_visits_per_year : FREQUENCY_OPTIONS.find(item => item.value === frequency).defaultVisits }));
+              setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity, frequency) }));
             }} className={`${inputClass} mt-2`}>{FREQUENCY_OPTIONS.map(item => <option key={item.value}>{item.value}</option>)}</select></label>
             <label className="block text-xs font-medium text-slate-600">Visits Per Year<input type="number" min="1" max="366" step="1" readOnly={!service.allow_manual_visits} value={inputs.visits} onChange={event => setInput('visits', event.target.value)} className={`${inputClass} mt-2 ${!service.allow_manual_visits ? 'bg-slate-50' : ''}`} /></label>
             {service.pricing_method === 'fixed_visit_custom' && <label className="block text-xs font-medium text-slate-600">One-off Custom Work Cost (₹)<input type="number" min="0" step="0.01" value={inputs.custom_work_cost} onChange={event => setInput('custom_work_cost', event.target.value)} className={`${inputClass} mt-2`} /></label>}
