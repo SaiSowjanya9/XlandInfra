@@ -223,11 +223,16 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
       }
       const queryString = params.toString();
       
-      // Fetch ALL payments data (no date filter for dashboard overview)
-      const paymentsRes = await fetch(`${API_BASE}/api/payments${queryString ? '?' + queryString : ''}`, {
+      // Fetch ALL payments data (no date filter for dashboard overview).
+      // The list lives at /api/payments/payments - /api/payments has no handler and 404s,
+      // which silently left every payment figure on this dashboard at zero.
+      const paymentsRes = await fetch(`${API_BASE}/api/payments/payments${queryString ? '?' + queryString : ''}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      const paymentsResult = await paymentsRes.json();
+      if (!paymentsRes.ok) {
+        console.error('[Payments Dashboard] Payments request failed:', paymentsRes.status);
+      }
+      const paymentsResult = await paymentsRes.json().catch(() => ({}));
       const allPayments = paymentsResult.success ? (paymentsResult.data || []) : (Array.isArray(paymentsResult) ? paymentsResult : []);
 
       // Fetch ALL invoices data
