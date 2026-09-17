@@ -2,8 +2,7 @@ const FREQUENCIES = { Monthly: 12, 'Every 2 Months': 6, Quarterly: 4, 'Half-Year
 const UNITS = {
   fixed_price: ['Visit', 'Service', 'Job'], quantity_based: ['Nos', 'Units', 'Lifts', 'Pumps', 'Tanks', 'Camera'],
   area_based: ['Sq Ft', 'Sq M', 'Acres'], capacity_based: ['KL', 'Liters', 'KVA', 'KW'],
-  capacity_slab: ['Persons', 'KVA', 'KW', 'HP', 'KL', 'Liters'], manpower: ['Persons', 'Guards', 'Staff', 'Personnel'],
-  fixed_visit_custom: ['Visit', 'Job'], custom_quote: ['Quote', 'Project']
+  capacity_slab: ['Persons', 'KVA', 'KW', 'HP', 'KL', 'Liters'], manpower: ['Persons', 'Guards', 'Staff', 'Personnel']
 };
 const PROPERTY_TYPES = ['APT', 'GC', 'FLAT', 'VILLA', 'IH', 'PLOT'];
 const fail = message => { throw Object.assign(new Error(message), { status: 400 }); };
@@ -46,9 +45,8 @@ const validateService = input => {
   if (!config.allow_manual_visits && config.default_visits_per_year !== FREQUENCIES[config.default_frequency]) fail('Default visits must match the selected frequency when manual visits are disabled.');
   if (!Array.isArray(input.applicable_property_types) || !input.applicable_property_types.length || input.applicable_property_types.some(type => !PROPERTY_TYPES.includes(type))) fail('Select at least one valid property type.');
   config.applicable_property_types = [...new Set(input.applicable_property_types)];
-  const rateField = { fixed_price: 'fixed_price', quantity_based: 'rate_per_quantity', area_based: 'rate_per_unit', capacity_based: 'rate_per_capacity', fixed_visit_custom: 'visit_charge' }[config.pricing_method];
+  const rateField = { fixed_price: 'fixed_price', quantity_based: 'rate_per_quantity', area_based: 'rate_per_unit', capacity_based: 'rate_per_capacity' }[config.pricing_method];
   if (rateField) config[rateField] = number(input[rateField], 'Vendor rate');
-  if (config.pricing_method === 'fixed_visit_custom') config.custom_work_rate = number(input.custom_work_rate, 'Custom work cost');
   if (config.pricing_method === 'manpower') {
     config.manpower_basis = input.manpower_basis ?? 'monthly';
     if (!['monthly', 'per_visit'].includes(config.manpower_basis)) fail('Select a valid manpower pricing basis.');
@@ -124,6 +122,8 @@ const calculateServiceQuote = (config, input = {}, role) => {
   if (!config.allow_manual_visits && visits !== defaultVisits) fail('Manual visits are disabled for this service.');
   const inputs = { property_type: propertyType, frequency, visits };
   let vendorCost;
+  // 'custom_quote' and 'fixed_visit_custom' are retired: no new service can be saved with them,
+  // but services and estimate snapshots stored earlier must still price correctly.
   let requiresCustomQuote = config.pricing_method === 'custom_quote';
   switch (config.pricing_method) {
     case 'fixed_price': vendorCost = config.fixed_price * visits; break;

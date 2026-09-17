@@ -3,13 +3,13 @@ import { Edit2, Loader2, Plus, Save, Trash2, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import ManpowerFields from './ManpowerFields';
 import { isVisitManpower, suggestedManpower } from '../../utils/manpowerPricing';
-import { FREQUENCY_OPTIONS, PRICING_METHODS, PROPERTY_TYPES, getServiceSchedule } from './AddServicePage';
+import { FREQUENCY_OPTIONS, PROPERTY_TYPES, getServiceSchedule, methodLabel } from './AddServicePage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const inputClass = 'mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500';
 const money = value => `₹${Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 const round = value => Math.round((value + Number.EPSILON) * 100) / 100;
-const methodLabel = value => PRICING_METHODS.find(method => method.value === value)?.label || value;
+
 const INPUTS = {
   quantity_based: ['quantity', 'Quantity', 1], area_based: ['area', 'Area', 0.01],
   capacity_based: ['capacity', 'Capacity', 0.01], capacity_slab: ['capacity', 'Capacity', 1],
