@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
-import AddServicePage, { PROPERTY_TYPES, methodLabel, serviceOptionLabel } from './AddServicePage';
+import AddServicePage, { methodLabel, propertyTypeLabel, serviceOptionLabel } from './AddServicePage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const RATE_LABELS = {
@@ -58,7 +58,7 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
         </summary>
         <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm">
           <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 [&>div]:min-w-0 [&_dd]:[overflow-wrap:anywhere]">
-            <div><dt className="text-xs text-slate-500">Applicable property types</dt><dd className="mt-1">{service.applicable_property_types.map(id => PROPERTY_TYPES.find(type => type.id === id)?.label || id).join(', ')}</dd></div>
+            <div><dt className="text-xs text-slate-500">Applicable property types</dt><dd className="mt-1">{service.applicable_property_types.map(propertyTypeLabel).join(', ')}</dd></div>
             <div><dt className="text-xs text-slate-500">Unit</dt><dd className="mt-1">{service.unit}</dd></div>
             <div><dt className="text-xs text-slate-500">Scope</dt><dd className="mt-1">{service.franchise_partner_id ? `FP ${service.franchise_partner_id}` : 'All FPs'}</dd></div>
             <div><dt className="text-xs text-slate-500">Default markup</dt><dd className="mt-1">{service.default_markup_percentage}%</dd></div>
