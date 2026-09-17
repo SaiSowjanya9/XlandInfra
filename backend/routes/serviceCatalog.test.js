@@ -67,7 +67,7 @@ test('catalog API permissions, persistence contract, quoting and estimate valida
     assert.equal(created.data.rate_per_quantity, 125.5);
     assert.equal(created.data.fixed_price, undefined);
     assert.equal((await request('/catalog', 'POST', config)).status, 409);
-    assert.equal((await request('/catalog', 'POST', { ...config, service_name: 'Invalid', category: 'Does not exist' })).status, 400);
+    assert.equal((await request('/catalog', 'POST', { ...config, service_name: 'Invalid', category: '   ' })).status, 400, 'a blank category is still refused');
     assert.equal((await request('/catalog', 'POST', { ...config, service_name: 'Invalid', default_visits_per_year: 8 })).status, 400);
   });
   await t.test('fresh list returns saved settings and honors property and FP filtering', async () => {

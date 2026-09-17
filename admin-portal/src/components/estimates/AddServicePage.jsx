@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { ChevronLeft, Plus, Trash2, Save, Loader2, SlidersHorizontal } from 'lucide-react';
 import { useFP } from '../../contexts/FPContext';
+import AutocompleteInput from '../common/AutocompleteInput';
 import { manpowerRangeLabel, previewManpower, suggestedManpower } from '../../utils/manpowerPricing';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -180,7 +181,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
   useEffect(() => {
     const controller = new AbortController();
     setCategoryError('');
-    fetch(`${API_BASE}${scoped ? `${apiPath}/categories` : '/api/admin/categories'}`, {
+    fetch(`${API_BASE}${apiPath}/categories`, {
       headers: { Authorization: `Bearer ${token}` }, signal: controller.signal
     }).then(async response => {
       const result = await response.json();
@@ -269,6 +270,10 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     setFormError('');
     if (!formData.pricingMethod) {
       setFormError('Select a pricing method.');
+      return;
+    }
+    if (!formData.category.trim()) {
+      setFormError('Enter or select a category.');
       return;
     }
     if (!formData.applicablePropertyTypes.length) {
@@ -365,6 +370,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     setFormData(prev => ({ ...prev, allowManualVisits: !prev.allowManualVisits, defaultVisitsPerYear: prev.allowManualVisits ? FREQUENCY_OPTIONS.find(item => item.value === prev.defaultFrequency).defaultVisits : prev.defaultVisitsPerYear }));
   };
 
+  const categoryNames = [...new Set(categories.map(category => category.name).filter(Boolean))];
   const scopeText = scopeLabel ?? (service
     ? (service.franchise_partner_id ? `For FP ${service.franchise_partner_id}` : 'Available to all FPs')
     : selectedFp?.id && selectedFp.id !== 'all' ? `For ${selectedFp.companyName || selectedFp.fpId || `FP ${selectedFp.id}`}` : 'Available to all FPs');
@@ -388,7 +394,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             <ChevronLeft className="h-5 w-5 text-slate-500" />
           </button>
           <button type="button" onClick={onBack} disabled={isSubmitting} className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-blue-600 shadow-sm transition hover:bg-blue-50">Cancel</button>
-          <button type="submit" disabled={isSubmitting || !categories.length || !formData.pricingMethod} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50">
+          <button type="submit" disabled={isSubmitting || !formData.pricingMethod} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50">
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {isSubmitting ? 'Saving...' : 'Save Service'}
           </button>
@@ -406,10 +412,8 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field label="Service Name *"><input required maxLength={150} value={formData.serviceName} onChange={event => setField('serviceName', event.target.value)} placeholder="e.g. Generator Maintenance" className={inputClass} /></Field>
                 <Field label="Category *">
-                  <select required value={formData.category} onChange={event => setField('category', event.target.value)} className={inputClass}>
-                    <option value="">{categories.length ? 'Select category' : 'Loading categories...'}</option>
-                    {[...new Set(categories.map(category => category.name))].map(name => <option key={name} value={name}>{name}</option>)}
-                  </select>
+                  <AutocompleteInput value={formData.category} onChange={value => setField('category', value)} options={categoryNames}
+                    placeholder="Type or select category" inputClassName="py-2.5" maxResults={20} />
                 </Field>
                 {/* Pricing Method — every method is visible so the form is never mistaken for a single-method screen */}
                 <div className="sm:col-span-2">
