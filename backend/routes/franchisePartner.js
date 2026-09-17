@@ -178,6 +178,10 @@ router.post('/login', loginRateLimiter, async (req, res) => {
 router.use(authenticate);
 router.use(attachFPScope);
 
+// Read-only configured service catalog for FP estimates
+const fpServiceCatalog = require('./fpServiceCatalog');
+router.use('/service-catalog', fpServiceCatalog);
+
 // ============================================
 // FP DASHBOARD
 // ============================================
@@ -4414,7 +4418,7 @@ router.get('/estimates', requireFPScope, async (req, res) => {
 });
 
 // Create estimate
-router.post('/estimates', requireFPScope, async (req, res) => {
+router.post('/estimates', requireFPScope, fpServiceCatalog.validatePackageEstimate, async (req, res) => {
   try {
     const {
       estimate_type, property_id, property_code, client_name, client_phone, client_email,

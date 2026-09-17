@@ -221,7 +221,7 @@ export const updateEstimate = async (estimateId, updates) => {
   try {
     const response = await fetch(`${EST_API_URL}/api/estimates-sync/${estimateId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getAuthToken()}` },
       body: JSON.stringify(updates)
     });
     const result = await response.json();
@@ -240,7 +240,8 @@ export const deleteEstimate = async (estimateId, permanent = false) => {
   try {
     if (permanent) {
       const response = await fetch(`${EST_API_URL}/api/estimates-sync/${estimateId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${getAuthToken()}` }
       });
       const result = await response.json();
       if (result.success) {

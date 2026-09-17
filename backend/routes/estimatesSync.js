@@ -1,5 +1,5 @@
 const express = require('express');
-const { normalizeEstimateData } = require('../utils/estimateData');
+const { normalizeEstimateData, hasCatalogServices } = require('../utils/estimateData');
 const router = express.Router();
 const crypto = require('crypto');
 const db = require('../config/database');
@@ -123,7 +123,7 @@ router.get('/', authenticate, adminOnly, async (req, res) => {
 });
 
 // CREATE estimate
-router.post('/', require('./serviceCatalog').validateCatalogEstimate, async (req, res) => {
+router.post('/', authenticate, adminOnly, require('./serviceCatalog').validateCatalogEstimate, async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
@@ -152,16 +152,8 @@ router.post('/', require('./serviceCatalog').validateCatalogEstimate, async (req
     const pool = db.pool;
     const titleValue = customerName || propertyName || communityName || 'Direct Estimate';
     
-    // Get admin user ID for created_by (required NOT NULL field)
-    let createdById = 1; // Default to admin user ID 1
-    try {
-      const [adminUsers] = await pool.execute(`SELECT id FROM users WHERE role = 'admin' LIMIT 1`);
-      if (adminUsers.length > 0) {
-        createdById = adminUsers[0].id;
-      }
-    } catch (e) {
-      console.log('Could not fetch admin user, using default ID 1');
-    }
+    // created_by is NOT NULL; record the authenticated admin instead of guessing a user
+    const createdById = req.user.id;
     
     await pool.execute(
       `INSERT INTO estimates (
@@ -217,7 +209,7 @@ router.post('/', require('./serviceCatalog').validateCatalogEstimate, async (req
 });
 
 // UPDATE estimate
-router.put('/:estimateId', async (req, res) => {
+router.put('/:estimateId', authenticate, adminOnly, async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
@@ -232,6 +224,10 @@ router.put('/:estimateId', async (req, res) => {
     } = req.body;
     
     const pool = db.pool;
+    const [[existing]] = await pool.execute('SELECT estimate_type, addons FROM estimates WHERE estimate_id = ?', [estimateId]);
+    if (!existing) return res.status(404).json({ success: false, message: 'Estimate not found' });
+    // Saved configured-service pricing snapshots must not be replaced by the legacy editor
+    if (hasCatalogServices(existing)) return res.status(409).json({ success: false, message: 'Configured-service estimates cannot be rewritten here. Create a new estimate to change these services.' });
     await pool.execute(
       `UPDATE estimates SET 
         customer_name = COALESCE(?, customer_name),
@@ -278,7 +274,7 @@ router.put('/:estimateId', async (req, res) => {
 });
 
 // ARCHIVE estimate
-router.put('/:estimateId/archive', async (req, res) => {
+router.put('/:estimateId/archive', authenticate, adminOnly, async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
@@ -314,7 +310,7 @@ router.put('/:estimateId/archive', async (req, res) => {
 });
 
 // RESTORE estimate
-router.put('/:estimateId/restore', async (req, res) => {
+router.put('/:estimateId/restore', authenticate, adminOnly, async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
@@ -350,7 +346,7 @@ router.put('/:estimateId/restore', async (req, res) => {
 });
 
 // DELETE ALL archived estimates
-router.delete('/archived/delete-all', async (req, res) => {
+router.delete('/archived/delete-all', authenticate, adminOnly, async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
@@ -387,7 +383,7 @@ router.delete('/archived/delete-all', async (req, res) => {
 });
 
 // DELETE single archived estimate permanently (must be before /:estimateId route)
-router.delete('/archived/:estimateId', async (req, res) => {
+router.delete('/archived/:estimateId', authenticate, adminOnly, async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
@@ -427,7 +423,7 @@ router.delete('/archived/:estimateId', async (req, res) => {
 });
 
 // DELETE estimate (soft delete)
-router.delete('/:estimateId', async (req, res) => {
+router.delete('/:estimateId', authenticate, adminOnly, async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });

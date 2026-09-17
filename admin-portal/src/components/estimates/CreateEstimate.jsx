@@ -1080,7 +1080,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
     try {
       const response = await fetch(`${API_BASE}/api/estimates-sync/${lastCreatedEstimate.estimateId}/send`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getAuthToken()}` }
       });
       const result = await response.json();
       
