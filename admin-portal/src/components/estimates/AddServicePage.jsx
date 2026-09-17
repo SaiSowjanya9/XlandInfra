@@ -419,8 +419,27 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                     {[...new Set(categories.map(category => category.name))].map(name => <option key={name} value={name}>{name}</option>)}
                   </select>
                 </Field>
-                {/* Pricing Method */}
-                <Field label="Pricing Method *"><select value={formData.pricingMethod} onChange={event => changePricingMethod(event.target.value)} className={inputClass}>{PRICING_METHODS.map(method => <option key={method.value} value={method.value}>{method.label}</option>)}</select></Field>
+                {/* Pricing Method — every method is visible so the form is never mistaken for a single-method screen */}
+                <div className="sm:col-span-2">
+                  <span className="mb-3 block text-xs font-semibold text-slate-700">Pricing Method <span className="text-red-500">*</span></span>
+                  <div role="group" aria-label="Pricing Method" className="grid grid-cols-2 gap-2 sm:grid-cols-3 2xl:grid-cols-6">
+                    {PRICING_METHODS.map(method => (
+                      <button key={method.value} type="button" aria-pressed={formData.pricingMethod === method.value}
+                        onClick={() => changePricingMethod(method.value)}
+                        className={`rounded-lg border px-3 py-2.5 text-xs font-semibold transition ${formData.pricingMethod === method.value
+                          ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
+                        {method.label}
+                      </button>
+                    ))}
+                    {formData.pricingMethod && !PRICING_METHODS.some(method => method.value === formData.pricingMethod) && (
+                      <button type="button" disabled aria-pressed="true" title="This method is no longer offered"
+                        className="cursor-not-allowed rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-700">
+                        {methodLabel(formData.pricingMethod)}
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">Selecting a method changes the configuration fields below.</p>
+                </div>
                 {/* Primary Input */}
                 {/* Unit */}
                 <Field label={isCapacityBased || isCapacitySlab ? 'Capacity Unit *' : 'Unit *'}><select value={formData.unit} onChange={event => setField('unit', event.target.value)} className={inputClass}>{(UNIT_OPTIONS[formData.pricingMethod] ?? [formData.unit]).map(unit => <option key={unit}>{unit}</option>)}</select></Field>
