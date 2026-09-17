@@ -5,6 +5,7 @@ const { adminOnly, requireRole } = require('../middleware/rbac');
 const { validateService, calculateServiceQuote, calculateEstimateSummary, normalizePropertyType } = require('../utils/servicePricing');
 const { randomUUID } = require('crypto');
 const { normalizeEstimateService } = require('../utils/estimateData');
+const { categoryOptions } = require('../utils/serviceCategories');
 const router = express.Router();
 
 const parseService = row => ({
@@ -38,15 +39,9 @@ router.get('/', async (req, res) => {
 
 const saveService = async (req, res) => {
   try {
+    // The category may be typed rather than chosen, so it is validated as text, not against a list
     const config = validateService(req.body);
     const scope = scopeId(req.body.franchise_partner_id);
-    const categories = require('../config/categories');
-    let validCategory = categories.some(category => category.name === config.category);
-    if (!validCategory) {
-      const [rows] = await db.pool.execute('SELECT id FROM admin_categories WHERE name = ? AND is_active = 1', [config.category]);
-      validCategory = rows.length > 0;
-    }
-    if (!validCategory) return res.status(400).json({ success: false, message: 'Select an existing category.' });
     if (scope) {
       const [partners] = await db.pool.execute('SELECT id FROM franchise_partners WHERE id = ?', [scope]);
       if (!partners.length) return res.status(400).json({ success: false, message: 'The selected franchise partner does not exist.' });
@@ -67,6 +62,12 @@ const saveService = async (req, res) => {
 };
 router.post('/', requireRole('admin'), saveService);
 router.put('/:id', requireRole('admin'), saveService);
+
+// Suggestions for the category field, including custom categories already saved on services
+router.get('/categories', async (req, res) => {
+  try { res.json({ success: true, data: await categoryOptions(db.pool, scopeId(req.query.fpId)) }); }
+  catch (error) { handleError(res, error); }
+});
 
 router.get('/estimate-options', async (req, res) => {
   try {

@@ -3,6 +3,7 @@ const { pool } = require('../config/database');
 const { requireFPScope, isFranchisePartner } = require('../middleware/fpScope');
 const { validateService, calculateServiceQuote, normalizePropertyType } = require('../utils/servicePricing');
 const { normalizeEstimateService } = require('../utils/estimateData');
+const { categoryOptions } = require('../utils/serviceCategories');
 const { parseService } = require('./serviceCatalog');
 const router = express.Router();
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
@@ -38,17 +39,11 @@ router.get('/', async (req, res) => {
   } catch (error) { handleError(res, error); }
 });
 
-// The categories the service validator accepts, so the FP form never offers an unsavable option
+// Suggestions for the category field: the shared list plus any category this scope already used,
+// which is how a custom category typed on a saved service comes back in the dropdown.
 router.get('/categories', async (req, res) => {
-  try {
-    const defaults = require('../config/categories').map(category => ({ id: category.id, name: category.name }));
-    let added = [];
-    try {
-      const [rows] = await pool.execute('SELECT id, name FROM admin_categories WHERE is_active = 1 ORDER BY name');
-      added = rows;
-    } catch (tableError) { added = []; }
-    res.json({ success: true, data: [...defaults, ...added] });
-  } catch (error) { handleError(res, error); }
+  try { res.json({ success: true, data: await categoryOptions(pool, req.catalogFpId) }); }
+  catch (error) { handleError(res, error); }
 });
 
 router.post('/:id/quote', async (req, res) => {
@@ -66,14 +61,8 @@ const saveService = async (req, res) => {
   try {
     // FP staff (manager, coordinator, supervisor, executive) may quote from the catalog but not author it
     if (!isFranchisePartner(req.user.role)) fail('Only the franchise partner can configure services.', 403);
+    // The category may be typed rather than chosen, so it is validated as text, not against a list
     const config = validateService(req.body);
-    const defaults = require('../config/categories');
-    let validCategory = defaults.some(category => category.name === config.category);
-    if (!validCategory) {
-      const [rows] = await pool.execute('SELECT id FROM admin_categories WHERE name = ? AND is_active = 1', [config.category]);
-      validCategory = rows.length > 0;
-    }
-    if (!validCategory) fail('Select an existing category.');
     if (req.params.id) {
       const [[existing]] = await pool.execute('SELECT id, scope_id FROM service_catalog WHERE id = ?', [req.params.id]);
       if (!existing) fail('Service not found.', 404);
