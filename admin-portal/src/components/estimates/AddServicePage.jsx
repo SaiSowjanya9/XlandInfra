@@ -495,18 +495,18 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             </div>}
             {formData.pricingMethod && <div id={isRatePricing ? 'pricing-configuration' : undefined} className="scroll-mt-6 border-t border-slate-100 p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold text-blue-600">{isRatePricing ? `${getFormulaText()} Configuration` : isCapacitySlab ? 'Fallback Frequency & Estimate Overrides' : 'Default Frequency'}</h2>
-              <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-4">
-                {/* Fixed Price Fields */}
+              <div className={`grid gap-5 ${isRatePricing ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'}`}>
+                {/* Rate, frequency and visit count on one row */}
                 {isRatePricing && <Field label={isVisitManpower ? 'Rate per Person per Visit (₹) *' : isFixedPrice ? 'Fixed Rate per Visit (₹) *' : `Rate per ${formData.unit} (₹) *`} hint={isVisitManpower ? 'Rate includes the configured regular working hours' : isFixedPrice ? 'Vendor charge for one visit' : `Vendor charge per ${formData.unit} per visit`}>{numberInput(rateField, { max: 1e9 })}</Field>}
-                {/* Default Frequency */}
                 <Field label="Default Frequency *" hint={isCapacitySlab ? 'Used when capacity is above the configured slabs' : 'Default visit frequency for this service'}><select value={formData.defaultFrequency} onChange={event => changeFrequency(event.target.value)} className={inputClass}>{FREQUENCY_OPTIONS.map(frequency => <option key={frequency.value}>{frequency.value}</option>)}</select></Field>
-                {/* Default Visits Per Year */}
                 <Field label="Default Visits Per Year *" hint={formData.allowManualVisits ? 'Manual visit count enabled' : 'Based on selected frequency'}>{numberInput('defaultVisitsPerYear', { min: 1, max: 366, step: 1, readOnly: !formData.allowManualVisits, className: `${inputClass} ${!formData.allowManualVisits ? 'bg-slate-50' : ''}` })}</Field>
-                {/* Allow Frequency Override */}
+              </div>
+              {/* Both override toggles on the row below, aligned to the same columns */}
+              <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 <Toggle label="Allow Frequency Override" hint="Allow override while creating estimate" checked={formData.allowFrequencyOverride} onChange={() => setField('allowFrequencyOverride', !formData.allowFrequencyOverride)} />
                 <Toggle label="Allow Manual Visits" hint="Allow manual number of visits" checked={formData.allowManualVisits} onChange={toggleManualVisits} />
               </div>
-              {isVisitManpower && <div className="mt-6 grid gap-5 sm:grid-cols-2 2xl:grid-cols-4">
+              {isVisitManpower && <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 <Field label="Role / Designation (Optional)"><input maxLength={150} value={formData.roleDesignation} onChange={event => setField('roleDesignation', event.target.value)} placeholder="e.g. Housekeeping Staff" className={inputClass} /></Field>
                 <Field label="Working Hours per Visit *" hint="Included regular hours per person">{numberInput('workingHoursPerVisit', { min: 0.01, max: 24 })}</Field>
                 <Field label="Overtime Rate per Person / Hour (₹)" hint="Optional; extra hours are entered in the estimate">{numberInput('overtimeRatePerHour', { required: false, max: 1e9 })}</Field>
@@ -538,8 +538,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             {/* 3. Markup & Margin */}
             {formData.pricingMethod && <div id="markup" className="scroll-mt-6 border-t border-slate-100 p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold text-blue-600">Default Markup</h2>
-              <div className="grid gap-5 sm:grid-cols-2">
-                {/* Default Markup Percentage */}
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 <Field label="Default Markup Percentage (%) *" hint="Applied on total actual cost">{numberInput('defaultMarkupPercentage', { max: 1000 })}</Field>
               </div>
             </div>}
@@ -621,7 +620,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
         {/* 2. Monthly Manpower Configuration, kept for services saved before the per-visit basis */}
         {formData.pricingMethod === 'manpower' && !isVisitManpower && <section id="pricing-configuration" className="scroll-mt-6 rounded-xl border border-slate-200 bg-white shadow-sm p-5 sm:p-6">
           <h2 className="mb-5 text-sm font-semibold">{getFormulaText()} Configuration</h2>
-          <div className="grid gap-5 sm:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <Field label={`Monthly Vendor Rate (₹) per ${formData.unit} *`}>{numberInput('monthlyRate')}</Field>
             <Field label="Billing Period *"><select value={formData.billingPeriod} onChange={event => setField('billingPeriod', event.target.value)} className={inputClass}>{BILLING_PERIODS.map(period => <option key={period}>{period}</option>)}</select></Field>
             <Field label="Period (Months) *">{numberInput('periodMonths', { min: 1, max: 12, step: 1 })}</Field>
