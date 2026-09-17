@@ -20,6 +20,10 @@ import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
 import { getServiceDescription, hasCatalogServices } from '../utils/estimatePackageUtils';
 import * as XLSX from 'xlsx';
 import AutocompleteInput from '../components/common/AutocompleteInput';
+import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
+import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
+
+const FP_CATALOG_API = '/api/fp/service-catalog';
 
 // Decode HTML entities (e.g., &#x2F; -> /, &amp;amp; -> &)
 const decodeHtml = (html) => {
@@ -224,6 +228,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [editEstimate, setEditEstimate] = useState(null);
   const [editEstimateForm, setEditEstimateForm] = useState(null);
   const [savingEstimate, setSavingEstimate] = useState(false);
+  // Configured services picked from the service catalog, priced by the backend
+  const [catalogAddons, setCatalogAddons] = useState([]);
   const [viewAmcPackage, setViewAmcPackage] = useState(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [archivedTypeFilter, setArchivedTypeFilter] = useState('all');
@@ -659,6 +665,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     return PROPERTY_TYPE_OPTIONS.find(t => t.id === normalized)?.label || type || '-';
   };
 
+  // Property type the create form prices configured services against
+  const createPropertyType = normalizePropertyType(selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm.propertyType || '');
+  // Configured-service prices depend on the property type, so never carry them across a change
+  useEffect(() => { setCatalogAddons([]); }, [createPropertyType, estimateType]);
+  const catalogAddonsTotal = catalogAddons.reduce((sum, addon) => sum + (parseFloat(addon.totalPrice) || 0), 0);
+  const removeCatalogAddon = (addonId) => setCatalogAddons(prev => prev.filter(addon => addon.addonId !== addonId));
+  const renderCatalogPicker = () => (
+    <ServiceCatalogPicker
+      key={`${estimateType}-${createPropertyType}`}
+      apiPath={FP_CATALOG_API}
+      propertyType={createPropertyType}
+      selectedAddons={catalogAddons}
+      onAdd={addon => setCatalogAddons(prev => prev.some(item => item.addonId === addon.addonId) ? prev : [...prev, addon])}
+    />
+  );
+
   // Helper to match property type for filtering
   const matchPropertyType = (value, filterId) => {
     if (!value || !filterId) return false;
@@ -991,6 +1013,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
   // Back navigation handler for estimate subsections
   const handleBackFromEstimate = useCallback(() => {
+    setCatalogAddons([]);
     if (estimateType === 'property-based' && selectedProperty) {
       // If property is selected, go back to property ID entry
       setSelectedProperty(null);
@@ -1036,7 +1059,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       const addon = addons.find(a => a.id == id);
       return sum + (parseFloat(addon?.price) || 0);
     }, 0);
-    const subtotal = pkgPrice + addonsPrice;
+    const subtotal = pkgPrice + addonsPrice + catalogAddonsTotal;
     const discount = parseFloat(estimateForm.discount) || 0;
     const gst = parseFloat(estimateForm.gst) || 0;
     const discountAmt = (subtotal * discount) / 100;
@@ -1072,9 +1095,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     // Build email - prioritize property contact, then form input
     let clientEmail = selectedProperty?.contact_email || selectedProperty?.email || estimateForm.email || '';
     
-    if (!clientName?.trim()) { showToast('Customer name is required', 'error'); return; }
-    if (!clientPhone?.trim()) { showToast('Phone number is required', 'error'); return; }
-    if (!estimateForm.selectedPackage) { showToast('Please select an AMC package', 'error'); return; }
+    const abort = (message) => { showToast(message, 'error'); setSavingEstimate(false); };
+    if (!clientName?.trim()) return abort('Customer name is required');
+    if (!clientPhone?.trim()) return abort('Phone number is required');
+    if (!estimateForm.selectedPackage) return abort('Please select an AMC package');
 
     const pkg = getSelectedPackage();
     const pricing = calculatePricing();
@@ -1124,14 +1148,29 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
           description: s.description || ''
         })),
-        addons: selectedAddonsList.map(a => ({ 
-          id: a.id, 
-          name: a.service_name, 
-          price: a.price, 
-          frequency_count: a.frequency_count, 
-          frequency_type: a.frequency_type,
-          description: a.description || ''
-        })),
+        addons: [
+          ...selectedAddonsList.map(a => ({ 
+            id: a.id, 
+            name: a.service_name, 
+            price: a.price, 
+            frequency_count: a.frequency_count, 
+            frequency_type: a.frequency_type,
+            description: a.description || ''
+          })),
+          // Configured services; the backend re-prices these from the catalog before saving
+          ...catalogAddons.map(a => ({
+            addonId: a.addonId,
+            catalogServiceId: a.catalogServiceId,
+            pricingInputs: a.pricingInputs,
+            name: a.name,
+            description: a.description || '',
+            frequency_type: a.frequency_type,
+            frequency_count: a.frequency_count,
+            services: a.services,
+            totalPrice: a.totalPrice,
+            price: a.totalPrice
+          }))
+        ],
         subtotal: pricing.subtotal,
         discount_percent: estimateForm.discount,
         discount_amount: pricing.discountAmt,
@@ -1154,6 +1193,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         setEstimateType(null);
         setSelectedProperty(null);
         setPropertyIdInput('');
+        setCatalogAddons([]);
         setEstimateForm({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: '', gst: '', description: '', numberOfBlocks: 1, unitsPerBlock: {}, totalUnits: 0 });
         loadData();
       } else {
@@ -1503,7 +1543,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             {/* Services - package services + added services in one table */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div className="px-5 py-3 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center gap-3">
-                <h3 className="text-sm font-semibold text-gray-800">Services ({pkgServices.length + selectedAddonRows.length})</h3>
+                <h3 className="text-sm font-semibold text-gray-800">Services ({pkgServices.length + selectedAddonRows.length + catalogAddons.length})</h3>
                 <select
                   onChange={(e) => { if (e.target.value) setEstimateForm({...estimateForm, selectedAddons: [...estimateForm.selectedAddons, e.target.value]}); e.target.value = ''; }}
                   className="sm:ml-auto px-3 py-2 border border-blue-600 text-blue-700 bg-white rounded-lg text-sm font-medium min-w-[220px]"
@@ -1519,7 +1559,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   })()}
                 </select>
               </div>
-              {pkgServices.length === 0 && selectedAddonRows.length === 0 ? (
+              <div className="px-5 pt-4">{renderCatalogPicker()}</div>
+              {pkgServices.length === 0 && selectedAddonRows.length === 0 && catalogAddons.length === 0 ? (
                 <div className="py-10 text-center text-sm text-gray-400">Select an AMC package to see its services, or add services individually</div>
               ) : (
                 <table className="w-full text-sm">
@@ -1572,12 +1613,27 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         </tr>
                       );
                     })}
+                    {catalogAddons.map((addon, i) => (
+                      <tr key={`catalog-${addon.addonId}`} className="align-top">
+                        <td className="px-3 py-2.5 text-center text-gray-500">{pkgServices.length + selectedAddonRows.length + i + 1}</td>
+                        <td className="px-3 py-2.5">
+                          <p className="font-medium text-gray-800">{addon.name}</p>
+                          <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-emerald-50 text-emerald-700 border border-emerald-100">Configured</span>
+                        </td>
+                        <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!addon.description ? 'text-center' : ''}`}>{addon.description || '-'}</td>
+                        <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type}</td>
+                        <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_count}</td>
+                        <td className="px-3 py-2.5 text-center">
+                          <button onClick={() => removeCatalogAddon(addon.addonId)} className="text-red-400 hover:text-red-600" title="Remove service"><Trash2 className="w-4 h-4" /></button>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
-                  {selectedAddonRows.length > 0 && (
+                  {(selectedAddonRows.length > 0 || catalogAddons.length > 0) && (
                     <tfoot className="bg-blue-50 border-t border-blue-200">
                       <tr>
                         <td colSpan={5} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td>
-                        <td className="px-3 py-2.5 text-right font-bold text-blue-700 whitespace-nowrap">{formatCurrency(addonsTotal)}</td>
+                        <td className="px-3 py-2.5 text-right font-bold text-blue-700 whitespace-nowrap">{formatCurrency(addonsTotal + catalogAddonsTotal)}</td>
                       </tr>
                     </tfoot>
                   )}
@@ -1881,6 +1937,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 );
               })()}
 
+              <div className="pt-2">{renderCatalogPicker()}</div>
+
               <div className="pt-2">
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Add Service</label>
                 <select 
@@ -1903,7 +1961,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               </div>
 
               {/* Additional Services Table - Only show when services selected */}
-              {estimateForm.selectedAddons.length > 0 && (
+              {(estimateForm.selectedAddons.length > 0 || catalogAddons.length > 0) && (
                 <div className="border border-blue-200 rounded-xl overflow-hidden">
                   <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200">
                     <span className="text-sm font-semibold text-blue-700">Additional Services</span>
@@ -1935,11 +1993,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           </tr>
                         );
                       })}
+                      {catalogAddons.map(addon => (
+                        <tr key={`catalog-${addon.addonId}`} className="align-top">
+                          <td className="px-3 py-2.5 text-gray-800 font-medium">{addon.name}</td>
+                          <td className="px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center">{addon.description || '-'}</td>
+                          <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type}</td>
+                          <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_count}</td>
+                          <td className="px-3 py-2.5 text-center">
+                            <button onClick={() => removeCatalogAddon(addon.addonId)} className="text-red-400 hover:text-red-600" title="Remove service"><Trash2 className="w-4 h-4" /></button>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                     <tfoot className="bg-blue-50 border-t border-blue-200">
                       <tr>
-                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Services Price</td>
-                        <td className="px-3 py-2.5 text-right font-bold text-blue-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0))}</td>
+                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td>
+                        <td className="px-3 py-2.5 text-right font-bold text-blue-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (parseFloat(addons.find(a => a.id == id)?.price) || 0), 0) + catalogAddonsTotal)}</td>
                       </tr>
                     </tfoot>
                   </table>
@@ -3512,7 +3581,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           <Layers className="w-4 h-4" />All Services
           {addons.length > 0 && <span className="px-1.5 py-0.5 bg-gray-700 text-white rounded-full text-xs">{addons.length}</span>}
         </button>
+        <button onClick={() => setAddonActiveTab('configured')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'configured' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+          <ClipboardList className="w-4 h-4" />Configured Services
+        </button>
       </div>
+
+      {addonActiveTab === 'configured' && (
+        <ServiceCatalogList apiPath={FP_CATALOG_API} admin={user} showToast={showToast} />
+      )}
 
       {addonActiveTab === 'create' && (
         <div className="space-y-6">

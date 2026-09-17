@@ -84,7 +84,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
 
   const handleRestoreEstimate = async (estimateId) => {
     try {
-      const response = await fetch(`${API_BASE}/api/estimates-sync/${estimateId}/restore`, { method: 'PUT' });
+      const response = await fetch(`${API_BASE}/api/estimates-sync/${estimateId}/restore`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } });
       const result = await response.json();
       if (result.success) {
         showToast('Estimate restored');
@@ -98,7 +98,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
 
   const handleDeletePermanent = async (estimateId) => {
     try {
-      const response = await fetch(`${API_BASE}/api/estimates-sync/archived/${estimateId}`, { method: 'DELETE' });
+      const response = await fetch(`${API_BASE}/api/estimates-sync/archived/${estimateId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
       const result = await response.json();
       if (result.success) {
         showToast('Estimate deleted permanently');
@@ -112,7 +112,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
 
   const handleDeleteAllArchived = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/estimates-sync/archived/delete-all`, { method: 'DELETE' });
+      const response = await fetch(`${API_BASE}/api/estimates-sync/archived/delete-all`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
       const result = await response.json();
       if (result.success) {
         showToast(`${result.deletedCount || archivedEstimates.length} archived estimates deleted`);
