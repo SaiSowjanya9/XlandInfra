@@ -107,7 +107,8 @@ export const getServiceSchedule = (service, capacity, frequency) => {
 
 // `scoped` portals (FP) own their catalog scope on the server, so no FP is sent with the service.
 // `embedded` drops the form's own title: the hosting page already names the screen.
-const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '/api/admin/service-catalog', scoped = false, scopeLabel, embedded = false }) => {
+// `leading` lets the hosting page put its own controls on the form's action row, keeping one line.
+const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '/api/admin/service-catalog', scoped = false, scopeLabel, embedded = false, leading }) => {
   const { selectedFp } = useFP();
   const token = getAuthToken();
 
@@ -386,9 +387,10 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 text-slate-900">
+    <form onSubmit={handleSubmit} className="space-y-4 text-slate-900">
       {/* Header */}
-      <header className={`flex flex-wrap items-center gap-4 ${embedded ? 'justify-end' : 'justify-between'}`}>
+      <header className={`flex flex-wrap items-center gap-3 ${embedded && !leading ? 'justify-end' : 'justify-between'}`}>
+        {leading}
         {!embedded && <div className="min-w-0">
           <h1 className="truncate text-xl font-semibold">{service ? 'Edit Service' : 'Add Service'}{formData.pricingMethod ? ` — ${getFormulaText()}` : ''}</h1>
           <span className="mt-1.5 inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">{scopeText}</span>
