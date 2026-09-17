@@ -1,12 +1,13 @@
 const express = require('express');
 const { pool } = require('../config/database');
-const { requireFPScope } = require('../middleware/fpScope');
-const { calculateServiceQuote, normalizePropertyType } = require('../utils/servicePricing');
+const { requireFPScope, isFranchisePartner } = require('../middleware/fpScope');
+const { validateService, calculateServiceQuote, normalizePropertyType } = require('../utils/servicePricing');
 const { normalizeEstimateService } = require('../utils/estimateData');
 const { parseService } = require('./serviceCatalog');
 const router = express.Router();
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
 const handleError = (res, error) => {
+  if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ success: false, message: 'A service with this name already exists for your franchise.' });
   if (!error.status) console.error('FP service catalog error:', error.message);
   return res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Unable to access the service catalog. Please try again.' });
 };
@@ -37,6 +38,19 @@ router.get('/', async (req, res) => {
   } catch (error) { handleError(res, error); }
 });
 
+// The categories the service validator accepts, so the FP form never offers an unsavable option
+router.get('/categories', async (req, res) => {
+  try {
+    const defaults = require('../config/categories').map(category => ({ id: category.id, name: category.name }));
+    let added = [];
+    try {
+      const [rows] = await pool.execute('SELECT id, name FROM admin_categories WHERE is_active = 1 ORDER BY name');
+      added = rows;
+    } catch (tableError) { added = []; }
+    res.json({ success: true, data: [...defaults, ...added] });
+  } catch (error) { handleError(res, error); }
+});
+
 router.post('/:id/quote', async (req, res) => {
   try {
     const [rows] = await pool.execute('SELECT * FROM service_catalog WHERE id = ? AND scope_id IN (0, ?)', [req.params.id, req.catalogFpId]);
@@ -46,8 +60,34 @@ router.post('/:id/quote', async (req, res) => {
   } catch (error) { handleError(res, error); }
 });
 
-router.post('/', (req, res) => res.status(403).json({ success: false, message: 'Service configuration is read-only for Franchise Partners.' }));
-router.put('/:id', (req, res) => res.status(403).json({ success: false, message: 'Service configuration is read-only for Franchise Partners.' }));
+// FPs configure their own services. The scope is always their own FP, so a service can never be
+// saved against another FP or made global, and admin-owned (scope 0) services stay read-only.
+const saveService = async (req, res) => {
+  try {
+    // FP staff (manager, coordinator, supervisor, executive) may quote from the catalog but not author it
+    if (!isFranchisePartner(req.user.role)) fail('Only the franchise partner can configure services.', 403);
+    const config = validateService(req.body);
+    const defaults = require('../config/categories');
+    let validCategory = defaults.some(category => category.name === config.category);
+    if (!validCategory) {
+      const [rows] = await pool.execute('SELECT id FROM admin_categories WHERE name = ? AND is_active = 1', [config.category]);
+      validCategory = rows.length > 0;
+    }
+    if (!validCategory) fail('Select an existing category.');
+    if (req.params.id) {
+      const [[existing]] = await pool.execute('SELECT id, scope_id FROM service_catalog WHERE id = ?', [req.params.id]);
+      if (!existing) fail('Service not found.', 404);
+      if (Number(existing.scope_id) !== req.catalogFpId) fail('Only services created for your franchise can be edited.', 403);
+      await pool.execute('UPDATE service_catalog SET service_name = ?, configuration = ? WHERE id = ?', [config.service_name, JSON.stringify(config), req.params.id]);
+      return res.json({ success: true, data: { ...config, id: Number(req.params.id), franchise_partner_id: req.catalogFpId } });
+    }
+    const [result] = await pool.execute('INSERT INTO service_catalog (service_name, scope_id, configuration, created_by) VALUES (?, ?, ?, ?)',
+      [config.service_name, req.catalogFpId, JSON.stringify(config), req.user.id]);
+    res.status(201).json({ success: true, data: { ...config, id: result.insertId, franchise_partner_id: req.catalogFpId } });
+  } catch (error) { handleError(res, error); }
+};
+router.post('/', saveService);
+router.put('/:id', saveService);
 
 // Re-prices every configured service on the server so a saved FP estimate can never keep a
 // client-supplied price, and rebuilds the stored snapshot from the current catalog definition.

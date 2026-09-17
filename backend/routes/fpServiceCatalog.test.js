@@ -13,7 +13,19 @@ const services = [
   { id: 3, scope_id: 9, configuration: JSON.stringify(baseConfig) },
   { id: 4, scope_id: 8, configuration: JSON.stringify(slabConfig) }
 ];
+const inserts = [];
+const updates = [];
 const pool = { execute: async (sql, params = []) => {
+  if (sql.startsWith('INSERT INTO service_catalog')) {
+    if (params[0] === 'Duplicate') throw Object.assign(new Error('Duplicate entry'), { code: 'ER_DUP_ENTRY' });
+    inserts.push(params);
+    return [{ insertId: 100 + inserts.length }];
+  }
+  if (sql.startsWith('UPDATE service_catalog')) {
+    updates.push(params);
+    return [{ affectedRows: 1 }];
+  }
+  if (sql.includes('FROM admin_categories')) return [[]];
   if (sql.includes('FROM franchise_partners')) return [[{ id: params[0], is_active: 1 }]];
   if (sql.includes('FROM fp_employees')) return [[{ id: params[0], is_active: 1, franchise_partner_id: 8 }]];
   if (sql.includes('FROM users')) return [[{ id: params[0], is_active: 1 }]];
@@ -31,7 +43,7 @@ const { authenticate, generateToken } = require('../middleware/auth');
 const { attachFPScope } = require('../middleware/fpScope');
 const router = require('./fpServiceCatalog');
 
-test('FP catalog is read-only, scoped to the signed-in FP, and re-prices saved estimates', async t => {
+test('FPs configure services in their own scope only, and estimates are re-priced on save', async t => {
   const app = express();
   app.use(express.json());
   app.use('/catalog', authenticate, attachFPScope, router);
@@ -58,8 +70,24 @@ test('FP catalog is read-only, scoped to the signed-in FP, and re-prices saved e
   assert.deepEqual((await request('/catalog?propertyType=Apartment')).data.map(row => row.id), [1, 2, 4]);
   assert.deepEqual((await request('/catalog?propertyType=PLOT')).data, []);
   assert.equal((await request('/catalog?fpId=9')).status, 403);
-  assert.equal((await request('/catalog', 'POST', baseConfig)).status, 403);
-  assert.equal((await request('/catalog/2', 'PUT', baseConfig)).status, 403);
+  assert.ok((await request('/catalog/categories')).data.some(category => category.name === 'Generator'), 'the form only offers categories the validator accepts');
+  // FPs author their own services; staff and other scopes cannot
+  const created = await request('/catalog', 'POST', baseConfig);
+  assert.equal(created.status, 201);
+  assert.equal(created.data.franchise_partner_id, 8);
+  assert.equal(inserts[0][1], 8, 'the service is stored against the signed-in FP, never global');
+  assert.equal((await request('/catalog', 'POST', { ...baseConfig, franchise_partner_id: 9 })).status, 403);
+  assert.equal((await request('/catalog', 'POST', baseConfig, 'employee')).status, 403);
+  assert.equal((await request('/catalog', 'POST', baseConfig, 'noFp')).status, 403);
+  assert.equal((await request('/catalog', 'POST', { ...baseConfig, category: 'Not A Category' })).status, 400);
+  assert.equal((await request('/catalog', 'POST', { ...baseConfig, pricing_method: 'custom_quote', unit: 'Quote' })).status, 400);
+  assert.equal((await request('/catalog', 'POST', { ...baseConfig, service_name: 'Duplicate' })).status, 409);
+  assert.equal((await request('/catalog/2', 'PUT', baseConfig)).status, 200);
+  assert.equal(updates.at(-1)[2], '2');
+  assert.equal((await request('/catalog/1', 'PUT', baseConfig)).status, 403, 'admin-owned global services stay read-only');
+  assert.equal((await request('/catalog/3', 'PUT', baseConfig)).status, 403);
+  assert.equal((await request('/catalog/99', 'PUT', baseConfig)).status, 404);
+  assert.equal((await request('/catalog/2', 'PUT', baseConfig, 'employee')).status, 403);
   assert.equal((await request('/catalog/3/quote', 'POST', { property_type: 'APT', quantity: 10 })).status, 404);
   const quoted = await request('/catalog/2/quote', 'POST', { property_type: 'APT', quantity: 10 });
   assert.equal(quoted.data.totalPrice, 13500);
