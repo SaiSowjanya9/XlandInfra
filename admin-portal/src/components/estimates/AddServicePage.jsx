@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAuthToken } from '../../utils/safeStorage';
-import { ChevronLeft, Plus, Trash2, Save, Loader2 } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Save, Loader2, SlidersHorizontal } from 'lucide-react';
 import { useFP } from '../../contexts/FPContext';
 import { manpowerRangeLabel, previewManpower, suggestedManpower } from '../../utils/manpowerPricing';
 
@@ -106,7 +106,8 @@ export const getServiceSchedule = (service, capacity, frequency) => {
 };
 
 // `scoped` portals (FP) own their catalog scope on the server, so no FP is sent with the service.
-const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '/api/admin/service-catalog', scoped = false, scopeLabel }) => {
+// `embedded` drops the form's own title: the hosting page already names the screen.
+const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '/api/admin/service-catalog', scoped = false, scopeLabel, embedded = false }) => {
   const { selectedFp } = useFP();
   const token = getAuthToken();
 
@@ -376,6 +377,10 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     setFormData(prev => ({ ...prev, allowManualVisits: !prev.allowManualVisits, defaultVisitsPerYear: prev.allowManualVisits ? FREQUENCY_OPTIONS.find(item => item.value === prev.defaultFrequency).defaultVisits : prev.defaultVisitsPerYear }));
   };
 
+  const scopeText = scopeLabel ?? (service
+    ? (service.franchise_partner_id ? `For FP ${service.franchise_partner_id}` : 'Available to all FPs')
+    : selectedFp?.id && selectedFp.id !== 'all' ? `For ${selectedFp.companyName || selectedFp.fpId || `FP ${selectedFp.id}`}` : 'Available to all FPs');
+
   if (admin?.role === 'operations_manager') {
     return <div className="rounded-xl border bg-white p-6 text-sm text-slate-600">Service configuration is read-only for your role.</div>;
   }
@@ -384,25 +389,26 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     <form onSubmit={handleSubmit} className="space-y-5 text-slate-900">
       {/* Header */}
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <button type="button" onClick={onBack} disabled={isSubmitting} aria-label="Back to services" className="rounded-lg border border-slate-200 bg-white p-2 hover:bg-slate-50">
+        <div className="flex min-w-0 items-center gap-3">
+          <button type="button" onClick={onBack} disabled={isSubmitting} aria-label="Back to services" className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm transition hover:bg-slate-50">
             <ChevronLeft className="h-5 w-5 text-slate-500" />
           </button>
-          <div>
-            <h1 className="text-xl font-semibold">{service ? 'Edit Service' : 'Add Service'}{formData.pricingMethod ? ` — ${getFormulaText()}` : ''}</h1>
-            <p className="mt-1 text-xs text-slate-500">Master Data <span className="mx-2">›</span> Service Master <span className="mx-2">›</span> {service ? 'Edit Service' : 'Add Service'}</p>
-            <p className="mt-1 text-xs text-slate-500">{scopeLabel ?? (service ? (service.franchise_partner_id ? `For FP ${service.franchise_partner_id}` : 'Available to all FPs') : selectedFp?.id && selectedFp.id !== 'all' ? `For ${selectedFp.companyName || selectedFp.fpId || `FP ${selectedFp.id}`}` : 'Available to all FPs')}</p>
-          </div>
+          {embedded
+            ? <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">{formData.pricingMethod ? getFormulaText() : service ? 'Edit Service' : 'New Service'}</span>
+            : <div className="min-w-0">
+              <h1 className="truncate text-xl font-semibold">{service ? 'Edit Service' : 'Add Service'}{formData.pricingMethod ? ` — ${getFormulaText()}` : ''}</h1>
+              <span className="mt-1.5 inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">{scopeText}</span>
+            </div>}
         </div>
         <div className="flex items-center gap-3">
-          <button type="button" onClick={onBack} disabled={isSubmitting} className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50">Cancel</button>
+          <button type="button" onClick={onBack} disabled={isSubmitting} className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-blue-600 shadow-sm transition hover:bg-blue-50">Cancel</button>
           <button type="submit" disabled={isSubmitting || !categories.length || !formData.pricingMethod} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50">
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {isSubmitting ? 'Saving...' : 'Save Service'}
           </button>
         </div>
       </header>
-      <nav aria-label="Service form sections" className="flex gap-4 overflow-x-auto rounded-xl border border-slate-200 bg-white px-4 sm:gap-8">
+      <nav aria-label="Service form sections" className="flex gap-4 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm px-4 sm:gap-8">
         {formSections.map(([id, label], index) => (
           <a key={id} href={`#${id}`} onClick={() => setActiveSection(id)} aria-current={activeSection === id ? 'location' : undefined}
             className={`flex shrink-0 items-center gap-2 border-b-2 py-4 text-xs font-semibold ${activeSection === id ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
@@ -415,7 +421,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
         {/* Main Content */}
         <div className="grid gap-5 xl:grid-cols-3">
           {/* Left Column - Main Form */}
-          <section id="basic-information" className="scroll-mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white xl:col-span-2">
+          <section id="basic-information" className="scroll-mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm xl:col-span-2">
             {/* 1. Basic Information */}
             <div className="p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold">Basic Information</h2>
@@ -483,7 +489,11 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
               <button type="button" onClick={addCapacitySlab} disabled={capacitySlabs.length >= 100} className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg border border-blue-200 px-4 py-2.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:opacity-50"><Plus className="h-4 w-4" />Add Slab</button>
             </div>}
             {!formData.pricingMethod && <div className="border-t border-slate-100 p-5 sm:p-6">
-              <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">Select a pricing method above to configure its rates, frequency and markup.</p>
+              <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-6 py-10 text-center">
+                <SlidersHorizontal className="h-5 w-5 text-slate-400" />
+                <p className="text-sm font-medium text-slate-700">No pricing method selected</p>
+                <p className="max-w-sm text-xs text-slate-500">Choose a method above to configure its rate, frequency, visits and markup.</p>
+              </div>
             </div>}
             {formData.pricingMethod && <div id={isRatePricing ? 'pricing-configuration' : undefined} className="scroll-mt-6 border-t border-slate-100 p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold text-blue-600">{isRatePricing ? `${getFormulaText()} Configuration` : isCapacitySlab ? 'Fallback Frequency & Estimate Overrides' : 'Default Frequency'}</h2>
@@ -539,7 +549,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
           {/* Right Column - Sidebar */}
           <aside id="additional-information" className="scroll-mt-6 space-y-5">
             {/* Applicable Property Types */}
-            <section className="rounded-xl border border-slate-200 bg-white p-5">
+            <section className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
               <h2 className="mb-4 text-sm font-semibold">Applicable Property Types <span className="text-red-500">*</span></h2>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-2">
                 {PROPERTY_TYPES.map(type => (
@@ -558,12 +568,12 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
               </div>
             </section>
             {/* Description */}
-            <section className="rounded-xl border border-slate-200 bg-white p-5">
+            <section className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
               <Field label="Description"><textarea value={formData.description} onChange={event => setField('description', event.target.value)} placeholder="Describe the service" rows={6} maxLength={500} className={`${inputClass} resize-y`} /></Field>
               <p className="mt-1 text-right text-xs text-slate-400">{formData.description.length}/500</p>
             </section>
             {/* Pricing Preview (Example) */}
-            {isRatePricing && !isVisitManpower && <section className="rounded-xl border border-slate-200 bg-white p-5">
+            {isRatePricing && !isVisitManpower && <section className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
               <h2 className="mb-4 text-sm font-semibold">Pricing Preview (Example)</h2>
               <dl className="space-y-3 text-xs text-slate-600">
                 <div className="flex justify-between gap-3"><dt>{isFixedPrice ? 'Fixed Rate per Visit' : `Rate per ${formData.unit} per Visit`}</dt><dd className="font-medium text-slate-800">{currency(formData[rateField] === '' ? null : Number(formData[rateField]))}</dd></div>
@@ -575,7 +585,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
               </dl>
               <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, with no XLAND operating cost or tax. Final customer pricing uses the {isFixedPrice ? 'visits and operating costs' : `actual ${isQuantityBased ? 'quantity' : isCapacityBased ? 'capacity' : 'area'}, visits and operating costs`} entered in the estimate.</p>
             </section>}
-            {isVisitManpower && <section className="rounded-xl border border-slate-200 bg-white p-5">
+            {isVisitManpower && <section className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
               <h2 className="mb-4 text-sm font-semibold">Pricing Preview (Example)</h2>
               <div className="space-y-3">
                 {manpowerRanges.length > 0 && <Field label="Example Property Area (Sq Ft)"><input inputMode="numeric" value={exampleManpowerArea} onChange={event => { setExampleManpowerArea(event.target.value); setExamplePersonnel(String(suggestedManpower(manpowerConfig, event.target.value))); }} className={inputClass} /></Field>}
@@ -593,7 +603,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
               {manpowerExample?.error && <p className="mt-3 text-xs text-amber-700">{manpowerExample.error}</p>}
               <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, with no XLAND operating cost or tax. Final pricing uses the selected manpower, area range, visits and overtime entered in the estimate.</p>
             </section>}
-            {isCapacitySlab && <section className="rounded-xl border border-slate-200 bg-white p-5">
+            {isCapacitySlab && <section className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
               <h2 className="mb-4 text-sm font-semibold">Pricing Preview (Example)</h2>
               <Field label={`Entered Capacity (${formData.unit})`}><input inputMode="numeric" value={exampleCapacity} onChange={event => setExampleCapacity(event.target.value)} className={inputClass} /></Field>
               <dl className="mt-4 space-y-3 text-xs text-slate-600">
@@ -611,7 +621,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
           </aside>
         </div>
         {/* 2. Monthly Manpower Configuration, kept for services saved before the per-visit basis */}
-        {formData.pricingMethod === 'manpower' && !isVisitManpower && <section id="pricing-configuration" className="scroll-mt-6 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+        {formData.pricingMethod === 'manpower' && !isVisitManpower && <section id="pricing-configuration" className="scroll-mt-6 rounded-xl border border-slate-200 bg-white shadow-sm p-5 sm:p-6">
           <h2 className="mb-5 text-sm font-semibold">{getFormulaText()} Configuration</h2>
           <div className="grid gap-5 sm:grid-cols-3">
             <Field label={`Monthly Vendor Rate (₹) per ${formData.unit} *`}>{numberInput('monthlyRate')}</Field>
