@@ -26,16 +26,6 @@ import { getPackageId, getPackageName, getPackagePrice as getNormalizedPackagePr
 // Subcategory options for services
 const SUBCATEGORIES = ['Maintenance', 'Cleaning', 'Security', 'Landscaping', 'Utilities', 'Other'];
 
-// Method options for services (Image 1 design)
-const METHOD_OPTIONS = [
-  { value: 'quantity_based', label: 'Quantity Based', color: 'bg-blue-100 text-blue-700' },
-  { value: 'capacity_slab', label: 'Capacity Slab', color: 'bg-purple-100 text-purple-700' },
-  { value: 'fixed_price', label: 'Fixed Price', color: 'bg-green-100 text-green-700' },
-  { value: 'area_based', label: 'Area Based', color: 'bg-orange-100 text-orange-700' },
-  { value: 'fixed_visit_custom', label: 'Fixed Visit + Custom Work', color: 'bg-pink-100 text-pink-700' },
-  { value: 'manpower', label: 'Manpower', color: 'bg-teal-100 text-teal-700' }
-];
-
 const PROPERTY_ICONS = {
   APT: Home,
   Flats: LayoutGrid,

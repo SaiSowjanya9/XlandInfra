@@ -3,7 +3,7 @@ import { Loader2, Plus, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import ManpowerFields from './ManpowerFields';
 import { isVisitManpower, suggestedManpower } from '../../utils/manpowerPricing';
-import { FREQUENCY_OPTIONS, PRICING_METHODS, getServiceSchedule } from './AddServicePage';
+import { FREQUENCY_OPTIONS, getServiceSchedule, methodLabel } from './AddServicePage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const inputClass = 'w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500';
@@ -105,7 +105,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
         </label>
         {!loading && !services.length && !error && <p className="mt-2 text-xs text-slate-500">No configured services available for this property type.</p>}
         {service && <div className="mt-4">
-          <div className="mb-4 flex items-center justify-between gap-2"><span className="rounded bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700">{PRICING_METHODS.find(item => item.value === service.pricing_method)?.label}</span><button type="button" onClick={() => selectService('')} aria-label="Cancel service selection" className="p-1 text-slate-500"><X className="h-4 w-4" /></button></div>
+          <div className="mb-4 flex items-center justify-between gap-2"><span className="rounded bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700">{methodLabel(service.pricing_method)}</span><button type="button" onClick={() => selectService('')} aria-label="Cancel service selection" className="p-1 text-slate-500"><X className="h-4 w-4" /></button></div>
           <div className="grid gap-4 sm:grid-cols-3">
             <ManpowerFields service={service} inputs={inputs} onChange={setInput} />
             {input && <label className="block text-xs font-medium text-slate-600">{input[1]} ({service.unit}) *<input aria-label={`${input[1]} (${service.unit})`} type="number" min={isVisitManpower(service) ? service.minimum_manpower : service.pricing_method === 'capacity_slab' ? 0 : input[2]} step={input[2]} value={inputs[input[0]] ?? ''} onChange={event => setInput(input[0], event.target.value)} className={`${inputClass} mt-2`} /></label>}

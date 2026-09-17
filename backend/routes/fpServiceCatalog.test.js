@@ -4,12 +4,14 @@ const express = require('express');
 const baseConfig = { service_name: 'Camera Maintenance', category: 'Generator', pricing_method: 'quantity_based', unit: 'Camera',
   applicable_property_types: ['APT', 'VILLA'], default_frequency: 'Quarterly', default_visits_per_year: 4, allow_frequency_override: true,
   allow_manual_visits: false, default_markup_percentage: 35, rate_per_quantity: 250, description: 'Saved service description' };
-const quoteConfig = { ...baseConfig, service_name: 'Bespoke Works', pricing_method: 'custom_quote', unit: 'Quote' };
+const slabConfig = { ...baseConfig, service_name: 'Generator Slabs', pricing_method: 'capacity_slab', unit: 'KVA',
+  capacity_slabs: [{ capacityFrom: 0, capacityTo: 25, vendorRate: 2000, isCustomQuote: false, defaultFrequency: 'Quarterly', defaultVisitsPerYear: 4 },
+    { capacityFrom: 26, capacityTo: null, vendorRate: null, isCustomQuote: true, defaultFrequency: 'Quarterly', defaultVisitsPerYear: 4 }] };
 const services = [
   { id: 1, scope_id: 0, configuration: JSON.stringify(baseConfig) },
   { id: 2, scope_id: 8, configuration: JSON.stringify(baseConfig) },
   { id: 3, scope_id: 9, configuration: JSON.stringify(baseConfig) },
-  { id: 4, scope_id: 8, configuration: JSON.stringify(quoteConfig) }
+  { id: 4, scope_id: 8, configuration: JSON.stringify(slabConfig) }
 ];
 const pool = { execute: async (sql, params = []) => {
   if (sql.includes('FROM franchise_partners')) return [[{ id: params[0], is_active: 1 }]];
@@ -63,9 +65,10 @@ test('FP catalog is read-only, scoped to the signed-in FP, and re-prices saved e
   assert.equal(quoted.data.totalPrice, 13500);
   assert.equal(quoted.data.vendorCost, 10000);
   assert.equal((await request('/catalog/2/quote', 'POST', { property_type: 'PLOT', quantity: 10 })).status, 400);
-  // Custom quotes stay with admins and managers, so the FP owner cannot price them
-  assert.equal((await request('/catalog/4/quote', 'POST', { property_type: 'APT' })).data.requiresCustomQuote, true);
-  assert.equal((await request('/catalog/4/quote', 'POST', { property_type: 'APT', custom_quote: 5000 })).status, 400);
+  // Above-range slab capacities need a custom quote, which stays with admins and managers
+  assert.equal((await request('/catalog/4/quote', 'POST', { property_type: 'APT', capacity: 30 })).data.requiresCustomQuote, true);
+  assert.equal((await request('/catalog/4/quote', 'POST', { property_type: 'APT', capacity: 30, custom_quote: 5000 })).status, 400);
+  assert.equal((await request('/catalog/4/quote', 'POST', { property_type: 'APT', capacity: 20 })).data.totalPrice, 10800);
   assert.equal((await request('/catalog/2/quote', 'POST', { property_type: 'APT', quantity: 10 }, 'employee')).data.totalPrice, 13500);
 
   const estimate = { estimate_type: 'property_based', property_type: 'APT', package_id: 20, package_price: 1,

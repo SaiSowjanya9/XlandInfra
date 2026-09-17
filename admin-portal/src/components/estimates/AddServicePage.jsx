@@ -13,10 +13,15 @@ export const PRICING_METHODS = [
   { value: 'area_based', label: 'Area Based' },
   { value: 'capacity_based', label: 'Capacity Based' },
   { value: 'capacity_slab', label: 'Capacity Slab' },
-  { value: 'manpower', label: 'Manpower' },
+  { value: 'manpower', label: 'Manpower' }
+];
+
+// Methods no longer offered; kept only so services saved earlier still read correctly
+const RETIRED_METHODS = [
   { value: 'fixed_visit_custom', label: 'Fixed Visit + Custom Work' },
   { value: 'custom_quote', label: 'Custom Quote' }
 ];
+export const methodLabel = value => [...PRICING_METHODS, ...RETIRED_METHODS].find(method => method.value === value)?.label || value || '—';
 
 // Unit Options based on pricing method
 const UNIT_OPTIONS = {
@@ -25,9 +30,7 @@ const UNIT_OPTIONS = {
   area_based: ['Sq Ft', 'Sq M', 'Acres'],
   capacity_based: ['KL', 'Liters', 'KVA', 'KW'],
   capacity_slab: ['Persons', 'KVA', 'KW', 'HP', 'KL', 'Liters'],
-  manpower: ['Persons', 'Guards', 'Staff', 'Personnel'],
-  fixed_visit_custom: ['Visit', 'Job'],
-  custom_quote: ['Quote', 'Project']
+  manpower: ['Persons', 'Guards', 'Staff', 'Personnel']
 };
 
 // Frequency Options
@@ -135,10 +138,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
     // For Quantity Based
     ratePerQuantity: '',
     // For Capacity Based
-    ratePerCapacity: '',
-    // For Fixed Visit + Custom Work
-    visitCharge: '',
-    customWorkRate: 0
+    ratePerCapacity: ''
   });
 
   // Capacity Slab Configuration
@@ -162,7 +162,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
 
   useEffect(() => {
     if (!service) return;
-    const fields = { manpowerBasis: 'manpower_basis', ratePerPerson: 'rate_per_person', roleDesignation: 'role_designation', workingHoursPerVisit: 'working_hours_per_visit', overtimeRatePerHour: 'overtime_rate_per_hour', minimumManpower: 'minimum_manpower', serviceName: 'service_name', category: 'category', pricingMethod: 'pricing_method', unit: 'unit', applicablePropertyTypes: 'applicable_property_types', ratePerUnit: 'rate_per_unit', defaultFrequency: 'default_frequency', defaultVisitsPerYear: 'default_visits_per_year', allowFrequencyOverride: 'allow_frequency_override', allowManualVisits: 'allow_manual_visits', defaultMarkupPercentage: 'default_markup_percentage', description: 'description', monthlyRate: 'monthly_rate', billingPeriod: 'billing_period', periodMonths: 'period_months', fixedPrice: 'fixed_price', ratePerQuantity: 'rate_per_quantity', ratePerCapacity: 'rate_per_capacity', visitCharge: 'visit_charge', customWorkRate: 'custom_work_rate' };
+    const fields = { manpowerBasis: 'manpower_basis', ratePerPerson: 'rate_per_person', roleDesignation: 'role_designation', workingHoursPerVisit: 'working_hours_per_visit', overtimeRatePerHour: 'overtime_rate_per_hour', minimumManpower: 'minimum_manpower', serviceName: 'service_name', category: 'category', pricingMethod: 'pricing_method', unit: 'unit', applicablePropertyTypes: 'applicable_property_types', ratePerUnit: 'rate_per_unit', defaultFrequency: 'default_frequency', defaultVisitsPerYear: 'default_visits_per_year', allowFrequencyOverride: 'allow_frequency_override', allowManualVisits: 'allow_manual_visits', defaultMarkupPercentage: 'default_markup_percentage', description: 'description', monthlyRate: 'monthly_rate', billingPeriod: 'billing_period', periodMonths: 'period_months', fixedPrice: 'fixed_price', ratePerQuantity: 'rate_per_quantity', ratePerCapacity: 'rate_per_capacity' };
     setFormData(prev => ({ ...Object.fromEntries(Object.entries(prev).map(([field, value]) => [field, service[fields[field]] ?? value])),
       manpowerBasis: service.pricing_method === 'manpower' ? service.manpower_basis ?? 'monthly' : 'per_visit',
       overtimeRatePerHour: service.overtime_rate_per_hour ?? '' }));
@@ -190,7 +190,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
 
   // Update unit options when pricing method changes
   const changePricingMethod = (pricingMethod) => {
-    setFormData(prev => ({ ...prev, pricingMethod, unit: UNIT_OPTIONS[pricingMethod][0] }));
+    setFormData(prev => ({ ...prev, pricingMethod, unit: UNIT_OPTIONS[pricingMethod]?.[0] ?? prev.unit }));
     setActiveSection('basic-information');
   };
 
@@ -257,11 +257,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
   };
 
   // Get formula text based on pricing method
-  const getFormulaText = () => PRICING_METHODS.find(method => method.value === formData.pricingMethod)?.label;
-
-  // Get configuration info text
-  const getConfigInfoText = () => formData.pricingMethod === 'custom_quote'
-    ? 'The vendor quote is entered by an admin or manager while preparing the estimate.' : '';
+  const getFormulaText = () => methodLabel(formData.pricingMethod);
 
   // Handle form submission
   const handleSubmit = async (event) => {
@@ -292,8 +288,6 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
         fixed_price: Number(formData.fixedPrice),
         rate_per_quantity: Number(formData.ratePerQuantity),
         rate_per_capacity: Number(formData.ratePerCapacity),
-        visit_charge: Number(formData.visitCharge),
-        custom_work_rate: Number(formData.customWorkRate),
         // Capacity slabs
         capacity_slabs: formData.pricingMethod === 'capacity_slab' ? capacitySlabs.map(slab => ({
           capacityFrom: Number(slab.capacityFrom),
@@ -422,7 +416,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
                 <Field label="Pricing Method *"><select value={formData.pricingMethod} onChange={event => changePricingMethod(event.target.value)} className={inputClass}>{PRICING_METHODS.map(method => <option key={method.value} value={method.value}>{method.label}</option>)}</select></Field>
                 {/* Primary Input */}
                 {/* Unit */}
-                <Field label={isCapacityBased || isCapacitySlab ? 'Capacity Unit *' : 'Unit *'}><select value={formData.unit} onChange={event => setField('unit', event.target.value)} className={inputClass}>{UNIT_OPTIONS[formData.pricingMethod].map(unit => <option key={unit}>{unit}</option>)}</select></Field>
+                <Field label={isCapacityBased || isCapacitySlab ? 'Capacity Unit *' : 'Unit *'}><select value={formData.unit} onChange={event => setField('unit', event.target.value)} className={inputClass}>{(UNIT_OPTIONS[formData.pricingMethod] ?? [formData.unit]).map(unit => <option key={unit}>{unit}</option>)}</select></Field>
               </div>
               {categoryError && <div role="alert" className="mt-3 text-sm text-red-600">{categoryError} <button type="button" onClick={() => setCategoryAttempt(value => value + 1)} className="font-semibold underline">Retry</button></div>}
             </div>
@@ -572,27 +566,14 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
             </section>}
           </aside>
         </div>
-        {/* 2. Method-Specific Configuration */}
+        {/* 2. Monthly Manpower Configuration, kept for services saved before the per-visit basis */}
         {!isRatePricing && !isCapacitySlab && <section id="pricing-configuration" className="scroll-mt-6 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
           <h2 className="mb-5 text-sm font-semibold">{getFormulaText()} Configuration</h2>
-          {/* Info Box */}
-          {/* Area Based / Quantity Based / Capacity Based Fields */}
-          {rateField && <div className="max-w-sm">
-            {/* Rate per Unit */}
-            <Field label={`Vendor Rate (₹) per ${formData.unit} per Visit *`}>{numberInput(rateField)}</Field>
-          </div>}
-          {/* Manpower Fields */}
-          {formData.pricingMethod === 'manpower' && <div className="grid gap-5 sm:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-3">
             <Field label={`Monthly Vendor Rate (₹) per ${formData.unit} *`}>{numberInput('monthlyRate')}</Field>
             <Field label="Billing Period *"><select value={formData.billingPeriod} onChange={event => setField('billingPeriod', event.target.value)} className={inputClass}>{BILLING_PERIODS.map(period => <option key={period}>{period}</option>)}</select></Field>
             <Field label="Period (Months) *">{numberInput('periodMonths', { min: 1, max: 12, step: 1 })}</Field>
-          </div>}
-          {formData.pricingMethod === 'fixed_visit_custom' && <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Vendor Visit Charge (₹) *">{numberInput('visitCharge')}</Field>
-            <Field label="Default Extra Material / Custom Work Cost (₹)" hint="One-off cost; can be changed in the estimate">{numberInput('customWorkRate')}</Field>
-          </div>}
-          {formData.pricingMethod === 'custom_quote' && <p className="text-sm text-slate-500">{getConfigInfoText()}</p>}
-          {/* Formula Preview */}
+          </div>
         </section>}
       </fieldset>
     </form>

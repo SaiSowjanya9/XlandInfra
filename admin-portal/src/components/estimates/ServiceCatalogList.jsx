@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
-import AddServicePage, { PRICING_METHODS, PROPERTY_TYPES } from './AddServicePage';
+import AddServicePage, { PROPERTY_TYPES, methodLabel } from './AddServicePage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const RATE_LABELS = {
@@ -46,7 +46,7 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
       {services.map(service => <details key={service.id} className="group min-w-0 px-5 py-4">
         <summary className="cursor-pointer text-sm text-slate-700 [overflow-wrap:anywhere]">
           <span className="font-semibold text-slate-900">{service.service_name}</span>
-          <span className="ml-3 inline-block rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">{PRICING_METHODS.find(method => method.value === service.pricing_method)?.label}</span>
+          <span className="ml-3 inline-block rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">{methodLabel(service.pricing_method)}</span>
           <span className="ml-3 text-xs text-slate-500">{service.category} · {service.default_frequency} — {service.default_visits_per_year} visits</span>
         </summary>
         <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm">

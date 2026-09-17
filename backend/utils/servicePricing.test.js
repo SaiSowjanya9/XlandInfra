@@ -148,22 +148,32 @@ test('frontend manpower preview and headcount suggestions match backend pricing'
   assert.ok(previewManpower({ ...service, overtime_rate_per_hour: null }, { area: 1500, overtime_hours_per_visit: 1 }).error);
 });
 
-test('all eight methods calculate vendor cost and marked-up customer totals', () => {
+test('all six methods calculate vendor cost and marked-up customer totals', () => {
   const cases = [
     [{}, {}, 1200],
     [{ pricing_method: 'quantity_based', unit: 'Lifts', rate_per_quantity: 125.5 }, { quantity: 3 }, 4518],
     [{ pricing_method: 'area_based', unit: 'Sq Ft', rate_per_unit: 1.2 }, { area: 10000 }, 144000],
     [{ pricing_method: 'capacity_based', unit: 'KL', rate_per_capacity: 100 }, { capacity: 2.5 }, 3000],
     [{ pricing_method: 'capacity_slab', unit: 'KVA', capacity_slabs: [{ capacityFrom: 0, capacityTo: 25, vendorRate: 2000, isCustomQuote: false }, { capacityFrom: 26, capacityTo: null, vendorRate: null, isCustomQuote: true }] }, { capacity: 25 }, 24000],
-    [{ pricing_method: 'manpower', unit: 'Guards', monthly_rate: 10000, period_months: 12, billing_period: 'Quarterly' }, { personnel: 2 }, 240000],
-    [{ pricing_method: 'fixed_visit_custom', unit: 'Visit', visit_charge: 500, custom_work_rate: 1000 }, {}, 7000],
-    [{ pricing_method: 'custom_quote', unit: 'Quote' }, { custom_quote: 4000 }, 4000]
+    [{ pricing_method: 'manpower', unit: 'Guards', monthly_rate: 10000, period_months: 12, billing_period: 'Quarterly' }, { personnel: 2 }, 240000]
   ];
   for (const [configuration, inputs, expected] of cases) {
     const result = quote(configuration, inputs);
     assert.equal(result.vendorCost, expected);
     assert.equal(result.totalPrice, expected * 1.5);
   }
+});
+
+test('retired methods cannot be saved but still price services stored before they were removed', () => {
+  for (const retired of [{ pricing_method: 'fixed_visit_custom', unit: 'Visit', visit_charge: 500, custom_work_rate: 1000 },
+    { pricing_method: 'custom_quote', unit: 'Quote' }]) {
+    assert.throws(() => validateService(config(retired)), /valid pricing method and unit/i);
+  }
+  const savedVisitCustom = { ...config({ pricing_method: 'fixed_visit_custom', unit: 'Visit', visit_charge: 500, custom_work_rate: 1000 }), default_visits_per_year: 12 };
+  assert.equal(calculateServiceQuote(savedVisitCustom, { property_type: 'APT' }, 'admin').vendorCost, 7000);
+  const savedCustomQuote = config({ pricing_method: 'custom_quote', unit: 'Quote' });
+  assert.equal(calculateServiceQuote(savedCustomQuote, { property_type: 'APT' }, 'admin').requiresCustomQuote, true);
+  assert.equal(calculateServiceQuote(savedCustomQuote, { property_type: 'APT', custom_quote: 4000 }, 'admin').vendorCost, 4000);
 });
 
 test('area-based reference uses rate, area and visits with markup on actual cost', () => {
@@ -304,6 +314,7 @@ test('estimate inputs reject unsupported properties, missing quantity, zero visi
   assert.throws(() => quote({}, { property_type: 'PLOT' }), /property type/i);
   assert.throws(() => quote({ pricing_method: 'quantity_based', unit: 'Lifts', rate_per_quantity: 1 }), /quantity/i);
   assert.throws(() => quote({ allow_manual_visits: true }, { visits: 0 }), /visits/i);
-  assert.throws(() => quote({ pricing_method: 'custom_quote', unit: 'Quote' }, { custom_quote: -1 }), /quote/i);
-  assert.equal(quote({ pricing_method: 'custom_quote', unit: 'Quote' }).requiresCustomQuote, true);
+  const aboveSlab = { pricing_method: 'capacity_slab', unit: 'KVA', capacity_slabs: [{ capacityFrom: 0, capacityTo: 25, vendorRate: 100 }, { capacityFrom: 26, capacityTo: null, isCustomQuote: true }] };
+  assert.throws(() => quote(aboveSlab, { capacity: 30, custom_quote: -1 }), /quote/i);
+  assert.equal(quote(aboveSlab, { capacity: 30 }).requiresCustomQuote, true);
 });
