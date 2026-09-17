@@ -4,6 +4,7 @@
  */
 
 const express = require('express');
+const { normalizeEstimateData, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -168,6 +169,7 @@ router.post('/login', loginRateLimiter, async (req, res) => {
 // Apply authentication middleware to all routes below
 router.use(authenticate);
 router.use(attachManagerScope);
+router.use('/service-catalog', requireManagerScope, require('./managerServiceCatalog'));
 
 // ============================================
 // MANAGER DASHBOARD
@@ -2385,7 +2387,9 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
         const assignedZones = await getAssignedZones(employeeId, creatorEmail);
         
         // Build zone + creator filter - match by created_by_id OR created_by_name (name, email, or username)
-        if (assignedZones.length > 0) {
+        if (assignedZones.includes('__ALL__')) {
+          propertyClause = '';
+        } else if (assignedZones.length > 0) {
           const placeholders = assignedZones.map(() => '?').join(',');
           propertyClause = ` AND (e.zone IN (${placeholders}) OR e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
           propertyParams = [...assignedZones, managerId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
@@ -2423,7 +2427,7 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
       let fpAddons = [];
       try {
         const [addonResults] = await pool.execute(
-          `SELECT id, service_name, description, property_type FROM fp_addons WHERE franchise_partner_id = ?`,
+          `SELECT id, service_name, description, property_type, frequency_type, frequency_count FROM fp_addons WHERE franchise_partner_id = ?`,
           [franchisePartnerId]
         );
         fpAddons = addonResults;
@@ -2435,11 +2439,11 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
         let addons = [];
         if (est.addons_data) {
           try { 
-            addons = JSON.parse(est.addons_data);
+            addons = typeof est.addons_data === 'string' ? JSON.parse(est.addons_data) : est.addons_data;
             // Enrich addons with descriptions - match by property_type
             const estPropertyType = est.property_type?.toUpperCase();
             addons = addons.map(addon => {
-              if (!addon.description) {
+              if (!addon.description && !addon.catalogServiceId) {
                 const addonName = addon.name || addon.service_name || '';
                 const addonId = addon.id || addon.addon_id;
                 // Priority 1: Match by exact ID
@@ -2455,7 +2459,7 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
                   addon.description = foundAddon.description;
                 }
               }
-              return addon;
+              return enrichLegacyEstimateAddon(addon, fpAddons, estPropertyType);
             });
           } catch(e) {}
         }
@@ -2526,15 +2530,34 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
       console.log(`Manager ${managerId} (FP: ${franchisePartnerId}) - Found ${estimates.length} FP estimates`);
     }
     
-    res.json({ success: true, data: estimates });
+    res.json({ success: true, data: estimates.map(normalizeEstimateData) });
   } catch (error) {
     console.error('Error fetching manager estimates:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
+router.post('/estimates/send-email', requireManagerScope, async (req, res) => {
+  try {
+    const id = Number(req.body.estimateId);
+    if (!Number.isSafeInteger(id) || id <= 0 || !req.franchisePartnerId) return res.status(400).json({ success: false, message: 'Select a valid estimate.' });
+    const [[estimate]] = await pool.execute('SELECT * FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?', [id, req.franchisePartnerId]);
+    const creator = getCreatorIdentifier(req);
+    const zones = await getAssignedZones(await getEmployeeIdForZoneLookup(req, 'manager'), creator);
+    if (!canEmailEstimate(estimate, { fpId: req.franchisePartnerId, zones, creatorId: req.managerId, role: 'manager',
+      creatorNames: [creator, req.user?.username, req.user?.email, req.user?.name, [req.user?.first_name, req.user?.last_name].filter(Boolean).join(' ')] })) {
+      return res.status(404).json({ success: false, message: 'Estimate not available in your scope.' });
+    }
+    req.fpId = req.franchisePartnerId;
+    req.body = { estimateId: id, email: estimate.client_email };
+    return require('./franchisePartner').sendEstimateEmailHandler(req, res);
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Unable to send estimate email.' });
+  }
+});
+
 // Create estimate - dual-tag with manager_id AND franchise_partner_id
-router.post('/estimates', requireManagerScope, async (req, res) => {
+router.post('/estimates', requireManagerScope, require('./managerServiceCatalog').validatePackageEstimate, async (req, res) => {
   try {
     const {
       estimate_type, property_id, property_code, client_name, client_phone, client_email,
@@ -2663,6 +2686,7 @@ router.put('/estimates/:id', requireManagerScope, async (req, res) => {
     if (!existing) {
       return res.status(404).json({ success: false, message: 'Estimate not found' });
     }
+    if (hasCatalogServices(existing)) return res.status(409).json({ success: false, message: 'Configured-service estimates cannot be rewritten by the legacy editor. Create a new estimate to change these services.' });
     
     const {
       client_name, client_phone, client_email,

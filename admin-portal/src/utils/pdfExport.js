@@ -1,6 +1,7 @@
 // Professional PDF Export using jsPDF - Direct Download, No Print Dialog
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { getEstimateAddons, getAddonPrice, getServiceDescription } from './estimatePackageUtils';
 import { XLAND_LOGO_ICON } from './logoIconBase64.js';
 
 // Debug logger - only logs in development
@@ -94,7 +95,7 @@ let isExporting = false;
 // Format currency with proper Indian formatting
 const formatCurrency = (amount) => {
   const num = parseFloat(amount) || 0;
-  return 'Rs. ' + num.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  return 'Rs. ' + num.toLocaleString('en-IN', { maximumFractionDigits: 2 });
 };
 
 // Format date
@@ -478,7 +479,7 @@ const generatePDF = (data, type, filename) => {
       doc.setTextColor(...navy);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('ADD-ONS', margin, y);
+      doc.text(data.estimateType === 'custom' ? 'SERVICES' : 'ADD-ONS', margin, y);
       y += 6;
 
       const addonsBody = data.addons.map((a, idx) => {
@@ -517,6 +518,16 @@ const generatePDF = (data, type, filename) => {
       y = doc.lastAutoTable.finalY + 8;
     }
 
+    if (!isWorkOrder && data.addons?.length) {
+      if (y + 12 > pageHeight) { doc.addPage(); y = 20; }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...navy);
+      doc.text('Total Services Price', margin, y);
+      doc.text(formatCurrency(data.addonsTotal ?? data.addons.reduce((sum, addon) => sum + getAddonPrice(addon), 0)), pageWidth - margin, y, { align: 'right' });
+      y += 10;
+    }
+
     // ===== PRICE SUMMARY (Plain, right-aligned) =====
     const subtotal = parseFloat(data.subtotal) || 0;
     
@@ -542,7 +553,8 @@ const generatePDF = (data, type, filename) => {
     }
     
     // Calculate final total
-    const total = Math.round(afterDiscount + gstAmount);
+    const savedTotal = data.totalPrice ?? data.total;
+    const total = savedTotal != null && Number.isFinite(Number(savedTotal)) ? Number(savedTotal) : Math.round((afterDiscount + gstAmount + Number.EPSILON) * 100) / 100;
     const hasDiscount = discountAmount > 0;
 
     // Check for page break
@@ -650,6 +662,11 @@ export const exportEstimateToPDF = (estimate) => {
       return false;
     }
 
+    estimate = { ...estimate, addons: getEstimateAddons(estimate) };
+    if (typeof estimate.services === 'string') {
+      try { estimate.services = JSON.parse(estimate.services); } catch { estimate.services = []; }
+    }
+
     // Prepare services from various possible formats
     let services = [];
     
@@ -698,14 +715,16 @@ export const exportEstimateToPDF = (estimate) => {
           return s.services.map(inner => ({
             name: inner.name || inner.service || 'Service',
             frequencyCount: inner.frequencyCount ?? inner.frequency ?? 1,
-            frequencyType: inner.frequencyType || 'Monthly'
+            frequencyType: inner.frequencyType || inner.frequency_type || 'Monthly',
+            description: getServiceDescription(inner)
           }));
         }
         // Handle addon/service structure
         return {
           name: s.name || s.service || s.serviceName || s.description || 'Service',
           frequencyCount: s.frequencyCount ?? s.frequency ?? s.visits ?? 1,
-          frequencyType: s.frequencyType || s.billingType || s.billing || 'Monthly'
+          frequencyType: s.frequencyType || s.frequency_type || s.billingType || s.billing || 'Monthly',
+          description: getServiceDescription(s)
         };
       }).flat();
     }
@@ -722,7 +741,7 @@ export const exportEstimateToPDF = (estimate) => {
     }
     
     // Final fallback - if still no services but has a total, add a placeholder
-    if (services.length === 0 && (estimate.total || estimate.totalPrice || estimate.subtotal)) {
+    if (services.length === 0 && estimate.addons.length === 0 && (estimate.total || estimate.totalPrice || estimate.subtotal)) {
       debug('[PDF] No services found, adding placeholder');
       services.push({
         name: estimate.propertyType ? `${estimate.propertyType} Service` : 'Estimate Services',
@@ -742,7 +761,7 @@ export const exportEstimateToPDF = (estimate) => {
         name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
         frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
         frequencyCount: a.frequencyCount ?? a.frequency_count ?? a.visits ?? a.noOfVisits ?? a.no_of_visits ?? a.services?.[0]?.frequency ?? a.services?.[0]?.frequencyCount ?? 1,
-        description: a.description || ''
+        description: getServiceDescription(a)
       }));
     }
     // Try addons_data JSON string (from backend)
@@ -754,7 +773,7 @@ export const exportEstimateToPDF = (estimate) => {
             name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
             frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
             frequencyCount: a.frequencyCount ?? a.frequency_count ?? a.visits ?? a.noOfVisits ?? a.no_of_visits ?? a.services?.[0]?.frequency ?? a.services?.[0]?.frequencyCount ?? 1,
-            description: a.description || ''
+            description: getServiceDescription(a)
           }));
         }
       } catch (e) { debug('[PDF] addons_data parse error:', e); }
@@ -765,7 +784,7 @@ export const exportEstimateToPDF = (estimate) => {
         name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
         frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
         frequencyCount: a.frequencyCount ?? a.frequency_count ?? a.visits ?? a.noOfVisits ?? a.no_of_visits ?? a.services?.[0]?.frequency ?? a.services?.[0]?.frequencyCount ?? 1,
-        description: a.description || ''
+        description: getServiceDescription(a)
       }));
     }
     
@@ -804,12 +823,13 @@ export const exportEstimateToPDF = (estimate) => {
       description: estimate.description || estimate.notes || estimate.remarks,
       services,
       addons,
+      addonsTotal: estimate.addons.reduce((sum, addon) => sum + getAddonPrice(addon), 0),
       billingDuration: estimate.billingDuration || estimate.billing_duration || 'Yearly',
       subtotal: parseFloat(estimate.subtotal || estimate.subTotal || estimate.sub_total || 0),
-      discountPercent: parseFloat(estimate.discountPercent || estimate.discount_percent || estimate.discount || 0),
-      discountAmount: parseFloat(estimate.discountAmount || estimate.discount_amount || 0),
-      gstPercent: parseFloat(estimate.gstPercent || estimate.gst_percent || estimate.gst || 0),
-      gstAmount: parseFloat(estimate.gstAmount || estimate.gst_amount || 0),
+      discountPercent: parseFloat(estimate.discountPercent ?? estimate.discount_percent ?? estimate.discount_percentage ?? 0),
+      discountAmount: parseFloat(estimate.discountAmount ?? estimate.discount_amount ?? estimate.discount ?? 0),
+      gstPercent: parseFloat(estimate.gstPercent ?? estimate.gst_percent ?? estimate.tax_percentage ?? 0),
+      gstAmount: parseFloat(estimate.gstAmount ?? estimate.gst_amount ?? estimate.tax_amount ?? estimate.tax ?? estimate.gst ?? 0),
       totalPrice: parseFloat(estimate.totalPrice || estimate.total || estimate.total_price || estimate.total_amount || 0),
       createdAt: estimate.createdAt || estimate.created_at || new Date().toISOString(),
       // Work Order Estimate fields

@@ -1,8 +1,8 @@
 const FREQUENCIES = { Monthly: 12, 'Every 2 Months': 6, Quarterly: 4, 'Half-Yearly': 2, Yearly: 1, 'One-time': 1 };
 const UNITS = {
-  fixed_price: ['Visit', 'Service', 'Job'], quantity_based: ['Nos', 'Units', 'Lifts', 'Pumps', 'Tanks'],
+  fixed_price: ['Visit', 'Service', 'Job'], quantity_based: ['Nos', 'Units', 'Lifts', 'Pumps', 'Tanks', 'Camera'],
   area_based: ['Sq Ft', 'Sq M', 'Acres'], capacity_based: ['KL', 'Liters', 'KVA', 'KW'],
-  capacity_slab: ['Persons', 'KVA', 'KW', 'HP', 'KL', 'Liters'], manpower: ['Guards', 'Staff', 'Personnel'],
+  capacity_slab: ['Persons', 'KVA', 'KW', 'HP', 'KL', 'Liters'], manpower: ['Persons', 'Guards', 'Staff', 'Personnel'],
   fixed_visit_custom: ['Visit', 'Job'], custom_quote: ['Quote', 'Project']
 };
 const PROPERTY_TYPES = ['APT', 'GC', 'FLAT', 'VILLA', 'IH', 'PLOT'];
@@ -46,13 +46,40 @@ const validateService = input => {
   if (!config.allow_manual_visits && config.default_visits_per_year !== FREQUENCIES[config.default_frequency]) fail('Default visits must match the selected frequency when manual visits are disabled.');
   if (!Array.isArray(input.applicable_property_types) || !input.applicable_property_types.length || input.applicable_property_types.some(type => !PROPERTY_TYPES.includes(type))) fail('Select at least one valid property type.');
   config.applicable_property_types = [...new Set(input.applicable_property_types)];
-  const rateField = { fixed_price: 'fixed_price', quantity_based: 'rate_per_quantity', area_based: 'rate_per_unit', capacity_based: 'rate_per_capacity', manpower: 'monthly_rate', fixed_visit_custom: 'visit_charge' }[config.pricing_method];
+  const rateField = { fixed_price: 'fixed_price', quantity_based: 'rate_per_quantity', area_based: 'rate_per_unit', capacity_based: 'rate_per_capacity', fixed_visit_custom: 'visit_charge' }[config.pricing_method];
   if (rateField) config[rateField] = number(input[rateField], 'Vendor rate');
   if (config.pricing_method === 'fixed_visit_custom') config.custom_work_rate = number(input.custom_work_rate, 'Custom work cost');
   if (config.pricing_method === 'manpower') {
-    config.period_months = number(input.period_months, 'Period months', 1, 12, true);
-    if (!['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'].includes(input.billing_period)) fail('Select a valid billing period.');
-    config.billing_period = input.billing_period;
+    config.manpower_basis = input.manpower_basis ?? 'monthly';
+    if (!['monthly', 'per_visit'].includes(config.manpower_basis)) fail('Select a valid manpower pricing basis.');
+    if (config.manpower_basis === 'monthly') {
+      config.monthly_rate = number(input.monthly_rate, 'Monthly vendor rate');
+      config.period_months = number(input.period_months, 'Period months', 1, 12, true);
+      if (!['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'].includes(input.billing_period)) fail('Select a valid billing period.');
+      config.billing_period = input.billing_period;
+    } else {
+      config.rate_per_person = number(input.rate_per_person, 'Rate per person per visit');
+      config.role_designation = text(input.role_designation ?? '', 'Role / designation', 150, false);
+      config.working_hours_per_visit = number(input.working_hours_per_visit, 'Working hours per visit', 0.01, 24);
+      config.overtime_rate_per_hour = input.overtime_rate_per_hour == null || input.overtime_rate_per_hour === '' ? null : number(input.overtime_rate_per_hour, 'Overtime rate per person per hour');
+      config.minimum_manpower = number(input.minimum_manpower, 'Minimum manpower', 1, 1e6, true);
+      const ranges = input.manpower_ranges ?? [];
+      if (!Array.isArray(ranges) || ranges.length > 100) fail('Configure at most 100 manpower ranges.');
+      config.manpower_ranges = ranges.map((range, index) => ({
+        areaFrom: number(range?.areaFrom, `Range ${index + 1} area from`, 0, 1e9, true),
+        areaTo: range?.areaTo === null ? null : number(range?.areaTo, `Range ${index + 1} area to`, 1, 1e9, true),
+        recommendedMin: number(range?.recommendedMin, `Range ${index + 1} recommended minimum`, 1, 1e6, true),
+        recommendedMax: number(range?.recommendedMax, `Range ${index + 1} recommended maximum`, config.minimum_manpower, 1e6, true),
+        ratePerPerson: number(range?.ratePerPerson, `Range ${index + 1} rate per person`)
+      }));
+      config.manpower_ranges.forEach((range, index, rows) => {
+        if (!index && range.areaFrom > 1) fail('The first manpower range must begin at 0 or 1 Sq Ft.');
+        if (range.areaTo !== null && range.areaTo < range.areaFrom) fail(`Range ${index + 1} upper area must not be less than its lower area.`);
+        if (range.areaTo === null && index !== rows.length - 1) fail('Only the last manpower range can have no upper limit.');
+        if (index && range.areaFrom !== rows[index - 1].areaTo + 1) fail('Manpower ranges must be consecutive whole-number areas without gaps or overlaps.');
+        if (range.recommendedMax < range.recommendedMin) fail(`Range ${index + 1} recommended maximum must not be below its minimum.`);
+      });
+    }
   }
   if (config.pricing_method === 'capacity_slab') {
     if (!Array.isArray(input.capacity_slabs) || !input.capacity_slabs.length || input.capacity_slabs.length > 100) fail('Configure between 1 and 100 capacity slabs.');
@@ -115,9 +142,27 @@ const calculateServiceQuote = (config, input = {}, role) => {
       if (!requiresCustomQuote) vendorCost = slab.vendorRate * visits;
       break;
     }
-    case 'manpower':
-      inputs.personnel = number(input.personnel, 'Personnel count', 1, 1e6, true);
-      vendorCost = inputs.personnel * config.monthly_rate * config.period_months; break;
+    case 'manpower': {
+      if (config.manpower_basis !== 'per_visit') {
+        inputs.personnel = number(input.personnel, 'Personnel count', 1, 1e6, true);
+        vendorCost = inputs.personnel * config.monthly_rate * config.period_months;
+        break;
+      }
+      let range;
+      if (config.manpower_ranges?.length) {
+        inputs.area = number(input.area, 'Property area', 1, 1e9, true);
+        range = config.manpower_ranges.find(item => inputs.area >= item.areaFrom && (item.areaTo === null || inputs.area <= item.areaTo));
+        if (!range) fail('Property area is outside the configured manpower ranges.');
+        inputs.manpower_range = { areaFrom: range.areaFrom, areaTo: range.areaTo, recommendedMin: range.recommendedMin, recommendedMax: range.recommendedMax };
+      }
+      inputs.personnel = number(input.personnel ?? Math.max(config.minimum_manpower, range?.recommendedMin ?? 1), 'Personnel count', config.minimum_manpower, 1e6, true);
+      inputs.working_hours_per_visit = config.working_hours_per_visit;
+      inputs.overtime_hours_per_visit = number(input.overtime_hours_per_visit ?? 0, 'Overtime hours per person per visit', 0, 24 - config.working_hours_per_visit);
+      if (inputs.overtime_hours_per_visit > 0 && config.overtime_rate_per_hour == null) fail('Overtime pricing is not configured for this service.');
+      const rate = range?.ratePerPerson ?? config.rate_per_person;
+      vendorCost = inputs.personnel * (rate + inputs.overtime_hours_per_visit * (config.overtime_rate_per_hour ?? 0)) * visits;
+      break;
+    }
     case 'fixed_visit_custom':
       inputs.custom_work_cost = number(input.custom_work_cost ?? config.custom_work_rate, 'Custom work cost');
       vendorCost = config.visit_charge * visits + inputs.custom_work_cost; break;

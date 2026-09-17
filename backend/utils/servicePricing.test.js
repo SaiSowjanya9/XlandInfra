@@ -53,6 +53,101 @@ test('fixed-price reference charges per visit with markup on vendor and operatin
   assert.throws(() => quote(fixed, { visits: 5 }), /manual visits/i);
 });
 
+test('quantity-based camera reference applies rate times quantity times visits', () => {
+  const camera = { pricing_method: 'quantity_based', unit: 'Camera', rate_per_quantity: 250,
+    default_frequency: 'Quarterly', default_visits_per_year: 4, default_markup_percentage: 35 };
+  const result = quote(camera, { quantity: 10 });
+  assert.equal(result.vendorCost, 10000);
+  assert.equal(result.totalPrice, 13500);
+  assert.equal(result.profit, 3500);
+  assert.equal(result.marginPercentage, 25.93);
+  assert.equal(quote(camera, { quantity: 10, operating_cost: 1000 }).totalPrice, 14850);
+  assert.equal(quote(camera, { quantity: 10, frequency: 'Monthly' }).vendorCost, 30000);
+  assert.equal(quote({ ...camera, allow_manual_visits: true }, { quantity: 10, visits: 5 }).vendorCost, 12500);
+  assert.equal(quote(camera, { quantity: 10, markup_percentage: 0 }).totalPrice, 10000);
+  for (const quantity of [undefined, '', 0, -1, 1.5, Infinity]) assert.throws(() => quote(camera, { quantity }), /quantity/i);
+  assert.throws(() => quote({ ...camera, allow_frequency_override: false }, { quantity: 10, frequency: 'Monthly' }), /frequency override/i);
+  assert.throws(() => quote(camera, { quantity: 10, visits: 5 }), /manual visits/i);
+  for (const unit of ['Nos', 'Units', 'Lifts', 'Pumps', 'Tanks', 'Camera']) assert.equal(quote({ ...camera, unit }, { quantity: 10 }).vendorCost, 10000);
+});
+
+const manpower = { pricing_method: 'manpower', unit: 'Persons', manpower_basis: 'per_visit', rate_per_person: 450,
+  working_hours_per_visit: 2, overtime_rate_per_hour: 60, minimum_manpower: 1, role_designation: 'Housekeeping Staff', default_markup_percentage: 30,
+  manpower_ranges: [
+    { areaFrom: 0, areaTo: 1000, recommendedMin: 1, recommendedMax: 1, ratePerPerson: 450 },
+    { areaFrom: 1001, areaTo: 2000, recommendedMin: 2, recommendedMax: 2, ratePerPerson: 450 },
+    { areaFrom: 2001, areaTo: 4000, recommendedMin: 3, recommendedMax: 4, ratePerPerson: 425 },
+    { areaFrom: 4001, areaTo: null, recommendedMin: 4, recommendedMax: 6, ratePerPerson: 400 }
+  ] };
+
+test('visit-based manpower applies the area range and suggests headcount without multiplying regular hours', () => {
+  const result = quote(manpower, { area: 1500 });
+  assert.equal(result.inputs.personnel, 2);
+  assert.equal(result.vendorCost, 10800);
+  assert.equal(result.totalPrice, 14040);
+  assert.equal(result.inputs.working_hours_per_visit, 2);
+  assert.deepEqual(result.inputs.manpower_range, { areaFrom: 1001, areaTo: 2000, recommendedMin: 2, recommendedMax: 2 });
+  assert.equal(quote(manpower, { area: 3000 }).vendorCost, 15300);
+  assert.equal(quote(manpower, { area: 5000 }).vendorCost, 19200);
+  assert.equal(quote(manpower, { area: 3000, personnel: 4 }).vendorCost, 20400);
+  assert.equal(quote(manpower, { area: 3000, personnel: 2 }).vendorCost, 10200);
+  assert.equal(quote(manpower, { area: 3000, rate_per_person: 1, manpower_range: {} }).vendorCost, 15300);
+  assert.equal(quote(manpower, { area: 1500, frequency: 'Quarterly' }).vendorCost, 3600);
+  assert.equal(quote(manpower, { area: 1500, operating_cost: 1000 }).totalPrice, 15340);
+});
+
+test('manpower range boundaries, missing areas, minimum headcount and overtime are validated', () => {
+  for (const [area, people] of [[1, 1], [1000, 1], [1001, 2], [2000, 2], [2001, 3], [4000, 3], [4001, 4]]) assert.equal(quote(manpower, { area }).inputs.personnel, people);
+  for (const area of [undefined, '', 0, -1, 1000.5]) assert.throws(() => quote(manpower, { area }), /area/i);
+  for (const personnel of [0, -1, 1.5]) assert.throws(() => quote(manpower, { area: 1500, personnel }), /personnel/i);
+  assert.equal(quote(manpower, { area: 1500, overtime_hours_per_visit: 1 }).vendorCost, 12240);
+  assert.throws(() => quote(manpower, { area: 1500, overtime_hours_per_visit: 23 }), /overtime/i);
+  assert.throws(() => quote({ ...manpower, overtime_rate_per_hour: null }, { area: 1500, overtime_hours_per_visit: 1 }), /overtime/i);
+  assert.equal(quote({ ...manpower, manpower_ranges: [] }, { personnel: 2 }).vendorCost, 10800);
+  assert.throws(() => quote({ ...manpower, manpower_ranges: [], minimum_manpower: 2 }, { personnel: 1 }), /personnel/i);
+  assert.throws(() => quote({ ...manpower, manpower_ranges: manpower.manpower_ranges.slice(0, 1) }, { area: 2000 }), /range/i);
+});
+
+test('manpower template rejects gaps, overlaps, invalid recommendations and invalid rates', () => {
+  for (const ranges of [
+    [{ ...manpower.manpower_ranges[0], areaFrom: 2 }],
+    [manpower.manpower_ranges[0], { ...manpower.manpower_ranges[1], areaFrom: 1000 }],
+    [manpower.manpower_ranges[0], { ...manpower.manpower_ranges[1], areaFrom: 1002 }],
+    [{ ...manpower.manpower_ranges[0], recommendedMin: 3, recommendedMax: 2 }],
+    [{ ...manpower.manpower_ranges[0], ratePerPerson: -1 }],
+    [{ ...manpower.manpower_ranges[0], areaTo: null }, manpower.manpower_ranges[1]]
+  ]) assert.throws(() => validateService(config({ ...manpower, manpower_ranges: ranges })), /range/i);
+  for (const overrides of [{ manpower_basis: 'invalid' }, { working_hours_per_visit: 25 }, { minimum_manpower: 0 }, { rate_per_person: '' }, { overtime_rate_per_hour: -1 }]) assert.throws(() => validateService(config({ ...manpower, ...overrides })));
+});
+
+test('existing monthly manpower remains monthly after validation and does not use visit multipliers', () => {
+  const legacy = { pricing_method: 'manpower', unit: 'Guards', monthly_rate: 10000, period_months: 12, billing_period: 'Monthly' };
+  const result = quote(legacy, { personnel: 2, frequency: 'Quarterly' });
+  assert.equal(result.vendorCost, 240000);
+  assert.equal(validateService(config(legacy)).manpower_basis, 'monthly');
+  assert.equal(calculateServiceQuote(config(legacy), { property_type: 'APT', personnel: 2 }, 'admin').vendorCost, 240000);
+});
+
+test('frontend manpower preview and headcount suggestions match backend pricing', async () => {
+  const { previewManpower, suggestedManpower, findManpowerRange } = await import('../../admin-portal/src/utils/manpowerPricing.js');
+  const service = validateService(config(manpower));
+  for (const input of [{ area: 750 }, { area: 1500 }, { area: 3000, personnel: 4 }, { area: 5000, overtime_hours_per_visit: 1 }]) {
+    const preview = previewManpower(service, input);
+    const result = quote(manpower, input);
+    assert.equal(preview.error, undefined);
+    assert.equal(preview.vendorCost, result.vendorCost);
+    assert.equal(preview.customerPrice, result.totalPrice);
+    assert.equal(preview.personnel, result.inputs.personnel);
+  }
+  assert.equal(suggestedManpower(service, 3000), 3);
+  assert.equal(findManpowerRange(service.manpower_ranges, ''), undefined);
+  assert.equal(findManpowerRange(service.manpower_ranges, 1e9 + 1), undefined);
+  assert.ok(previewManpower(service, { area: '', personnel: 2 }).error);
+  assert.ok(previewManpower(service, { area: 1500, personnel: 0 }).error);
+  assert.ok(previewManpower(service, { area: 1500, overtime_hours_per_visit: 23 }).error);
+  assert.ok(previewManpower({ ...service, overtime_rate_per_hour: null }, { area: 1500, overtime_hours_per_visit: 1 }).error);
+});
+
 test('all eight methods calculate vendor cost and marked-up customer totals', () => {
   const cases = [
     [{}, {}, 1200],

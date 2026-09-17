@@ -1,4 +1,5 @@
 const PDFDocument = require('pdfkit');
+const { customerEstimateData } = require('../utils/estimateData');
 const path = require('path');
 
 // Logo file path - icon only (without text) for horizontal layout - OPTIMIZED for smaller PDF size
@@ -90,6 +91,7 @@ const drawPDFHeader = (doc, margin) => {
 
 // Generate estimate PDF and return as buffer
 const generateEstimatePDF = async (estimate) => {
+  estimate = customerEstimateData(estimate);
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -120,7 +122,7 @@ const generateEstimatePDF = async (estimate) => {
       // Ensure numeric values are valid (handle NaN, undefined, null) - round to whole numbers
       const safeNum = (val) => {
         const num = parseFloat(val);
-        return isNaN(num) ? 0 : Math.round(num);
+        return isNaN(num) ? 0 : Math.round((num + Number.EPSILON) * 100) / 100;
       };
       const safeSubtotal = safeNum(subtotal);
       const safeDiscount = safeNum(discount);
@@ -178,6 +180,14 @@ const generateEstimatePDF = async (estimate) => {
       if (zone) doc.text(zone, col1, y);
       if (division) doc.text(division, col3, y);
       y += 14;
+
+      for (const [label, value] of [['Property ID', propertyCode], ['Address', address], ['Blocks', numberOfBlocks], ['Total Units', totalUnits], ['Tower / Building', towerName], ['Block Number', blockNumber], ['Villa / Plot Number', villaPlotNumber]]) {
+        if (value === undefined || value === null || value === '') continue;
+        const text = decodeHtml(String(value));
+        doc.fontSize(8).font('Helvetica').fillColor('#666666').text(`${label}:`, col1, y, { width: 95 });
+        doc.fillColor('#333333').text(text, col2, y, { width: 395 });
+        y += Math.max(12, doc.heightOfString(text, { width: 395 }) + 4);
+      }
 
       // Customer Details
       doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('Customer Details', col1, y);
@@ -351,7 +361,7 @@ const generateEstimatePDF = async (estimate) => {
           y = 50;
         }
         
-        doc.fontSize(10).fillColor(navy).text('ADD-ONS', 50, y, { continued: false });
+        doc.fontSize(10).fillColor(navy).text(estimateType === 'custom' ? 'SERVICES' : 'ADD-ONS', 50, y, { continued: false });
         y += 15;
         
         // Add-ons header - separate Service and Description columns
@@ -396,6 +406,13 @@ const generateEstimatePDF = async (estimate) => {
         });
 
         y += 10;
+      }
+
+      if (!isWOEstimate && addonList.length) {
+        if (y + 20 > pageHeight) { doc.addPage(); y = 50; }
+        const addonsTotal = addonList.reduce((sum, addon) => sum + Number(addon.totalPrice ?? addon.price ?? 0), 0);
+        doc.fontSize(9).font('Helvetica-Bold').fillColor(navy).text(`Total Services Price: Rs. ${addonsTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`, 50, y);
+        y += 18;
       }
 
       // Check if Price Summary needs new page

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
+import CategorySelection from '../components/common/CategorySelection';
 import {
   Building2,
   Plus,
@@ -668,37 +669,9 @@ const ManagerProperties = ({ user }) => {
         )}
 
         {/* Category Selection */}
-        <div className="bg-gray-50 rounded-2xl p-12">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold text-gray-900">Select Category</h2>
-            <p className="text-gray-500 mt-2">Choose the customer category to proceed</p>
-          </div>
-
-          <div className="flex justify-center gap-8">
-            {/* Residential Card */}
-            <button
-              onClick={() => setSelectedCategory('residential')}
-              className="w-72 h-52 p-8 border-2 border-teal-400 rounded-2xl hover:shadow-xl transition-all duration-200 bg-teal-50/50 group flex flex-col items-start justify-center"
-            >
-              <div className="w-14 h-14 bg-teal-500 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                <Home className="w-7 h-7 text-white" />
-              </div>
-              <p className="text-lg font-semibold text-gray-900">Residential</p>
-            </button>
-
-            {/* Commercial Card - Coming Soon */}
-            <div className="w-72 h-52 p-8 border border-gray-200 rounded-2xl bg-white relative cursor-not-allowed flex flex-col items-start justify-center">
-              <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full border border-gray-200">
-                <Lock className="w-3.5 h-3.5 text-gray-400" />
-                <span className="text-xs font-medium text-gray-500">Coming Soon</span>
-              </div>
-              <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center mb-5">
-                <Building className="w-7 h-7 text-gray-400" />
-              </div>
-              <p className="text-lg font-medium text-gray-400">Commercial</p>
-            </div>
-          </div>
-        </div>
+        {/* Residential Card */}
+        {/* Commercial Card - Coming Soon */}
+        <CategorySelection onSelect={setSelectedCategory} />
       </div>
     );
   }

@@ -5,6 +5,7 @@ import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, P
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { exportEstimateToPDF } from '../utils/pdfExport';
+import { getServiceDescription } from '../utils/estimatePackageUtils';
 import {
   getEstimateContactPhone, getEstimateAddress, getEstimateCity, getEstimateZone,
   getEstimateUnits, formatAddonsForExport
@@ -1718,7 +1719,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                             (a.property_type || '').toUpperCase() === estPropertyType
                           ) || addonFromList;
                         }
-                        const addonDescription = decodeHtml(addon.description || addonFromList?.description) || '';
+                        const addonDescription = decodeHtml(getServiceDescription(addon) || addonFromList?.description) || '';
                         const frequencyCount = addon.frequency_count ?? addon.frequencyCount ?? addonFromList?.frequency_count ?? 1;
                         const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
                         return (

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { ChevronLeft, Plus, Trash2, Save, Loader2 } from 'lucide-react';
 import { useFP } from '../../contexts/FPContext';
+import { manpowerRangeLabel, previewManpower, suggestedManpower } from '../../utils/manpowerPricing';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -20,11 +21,11 @@ export const PRICING_METHODS = [
 // Unit Options based on pricing method
 const UNIT_OPTIONS = {
   fixed_price: ['Visit', 'Service', 'Job'],
-  quantity_based: ['Nos', 'Units', 'Lifts', 'Pumps', 'Tanks'],
+  quantity_based: ['Nos', 'Units', 'Lifts', 'Pumps', 'Tanks', 'Camera'],
   area_based: ['Sq Ft', 'Sq M', 'Acres'],
   capacity_based: ['KL', 'Liters', 'KVA', 'KW'],
   capacity_slab: ['Persons', 'KVA', 'KW', 'HP', 'KL', 'Liters'],
-  manpower: ['Guards', 'Staff', 'Personnel'],
+  manpower: ['Persons', 'Guards', 'Staff', 'Personnel'],
   fixed_visit_custom: ['Visit', 'Job'],
   custom_quote: ['Quote', 'Project']
 };
@@ -120,6 +121,12 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
     // Description
     description: '',
     // For Manpower
+    manpowerBasis: 'per_visit',
+    ratePerPerson: '',
+    roleDesignation: '',
+    workingHoursPerVisit: 2,
+    overtimeRatePerHour: '',
+    minimumManpower: 1,
     monthlyRate: '',
     billingPeriod: 'Monthly',
     periodMonths: 12,
@@ -142,14 +149,24 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
     { id: 4, capacityFrom: 16, capacityTo: 20, vendorRate: 1250, isCustomQuote: false },
     { id: 5, capacityFrom: 21, capacityTo: null, vendorRate: null, isCustomQuote: true }
   ].map(slab => ({ ...slab, defaultFrequency: 'Monthly', defaultVisitsPerYear: 12 })));
+  const [manpowerRanges, setManpowerRanges] = useState([]);
+  const [exampleManpowerArea, setExampleManpowerArea] = useState('1500');
+  const [examplePersonnel, setExamplePersonnel] = useState('2');
+  const [exampleOvertime, setExampleOvertime] = useState('0');
   const [exampleCapacity, setExampleCapacity] = useState('10');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const setField = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
+  const setField = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'overtimeRatePerHour' && value === '') setExampleOvertime('0');
+  };
 
   useEffect(() => {
     if (!service) return;
-    const fields = { serviceName: 'service_name', category: 'category', pricingMethod: 'pricing_method', unit: 'unit', applicablePropertyTypes: 'applicable_property_types', ratePerUnit: 'rate_per_unit', defaultFrequency: 'default_frequency', defaultVisitsPerYear: 'default_visits_per_year', allowFrequencyOverride: 'allow_frequency_override', allowManualVisits: 'allow_manual_visits', defaultMarkupPercentage: 'default_markup_percentage', description: 'description', monthlyRate: 'monthly_rate', billingPeriod: 'billing_period', periodMonths: 'period_months', fixedPrice: 'fixed_price', ratePerQuantity: 'rate_per_quantity', ratePerCapacity: 'rate_per_capacity', visitCharge: 'visit_charge', customWorkRate: 'custom_work_rate' };
-    setFormData(prev => Object.fromEntries(Object.entries(prev).map(([field, value]) => [field, service[fields[field]] ?? value])));
+    const fields = { manpowerBasis: 'manpower_basis', ratePerPerson: 'rate_per_person', roleDesignation: 'role_designation', workingHoursPerVisit: 'working_hours_per_visit', overtimeRatePerHour: 'overtime_rate_per_hour', minimumManpower: 'minimum_manpower', serviceName: 'service_name', category: 'category', pricingMethod: 'pricing_method', unit: 'unit', applicablePropertyTypes: 'applicable_property_types', ratePerUnit: 'rate_per_unit', defaultFrequency: 'default_frequency', defaultVisitsPerYear: 'default_visits_per_year', allowFrequencyOverride: 'allow_frequency_override', allowManualVisits: 'allow_manual_visits', defaultMarkupPercentage: 'default_markup_percentage', description: 'description', monthlyRate: 'monthly_rate', billingPeriod: 'billing_period', periodMonths: 'period_months', fixedPrice: 'fixed_price', ratePerQuantity: 'rate_per_quantity', ratePerCapacity: 'rate_per_capacity', visitCharge: 'visit_charge', customWorkRate: 'custom_work_rate' };
+    setFormData(prev => ({ ...Object.fromEntries(Object.entries(prev).map(([field, value]) => [field, service[fields[field]] ?? value])),
+      manpowerBasis: service.pricing_method === 'manpower' ? service.manpower_basis ?? 'monthly' : 'per_visit',
+      overtimeRatePerHour: service.overtime_rate_per_hour ?? '' }));
+    setManpowerRanges((service.manpower_ranges || []).map((range, index) => ({ ...range, id: index + 1 })));
     if (service.capacity_slabs) setCapacitySlabs(service.capacity_slabs.map((slab, index) => {
       const schedule = getServiceSchedule({ ...service, capacity_slabs: [slab] }, slab.capacityFrom);
       return { ...slab, id: index + 1, defaultFrequency: schedule.frequency, defaultVisitsPerYear: schedule.visits };
@@ -219,10 +236,22 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
     setCapacitySlabs(prev => prev.filter(slab => slab.id !== id));
   };
 
+  const updateManpowerRange = (id, field, value) => setManpowerRanges(prev => prev.map(range => range.id === id ? { ...range, [field]: value } : range));
+  const addManpowerRange = () => setManpowerRanges(prev => {
+    const last = prev[prev.length - 1];
+    const openEnded = last?.areaTo === null;
+    const start = openEnded ? Number(last.areaFrom) : last ? Number(last.areaTo) + 1 : 0;
+    const end = start === 0 ? 1000 : start + 999;
+    const people = Math.max(Number(formData.minimumManpower) || 1, last ? Number(last.recommendedMin) + 1 : 1);
+    const range = { id: Math.max(0, ...prev.map(item => item.id)) + 1, areaFrom: start, areaTo: end,
+      recommendedMin: people, recommendedMax: people, ratePerPerson: formData.ratePerPerson };
+    return openEnded ? [...prev.slice(0, -1), range, { ...last, areaFrom: end + 1 }] : [...prev, range];
+  });
+
   // Calculate example pricing
   const calculateExamplePricing = () => {
     const exampleArea = 10000; // Example: 10,000 Sq Ft
-    const quantity = isFixedPrice ? 1 : isCapacityBased ? 10 : exampleArea;
+    const quantity = isFixedPrice ? 1 : isQuantityBased || isCapacityBased ? 10 : exampleArea;
     const vendorCost = Number(formData[rateField]) * quantity * Number(formData.defaultVisitsPerYear);
     return { vendorCost, customerPrice: vendorCost * (1 + Number(formData.defaultMarkupPercentage) / 100) };
   };
@@ -275,6 +304,14 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
           defaultVisitsPerYear: Number(slab.defaultVisitsPerYear)
         })) : null,
         // Manpower fields
+        manpower_basis: formData.manpowerBasis,
+        rate_per_person: Number(formData.ratePerPerson),
+        role_designation: formData.roleDesignation.trim(),
+        working_hours_per_visit: Number(formData.workingHoursPerVisit),
+        overtime_rate_per_hour: formData.overtimeRatePerHour === '' ? null : Number(formData.overtimeRatePerHour),
+        minimum_manpower: Number(formData.minimumManpower),
+        manpower_ranges: manpowerRanges.map(range => ({ areaFrom: Number(range.areaFrom), areaTo: range.areaTo === null ? null : Number(range.areaTo),
+          recommendedMin: Number(range.recommendedMin), recommendedMax: Number(range.recommendedMax), ratePerPerson: Number(range.ratePerPerson) })),
         monthly_rate: Number(formData.monthlyRate),
         billing_period: formData.pricingMethod === 'manpower' ? formData.billingPeriod : null,
         period_months: formData.pricingMethod === 'manpower' ? Number(formData.periodMonths) : null
@@ -298,14 +335,20 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
   };
 
   const isFixedPrice = formData.pricingMethod === 'fixed_price';
+  const isQuantityBased = formData.pricingMethod === 'quantity_based';
   const isCapacityBased = formData.pricingMethod === 'capacity_based';
   const isCapacitySlab = formData.pricingMethod === 'capacity_slab';
-  const isRatePricing = formData.pricingMethod === 'area_based' || isCapacityBased || isFixedPrice;
-  const rateField = { fixed_price: 'fixedPrice', area_based: 'ratePerUnit', quantity_based: 'ratePerQuantity', capacity_based: 'ratePerCapacity' }[formData.pricingMethod];
+  const isVisitManpower = formData.pricingMethod === 'manpower' && formData.manpowerBasis === 'per_visit';
+  const isRatePricing = formData.pricingMethod === 'area_based' || isQuantityBased || isCapacityBased || isFixedPrice || isVisitManpower;
+  const rateField = { fixed_price: 'fixedPrice', area_based: 'ratePerUnit', quantity_based: 'ratePerQuantity', capacity_based: 'ratePerCapacity', manpower: isVisitManpower ? 'ratePerPerson' : undefined }[formData.pricingMethod];
+  const manpowerConfig = { manpower_ranges: manpowerRanges, rate_per_person: formData.ratePerPerson, minimum_manpower: formData.minimumManpower,
+    working_hours_per_visit: formData.workingHoursPerVisit, overtime_rate_per_hour: formData.overtimeRatePerHour === '' ? null : formData.overtimeRatePerHour,
+    default_visits_per_year: formData.defaultVisitsPerYear, default_markup_percentage: formData.defaultMarkupPercentage };
+  const manpowerExample = isVisitManpower ? previewManpower(manpowerConfig, { area: exampleManpowerArea, personnel: examplePersonnel, overtime_hours_per_visit: exampleOvertime }) : null;
   const formSections = isRatePricing || isCapacitySlab
     ? [sections[0], ['pricing-configuration', `${getFormulaText()} Configuration`], ['markup', 'Markup']]
     : sections;
-  const examplePricing = isRatePricing && formData[rateField] !== '' ? calculateExamplePricing() : null;
+  const examplePricing = isRatePricing && !isVisitManpower && formData[rateField] !== '' ? calculateExamplePricing() : null;
   const currency = value => value == null ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value);
   const numberInput = (field, props = {}) => (
     <input type="number" min="0" step="0.01" required value={formData[field]}
@@ -415,7 +458,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
               <h2 className="mb-5 text-sm font-semibold text-blue-600">{isRatePricing ? `${getFormulaText()} Configuration` : isCapacitySlab ? 'Fallback Frequency & Estimate Overrides' : 'Default Frequency'}</h2>
               <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-4">
                 {/* Fixed Price Fields */}
-                {isRatePricing && <Field label={isFixedPrice ? 'Fixed Rate per Visit (₹) *' : `Rate per ${formData.unit} (₹) *`} hint={isFixedPrice ? 'Vendor charge for one visit' : `Vendor charge per ${formData.unit} per visit`}>{numberInput(rateField, { max: 1e9 })}</Field>}
+                {isRatePricing && <Field label={isVisitManpower ? 'Rate per Person per Visit (₹) *' : isFixedPrice ? 'Fixed Rate per Visit (₹) *' : `Rate per ${formData.unit} (₹) *`} hint={isVisitManpower ? 'Rate includes the configured regular working hours' : isFixedPrice ? 'Vendor charge for one visit' : `Vendor charge per ${formData.unit} per visit`}>{numberInput(rateField, { max: 1e9 })}</Field>}
                 {/* Default Frequency */}
                 <Field label="Default Frequency *" hint={isCapacitySlab ? 'Used when capacity is above the configured slabs' : 'Default visit frequency for this service'}><select value={formData.defaultFrequency} onChange={event => changeFrequency(event.target.value)} className={inputClass}>{FREQUENCY_OPTIONS.map(frequency => <option key={frequency.value}>{frequency.value}</option>)}</select></Field>
                 {/* Default Visits Per Year */}
@@ -424,7 +467,35 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
                 <Toggle label="Allow Frequency Override" hint="Allow override while creating estimate" checked={formData.allowFrequencyOverride} onChange={() => setField('allowFrequencyOverride', !formData.allowFrequencyOverride)} />
                 <Toggle label="Allow Manual Visits" hint="Allow manual number of visits" checked={formData.allowManualVisits} onChange={toggleManualVisits} />
               </div>
+              {isVisitManpower && <div className="mt-6 grid gap-5 sm:grid-cols-2 2xl:grid-cols-4">
+                <Field label="Role / Designation (Optional)"><input maxLength={150} value={formData.roleDesignation} onChange={event => setField('roleDesignation', event.target.value)} placeholder="e.g. Housekeeping Staff" className={inputClass} /></Field>
+                <Field label="Working Hours per Visit *" hint="Included regular hours per person">{numberInput('workingHoursPerVisit', { min: 0.01, max: 24 })}</Field>
+                <Field label="Overtime Rate per Person / Hour (₹)" hint="Optional; extra hours are entered in the estimate">{numberInput('overtimeRatePerHour', { required: false, max: 1e9 })}</Field>
+                <Field label="Minimum Manpower Required *" hint="Minimum persons per visit">{numberInput('minimumManpower', { min: 1, max: 1e6, step: 1 })}</Field>
+              </div>}
             </div>
+            {isVisitManpower && <section className="border-t border-slate-100 p-5 sm:p-6">
+              <h2 className="text-sm font-semibold text-blue-600">Manpower Requirement Template (Optional)</h2>
+              <p className="mb-4 mt-1 text-xs text-slate-500">Area ranges apply their rate automatically and suggest a headcount. Leave empty to use the default rate.</p>
+              {manpowerRanges.length > 0 && <div className="overflow-x-auto rounded-lg border border-slate-200">
+                <table className="w-full min-w-[900px] text-left text-xs">
+                  <thead className="border-b border-slate-200 bg-slate-50 text-slate-500"><tr>{['#', 'Area From (Sq Ft)', 'Area To (Sq Ft)', 'Recommended Min', 'Recommended Max', 'Rate per Person / Visit (₹)', 'Action'].map(label => <th key={label} className="px-3 py-3">{label}</th>)}</tr></thead>
+                  <tbody className="divide-y divide-slate-100">{manpowerRanges.map((range, index) => <tr key={range.id}>
+                    <td className="px-3 py-3">{index + 1}</td>
+                    <td className="px-3 py-3"><input aria-label={`Manpower range ${index + 1} area from`} type="number" min="0" max={1e9} step="1" required value={range.areaFrom} onChange={event => updateManpowerRange(range.id, 'areaFrom', event.target.value)} className={`${inputClass} min-w-[100px]`} /></td>
+                    <td className="px-3 py-3"><div className="space-y-2">
+                      {range.areaTo !== null && <input aria-label={`Manpower range ${index + 1} area to`} type="number" min={Math.max(1, Number(range.areaFrom))} max={1e9} step="1" required value={range.areaTo} onChange={event => updateManpowerRange(range.id, 'areaTo', event.target.value)} className={`${inputClass} min-w-[100px]`} />}
+                      {index === manpowerRanges.length - 1 && <label className="flex items-center gap-2 text-slate-500"><input type="checkbox" checked={range.areaTo === null} onChange={event => updateManpowerRange(range.id, 'areaTo', event.target.checked ? null : Number(range.areaFrom) + 999)} className="accent-blue-600" />No upper limit</label>}
+                    </div></td>
+                    <td className="px-3 py-3"><input aria-label={`Manpower range ${index + 1} recommended minimum`} type="number" min="1" max={1e6} step="1" required value={range.recommendedMin} onChange={event => updateManpowerRange(range.id, 'recommendedMin', event.target.value)} className={`${inputClass} min-w-[90px]`} /></td>
+                    <td className="px-3 py-3"><input aria-label={`Manpower range ${index + 1} recommended maximum`} type="number" min={Math.max(Number(range.recommendedMin), Number(formData.minimumManpower))} max={1e6} step="1" required value={range.recommendedMax} onChange={event => updateManpowerRange(range.id, 'recommendedMax', event.target.value)} className={`${inputClass} min-w-[90px]`} /></td>
+                    <td className="px-3 py-3"><input aria-label={`Manpower range ${index + 1} rate per person`} type="number" min="0" max={1e9} step="0.01" required value={range.ratePerPerson} onChange={event => updateManpowerRange(range.id, 'ratePerPerson', event.target.value)} className={`${inputClass} min-w-[120px]`} /></td>
+                    <td className="px-3 py-3"><button type="button" aria-label={`Delete manpower range ${index + 1}`} onClick={() => setManpowerRanges(prev => prev.filter(item => item.id !== range.id))} className="rounded p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-4 w-4" /></button></td>
+                  </tr>)}</tbody>
+                </table>
+              </div>}
+              <button type="button" onClick={addManpowerRange} disabled={manpowerRanges.length >= 100} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-blue-200 px-4 py-2.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:opacity-50"><Plus className="h-4 w-4" />Add Range</button>
+            </section>}
             {/* 3. Markup & Margin */}
             <div id="markup" className="scroll-mt-6 border-t border-slate-100 p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold text-blue-600">Default Markup</h2>
@@ -454,17 +525,35 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
               <p className="mt-1 text-right text-xs text-slate-400">{formData.description.length}/500</p>
             </section>
             {/* Pricing Preview (Example) */}
-            {isRatePricing && <section className="rounded-xl border border-slate-200 bg-white p-5">
+            {isRatePricing && !isVisitManpower && <section className="rounded-xl border border-slate-200 bg-white p-5">
               <h2 className="mb-4 text-sm font-semibold">Pricing Preview (Example)</h2>
               <dl className="space-y-3 text-xs text-slate-600">
                 <div className="flex justify-between gap-3"><dt>{isFixedPrice ? 'Fixed Rate per Visit' : `Rate per ${formData.unit} per Visit`}</dt><dd className="font-medium text-slate-800">{currency(formData[rateField] === '' ? null : Number(formData[rateField]))}</dd></div>
-                {!isFixedPrice && <div className="flex justify-between gap-3"><dt>Total {isCapacityBased ? 'Capacity' : 'Area'} ({formData.unit})</dt><dd className="font-medium text-slate-800">{isCapacityBased ? '10' : '10,000'}</dd></div>}
+                {!isFixedPrice && <div className="flex justify-between gap-3"><dt>Total {isQuantityBased ? 'Quantity' : isCapacityBased ? 'Capacity' : 'Area'} ({formData.unit})</dt><dd className="font-medium text-slate-800">{isQuantityBased || isCapacityBased ? '10' : '10,000'}</dd></div>}
                 <div className="flex justify-between gap-3"><dt>Visits Per Year</dt><dd className="font-medium text-slate-800">{formData.defaultVisitsPerYear}</dd></div>
                 <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(examplePricing?.vendorCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage}%</dd></div>
                 <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(examplePricing?.customerPrice)}</dd></div>
               </dl>
-              <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, with no XLAND operating cost or tax. Final customer pricing uses the {isFixedPrice ? 'visits and operating costs' : `actual ${isCapacityBased ? 'capacity' : 'area'}, visits and operating costs`} entered in the estimate.</p>
+              <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, with no XLAND operating cost or tax. Final customer pricing uses the {isFixedPrice ? 'visits and operating costs' : `actual ${isQuantityBased ? 'quantity' : isCapacityBased ? 'capacity' : 'area'}, visits and operating costs`} entered in the estimate.</p>
+            </section>}
+            {isVisitManpower && <section className="rounded-xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-4 text-sm font-semibold">Pricing Preview (Example)</h2>
+              <div className="space-y-3">
+                {manpowerRanges.length > 0 && <Field label="Example Property Area (Sq Ft)"><input inputMode="numeric" value={exampleManpowerArea} onChange={event => { setExampleManpowerArea(event.target.value); setExamplePersonnel(String(suggestedManpower(manpowerConfig, event.target.value))); }} className={inputClass} /></Field>}
+                <Field label="Manpower (Persons)" hint={`Minimum required: ${formData.minimumManpower}`}><input inputMode="numeric" value={examplePersonnel} onChange={event => setExamplePersonnel(event.target.value)} className={inputClass} /></Field>
+                {formData.overtimeRatePerHour !== '' && <Field label="Overtime Hours per Person / Visit"><input inputMode="decimal" value={exampleOvertime} onChange={event => setExampleOvertime(event.target.value)} className={inputClass} /></Field>}
+              </div>
+              <dl className="mt-4 space-y-3 text-xs text-slate-600">
+                {manpowerRanges.length > 0 && <div className="flex justify-between gap-3"><dt>Matching Area Range</dt><dd className="font-medium text-slate-800">{manpowerRangeLabel(manpowerExample?.range)}</dd></div>}
+                <div className="flex justify-between gap-3"><dt>Rate per Person per Visit</dt><dd className="font-medium text-slate-800">{currency(manpowerExample?.ratePerPerson)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Visits Per Year</dt><dd className="font-medium text-slate-800">{formData.defaultVisitsPerYear}</dd></div>
+                <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(manpowerExample?.vendorCost)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage}%</dd></div>
+                <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(manpowerExample?.customerPrice)}</dd></div>
+              </dl>
+              {manpowerExample?.error && <p className="mt-3 text-xs text-amber-700">{manpowerExample.error}</p>}
+              <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, with no XLAND operating cost or tax. Final pricing uses the selected manpower, area range, visits and overtime entered in the estimate.</p>
             </section>}
             {isCapacitySlab && <section className="rounded-xl border border-slate-200 bg-white p-5">
               <h2 className="mb-4 text-sm font-semibold">Pricing Preview (Example)</h2>

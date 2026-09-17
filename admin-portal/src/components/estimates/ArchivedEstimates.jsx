@@ -5,6 +5,7 @@ import {
   Home, LayoutGrid, Layers, TreePine, Map, Briefcase
 } from 'lucide-react';
 import { calculateEstimateTotal } from '../../utils/estimateStore';
+import { getAddonPrice, getServiceDescription } from '../../utils/estimatePackageUtils';
 
 // Decode HTML entities (e.g., &amp; -> &)
 const decodeHtml = (html) => {
@@ -505,7 +506,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                               <p className="font-medium text-gray-800 text-sm">{addonName}</p>
                             </div>
                             <div className="col-span-4 overflow-hidden">
-                              <p className={`text-xs text-gray-500 break-words whitespace-normal ${!addon.description ? 'text-center' : ''}`}>{decodeHtml(addon.description) || '-'}</p>
+                              <p className={`text-xs text-gray-500 break-words whitespace-normal ${!addon.description ? 'text-center' : ''}`}>{decodeHtml(getServiceDescription(addon)) || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>
@@ -519,7 +520,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                     </div>
                     <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-lg">
                       <p className="font-semibold text-green-800">Total Services Price</p>
-                      <p className="font-bold text-green-700">₹{viewEstimate.addons.reduce((sum, a) => sum + Number(a.price || 0), 0).toLocaleString()}</p>
+                      <p className="font-bold text-green-700">₹{viewEstimate.addons.reduce((sum, a) => sum + getAddonPrice(a), 0).toLocaleString()}</p>
                     </div>
                   </div>
                 </div>

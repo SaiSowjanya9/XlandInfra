@@ -611,12 +611,12 @@ const Dashboard = () => {
         </div>
 
         {/* Header with Main Date Filter */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-col gap-3">
           <div>
             <h1 className="text-xl font-semibold text-gray-800">Operations Dashboard</h1>
             <p className="text-gray-500 text-sm">Real-time overview for {selectedFp.companyName || 'All FPs'}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 self-end w-fit max-w-full">
             {/* Main Date Range Picker - Prominent Position */}
             <DateRangeFilter
               startDate={startDate}

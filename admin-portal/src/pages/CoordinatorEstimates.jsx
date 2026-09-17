@@ -16,6 +16,7 @@ import {
 
 const ITEMS_PER_PAGE = 10;
 import { exportEstimateToPDF } from '../utils/pdfExport';
+import { getServiceDescription } from '../utils/estimatePackageUtils';
 import * as XLSX from 'xlsx';
 
 // Decode HTML entities (e.g., &amp;amp; -> &)
@@ -509,7 +510,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
         package_name: pkgName,
         package_price: pkgPrice,
         billing_duration: getPackageBillingDuration(pkg) || 'yearly',
-        addons: selectedAddons.map(id => { const a = addons.find(x => getAddonId(x) === id); return a ? { id: getAddonId(a), name: getAddonName(a), price: getAddonPrice(a) } : null; }).filter(Boolean),
+        addons: selectedAddons.map(id => { const a = addons.find(x => getAddonId(x) === id); return a ? { id: getAddonId(a), name: getAddonName(a), price: getAddonPrice(a), description: getServiceDescription(a), frequency_type: a.frequency_type || a.frequencyType || 'One-time', frequency_count: a.frequency_count ?? a.frequencyCount ?? FREQUENCY_COUNT_MAP[a.frequency_type || a.frequencyType] ?? 1 } : null; }).filter(Boolean),
         subtotal: priceSummary.subTotal,
         discount_percent: discountPercent,
         discount_amount: priceSummary.discountAmount,
@@ -541,7 +542,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
         package_name: pkgName,
         package_price: pkgPrice,
         billing_duration: getPackageBillingDuration(pkg) || 'yearly',
-        addons: selectedAddons.map(id => { const a = addons.find(x => getAddonId(x) === id); return a ? { id: getAddonId(a), name: getAddonName(a), price: getAddonPrice(a) } : null; }).filter(Boolean),
+        addons: selectedAddons.map(id => { const a = addons.find(x => getAddonId(x) === id); return a ? { id: getAddonId(a), name: getAddonName(a), price: getAddonPrice(a), description: getServiceDescription(a), frequency_type: a.frequency_type || a.frequencyType || 'One-time', frequency_count: a.frequency_count ?? a.frequencyCount ?? FREQUENCY_COUNT_MAP[a.frequency_type || a.frequencyType] ?? 1 } : null; }).filter(Boolean),
         subtotal: priceSummary.subTotal,
         discount_percent: discountPercent,
         discount_amount: priceSummary.discountAmount,
@@ -2116,7 +2117,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                             (a.property_type || '').toUpperCase() === estPropertyType
                           ) || addonFromList;
                         }
-                        const addonDescription = decodeHtml(addon.description || addonFromList?.description) || '';
+                        const addonDescription = decodeHtml(getServiceDescription(addon) || addonFromList?.description) || '';
                         const frequencyCount = addon.frequency_count ?? addon.frequencyCount ?? addonFromList?.frequency_count ?? 1;
                         const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
                         return (

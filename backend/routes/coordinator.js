@@ -4,6 +4,7 @@
  */
 
 const express = require('express');
+const { normalizeEstimateData, enrichLegacyEstimateAddon } = require('../utils/estimateData');
 const router = express.Router();
 const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
@@ -2102,7 +2103,7 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
       let fpAddons = [];
       try {
         const [addonResults] = await pool.query(
-          `SELECT id, service_name, description, property_type FROM fp_addons WHERE franchise_partner_id = ?`,
+          `SELECT id, service_name, description, property_type, frequency_type, frequency_count FROM fp_addons WHERE franchise_partner_id = ?`,
           [franchisePartnerId]
         );
         fpAddons = addonResults;
@@ -2114,11 +2115,11 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
         let addons = [];
         if (est.addons_data) {
           try { 
-            addons = JSON.parse(est.addons_data);
+            addons = typeof est.addons_data === 'string' ? JSON.parse(est.addons_data) : est.addons_data;
             // Enrich addons with descriptions - match by property_type
             const estPropertyType = est.property_type?.toUpperCase();
             addons = addons.map(addon => {
-              if (!addon.description) {
+              if (!addon.description && !addon.catalogServiceId) {
                 const addonName = addon.name || addon.service_name || '';
                 const addonId = addon.id || addon.addon_id;
                 let foundAddon = fpAddons.find(a => a.id == addonId);
@@ -2130,7 +2131,7 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
                 }
                 if (foundAddon && foundAddon.description) addon.description = foundAddon.description;
               }
-              return addon;
+              return enrichLegacyEstimateAddon(addon, fpAddons, estPropertyType);
             });
           } catch(e) {}
         }
@@ -2199,7 +2200,7 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
       console.log(`Coordinator ${coordinatorId} (FP: ${franchisePartnerId}) - Found ${estimates.length} FP estimates`);
     }
     
-    res.json({ success: true, data: estimates });
+    res.json({ success: true, data: estimates.map(normalizeEstimateData) });
   } catch (error) {
     console.error('Estimates fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch estimates' });

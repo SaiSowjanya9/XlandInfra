@@ -1,4 +1,5 @@
 const express = require('express');
+const { normalizeEstimateData } = require('../utils/estimateData');
 const router = express.Router();
 const crypto = require('crypto');
 const db = require('../config/database');
@@ -25,7 +26,7 @@ router.get('/', authenticate, adminOnly, async (req, res) => {
     // Also fetch from fp_estimates table (where FP creates estimates)
     let fpEstimates = [];
     try {
-      constq [fpEst] = await pool.execute(
+      const [fpEst] = await pool.execute(
         `SELECT * FROM fp_estimates WHERE (is_archived = ? OR is_archived IS NULL) ORDER BY created_at DESC`,
         [isArchived ? 1 : 0]
       );
@@ -49,7 +50,8 @@ router.get('/', authenticate, adminOnly, async (req, res) => {
           addons = typeof addonData === 'string' ? JSON.parse(addonData) : addonData;
         } catch (e) {}
       }
-      return {
+      return normalizeEstimateData({
+        ...est,
         // IDs
         estimateId: est.estimate_id,
         estimate_id: est.estimate_id,
@@ -110,7 +112,7 @@ router.get('/', authenticate, adminOnly, async (req, res) => {
         // Creator info
         created_by_name: est.created_by_name,
         created_by_role: est.created_by_role
-      };
+      });
     });
     
     res.json({ success: true, data: formattedEstimates });
@@ -447,7 +449,7 @@ router.delete('/:estimateId', async (req, res) => {
 });
 
 // SEND estimate email to customer
-router.post('/:estimateId/send', async (req, res) => {
+router.post('/:estimateId/send', authenticate, adminOnly, async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
@@ -462,10 +464,14 @@ router.post('/:estimateId/send', async (req, res) => {
     );
     
     if (estimates.length === 0) {
-      return res.status(404).json({ success: false, message: 'Estimate not found' });
+      const [[fpEstimate]] = await pool.execute('SELECT id, franchise_partner_id, client_email FROM fp_estimates WHERE estimate_id = ?', [estimateId]);
+      if (!fpEstimate) return res.status(404).json({ success: false, message: 'Estimate not found' });
+      req.fpId = fpEstimate.franchise_partner_id;
+      req.body = { estimateId: fpEstimate.id, email: fpEstimate.client_email };
+      return require('./franchisePartner').sendEstimateEmailHandler(req, res);
     }
     
-    const est = estimates[0];
+    const est = normalizeEstimateData(estimates[0]);
     
     // Parse JSON fields
     let services = [];
@@ -543,9 +549,11 @@ router.post('/:estimateId/send', async (req, res) => {
     const estimateData = {
       estimateId: est.estimate_id,
       estimateType: est.estimate_type,
-      customerName: est.customer_name,
-      customerEmail: est.customer_email,
-      customerPhone: est.customer_phone || est.client_phone || '',
+      propertyCode: est.propertyCode,
+      createdAt: est.createdAt,
+      customerName: est.customerName,
+      customerEmail: est.customerEmail,
+      customerPhone: est.customerPhone || '',
       propertyName: est.property_name,
       propertyType: est.property_type,
       zone: est.zone,
@@ -569,12 +577,12 @@ router.post('/:estimateId/send', async (req, res) => {
       // Services with descriptions
       services: packageServices.length > 0 ? packageServices : services,
       addons: addons,
-      subtotal: Math.round(parseFloat(est.subtotal || 0)),
-      discount: parseFloat(est.discount_percent || est.discount_percentage || 0),
-      discountAmount: Math.round(parseFloat(est.discount_amount || 0)),
-      tax: Math.round(parseFloat(est.tax_amount || est.gst_amount || 0)),
-      gstPercent: parseFloat(est.gst_percent || est.tax_percentage || 18),
-      total: Math.round(parseFloat(est.total_amount || est.total || 0)),
+      subtotal: est.subtotal,
+      discount: est.discountPercent,
+      discountAmount: est.discountAmount,
+      tax: est.gstAmount,
+      gstPercent: est.gstPercent,
+      total: est.total,
       validUntil: est.valid_until,
       // Work Order fields
       isWorkOrderEstimate,
@@ -801,7 +809,7 @@ router.get('/:estimateId/status', async (req, res) => {
         estimateId: est.estimate_id,
         customerName: est.customer_name || est.client_name,
         propertyName: est.property_name,
-        total: Math.round(parseFloat(est.total || est.total_amount || 0)),
+        total: parseFloat(est.total ?? est.total_amount ?? 0),
         status: est.status,
         sentAt: est.sent_at,
         source: est.source
