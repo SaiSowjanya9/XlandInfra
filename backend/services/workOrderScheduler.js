@@ -13,6 +13,7 @@
 
 const cron = require('node-cron');
 const { pool } = require('../config/database');
+const { initSchedulingSchema } = require('../config/schedulingSchema');
 const { sendEmail, getWorkOrderNotificationRecipients } = require('./emailService');
 const { processRenewals, getRenewalStats } = require('./autoRenewalService');
 
@@ -92,10 +93,10 @@ async function generateScheduledWorkOrders() {
         op.community_name as property_name,
         op.property_id as property_code,
         op.address_line1,
-        op.address_line2,
+        op.apt_suite_unit as address_line2,
         op.city,
         op.state,
-        op.pincode,
+        op.postal_code as pincode,
         op.zone as property_zone,
         pc.name as customer_name,
         pc.phone as customer_phone,
@@ -107,7 +108,7 @@ async function generateScheduledWorkOrders() {
       FROM schedule_occurrences so
       JOIN schedule_series ss ON so.series_id = ss.id
       LEFT JOIN onboarded_properties op ON ss.property_id = op.id
-      LEFT JOIN property_contacts pc ON pc.property_id = op.id AND pc.is_primary = 1
+      LEFT JOIN property_contacts pc ON pc.id = (SELECT pc2.id FROM property_contacts pc2 WHERE pc2.property_id = op.id ORDER BY pc2.id LIMIT 1)
       LEFT JOIN onboarded_vendors ov ON so.vendor_id = ov.id
       WHERE so.work_order_id IS NULL
         AND so.status IN ('scheduled', 'confirmed')
@@ -532,10 +533,17 @@ async function sendServiceReminderEmail({
  * Initialize the scheduler
  * Runs at 6:00 AM and 6:00 PM daily
  */
-function initScheduler() {
+async function initScheduler() {
   if (isSchedulerRunning) {
     console.log('⚠️ Work Order Scheduler already running');
     return;
+  }
+
+  try {
+    await initSchedulingSchema(pool);
+  } catch (error) {
+    console.error('Scheduling schema initialization failed; work-order and renewal jobs were not started. Check database CREATE/ALTER permissions and prerequisite tables, then restart the backend:', error.message);
+    return false;
   }
 
   console.log('\n🚀 Initializing Work Order Scheduler...');
@@ -566,6 +574,7 @@ function initScheduler() {
   console.log('✅ Work Order Scheduler initialized successfully');
   console.log('✅ Auto-Renewal Processor initialized');
   console.log('🕐 Next runs: 6:00 AM and 6:00 PM IST\n');
+  return true;
 }
 
 /**
