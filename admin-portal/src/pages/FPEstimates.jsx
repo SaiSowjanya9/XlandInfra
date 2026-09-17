@@ -3558,25 +3558,30 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     }
   };
 
+  // Rendered either on its own row or inside the service form header, so both share one line
+  const renderAddonTabs = () => (
+    <div className="flex gap-2">
+      <button onClick={() => { setAddonActiveTab('configured'); setCatalogEntry(value => value + 1); }} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'configured' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+        {isFPManager ? <><ClipboardList className="w-4 h-4" />Configured Services</> : <><Plus className="w-4 h-4" />Add Service</>}
+      </button>
+      <button onClick={() => setAddonActiveTab('all-addons')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'all-addons' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+        <Layers className="w-4 h-4" />All Services
+        {addons.length > 0 && <span className="px-1.5 py-0.5 bg-gray-700 text-white rounded-full text-xs">{addons.length}</span>}
+      </button>
+    </div>
+  );
+
   const renderAddons = () => (
-    <div className="space-y-6">
-      {/* Tabs */}
-      <div className="flex gap-2">
-        <button onClick={() => { setAddonActiveTab('configured'); setCatalogEntry(value => value + 1); }} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'configured' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-          {isFPManager ? <><ClipboardList className="w-4 h-4" />Configured Services</> : <><Plus className="w-4 h-4" />Add Service</>}
-        </button>
-        <button onClick={() => setAddonActiveTab('all-addons')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'all-addons' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-          <Layers className="w-4 h-4" />All Services
-          {addons.length > 0 && <span className="px-1.5 py-0.5 bg-gray-700 text-white rounded-full text-xs">{addons.length}</span>}
-        </button>
-      </div>
+    <div className="space-y-4">
+      {/* The service form hosts the tabs in its own header row; other tabs show them here */}
+      {!(addonActiveTab === 'configured' && !isFPManager) && renderAddonTabs()}
 
       {/* The Add Service tab is the form itself; managers cannot author, so they get the list */}
       {addonActiveTab === 'configured' && (isFPManager
         ? <ServiceCatalogList apiPath={FP_CATALOG_API} admin={user} showToast={showToast} scoped
             scopeLabel="For your franchise" canEdit={() => false} />
         : <AddServicePage key={catalogEntry} admin={user} showToast={showToast} apiPath={FP_CATALOG_API} scoped embedded
-            scopeLabel="For your franchise" onSave={loadData} onBack={() => setAddonActiveTab('all-addons')} />
+            leading={renderAddonTabs()} scopeLabel="For your franchise" onSave={loadData} onBack={() => setAddonActiveTab('all-addons')} />
       )}
 
       {addonActiveTab === 'all-addons' && (
