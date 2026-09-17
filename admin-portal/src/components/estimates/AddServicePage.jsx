@@ -64,11 +64,6 @@ export const propertyTypeLabel = id => [...PROPERTY_TYPES, ...LEGACY_PROPERTY_TY
 // Billing Period Options (for Manpower)
 const BILLING_PERIODS = ['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'];
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500';
-const sections = [
-  ['basic-information', 'Basic Information'],
-  ['pricing-configuration', 'Pricing Configuration'],
-  ['additional-information', 'Additional Information']
-];
 
 const Field = ({ label, hint, children }) => (
   <label className="block min-w-0">
@@ -117,7 +112,6 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
   const [categoryError, setCategoryError] = useState('');
   const [categoryAttempt, setCategoryAttempt] = useState(0);
   const [formError, setFormError] = useState('');
-  const [activeSection, setActiveSection] = useState('basic-information');
   const [formData, setFormData] = useState({
     serviceName: '',
     category: '',
@@ -203,7 +197,6 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
   // Update unit options when pricing method changes
   const changePricingMethod = (pricingMethod) => {
     setFormData(prev => ({ ...prev, pricingMethod, unit: UNIT_OPTIONS[pricingMethod]?.[0] ?? prev.unit }));
-    setActiveSection('basic-information');
   };
 
   // Update visits when frequency changes
@@ -355,10 +348,6 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     working_hours_per_visit: formData.workingHoursPerVisit, overtime_rate_per_hour: formData.overtimeRatePerHour === '' ? null : formData.overtimeRatePerHour,
     default_visits_per_year: formData.defaultVisitsPerYear, default_markup_percentage: formData.defaultMarkupPercentage };
   const manpowerExample = isVisitManpower ? previewManpower(manpowerConfig, { area: exampleManpowerArea, personnel: examplePersonnel, overtime_hours_per_visit: exampleOvertime }) : null;
-  const formSections = !formData.pricingMethod ? [sections[0], sections[2]]
-    : isRatePricing || isCapacitySlab
-      ? [sections[0], ['pricing-configuration', `${getFormulaText()} Configuration`], ['markup', 'Markup']]
-      : sections;
   const examplePricing = isRatePricing && !isVisitManpower && formData[rateField] !== '' ? calculateExamplePricing() : null;
   const currency = value => value == null ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value);
   const numberInput = (field, props = {}) => (
@@ -406,20 +395,12 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
           </button>
         </div>
       </header>
-      <nav aria-label="Service form sections" className="flex gap-4 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm px-4 sm:gap-8">
-        {formSections.map(([id, label], index) => (
-          <a key={id} href={`#${id}`} onClick={() => setActiveSection(id)} aria-current={activeSection === id ? 'location' : undefined}
-            className={`flex shrink-0 items-center gap-2 border-b-2 py-4 text-xs font-semibold ${activeSection === id ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
-            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] text-white ${activeSection === id ? 'bg-blue-600' : 'bg-slate-300'}`}>{index + 1}</span>{label}
-          </a>
-        ))}
-      </nav>
       {formError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{formError}</div>}
       <fieldset disabled={isSubmitting} className="min-w-0 space-y-5">
         {/* Main Content */}
         <div className="grid gap-5 xl:grid-cols-3">
           {/* Left Column - Main Form */}
-          <section id="basic-information" className="scroll-mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm xl:col-span-2">
+          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm xl:col-span-2">
             {/* 1. Basic Information */}
             <div className="p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold">Basic Information</h2>
@@ -459,7 +440,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
               {categoryError && <div role="alert" className="mt-3 text-sm text-red-600">{categoryError} <button type="button" onClick={() => setCategoryAttempt(value => value + 1)} className="font-semibold underline">Retry</button></div>}
             </div>
             {/* Capacity Slab Configuration */}
-            {isCapacitySlab && <div id="pricing-configuration" className="scroll-mt-6 border-t border-slate-100 p-5 sm:p-6">
+            {isCapacitySlab && <div className="border-t border-slate-100 p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold text-blue-600">Capacity Slab Configuration</h2>
               <div className="overflow-x-auto rounded-lg border border-slate-200">
                 <table className="w-full min-w-[1000px] text-left text-xs">
@@ -493,7 +474,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <p className="max-w-sm text-xs text-slate-500">Choose a method above to configure its rate, frequency, visits and markup.</p>
               </div>
             </div>}
-            {formData.pricingMethod && <div id={isRatePricing ? 'pricing-configuration' : undefined} className="scroll-mt-6 border-t border-slate-100 p-5 sm:p-6">
+            {formData.pricingMethod && <div className="border-t border-slate-100 p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold text-blue-600">{isRatePricing ? `${getFormulaText()} Configuration` : isCapacitySlab ? 'Fallback Frequency & Estimate Overrides' : 'Default Frequency'}</h2>
               <div className={`grid gap-5 ${isRatePricing ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'}`}>
                 {/* Rate, frequency and visit count on one row */}
@@ -536,7 +517,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
               <button type="button" onClick={addManpowerRange} disabled={manpowerRanges.length >= 100} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-blue-200 px-4 py-2.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:opacity-50"><Plus className="h-4 w-4" />Add Range</button>
             </section>}
             {/* 3. Markup & Margin */}
-            {formData.pricingMethod && <div id="markup" className="scroll-mt-6 border-t border-slate-100 p-5 sm:p-6">
+            {formData.pricingMethod && <div className="border-t border-slate-100 p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold text-blue-600">Default Markup</h2>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 <Field label="Default Markup Percentage (%) *" hint="Applied on total actual cost">{numberInput('defaultMarkupPercentage', { max: 1000 })}</Field>
@@ -544,7 +525,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             </div>}
           </section>
           {/* Right Column - Sidebar */}
-          <aside id="additional-information" className="scroll-mt-6 space-y-5">
+          <aside className="space-y-5">
             {/* Applicable Property Types */}
             <section className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
               <h2 className="mb-4 text-sm font-semibold">Applicable Property Types <span className="text-red-500">*</span></h2>
@@ -618,7 +599,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
           </aside>
         </div>
         {/* 2. Monthly Manpower Configuration, kept for services saved before the per-visit basis */}
-        {formData.pricingMethod === 'manpower' && !isVisitManpower && <section id="pricing-configuration" className="scroll-mt-6 rounded-xl border border-slate-200 bg-white shadow-sm p-5 sm:p-6">
+        {formData.pricingMethod === 'manpower' && !isVisitManpower && <section className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 sm:p-6">
           <h2 className="mb-5 text-sm font-semibold">{getFormulaText()} Configuration</h2>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <Field label={`Monthly Vendor Rate (₹) per ${formData.unit} *`}>{numberInput('monthlyRate')}</Field>
