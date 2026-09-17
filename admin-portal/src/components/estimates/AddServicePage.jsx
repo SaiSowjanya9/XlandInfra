@@ -65,22 +65,20 @@ export const propertyTypeLabel = id => [...PROPERTY_TYPES, ...LEGACY_PROPERTY_TY
 const BILLING_PERIODS = ['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'];
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500';
 
-const Field = ({ label, hint, children }) => (
+const Field = ({ label, children }) => (
   <label className="block min-w-0">
     <span className="mb-2 block text-xs font-semibold text-slate-700">{label}</span>
     {children}
-    {hint && <span className="mt-1.5 block text-xs text-slate-500">{hint}</span>}
   </label>
 );
 
-const Toggle = ({ label, hint, checked, onChange }) => (
+const Toggle = ({ label, checked, onChange }) => (
   <div>
     <span className="mb-3 block text-xs font-semibold text-slate-700">{label}</span>
     <button type="button" role="switch" aria-label={label} aria-checked={checked} onClick={onChange}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 ${checked ? 'bg-blue-600' : 'bg-slate-300'}`}>
       <span className={`h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
     </button>
-    <p className="mt-1.5 text-xs text-slate-500">{hint}</p>
   </div>
 );
 
@@ -432,7 +430,6 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                       </button>
                     )}
                   </div>
-                  <p className="mt-2 text-xs text-slate-500">Selecting a method changes the configuration fields below.</p>
                 </div>
                 {/* Primary Input */}
                 {/* Unit */}
@@ -479,20 +476,20 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
               <h2 className="mb-5 text-sm font-semibold text-blue-600">{isRatePricing ? `${getFormulaText()} Configuration` : isCapacitySlab ? 'Fallback Frequency & Estimate Overrides' : 'Default Frequency'}</h2>
               <div className={`grid gap-5 ${isRatePricing ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'}`}>
                 {/* Rate, frequency and visit count on one row */}
-                {isRatePricing && <Field label={isVisitManpower ? 'Rate per Person per Visit (₹) *' : isFixedPrice ? 'Fixed Rate per Visit (₹) *' : `Rate per ${formData.unit} (₹) *`} hint={isVisitManpower ? 'Rate includes the configured regular working hours' : isFixedPrice ? 'Vendor charge for one visit' : `Vendor charge per ${formData.unit} per visit`}>{numberInput(rateField, { max: 1e9 })}</Field>}
-                <Field label="Default Frequency *" hint={isCapacitySlab ? 'Used when capacity is above the configured slabs' : 'Default visit frequency for this service'}><select value={formData.defaultFrequency} onChange={event => changeFrequency(event.target.value)} className={inputClass}>{FREQUENCY_OPTIONS.map(frequency => <option key={frequency.value}>{frequency.value}</option>)}</select></Field>
-                <Field label="Default Visits Per Year *" hint={formData.allowManualVisits ? 'Manual visit count enabled' : 'Based on selected frequency'}>{numberInput('defaultVisitsPerYear', { min: 1, max: 366, step: 1, readOnly: !formData.allowManualVisits, className: `${inputClass} ${!formData.allowManualVisits ? 'bg-slate-50' : ''}` })}</Field>
+                {isRatePricing && <Field label={isVisitManpower ? 'Rate per Person per Visit (₹) *' : isFixedPrice ? 'Fixed Rate per Visit (₹) *' : `Rate per ${formData.unit} (₹) *`}>{numberInput(rateField, { max: 1e9 })}</Field>}
+                <Field label="Default Frequency *"><select value={formData.defaultFrequency} onChange={event => changeFrequency(event.target.value)} className={inputClass}>{FREQUENCY_OPTIONS.map(frequency => <option key={frequency.value}>{frequency.value}</option>)}</select></Field>
+                <Field label="Default Visits Per Year *">{numberInput('defaultVisitsPerYear', { min: 1, max: 366, step: 1, readOnly: !formData.allowManualVisits, className: `${inputClass} ${!formData.allowManualVisits ? 'bg-slate-50' : ''}` })}</Field>
               </div>
               {/* Both override toggles on the row below, aligned to the same columns */}
               <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <Toggle label="Allow Frequency Override" hint="Allow override while creating estimate" checked={formData.allowFrequencyOverride} onChange={() => setField('allowFrequencyOverride', !formData.allowFrequencyOverride)} />
-                <Toggle label="Allow Manual Visits" hint="Allow manual number of visits" checked={formData.allowManualVisits} onChange={toggleManualVisits} />
+                <Toggle label="Allow Frequency Override" checked={formData.allowFrequencyOverride} onChange={() => setField('allowFrequencyOverride', !formData.allowFrequencyOverride)} />
+                <Toggle label="Allow Manual Visits" checked={formData.allowManualVisits} onChange={toggleManualVisits} />
               </div>
               {isVisitManpower && <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 <Field label="Role / Designation (Optional)"><input maxLength={150} value={formData.roleDesignation} onChange={event => setField('roleDesignation', event.target.value)} placeholder="e.g. Housekeeping Staff" className={inputClass} /></Field>
-                <Field label="Working Hours per Visit *" hint="Included regular hours per person">{numberInput('workingHoursPerVisit', { min: 0.01, max: 24 })}</Field>
-                <Field label="Overtime Rate per Person / Hour (₹)" hint="Optional; extra hours are entered in the estimate">{numberInput('overtimeRatePerHour', { required: false, max: 1e9 })}</Field>
-                <Field label="Minimum Manpower Required *" hint="Minimum persons per visit">{numberInput('minimumManpower', { min: 1, max: 1e6, step: 1 })}</Field>
+                <Field label="Working Hours per Visit *">{numberInput('workingHoursPerVisit', { min: 0.01, max: 24 })}</Field>
+                <Field label="Overtime Rate per Person / Hour (₹)">{numberInput('overtimeRatePerHour', { required: false, max: 1e9 })}</Field>
+                <Field label="Minimum Manpower Required *">{numberInput('minimumManpower', { min: 1, max: 1e6, step: 1 })}</Field>
               </div>}
             </div>}
             {isVisitManpower && <section className="border-t border-slate-100 p-5 sm:p-6">
@@ -521,7 +518,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             {formData.pricingMethod && <div className="border-t border-slate-100 p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold text-blue-600">Default Markup</h2>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <Field label="Default Markup Percentage (%) *" hint="Applied on total actual cost">{numberInput('defaultMarkupPercentage', { max: 1000 })}</Field>
+                <Field label="Default Markup Percentage (%) *">{numberInput('defaultMarkupPercentage', { max: 1000 })}</Field>
               </div>
             </div>}
           </section>
@@ -568,7 +565,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
               <h2 className="mb-4 text-sm font-semibold">Pricing Preview (Example)</h2>
               <div className="space-y-3">
                 {manpowerRanges.length > 0 && <Field label="Example Property Area (Sq Ft)"><input inputMode="numeric" value={exampleManpowerArea} onChange={event => { setExampleManpowerArea(event.target.value); setExamplePersonnel(String(suggestedManpower(manpowerConfig, event.target.value))); }} className={inputClass} /></Field>}
-                <Field label="Manpower (Persons)" hint={`Minimum required: ${formData.minimumManpower}`}><input inputMode="numeric" value={examplePersonnel} onChange={event => setExamplePersonnel(event.target.value)} className={inputClass} /></Field>
+                <Field label="Manpower (Persons)"><input inputMode="numeric" value={examplePersonnel} onChange={event => setExamplePersonnel(event.target.value)} className={inputClass} /></Field>
                 {formData.overtimeRatePerHour !== '' && <Field label="Overtime Hours per Person / Visit"><input inputMode="decimal" value={exampleOvertime} onChange={event => setExampleOvertime(event.target.value)} className={inputClass} /></Field>}
               </div>
               <dl className="mt-4 space-y-3 text-xs text-slate-600">
