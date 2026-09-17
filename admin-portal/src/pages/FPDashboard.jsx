@@ -570,142 +570,142 @@ const FPDashboard = ({ user }) => {
     <div className="space-y-6">
       {/* Header with Stats Cards - Single Row Layout */}
       <div className="flex flex-col gap-4 overflow-visible">
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="shrink-0 min-w-0">
             <h1 className="text-2xl font-bold text-gray-900 break-words">
               Welcome, {user?.firstName || user?.name?.split(' ')[0] || 'Partner'}!
             </h1>
             <p className="text-gray-500 mt-1 break-words">Here's what's happening with your business today.</p>
           </div>
-          <DashboardStatCards cards={[
-            { label: 'Properties', value: realTimeStats.properties, to: '/fp/properties', icon: Building2, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', hoverBorder: 'hover:border-blue-200' },
-            { label: 'Vendors', value: realTimeStats.vendors, to: '/fp/vendors', icon: Store, iconBg: 'bg-amber-50', iconColor: 'text-amber-600', hoverBorder: 'hover:border-amber-200' },
-            { label: 'Employees', value: realTimeStats.employees, to: '/fp/employees', icon: Users, iconBg: 'bg-orange-50', iconColor: 'text-orange-600', hoverBorder: 'hover:border-orange-200' },
-            { label: 'Work Orders', value: realTimeStats.workOrders, to: '/fp/work-orders', icon: ClipboardList, iconBg: 'bg-purple-50', iconColor: 'text-purple-600', hoverBorder: 'hover:border-purple-200' },
-            { label: 'Estimates', value: realTimeStats.estimates, to: '/fp/estimates', icon: FileText, iconBg: 'bg-teal-50', iconColor: 'text-teal-600', hoverBorder: 'hover:border-teal-200' },
-            ...(pendingSchedulesCount > 0 ? [{ label: 'Pending Schedules', value: pendingSchedulesCount, to: '/fp/schedules/pending', icon: Calendar, iconBg: 'bg-orange-500', iconColor: 'text-white', accent: true }] : [])
-          ]} />
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0 self-end w-fit">
-          {/* Main Date Range Picker */}
-          <DateRangeFilter
-            startDate={startDate}
-            endDate={endDate}
-            onDateChange={(start, end) => {
-              setStartDate(start);
-              setEndDate(end);
-              setStartDateDisplay(start ? new Date(start + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/') : '');
-              setEndDateDisplay(end ? new Date(end + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/') : '');
-            }}
-            onRefresh={() => fetchDashboardData(false)}
-            showRefreshButton={false}
-          />
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Main Date Range Picker */}
+            <DateRangeFilter
+              startDate={startDate}
+              endDate={endDate}
+              onDateChange={(start, end) => {
+                setStartDate(start);
+                setEndDate(end);
+                setStartDateDisplay(start ? new Date(start + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/') : '');
+                setEndDateDisplay(end ? new Date(end + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/') : '');
+              }}
+              onRefresh={() => fetchDashboardData(false)}
+              showRefreshButton={false}
+            />
           
-          {/* Notification Bell */}
-          <div className="relative" ref={notificationRef}>
-            <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              title="Notifications"
-            >
-              <Bell className="w-5 h-5 text-gray-600" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
+            {/* Notification Bell */}
+            <div className="relative" ref={notificationRef}>
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                title="Notifications"
+              >
+                <Bell className="w-5 h-5 text-gray-600" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
 
-            {/* Notification Dropdown */}
-            {showNotifications && (
-              <div className="absolute right-0 top-12 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50">
-                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-gray-800">Notifications</span>
+              {/* Notification Dropdown */}
+              {showNotifications && (
+                <div className="absolute right-0 top-12 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50">
+                  <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-800">Notifications</span>
+                      {unreadCount > 0 && (
+                        <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">
+                          {unreadCount} new
+                        </span>
+                      )}
+                    </div>
                     {unreadCount > 0 && (
-                      <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">
-                        {unreadCount} new
-                      </span>
+                      <button
+                        onClick={markAllAsRead}
+                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        Mark All Read
+                      </button>
                     )}
                   </div>
-                  {unreadCount > 0 && (
-                    <button
-                      onClick={markAllAsRead}
-                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      Mark All Read
-                    </button>
-                  )}
-                </div>
-                <div className="max-h-80 overflow-y-auto">
-                  {notifications.length === 0 ? (
-                    <div className="p-6 text-center">
-                      <Bell className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                      <p className="text-sm text-gray-500">No notifications</p>
-                    </div>
-                  ) : (
-                    <div>
-                      {notifications.some(n => n.type === 'warning') && (
-                        <div className="px-4 py-2 bg-amber-50 border-b border-amber-100">
-                          <div className="flex items-center gap-2 text-amber-800">
-                            <AlertTriangle className="w-4 h-4" />
-                            <span className="text-xs font-medium">Work Orders Approaching Auto-Delete</span>
-                          </div>
-                        </div>
-                      )}
-                      {notifications.map((notification) => (
-                        <div
-                          key={notification.id}
-                          onClick={() => !notification.read && markAsRead(notification.id)}
-                          className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
-                            !notification.read ? 'bg-blue-50/50' : ''
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-start gap-3">
-                              <div className="relative">
-                                <div className="p-1.5 rounded-lg bg-amber-100">
-                                  <AlertTriangle className="w-4 h-4 text-amber-600" />
-                                </div>
-                                {!notification.read && (
-                                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white"></span>
-                                )}
-                              </div>
-                              <div>
-                                <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>
-                                  {notification.workOrderId}
-                                </p>
-                                <p className="text-xs text-amber-600 mt-0.5">
-                                  {notification.daysRemaining} days until auto-delete
-                                </p>
-                              </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="p-6 text-center">
+                        <Bell className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                        <p className="text-sm text-gray-500">No notifications</p>
+                      </div>
+                    ) : (
+                      <div>
+                        {notifications.some(n => n.type === 'warning') && (
+                          <div className="px-4 py-2 bg-amber-50 border-b border-amber-100">
+                            <div className="flex items-center gap-2 text-amber-800">
+                              <AlertTriangle className="w-4 h-4" />
+                              <span className="text-xs font-medium">Work Orders Approaching Auto-Delete</span>
                             </div>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); dismissNotification(notification.id); }}
-                              className="p-1 hover:bg-red-100 rounded transition-colors"
-                              title="Dismiss"
-                            >
-                              <X className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
-                            </button>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        )}
+                        {notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            onClick={() => !notification.read && markAsRead(notification.id)}
+                            className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
+                              !notification.read ? 'bg-blue-50/50' : ''
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-start gap-3">
+                                <div className="relative">
+                                  <div className="p-1.5 rounded-lg bg-amber-100">
+                                    <AlertTriangle className="w-4 h-4 text-amber-600" />
+                                  </div>
+                                  {!notification.read && (
+                                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white"></span>
+                                  )}
+                                </div>
+                                <div>
+                                  <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>
+                                    {notification.workOrderId}
+                                  </p>
+                                  <p className="text-xs text-amber-600 mt-0.5">
+                                    {notification.daysRemaining} days until auto-delete
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); dismissNotification(notification.id); }}
+                                className="p-1 hover:bg-red-100 rounded transition-colors"
+                                title="Dismiss"
+                              >
+                                <X className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          {/* Refresh Button - Icon Only */}
-          <button
-            onClick={() => fetchDashboardData(false)}
-            title="Refresh"
-            className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <RefreshCw className="w-5 h-5 text-gray-600" />
-          </button>
+            {/* Refresh Button - Icon Only */}
+            <button
+              onClick={() => fetchDashboardData(false)}
+              title="Refresh"
+              className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <RefreshCw className="w-5 h-5 text-gray-600" />
+            </button>
+          </div>
         </div>
+        <DashboardStatCards cards={[
+          { label: 'Properties', value: realTimeStats.properties, to: '/fp/properties', icon: Building2, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', hoverBorder: 'hover:border-blue-200' },
+          { label: 'Vendors', value: realTimeStats.vendors, to: '/fp/vendors', icon: Store, iconBg: 'bg-amber-50', iconColor: 'text-amber-600', hoverBorder: 'hover:border-amber-200' },
+          { label: 'Employees', value: realTimeStats.employees, to: '/fp/employees', icon: Users, iconBg: 'bg-orange-50', iconColor: 'text-orange-600', hoverBorder: 'hover:border-orange-200' },
+          { label: 'Work Orders', value: realTimeStats.workOrders, to: '/fp/work-orders', icon: ClipboardList, iconBg: 'bg-purple-50', iconColor: 'text-purple-600', hoverBorder: 'hover:border-purple-200' },
+          { label: 'Estimates', value: realTimeStats.estimates, to: '/fp/estimates', icon: FileText, iconBg: 'bg-teal-50', iconColor: 'text-teal-600', hoverBorder: 'hover:border-teal-200' },
+          ...(pendingSchedulesCount > 0 ? [{ label: 'Pending Schedules', value: pendingSchedulesCount, to: '/fp/schedules/pending', icon: Calendar, iconBg: 'bg-orange-500', iconColor: 'text-white', accent: true }] : [])
+        ]} />
       </div>
 
       {/* Error Alert */}
