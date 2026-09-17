@@ -286,7 +286,8 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
           op.franchise_partner_id as fpId,
           fe.id as estimateId,
           fe.estimate_id as estimateCode,
-          fe.package_name as packageName,
+          COALESCE(NULLIF(fe.package_name, ''), fpamc.name) as packageName,
+          fe.estimate_type as estimateType,
           fe.total_amount as totalPrice,
           fe.status as estimateStatus,
           fe.payment_status as paymentStatus,
@@ -307,7 +308,7 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
           GROUP BY property_id
         ) latest_fe ON latest_fe.property_id = op.id
         INNER JOIN fp_estimates fe ON fe.id = latest_fe.latest_estimate_id
-        LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id
+        LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id AND fpamc.franchise_partner_id = fe.franchise_partner_id
         LEFT JOIN property_contacts pc ON pc.id = (SELECT pc2.id FROM property_contacts pc2 WHERE pc2.property_id = op.id ORDER BY pc2.id LIMIT 1)
         WHERE op.status = 'active'
         
@@ -325,7 +326,8 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
           fe.franchise_partner_id as fpId,
           fe.id as estimateId,
           fe.estimate_id as estimateCode,
-          fe.package_name as packageName,
+          COALESCE(NULLIF(fe.package_name, ''), fpamc.name) as packageName,
+          fe.estimate_type as estimateType,
           fe.total_amount as totalPrice,
           fe.status as estimateStatus,
           fe.payment_status as paymentStatus,
@@ -346,7 +348,7 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
           GROUP BY property_id
         ) latest_fe_p ON latest_fe_p.property_id = p.id
         INNER JOIN fp_estimates fe ON fe.id = latest_fe_p.latest_estimate_id
-        LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id
+        LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id AND fpamc.franchise_partner_id = fe.franchise_partner_id
         WHERE p.status = 'active'
           AND p.id NOT IN (SELECT id FROM onboarded_properties)
       ) combined
@@ -413,6 +415,7 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
         zone: orNull(p.zone),
         areaName: orNull(p.areaName),
         packageName: orNull(p.packageName),
+        estimateType: orNull(p.estimateType),
         estimateId: p.estimateId,
         estimateCode: p.estimateCode,
         totalPrice: p.totalPrice,
@@ -3207,7 +3210,7 @@ router.get('/renewals/:id', authenticate, canSeeSchedule, async (req, res) => {
       JOIN schedule_series ss ON sr.original_series_id = ss.id
       LEFT JOIN onboarded_properties op ON sr.property_id = op.id
       LEFT JOIN onboarded_vendors ov ON sr.vendor_id = ov.id
-      LEFT JOIN property_contacts pc ON pc.property_id = op.id AND pc.is_primary = 1
+      LEFT JOIN property_contacts pc ON pc.id = (SELECT pc2.id FROM property_contacts pc2 WHERE pc2.property_id = op.id ORDER BY pc2.id LIMIT 1)
       WHERE sr.id = ? OR sr.renewal_id = ?
     `, [id, id]);
 
