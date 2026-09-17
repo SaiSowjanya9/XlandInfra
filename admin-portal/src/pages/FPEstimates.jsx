@@ -676,6 +676,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     <ServiceCatalogPicker
       key={`${estimateType}-${createPropertyType}`}
       apiPath={FP_CATALOG_API}
+      label="Add Service"
       propertyType={createPropertyType}
       selectedAddons={catalogAddons}
       onAdd={addon => setCatalogAddons(prev => prev.some(item => item.addonId === addon.addonId) ? prev : [...prev, addon])}
@@ -1545,20 +1546,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div className="px-5 py-3 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center gap-3">
                 <h3 className="text-sm font-semibold text-gray-800">Services ({pkgServices.length + selectedAddonRows.length + catalogAddons.length})</h3>
-                <select
-                  onChange={(e) => { if (e.target.value) setEstimateForm({...estimateForm, selectedAddons: [...estimateForm.selectedAddons, e.target.value]}); e.target.value = ''; }}
-                  className="sm:ml-auto px-3 py-2 border border-blue-600 text-blue-700 bg-white rounded-lg text-sm font-medium min-w-[220px]"
-                >
-                  <option value="">+ Add Service</option>
-                  {(() => {
-                    const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType || selectedPkg?.property_type;
-                    const searchType = normalizePropertyType(propertyType);
-                    if (!searchType) return <option disabled>Select property first</option>;
-                    const filteredAddons = addons.filter(addon => normalizePropertyType(addon.property_type) === searchType);
-                    if (filteredAddons.length === 0) return <option disabled>No add-ons for {propertyType}</option>;
-                    return filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{decodeHtml(addon.service_name)}</option>);
-                  })()}
-                </select>
               </div>
               <div className="px-5 pt-4">{renderCatalogPicker()}</div>
               {pkgServices.length === 0 && selectedAddonRows.length === 0 && catalogAddons.length === 0 ? (
@@ -1939,27 +1926,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               })()}
 
               <div className="pt-2">{renderCatalogPicker()}</div>
-
-              <div className="pt-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Add Service</label>
-                <select 
-                  onChange={(e) => { if (e.target.value) setEstimateForm({...estimateForm, selectedAddons: [...estimateForm.selectedAddons, e.target.value]}); e.target.value = ''; }}
-                  className="w-full max-w-sm px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
-                >
-                  <option value="">+ Select Service to add</option>
-                  {(() => {
-                    // Get property type from selected property, form, or selected AMC package
-                    const selectedPkg = amcPackages.find(p => p.id == estimateForm.selectedPackage);
-                    const pkgPropertyType = selectedPkg?.property_type;
-                    const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType || pkgPropertyType;
-                    const searchType = normalizePropertyType(propertyType);
-                    if (!searchType) return <option disabled>Select property type first</option>;
-                    const filteredAddons = addons.filter(addon => normalizePropertyType(addon.property_type) === searchType);
-                    if (filteredAddons.length === 0) return <option disabled>No add-ons for {propertyType}</option>;
-                    return filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{decodeHtml(addon.service_name)}</option>);
-                  })()}
-                </select>
-              </div>
 
               {/* Additional Services Table - Only show when services selected */}
               {(estimateForm.selectedAddons.length > 0 || catalogAddons.length > 0) && (

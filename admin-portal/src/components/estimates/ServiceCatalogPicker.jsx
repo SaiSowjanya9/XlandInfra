@@ -13,7 +13,7 @@ const INPUTS = {
   manpower: ['personnel', 'Personnel count', 1]
 };
 
-const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPath = '/api/admin/service-catalog' }) => {
+const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPath = '/api/admin/service-catalog', label = 'Configured Service' }) => {
   const [services, setServices] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [inputs, setInputs] = useState({});
@@ -97,9 +97,9 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
     <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50/30 p-4">
       <fieldset disabled={saving} className="min-w-0">
         <label className="block max-w-md text-sm font-medium text-slate-700">
-          Configured Service
+          {label}
           <select value={selectedId} onChange={event => selectService(event.target.value)} disabled={loading || !propertyType || saving} className={`${inputClass} mt-2`}>
-            <option value="">{loading ? 'Loading services...' : !propertyType ? 'Select a property type first' : 'Select service from catalog'}</option>
+            <option value="">{loading ? 'Loading services...' : !propertyType ? 'Select a property type first' : '+ Select service to add'}</option>
             {services.filter(item => !selectedAddons.some(addon => addon.catalogServiceId === item.id)).map(item => <option key={item.id} value={item.id}>{serviceOptionLabel(item, services)}</option>)}
           </select>
         </label>
