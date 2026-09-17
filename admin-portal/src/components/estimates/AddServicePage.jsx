@@ -117,8 +117,9 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
   const [formData, setFormData] = useState({
     serviceName: '',
     category: '',
-    pricingMethod: 'capacity_slab',
-    unit: 'Persons',
+    // No method is preselected: the pricing method is an explicit choice
+    pricingMethod: '',
+    unit: '',
     applicablePropertyTypes: [],
     // Area Based specific
     ratePerUnit: '',
@@ -271,6 +272,10 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     event.preventDefault();
     if (isSubmitting) return;
     setFormError('');
+    if (!formData.pricingMethod) {
+      setFormError('Select a pricing method.');
+      return;
+    }
     if (!formData.applicablePropertyTypes.length) {
       setFormError('Select at least one applicable property type.');
       return;
@@ -346,9 +351,10 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     working_hours_per_visit: formData.workingHoursPerVisit, overtime_rate_per_hour: formData.overtimeRatePerHour === '' ? null : formData.overtimeRatePerHour,
     default_visits_per_year: formData.defaultVisitsPerYear, default_markup_percentage: formData.defaultMarkupPercentage };
   const manpowerExample = isVisitManpower ? previewManpower(manpowerConfig, { area: exampleManpowerArea, personnel: examplePersonnel, overtime_hours_per_visit: exampleOvertime }) : null;
-  const formSections = isRatePricing || isCapacitySlab
-    ? [sections[0], ['pricing-configuration', `${getFormulaText()} Configuration`], ['markup', 'Markup']]
-    : sections;
+  const formSections = !formData.pricingMethod ? [sections[0], sections[2]]
+    : isRatePricing || isCapacitySlab
+      ? [sections[0], ['pricing-configuration', `${getFormulaText()} Configuration`], ['markup', 'Markup']]
+      : sections;
   const examplePricing = isRatePricing && !isVisitManpower && formData[rateField] !== '' ? calculateExamplePricing() : null;
   const currency = value => value == null ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value);
   const numberInput = (field, props = {}) => (
@@ -381,14 +387,14 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             <ChevronLeft className="h-5 w-5 text-slate-500" />
           </button>
           <div>
-            <h1 className="text-xl font-semibold">{service ? 'Edit Service' : 'Add Service'} — {getFormulaText()}</h1>
+            <h1 className="text-xl font-semibold">{service ? 'Edit Service' : 'Add Service'}{formData.pricingMethod ? ` — ${getFormulaText()}` : ''}</h1>
             <p className="mt-1 text-xs text-slate-500">Master Data <span className="mx-2">›</span> Service Master <span className="mx-2">›</span> {service ? 'Edit Service' : 'Add Service'}</p>
             <p className="mt-1 text-xs text-slate-500">{scopeLabel ?? (service ? (service.franchise_partner_id ? `For FP ${service.franchise_partner_id}` : 'Available to all FPs') : selectedFp?.id && selectedFp.id !== 'all' ? `For ${selectedFp.companyName || selectedFp.fpId || `FP ${selectedFp.id}`}` : 'Available to all FPs')}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <button type="button" onClick={onBack} disabled={isSubmitting} className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50">Cancel</button>
-          <button type="submit" disabled={isSubmitting || !categories.length} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50">
+          <button type="submit" disabled={isSubmitting || !categories.length || !formData.pricingMethod} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50">
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {isSubmitting ? 'Saving...' : 'Save Service'}
           </button>
@@ -442,7 +448,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 </div>
                 {/* Primary Input */}
                 {/* Unit */}
-                <Field label={isCapacityBased || isCapacitySlab ? 'Capacity Unit *' : 'Unit *'}><select value={formData.unit} onChange={event => setField('unit', event.target.value)} className={inputClass}>{(UNIT_OPTIONS[formData.pricingMethod] ?? [formData.unit]).map(unit => <option key={unit}>{unit}</option>)}</select></Field>
+                {formData.pricingMethod && <Field label={isCapacityBased || isCapacitySlab ? 'Capacity Unit *' : 'Unit *'}><select value={formData.unit} onChange={event => setField('unit', event.target.value)} className={inputClass}>{(UNIT_OPTIONS[formData.pricingMethod] ?? [formData.unit]).map(unit => <option key={unit}>{unit}</option>)}</select></Field>}
               </div>
               {categoryError && <div role="alert" className="mt-3 text-sm text-red-600">{categoryError} <button type="button" onClick={() => setCategoryAttempt(value => value + 1)} className="font-semibold underline">Retry</button></div>}
             </div>
@@ -474,7 +480,10 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
               </div>
               <button type="button" onClick={addCapacitySlab} disabled={capacitySlabs.length >= 100} className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg border border-blue-200 px-4 py-2.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:opacity-50"><Plus className="h-4 w-4" />Add Slab</button>
             </div>}
-            <div id={isRatePricing ? 'pricing-configuration' : undefined} className="scroll-mt-6 border-t border-slate-100 p-5 sm:p-6">
+            {!formData.pricingMethod && <div className="border-t border-slate-100 p-5 sm:p-6">
+              <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">Select a pricing method above to configure its rates, frequency and markup.</p>
+            </div>}
+            {formData.pricingMethod && <div id={isRatePricing ? 'pricing-configuration' : undefined} className="scroll-mt-6 border-t border-slate-100 p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold text-blue-600">{isRatePricing ? `${getFormulaText()} Configuration` : isCapacitySlab ? 'Fallback Frequency & Estimate Overrides' : 'Default Frequency'}</h2>
               <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-4">
                 {/* Fixed Price Fields */}
@@ -493,7 +502,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <Field label="Overtime Rate per Person / Hour (₹)" hint="Optional; extra hours are entered in the estimate">{numberInput('overtimeRatePerHour', { required: false, max: 1e9 })}</Field>
                 <Field label="Minimum Manpower Required *" hint="Minimum persons per visit">{numberInput('minimumManpower', { min: 1, max: 1e6, step: 1 })}</Field>
               </div>}
-            </div>
+            </div>}
             {isVisitManpower && <section className="border-t border-slate-100 p-5 sm:p-6">
               <h2 className="text-sm font-semibold text-blue-600">Manpower Requirement Template (Optional)</h2>
               <p className="mb-4 mt-1 text-xs text-slate-500">Area ranges apply their rate automatically and suggest a headcount. Leave empty to use the default rate.</p>
@@ -517,13 +526,13 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
               <button type="button" onClick={addManpowerRange} disabled={manpowerRanges.length >= 100} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-blue-200 px-4 py-2.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:opacity-50"><Plus className="h-4 w-4" />Add Range</button>
             </section>}
             {/* 3. Markup & Margin */}
-            <div id="markup" className="scroll-mt-6 border-t border-slate-100 p-5 sm:p-6">
+            {formData.pricingMethod && <div id="markup" className="scroll-mt-6 border-t border-slate-100 p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold text-blue-600">Default Markup</h2>
               <div className="grid gap-5 sm:grid-cols-2">
                 {/* Default Markup Percentage */}
                 <Field label="Default Markup Percentage (%) *" hint="Applied on total actual cost">{numberInput('defaultMarkupPercentage', { max: 1000 })}</Field>
               </div>
-            </div>
+            </div>}
           </section>
           {/* Right Column - Sidebar */}
           <aside id="additional-information" className="scroll-mt-6 space-y-5">
@@ -593,7 +602,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
           </aside>
         </div>
         {/* 2. Monthly Manpower Configuration, kept for services saved before the per-visit basis */}
-        {!isRatePricing && !isCapacitySlab && <section id="pricing-configuration" className="scroll-mt-6 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+        {formData.pricingMethod === 'manpower' && !isVisitManpower && <section id="pricing-configuration" className="scroll-mt-6 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
           <h2 className="mb-5 text-sm font-semibold">{getFormulaText()} Configuration</h2>
           <div className="grid gap-5 sm:grid-cols-3">
             <Field label={`Monthly Vendor Rate (₹) per ${formData.unit} *`}>{numberInput('monthlyRate')}</Field>
