@@ -219,6 +219,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [filterPropertyType, setFilterPropertyType] = useState('all');
   // FP Manager defaults to 'all-addons' (no create access)
   const [addonActiveTab, setAddonActiveTab] = useState('configured');
+  // Bumped on every Add Service tab click so the tab always reopens the form
+  const [catalogEntry, setCatalogEntry] = useState(0);
   const [addonFilterPropertyType, setAddonFilterPropertyType] = useState('all');
   const [editingAddon, setEditingAddon] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -3559,8 +3561,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     <div className="space-y-6">
       {/* Tabs */}
       <div className="flex gap-2">
-        <button onClick={() => setAddonActiveTab('configured')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'configured' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-          {isFPManager ? <><ClipboardList className="w-4 h-4" />Configured Services</> : <><Plus className="w-4 h-4" />Create Service</>}
+        <button onClick={() => { setAddonActiveTab('configured'); setCatalogEntry(value => value + 1); }} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'configured' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+          {isFPManager ? <><ClipboardList className="w-4 h-4" />Configured Services</> : <><Plus className="w-4 h-4" />Add Service</>}
         </button>
         <button onClick={() => setAddonActiveTab('all-addons')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'all-addons' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
           <Layers className="w-4 h-4" />All Services
@@ -3569,7 +3571,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       </div>
 
       {addonActiveTab === 'configured' && (
-        <ServiceCatalogList apiPath={FP_CATALOG_API} admin={user} showToast={showToast} scoped
+        <ServiceCatalogList key={catalogEntry} apiPath={FP_CATALOG_API} admin={user} showToast={showToast} scoped openCreateOnMount
           scopeLabel="For your franchise" canCreate={!isFPManager} canEdit={service => !isFPManager && !!service.franchise_partner_id} />
       )}
 

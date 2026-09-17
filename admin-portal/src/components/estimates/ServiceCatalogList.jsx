@@ -13,9 +13,10 @@ const RATE_LABELS = {
 const money = value => `₹${Number(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '/api/admin/service-catalog',
-  scoped = false, scopeLabel, canCreate = false, canEdit = service => admin?.role === 'admin' }) {
+  scoped = false, scopeLabel, canCreate = false, openCreateOnMount = false, canEdit = service => admin?.role === 'admin' }) {
   const [editingService, setEditingService] = useState(null);
-  const [creating, setCreating] = useState(false);
+  // Portals that enter through an "Add Service" tab open straight on the form
+  const [creating, setCreating] = useState(openCreateOnMount && canCreate);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
