@@ -23,6 +23,12 @@ const RETIRED_METHODS = [
 ];
 export const methodLabel = value => [...PRICING_METHODS, ...RETIRED_METHODS].find(method => method.value === value)?.label || value || '—';
 
+// A franchise service may share its name with an admin-wide one, so only ambiguous names carry a scope
+export const serviceOptionLabel = (service, services = []) =>
+  services.filter(item => item.service_name === service.service_name).length > 1
+    ? `${service.service_name} (${service.franchise_partner_id ? `FP ${service.franchise_partner_id}` : 'All FPs'})`
+    : service.service_name;
+
 // Unit Options based on pricing method
 const UNIT_OPTIONS = {
   fixed_price: ['Visit', 'Service', 'Job'],

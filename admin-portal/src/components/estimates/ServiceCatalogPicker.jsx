@@ -3,7 +3,7 @@ import { Loader2, Plus, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import ManpowerFields from './ManpowerFields';
 import { isVisitManpower, suggestedManpower } from '../../utils/manpowerPricing';
-import { FREQUENCY_OPTIONS, getServiceSchedule, methodLabel } from './AddServicePage';
+import { FREQUENCY_OPTIONS, getServiceSchedule, methodLabel, serviceOptionLabel } from './AddServicePage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const inputClass = 'w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500';
@@ -100,7 +100,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
           Configured Service
           <select value={selectedId} onChange={event => selectService(event.target.value)} disabled={loading || !propertyType || saving} className={`${inputClass} mt-2`}>
             <option value="">{loading ? 'Loading services...' : !propertyType ? 'Select a property type first' : 'Select service from catalog'}</option>
-            {services.filter(item => !selectedAddons.some(addon => addon.catalogServiceId === item.id)).map(item => <option key={item.id} value={item.id}>{item.service_name}</option>)}
+            {services.filter(item => !selectedAddons.some(addon => addon.catalogServiceId === item.id)).map(item => <option key={item.id} value={item.id}>{serviceOptionLabel(item, services)}</option>)}
           </select>
         </label>
         {!loading && !services.length && !error && <p className="mt-2 text-xs text-slate-500">No configured services available for this property type.</p>}

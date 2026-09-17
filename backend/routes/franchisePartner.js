@@ -4435,6 +4435,14 @@ router.post('/estimates', requireFPScope, fpServiceCatalog.validatePackageEstima
     
     console.log('Creating estimate with division:', division, 'property_code:', property_code);
 
+    // An FP session may only reference its own properties; callers without an FP scope are unchanged
+    if (req.fpId && property_id) {
+      const { propertyBelongsToFp } = require('../utils/fpProperties');
+      if (!await propertyBelongsToFp(pool, property_id, req.fpId)) {
+        return res.status(403).json({ success: false, message: 'The selected property belongs to another franchise partner.' });
+      }
+    }
+
     // Ensure fp_estimates table exists
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS fp_estimates (

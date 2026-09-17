@@ -4,7 +4,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const db = require('../config/database');
 const { authenticate } = require('../middleware/auth');
-const { adminOnly } = require('../middleware/rbac');
+const { adminOnly, requireRole } = require('../middleware/rbac');
 const { sendEstimateEmail, sendEstimateActionNotification } = require('../services/emailService');
 
 // GET all estimates (supports ?archived=true for archived estimates)
@@ -123,7 +123,7 @@ router.get('/', authenticate, adminOnly, async (req, res) => {
 });
 
 // CREATE estimate
-router.post('/', authenticate, adminOnly, require('./serviceCatalog').validateCatalogEstimate, async (req, res) => {
+router.post('/', authenticate, requireRole('admin'), require('./serviceCatalog').validateCatalogEstimate, async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
@@ -209,7 +209,7 @@ router.post('/', authenticate, adminOnly, require('./serviceCatalog').validateCa
 });
 
 // UPDATE estimate
-router.put('/:estimateId', authenticate, adminOnly, async (req, res) => {
+router.put('/:estimateId', authenticate, requireRole('admin'), async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
@@ -274,7 +274,7 @@ router.put('/:estimateId', authenticate, adminOnly, async (req, res) => {
 });
 
 // ARCHIVE estimate
-router.put('/:estimateId/archive', authenticate, adminOnly, async (req, res) => {
+router.put('/:estimateId/archive', authenticate, requireRole('admin'), async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
@@ -310,7 +310,7 @@ router.put('/:estimateId/archive', authenticate, adminOnly, async (req, res) => 
 });
 
 // RESTORE estimate
-router.put('/:estimateId/restore', authenticate, adminOnly, async (req, res) => {
+router.put('/:estimateId/restore', authenticate, requireRole('admin'), async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
@@ -346,7 +346,7 @@ router.put('/:estimateId/restore', authenticate, adminOnly, async (req, res) => 
 });
 
 // DELETE ALL archived estimates
-router.delete('/archived/delete-all', authenticate, adminOnly, async (req, res) => {
+router.delete('/archived/delete-all', authenticate, requireRole('admin'), async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
@@ -383,7 +383,7 @@ router.delete('/archived/delete-all', authenticate, adminOnly, async (req, res) 
 });
 
 // DELETE single archived estimate permanently (must be before /:estimateId route)
-router.delete('/archived/:estimateId', authenticate, adminOnly, async (req, res) => {
+router.delete('/archived/:estimateId', authenticate, requireRole('admin'), async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
@@ -423,7 +423,7 @@ router.delete('/archived/:estimateId', authenticate, adminOnly, async (req, res)
 });
 
 // DELETE estimate (soft delete)
-router.delete('/:estimateId', authenticate, adminOnly, async (req, res) => {
+router.delete('/:estimateId', authenticate, requireRole('admin'), async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
@@ -445,7 +445,7 @@ router.delete('/:estimateId', authenticate, adminOnly, async (req, res) => {
 });
 
 // SEND estimate email to customer
-router.post('/:estimateId/send', authenticate, adminOnly, async (req, res) => {
+router.post('/:estimateId/send', authenticate, requireRole('admin'), async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });

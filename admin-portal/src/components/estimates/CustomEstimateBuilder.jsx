@@ -3,7 +3,7 @@ import { Edit2, Loader2, Plus, Save, Trash2, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import ManpowerFields from './ManpowerFields';
 import { isVisitManpower, suggestedManpower } from '../../utils/manpowerPricing';
-import { FREQUENCY_OPTIONS, PROPERTY_TYPES, getServiceSchedule, methodLabel } from './AddServicePage';
+import { FREQUENCY_OPTIONS, PROPERTY_TYPES, getServiceSchedule, methodLabel, serviceOptionLabel } from './AddServicePage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const inputClass = 'mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500';
@@ -73,7 +73,7 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
   return <section className="rounded-xl border border-blue-200 bg-white p-5">
     <div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-sm font-semibold text-slate-800">{initialRow ? 'Edit Service' : 'Add Services'}</h3><button type="button" onClick={onCancel} aria-label="Close service editor" className="rounded p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button></div>
     <div className="grid gap-4 sm:grid-cols-2">
-      <Field label="Select Service *"><select value={serviceId} onChange={event => selectService(event.target.value)} className={inputClass}><option value="">Select a service</option>{services.map(item => <option key={item.id} value={item.id}>{item.service_name}</option>)}</select></Field>
+      <Field label="Select Service *"><select value={serviceId} onChange={event => selectService(event.target.value)} className={inputClass}><option value="">Select a service</option>{services.map(item => <option key={item.id} value={item.id}>{serviceOptionLabel(item, services)}</option>)}</select></Field>
       <Field label="Vendor *"><select value={vendorId} onChange={event => setVendorId(event.target.value)} className={inputClass}><option value="">Select a vendor</option>{vendors.map(item => <option key={item.id} value={item.id}>{item.name}{item.service_type ? ` — ${item.service_type}` : ''}</option>)}</select></Field>
     </div>
     {service && <>
