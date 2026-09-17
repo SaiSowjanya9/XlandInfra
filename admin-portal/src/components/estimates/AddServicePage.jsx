@@ -159,6 +159,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
   const [examplePersonnel, setExamplePersonnel] = useState('2');
   const [exampleOvertime, setExampleOvertime] = useState('0');
   const [exampleCapacity, setExampleCapacity] = useState('10');
+  const [exampleAmount, setExampleAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const setField = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -196,6 +197,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
   // Update unit options when pricing method changes
   const changePricingMethod = (pricingMethod) => {
     setFormData(prev => ({ ...prev, pricingMethod, unit: UNIT_OPTIONS[pricingMethod]?.[0] ?? prev.unit }));
+    setExampleAmount('');
   };
 
   // Update visits when frequency changes
@@ -252,12 +254,14 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     return openEnded ? [...prev.slice(0, -1), range, { ...last, areaFrom: end + 1 }] : [...prev, range];
   });
 
-  // Calculate example pricing
+  // Example pricing for the preview. The real area, quantity or capacity belongs to the property and
+  // is entered on the estimate, so this only demonstrates the configured rate.
   const calculateExamplePricing = () => {
-    const exampleArea = 10000; // Example: 10,000 Sq Ft
-    const quantity = isFixedPrice ? 1 : isQuantityBased || isCapacityBased ? 10 : exampleArea;
+    const quantity = isFixedPrice ? 1 : Number(exampleAmountValue);
+    const markup = formData.defaultMarkupPercentage === '' ? null : Number(formData.defaultMarkupPercentage);
     const vendorCost = Number(formData[rateField]) * quantity * Number(formData.defaultVisitsPerYear);
-    return { vendorCost, customerPrice: vendorCost * (1 + Number(formData.defaultMarkupPercentage) / 100) };
+    if (!Number.isFinite(vendorCost)) return null;
+    return { vendorCost, customerPrice: markup == null ? null : vendorCost * (1 + markup / 100) };
   };
 
   // Get formula text based on pricing method
@@ -351,7 +355,9 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     working_hours_per_visit: formData.workingHoursPerVisit, overtime_rate_per_hour: formData.overtimeRatePerHour === '' ? null : formData.overtimeRatePerHour,
     default_visits_per_year: formData.defaultVisitsPerYear, default_markup_percentage: formData.defaultMarkupPercentage };
   const manpowerExample = isVisitManpower ? previewManpower(manpowerConfig, { area: exampleManpowerArea, personnel: examplePersonnel, overtime_hours_per_visit: exampleOvertime }) : null;
-  const examplePricing = isRatePricing && !isVisitManpower && formData[rateField] !== '' ? calculateExamplePricing() : null;
+  const exampleAmountValue = exampleAmount === '' ? (isQuantityBased || isCapacityBased ? '10' : '10000') : exampleAmount;
+  const validExampleAmount = isFixedPrice || (String(exampleAmountValue).trim() !== '' && Number(exampleAmountValue) > 0 && Number(exampleAmountValue) <= 1e9);
+  const examplePricing = isRatePricing && !isVisitManpower && formData[rateField] !== '' && validExampleAmount ? calculateExamplePricing() : null;
   const currency = value => value == null ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value);
   const numberInput = (field, props = {}) => (
     <input type="number" min="0" step="0.01" required value={formData[field]}
@@ -555,14 +561,17 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             {/* Pricing Preview (Example) */}
             {isRatePricing && !isVisitManpower && <section className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
               <h2 className="mb-4 text-sm font-semibold">Pricing Preview (Example)</h2>
-              <dl className="space-y-3 text-xs text-slate-600">
+              {!isFixedPrice && <Field label={`Example Total ${isQuantityBased ? 'Quantity' : isCapacityBased ? 'Capacity' : 'Area'} (${formData.unit})`}>
+                <input inputMode="decimal" value={exampleAmountValue} onChange={event => setExampleAmount(event.target.value)} className={inputClass} />
+              </Field>}
+              <dl className={`space-y-3 text-xs text-slate-600 ${isFixedPrice ? '' : 'mt-4'}`}>
                 <div className="flex justify-between gap-3"><dt>{isFixedPrice ? 'Fixed Rate per Visit' : `Rate per ${formData.unit} per Visit`}</dt><dd className="font-medium text-slate-800">{currency(formData[rateField] === '' ? null : Number(formData[rateField]))}</dd></div>
-                {!isFixedPrice && <div className="flex justify-between gap-3"><dt>Total {isQuantityBased ? 'Quantity' : isCapacityBased ? 'Capacity' : 'Area'} ({formData.unit})</dt><dd className="font-medium text-slate-800">{isQuantityBased || isCapacityBased ? '10' : '10,000'}</dd></div>}
                 <div className="flex justify-between gap-3"><dt>Visits Per Year</dt><dd className="font-medium text-slate-800">{formData.defaultVisitsPerYear}</dd></div>
                 <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(examplePricing?.vendorCost)}</dd></div>
-                <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage}%</dd></div>
+                <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage === '' ? '—' : `${formData.defaultMarkupPercentage}%`}</dd></div>
                 <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(examplePricing?.customerPrice)}</dd></div>
               </dl>
+              {!validExampleAmount && <p className="mt-3 text-xs text-amber-700">Enter an example {isQuantityBased ? 'quantity' : isCapacityBased ? 'capacity' : 'area'} greater than zero to see the pricing.</p>}
               <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, with no XLAND operating cost or tax. Final customer pricing uses the {isFixedPrice ? 'visits and operating costs' : `actual ${isQuantityBased ? 'quantity' : isCapacityBased ? 'capacity' : 'area'}, visits and operating costs`} entered in the estimate.</p>
             </section>}
             {isVisitManpower && <section className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
