@@ -413,7 +413,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <Field label="Service Name *"><input required maxLength={150} value={formData.serviceName} onChange={event => setField('serviceName', event.target.value)} placeholder="e.g. Generator Maintenance" className={inputClass} /></Field>
                 <Field label="Category *">
                   <AutocompleteInput value={formData.category} onChange={value => setField('category', value)} options={categoryNames}
-                    placeholder="Type or select category" inputClassName="py-2.5" maxResults={20} />
+                    placeholder="Type or select category" inputClassName="py-2.5" maxResults={100} showAllOnOpen />
                 </Field>
                 {/* Pricing Method — every method is visible so the form is never mistaken for a single-method screen */}
                 <div className="sm:col-span-2">
