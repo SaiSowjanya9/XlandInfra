@@ -14,7 +14,7 @@ const db = { isDbConnected: true, pool: { execute: async sql => {
   throw new Error(`Unexpected SQL: ${sql}`);
 } } };
 require.cache[require.resolve('../config/database')] = { exports: db };
-require.cache[require.resolve('../middleware/auth')] = { exports: { authenticate: (req, res, next) => { req.user = { id: 1, role: 'admin' }; next(); } } };
+require.cache[require.resolve('../middleware/auth')] = { exports: { authenticate: (req, res, next) => { req.user = { id: 1, role: req.headers['x-test-role'] || 'admin' }; next(); } } };
 require.cache[require.resolve('../services/emailService')] = { exports: {
   sendEstimateEmail: async data => { delivery = data; return { success: true }; }, sendEstimateActionNotification: async () => ({ success: true })
 } };
@@ -47,4 +47,14 @@ test('estimate sync keeps both sources and passes saved fields to the email trig
   const status = await (await fetch(`${base}/EST-CUSTOM/status?token=test-token`)).json();
   assert.equal(status.success, true);
   assert.equal(status.data.total, 11700.25);
+
+  // Operations Manager is a read-only role: it may list estimates but never change them
+  const asOps = (path, method = 'PUT') => fetch(`${base}${path}`, { method, headers: { 'Content-Type': 'application/json', 'x-test-role': 'operations_manager' }, ...(method === 'POST' ? { body: '{}' } : {}) });
+  assert.equal((await fetch(base, { headers: { 'x-test-role': 'operations_manager' } })).status, 200);
+  for (const [path, method] of [['', 'POST'], ['/EST-CUSTOM', 'PUT'], ['/EST-CUSTOM/archive', 'PUT'], ['/EST-CUSTOM/restore', 'PUT'],
+    ['/EST-CUSTOM', 'DELETE'], ['/archived/EST-CUSTOM', 'DELETE'], ['/archived/delete-all', 'DELETE'], ['/EST-CUSTOM/send', 'POST']]) {
+    assert.equal((await asOps(path, method)).status, 403, `${method} ${path || '/'} must be admin only`);
+  }
+  // The customer action page stays public
+  assert.notEqual((await fetch(`${base}/EST-CUSTOM/status?token=test-token`, { headers: { 'x-test-role': 'operations_manager' } })).status, 403);
 });
