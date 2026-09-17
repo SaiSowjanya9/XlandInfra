@@ -53,6 +53,11 @@ const getApiPath = (portalType) => {
   return portalMap[portalType] || 'fp';
 };
 
+// Work order estimates carry no AMC package, so the Package column says so
+// instead of showing a bare dash. Tolerates work_order / workOrder / "work order".
+const isWorkOrderEstimate = (estimateType) =>
+  String(estimateType || '').toLowerCase().replace(/[^a-z]/g, '').startsWith('workorder');
+
 // Format date helper
 const formatDate = (dateString) => {
   if (!dateString) return '-';
@@ -437,7 +442,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       property.propertyType ? normalizePropertyType(property.propertyType) : '',
       property.customerName || '',
       getZoneName(property.zone) || '',
-      property.packageName || '',
+      property.packageName || (isWorkOrderEstimate(property.estimateType) ? 'Work Order' : ''),
       property.totalServices || 0,
       property.assignedVendors || 0,
       property.pendingServices || 0,
@@ -796,6 +801,10 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                       {property.packageName ? (
                         <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-lg whitespace-nowrap">
                           <span className="text-sm font-medium text-purple-700 whitespace-nowrap">{property.packageName}</span>
+                        </div>
+                      ) : isWorkOrderEstimate(property.estimateType) ? (
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg whitespace-nowrap" title="Work order estimate - no AMC package">
+                          <span className="text-sm font-medium text-gray-500 whitespace-nowrap">Work Order</span>
                         </div>
                       ) : (
                         <span className="text-sm text-gray-400">-</span>

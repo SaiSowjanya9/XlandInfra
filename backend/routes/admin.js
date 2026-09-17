@@ -4465,7 +4465,8 @@ router.get('/schedules/pending-properties', authenticate, async (req, res) => {
           op.franchise_partner_id as fpId,
           fe.id as estimateId,
           fe.estimate_id as estimateCode,
-          fe.package_name as packageName,
+          COALESCE(NULLIF(fe.package_name, ''), fpamc.name) as packageName,
+          fe.estimate_type as estimateType,
           fe.total_amount as totalPrice,
           fe.status as estimateStatus,
           fe.payment_status as paymentStatus,
@@ -4480,6 +4481,7 @@ router.get('/schedules/pending-properties', authenticate, async (req, res) => {
           'onboarded' as source
         FROM onboarded_properties op
         INNER JOIN fp_estimates fe ON fe.property_id = op.id AND fe.status = 'approved'
+        LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id AND fpamc.franchise_partner_id = fe.franchise_partner_id
         LEFT JOIN property_contacts pc ON pc.id = (SELECT pc2.id FROM property_contacts pc2 WHERE pc2.property_id = op.id ORDER BY pc2.id LIMIT 1)
         WHERE op.status = 'active'
           AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
@@ -4498,7 +4500,8 @@ router.get('/schedules/pending-properties', authenticate, async (req, res) => {
           fe.franchise_partner_id as fpId,
           fe.id as estimateId,
           fe.estimate_id as estimateCode,
-          fe.package_name as packageName,
+          COALESCE(NULLIF(fe.package_name, ''), fpamc.name) as packageName,
+          fe.estimate_type as estimateType,
           fe.total_amount as totalPrice,
           fe.status as estimateStatus,
           fe.payment_status as paymentStatus,
@@ -4513,6 +4516,7 @@ router.get('/schedules/pending-properties', authenticate, async (req, res) => {
           'legacy' as source
         FROM properties p
         INNER JOIN fp_estimates fe ON fe.property_id = p.id AND fe.status = 'approved'
+        LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id AND fpamc.franchise_partner_id = fe.franchise_partner_id
         WHERE p.status = 'active'
           AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
           AND p.id NOT IN (SELECT id FROM onboarded_properties)
@@ -4564,6 +4568,7 @@ router.get('/schedules/pending-properties', authenticate, async (req, res) => {
         zone: orNull(p.zone),
         areaName: orNull(p.areaName),
         packageName: orNull(p.packageName),
+        estimateType: orNull(p.estimateType),
         estimateId: p.estimateId,
         estimateCode: p.estimateCode,
         totalPrice: p.totalPrice,
