@@ -20,6 +20,8 @@ import { ChevronDown, X, Check } from 'lucide-react';
  * - filterFn: Custom filter function (optional)
  * - renderOption: Custom option renderer (optional)
  * - maxResults: Maximum number of results to show (default: 10)
+ * - showAllOnOpen: Opening the list with the arrow or on focus shows every option, like a plain
+ *   select; typing then filters as usual (default: false)
  */
 const AutocompleteInput = ({
   value = '',
@@ -37,9 +39,12 @@ const AutocompleteInput = ({
   filterFn,
   renderOption,
   maxResults = 10,
+  showAllOnOpen = false,
   id,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  // True while the list was opened without typing, so every option is listed
+  const [browsing, setBrowsing] = useState(false);
   const [inputValue, setInputValue] = useState(value || '');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const inputRef = useRef(null);
@@ -82,6 +87,7 @@ const AutocompleteInput = ({
 
   // Filter and sort options
   const getFilteredOptions = () => {
+    if (showAllOnOpen && browsing) return normalizedOptions.slice(0, maxResults);
     const filter = filterFn || defaultFilter;
     const results = normalizedOptions
       .map(opt => ({ ...opt, ...filter(opt, inputValue) }))
@@ -110,6 +116,7 @@ const AutocompleteInput = ({
     const newValue = e.target.value;
     setInputValue(newValue);
     setIsOpen(true);
+    setBrowsing(false);
     setHighlightedIndex(-1);
     if (allowCustom) {
       onChange?.(newValue);
@@ -129,6 +136,7 @@ const AutocompleteInput = ({
   const handleKeyDown = (e) => {
     if (!isOpen && e.key === 'ArrowDown') {
       setIsOpen(true);
+      setBrowsing(true);
       return;
     }
 
@@ -178,6 +186,7 @@ const AutocompleteInput = ({
   const handleClear = () => {
     setInputValue('');
     onChange?.('');
+    setBrowsing(true);
     inputRef.current?.focus();
   };
 
@@ -197,7 +206,7 @@ const AutocompleteInput = ({
           type="text"
           value={inputValue}
           onChange={handleInputChange}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => { setIsOpen(true); setBrowsing(true); }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
@@ -220,7 +229,7 @@ const AutocompleteInput = ({
           )}
           <button
             type="button"
-            onClick={() => !disabled && setIsOpen(!isOpen)}
+            onClick={() => { if (disabled) return; setBrowsing(true); setIsOpen(!isOpen); }}
             className={`p-1 hover:bg-gray-100 rounded text-gray-400 ${disabled ? 'cursor-not-allowed' : ''}`}
             disabled={disabled}
           >
