@@ -13,7 +13,7 @@ const RATE_LABELS = {
 const money = value => `₹${Number(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '/api/admin/service-catalog',
-  scoped = false, scopeLabel, canCreate = false, openCreateOnMount = false, canEdit = service => admin?.role === 'admin' }) {
+  scoped = false, scopeLabel, canCreate = false, openCreateOnMount = false, embedded = false, canEdit = service => admin?.role === 'admin' }) {
   const [editingService, setEditingService] = useState(null);
   // Portals that enter through an "Add Service" tab open straight on the form
   const [creating, setCreating] = useState(openCreateOnMount && canCreate);
@@ -39,7 +39,7 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
   }, [apiPath, fpId, token, refresh]);
 
   if (editingService || creating) return <AddServicePage service={editingService ?? undefined} admin={admin} showToast={showToast}
-    apiPath={apiPath} scoped={scoped} scopeLabel={scopeLabel}
+    apiPath={apiPath} scoped={scoped} scopeLabel={scopeLabel} embedded={embedded}
     onBack={() => { setEditingService(null); setCreating(false); }} onSave={() => setRefresh(value => value + 1)} />;
 
   return <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white">

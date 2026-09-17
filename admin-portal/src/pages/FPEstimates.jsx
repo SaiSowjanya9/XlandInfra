@@ -3571,7 +3571,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       </div>
 
       {addonActiveTab === 'configured' && (
-        <ServiceCatalogList key={catalogEntry} apiPath={FP_CATALOG_API} admin={user} showToast={showToast} scoped openCreateOnMount
+        <ServiceCatalogList key={catalogEntry} apiPath={FP_CATALOG_API} admin={user} showToast={showToast} scoped openCreateOnMount embedded
           scopeLabel="For your franchise" canCreate={!isFPManager} canEdit={service => !isFPManager && !!service.franchise_partner_id} />
       )}
 
