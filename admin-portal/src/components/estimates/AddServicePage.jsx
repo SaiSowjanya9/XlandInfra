@@ -51,13 +51,15 @@ export const FREQUENCY_OPTIONS = [
 
 // Property Type Options
 export const PROPERTY_TYPES = [
-  { id: 'APT', label: 'Apartment' },
   { id: 'GC', label: 'Gated Community' },
+  { id: 'APT', label: 'Apartment' },
   { id: 'FLAT', label: 'Flat' },
   { id: 'VILLA', label: 'Villa' },
-  { id: 'IH', label: 'Independent House' },
   { id: 'PLOT', label: 'Plot' }
 ];
+// Not offered on new services; kept so older records and properties still read correctly
+const LEGACY_PROPERTY_TYPES = [{ id: 'IH', label: 'Independent House' }];
+export const propertyTypeLabel = id => [...PROPERTY_TYPES, ...LEGACY_PROPERTY_TYPES].find(type => type.id === id)?.label || id || '—';
 
 // Billing Period Options (for Manpower)
 const BILLING_PERIODS = ['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'];
@@ -544,6 +546,13 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                   <label key={type.id} className={`flex cursor-pointer items-center gap-2 rounded-lg border p-2.5 transition ${formData.applicablePropertyTypes.includes(type.id) ? 'border-blue-200 bg-blue-50/50' : 'border-slate-200 hover:bg-slate-50'}`}>
                     <input type="checkbox" checked={formData.applicablePropertyTypes.includes(type.id)} onChange={() => togglePropertyType(type.id)} className="h-4 w-4 shrink-0 accent-blue-600" />
                     <span className="text-xs text-slate-700">{type.label}</span>
+                  </label>
+                ))}
+                {/* A type saved before it was withdrawn stays visible so it can be seen and removed */}
+                {formData.applicablePropertyTypes.filter(id => !PROPERTY_TYPES.some(type => type.id === id)).map(id => (
+                  <label key={id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5" title="No longer offered for new services">
+                    <input type="checkbox" checked onChange={() => togglePropertyType(id)} className="h-4 w-4 shrink-0 accent-amber-600" />
+                    <span className="text-xs text-amber-700">{propertyTypeLabel(id)}</span>
                   </label>
                 ))}
               </div>

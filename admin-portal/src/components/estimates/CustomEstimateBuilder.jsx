@@ -3,7 +3,7 @@ import { Edit2, Loader2, Plus, Save, Trash2, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import ManpowerFields from './ManpowerFields';
 import { isVisitManpower, suggestedManpower } from '../../utils/manpowerPricing';
-import { FREQUENCY_OPTIONS, PROPERTY_TYPES, getServiceSchedule, methodLabel, serviceOptionLabel } from './AddServicePage';
+import { FREQUENCY_OPTIONS, getServiceSchedule, methodLabel, propertyTypeLabel, serviceOptionLabel } from './AddServicePage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const inputClass = 'mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500';
@@ -197,7 +197,7 @@ export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess
         <h2 className="mb-4 text-sm font-semibold text-slate-800">Property Details</h2>
         <Field label="Property *"><select disabled={loading} value={propertyId} onChange={event => { setPropertyId(event.target.value); setRows([]); setEditor(event.target.value ? { key: Date.now(), index: null } : null); setError(''); }} className={inputClass}><option value="">{loading ? 'Loading properties...' : 'Select property'}</option>{properties.map(item => <option key={propertyKey(item)} value={propertyKey(item)}>{item.property_id} — {item.community_name}</option>)}</select></Field>
         {property && <dl className="mt-5 space-y-4 text-sm text-slate-700">{[
-          ['Property Type', PROPERTY_TYPES.find(type => type.id === property.entry_type)?.label || property.entry_type],
+          ['Property Type', propertyTypeLabel(property.entry_type)],
           ['Property ID', property.property_id], ['Customer', property.customer_name || property.community_name],
           ['Contact Phone', property.customer_phone], ['Contact Email', property.customer_email],
           ['Zone', property.zone], ['Division', property.division], ['City', property.city], ['Address', property.address]
