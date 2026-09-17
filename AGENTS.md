@@ -111,6 +111,35 @@ For reusable task instructions for major modules, see `.devin/skills/`:
 - `billing-payments.md`
 - `scheduling-module.md`
 
+## Scheduling Schema Initialization
+
+- `backend/config/schedulingSchema.js` initializes the eight schedule-series/occurrence/renewal tables before the work-order scheduler registers its jobs. It reuses only the table DDL from v23/v28, adds missing renewal columns/indexes through `information_schema` checks compatible with MySQL 8, and serializes initialization with a database advisory lock. Do not execute those legacy migration files wholesale at startup: they include legacy-data copies, invalid views, and MariaDB-only ALTER syntax.
+- Initialization is additive and does not copy legacy schedules or change existing records. If it fails, scheduled work-order generation and renewal processing stay stopped until the database issue is resolved and the backend is restarted.
+- Property contacts have no `is_primary` column; use the first contact ordered by `id`, matching the portal queries. Onboarded-property address fields are `apt_suite_unit` and `postal_code`, not `address_line2` and `pincode`.
+- Scheduling regression tests: `node --test backend/config/schedulingSchema.test.js`. Set `RUN_LOCAL_MYSQL_TESTS=1` and `NODE_ENV=development` to also apply the additive initializer twice to the validated local database and EXPLAIN the scheduler queries without creating work orders, renewals, or emails.
+
+## Pending Property Schedules
+
+- Estimates keep the AMC package as `package_id` plus a `package_name` copy, and the write paths default that copy to `''` (`package_name || ''`). Every pending-properties query must therefore read `COALESCE(NULLIF(fe.package_name, ''), fpamc.name)` with `LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id AND fpamc.franchise_partner_id = fe.franchise_partner_id`. All package selectors read `fp_amc_packages`, and the FP scope prevents borrowing another partner's package name.
+- Estimates with no package at all, such as catalog/custom ones, must keep showing a dash. Never substitute a plausible-looking placeholder for missing property, customer, zone, or package values.
+- Work order estimates never have an AMC package, so the feed also returns `estimateType` and the Package column shows a muted "Work Order" chip for them instead of a dash. The frontend check normalizes the value, so `work_order`, `workOrder` and `work order` all match.
+- Test: `node --test backend/utils/pendingProperties.test.js` with `RUN_LOCAL_MYSQL_TESTS=1` and `NODE_ENV=development` (creates and rolls back its own records in the local database).
+
+## Estimate Types
+
+`fp_estimates.estimate_type` is created by `schema_v8` as `ENUM('property_based','direct')`, but the application also writes `'work_order'` (FP work order estimates) and `'custom'` (manager catalog estimates). On a database with the narrow enum those inserts fail in strict mode with "Data truncated for column 'estimate_type'" and the estimate is never saved.
+
+- `schema_v33_fp_estimate_type_enum.sql` widens the column to all four values. It is idempotent, preserves the existing nullability and default, and skips columns that are not an ENUM. It intentionally uses no `DELIMITER`/stored procedure, so a statement-at-a-time runner can apply it too.
+- `estimates.estimate_type` is a VARCHAR and needs no migration.
+- Test: `node --test backend/database/migrations/estimateTypeEnum.test.js` with `RUN_LOCAL_MYSQL_TESTS=1` (applies the migration to a scratch table, never to `fp_estimates`).
+- Never widen an enum from inside a test transaction: DDL causes an implicit commit in MySQL and would leave test records behind.
+
+## Property Scheduling Screen
+
+- `handlePrepareConfirmation` and `handleShowFinalReview` take an optional override argument, so they must be wired as `onClick={() => handler()}`. Passing them directly hands React's click event to that parameter; both now ignore anything that is not an array, but keep the wrapper for clarity.
+- "Review & Confirm" only opens the confirmation modal. The save happens in `handleConfirmSchedule` via `POST /api/schedules/confirm`, which writes one `property_service_schedules` row plus one `scheduled_visits` row per visit, converts display times such as `2:30 PM` to `14:30:00`, and replaces only visits still in `scheduled`/`confirmed` state so completed visits survive re-confirmation.
+- Test: `node --test backend/routes/schedulesConfirm.test.js` with `RUN_LOCAL_MYSQL_TESTS=1` and `NODE_ENV=development` (runs the real route, rolls back its records).
+
 ## Razorpay Integration
 
 The project uses **Razorpay Payment Links** (hosted checkout) for online payments. UPI, cards, net banking, and wallets are all handled by Razorpay's hosted page.

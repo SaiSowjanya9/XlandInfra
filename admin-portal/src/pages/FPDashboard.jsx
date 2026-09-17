@@ -26,6 +26,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import EstimatesOverviewBlocks from '../components/EstimatesOverviewBlocks';
 import DonutChart from '../components/common/DonutChart';
 import DateRangeFilter from '../components/common/DateRangeFilter';
+import DashboardStatCards from '../components/common/DashboardStatCards';
 import { PendingSchedulesBadge, usePendingSchedulesCount } from '../components/scheduling/PropertyScheduleNotificationCard';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -576,81 +577,14 @@ const FPDashboard = ({ user }) => {
             </h1>
             <p className="text-gray-500 mt-1 break-words">Here's what's happening with your business today.</p>
           </div>
-          <div className="grid w-full min-w-0 flex-1 grid-flow-col auto-cols-[minmax(144px,1fr)] gap-2 overflow-x-auto p-1 [&>a]:flex [&>a]:h-24 [&>a]:min-w-0 [&>a]:items-center [&>a>div]:w-full [&>a>div>div:first-child]:shrink-0 [&>a>div>div:last-child]:min-w-0 [&>a>div>div:last-child]:flex-1 [&>a_p:first-child]:flex [&>a_p:first-child]:h-8 [&>a_p:first-child]:items-center [&>a_p:first-child]:justify-center [&>a_p:first-child]:leading-4">
-            <Link to="/fp/properties" className="bg-white rounded-lg border border-gray-100 px-3 py-2 hover:shadow-md hover:border-blue-200 transition-all duration-200 group">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Building2 className="w-4 h-4 text-blue-600" />
-                </div>
-                <div className="text-center">
-                  <p className="text-xs text-gray-500">Properties</p>
-                  <p className="text-lg font-bold text-gray-900">{realTimeStats.properties}</p>
-                </div>
-              </div>
-            </Link>
-            <Link to="/fp/vendors" className="bg-white rounded-lg border border-gray-100 px-3 py-2 hover:shadow-md hover:border-amber-200 transition-all duration-200 group">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Store className="w-4 h-4 text-amber-600" />
-                </div>
-                <div className="text-center">
-                  <p className="text-xs text-gray-500">Vendors</p>
-                  <p className="text-lg font-bold text-gray-900">{realTimeStats.vendors}</p>
-                </div>
-              </div>
-            </Link>
-            <Link to="/fp/employees" className="bg-white rounded-lg border border-gray-100 px-3 py-2 hover:shadow-md hover:border-orange-200 transition-all duration-200 group">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Users className="w-4 h-4 text-orange-600" />
-                </div>
-                <div className="text-center">
-                  <p className="text-xs text-gray-500">Employees</p>
-                  <p className="text-lg font-bold text-gray-900">{realTimeStats.employees}</p>
-                </div>
-              </div>
-            </Link>
-            <Link to="/fp/work-orders" className="bg-white rounded-lg border border-gray-100 px-3 py-2 hover:shadow-md hover:border-purple-200 transition-all duration-200 group">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <ClipboardList className="w-4 h-4 text-purple-600" />
-                </div>
-                <div className="text-center">
-                  <p className="text-xs text-gray-500">Work Orders</p>
-                  <p className="text-lg font-bold text-gray-900">{realTimeStats.workOrders}</p>
-                </div>
-              </div>
-            </Link>
-            <Link to="/fp/estimates" className="bg-white rounded-lg border border-gray-100 px-3 py-2 hover:shadow-md hover:border-teal-200 transition-all duration-200 group">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-teal-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <FileText className="w-4 h-4 text-teal-600" />
-                </div>
-                <div className="text-center">
-                  <p className="text-xs text-gray-500">Estimates</p>
-                  <p className="text-lg font-bold text-gray-900">{realTimeStats.estimates}</p>
-                </div>
-              </div>
-            </Link>
-            {/* Pending Schedules Card */}
-            {pendingSchedulesCount > 0 && (
-              <Link to="/fp/schedules/pending" className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg border border-orange-200 px-3 py-2 hover:shadow-md hover:border-orange-300 transition-all duration-200 group relative">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Calendar className="w-4 h-4 text-white" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-orange-600 font-medium">Pending Schedules</p>
-                    <p className="text-lg font-bold text-orange-700">{pendingSchedulesCount}</p>
-                  </div>
-                </div>
-                <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
-                </span>
-              </Link>
-            )}
-          </div>
+          <DashboardStatCards cards={[
+            { label: 'Properties', value: realTimeStats.properties, to: '/fp/properties', icon: Building2, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', hoverBorder: 'hover:border-blue-200' },
+            { label: 'Vendors', value: realTimeStats.vendors, to: '/fp/vendors', icon: Store, iconBg: 'bg-amber-50', iconColor: 'text-amber-600', hoverBorder: 'hover:border-amber-200' },
+            { label: 'Employees', value: realTimeStats.employees, to: '/fp/employees', icon: Users, iconBg: 'bg-orange-50', iconColor: 'text-orange-600', hoverBorder: 'hover:border-orange-200' },
+            { label: 'Work Orders', value: realTimeStats.workOrders, to: '/fp/work-orders', icon: ClipboardList, iconBg: 'bg-purple-50', iconColor: 'text-purple-600', hoverBorder: 'hover:border-purple-200' },
+            { label: 'Estimates', value: realTimeStats.estimates, to: '/fp/estimates', icon: FileText, iconBg: 'bg-teal-50', iconColor: 'text-teal-600', hoverBorder: 'hover:border-teal-200' },
+            ...(pendingSchedulesCount > 0 ? [{ label: 'Pending Schedules', value: pendingSchedulesCount, to: '/fp/schedules/pending', icon: Calendar, iconBg: 'bg-orange-500', iconColor: 'text-white', accent: true }] : [])
+          ]} />
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 self-end w-fit">
           {/* Main Date Range Picker */}
