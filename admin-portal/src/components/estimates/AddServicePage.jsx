@@ -97,7 +97,8 @@ export const getServiceSchedule = (service, capacity, frequency) => {
     ? defaultVisits : FREQUENCY_OPTIONS.find(item => item.value === selectedFrequency)?.defaultVisits };
 };
 
-const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
+// `scoped` portals (FP) own their catalog scope on the server, so no FP is sent with the service.
+const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '/api/admin/service-catalog', scoped = false, scopeLabel }) => {
   const { selectedFp } = useFP();
   const token = getAuthToken();
 
@@ -176,7 +177,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
   useEffect(() => {
     const controller = new AbortController();
     setCategoryError('');
-    fetch(`${API_BASE}/api/admin/categories`, {
+    fetch(`${API_BASE}${scoped ? `${apiPath}/categories` : '/api/admin/categories'}`, {
       headers: { Authorization: `Bearer ${token}` }, signal: controller.signal
     }).then(async response => {
       const result = await response.json();
@@ -186,7 +187,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
       if (error.name !== 'AbortError') setCategoryError('Unable to load categories. Please retry.');
     });
     return () => controller.abort();
-  }, [token, categoryAttempt]);
+  }, [apiPath, scoped, token, categoryAttempt]);
 
   // Update unit options when pricing method changes
   const changePricingMethod = (pricingMethod) => {
@@ -273,7 +274,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
       const serviceData = {
         service_name: formData.serviceName.trim(),
         category: formData.category,
-        franchise_partner_id: service ? service.franchise_partner_id : selectedFp?.id && selectedFp.id !== 'all' ? Number(selectedFp.id) : null,
+        ...(scoped ? {} : { franchise_partner_id: service ? service.franchise_partner_id : selectedFp?.id && selectedFp.id !== 'all' ? Number(selectedFp.id) : null }),
         pricing_method: formData.pricingMethod,
         unit: formData.unit,
         applicable_property_types: formData.applicablePropertyTypes,
@@ -311,7 +312,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
         period_months: formData.pricingMethod === 'manpower' ? Number(formData.periodMonths) : null
       };
       // API call to save service
-      const response = await fetch(`${API_BASE}/api/admin/service-catalog${service ? `/${service.id}` : ''}`, {
+      const response = await fetch(`${API_BASE}${apiPath}${service ? `/${service.id}` : ''}`, {
         method: service ? 'PUT' : 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(serviceData)
@@ -376,7 +377,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service }) => {
           <div>
             <h1 className="text-xl font-semibold">{service ? 'Edit Service' : 'Add Service'} — {getFormulaText()}</h1>
             <p className="mt-1 text-xs text-slate-500">Master Data <span className="mx-2">›</span> Service Master <span className="mx-2">›</span> {service ? 'Edit Service' : 'Add Service'}</p>
-            <p className="mt-1 text-xs text-slate-500">{service ? (service.franchise_partner_id ? `For FP ${service.franchise_partner_id}` : 'Available to all FPs') : selectedFp?.id && selectedFp.id !== 'all' ? `For ${selectedFp.companyName || selectedFp.fpId || `FP ${selectedFp.id}`}` : 'Available to all FPs'}</p>
+            <p className="mt-1 text-xs text-slate-500">{scopeLabel ?? (service ? (service.franchise_partner_id ? `For FP ${service.franchise_partner_id}` : 'Available to all FPs') : selectedFp?.id && selectedFp.id !== 'all' ? `For ${selectedFp.companyName || selectedFp.fpId || `FP ${selectedFp.id}`}` : 'Available to all FPs')}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
