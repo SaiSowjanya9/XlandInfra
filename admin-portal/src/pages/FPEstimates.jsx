@@ -20,6 +20,7 @@ import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
 import { getServiceDescription, hasCatalogServices } from '../utils/estimatePackageUtils';
 import * as XLSX from 'xlsx';
 import AutocompleteInput from '../components/common/AutocompleteInput';
+import AddServicePage from '../components/estimates/AddServicePage';
 import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 
@@ -3570,13 +3571,19 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         </button>
       </div>
 
-      {addonActiveTab === 'configured' && (
-        <ServiceCatalogList key={catalogEntry} apiPath={FP_CATALOG_API} admin={user} showToast={showToast} scoped openCreateOnMount embedded
-          scopeLabel="For your franchise" canCreate={!isFPManager} canEdit={service => !isFPManager && !!service.franchise_partner_id} />
+      {/* The Add Service tab is the form itself; managers cannot author, so they get the list */}
+      {addonActiveTab === 'configured' && (isFPManager
+        ? <ServiceCatalogList apiPath={FP_CATALOG_API} admin={user} showToast={showToast} scoped
+            scopeLabel="For your franchise" canEdit={() => false} />
+        : <AddServicePage key={catalogEntry} admin={user} showToast={showToast} apiPath={FP_CATALOG_API} scoped embedded
+            scopeLabel="For your franchise" onSave={loadData} onBack={() => setAddonActiveTab('all-addons')} />
       )}
 
       {addonActiveTab === 'all-addons' && (
         <div className="space-y-4">
+          {/* Configured services are reviewed and edited here, alongside the legacy add-ons */}
+          <ServiceCatalogList apiPath={FP_CATALOG_API} admin={user} showToast={showToast} scoped
+            scopeLabel="For your franchise" canEdit={service => !isFPManager && !!service.franchise_partner_id} />
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <div className="flex items-center justify-between">
               <div>
