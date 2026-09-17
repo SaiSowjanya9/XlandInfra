@@ -100,7 +100,7 @@ async function processRenewals() {
       FROM schedule_series ss
       LEFT JOIN onboarded_properties op ON ss.property_id = op.id
       LEFT JOIN onboarded_vendors ov ON ss.vendor_id = ov.id
-      LEFT JOIN property_contacts pc ON pc.property_id = op.id AND pc.is_primary = 1
+      LEFT JOIN property_contacts pc ON pc.id = (SELECT pc2.id FROM property_contacts pc2 WHERE pc2.property_id = op.id ORDER BY pc2.id LIMIT 1)
       LEFT JOIN property_renewal_settings prs ON prs.property_id = op.id
       WHERE ss.status = 'active'
         AND COALESCE(ss.auto_renewal_enabled, TRUE) = TRUE
@@ -754,7 +754,7 @@ async function getPendingRenewals(filters = {}) {
     JOIN schedule_series ss ON sr.original_series_id = ss.id
     LEFT JOIN onboarded_properties op ON sr.property_id = op.id
     LEFT JOIN onboarded_vendors ov ON sr.vendor_id = ov.id
-    LEFT JOIN property_contacts pc ON pc.property_id = op.id AND pc.is_primary = 1
+    LEFT JOIN property_contacts pc ON pc.id = (SELECT pc2.id FROM property_contacts pc2 WHERE pc2.property_id = op.id ORDER BY pc2.id LIMIT 1)
     WHERE 1=1
   `;
   const params = [];

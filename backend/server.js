@@ -255,7 +255,7 @@ const startServer = async () => {
     
     // Start work order auto-generation scheduler (creates work orders 7 days before scheduled services)
     // Runs at 6:00 AM and 6:00 PM daily (IST)
-    initWorkOrderScheduler();
+    await initWorkOrderScheduler();
   } else {
     console.log('⚠️ Database mode: Demo (no MySQL connection)');
     console.log('   To enable database, update .env with valid MySQL credentials');
