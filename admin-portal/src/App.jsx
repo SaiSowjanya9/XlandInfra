@@ -471,7 +471,8 @@ function App() {
                     <Route path="estimates/dashboard" element={<EstimatesDashboard user={user} portalType="franchise" />} />
                     <Route path="estimates/create" element={<FPEstimates user={user} defaultTab="create" />} />
                     <Route path="estimates/amc" element={<FPEstimates user={user} defaultTab="amc" />} />
-                    <Route path="estimates/addons" element={<FPEstimates user={user} defaultTab="addons" />} />
+                    <Route path="estimates/add-service" element={<FPEstimates user={user} defaultTab="addons" />} />
+                    <Route path="estimates/addons" element={<Navigate to="/fp/estimates/add-service" replace />} />
                     <Route path="estimates/archived" element={<FPEstimates user={user} defaultTab="archived" />} />
                     <Route path="qr-management" element={<QRManagement />} />
                     <Route path="billing/dashboard" element={<PaymentsDashboard user={user} portalType="fp" />} />
