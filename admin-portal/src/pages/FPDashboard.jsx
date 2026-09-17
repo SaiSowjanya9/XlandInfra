@@ -569,14 +569,14 @@ const FPDashboard = ({ user }) => {
     <div className="space-y-6">
       {/* Header with Stats Cards - Single Row Layout */}
       <div className="flex flex-col gap-4 overflow-visible">
-        <div className="flex items-center gap-6 flex-nowrap">
-          <div className="shrink-0 min-w-max">
-            <h1 className="text-2xl font-bold text-gray-900 whitespace-nowrap">
+        <div className="flex flex-col gap-4">
+          <div className="shrink-0 min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900 break-words">
               Welcome, {user?.firstName || user?.name?.split(' ')[0] || 'Partner'}!
             </h1>
-            <p className="text-gray-500 mt-1 whitespace-nowrap">Here's what's happening with your business today.</p>
+            <p className="text-gray-500 mt-1 break-words">Here's what's happening with your business today.</p>
           </div>
-          <div className="flex items-center gap-2 flex-nowrap">
+          <div className="grid w-full min-w-0 flex-1 grid-flow-col auto-cols-[minmax(144px,1fr)] gap-2 overflow-x-auto p-1 [&>a]:flex [&>a]:h-24 [&>a]:min-w-0 [&>a]:items-center [&>a>div]:w-full [&>a>div>div:first-child]:shrink-0 [&>a>div>div:last-child]:min-w-0 [&>a>div>div:last-child]:flex-1 [&>a_p:first-child]:flex [&>a_p:first-child]:h-8 [&>a_p:first-child]:items-center [&>a_p:first-child]:justify-center [&>a_p:first-child]:leading-4">
             <Link to="/fp/properties" className="bg-white rounded-lg border border-gray-100 px-3 py-2 hover:shadow-md hover:border-blue-200 transition-all duration-200 group">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -1044,9 +1044,9 @@ const FPDashboard = ({ user }) => {
           
           {/* Invoices by Payment Status Chart - Centered and Large */}
           <div className="flex justify-center">
-            <div className="bg-gray-50 rounded-2xl border border-gray-200 p-8 w-full max-w-2xl">
-              <div className="flex justify-between items-center mb-6 gap-4">
-                <h3 className="text-lg font-semibold text-gray-900">Invoices by Payment Status</h3>
+            <div className="w-full max-w-lg rounded-xl border border-gray-200 bg-gray-50 p-5">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h3 className="text-base font-semibold text-gray-900">Invoices by Payment Status</h3>
                 <div className="relative">
                   <select 
                     value={invoiceStatusFilter} 
@@ -1063,7 +1063,7 @@ const FPDashboard = ({ user }) => {
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
               </div>
-              <div className="flex items-center justify-center gap-12">
+              <div className="flex flex-col items-center gap-5 sm:flex-row">
                 {(() => {
                   // Calculate invoice status data
                   const statusCounts = {
@@ -1083,21 +1083,21 @@ const FPDashboard = ({ user }) => {
 
                   return (
                     <>
-                      <div className="w-48 h-48 flex-shrink-0">
+                      <div className="h-36 w-36 flex-shrink-0">
                         <DonutChart
                           data={invoiceStatusData}
                           centerValue={total}
-                          size={192}
-                          strokeWidth={24}
+                          size={144}
+                          strokeWidth={18}
                         />
                       </div>
-                      <div className="flex-1 min-w-0 space-y-4 max-w-xs">
+                      <div className="w-full min-w-0 space-y-3 sm:flex-1">
                         {invoiceStatusData.map((item, index) => (
-                          <div key={index} className="flex items-center gap-3 text-base">
-                            <span className="inline-block w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></span>
+                          <div key={index} className="grid grid-cols-[12px_minmax(0,1fr)_auto_52px] items-center gap-2 text-sm">
+                            <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }}></span>
                             <span className="text-gray-600">{item.name}</span>
-                            <span className="font-bold text-gray-900 ml-auto text-lg">{item.value}</span>
-                            <span className="text-gray-400 text-sm">({total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)</span>
+                            <span className="text-right font-semibold tabular-nums text-gray-900">{item.value}</span>
+                            <span className="text-right text-xs tabular-nums text-gray-400">({total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)</span>
                           </div>
                         ))}
                       </div>

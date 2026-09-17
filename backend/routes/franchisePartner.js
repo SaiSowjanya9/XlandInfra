@@ -4,6 +4,7 @@
  */
 
 const express = require('express');
+const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -4285,7 +4286,7 @@ router.get('/estimates', requireFPScope, async (req, res) => {
     let fpAddons = [];
     try {
       const [addonResults] = await pool.execute(
-        `SELECT id, service_name, description, property_type FROM fp_addons WHERE franchise_partner_id = ?`,
+        `SELECT id, service_name, description, property_type, frequency_type, frequency_count FROM fp_addons WHERE franchise_partner_id = ?`,
         [req.fpId]
       );
       fpAddons = addonResults;
@@ -4303,7 +4304,7 @@ router.get('/estimates', requireFPScope, async (req, res) => {
           // Use estimate's property_type to match correct addon
           const estPropertyType = est.property_type?.toUpperCase();
           addons = addons.map(addon => {
-            if (!addon.description) {
+            if (!addon.description && !addon.catalogServiceId) {
               const addonName = addon.name || addon.serviceName || addon.service_name || '';
               const addonId = addon.id || addon.addon_id;
               // Priority 1: Match by exact ID
@@ -4326,7 +4327,7 @@ router.get('/estimates', requireFPScope, async (req, res) => {
                 console.log('Enriched addon', addonName, 'with description from', foundAddon.property_type, ':', foundAddon.description);
               }
             }
-            return addon;
+            return enrichLegacyEstimateAddon(addon, fpAddons, estPropertyType);
           });
         } catch (e) { console.log('Error parsing addons:', e.message); }
       }
@@ -4405,7 +4406,7 @@ router.get('/estimates', requireFPScope, async (req, res) => {
       return { ...est, addons, created_by_name: creatorName, division, property_code, client_phone, client_email };
     }));
 
-    res.json({ success: true, data: enrichedEstimates });
+    res.json({ success: true, data: enrichedEstimates.map(normalizeEstimateData) });
   } catch (error) {
     console.error('Get estimates error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch estimates', error: error.message });
@@ -4744,6 +4745,7 @@ router.put('/estimates/:id', requireFPScope, async (req, res) => {
     if (!existing) {
       return res.status(404).json({ success: false, message: 'Estimate not found' });
     }
+    if (hasCatalogServices(existing)) return res.status(409).json({ success: false, message: 'Configured-service estimates cannot be rewritten by the legacy editor. Create a new estimate to change these services.' });
     
     const {
       client_name, client_phone, client_email,
@@ -4804,7 +4806,7 @@ router.put('/estimates/:id', requireFPScope, async (req, res) => {
 });
 
 // Send estimate via email
-router.post('/estimates/send-email', requireFPScope, async (req, res) => {
+const sendEstimateEmailHandler = async (req, res) => {
   try {
     const { estimateId, email } = req.body;
     console.log(`📧 [Send Email] Request received - estimateId: ${estimateId}, email: ${email}, fpId: ${req.fpId}`);
@@ -4847,6 +4849,7 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
     console.log(`📧 Generated new action token for estimate ${estimateId} (ID: ${estimate.id})`);
     
     // Update estimate with action token and status
+    const markEstimateSent = async () => {
     try {
       console.log(`📧 [Send Email] Updating status to 'sent' for estimate id=${estimateId}`);
       const [updateResult] = await pool.execute(
@@ -4882,6 +4885,7 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         );
       }
     }
+    };
     
     // Try to send email using the email service
     try {
@@ -4894,13 +4898,13 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
           addons = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
           // Fetch addon descriptions from fp_addons table
           const [fpAddons] = await pool.execute(
-            `SELECT id, service_name, description, property_type FROM fp_addons WHERE franchise_partner_id = ?`,
+            `SELECT id, service_name, description, property_type, frequency_type, frequency_count FROM fp_addons WHERE franchise_partner_id = ?`,
             [req.fpId]
           );
           // Enrich addons with descriptions - match by property_type
           const estPropertyType = estimate.property_type?.toUpperCase();
           addons = addons.map(addon => {
-            if (!addon.description) {
+            if (!addon.description && !addon.catalogServiceId) {
               const addonName = addon.name || addon.serviceName || addon.service_name || '';
               const addonId = addon.id || addon.addon_id;
               // Priority 1: Match by exact ID
@@ -4916,7 +4920,7 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
                 addon.description = foundAddon.description;
               }
             }
-            return addon;
+            return enrichLegacyEstimateAddon(addon, fpAddons, estPropertyType);
           });
           console.log('[Email] Enriched addons with descriptions:', addons.map(a => ({ 
             name: a.name || a.service_name || a.serviceName, 
@@ -5111,6 +5115,7 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
       const emailResult = await sendEstimateEmail(estimateData, actionToken);
       
       if (emailResult.success) {
+        await markEstimateSent();
         res.json({ 
           success: true, 
           message: `Email sent to ${email}` 
@@ -5133,7 +5138,9 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
     console.error('Send email error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
-});
+};
+router.post('/estimates/send-email', requireFPScope, sendEstimateEmailHandler);
+router.sendEstimateEmailHandler = sendEstimateEmailHandler;
 
 // Restore estimate
 router.put('/estimates/:id/restore', requireFPScope, async (req, res) => {

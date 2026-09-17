@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const { customerEstimateData } = require('../utils/estimateData');
 const { generateEstimatePDF, generateInvoicePDF } = require('./pdfService');
 const { pool } = require('../config/database');
 
@@ -864,6 +865,9 @@ const sendFPEmployeeWelcomeEmail = async (userData) => {
 
 // Send estimate email to customer with Approve/Reject buttons
 const sendEstimateEmail = async (estimate, actionToken) => {
+  estimate = customerEstimateData(estimate);
+  const money = value => Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  const emailText = value => String(decodeHtml(value) || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
   const { 
     customerName, customerEmail, customerPhone, estimateId, estimateType, propertyName, propertyType,
     zone, division, city, address,
@@ -900,11 +904,10 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   const servicesHtml = servicesList.map(s => `
     <tr>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
-        <strong>${decodeHtml(s.name || s.service || 'Service')}</strong>
+        <strong>${emailText(s.name || s.service || 'Service')}</strong>
         ${s.frequencyType ? `<br><span style="font-size: 12px; color: #6b7280;">${s.frequencyType} - ${s.frequencyCount ?? 1} visits</span>` : ''}
-        ${s.description ? `<br><span style="font-size: 12px; color: #6b7280;">${decodeHtml(s.description)}</span>` : ''}
+        ${s.description ? `<br><span style="font-size: 12px; color: #6b7280;">${emailText(s.description)}</span>` : ''}
       </td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">Rs. ${Math.round(Number(s.price || s.rate || 0)).toLocaleString()}</td>
     </tr>
   `).join('');
 
@@ -922,7 +925,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   // Format addons list with descriptions - handle all possible field names
   const addonsHtml = addonsList.map(a => {
     // Get addon name - try all possible field names
-    const addonName = decodeHtml(a.name || a.service_name || a.serviceName || a.services?.[0]?.name || 'Add-on');
+    const addonName = emailText(a.name || a.service_name || a.serviceName || a.services?.[0]?.name || 'Add-on');
     // Get frequency - try frequency_type, frequencyType, frequency
     const freqType = a.frequency_type || a.frequencyType || a.frequency || '';
     // Get visits/count - try frequency_count, frequencyCount, visits, quantity
@@ -930,7 +933,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
     // Get price - try price, totalPrice, calculatedPrice
     const addonPrice = Number(a.price || a.totalPrice || a.calculatedPrice || a.services?.[0]?.price || 0);
     // Get description
-    const desc = a.description ? decodeHtml(a.description) : '';
+    const desc = a.description ? emailText(a.description) : '';
     
     return `
     <tr>
@@ -939,14 +942,13 @@ const sendEstimateEmail = async (estimate, actionToken) => {
         ${freqType ? `<br><span style="font-size: 12px; color: #6b7280;">${freqType} - ${freqCount} visits</span>` : ''}
         ${desc ? `<br><span style="font-size: 12px; color: #6b7280;">${desc}</span>` : ''}
       </td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">Rs. ${Math.round(addonPrice).toLocaleString()}</td>
     </tr>
   `;
   }).join('');
 
   // Calculate expiry date (1 month from now)
-  const expiryDate = new Date();
-  expiryDate.setMonth(expiryDate.getMonth() + 1);
+  const expiryDate = validUntil ? new Date(validUntil) : new Date();
+  if (!validUntil) expiryDate.setMonth(expiryDate.getMonth() + 1);
 
   // Get property type label
   const getPropertyTypeLabel = (type) => {
@@ -1048,6 +1050,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
     console.log(`📄 PDF generated for estimate ${estimateId}`);
   } catch (pdfError) {
     console.error('PDF generation failed:', pdfError.message);
+    return { success: false, error: 'Unable to generate the estimate PDF. Email was not sent.' };
   }
 
   // Email subject - different for work order estimates
@@ -1122,6 +1125,8 @@ const sendEstimateEmail = async (estimate, actionToken) => {
             
             <!-- Work Order Details (only for work order estimates) -->
             ${workOrderHtml}
+            ${servicesList.length ? `<div style="margin-bottom: 20px;"><h3 style="font-size: 14px;">Services</h3><table style="width: 100%; border-collapse: collapse;">${servicesHtml}</table></div>` : ''}
+            ${addonsList.length ? `<div style="margin-bottom: 20px;"><h3 style="font-size: 14px;">${estimateType === 'custom' ? 'Services' : 'Additional Services'}</h3><table style="width: 100%; border-collapse: collapse;">${addonsHtml}</table><p style="text-align: right; font-weight: 600;">Total Services Price: Rs. ${money(addonsList.reduce((sum, addon) => sum + Number(addon.totalPrice ?? addon.price ?? 0), 0))}</p></div>` : ''}
             
             <!-- Price Summary -->
             <div style="margin-bottom: 20px;">
@@ -1129,22 +1134,22 @@ const sendEstimateEmail = async (estimate, actionToken) => {
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td width="60%" style="padding: 6px 0; color: #6b7280; font-size: 14px;">Subtotal</td>
-                  <td width="40%" style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 500;">Rs. ${Math.round(Number(subtotal || 0)).toLocaleString()}</td>
+                  <td width="40%" style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 500;">Rs. ${money(subtotal)}</td>
                 </tr>
                 ${discount > 0 ? `<tr>
-                  <td width="60%" style="padding: 6px 0; color: #059669; font-size: 14px;">Discount (${Math.round(discount)}%)</td>
-                  <td width="40%" style="padding: 6px 0; text-align: right; color: #059669; font-weight: 500;">-Rs. ${Math.round(Number(estimate.discountAmount || 0)).toLocaleString()}</td>
+                  <td width="60%" style="padding: 6px 0; color: #059669; font-size: 14px;">Discount (${money(discount)}%)</td>
+                  <td width="40%" style="padding: 6px 0; text-align: right; color: #059669; font-weight: 500;">-Rs. ${money(estimate.discountAmount)}</td>
                 </tr>` : ''}
                 <tr>
-                  <td width="60%" style="padding: 6px 0; color: #6b7280; font-size: 14px;">GST (${Math.round(estimate.gstPercent || 0)}%)</td>
-                  <td width="40%" style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 500;">Rs. ${Math.round(Number(tax || 0)).toLocaleString()}</td>
+                  <td width="60%" style="padding: 6px 0; color: #6b7280; font-size: 14px;">GST (${money(estimate.gstPercent)}%)</td>
+                  <td width="40%" style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 500;">Rs. ${money(tax)}</td>
                 </tr>
                 <tr>
                   <td colspan="2" style="padding: 6px 0;"><hr style="border: none; border-top: 1px solid #e5e7eb; margin: 0;"></td>
                 </tr>
                 <tr>
                   <td width="60%" style="padding: 8px 0; color: #1f2937; font-size: 15px; font-weight: 700;">Grand Total</td>
-                  <td width="40%" style="padding: 8px 0; text-align: right; color: #1f2937; font-size: 16px; font-weight: 700;">Rs. ${Math.round(Number(total || 0)).toLocaleString()}</td>
+                  <td width="40%" style="padding: 8px 0; text-align: right; color: #1f2937; font-size: 16px; font-weight: 700;">Rs. ${money(total)}</td>
                 </tr>
               </table>
             </div>
@@ -1246,7 +1251,7 @@ const sendEstimateActionNotification = async (estimate, action, customerName) =>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #c9a227; font-weight: 600;">Grand Total</td>
-                <td style="padding: 8px 0; color: #c9a227; font-weight: 700; font-size: 18px; text-align: right;">Rs. ${Math.round(Number(total || 0)).toLocaleString()}</td>
+                <td style="padding: 8px 0; color: #c9a227; font-weight: 700; font-size: 18px; text-align: right;">Rs. ${Number(total || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #6b7280;">Action Date:</td>

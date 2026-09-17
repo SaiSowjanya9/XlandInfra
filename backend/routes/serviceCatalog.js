@@ -4,6 +4,7 @@ const { authenticate } = require('../middleware/auth');
 const { adminOnly, requireRole } = require('../middleware/rbac');
 const { validateService, calculateServiceQuote, calculateEstimateSummary, normalizePropertyType } = require('../utils/servicePricing');
 const { randomUUID } = require('crypto');
+const { normalizeEstimateService } = require('../utils/estimateData');
 const router = express.Router();
 
 const parseService = row => ({
@@ -71,7 +72,7 @@ router.get('/estimate-options', async (req, res) => {
   try {
     const scope = scopeId(req.query.fpId);
     const [properties] = await db.pool.execute(
-      `SELECT p.id, p.property_id, p.entry_type, p.community_name, p.zone, p.address, p.franchise_partner_id,
+      `SELECT p.id, p.property_id, p.entry_type, p.community_name, p.zone, p.division, p.city, p.address, p.franchise_partner_id,
               c.name AS customer_name, c.email AS customer_email, c.phone AS customer_phone
        FROM onboarded_properties p
        LEFT JOIN property_contacts c ON c.id = (SELECT MIN(pc.id) FROM property_contacts pc WHERE pc.property_id = p.id)
@@ -83,21 +84,26 @@ router.get('/estimate-options', async (req, res) => {
        FROM onboarded_vendors WHERE (status = 'active' OR status IS NULL)
        ${scope ? 'AND (franchise_partner_id = ? OR franchise_partner_id IS NULL)' : ''} ORDER BY name`, scope ? [scope] : []
     );
-    res.json({ success: true, data: { properties: properties.filter(property => ['APT', 'GC', 'FLAT', 'VILLA', 'IH', 'PLOT'].includes(normalizePropertyType(property.entry_type))), vendors } });
+    res.json({ success: true, data: { properties: properties.filter(property => ['APT', 'GC', 'FLAT', 'VILLA', 'IH', 'PLOT'].includes(normalizePropertyType(property.entry_type))).map(property => ({ ...property, source_table: 'onboarded_properties', entry_type: normalizePropertyType(property.entry_type) })), vendors } });
   } catch (error) { handleError(res, error); }
 });
 
-const priceCustomEstimate = async (body, role) => {
+const priceCustomEstimate = async (body, role, authorizedProperty = null) => {
   const invalid = message => { throw Object.assign(new Error(message), { status: 400 }); };
   if (!Array.isArray(body.rows) || !body.rows.length || body.rows.length > 100) invalid('Add between 1 and 100 service rows.');
   if (!Number.isSafeInteger(Number(body.property_id)) || Number(body.property_id) <= 0) invalid('Select a property.');
-  const [properties] = await db.pool.execute(
-    `SELECT p.*, c.name AS customer_name, c.email AS customer_email, c.phone AS customer_phone
-     FROM onboarded_properties p LEFT JOIN property_contacts c ON c.id = (SELECT MIN(pc.id) FROM property_contacts pc WHERE pc.property_id = p.id)
-     WHERE p.id = ? AND (p.status = 'active' OR p.status IS NULL)`, [body.property_id]
-  );
-  if (!properties.length) invalid('Selected property is not available.');
-  const property = properties[0];
+  let property = authorizedProperty;
+  if (!property) {
+    if (body.property_source && body.property_source !== 'onboarded_properties') invalid('Select a supported property source.');
+    const [properties] = await db.pool.execute(
+      `SELECT p.*, c.name AS customer_name, c.email AS customer_email, c.phone AS customer_phone
+       FROM onboarded_properties p LEFT JOIN property_contacts c ON c.id = (SELECT MIN(pc.id) FROM property_contacts pc WHERE pc.property_id = p.id)
+       WHERE p.id = ? AND (p.status = 'active' OR p.status IS NULL)`, [body.property_id]
+    );
+    if (!properties.length) invalid('Selected property is not available.');
+    property = properties[0];
+  }
+  if (Number(property.id) !== Number(body.property_id)) invalid('Selected property does not match the authorized record.');
   const scope = scopeId(body.fpId);
   if (scope && scope !== Number(property.franchise_partner_id)) invalid('Property belongs to another FP.');
   const rows = [];
@@ -113,13 +119,22 @@ const priceCustomEstimate = async (body, role) => {
     if (!vendors.length || (vendors[0].franchise_partner_id && vendors[0].franchise_partner_id !== Number(property.franchise_partner_id))) invalid('The selected vendor is not available for this property.');
     const quote = calculateServiceQuote(config, { ...row.inputs, property_type: property.entry_type }, role);
     if (quote.requiresCustomQuote) invalid(`${config.service_name} requires a custom quote for this capacity. Enter the total vendor cost for the service period.`);
-    rows.push({ service_id: config.id, service_name: config.service_name, description: config.description, category: config.category, pricing_method: config.pricing_method, unit: config.unit, vendor_id: vendors[0].id, vendor_name: vendors[0].name, ...quote });
+    rows.push(normalizeEstimateService({ ...config, service_id: config.id, service_name: config.service_name, vendor_id: vendors[0].id, vendor_name: vendors[0].name, ...quote }));
   }
   return {
-    property: { id: property.id, property_id: property.property_id, entry_type: property.entry_type, community_name: property.community_name, zone: property.zone, address: property.address, franchise_partner_id: property.franchise_partner_id, customer_name: property.customer_name || property.community_name, customer_email: property.customer_email, customer_phone: property.customer_phone },
+    property: { id: property.id, property_id: property.property_id, source_table: property.source_table || 'onboarded_properties', entry_type: property.entry_type, community_name: property.community_name, zone: property.zone, division: property.division, city: property.city, address: property.address,
+      number_of_blocks: property.number_of_blocks, total_units: property.total_units, block_names: property.block_names, units_per_block: property.units_per_block,
+      tower_name: property.tower_name, block_number: property.block_number, villa_plot_number: property.villa_plot_number, franchise_partner_id: property.franchise_partner_id, customer_name: property.customer_name || property.community_name, customer_email: property.customer_email, customer_phone: property.customer_phone },
     rows, summary: calculateEstimateSummary(rows, body.discount_percentage ?? 0, body.gst_percentage ?? 18)
   };
 };
+
+const buildCatalogAddons = (rows, property) => rows.map((row, index) => normalizeEstimateService({
+  addonId: `CAT-${row.service_id}-${index}`, catalogServiceId: row.service_id, name: row.service_name, service_name: row.service_name,
+  description: row.description, frequency_type: row.frequency, frequency_count: row.visits, totalPrice: row.totalPrice,
+  services: [{ name: row.service_name, description: row.description, frequencyType: row.frequency, frequency: row.visits, price: row.totalPrice / row.visits }],
+  pricingInputs: row.inputs, pricingSnapshot: row, propertySnapshot: property
+}));
 
 router.post('/custom-estimates/quote', requireRole('admin'), async (req, res) => {
   try { res.json({ success: true, data: await priceCustomEstimate(req.body, req.user.role) }); }
@@ -132,12 +147,7 @@ router.post('/custom-estimates', requireRole('admin'), async (req, res) => {
     const { property, rows, summary } = result;
     if (typeof req.body.notes !== 'string' || req.body.notes.length > 2000) return res.status(400).json({ success: false, message: 'Notes must be at most 2000 characters.' });
     const estimateId = `EST-${randomUUID()}`;
-    const addons = rows.map((row, index) => ({
-      addonId: `CAT-${row.service_id}-${index}`, catalogServiceId: row.service_id, name: row.service_name, service_name: row.service_name,
-      description: row.description, frequency_type: row.frequency, frequency_count: row.visits, totalPrice: row.totalPrice,
-      services: [{ name: row.service_name, description: row.description, frequencyType: row.frequency, frequency: row.visits, price: row.totalPrice / row.visits }],
-      pricingInputs: row.inputs, pricingSnapshot: row
-    }));
+    const addons = buildCatalogAddons(rows, property);
     await db.pool.execute(
       `INSERT INTO estimates (estimate_id, title, property_id, franchise_partner_id, customer_name, customer_email, customer_phone,
         property_type, property_name, property_address, services, addons, subtotal, discount, tax, total, total_amount,
@@ -188,12 +198,12 @@ const validateCatalogEstimate = (req, res, next) => {
         if (quote.requiresCustomQuote) throw Object.assign(new Error(`Enter a custom quote for ${config.service_name}.`), { status: 400 });
         if (Math.abs(Number(addon.totalPrice) - quote.totalPrice) > 0.01 || !Number.isFinite(Number(addon.totalPrice))) throw Object.assign(new Error('Service pricing has changed. Remove and re-add the service before saving.'), { status: 400 });
         const service = { name: config.service_name, description: config.description, frequencyType: quote.frequency, frequency: quote.visits, price: quote.totalPrice / quote.visits };
-        addons[index] = {
+        addons[index] = normalizeEstimateService({
           addonId: `CAT-${id}`, catalogServiceId: id, name: config.service_name, service_name: config.service_name,
           frequency_type: quote.frequency, frequency_count: quote.visits, description: config.description,
           services: [service], totalPrice: quote.totalPrice, pricingInputs: quote.inputs,
-          pricingSnapshot: { ...config, vendorCost: quote.vendorCost, totalPrice: quote.totalPrice }
-        };
+          pricingSnapshot: { ...config, ...quote }
+        });
         catalogPrice += quote.totalPrice;
       }
       const legacyTotal = addons.filter(addon => !isCatalogAddon(addon)).reduce((sum, addon) => sum + (addon.services?.reduce((value, service) => value + (Number(service.price) || 0) * (Number(service.frequency) || 1), 0) || Number(addon.totalPrice) || 0), 0);
@@ -208,4 +218,4 @@ const validateCatalogEstimate = (req, res, next) => {
   }));
 };
 
-module.exports = { router, validateCatalogEstimate };
+module.exports = { router, validateCatalogEstimate, parseService, priceCustomEstimate, buildCatalogAddons };

@@ -166,7 +166,7 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
             </fieldset>}
             {createMode === 'custom' && admin?.role === 'admin'
               ? <CustomEstimateBuilder key={selectedFp?.id} selectedFp={selectedFp} showToast={showToast} onSuccess={handleEstimateCreated} />
-              : <CreateEstimate admin={admin} onSuccess={handleEstimateCreated} showToast={showToast} />}
+              : <CreateEstimate admin={admin} onSuccess={handleEstimateCreated} showToast={showToast} onSelectCustomEstimate={admin?.role === 'admin' ? () => setCreateMode('custom') : undefined} />}
           </div>
         );
       case 'list':
@@ -224,7 +224,7 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-800">{TAB_TITLES[defaultTab] || 'Estimates'}</h1>
-                <p className="text-sm text-gray-500">Create and manage estimates, AMC packages, and add-ons</p>
+                <p className="text-sm text-gray-500">Create and manage estimates, AMC packages, and services</p>
               </div>
             </div>
 

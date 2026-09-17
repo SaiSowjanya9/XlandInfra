@@ -218,4 +218,61 @@ test('catalog API permissions, persistence contract, quoting and estimate valida
     assert.equal((await request(`/catalog/${id}/quote`, 'POST', { property_type: 'APT', capacity: 75 })).data.vendorCost, 4600);
     assert.equal((await request(`/catalog/${id}`, 'PUT', { ...slabConfig, capacity_slabs: [{ ...updatedSlabs[0], defaultVisitsPerYear: 12 }] })).status, 400);
   });
+  await t.test('visit-based manpower persists its template and saves the selected range and working details', async () => {
+    const manpowerConfig = { ...config, service_name: 'Housekeeping Manpower', pricing_method: 'manpower', unit: 'Persons', manpower_basis: 'per_visit',
+      rate_per_person: 450, working_hours_per_visit: 2, overtime_rate_per_hour: 60, minimum_manpower: 1, role_designation: 'Housekeeping Staff', default_markup_percentage: 30,
+      manpower_ranges: [{ areaFrom: 0, areaTo: 1000, recommendedMin: 1, recommendedMax: 2, ratePerPerson: 450 },
+        { areaFrom: 1001, areaTo: null, recommendedMin: 2, recommendedMax: 4, ratePerPerson: 400 }] };
+    const created = await request('/catalog', 'POST', manpowerConfig);
+    assert.equal(created.status, 201);
+    const id = created.data.id;
+    const reloaded = (await request('/catalog')).data.find(item => item.id === id);
+    assert.equal(reloaded.manpower_basis, 'per_visit');
+    assert.equal(reloaded.role_designation, 'Housekeeping Staff');
+    assert.equal(reloaded.monthly_rate, undefined);
+    assert.equal(reloaded.manpower_ranges[1].ratePerPerson, 400);
+    const quoted = await request(`/catalog/${id}/quote`, 'POST', { property_type: 'APT', area: 1500 });
+    assert.equal(quoted.status, 200);
+    assert.equal(quoted.data.inputs.personnel, 2);
+    assert.equal(quoted.data.vendorCost, 9600);
+    assert.equal(quoted.data.totalPrice, 12480);
+    assert.equal((await request(`/catalog/${id}/quote`, 'POST', { property_type: 'APT', personnel: 2 })).status, 400);
+    const saved = await request('/catalog/custom-estimates', 'POST', { fpId: 8, property_id: 3,
+      rows: [{ service_id: id, vendor_id: 4, inputs: { area: 1500, overtime_hours_per_visit: 1 } }], discount_percentage: 0, gst_percentage: 0, notes: '' });
+    assert.equal(saved.status, 201);
+    const addon = JSON.parse(estimateInserts.at(-1)[11])[0];
+    assert.equal(addon.pricingSnapshot.manpower_basis, 'per_visit');
+    assert.equal(addon.pricingSnapshot.role_designation, 'Housekeeping Staff');
+    assert.equal(addon.pricingInputs.manpower_range.areaFrom, 1001);
+    assert.equal(addon.pricingInputs.working_hours_per_visit, 2);
+    assert.equal(addon.pricingInputs.overtime_hours_per_visit, 1);
+    assert.match(addon.details, /1500 Sq Ft/);
+    assert.match(addon.details, /Housekeeping Staff/);
+    const updated = await request(`/catalog/${id}`, 'PUT', { ...manpowerConfig, overtime_rate_per_hour: null });
+    assert.equal(updated.status, 200);
+    assert.equal(updated.data.overtime_rate_per_hour, null);
+    assert.equal((await request(`/catalog/${id}/quote`, 'POST', { property_type: 'APT', area: 1500, overtime_hours_per_visit: 1 })).status, 400);
+  });
+  await t.test('quantity-based Camera services retain their units, quantity and quarterly visits on save', async () => {
+    const camera = { ...config, service_name: 'CCTV Camera Maintenance', unit: 'Camera', rate_per_quantity: 250,
+      default_frequency: 'Quarterly', default_visits_per_year: 4, default_markup_percentage: 35 };
+    const created = await request('/catalog', 'POST', camera);
+    assert.equal(created.status, 201);
+    const id = created.data.id;
+    assert.equal((await request('/catalog')).data.find(item => item.id === id).unit, 'Camera');
+    const quoted = await request(`/catalog/${id}/quote`, 'POST', { property_type: 'APT', quantity: 10 });
+    assert.equal(quoted.status, 200);
+    assert.equal(quoted.data.vendorCost, 10000);
+    assert.equal(quoted.data.totalPrice, 13500);
+    const saved = await request('/catalog/custom-estimates', 'POST', { fpId: 8, property_id: 3,
+      rows: [{ service_id: id, vendor_id: 4, inputs: { quantity: 10 } }], discount_percentage: 0, gst_percentage: 0, notes: '' });
+    assert.equal(saved.status, 201);
+    const addon = JSON.parse(estimateInserts.at(-1)[11])[0];
+    assert.equal(addon.pricingInputs.quantity, 10);
+    assert.equal(addon.pricingSnapshot.unit, 'Camera');
+    assert.equal(addon.frequency_count, 4);
+    assert.equal(addon.frequency_type, 'Quarterly');
+    assert.match(addon.details, /Quantity: 10 Camera/);
+    assert.equal(addon.totalPrice, 13500);
+  });
 });

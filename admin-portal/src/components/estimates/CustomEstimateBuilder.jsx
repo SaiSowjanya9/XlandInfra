@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Edit2, Loader2, Plus, Save, Trash2, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import ManpowerFields from './ManpowerFields';
+import { isVisitManpower, suggestedManpower } from '../../utils/manpowerPricing';
 import { FREQUENCY_OPTIONS, PRICING_METHODS, PROPERTY_TYPES, getServiceSchedule } from './AddServicePage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -17,7 +19,7 @@ const Field = ({ label, children }) => <label className="block text-xs font-semi
 const Metric = ({ label, value, emphasis = false }) => <div><p className="text-[11px] text-slate-500">{label}</p><p className={`mt-2 text-sm font-semibold ${emphasis ? 'text-green-700' : 'text-slate-800'}`}>{value}</p></div>;
 const headers = () => ({ Authorization: `Bearer ${getAuthToken()}`, 'Content-Type': 'application/json' });
 
-const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCancel }) => {
+const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCancel, apiPath }) => {
   const [serviceId, setServiceId] = useState(String(initialRow?.service_id || ''));
   const [vendorId, setVendorId] = useState(String(initialRow?.vendor_id || ''));
   const [inputs, setInputs] = useState(initialRow?.inputs || {});
@@ -30,12 +32,13 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
   useEffect(() => {
     setQuote(null);
     setError('');
-    if (!service || (field && (inputs[field[0]] === undefined || inputs[field[0]] === ''))) { setLoading(false); return; }
+    if (!service || (field && (inputs[field[0]] === undefined || inputs[field[0]] === '')) ||
+      (isVisitManpower(service) && service.manpower_ranges?.length && (inputs.area === undefined || inputs.area === ''))) { setLoading(false); return; }
     const controller = new AbortController();
     setLoading(true);
     const timer = setTimeout(async () => {
       try {
-        const response = await fetch(`${API_BASE}/api/admin/service-catalog/${service.id}/quote`, {
+        const response = await fetch(`${API_BASE}${apiPath}/${service.id}/quote`, {
           method: 'POST', headers: headers(), signal: controller.signal,
           body: JSON.stringify({ ...inputs, property_type: property.entry_type, fpId: property.franchise_partner_id || 'all' })
         });
@@ -46,18 +49,20 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
       finally { if (!controller.signal.aborted) setLoading(false); }
     }, 250);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [service, inputs, property]);
+  }, [service, inputs, property, apiPath]);
 
   const updateInput = (name, value) => {
     setQuote(null);
     setInputs(prev => ({ ...prev, [name]: value, ...(name === 'capacity' && service.pricing_method === 'capacity_slab'
-      ? { ...getServiceSchedule(service, value), custom_quote: undefined } : {}) }));
+      ? { ...getServiceSchedule(service, value), custom_quote: undefined } : {}),
+      ...(name === 'area' && isVisitManpower(service) ? { personnel: suggestedManpower(service, value) } : {}) }));
   };
   const selectService = id => {
     const selected = services.find(item => String(item.id) === id);
     setServiceId(id);
     setQuote(null);
-    setInputs(selected ? { frequency: selected.default_frequency, visits: selected.default_visits_per_year, operating_cost: 0, markup_percentage: selected.default_markup_percentage, custom_work_cost: selected.custom_work_rate ?? 0 } : {});
+    setInputs(selected ? { frequency: selected.default_frequency, visits: selected.default_visits_per_year, operating_cost: 0, markup_percentage: selected.default_markup_percentage, custom_work_cost: selected.custom_work_rate ?? 0,
+      ...(isVisitManpower(selected) ? { personnel: suggestedManpower(selected), overtime_hours_per_visit: 0 } : {}) } : {});
   };
   const save = () => {
     const vendor = vendors.find(item => String(item.id) === vendorId);
@@ -74,7 +79,8 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
     {service && <>
       <p className="mt-4 inline-block rounded bg-orange-50 px-2 py-1 text-xs font-medium text-orange-700">{methodLabel(service.pricing_method)}</p>
       <div className="mt-3 grid gap-4 sm:grid-cols-3">
-        {field && <Field label={`${field[1]} (${service.unit}) *`}><input type="number" min={service.pricing_method === 'capacity_slab' ? service.capacity_slabs[0].capacityFrom : field[2]} step={field[2]} value={inputs[field[0]] ?? ''} onChange={event => updateInput(field[0], event.target.value)} className={inputClass} /></Field>}
+        <ManpowerFields service={service} inputs={inputs} onChange={updateInput} />
+        {field && <Field label={`${field[1]} (${service.unit}) *`}><input type="number" min={isVisitManpower(service) ? service.minimum_manpower : service.pricing_method === 'capacity_slab' ? service.capacity_slabs[0].capacityFrom : field[2]} step={field[2]} value={inputs[field[0]] ?? ''} onChange={event => updateInput(field[0], event.target.value)} className={inputClass} /></Field>}
         <Field label="Frequency *"><select value={inputs.frequency} disabled={!service.allow_frequency_override} onChange={event => {
           const frequency = event.target.value;
           setQuote(null);
@@ -104,7 +110,7 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
   </section>;
 };
 
-export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess }) {
+export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess, apiPath = '/api/admin/service-catalog' }) {
   const [properties, setProperties] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [services, setServices] = useState([]);
@@ -121,15 +127,16 @@ export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess
   const [preview, setPreview] = useState(null);
   const [savedId, setSavedId] = useState(null);
   const fpId = selectedFp?.id || 'all';
-  const property = properties.find(item => String(item.id) === propertyId);
+  const propertyKey = item => `${item.source_table || 'onboarded_properties'}:${item.id}`;
+  const property = properties.find(item => propertyKey(item) === propertyId);
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError('');
     const params = new URLSearchParams({ fpId });
     Promise.all([
-      fetch(`${API_BASE}/api/admin/service-catalog/estimate-options?${params}`, { headers: headers(), signal: controller.signal }),
-      fetch(`${API_BASE}/api/admin/service-catalog?${params}`, { headers: headers(), signal: controller.signal })
+      fetch(`${API_BASE}${apiPath}/estimate-options?${params}`, { headers: headers(), signal: controller.signal }),
+      fetch(`${API_BASE}${apiPath}?${params}`, { headers: headers(), signal: controller.signal })
     ]).then(async responses => {
       const results = await Promise.all(responses.map(response => response.json()));
       const failed = results.find((result, index) => !responses[index].ok || !result.success);
@@ -140,7 +147,7 @@ export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess
     }).catch(error => { if (error.name !== 'AbortError') setError(error.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [fpId, attempt]);
+  }, [apiPath, fpId, attempt]);
 
   const availableServices = property ? services.filter(service => service.applicable_property_types.includes(property.entry_type) && (!service.franchise_partner_id || service.franchise_partner_id === property.franchise_partner_id)) : [];
   const availableVendors = property ? vendors.filter(vendor => !vendor.franchise_partner_id || vendor.franchise_partner_id === property.franchise_partner_id) : [];
@@ -167,9 +174,9 @@ export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess
     setSaving(true);
     setError('');
     try {
-      const response = await fetch(`${API_BASE}/api/admin/service-catalog/custom-estimates`, {
+      const response = await fetch(`${API_BASE}${apiPath}/custom-estimates`, {
         method: 'POST', headers: headers(), body: JSON.stringify({
-          fpId, property_id: property.id, discount_percentage: Number(discount), gst_percentage: Number(gst), notes,
+          fpId, property_id: property.id, property_source: property.source_table || 'onboarded_properties', discount_percentage: Number(discount), gst_percentage: Number(gst), notes,
           rows: rows.map(row => ({ service_id: row.service_id, vendor_id: row.vendor_id, inputs: row.inputs }))
         })
       });
@@ -188,15 +195,17 @@ export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess
     <fieldset disabled={saving || !!savedId} className="grid min-w-0 items-start gap-5 xl:grid-cols-[240px_minmax(0,1fr)_270px]">
       <aside className="rounded-xl border border-slate-200 bg-white p-5">
         <h2 className="mb-4 text-sm font-semibold text-slate-800">Property Details</h2>
-        <Field label="Property *"><select disabled={loading} value={propertyId} onChange={event => { setPropertyId(event.target.value); setRows([]); setEditor(event.target.value ? { key: Date.now(), index: null } : null); setError(''); }} className={inputClass}><option value="">{loading ? 'Loading properties...' : 'Select property'}</option>{properties.map(item => <option key={item.id} value={item.id}>{item.property_id} — {item.community_name}</option>)}</select></Field>
+        <Field label="Property *"><select disabled={loading} value={propertyId} onChange={event => { setPropertyId(event.target.value); setRows([]); setEditor(event.target.value ? { key: Date.now(), index: null } : null); setError(''); }} className={inputClass}><option value="">{loading ? 'Loading properties...' : 'Select property'}</option>{properties.map(item => <option key={propertyKey(item)} value={propertyKey(item)}>{item.property_id} — {item.community_name}</option>)}</select></Field>
         {property && <dl className="mt-5 space-y-4 text-sm text-slate-700">{[
           ['Property Type', PROPERTY_TYPES.find(type => type.id === property.entry_type)?.label || property.entry_type],
-          ['Customer', property.customer_name || property.community_name], ['Zone', property.zone], ['Address', property.address]
-        ].map(([label, value]) => <div key={label}><dt className="text-xs text-slate-400">{label}</dt><dd className="mt-1">{value || '—'}</dd></div>)}</dl>}
+          ['Property ID', property.property_id], ['Customer', property.customer_name || property.community_name],
+          ['Contact Phone', property.customer_phone], ['Contact Email', property.customer_email],
+          ['Zone', property.zone], ['Division', property.division], ['City', property.city], ['Address', property.address]
+        ].map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 whitespace-pre-wrap [overflow-wrap:anywhere]">{value ?? '—'}</dd></div>)}</dl>}
         <p className="mt-5 text-xs text-slate-400">Changing the property clears the selected services.</p>
       </aside>
       <main className="min-w-0 space-y-5">
-        {editor && property && <ServiceEditor key={editor.key} services={availableServices} vendors={availableVendors} property={property} initialRow={editor.index === null ? null : rows[editor.index]} onCancel={() => setEditor(null)} onSave={row => { setRows(prev => editor.index === null ? [...prev, row] : prev.map((item, index) => index === editor.index ? row : item)); setEditor(null); setError(''); }} />}
+        {editor && property && <ServiceEditor key={editor.key} apiPath={apiPath} services={availableServices} vendors={availableVendors} property={property} initialRow={editor.index === null ? null : rows[editor.index]} onCancel={() => setEditor(null)} onSave={row => { setRows(prev => editor.index === null ? [...prev, row] : prev.map((item, index) => index === editor.index ? row : item)); setEditor(null); setError(''); }} />}
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4"><h2 className="text-sm font-semibold text-slate-800">Service List</h2><button type="button" disabled={!property || !!editor} onClick={() => setEditor({ key: Date.now(), index: null })} className="inline-flex items-center gap-2 rounded-lg border border-blue-200 px-3 py-2 text-xs font-medium text-blue-600 disabled:opacity-50"><Plus className="h-3 w-3" />Add Another Service</button></div>
           {rows.length ? <div className="overflow-x-auto"><table className="w-full min-w-[1000px] text-left text-xs"><thead className="bg-slate-50 text-slate-500"><tr>{['#', 'Service', 'Method', 'Input / Details', 'Vendor', 'Frequency', 'Visits / Year', 'Vendor Cost (₹)', 'XLAND Cost (₹)', 'Customer Price (₹)', 'Margin %', 'Action'].map(label => <th key={label} className="px-3 py-3 font-semibold">{label}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{rows.map((row, index) => <tr key={index} className="text-slate-700">
@@ -222,7 +231,7 @@ export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess
     {preview && <div role="dialog" aria-modal="true" aria-labelledby="custom-estimate-preview-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"><section className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
       <div className="mb-6 flex items-start justify-between gap-4"><div><h2 id="custom-estimate-preview-title" className="text-xl font-semibold text-slate-900">Estimate Preview</h2><p className="mt-1 text-xs text-slate-400">{preview.estimateId}</p></div><button type="button" aria-label="Close preview" onClick={() => { setPreview(null); onSuccess?.(); }} className="p-1 text-slate-500"><X className="h-5 w-5" /></button></div>
       <h3 className="font-semibold text-slate-800">{preview.property.community_name}</h3><p className="mt-1 text-sm text-slate-600">{preview.property.customer_name}</p><p className="mt-1 text-sm text-slate-500">{preview.property.address}</p>
-      <div className="my-6 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b bg-slate-50 text-xs text-slate-500"><tr><th className="p-3">Service</th><th className="p-3">Description</th><th className="p-3">Frequency</th><th className="p-3">Visits</th></tr></thead><tbody>{preview.rows.map((row, index) => <tr key={index} className="border-b border-slate-100"><td className="p-3">{row.service_name}</td><td className="p-3">{row.description || '—'}</td><td className="p-3">{row.frequency}</td><td className="p-3">{row.visits}</td></tr>)}</tbody></table></div>
+      <div className="my-6 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b bg-slate-50 text-xs text-slate-500"><tr><th className="p-3">Service</th><th className="p-3">Description</th><th className="p-3">Frequency</th><th className="p-3">Visits</th></tr></thead><tbody>{preview.rows.map((row, index) => <tr key={index} className="border-b border-slate-100"><td className="p-3">{row.service_name}</td><td className="p-3">{row.details || row.description || '—'}</td><td className="p-3">{row.frequency}</td><td className="p-3">{row.visits}</td></tr>)}</tbody></table></div>
       <dl className="ml-auto max-w-sm space-y-3 text-sm">{[['Service Subtotal', money(preview.summary.subtotal)], [`Discount (${preview.summary.discountPercent}%)`, money(preview.summary.discount)], ['Subtotal After Discount', money(preview.summary.netSubtotal)], [`GST (${preview.summary.gstPercent}%)`, money(preview.summary.gst)], ['Grand Total', money(preview.summary.total)]].map(([label, value]) => <div key={label} className="flex justify-between gap-5"><dt>{label}</dt><dd className="font-semibold">{value}</dd></div>)}</dl>
       {notes && <p className="mt-6 whitespace-pre-wrap text-sm text-slate-600">{notes}</p>}
       <button type="button" onClick={() => { setPreview(null); onSuccess?.(); }} className="mt-6 rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white">Done</button>

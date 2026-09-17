@@ -11,6 +11,7 @@ import {
 import { useFP } from '../../contexts/FPContext';
 import PhoneInput from '../common/PhoneInput';
 import ServiceCatalogPicker from './ServiceCatalogPicker';
+import { EstimateInput, PropertyIdInput } from './EstimateFields';
 import AutocompleteInput from '../common/AutocompleteInput';
 import { 
   createEstimate, calculateEstimateTotal, getServices, PROPERTY_TYPES,
@@ -61,7 +62,7 @@ const decodeHtml = (html) => {
   return decoded;
 };
 
-const CreateEstimate = ({ admin, onSuccess, showToast }) => {
+const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate }) => {
   // Check if user is Operations Manager (restricted access - view only)
   const isOpsManager = admin?.role === 'operations_manager';
   
@@ -1637,20 +1638,20 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
 
       {/* Property-based Estimate Form - Two Column Layout */}
       {estimateType === 'property' && (
-        <div className="flex gap-6">
+        <div className="flex flex-col xl:flex-row gap-6">
           {/* Left Column - Main Form */}
-          <div className="flex-1 space-y-4">
+          <div className="flex-1 min-w-0 space-y-4">
             {/* Property Info Card - Compact horizontal layout (Image 1 style) */}
             <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="grid grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4">
                 {/* Property ID Search */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
                     Property ID <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <input
-                      type="text"
+                    <PropertyIdInput
+                      aria-label="Property ID"
                       value={propertyIdInput}
                       onChange={(e) => handlePropertyIdChange(e.target.value)}
                       onFocus={() => {
@@ -1689,7 +1690,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 {/* Property Name */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Property Name</label>
-                  <input
+                  <EstimateInput
                     type="text"
                     value={estimateForm.propertyName}
                     readOnly
@@ -1700,7 +1701,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 {/* Property Type */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Property Type</label>
-                  <input
+                  <EstimateInput
                     type="text"
                     value={estimateForm.entryType || estimateForm.propertyType}
                     readOnly
@@ -1711,7 +1712,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 {/* Customer */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Customer</label>
-                  <input
+                  <EstimateInput
                     type="text"
                     value={estimateForm.customerName || estimateForm.propertyName}
                     readOnly
@@ -1723,7 +1724,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Zone</label>
                   <div className="relative">
-                    <input
+                    <EstimateInput
                       type="text"
                       value={estimateForm.zone}
                       readOnly
@@ -1738,10 +1739,10 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
             {/* Estimate Structure Card (Image 1 style) */}
             <div className="bg-white rounded-xl border border-gray-200 p-4">
               <h3 className="text-sm font-semibold text-gray-800 mb-4">Estimate Structure</h3>
-              <div className="flex items-center gap-6">
+              <div className="flex flex-wrap items-center gap-6">
                 {/* Select AMC Package Option */}
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <input
+                  <EstimateInput
                     type="radio"
                     name="estimateStructure"
                     value="package"
@@ -1751,18 +1752,17 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   />
                   <div>
                     <p className="text-sm font-medium text-blue-600">Select AMC Package</p>
-                    <p className="text-xs text-gray-500">Choose a pre-built AMC package and customize</p>
                   </div>
                 </label>
                 
                 {/* Build Custom Services Option */}
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <input
+                  <EstimateInput
                     type="radio"
                     name="estimateStructure"
                     value="custom"
                     checked={estimateStructure === 'custom'}
-                    onChange={() => setEstimateStructure('custom')}
+                    onChange={() => onSelectCustomEstimate ? onSelectCustomEstimate() : setEstimateStructure('custom')}
                     className="w-4 h-4 text-gray-600"
                   />
                   <div>
@@ -1828,8 +1828,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               </label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
+                <PropertyIdInput
+                  aria-label="Property ID"
                   value={propertyIdInput}
                   onChange={(e) => handlePropertyIdChange(e.target.value)}
                   onFocus={() => {
@@ -1868,10 +1868,10 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
             {selectedProperty && (
               <>
                 {/* First Row - Contact Name, Property ID, Type, Zone, Area */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4 mb-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Contact Name</label>
-                    <input
+                    <EstimateInput
                       type="text"
                       value={estimateForm.customerName}
                       readOnly
@@ -1880,7 +1880,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Property ID</label>
-                    <input
+                    <EstimateInput
                       type="text"
                       value={estimateForm.propertyId}
                       readOnly
@@ -1889,7 +1889,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Entry Type</label>
-                    <input
+                    <EstimateInput
                       type="text"
                       value={estimateForm.entryType}
                       readOnly
@@ -1898,7 +1898,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Zone</label>
-                    <input
+                    <EstimateInput
                       type="text"
                       value={estimateForm.zone}
                       readOnly
@@ -1907,7 +1907,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Area</label>
-                    <input
+                    <EstimateInput
                       type="text"
                       value={estimateForm.areaName}
                       readOnly
@@ -1917,10 +1917,10 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 </div>
 
                 {/* Second Row - Community Name, Division, Property Type, Units, City */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4 mb-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Community Name</label>
-                    <input
+                    <EstimateInput
                       type="text"
                       value={estimateForm.propertyName}
                       readOnly
@@ -1929,7 +1929,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Division</label>
-                    <input
+                    <EstimateInput
                       type="text"
                       value={estimateForm.division}
                       readOnly
@@ -1938,7 +1938,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Property Type</label>
-                    <input
+                    <EstimateInput
                       type="text"
                       value={estimateForm.propertyType}
                       readOnly
@@ -1947,7 +1947,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Units</label>
-                    <input
+                    <EstimateInput
                       type="text"
                       value={estimateForm.numberOfUnits}
                       readOnly
@@ -1956,7 +1956,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">City</label>
-                    <input
+                    <EstimateInput
                       type="text"
                       value={estimateForm.city}
                       readOnly
@@ -1966,10 +1966,10 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 </div>
 
                 {/* Third Row - Address, Contact Phone, Contact Email */}
-                <div className="grid grid-cols-4 gap-4 mb-4">
-                  <div className="col-span-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  <div className="sm:col-span-2">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Address</label>
-                    <input
+                    <EstimateInput
                       type="text"
                       value={estimateForm.address}
                       readOnly
@@ -1978,7 +1978,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Contact Phone</label>
-                    <input
+                    <EstimateInput
                       type="text"
                       value={estimateForm.customerPhone}
                       readOnly
@@ -1987,7 +1987,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Contact Email</label>
-                    <input
+                    <EstimateInput
                       type="text"
                       value={estimateForm.customerEmail}
                       readOnly
@@ -2044,11 +2044,11 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label className="block text-xs font-medium text-gray-700 mb-1">Block Information</label>
-                              <input type="text" value={estimateForm.blockTower || '-'} readOnly className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed" />
+                              <EstimateInput type="text" value={estimateForm.blockTower || '-'} readOnly className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed" />
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-gray-700 mb-1">Number of Units</label>
-                              <input type="text" value={estimateForm.numberOfUnits ? `${estimateForm.numberOfUnits} Units` : '-'} readOnly className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed" />
+                              <EstimateInput type="text" value={estimateForm.numberOfUnits ? `${estimateForm.numberOfUnits} Units` : '-'} readOnly className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed" />
                             </div>
                           </div>
                         );
@@ -2062,7 +2062,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
                           Flat Number                         </label>
-                        <input
+                        <EstimateInput
                           type="text"
                           value={estimateForm.flatUnit}
                           readOnly
@@ -2073,7 +2073,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">
                             Block Info                           </label>
-                          <input
+                          <EstimateInput
                             type="text"
                             value={estimateForm.blockTower}
                             readOnly
@@ -2090,7 +2090,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
                           Villa Number                         </label>
-                        <input
+                        <EstimateInput
                           type="text"
                           value={estimateForm.flatUnit}
                           readOnly
@@ -2106,7 +2106,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
                           Plot Number                         </label>
-                        <input
+                        <EstimateInput
                           type="text"
                           value={estimateForm.flatUnit}
                           readOnly
@@ -2123,7 +2123,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                         <label className="block text-xs font-medium text-gray-700 mb-1">
                           Block No <span className="text-red-500">*</span>
                         </label>
-                        <input
+                        <EstimateInput
                           type="text"
                           value={estimateForm.blockTower}
                           onChange={(e) => setEstimateForm({ ...estimateForm, blockTower: e.target.value })}
@@ -2135,7 +2135,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                         <label className="block text-xs font-medium text-gray-700 mb-1">
                           Flat/Unit No <span className="text-red-500">*</span>
                         </label>
-                        <input
+                        <EstimateInput
                           type="text"
                           value={estimateForm.flatUnit}
                           onChange={(e) => setEstimateForm({ ...estimateForm, flatUnit: e.target.value })}
@@ -2184,11 +2184,11 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label className="block text-xs font-medium text-gray-700 mb-1">Block Name</label>
-                              <input type="text" value={estimateForm.blockTower || '-'} readOnly className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed" />
+                              <EstimateInput type="text" value={estimateForm.blockTower || '-'} readOnly className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed" />
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-gray-700 mb-1">Number of Units</label>
-                              <input type="text" value={estimateForm.numberOfUnits ? `${estimateForm.numberOfUnits} Units` : '-'} readOnly className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed" />
+                              <EstimateInput type="text" value={estimateForm.numberOfUnits ? `${estimateForm.numberOfUnits} Units` : '-'} readOnly className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed" />
                             </div>
                           </div>
                         );
@@ -2288,7 +2288,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                         <label className="block text-xs font-medium text-gray-700 mb-1">
                           Block/Section
                         </label>
-                        <input
+                        <EstimateInput
                           type="text"
                           value={estimateForm.blockTower}
                           onChange={(e) => setEstimateForm({ ...estimateForm, blockTower: e.target.value })}
@@ -2300,7 +2300,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                         <label className="block text-xs font-medium text-gray-700 mb-1">
                           Unit No
                         </label>
-                        <input
+                        <EstimateInput
                           type="text"
                           value={estimateForm.flatUnit}
                           onChange={(e) => setEstimateForm({ ...estimateForm, flatUnit: e.target.value })}
@@ -2331,9 +2331,6 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
           {/* AMC Package Selection Section */}
           {selectedProperty && (
             <>
-              <div className="px-6 py-3 bg-gray-100 border-b border-gray-200">
-                <h3 className="text-base font-semibold text-gray-800">AMC Package</h3>
-              </div>
               
               <div className="px-6 py-4">
                 {/* AMC Package Dropdown - Filtered by Property Type */}
@@ -2535,7 +2532,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       {/* Service Name */}
                       <div className="col-span-4">
                         <label className="block text-xs font-medium text-gray-600 mb-1">Service Name *</label>
-                        <input
+                        <EstimateInput
                           type="text"
                           value={customAddonForm.serviceName}
                           onChange={(e) => handleCustomAddonChange('serviceName', e.target.value)}
@@ -2559,7 +2556,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       {/* Visits */}
                       <div className="col-span-2">
                         <label className="block text-xs font-medium text-gray-600 mb-1">Visits</label>
-                        <input
+                        <EstimateInput
                           type="number"
                           min="0"
                           value={customAddonForm.frequencyCount}
@@ -2570,7 +2567,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       {/* Price */}
                       <div className="col-span-2">
                         <label className="block text-xs font-medium text-gray-600 mb-1">Price (₹) *</label>
-                        <input
+                        <EstimateInput
                           type="text"
                           inputMode="numeric"
                           value={customAddonForm.price}
@@ -2590,7 +2587,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       </div>
                       {/* Description - Full width */}
                       <div className="col-span-12 mt-2">
-                        <input
+                        <EstimateInput
                           type="text"
                           value={customAddonForm.description}
                           onChange={(e) => handleCustomAddonChange('description', e.target.value)}
@@ -2691,7 +2688,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     <div className="flex justify-between items-center py-2 border-b border-gray-200">
                       <span className="text-gray-600">Discount (%)</span>
                       <div className="flex items-center gap-2">
-                        <input
+                        <EstimateInput
                           type="number"
                           min="0"
                           max="100"
@@ -2708,7 +2705,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     <div className="flex justify-between items-center py-2 border-b border-gray-200">
                       <span className="text-gray-600">GST (%)</span>
                       <div className="flex items-center gap-2">
-                        <input
+                        <EstimateInput
                           type="number"
                           min="0"
                           max="100"
@@ -2842,7 +2839,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
         </div>
         
         {/* Right Sidebar - Pricing Summary (Image 1 style) */}
-        <div className="w-80 space-y-4 flex-shrink-0">
+        <div className="w-full xl:w-80 space-y-4 flex-shrink-0">
           {/* Pricing Summary Card */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 sticky top-24">
             <h3 className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -2949,7 +2946,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               <div className="min-w-0">
                 <label className="block text-xs font-medium text-gray-600 mb-1">Customer Name *</label>
-                <input
+                <EstimateInput
                   type="text"
                   value={estimateForm.customerName}
                   onChange={(e) => setEstimateForm({ ...estimateForm, customerName: e.target.value })}
@@ -2970,7 +2967,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     <option value="+1">+1</option>
                     <option value="+44">+44</option>
                   </select>
-                  <input
+                  <EstimateInput
                     type="text"
                     value={estimateForm.phone}
                     onChange={(e) => handlePhoneChange(e.target.value)}
@@ -2984,7 +2981,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               </div>
               <div className="min-w-0">
                 <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
-                <input
+                <EstimateInput
                   type="email"
                   value={estimateForm.email}
                   onChange={(e) => handleEmailChange(e.target.value)}
@@ -3022,7 +3019,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Property Name</label>
-                <input
+                <EstimateInput
                   type="text"
                   value={estimateForm.propertyName}
                   onChange={(e) => setEstimateForm({ ...estimateForm, propertyName: e.target.value })}
@@ -3060,7 +3057,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 <h4 className="text-sm font-semibold text-blue-800 mb-3">Block Details</h4>
                 <div className="mb-4 max-w-xs">
                   <label className="block text-xs font-medium text-gray-600 mb-1">Number of Blocks *</label>
-                  <input
+                  <EstimateInput
                     type="number"
                     min="1"
                     value={estimateForm.numberOfBlocks}
@@ -3073,11 +3070,11 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     <React.Fragment key={blockNum}>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Block Name</label>
-                        <input type="text" value={estimateForm.blockNames?.[blockNum] || ''} onChange={(e) => { const newBlockNames = {...(estimateForm.blockNames || {}), [blockNum]: e.target.value}; setEstimateForm({...estimateForm, blockNames: newBlockNames}); }} placeholder={`Block ${blockNum}`} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500" />
+                        <EstimateInput type="text" value={estimateForm.blockNames?.[blockNum] || ''} onChange={(e) => { const newBlockNames = {...(estimateForm.blockNames || {}), [blockNum]: e.target.value}; setEstimateForm({...estimateForm, blockNames: newBlockNames}); }} placeholder={`Block ${blockNum}`} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500" />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Units *</label>
-                        <input
+                        <EstimateInput
                           type="number"
                           min="1"
                           value={estimateForm.unitsPerBlock[blockNum] || ''}
@@ -3097,15 +3094,15 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Tower/Building Name</label>
-                  <input type="text" value={estimateForm.blockTower} onChange={(e) => setEstimateForm({...estimateForm, blockTower: e.target.value})} placeholder="Tower/Building name" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500" />
+                  <EstimateInput type="text" value={estimateForm.blockTower} onChange={(e) => setEstimateForm({...estimateForm, blockTower: e.target.value})} placeholder="Tower/Building name" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Block Number</label>
-                  <input type="text" value={estimateForm.blockNumber} onChange={(e) => setEstimateForm({...estimateForm, blockNumber: e.target.value})} placeholder="e.g., A, B, 1, 2" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500" />
+                  <EstimateInput type="text" value={estimateForm.blockNumber} onChange={(e) => setEstimateForm({...estimateForm, blockNumber: e.target.value})} placeholder="e.g., A, B, 1, 2" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Number of Units *</label>
-                  <input type="number" min="1" value={estimateForm.numberOfUnits} onChange={(e) => setEstimateForm({...estimateForm, numberOfUnits: e.target.value})} placeholder="Total units" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500" />
+                  <EstimateInput type="number" min="1" value={estimateForm.numberOfUnits} onChange={(e) => setEstimateForm({...estimateForm, numberOfUnits: e.target.value})} placeholder="Total units" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500" />
                 </div>
               </div>
             )}
@@ -3114,7 +3111,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               <div className="mb-4 p-4 bg-amber-50 rounded-lg border border-amber-100">
                 <div className="max-w-xs">
                   <label className="block text-xs font-medium text-gray-600 mb-1">Villa Number *</label>
-                  <input type="text" value={estimateForm.flatUnit} onChange={(e) => setEstimateForm({...estimateForm, flatUnit: e.target.value})} placeholder="Enter villa number" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500" />
+                  <EstimateInput type="text" value={estimateForm.flatUnit} onChange={(e) => setEstimateForm({...estimateForm, flatUnit: e.target.value})} placeholder="Enter villa number" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500" />
                 </div>
               </div>
             )}
@@ -3123,7 +3120,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               <div className="mb-4 p-4 bg-red-50 rounded-lg border border-red-100">
                 <div className="max-w-xs">
                   <label className="block text-xs font-medium text-gray-600 mb-1">Plot Number *</label>
-                  <input type="text" value={estimateForm.flatUnit} onChange={(e) => setEstimateForm({...estimateForm, flatUnit: e.target.value})} placeholder="Enter plot number" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500" />
+                  <EstimateInput type="text" value={estimateForm.flatUnit} onChange={(e) => setEstimateForm({...estimateForm, flatUnit: e.target.value})} placeholder="Enter plot number" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500" />
                 </div>
               </div>
             )}
@@ -3132,7 +3129,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
                 <div className="max-w-xs">
                   <label className="block text-xs font-medium text-gray-600 mb-1">Flat Number *</label>
-                  <input type="text" value={estimateForm.flatUnit} onChange={(e) => setEstimateForm({...estimateForm, flatUnit: e.target.value})} placeholder="Enter flat number" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500" />
+                  <EstimateInput type="text" value={estimateForm.flatUnit} onChange={(e) => setEstimateForm({...estimateForm, flatUnit: e.target.value})} placeholder="Enter flat number" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500" />
                 </div>
               </div>
             )}
@@ -3141,7 +3138,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
             <div className="grid grid-cols-1 gap-4 mb-4">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Address</label>
-                <input
+                <EstimateInput
                   type="text"
                   value={estimateForm.address}
                   onChange={(e) => setEstimateForm({ ...estimateForm, address: e.target.value })}
@@ -3154,9 +3151,6 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
 
           {/* AMC Package Section - Same as Property-Based */}
           <>
-            <div className="px-6 py-3 bg-gray-100 border-b border-gray-200">
-              <h3 className="text-base font-semibold text-gray-800">AMC Package</h3>
-            </div>
             
             <div className="px-6 py-4">
               {/* AMC Package Dropdown - Filtered by Property Type */}
@@ -3354,7 +3348,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
                     <div className="lg:col-span-4">
                       <label className="block text-xs font-medium text-gray-600 mb-1">Service Name *</label>
-                      <input
+                      <EstimateInput
                         type="text"
                         value={directCustomAddonForm.serviceName}
                         onChange={(e) => handleDirectCustomAddonChange('serviceName', e.target.value)}
@@ -3376,7 +3370,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     </div>
                     <div className="lg:col-span-2">
                       <label className="block text-xs font-medium text-gray-600 mb-1">Visits</label>
-                      <input
+                      <EstimateInput
                         type="number"
                         min="0"
                         value={directCustomAddonForm.frequencyCount}
@@ -3386,7 +3380,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     </div>
                     <div className="lg:col-span-2">
                       <label className="block text-xs font-medium text-gray-600 mb-1">Price (₹) *</label>
-                      <input
+                      <EstimateInput
                         type="text"
                         inputMode="numeric"
                         value={directCustomAddonForm.price}
@@ -3405,7 +3399,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     </div>
                     {/* Description - Full width */}
                     <div className="lg:col-span-12 mt-2">
-                      <input
+                      <EstimateInput
                         type="text"
                         value={directCustomAddonForm.description}
                         onChange={(e) => handleDirectCustomAddonChange('description', e.target.value)}
@@ -3506,7 +3500,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   <div className="flex justify-between items-center py-2 border-b border-gray-200">
                     <span className="text-gray-600">Discount (%)</span>
                     <div className="flex items-center gap-2">
-                      <input
+                      <EstimateInput
                         type="number"
                         min="0"
                         max="100"
@@ -3523,7 +3517,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   <div className="flex justify-between items-center py-2 border-b border-gray-200">
                     <span className="text-gray-600">GST (%)</span>
                     <div className="flex items-center gap-2">
-                      <input
+                      <EstimateInput
                         type="number"
                         min="0"
                         max="100"
@@ -3600,7 +3594,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     </label>
                     <div className="relative">
                       <ClipboardList className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
+                      <EstimateInput
                         type="text"
                         value={workOrderIdInput}
                         onChange={(e) => {
@@ -3929,7 +3923,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       </label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
-                        <input
+                        <EstimateInput
                           type="number"
                           value={workOrderAmount}
                           onChange={(e) => setWorkOrderAmount(e.target.value)}
@@ -3942,7 +3936,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         GST (%)
                       </label>
-                      <input
+                      <EstimateInput
                         type="number"
                         value={workOrderGst}
                         onChange={(e) => setWorkOrderGst(e.target.value)}
@@ -3954,7 +3948,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Discount (%)
                       </label>
-                      <input
+                      <EstimateInput
                         type="number"
                         value={workOrderDiscount}
                         onChange={(e) => setWorkOrderDiscount(e.target.value)}

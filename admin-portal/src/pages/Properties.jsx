@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
+import CategorySelection from '../components/common/CategorySelection';
 import { safeStorage } from '../utils/safeStorage';
+import { getAddonName, getAddonPrice, getServiceDescription } from '../utils/estimatePackageUtils';
 import { 
   Search, Trash2, X, Check, Building2, Home, TreePine, Map,
   Eye, ChevronDown, ChevronLeft, ChevronRight, AlertCircle, Bell, Clock, Briefcase, Lock, 
@@ -687,44 +689,7 @@ const Properties = () => {
           </div>
         </div>
 
-        <div className="bg-gray-50 rounded-2xl p-12">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold text-gray-900">Select Category</h2>
-            <p className="text-gray-500 mt-2">Choose the customer category to proceed</p>
-          </div>
-
-          <div className="flex justify-center gap-8">
-            {PROPERTY_CATEGORIES.map((category) => {
-              const Icon = category.icon;
-              return category.locked ? (
-                <div
-                  key={category.id}
-                  className="w-72 h-52 p-8 border border-gray-200 rounded-2xl bg-white relative cursor-not-allowed flex flex-col items-start justify-center"
-                >
-                  <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full border border-gray-200">
-                    <Lock className="w-3.5 h-3.5 text-gray-400" />
-                    <span className="text-xs font-medium text-gray-500">Coming Soon</span>
-                  </div>
-                  <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center mb-5">
-                    <Icon className="w-7 h-7 text-gray-400" />
-                  </div>
-                  <p className="text-lg font-medium text-gray-400">{category.name}</p>
-                </div>
-              ) : (
-                <button
-                  key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
-                  className="w-72 h-52 p-8 border-2 border-teal-400 rounded-2xl hover:shadow-xl transition-all duration-200 bg-teal-50/50 group flex flex-col items-start justify-center"
-                >
-                  <div className="w-14 h-14 bg-teal-500 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                    <Icon className="w-7 h-7 text-white" />
-                  </div>
-                  <p className="text-lg font-semibold text-gray-900">{category.name}</p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <CategorySelection categories={PROPERTY_CATEGORIES} onSelect={setSelectedCategory} />
       </div>
     );
   }
@@ -1666,16 +1631,17 @@ const Properties = () => {
                     {selectedEstimate.addons.map((addon, idx) => (
                       <div key={idx} className="p-3 bg-green-50 border border-green-200 rounded-lg">
                         <p className="text-sm font-medium text-gray-800">
-                          {addon.services?.map(s => s.name).join(', ') || `Service ${idx + 1}`}
+                          {getAddonName(addon)}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {addon.services?.map(s => s.frequencyType).join(', ')}
+                          {addon.frequencyType || addon.frequency_type || addon.services?.[0]?.frequencyType || 'One-time'} - {addon.frequencyCount ?? addon.frequency_count ?? addon.services?.[0]?.frequency ?? 1} visits
                         </p>
+                        <p className="text-xs text-gray-600 whitespace-pre-line">{getServiceDescription(addon)}</p>
                       </div>
                     ))}
                     <div className="flex justify-between items-center p-3 bg-green-100 border border-green-300 rounded-lg">
                       <p className="text-sm font-semibold text-green-800">Total Services Price</p>
-                      <p className="font-bold text-green-700">₹{(selectedEstimate.addonsTotal || selectedEstimate.addons.reduce((sum, a) => sum + (a.totalPrice || 0), 0)).toLocaleString()}</p>
+                      <p className="font-bold text-green-700">₹{(selectedEstimate.addonsTotal || selectedEstimate.addons.reduce((sum, a) => sum + getAddonPrice(a), 0)).toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
@@ -1688,20 +1654,20 @@ const Properties = () => {
                   Pricing Breakdown
                 </h3>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Package Price</span>
-                    <span className="font-medium text-gray-800">₹{(selectedEstimate.packageRate || 0).toLocaleString()}</span>
-                  </div>
+                  {(selectedEstimate.packageRate || selectedEstimate.packagePrice || selectedEstimate.package_price) > 0 && <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Yearly Billing</span>
+                    <span className="font-medium text-gray-800">₹{Number(selectedEstimate.packageRate ?? selectedEstimate.packagePrice ?? selectedEstimate.package_price ?? 0).toLocaleString()}</span>
+                  </div>}
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Services Total</span>
-                    <span className="font-medium text-gray-800">₹{(selectedEstimate.addonsTotal || 0).toLocaleString()}</span>
+                    <span className="font-medium text-gray-800">₹{(selectedEstimate.addonsTotal ?? selectedEstimate.addons?.reduce((sum, addon) => sum + getAddonPrice(addon), 0) ?? 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm border-t border-gray-200 pt-2">
                     <span className="text-gray-600">Sub Total</span>
                     <span className="font-medium text-gray-800">₹{(selectedEstimate.subTotal || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">GST (2%)</span>
+                    <span className="text-gray-600">GST ({selectedEstimate.gstPercent ?? selectedEstimate.gst_percent ?? selectedEstimate.tax_percentage ?? 0}%)</span>
                     <span className="font-medium text-gray-800">₹{(selectedEstimate.gst || 0).toLocaleString()}</span>
                   </div>
                   {selectedEstimate.discount > 0 && (

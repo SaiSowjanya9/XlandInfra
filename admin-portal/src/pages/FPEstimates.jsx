@@ -17,6 +17,7 @@ import {
 } from '../utils/estimateStore';
 import { getAuthToken } from '../utils/safeStorage';
 import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
+import { getServiceDescription, hasCatalogServices } from '../utils/estimatePackageUtils';
 import * as XLSX from 'xlsx';
 import AutocompleteInput from '../components/common/AutocompleteInput';
 
@@ -192,6 +193,20 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [propertyIdInput, setPropertyIdInput] = useState('');
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [showPropertySuggestions, setShowPropertySuggestions] = useState(false);
+  const propertyIdFieldRef = useRef(null);
+  useEffect(() => {
+    const field = propertyIdFieldRef.current;
+    if (!field) return;
+    const resize = () => { field.style.height = 'auto'; field.style.height = `${field.scrollHeight + 2}px`; };
+    resize();
+    let width = field.clientWidth;
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => {
+      if (field.clientWidth !== width) { width = field.clientWidth; resize(); }
+    });
+    observer?.observe(field);
+    window.addEventListener('resize', resize);
+    return () => { observer?.disconnect(); window.removeEventListener('resize', resize); };
+  }, [propertyIdInput, estimateType, defaultTab, loading]);
   // FP Manager defaults to 'all-packages' (no create access)
   const [amcActiveTab, setAmcActiveTab] = useState(isFPManager ? 'all-packages' : 'create');
   const [selectedPropertyType, setSelectedPropertyType] = useState(null);
@@ -784,10 +799,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           ) || addonFromList;
         }
         return {
+          ...a,
           name: addonName || 'Service',
           frequencyType: a.frequency_type || a.frequencyType || addonFromList?.frequency_type || 'One-time',
           frequencyCount: a.frequency_count ?? a.frequencyCount ?? addonFromList?.frequency_count ?? 0,
-          description: a.description || addonFromList?.description || ''
+          description: getServiceDescription(a) || addonFromList?.description || ''
         };
       })
     };
@@ -835,6 +851,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
   // Open edit estimate modal for property-based estimates
   const openEditEstimate = (estimate) => {
+    if (hasCatalogServices(estimate)) { showToast('Saved configured services are read-only in this editor. Create a new estimate to change them.', 'error'); return; }
     // Allow editing both property-based and direct estimates
     
     // Parse addons data with quantities
@@ -1225,22 +1242,30 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         let pkgSvcData = selectedPkg?.services;
         if (typeof pkgSvcData === 'string') { try { pkgSvcData = JSON.parse(pkgSvcData); } catch(e) { pkgSvcData = {}; } }
         const billingDuration = pkgSvcData?.billing_duration || selectedPkg?.billing_duration || (selectedPkg ? getPackageBillingDuration(selectedPkg) : '') || 'yearly';
-        const readOnlyCls = 'w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700';
+        const readOnlyCls = 'min-h-[42px] w-full min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm leading-6 text-gray-900 whitespace-pre-wrap [overflow-wrap:anywhere]';
+        const readOnlyValue = (value, white = false) => (
+          <div className={`${readOnlyCls} ${white ? 'bg-white' : 'bg-gray-50'}`}>
+            {value === '' || value == null ? <span className="text-gray-400">Auto-filled</span> : String(value)}
+          </div>
+        );
         return (
         <div className="flex flex-col xl:flex-row gap-6">
           {/* Left column - main form */}
           <div className="flex-1 min-w-0 space-y-4">
             {/* Property header - details auto-populate from Property ID */}
             <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Property ID <span className="text-red-500">*</span></label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4">
+                <div className="min-w-0">
+                  <label htmlFor="estimate-property-id" className="block text-xs font-medium text-slate-600 mb-1">Property ID <span className="text-red-500">*</span></label>
                   <div className="relative">
-                    <input
-                      type="text"
+                    <textarea
+                      id="estimate-property-id"
+                      rows={1}
+                      ref={propertyIdFieldRef}
                       value={propertyIdInput}
+                      onKeyDown={event => { if (event.key === 'Enter') event.preventDefault(); }}
                       onChange={(e) => {
-                        const v = e.target.value.trim();
+                        const v = e.target.value.replace(/[\r\n]/g, '').trim();
                         setPropertyIdInput(v);
                         setShowPropertySuggestions(true);
                         const m = properties.find(p => p.property_id?.toLowerCase() === v.toLowerCase());
@@ -1249,11 +1274,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       onFocus={() => setShowPropertySuggestions(true)}
                       onBlur={() => setTimeout(() => setShowPropertySuggestions(false), 200)}
                       placeholder="GC-DMMN-20260520"
-                      className="w-full pl-3 pr-9 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 text-sm"
+                      className="block w-full min-h-[42px] resize-none overflow-hidden pl-3 pr-9 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 text-sm leading-6 [overflow-wrap:anywhere]"
                     />
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                     {showPropertySuggestions && !selectedProperty && propertySuggestions.length > 0 && (
-                      <div className="absolute z-20 w-full min-w-[260px] mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+                      <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
                         {propertySuggestions.map(p => (
                           <button
                             key={p.id || p.property_id}
@@ -1263,8 +1288,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           >
                             <Building2 className="w-4 h-4 text-gray-400 shrink-0" />
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-gray-800 truncate">{p.property_id}</p>
-                              <p className="text-xs text-gray-500 truncate">{p.name || p.community_name || p.property_name || '-'}</p>
+                              <p className="text-sm font-medium text-gray-800 [overflow-wrap:anywhere]">{p.property_id}</p>
+                              <p className="text-xs text-gray-500 [overflow-wrap:anywhere]">{p.name || p.community_name || p.property_name || '-'}</p>
                             </div>
                           </button>
                         ))}
@@ -1274,19 +1299,19 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-600 mb-1">Property Name</label>
-                  <input type="text" value={selectedProperty?.name || selectedProperty?.community_name || selectedProperty?.property_name || ''} readOnly placeholder="Auto-filled" className={readOnlyCls} />
+                  {readOnlyValue(selectedProperty?.name || selectedProperty?.community_name || selectedProperty?.property_name)}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-600 mb-1">Property Type</label>
-                  <input type="text" value={propertyTypeRaw ? getPropertyTypeLabel(propertyTypeRaw) : ''} readOnly placeholder="Auto-filled" className={readOnlyCls} />
+                  {readOnlyValue(propertyTypeRaw ? getPropertyTypeLabel(propertyTypeRaw) : '')}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-600 mb-1">Customer</label>
-                  <input type="text" value={customerName} readOnly placeholder="Auto-filled" className={readOnlyCls} />
+                  {readOnlyValue(customerName)}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-600 mb-1">Zone</label>
-                  <input type="text" value={selectedProperty?.zone_name || selectedProperty?.zoneName || selectedProperty?.zone || ''} readOnly placeholder="Auto-filled" className={readOnlyCls} />
+                  {readOnlyValue(selectedProperty?.zone_name || selectedProperty?.zoneName || selectedProperty?.zone)}
                 </div>
               </div>
             </div>
@@ -1294,36 +1319,36 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             {/* Property Details - remaining auto-populated fields */}
             {selectedProperty && (
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
+                <div className="px-5 py-3 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
                   <h3 className="text-sm font-semibold text-gray-800">Property Details</h3>
                   <span className="text-xs text-gray-400">Auto-filled from property record</span>
                 </div>
                 <div className="p-5 space-y-4">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">Contact Phone</label>
-                      <input type="text" value={selectedProperty.contact_phone || selectedProperty.phone || ''} readOnly className={readOnlyCls} />
+                      {readOnlyValue(selectedProperty.contact_phone || selectedProperty.phone)}
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">Contact Email</label>
-                      <input type="text" value={selectedProperty.contact_email || selectedProperty.email || ''} readOnly className={readOnlyCls} />
+                      {readOnlyValue(selectedProperty.contact_email || selectedProperty.email)}
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">Area</label>
-                      <input type="text" value={selectedProperty.area || selectedProperty.area_name || ''} readOnly className={readOnlyCls} />
+                      {readOnlyValue(selectedProperty.area || selectedProperty.area_name)}
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">City</label>
-                      <input type="text" value={selectedProperty.city || ''} readOnly className={readOnlyCls} />
+                      {readOnlyValue(selectedProperty.city)}
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">Units</label>
-                      <input type="text" value={selectedProperty.units || selectedProperty.total_units || '1'} readOnly className={readOnlyCls} />
+                      {readOnlyValue(selectedProperty.units ?? selectedProperty.total_units ?? 1)}
                     </div>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-500 mb-1">Address</label>
-                    <input type="text" value={selectedProperty.address || ''} readOnly className={readOnlyCls} />
+                    {readOnlyValue(selectedProperty.address)}
                   </div>
 
                   {/* Unit Details - Property Type Specific */}
@@ -1342,7 +1367,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <div className="grid grid-cols-1 gap-4">
                             <div>
                               <label className="block text-xs font-medium text-slate-500 mb-1">Flat Number</label>
-                              <input type="text" value={selectedProperty.flat_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                              {readOnlyValue(selectedProperty.flat_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-', true)}
                             </div>
                           </div>
                         );
@@ -1354,7 +1379,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <div className="grid grid-cols-1 gap-4">
                             <div>
                               <label className="block text-xs font-medium text-slate-500 mb-1">Villa Number</label>
-                              <input type="text" value={selectedProperty.villa_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                              {readOnlyValue(selectedProperty.villa_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-', true)}
                             </div>
                           </div>
                         );
@@ -1366,7 +1391,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <div className="grid grid-cols-1 gap-4">
                             <div>
                               <label className="block text-xs font-medium text-slate-500 mb-1">Plot Number</label>
-                              <input type="text" value={selectedProperty.plot_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                              {readOnlyValue(selectedProperty.plot_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-', true)}
                             </div>
                           </div>
                         );
@@ -1391,9 +1416,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               return (
                                 <div key={blockNum} className="bg-white border border-gray-200 rounded-lg p-3">
                                   <div className="flex justify-between items-start mb-2">
-                                    <div>
+                                    <div className="min-w-0 pr-2">
                                       <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
-                                      <p className="text-sm font-semibold text-gray-800">{blockNames?.[blockNum] || blockNames?.[String(blockNum)] || `Block ${blockNum}`}</p>
+                                      <p className="text-sm font-semibold text-gray-800 [overflow-wrap:anywhere]">{blockNames?.[blockNum] || blockNames?.[String(blockNum)] || `Block ${blockNum}`}</p>
                                     </div>
                                     <div className="text-right">
                                       <label className="block text-xs font-medium text-slate-500 mb-1">Units</label>
@@ -1422,13 +1447,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         return (
                           <div className="space-y-3">
                             <div className="grid grid-cols-2 gap-4">
-                              <div>
+                              <div className="min-w-0">
                                 <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
-                                <input type="text" value={selectedProperty.block_name || selectedProperty.block_info || blockNames?.[1] || blockNames?.['1'] || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                                {readOnlyValue(selectedProperty.block_name || selectedProperty.block_info || blockNames?.[1] || blockNames?.['1'] || 'A', true)}
                               </div>
-                              <div>
+                              <div className="min-w-0">
                                 <label className="block text-xs font-medium text-slate-500 mb-1">Number of Units</label>
-                                <input type="text" value={`${selectedProperty.units || selectedProperty.total_units || unitsPerBlock?.[1] || 1} Units`} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                                {readOnlyValue(`${selectedProperty.units ?? selectedProperty.total_units ?? unitsPerBlock?.[1] ?? 1} Units`, true)}
                               </div>
                             </div>
                             {isAPT && (
@@ -1453,16 +1478,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             {/* AMC Package */}
             <div className="bg-white rounded-xl border border-gray-200 p-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800">AMC Package</h3>
-                  <p className="text-xs text-gray-500">Choose a pre-built AMC package for this property</p>
-                </div>
-                <div className="sm:ml-auto flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                  <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Select AMC Package <span className="text-red-500">*</span></label>
+                <div className="flex min-w-0 w-full flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <label htmlFor="estimate-amc-package" className="text-sm font-medium text-gray-700 whitespace-nowrap">Select AMC Package <span className="text-red-500">*</span></label>
                   <select
+                    id="estimate-amc-package"
                     value={estimateForm.selectedPackage}
                     onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value})}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white min-w-[240px]"
+                    className="w-full min-w-0 sm:flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
                   >
                     <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
                     {(() => {
@@ -4264,7 +4286,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                             (a.property_type || '').toUpperCase() === estPropertyType
                           ) || addonFromList;
                         }
-                        const addonDescription = decodeHtml(addon.description || addonFromList?.description) || '';
+                        const addonDescription = decodeHtml(getServiceDescription(addon) || addonFromList?.description) || '';
                         const frequencyCount = addon.frequency_count ?? addon.frequencyCount ?? addonFromList?.frequency_count ?? 1;
                         const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
                         return (

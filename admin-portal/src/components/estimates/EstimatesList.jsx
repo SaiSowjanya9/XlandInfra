@@ -13,6 +13,7 @@ import {
   getEstimateUnits, formatAddonsForExport
 } from '../../utils/estimateStore';
 import { exportEstimateToPDF } from '../../utils/pdfExport';
+import { getServiceDescription, getAddonPrice, hasCatalogServices } from '../../utils/estimatePackageUtils';
 import * as XLSX from 'xlsx';
 import { getAuthToken } from '../../utils/safeStorage';
 
@@ -156,6 +157,7 @@ const EstimatesList = ({
 
   // Open edit estimate modal
   const openEditEstimate = (estimate) => {
+    if (hasCatalogServices(estimate)) { showToast?.('Saved configured services are read-only in this editor. Create a new estimate to change them.', 'error'); return; }
     let selectedAddonsWithQty = [];
     if (estimate.addons_data || estimate.addons) {
       try {
@@ -570,10 +572,11 @@ const EstimatesList = ({
           })),
           // Include addons with descriptions (same as FP portal)
           addons: addonsArray.map(a => ({
+            ...a,
             name: a.name || a.service_name || a.serviceName || 'Service',
             frequencyType: a.frequency_type || a.frequencyType || 'One-time',
             frequencyCount: a.frequency_count ?? a.frequencyCount ?? 1,
-            description: a.description || ''
+            description: getServiceDescription(a)
           }))
         };
         
@@ -1260,7 +1263,7 @@ const EstimatesList = ({
                         const addonName = typeof addon === 'number' ? `Service ${idx + 1}` : decodeHtml(addon.name || addon.serviceName || addon.service_name) || `Service ${idx + 1}`;
                         const frequencyCount = typeof addon === 'object' ? (addon.frequency_count ?? addon.frequencyCount ?? 1) : 1;
                         const frequencyType = typeof addon === 'object' ? (addon.frequencyType || addon.frequency_type || 'Monthly') : 'Monthly';
-                        const addonDesc = typeof addon === 'object' ? decodeHtml(addon.description) || '' : '';
+                        const addonDesc = typeof addon === 'object' ? decodeHtml(getServiceDescription(addon)) || '' : '';
                         return (
                           <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
                             <div className="col-span-1">
@@ -1284,7 +1287,7 @@ const EstimatesList = ({
                     </div>
                     <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-lg">
                       <p className="font-semibold text-green-800">Total Services Price</p>
-                      <p className="font-bold text-green-700">â‚¹{viewEstimate.addons.reduce((sum, a) => sum + Number(typeof a === 'number' ? a : (a.price || 0)), 0).toLocaleString()}</p>
+                      <p className="font-bold text-green-700">â‚¹{viewEstimate.addons.reduce((sum, a) => sum + getAddonPrice(a), 0).toLocaleString()}</p>
                     </div>
                   </div>
                 </div>

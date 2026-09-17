@@ -1,4 +1,5 @@
 const express = require('express');
+const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const router = express.Router();
 router.use('/service-catalog', require('./serviceCatalog').router);
 const { pool } = require('../config/database');
@@ -2198,12 +2199,12 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
         try {
           let addons = typeof est.addons_data === 'string' ? JSON.parse(est.addons_data) : est.addons_data;
           const [fpAddons] = await pool.execute(
-            `SELECT id, service_name, description, property_type FROM fp_addons WHERE franchise_partner_id = ?`,
+            `SELECT id, service_name, description, property_type, frequency_type, frequency_count FROM fp_addons WHERE franchise_partner_id = ?`,
             [est.franchise_partner_id]
           );
           const estPropertyType = est.property_type?.toUpperCase();
           addons = addons.map(addon => {
-            if (!addon.description) {
+            if (!addon.description && !addon.catalogServiceId) {
               const addonName = addon.name || addon.service_name || '';
               const addonId = addon.id || addon.addon_id;
               let foundAddon = fpAddons.find(a => a.id == addonId);
@@ -2217,7 +2218,7 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
                 addon.description = foundAddon.description;
               }
             }
-            return addon;
+            return enrichLegacyEstimateAddon(addon, fpAddons, estPropertyType);
           });
           est.addons = addons;
         } catch (e) { /* ignore addon parse errors */ }
@@ -2226,7 +2227,7 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
     }));
     
     console.log('Admin all-estimates: Total', allEstimates.length, 'estimates');
-    res.json({ success: true, data: allEstimates || [] });
+    res.json({ success: true, data: (allEstimates || []).map(normalizeEstimateData) });
   } catch (error) {
     console.error('Error fetching all estimates:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch estimates' });
@@ -2297,19 +2298,23 @@ router.get('/estimates', authenticate, adminOnly, async (req, res) => {
     }
     
     // Don't filter admin estimates by fpId (they don't have FP association)
+    if (fpId) {
+      adminQuery += ` AND e.franchise_partner_id = ?`;
+      adminParams.push(fpId);
+    }
     adminQuery += ` ORDER BY e.created_at DESC`;
     
     // Execute both queries
     const [[fpEstimates], [adminEstimates]] = await Promise.all([
       pool.execute(fpQuery, fpParams),
-      fpId ? Promise.resolve([[]]) : pool.execute(adminQuery, adminParams) // Only include admin estimates if not filtering by FP
+      pool.execute(adminQuery, adminParams) // Only include admin estimates if not filtering by FP
     ]);
     
     // Combine and sort by created_at
     const allEstimates = [...(fpEstimates || []), ...(adminEstimates || [])];
     allEstimates.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
     
-    res.json({ success: true, data: allEstimates });
+    res.json({ success: true, data: allEstimates.map(normalizeEstimateData) });
   } catch (error) {
     console.error('Error fetching estimates:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch estimates' });
@@ -2396,7 +2401,7 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
     
     // Enrich addons with descriptions - match by property_type
     const [fpAddons] = await pool.execute(
-      `SELECT id, service_name, description, property_type FROM fp_addons WHERE franchise_partner_id = ?`,
+      `SELECT id, service_name, description, property_type, frequency_type, frequency_count FROM fp_addons WHERE franchise_partner_id = ?`,
       [fpIdNum]
     );
     allEstimates = allEstimates.map(est => {
@@ -2405,7 +2410,7 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
           let addons = typeof est.addons_data === 'string' ? JSON.parse(est.addons_data) : est.addons_data;
           const estPropertyType = est.property_type?.toUpperCase();
           addons = addons.map(addon => {
-            if (!addon.description) {
+            if (!addon.description && !addon.catalogServiceId) {
               const addonName = addon.name || addon.service_name || '';
               const addonId = addon.id || addon.addon_id;
               let foundAddon = fpAddons.find(a => a.id == addonId);
@@ -2419,7 +2424,7 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
                 addon.description = foundAddon.description;
               }
             }
-            return addon;
+            return enrichLegacyEstimateAddon(addon, fpAddons, estPropertyType);
           });
           est.addons = addons;
         } catch (e) { /* ignore */ }
@@ -2428,7 +2433,7 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
     });
     
     console.log('Admin fp-view estimates: Total', allEstimates.length, 'for FP', fpIdNum);
-    res.json({ success: true, data: allEstimates || [] });
+    res.json({ success: true, data: (allEstimates || []).map(normalizeEstimateData) });
   } catch (error) {
     console.error('Error fetching FP estimates:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch estimates' });
@@ -2472,6 +2477,7 @@ router.put('/estimates/:id', authenticate, adminOnly, async (req, res) => {
     if (!existing) {
       return res.status(404).json({ success: false, message: 'Estimate not found' });
     }
+    if (hasCatalogServices(existing)) return res.status(409).json({ success: false, message: 'Configured-service estimates cannot be rewritten by the legacy editor. Create a new estimate to change these services.' });
     
     const {
       client_name, client_phone, client_email,
