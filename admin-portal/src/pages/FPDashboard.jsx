@@ -226,8 +226,12 @@ const FPDashboard = ({ user }) => {
         setInvoices(invResult.data);
       }
       
-      if (vendorResult.success && Array.isArray(vendorResult.data)) {
-        setVendors(vendorResult.data);
+      if (vendorResult.success) {
+        // The vendors endpoint answers { own, assigned, all }, not a bare array
+        const vendorList = Array.isArray(vendorResult.data)
+          ? vendorResult.data
+          : vendorResult.data?.all || vendorResult.data?.own || [];
+        setVendors(vendorList);
       }
       
       if (empResult.success && Array.isArray(empResult.data)) {
