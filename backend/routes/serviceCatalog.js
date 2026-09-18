@@ -133,7 +133,7 @@ const priceCustomEstimate = async (body, role, authorizedProperty = null) => {
 const buildCatalogAddons = (rows, property) => rows.map((row, index) => normalizeEstimateService({
   addonId: `CAT-${row.service_id}-${index}`, catalogServiceId: row.service_id, name: row.service_name, service_name: row.service_name,
   description: row.description, frequency_type: row.frequency, frequency_count: row.visits, totalPrice: row.totalPrice,
-  services: [{ name: row.service_name, description: row.description, frequencyType: row.frequency, frequency: row.visits, price: row.totalPrice / row.visits }],
+  services: [{ name: row.service_name, description: row.description, frequencyType: row.frequency, frequency: row.visits, price: row.visits ? row.totalPrice / row.visits : row.totalPrice }],
   pricingInputs: row.inputs, pricingSnapshot: row, propertySnapshot: property
 }));
 
@@ -198,7 +198,7 @@ const validateCatalogEstimate = (req, res, next) => {
         const quote = calculateServiceQuote(config, { ...addon.pricingInputs, property_type: req.body.propertyType }, req.user.role);
         if (quote.requiresCustomQuote) throw Object.assign(new Error(`Enter a custom quote for ${config.service_name}.`), { status: 400 });
         if (Math.abs(Number(addon.totalPrice) - quote.totalPrice) > 0.01 || !Number.isFinite(Number(addon.totalPrice))) throw Object.assign(new Error('Service pricing has changed. Remove and re-add the service before saving.'), { status: 400 });
-        const service = { name: config.service_name, description: config.description, frequencyType: quote.frequency, frequency: quote.visits, price: quote.totalPrice / quote.visits };
+        const service = { name: config.service_name, description: config.description, frequencyType: quote.frequency, frequency: quote.visits, price: quote.visits ? quote.totalPrice / quote.visits : quote.totalPrice };
         addons[index] = normalizeEstimateService({
           addonId: `CAT-${id}`, catalogServiceId: id, name: config.service_name, service_name: config.service_name,
           frequency_type: quote.frequency, frequency_count: quote.visits, description: config.description,

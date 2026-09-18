@@ -164,6 +164,35 @@ test('all six methods calculate vendor cost and marked-up customer totals', () =
   }
 });
 
+test('the frequency list matches the agreed visit counts, including On Request', () => {
+  const expected = [['On Request', 0], ['Monthly', 12], ['Every 2 Months', 6], ['Quarterly', 4], ['Every 4 Months', 3],
+    ['Half Yearly', 2], ['Yearly', 1], ['Weekly', 52], ['Bi-Weekly', 26]];
+  for (const [frequency, visits] of expected) {
+    const service = config({ default_frequency: frequency, default_visits_per_year: visits });
+    assert.equal(validateService(service).default_visits_per_year, visits, frequency);
+    assert.equal(quote({ default_frequency: frequency, default_visits_per_year: visits }).visits, visits, frequency);
+  }
+  // Zero visits belong to On Request alone
+  assert.throws(() => validateService(config({ default_frequency: 'Monthly', default_visits_per_year: 0, allow_manual_visits: true })), /at least 1 for Monthly/i);
+  assert.throws(() => quote({ default_frequency: 'Weekly', default_visits_per_year: 52, allow_manual_visits: true }, { visits: 0 }), /at least 1 for Weekly/i);
+  // An On Request service costs nothing until it is requested, and must not divide by zero
+  const onRequest = quote({ default_frequency: 'On Request', default_visits_per_year: 0, fixed_price: 1000 });
+  assert.equal(onRequest.visits, 0);
+  assert.equal(onRequest.vendorCost, 0);
+  assert.equal(onRequest.vendorRatePerVisit, 0);
+  assert.equal(Number.isFinite(onRequest.totalPrice), true);
+  // Weekly multiplies by 52
+  assert.equal(quote({ default_frequency: 'Weekly', default_visits_per_year: 52, fixed_price: 100 }).vendorCost, 5200);
+  assert.throws(() => validateService(config({ default_frequency: 'Fortnightly', default_visits_per_year: 26 })), /valid default frequency/i);
+});
+
+test('frequencies retired from the list still validate and price saved services', () => {
+  for (const [frequency, visits] of [['Half-Yearly', 2], ['One-time', 1]]) {
+    assert.equal(validateService(config({ default_frequency: frequency, default_visits_per_year: visits })).default_frequency, frequency);
+    assert.equal(quote({ default_frequency: frequency, default_visits_per_year: visits }).visits, visits);
+  }
+});
+
 test('retired methods cannot be saved but still price services stored before they were removed', () => {
   for (const retired of [{ pricing_method: 'fixed_visit_custom', unit: 'Visit', visit_charge: 500, custom_work_rate: 1000 },
     { pricing_method: 'custom_quote', unit: 'Quote' }]) {

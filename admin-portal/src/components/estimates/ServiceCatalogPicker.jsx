@@ -82,7 +82,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
         pricing_method: service.pricing_method, unit: service.unit, manpower_basis: service.manpower_basis, role_designation: service.role_designation,
         frequency_type: quote.frequency, frequency_count: quote.visits,
         totalPrice: quote.totalPrice, pricingInputs: quote.inputs,
-        services: [{ name: service.service_name, description: service.description, frequencyType: quote.frequency, frequency: quote.visits, price: quote.totalPrice / quote.visits }]
+        services: [{ name: service.service_name, description: service.description, frequencyType: quote.frequency, frequency: quote.visits, price: quote.visits ? quote.totalPrice / quote.visits : quote.totalPrice }]
       });
       selectService('');
     } catch (error) {

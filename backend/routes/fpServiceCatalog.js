@@ -119,7 +119,7 @@ router.validatePackageEstimate = async (req, res, next) => {
       saved.push(normalizeEstimateService({
         addonId: `CAT-${id}`, catalogServiceId: id, name: config.service_name, service_name: config.service_name,
         description: config.description, frequency_type: quote.frequency, frequency_count: quote.visits,
-        services: [{ name: config.service_name, description: config.description, frequencyType: quote.frequency, frequency: quote.visits, price: quote.totalPrice / quote.visits }],
+        services: [{ name: config.service_name, description: config.description, frequencyType: quote.frequency, frequency: quote.visits, price: quote.visits ? quote.totalPrice / quote.visits : quote.totalPrice }],
         totalPrice: quote.totalPrice, price: quote.totalPrice, pricingInputs: quote.inputs, pricingSnapshot: { ...config, ...quote }
       }));
       subtotal += quote.totalPrice;
