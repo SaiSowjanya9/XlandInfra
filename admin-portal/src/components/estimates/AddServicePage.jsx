@@ -40,14 +40,17 @@ const UNIT_OPTIONS = {
   manpower: ['Persons', 'Guards', 'Staff', 'Personnel']
 };
 
-// Frequency Options
+// Frequency Options. On Request has no scheduled visits, so its annual count is zero.
 export const FREQUENCY_OPTIONS = [
+  { value: 'On Request', label: 'On Request', defaultVisits: 0 },
   { value: 'Monthly', label: 'Monthly', defaultVisits: 12 },
   { value: 'Every 2 Months', label: 'Every 2 Months', defaultVisits: 6 },
   { value: 'Quarterly', label: 'Quarterly', defaultVisits: 4 },
-  { value: 'Half-Yearly', label: 'Half-Yearly', defaultVisits: 2 },
+  { value: 'Every 4 Months', label: 'Every 4 Months', defaultVisits: 3 },
+  { value: 'Half Yearly', label: 'Half Yearly', defaultVisits: 2 },
   { value: 'Yearly', label: 'Yearly', defaultVisits: 1 },
-  { value: 'One-time', label: 'One-time', defaultVisits: 1 }
+  { value: 'Weekly', label: 'Weekly', defaultVisits: 52 },
+  { value: 'Bi-Weekly', label: 'Bi-Weekly', defaultVisits: 26 }
 ];
 
 // Property Type Options
@@ -468,7 +471,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                       <label className="flex items-center gap-2 text-xs text-slate-500"><input type="checkbox" checked={slab.isCustomQuote} onChange={event => updateCapacitySlab(slab.id, 'isCustomQuote', event.target.checked)} className="accent-blue-600" />Custom Quote</label>
                     </div></td>
                     <td className="px-3 py-3"><select aria-label={`Slab ${index + 1} default frequency`} value={slab.defaultFrequency} onChange={event => updateCapacitySlab(slab.id, 'defaultFrequency', event.target.value)} className={`${inputClass} min-w-[145px]`}>{FREQUENCY_OPTIONS.map(item => <option key={item.value}>{item.value}</option>)}</select></td>
-                    <td className="px-3 py-3"><input aria-label={`Slab ${index + 1} default visits per year`} type="number" min="1" max="366" step="1" required readOnly={!formData.allowManualVisits} value={slab.defaultVisitsPerYear} onChange={event => updateCapacitySlab(slab.id, 'defaultVisitsPerYear', event.target.value)} className={`${inputClass} min-w-[90px] ${!formData.allowManualVisits ? 'bg-slate-50' : ''}`} /></td>
+                    <td className="px-3 py-3"><input aria-label={`Slab ${index + 1} default visits per year`} type="number" min="0" max="366" step="1" required readOnly={!formData.allowManualVisits} value={slab.defaultVisitsPerYear} onChange={event => updateCapacitySlab(slab.id, 'defaultVisitsPerYear', event.target.value)} className={`${inputClass} min-w-[90px] ${!formData.allowManualVisits ? 'bg-slate-50' : ''}`} /></td>
                     <td className="px-3 py-3 text-center"><button type="button" aria-label={`Delete slab ${index + 1}`} disabled={capacitySlabs.length === 1} onClick={() => deleteCapacitySlab(slab.id)} className="rounded p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button></td>
                   </tr>)}</tbody>
                 </table>
@@ -488,7 +491,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 {/* Rate, frequency and visit count on one row */}
                 {isRatePricing && <Field label={isVisitManpower ? 'Rate per Person per Visit (₹) *' : isFixedPrice ? 'Fixed Rate per Visit (₹) *' : `Rate per ${formData.unit} (₹) *`}>{numberInput(rateField, { max: 1e9 })}</Field>}
                 <Field label="Default Frequency *"><select value={formData.defaultFrequency} onChange={event => changeFrequency(event.target.value)} className={inputClass}>{FREQUENCY_OPTIONS.map(frequency => <option key={frequency.value}>{frequency.value}</option>)}</select></Field>
-                <Field label="Default Visits Per Year *">{numberInput('defaultVisitsPerYear', { min: 1, max: 366, step: 1, readOnly: !formData.allowManualVisits, className: `${inputClass} ${!formData.allowManualVisits ? 'bg-slate-50' : ''}` })}</Field>
+                <Field label="Default Visits Per Year *">{numberInput('defaultVisitsPerYear', { min: 0, max: 366, step: 1, readOnly: !formData.allowManualVisits, className: `${inputClass} ${!formData.allowManualVisits ? 'bg-slate-50' : ''}` })}</Field>
               </div>
               {/* Both override toggles on the row below, aligned to the same columns */}
               <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

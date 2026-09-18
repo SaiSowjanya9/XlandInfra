@@ -67,16 +67,24 @@ export const normalizePropertyType = (type) => {
   return type;
 };
 
-// Frequency types (how often service occurs)
-export const FREQUENCY_TYPES = ['Monthly', 'Every 2 Months', 'Quarterly', 'Half-Yearly', 'Yearly', 'Other'];
+// Frequency types (how often service occurs). 'Other' stays so a package can carry a manual count.
+export const FREQUENCY_TYPES = ['On Request', 'Monthly', 'Every 2 Months', 'Quarterly', 'Every 4 Months',
+  'Half Yearly', 'Yearly', 'Weekly', 'Bi-Weekly', 'Other'];
 
 // Auto-calculate No. of visits per year based on frequency
 export const FREQUENCY_COUNT_MAP = {
+  'On Request': 0,
   'Monthly': 12,
   'Every 2 Months': 6,
   'Quarterly': 4,
-  'Half-Yearly': 2,
+  'Every 4 Months': 3,
+  'Half Yearly': 2,
   'Yearly': 1,
+  'Weekly': 52,
+  'Bi-Weekly': 26,
+  // Retired labels, still resolvable so packages and estimates saved earlier show the right count
+  'Half-Yearly': 2,
+  'One-time': 1,
   'Other': null  // Custom - user enters manually
 };
 
