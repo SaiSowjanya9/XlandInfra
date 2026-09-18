@@ -220,8 +220,8 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
         safeCount('SELECT COUNT(*) as count FROM onboarded_properties WHERE franchise_partner_id = ? AND status = \'active\'', [fpId])
       ]).then(([p1, p2]) => p1 + p2),
       
-      // Vendors count - only this FP's ACTIVE vendors
-      safeCount('SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ? AND status = \'active\' AND vendor_id NOT LIKE \'%SEED%\'', [fpId]),
+      // Vendors count - matches the vendor list, which treats a missing status as active
+      safeCount('SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ? AND (status = \'active\' OR status IS NULL) AND vendor_id NOT LIKE \'%SEED%\'', [fpId]),
       
       // Customers count
       safeCount('SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?', [fpId]),

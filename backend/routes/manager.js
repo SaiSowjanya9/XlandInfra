@@ -261,7 +261,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
          AND (p.zone_id IN (${assignedZones.map(() => '?').join(',')}) OR op.zone IN (${assignedZones.map(() => '?').join(',')}))`,
         [franchisePartnerId, ...assignedZones, ...assignedZones]
       ) : safeCount(
-        `SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ? AND status = 'active' AND vendor_id NOT LIKE '%SEED%'`,
+        `SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ? AND (status = 'active' OR status IS NULL) AND vendor_id NOT LIKE '%SEED%'`,
         [franchisePartnerId]
       ),
       

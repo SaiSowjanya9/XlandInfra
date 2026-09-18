@@ -2853,9 +2853,9 @@ router.get('/fp-view/:fpId/dashboard', authenticate, adminOnly, async (req, res)
       [fpIdNum]
     );
     
-    // Vendors count (active only)
+    // Vendors count - same filter the FP's own views use, so both agree
     const vendorCount = await safeCount(
-      `SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ? AND status = 'active'`,
+      `SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ? AND (status = 'active' OR status IS NULL) AND vendor_id NOT LIKE '%SEED%'`,
       [fpIdNum]
     );
     
