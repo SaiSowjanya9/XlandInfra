@@ -144,6 +144,15 @@ For reusable task instructions for major modules, see `.devin/skills/`:
 - Vendor assignments go through the existing `upsertPropertyVendorAssignment`, so `pending_property_schedules` stays in step. `applyEstimateVendorAssignments` refuses a vendor belonging to another franchise and reports it in `vendorsSkipped` rather than failing the estimate.
 - Test: `node --test backend/utils/estimateScheduling.test.js`.
 
+## Customer Portal Schedules
+
+- The customer portal (`frontend`) shows the same schedule the employee portals build, and is **read-only**: customers never schedule, reschedule or cancel a visit, so `frontend/src/pages/Schedule.jsx` has no action buttons and `GET /api/customers/schedules` is the only schedule route they have. The staff routes under `/api/schedules` stay off limits to them — they are role-gated and do not check property ownership.
+- A visit shows the service name, the vendor name, its date, time, status and visit number only. Never send a customer vendor ids, work order references, reschedule or cancellation notes, or any cost.
+- `scheduled_visits.property_id` is always `onboarded_properties.id`, while `customer_accounts` stores either that id or the property code, so the route resolves the property first (`resolveOnboardedPropertyId`) and then scopes on `sv.property_id`. A customer whose property is not onboarded gets an empty schedule with zero counts, not an error. The vendor is read as `COALESCE(pss.vendor_id, sv.vendor_id)`, matching the portals.
+- Counts come from the shared `fetchScheduleStats` in `backend/utils/scheduleStats.js`, so the customer's cards agree with the employee portals; `emptyScheduleStats` is exported for the no-property case. Statuses keep their real values (including `work_order_created` and the derived overdue), and dates/times are formatted in SQL as `%Y-%m-%d` / `%H:%i` so a stored IST day is never shifted by a timezone. The page derives "today" with the same IST offset the stats query uses.
+- The three list tabs are disjoint and cover every status: Upcoming holds the open ones plus `in_progress`, Past holds `completed` and `rescheduled`, Cancelled holds `cancelled`. Keep that split if a status is added.
+- Test: `node --test backend/routes/customerSchedules.test.js` (mocked database; covers authentication, property resolution by id and code, cross-property isolation, the customer-safe payload, and the row cap). Frontend verification: `npm run build` in `frontend`.
+
 ## Pending Property Schedules
 
 - Estimates keep the AMC package as `package_id` plus a `package_name` copy, and the write paths default that copy to `''` (`package_name || ''`). Every pending-properties query must therefore read `COALESCE(NULLIF(fe.package_name, ''), fpamc.name)` with `LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id AND fpamc.franchise_partner_id = fe.franchise_partner_id`. All package selectors read `fp_amc_packages`, and the FP scope prevents borrowing another partner's package name.

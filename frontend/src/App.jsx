@@ -52,7 +52,7 @@ const ProtectedDashboard = ({ user, onLogout }) => {
       <Routes>
         <Route path="/" element={<Dashboard user={user} />} />
         <Route path="/work-order" element={<WorkOrder user={user} />} />
-        <Route path="/schedule" element={<Suspense fallback={<PageLoader />}><Schedule /></Suspense>} />
+        <Route path="/schedule" element={<Suspense fallback={<PageLoader />}><Schedule user={user} /></Suspense>} />
         <Route path="/payment" element={<Suspense fallback={<PageLoader />}><Payment /></Suspense>} />
         <Route path="/contact" element={<Suspense fallback={<PageLoader />}><Contact /></Suspense>} />
       </Routes>

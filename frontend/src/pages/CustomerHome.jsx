@@ -67,7 +67,7 @@ const quickAccessModules = [
   { 
     id: 'schedules', 
     label: 'Schedules', 
-    description: 'View upcoming appointments and events',
+    description: 'View your scheduled service visits',
     icon: Calendar, 
     path: '/dashboard/schedule',
     color: 'from-purple-500/20 to-purple-600/20',
