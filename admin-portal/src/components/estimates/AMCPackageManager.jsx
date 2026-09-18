@@ -73,7 +73,8 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   const token = getAuthToken();
   
   // Operations Manager defaults to 'all-packages' tab (no create access)
-  const [activeTab, setActiveTab] = useState(isOpsManager ? 'all-packages' : 'create'); // 'create' or 'all-packages'
+  // The list is the landing view; Create Package is the highlighted action on the right
+  const [activeTab, setActiveTab] = useState('all-packages'); // 'create' or 'all-packages'
   const [amcPackages, setAmcPackages] = useState([]);
   const [filterPropertyType, setFilterPropertyType] = useState('all'); // Filter for All Packages tab
   const [exportingId, setExportingId] = useState(null); // Track PDF export state
@@ -374,41 +375,38 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
 
   return (
     <div className="space-y-4">
-      {/* Tabs - Create tab hidden for Operations Manager */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-        {!isOpsManager && (
+      {/* All Packages is the landing view; Create Package is the highlighted action on
+          the right and stays there while the form is open. Hidden for Operations Manager. */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
           <button
-            onClick={() => setActiveTab('create')}
+            onClick={() => setActiveTab('all-packages')}
             className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${
-              activeTab === 'create'
+              activeTab === 'all-packages'
                 ? 'bg-white text-slate-700 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             <div className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Create Package
+              <Layers className="w-4 h-4" />
+              All Packages
+              {amcPackages.length > 0 && (
+                <span className="px-1.5 py-0.5 bg-slate-600 text-white rounded-full text-xs">
+                  {amcPackages.length}
+                </span>
+              )}
             </div>
           </button>
+        </div>
+        {!isOpsManager && (
+          <button
+            onClick={() => setActiveTab('create')}
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" />
+            Create Package
+          </button>
         )}
-        <button
-          onClick={() => setActiveTab('all-packages')}
-          className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${
-            activeTab === 'all-packages'
-              ? 'bg-white text-slate-700 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4" />
-            All Packages
-            {amcPackages.length > 0 && (
-              <span className="px-1.5 py-0.5 bg-slate-600 text-white rounded-full text-xs">
-                {amcPackages.length}
-              </span>
-            )}
-          </div>
-        </button>
       </div>
 
       {/* All AMC Packages Tab - With Property Type Filter */}
