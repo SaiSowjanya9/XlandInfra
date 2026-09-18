@@ -83,6 +83,8 @@ const Toggle = ({ label, checked, onChange }) => (
   </div>
 );
 
+const blankSlab = (id) => ({ id, capacityFrom: '', capacityTo: '', vendorRate: '', isCustomQuote: false, defaultFrequency: 'Monthly', defaultVisitsPerYear: 12 });
+
 export const findCapacitySlab = (slabs, capacity) => {
   if (capacity == null || String(capacity).trim() === '' || !Number.isInteger(Number(capacity))) return undefined;
   return slabs?.find(slab => slab.capacityFrom !== '' && Number(capacity) >= Number(slab.capacityFrom) &&
@@ -125,14 +127,14 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     allowFrequencyOverride: true,
     allowManualVisits: false,
     // Markup & Margin
-    defaultMarkupPercentage: 35,
+    defaultMarkupPercentage: '',
     // Description
     description: '',
     // For Manpower
     manpowerBasis: 'per_visit',
     ratePerPerson: '',
     roleDesignation: '',
-    workingHoursPerVisit: 2,
+    workingHoursPerVisit: '',
     overtimeRatePerHour: '',
     minimumManpower: 1,
     monthlyRate: '',
@@ -146,14 +148,8 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     ratePerCapacity: ''
   });
 
-  // Capacity Slab Configuration
-  const [capacitySlabs, setCapacitySlabs] = useState([
-    { id: 1, capacityFrom: 1, capacityTo: 6, vendorRate: 500, isCustomQuote: false },
-    { id: 2, capacityFrom: 7, capacityTo: 10, vendorRate: 750, isCustomQuote: false },
-    { id: 3, capacityFrom: 11, capacityTo: 15, vendorRate: 1000, isCustomQuote: false },
-    { id: 4, capacityFrom: 16, capacityTo: 20, vendorRate: 1250, isCustomQuote: false },
-    { id: 5, capacityFrom: 21, capacityTo: null, vendorRate: null, isCustomQuote: true }
-  ].map(slab => ({ ...slab, defaultFrequency: 'Monthly', defaultVisitsPerYear: 12 })));
+  // Capacity Slab Configuration starts empty; the ranges and rates are the user's to enter
+  const [capacitySlabs, setCapacitySlabs] = useState([blankSlab(1)]);
   const [manpowerRanges, setManpowerRanges] = useState([]);
   const [exampleManpowerArea, setExampleManpowerArea] = useState('1500');
   const [examplePersonnel, setExamplePersonnel] = useState('2');
@@ -216,17 +212,19 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     }));
   };
 
-  // Add new capacity slab
+  // Add new capacity slab, continuing from the previous row only when it holds a real number
   const addCapacitySlab = () => {
     setCapacitySlabs(prev => {
       const last = prev[prev.length - 1];
+      const id = Math.max(0, ...prev.map(item => item.id)) + 1;
+      const schedule = { defaultFrequency: last?.defaultFrequency ?? formData.defaultFrequency, defaultVisitsPerYear: last?.defaultVisitsPerYear ?? formData.defaultVisitsPerYear };
       const openEnded = last?.capacityTo === null;
-      const start = openEnded ? Number(last.capacityFrom) : Number(last?.capacityTo ?? -1) + 1;
-      const slab = { id: Math.max(0, ...prev.map(item => item.id)) + 1, capacityFrom: start, capacityTo: start + 49, vendorRate: '', isCustomQuote: false,
-        defaultFrequency: last?.defaultFrequency ?? formData.defaultFrequency, defaultVisitsPerYear: last?.defaultVisitsPerYear ?? formData.defaultVisitsPerYear };
-      return openEnded
-        ? [...prev.slice(0, -1), slab, { ...last, capacityFrom: start + 50 }]
-        : [...prev, slab];
+      const previousEnd = openEnded ? Number(last.capacityFrom) - 1 : Number(last?.capacityTo);
+      if (!Number.isFinite(previousEnd) || String(openEnded ? last.capacityFrom : last?.capacityTo).trim() === '') {
+        return [...prev, { ...blankSlab(id), ...schedule }];
+      }
+      const slab = { ...blankSlab(id), ...schedule, capacityFrom: previousEnd + 1 };
+      return openEnded ? [...prev.slice(0, -1), slab, { ...last, capacityFrom: previousEnd + 2 }] : [...prev, slab];
     });
   };
 
@@ -363,10 +361,12 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     <input type="number" min="0" step="0.01" required value={formData[field]}
       onChange={event => setField(field, event.target.value)} className={inputClass} {...props} />
   );
-  const slabLabel = slab => `${slab.capacityFrom}${slab.capacityTo === null ? '+' : `–${slab.capacityTo}`} ${formData.unit}`;
+  const slabLabel = slab => String(slab.capacityFrom).trim() === '' ? 'New slab'
+    : `${slab.capacityFrom}${slab.capacityTo === null ? '+' : String(slab.capacityTo).trim() === '' ? '' : `–${slab.capacityTo}`} ${formData.unit}`;
   const previewSlab = findCapacitySlab(capacitySlabs, exampleCapacity);
   const validCapacity = exampleCapacity.trim() !== '' && Number.isInteger(Number(exampleCapacity)) && Number(exampleCapacity) >= 0 && Number(exampleCapacity) <= 1e9;
-  const slabPreviewMessage = !validCapacity ? 'Enter a whole-number capacity between 0 and 1,000,000,000.'
+  const slabPreviewMessage = !capacitySlabs.some(slab => String(slab.capacityFrom).trim() !== '') ? 'Configure a slab to see example pricing.'
+    : !validCapacity ? 'Enter a whole-number capacity between 0 and 1,000,000,000.'
     : Number(exampleCapacity) < Number(capacitySlabs[0]?.capacityFrom) ? 'Capacity is below the first configured slab.'
     : !previewSlab || previewSlab.isCustomQuote ? 'Custom quote required for this capacity.'
     : previewSlab.vendorRate === '' || previewSlab.vendorRate == null || Number(previewSlab.vendorRate) < 0 || Number(previewSlab.defaultVisitsPerYear) < 1 ? 'Enter a valid slab rate and visit count to see example pricing.' : '';
