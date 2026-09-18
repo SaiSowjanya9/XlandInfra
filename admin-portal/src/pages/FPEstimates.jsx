@@ -213,14 +213,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     return () => { observer?.disconnect(); window.removeEventListener('resize', resize); };
   }, [propertyIdInput, estimateType, defaultTab, loading]);
   // FP Manager defaults to 'all-packages' (no create access)
-  const [amcActiveTab, setAmcActiveTab] = useState(isFPManager ? 'all-packages' : 'create');
+  // Both sections land on their list; creating is the highlighted action on the right
+  const [amcActiveTab, setAmcActiveTab] = useState('all-packages');
   // A package can apply to several property types, so the same one is configured once
   const [selectedPropertyTypes, setSelectedPropertyTypes] = useState([]);
   const [amcForm, setAmcForm] = useState({ packageName: '', description: '', serviceRows: [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' });
   const [editingAmcPackage, setEditingAmcPackage] = useState(null);
   const [filterPropertyType, setFilterPropertyType] = useState('all');
   // FP Manager defaults to 'all-addons' (no create access)
-  const [addonActiveTab, setAddonActiveTab] = useState('configured');
+  const [addonActiveTab, setAddonActiveTab] = useState('all-addons');
   // Bumped on every Add Service tab click so the tab always reopens the form
   const [catalogEntry, setCatalogEntry] = useState(0);
   // Assign / Schedule Vendor: Yes sends the property to scheduling and lets a vendor be chosen now
@@ -3103,31 +3104,32 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       </div>
 
-      {/* Tabs - Create Package hidden for FP Manager */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit mb-6">
-        {!isFPManager && (
+      {/* The list is the landing view; Create Package is the highlighted action on the
+          right and stays there while the form is open. Hidden for FP Manager. */}
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
           <button
-            onClick={() => setAmcActiveTab('create')}
-            className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${amcActiveTab === 'create' ? 'bg-white text-slate-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+            onClick={() => setAmcActiveTab('all-packages')}
+            className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${amcActiveTab === 'all-packages' ? 'bg-white text-slate-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
           >
             <div className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Create Package
+              <Layers className="w-4 h-4" />
+              All Packages
+              {amcPackages.length > 0 && (
+                <span className="px-1.5 py-0.5 bg-slate-600 text-white rounded-full text-xs">{amcPackages.length}</span>
+              )}
             </div>
           </button>
+        </div>
+        {!isFPManager && (
+          <button
+            onClick={() => { resetAmcForm(); setAmcActiveTab('create'); }}
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" />
+            Create Package
+          </button>
         )}
-        <button
-          onClick={() => setAmcActiveTab('all-packages')}
-          className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${amcActiveTab === 'all-packages' ? 'bg-white text-slate-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
-        >
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4" />
-            All Packages
-            {amcPackages.length > 0 && (
-              <span className="px-1.5 py-0.5 bg-slate-600 text-white rounded-full text-xs">{amcPackages.length}</span>
-            )}
-          </div>
-        </button>
       </div>
 
       {/* All Packages Tab */}
@@ -3623,30 +3625,49 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     }
   };
 
-  // Rendered either on its own row or inside the service form header, so both share one line
+  // Rendered either on its own row or inside the service form header, so both share one
+  // line. type="button" matters in the form: a bare button there submits it.
   const renderAddonTabs = () => (
     <div className="flex gap-2">
-      <button onClick={() => { setAddonActiveTab('configured'); setCatalogEntry(value => value + 1); }} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'configured' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-        {isFPManager ? <><ClipboardList className="w-4 h-4" />Configured Services</> : <><Plus className="w-4 h-4" />Add Service</>}
-      </button>
-      <button onClick={() => setAddonActiveTab('all-addons')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'all-addons' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+      {/* Managers cannot author, so the configured catalog is a list tab for them */}
+      {isFPManager && (
+        <button type="button" onClick={() => setAddonActiveTab('configured')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'configured' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+          <ClipboardList className="w-4 h-4" />Configured Services
+        </button>
+      )}
+      <button type="button" onClick={() => setAddonActiveTab('all-addons')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'all-addons' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
         <Layers className="w-4 h-4" />All Services
         {addons.length > 0 && <span className="px-1.5 py-0.5 bg-gray-700 text-white rounded-full text-xs">{addons.length}</span>}
       </button>
     </div>
   );
 
+  // The highlighted create action. It stays on the right in both views, and always
+  // remounts the form so it opens empty.
+  const renderAddServiceAction = () => isFPManager ? null : (
+    <button type="button" onClick={() => { setAddonActiveTab('configured'); setCatalogEntry(value => value + 1); }}
+      className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700">
+      <Plus className="w-4 h-4" />Add Service
+    </button>
+  );
+
   const renderAddons = () => (
     <div className="space-y-4">
-      {/* The service form hosts the tabs in its own header row; other tabs show them here */}
-      {!(addonActiveTab === 'configured' && !isFPManager) && renderAddonTabs()}
+      {/* The service form hosts this row in its own header; every other view shows it here */}
+      {!(addonActiveTab === 'configured' && !isFPManager) && (
+        <div className="flex items-center justify-between gap-3">
+          {renderAddonTabs()}
+          {renderAddServiceAction()}
+        </div>
+      )}
 
-      {/* The Add Service tab is the form itself; managers cannot author, so they get the list */}
+      {/* Creating opens the form in place; managers cannot author, so they get the list */}
       {addonActiveTab === 'configured' && (isFPManager
         ? <ServiceCatalogList apiPath={FP_CATALOG_API} admin={user} showToast={showToast} scoped
             scopeLabel="For your franchise" canEdit={() => false} />
         : <AddServicePage key={catalogEntry} admin={user} showToast={showToast} apiPath={FP_CATALOG_API} scoped embedded
-            leading={renderAddonTabs()} scopeLabel="For your franchise" onSave={loadData} onBack={() => setAddonActiveTab('all-addons')} />
+            leading={renderAddonTabs()} trailing={renderAddServiceAction()} scopeLabel="For your franchise"
+            onSave={loadData} onBack={() => setAddonActiveTab('all-addons')} />
       )}
 
       {addonActiveTab === 'all-addons' && (

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ServiceCatalogList from './ServiceCatalogList';
 import { getAuthToken } from '../../utils/safeStorage';
-import { Trash2, PlusCircle, ChevronDown, Plus, Layers, Edit2, X, Settings } from 'lucide-react';
+import { Trash2, PlusCircle, ChevronDown, Plus, Layers, Edit2, X } from 'lucide-react';
 import {
   getAddons, createAddon, deleteAddon, updateAddon, fetchAddons,
   getServices, FREQUENCY_TYPES, FREQUENCY_COUNT_MAP
@@ -59,7 +59,8 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   const navigate = useNavigate();
   
   // Operations Manager defaults to 'all-addons' tab (no create access)
-  const [activeTab, setActiveTab] = useState(isOpsManager ? 'all-addons' : 'create'); // 'create' or 'all-addons'
+  // The list is the landing view; creating is the highlighted action on the right
+  const [activeTab, setActiveTab] = useState('all-addons'); // 'create' or 'all-addons'
   const [addons, setAddons] = useState([]);
   const [services, setServices] = useState([]);
   const [selectedPropertyType, setSelectedPropertyType] = useState(null);
@@ -325,7 +326,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
               onClick={() => navigate('/employee/estimates/add-service')}
               className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
             >
-              <Settings className="w-4 h-4" />
+              <Plus className="w-4 h-4" />
               Add Service
             </button>
           </div>

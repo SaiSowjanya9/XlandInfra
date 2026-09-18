@@ -107,7 +107,8 @@ export const getServiceSchedule = (service, capacity, frequency) => {
 // `scoped` portals (FP) own their catalog scope on the server, so no FP is sent with the service.
 // `embedded` drops the form's own title: the hosting page already names the screen.
 // `leading` lets the hosting page put its own controls on the form's action row, keeping one line.
-const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '/api/admin/service-catalog', scoped = false, scopeLabel, embedded = false, leading }) => {
+// `trailing` adds a host action ahead of the form's own, so a highlighted Add Service stays on the right.
+const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '/api/admin/service-catalog', scoped = false, scopeLabel, embedded = false, leading, trailing }) => {
   const { selectedFp } = useFP();
   const token = getAuthToken();
 
@@ -410,6 +411,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
           <span className="mt-1.5 inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">{scopeText}</span>
         </div>}
         <div className="ml-auto flex shrink-0 items-center gap-3">
+          {trailing}
           <button type="button" onClick={onBack} disabled={isSubmitting} aria-label="Back to services" className="rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm transition hover:bg-slate-50">
             <ChevronLeft className="h-5 w-5 text-slate-500" />
           </button>
