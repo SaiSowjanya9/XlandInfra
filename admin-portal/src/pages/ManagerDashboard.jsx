@@ -973,16 +973,16 @@ const ManagerDashboard = ({ user }) => {
 
         {/* Payments Overview Section - Centered and Large */}
         <div>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Payments Overview</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Payments Overview</h2>
             <Link to="/manager/billing/payments" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
               View All <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
           
-          {/* Invoices by Payment Status Chart - Centered and Large */}
+          {/* Invoices by Payment Status */}
           <div className="flex justify-center">
-            <div className="w-full max-w-lg rounded-xl border border-gray-200 bg-gray-50 p-5">
+            <div className="w-full max-w-3xl rounded-xl border border-gray-200 bg-gray-50 p-5">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <h3 className="text-base font-semibold text-gray-900">Invoices by Payment Status</h3>
                 <div className="relative">
