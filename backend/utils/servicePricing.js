@@ -47,7 +47,9 @@ const validateService = input => {
     default_frequency: input.default_frequency,
     allow_frequency_override: boolean(input.allow_frequency_override, 'Allow frequency override'),
     allow_manual_visits: boolean(input.allow_manual_visits, 'Allow manual visits'),
-    default_markup_percentage: number(input.default_markup_percentage, 'Default markup percentage', 0, 1000)
+    default_markup_percentage: number(input.default_markup_percentage, 'Default markup percentage', 0, 1000),
+    // XLAND's own annual cost of running the service; an estimate may still override it
+    default_operating_cost: number(input.default_operating_cost ?? 0, 'Default XLAND operating cost', 0, 1e9)
   };
   if (!Object.hasOwn(UNITS, config.pricing_method) || !UNITS[config.pricing_method].includes(config.unit)) fail('Select a valid pricing method and unit.');
   if (!Object.hasOwn(ALL_FREQUENCIES, config.default_frequency)) fail('Select a valid default frequency.');
@@ -184,7 +186,7 @@ const calculateServiceQuote = (config, input = {}, role) => {
     vendorCost = inputs.custom_quote;
   }
   vendorCost = round(vendorCost);
-  inputs.operating_cost = number(input.operating_cost ?? 0, 'XLAND operating cost');
+  inputs.operating_cost = number(input.operating_cost ?? config.default_operating_cost ?? 0, 'XLAND operating cost');
   inputs.markup_percentage = number(input.markup_percentage ?? config.default_markup_percentage, 'Markup percentage', 0, 1000);
   const operatingCost = round(inputs.operating_cost);
   const actualCost = round(vendorCost + operatingCost);

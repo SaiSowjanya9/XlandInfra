@@ -164,6 +164,36 @@ test('all six methods calculate vendor cost and marked-up customer totals', () =
   }
 });
 
+test('a service carries its own XLAND operating cost into every estimate', async () => {
+  const withCost = { fixed_price: 1000, default_markup_percentage: 35, default_operating_cost: 6000 };
+  assert.equal(validateService(config(withCost)).default_operating_cost, 6000);
+  // The estimate starts from the configured cost without being told
+  const priced = quote(withCost);
+  assert.equal(priced.vendorCost, 12000);
+  assert.equal(priced.operatingCost, 6000);
+  assert.equal(priced.actualCost, 18000);
+  assert.equal(priced.totalPrice, 24300);
+  assert.equal(priced.profit, 6300);
+  assert.equal(priced.marginPercentage, 25.93);
+  // An estimate may still override it, including back to nothing
+  assert.equal(quote(withCost, { operating_cost: 0 }).totalPrice, 16200);
+  assert.equal(quote(withCost, { operating_cost: 1000 }).actualCost, 13000);
+  // Absent means zero, which is how services saved before the field behave
+  assert.equal(validateService(config({ fixed_price: 1000 })).default_operating_cost, 0);
+  assert.equal(quote({ fixed_price: 1000 }).operatingCost, 0);
+  for (const value of [-1, 'abc', 1e10]) assert.throws(() => validateService(config({ ...withCost, default_operating_cost: value })), /operating cost/i, String(value));
+
+  // The manpower preview shown while configuring must agree with the server, operating cost included
+  const { previewManpower } = await import('../../admin-portal/src/utils/manpowerPricing.js');
+  const service = validateService(config({ ...manpower, default_operating_cost: 5000 }));
+  const preview = previewManpower(service, { area: 1500 });
+  const result = calculateServiceQuote(service, { property_type: 'APT', area: 1500 }, 'admin');
+  assert.equal(preview.operatingCost, 5000);
+  assert.equal(preview.actualCost, result.actualCost);
+  assert.equal(preview.customerPrice, result.totalPrice);
+  assert.equal(preview.marginPercentage, result.marginPercentage);
+});
+
 test('the frequency list matches the agreed visit counts, including On Request', () => {
   const expected = [['On Request', 0], ['Monthly', 12], ['Every 2 Months', 6], ['Quarterly', 4], ['Every 4 Months', 3],
     ['Half Yearly', 2], ['Yearly', 1], ['Weekly', 52], ['Bi-Weekly', 26]];
