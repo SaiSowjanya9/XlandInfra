@@ -29,7 +29,10 @@ export const previewManpower = (service, inputs) => {
   if (!valid(overtime) || Number(overtime) < 0 || Number(overtime) > 24 - Number(hours) ||
     (Number(overtime) > 0 && !valid(service.overtime_rate_per_hour))) return { error: 'Enter valid overtime hours with a configured overtime rate.' };
   const vendorCost = Math.round((Number(personnel) * (Number(rate) + Number(overtime) * Number(service.overtime_rate_per_hour ?? 0)) * Number(visits) + Number.EPSILON) * 100) / 100;
-  const customerPrice = Math.round((vendorCost * (1 + Number(markup) / 100) + Number.EPSILON) * 100) / 100;
+  const operatingCost = Number(service.default_operating_cost ?? 0) || 0;
+  const actualCost = Math.round((vendorCost + operatingCost + Number.EPSILON) * 100) / 100;
+  const customerPrice = Math.round((actualCost * (1 + Number(markup) / 100) + Number.EPSILON) * 100) / 100;
   if (customerPrice > 999999999.99) return { error: 'Example price exceeds the supported limit.' };
-  return { range, ratePerPerson: Number(rate), personnel: Number(personnel), vendorCost, customerPrice };
+  const marginPercentage = customerPrice ? Math.round(((customerPrice - actualCost) / customerPrice * 100 + Number.EPSILON) * 100) / 100 : 0;
+  return { range, ratePerPerson: Number(rate), personnel: Number(personnel), vendorCost, operatingCost, actualCost, customerPrice, marginPercentage };
 };

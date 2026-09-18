@@ -131,6 +131,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     allowManualVisits: false,
     // Markup & Margin
     defaultMarkupPercentage: '',
+    defaultOperatingCost: '',
     // Description
     description: '',
     // For Manpower
@@ -167,7 +168,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
 
   useEffect(() => {
     if (!service) return;
-    const fields = { manpowerBasis: 'manpower_basis', ratePerPerson: 'rate_per_person', roleDesignation: 'role_designation', workingHoursPerVisit: 'working_hours_per_visit', overtimeRatePerHour: 'overtime_rate_per_hour', minimumManpower: 'minimum_manpower', serviceName: 'service_name', category: 'category', pricingMethod: 'pricing_method', unit: 'unit', applicablePropertyTypes: 'applicable_property_types', ratePerUnit: 'rate_per_unit', defaultFrequency: 'default_frequency', defaultVisitsPerYear: 'default_visits_per_year', allowFrequencyOverride: 'allow_frequency_override', allowManualVisits: 'allow_manual_visits', defaultMarkupPercentage: 'default_markup_percentage', description: 'description', monthlyRate: 'monthly_rate', billingPeriod: 'billing_period', periodMonths: 'period_months', fixedPrice: 'fixed_price', ratePerQuantity: 'rate_per_quantity', ratePerCapacity: 'rate_per_capacity' };
+    const fields = { manpowerBasis: 'manpower_basis', ratePerPerson: 'rate_per_person', roleDesignation: 'role_designation', workingHoursPerVisit: 'working_hours_per_visit', overtimeRatePerHour: 'overtime_rate_per_hour', minimumManpower: 'minimum_manpower', serviceName: 'service_name', category: 'category', pricingMethod: 'pricing_method', unit: 'unit', applicablePropertyTypes: 'applicable_property_types', ratePerUnit: 'rate_per_unit', defaultFrequency: 'default_frequency', defaultVisitsPerYear: 'default_visits_per_year', allowFrequencyOverride: 'allow_frequency_override', allowManualVisits: 'allow_manual_visits', defaultMarkupPercentage: 'default_markup_percentage', defaultOperatingCost: 'default_operating_cost', description: 'description', monthlyRate: 'monthly_rate', billingPeriod: 'billing_period', periodMonths: 'period_months', fixedPrice: 'fixed_price', ratePerQuantity: 'rate_per_quantity', ratePerCapacity: 'rate_per_capacity' };
     setFormData(prev => ({ ...Object.fromEntries(Object.entries(prev).map(([field, value]) => [field, service[fields[field]] ?? value])),
       manpowerBasis: service.pricing_method === 'manpower' ? service.manpower_basis ?? 'monthly' : 'per_visit',
       overtimeRatePerHour: service.overtime_rate_per_hour ?? '' }));
@@ -262,7 +263,11 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     const markup = formData.defaultMarkupPercentage === '' ? null : Number(formData.defaultMarkupPercentage);
     const vendorCost = Number(formData[rateField]) * quantity * Number(formData.defaultVisitsPerYear);
     if (!Number.isFinite(vendorCost)) return null;
-    return { vendorCost, customerPrice: markup == null ? null : vendorCost * (1 + markup / 100) };
+    // Markup applies to the actual cost, which is the vendor cost plus XLAND's operating cost
+    const actualCost = vendorCost + exampleOperatingCost;
+    const customerPrice = markup == null ? null : actualCost * (1 + markup / 100);
+    return { vendorCost, operatingCost: exampleOperatingCost, actualCost, customerPrice,
+      marginPercentage: customerPrice ? (customerPrice - actualCost) / customerPrice * 100 : null };
   };
 
   // Get formula text based on pricing method
@@ -299,6 +304,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
         allow_frequency_override: formData.allowFrequencyOverride,
         allow_manual_visits: formData.allowManualVisits,
         default_markup_percentage: Number(formData.defaultMarkupPercentage),
+        default_operating_cost: formData.defaultOperatingCost === '' ? 0 : Number(formData.defaultOperatingCost),
         description: formData.description.trim(),
         // Method-specific fields
         rate_per_unit: Number(formData.ratePerUnit),
@@ -354,8 +360,10 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
   const rateField = { fixed_price: 'fixedPrice', area_based: 'ratePerUnit', quantity_based: 'ratePerQuantity', capacity_based: 'ratePerCapacity', manpower: isVisitManpower ? 'ratePerPerson' : undefined }[formData.pricingMethod];
   const manpowerConfig = { manpower_ranges: manpowerRanges, rate_per_person: formData.ratePerPerson, minimum_manpower: formData.minimumManpower,
     working_hours_per_visit: formData.workingHoursPerVisit, overtime_rate_per_hour: formData.overtimeRatePerHour === '' ? null : formData.overtimeRatePerHour,
-    default_visits_per_year: formData.defaultVisitsPerYear, default_markup_percentage: formData.defaultMarkupPercentage };
+    default_visits_per_year: formData.defaultVisitsPerYear, default_markup_percentage: formData.defaultMarkupPercentage,
+    default_operating_cost: formData.defaultOperatingCost === '' ? 0 : formData.defaultOperatingCost };
   const manpowerExample = isVisitManpower ? previewManpower(manpowerConfig, { area: exampleManpowerArea, personnel: examplePersonnel, overtime_hours_per_visit: exampleOvertime }) : null;
+  const exampleOperatingCost = formData.defaultOperatingCost === '' ? 0 : Number(formData.defaultOperatingCost) || 0;
   const exampleAmountValue = exampleAmount === '' ? (isQuantityBased || isCapacityBased ? '10' : '10000') : exampleAmount;
   const validExampleAmount = isFixedPrice || (String(exampleAmountValue).trim() !== '' && Number(exampleAmountValue) > 0 && Number(exampleAmountValue) <= 1e9);
   const examplePricing = isRatePricing && !isVisitManpower && formData[rateField] !== '' && validExampleAmount ? calculateExamplePricing() : null;
@@ -374,6 +382,9 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     : !previewSlab || previewSlab.isCustomQuote ? 'Custom quote required for this capacity.'
     : previewSlab.vendorRate === '' || previewSlab.vendorRate == null || Number(previewSlab.vendorRate) < 0 || Number(previewSlab.defaultVisitsPerYear) < 1 ? 'Enter a valid slab rate and visit count to see example pricing.' : '';
   const slabVendorCost = slabPreviewMessage ? null : Number(previewSlab.vendorRate) * Number(previewSlab.defaultVisitsPerYear);
+  const slabActualCost = slabVendorCost == null ? null : slabVendorCost + exampleOperatingCost;
+  const slabCustomerPrice = slabActualCost == null || formData.defaultMarkupPercentage === '' ? null
+    : slabActualCost * (1 + Number(formData.defaultMarkupPercentage) / 100);
   const toggleManualVisits = () => {
     if (formData.allowManualVisits) setCapacitySlabs(prev => prev.map(slab => ({ ...slab, defaultVisitsPerYear: FREQUENCY_OPTIONS.find(item => item.value === slab.defaultFrequency).defaultVisits })));
     setFormData(prev => ({ ...prev, allowManualVisits: !prev.allowManualVisits, defaultVisitsPerYear: prev.allowManualVisits ? FREQUENCY_OPTIONS.find(item => item.value === prev.defaultFrequency).defaultVisits : prev.defaultVisitsPerYear }));
@@ -531,6 +542,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             {formData.pricingMethod && <div className="border-t border-slate-100 p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold text-blue-600">Default Markup</h2>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <Field label="XLAND Operating Cost (Annual) (₹)">{numberInput('defaultOperatingCost', { required: false, max: 1e9 })}</Field>
                 <Field label="Default Markup Percentage (%) *">{numberInput('defaultMarkupPercentage', { max: 1000 })}</Field>
               </div>
             </div>}
@@ -571,11 +583,14 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <div className="flex justify-between gap-3"><dt>{isFixedPrice ? 'Fixed Rate per Visit' : `Rate per ${formData.unit} per Visit`}</dt><dd className="font-medium text-slate-800">{currency(formData[rateField] === '' ? null : Number(formData[rateField]))}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Visits Per Year</dt><dd className="font-medium text-slate-800">{formData.defaultVisitsPerYear}</dd></div>
                 <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(examplePricing?.vendorCost)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>XLAND Operating Cost</dt><dd className="font-medium text-slate-800">{currency(examplePricing?.operatingCost)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Actual Cost</dt><dd className="font-medium text-slate-800">{currency(examplePricing?.actualCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage === '' ? '—' : `${formData.defaultMarkupPercentage}%`}</dd></div>
                 <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(examplePricing?.customerPrice)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Margin</dt><dd className="font-medium text-slate-800">{examplePricing?.marginPercentage == null ? '—' : `${examplePricing.marginPercentage.toFixed(2)}%`}</dd></div>
               </dl>
               {!validExampleAmount && <p className="mt-3 text-xs text-amber-700">Enter an example {isQuantityBased ? 'quantity' : isCapacityBased ? 'capacity' : 'area'} greater than zero to see the pricing.</p>}
-              <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, with no XLAND operating cost or tax. Final customer pricing uses the {isFixedPrice ? 'visits and operating costs' : `actual ${isQuantityBased ? 'quantity' : isCapacityBased ? 'capacity' : 'area'}, visits and operating costs`} entered in the estimate.</p>
+              <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, before tax, using this service’s configured operating cost. Final customer pricing uses the {isFixedPrice ? 'visits and operating costs' : `actual ${isQuantityBased ? 'quantity' : isCapacityBased ? 'capacity' : 'area'}, visits and operating costs`} entered in the estimate.</p>
             </section>}
             {isVisitManpower && <section className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
               <h2 className="mb-4 text-sm font-semibold">Pricing Preview (Example)</h2>
@@ -589,11 +604,14 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <div className="flex justify-between gap-3"><dt>Rate per Person per Visit</dt><dd className="font-medium text-slate-800">{currency(manpowerExample?.ratePerPerson)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Visits Per Year</dt><dd className="font-medium text-slate-800">{formData.defaultVisitsPerYear}</dd></div>
                 <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(manpowerExample?.vendorCost)}</dd></div>
-                <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage}%</dd></div>
+                <div className="flex justify-between gap-3"><dt>XLAND Operating Cost</dt><dd className="font-medium text-slate-800">{currency(manpowerExample?.operatingCost)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Actual Cost</dt><dd className="font-medium text-slate-800">{currency(manpowerExample?.actualCost)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage === '' ? '—' : `${formData.defaultMarkupPercentage}%`}</dd></div>
                 <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(manpowerExample?.customerPrice)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Margin</dt><dd className="font-medium text-slate-800">{manpowerExample?.marginPercentage == null ? '—' : `${manpowerExample.marginPercentage.toFixed(2)}%`}</dd></div>
               </dl>
               {manpowerExample?.error && <p className="mt-3 text-xs text-amber-700">{manpowerExample.error}</p>}
-              <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, with no XLAND operating cost or tax. Final pricing uses the selected manpower, area range, visits and overtime entered in the estimate.</p>
+              <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, before tax, using this service’s configured operating cost. Final pricing uses the selected manpower, area range, visits and overtime entered in the estimate.</p>
             </section>}
             {isCapacitySlab && <section className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
               <h2 className="mb-4 text-sm font-semibold">Pricing Preview (Example)</h2>
@@ -604,11 +622,14 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <div className="flex justify-between gap-3"><dt>Frequency</dt><dd className="font-medium text-slate-800">{previewSlab?.defaultFrequency ?? '—'}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Visits Per Year</dt><dd className="font-medium text-slate-800">{previewSlab?.defaultVisitsPerYear ?? '—'}</dd></div>
                 <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(slabVendorCost)}</dd></div>
-                <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage}%</dd></div>
-                <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(slabVendorCost == null ? null : slabVendorCost * (1 + Number(formData.defaultMarkupPercentage) / 100))}</dd></div>
+                <div className="flex justify-between gap-3"><dt>XLAND Operating Cost</dt><dd className="font-medium text-slate-800">{currency(slabVendorCost == null ? null : exampleOperatingCost)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Actual Cost</dt><dd className="font-medium text-slate-800">{currency(slabActualCost)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage === '' ? '—' : `${formData.defaultMarkupPercentage}%`}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(slabCustomerPrice)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Margin</dt><dd className="font-medium text-slate-800">{slabCustomerPrice == null ? '—' : `${((slabCustomerPrice - slabActualCost) / slabCustomerPrice * 100).toFixed(2)}%`}</dd></div>
               </dl>
               {slabPreviewMessage && <p className="mt-3 text-xs text-amber-700">{slabPreviewMessage}</p>}
-              <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, with no XLAND operating cost or tax. Final customer pricing uses the actual capacity, visits and operating costs entered in the estimate.</p>
+              <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, before tax, using this service’s configured operating cost. Final customer pricing uses the actual capacity, visits and operating costs entered in the estimate.</p>
             </section>}
           </aside>
         </div>

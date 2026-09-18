@@ -7,6 +7,7 @@ import { FREQUENCY_OPTIONS, getServiceSchedule, methodLabel, serviceOptionLabel 
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const inputClass = 'w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500';
+const currency = value => value == null ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value);
 const INPUTS = {
   quantity_based: ['quantity', 'Quantity', 1], area_based: ['area', 'Area', 0.01],
   capacity_based: ['capacity', 'Capacity', 0.01], capacity_slab: ['capacity', 'Capacity', 1],
@@ -23,6 +24,8 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
   const [requiresQuote, setRequiresQuote] = useState(false);
   // Even where the service permits it, changing the frequency is a deliberate act
   const [overrideFrequency, setOverrideFrequency] = useState(false);
+  // Priced as the inputs change so the cost breakdown is visible before the service is added
+  const [preview, setPreview] = useState(null);
   const [attempt, setAttempt] = useState(0);
   const quoteRequest = useRef(null);
   const token = getAuthToken();
@@ -51,9 +54,32 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
     setError('');
     setOverrideFrequency(false);
     setRequiresQuote(item?.pricing_method === 'custom_quote');
+    setPreview(null);
     setInputs(item ? { frequency: item.default_frequency, visits: item.default_visits_per_year, custom_work_cost: item.custom_work_rate ?? 0,
+      operating_cost: item.default_operating_cost ?? 0,
       ...(isVisitManpower(item) ? { personnel: suggestedManpower(item), overtime_hours_per_visit: 0 } : {}) } : {});
   };
+  // Quote on the server as soon as the service has what it needs, so vendor cost, XLAND cost,
+  // customer price and margin fill in by themselves rather than only after adding the service.
+  useEffect(() => {
+    if (!service || !propertyType) return;
+    const required = INPUTS[service.pricing_method]?.[0];
+    if (required && (inputs[required] === undefined || inputs[required] === '')) {
+      setPreview(null);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetch(`${API_BASE}${apiPath}/${service.id}/quote`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...inputs, property_type: propertyType, fpId: fpId || 'all' }), signal: controller.signal
+      }).then(response => response.json())
+        .then(result => { if (result?.success) setPreview(result.data); else setPreview(null); })
+        .catch(() => {});
+    }, 400);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [service, inputs, propertyType, apiPath, fpId, token]);
+
   const setInput = (field, value) => {
     if (field === 'capacity' && service.pricing_method === 'capacity_slab') setRequiresQuote(false);
     setInputs(prev => ({ ...prev, [field]: value, ...(field === 'capacity' && service.pricing_method === 'capacity_slab'
@@ -123,9 +149,20 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
                 }} className="accent-blue-600" />Override frequency
               </span>}</label>
             <label className="block text-xs font-medium text-slate-600">Visits Per Year<input type="number" min="1" max="366" step="1" readOnly={!service.allow_manual_visits} value={inputs.visits} onChange={event => setInput('visits', event.target.value)} className={`${inputClass} mt-2 ${!service.allow_manual_visits ? 'bg-slate-50' : ''}`} /></label>
+            <label className="block text-xs font-medium text-slate-600">XLAND Operating Cost (Annual) (₹)<input type="number" min="0" step="0.01" value={inputs.operating_cost ?? 0} onChange={event => setInput('operating_cost', event.target.value)} className={`${inputClass} mt-2`} /></label>
             {service.pricing_method === 'fixed_visit_custom' && <label className="block text-xs font-medium text-slate-600">One-off Custom Work Cost (₹)<input type="number" min="0" step="0.01" value={inputs.custom_work_cost} onChange={event => setInput('custom_work_cost', event.target.value)} className={`${inputClass} mt-2`} /></label>}
             {requiresQuote && <label className="block text-xs font-medium text-slate-600">Total Vendor Quote for Service Period (₹) *<input type="number" min="0.01" step="0.01" value={inputs.custom_quote ?? ''} onChange={event => setInput('custom_quote', event.target.value)} className={`${inputClass} mt-2`} /></label>}
           </div>
+          {preview && !preview.requiresCustomQuote && (
+            <dl className="mt-4 grid gap-x-6 gap-y-2 rounded-lg border border-blue-200 bg-white p-4 text-xs sm:grid-cols-2">
+              <div className="flex justify-between gap-3"><dt className="text-slate-500">Vendor Cost (annual)</dt><dd className="font-medium text-slate-800">{currency(preview.vendorCost)}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-slate-500">XLAND Operating Cost</dt><dd className="font-medium text-slate-800">{currency(preview.operatingCost)}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-slate-500">Actual Cost</dt><dd className="font-medium text-slate-800">{currency(preview.actualCost)}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-slate-500">Markup</dt><dd className="font-medium text-slate-800">{preview.inputs?.markup_percentage}%</dd></div>
+              <div className="flex justify-between gap-3 border-t border-slate-100 pt-2"><dt className="font-semibold text-slate-700">Customer Price</dt><dd className="font-semibold text-blue-600">{currency(preview.totalPrice)}</dd></div>
+              <div className="flex justify-between gap-3 border-t border-slate-100 pt-2"><dt className="font-semibold text-slate-700">Margin</dt><dd className="font-semibold text-slate-800">{preview.marginPercentage}%</dd></div>
+            </dl>
+          )}
           <button type="button" onClick={addService} disabled={saving} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}Add Service</button>
         </div>}
       </fieldset>
