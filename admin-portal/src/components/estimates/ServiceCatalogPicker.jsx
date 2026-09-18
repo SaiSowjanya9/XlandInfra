@@ -21,6 +21,8 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [requiresQuote, setRequiresQuote] = useState(false);
+  // Even where the service permits it, changing the frequency is a deliberate act
+  const [overrideFrequency, setOverrideFrequency] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const quoteRequest = useRef(null);
   const token = getAuthToken();
@@ -47,6 +49,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
     const item = services.find(value => String(value.id) === id);
     setSelectedId(id);
     setError('');
+    setOverrideFrequency(false);
     setRequiresQuote(item?.pricing_method === 'custom_quote');
     setInputs(item ? { frequency: item.default_frequency, visits: item.default_visits_per_year, custom_work_cost: item.custom_work_rate ?? 0,
       ...(isVisitManpower(item) ? { personnel: suggestedManpower(item), overtime_hours_per_visit: 0 } : {}) } : {});
@@ -109,10 +112,16 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
           <div className="grid gap-4 sm:grid-cols-3">
             <ManpowerFields service={service} inputs={inputs} onChange={setInput} />
             {input && <label className="block text-xs font-medium text-slate-600">{input[1]} ({service.unit}) *<input aria-label={`${input[1]} (${service.unit})`} type="number" min={isVisitManpower(service) ? service.minimum_manpower : service.pricing_method === 'capacity_slab' ? 0 : input[2]} step={input[2]} value={inputs[input[0]] ?? ''} onChange={event => setInput(input[0], event.target.value)} className={`${inputClass} mt-2`} /></label>}
-            <label className="block text-xs font-medium text-slate-600">Frequency<select disabled={!service.allow_frequency_override || saving} value={inputs.frequency} onChange={event => {
+            <label className="block text-xs font-medium text-slate-600">Frequency<select disabled={!service.allow_frequency_override || !overrideFrequency || saving} value={inputs.frequency} onChange={event => {
               const frequency = event.target.value;
               setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity, frequency) }));
-            }} className={`${inputClass} mt-2`}>{FREQUENCY_OPTIONS.map(item => <option key={item.value}>{item.value}</option>)}</select></label>
+            }} className={`${inputClass} mt-2`}>{FREQUENCY_OPTIONS.map(item => <option key={item.value}>{item.value}</option>)}</select>
+              {service.allow_frequency_override && <span className="mt-2 flex items-center gap-2 text-xs font-normal text-slate-600">
+                <input type="checkbox" checked={overrideFrequency} onChange={event => {
+                  setOverrideFrequency(event.target.checked);
+                  if (!event.target.checked) setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity) }));
+                }} className="accent-blue-600" />Override frequency
+              </span>}</label>
             <label className="block text-xs font-medium text-slate-600">Visits Per Year<input type="number" min="1" max="366" step="1" readOnly={!service.allow_manual_visits} value={inputs.visits} onChange={event => setInput('visits', event.target.value)} className={`${inputClass} mt-2 ${!service.allow_manual_visits ? 'bg-slate-50' : ''}`} /></label>
             {service.pricing_method === 'fixed_visit_custom' && <label className="block text-xs font-medium text-slate-600">One-off Custom Work Cost (₹)<input type="number" min="0" step="0.01" value={inputs.custom_work_cost} onChange={event => setInput('custom_work_cost', event.target.value)} className={`${inputClass} mt-2`} /></label>}
             {requiresQuote && <label className="block text-xs font-medium text-slate-600">Total Vendor Quote for Service Period (₹) *<input type="number" min="0.01" step="0.01" value={inputs.custom_quote ?? ''} onChange={event => setInput('custom_quote', event.target.value)} className={`${inputClass} mt-2`} /></label>}

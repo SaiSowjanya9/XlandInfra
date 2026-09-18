@@ -127,7 +127,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     ratePerUnit: '',
     defaultFrequency: 'Monthly',
     defaultVisitsPerYear: 12,
-    allowFrequencyOverride: true,
+    allowFrequencyOverride: false,
     allowManualVisits: false,
     // Markup & Margin
     defaultMarkupPercentage: '',

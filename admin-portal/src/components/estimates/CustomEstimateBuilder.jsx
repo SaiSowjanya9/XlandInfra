@@ -24,6 +24,11 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
   const [vendorId, setVendorId] = useState(String(initialRow?.vendor_id || ''));
   const [inputs, setInputs] = useState(initialRow?.inputs || {});
   const [quote, setQuote] = useState(null);
+  // Even where the service permits it, changing the frequency is a deliberate act. A row saved with
+  // an overridden frequency opens with the box already ticked, so its state matches what it holds.
+  const [overrideFrequency, setOverrideFrequency] = useState(
+    Boolean(initialRow?.frequency && initialRow.default_frequency && initialRow.frequency !== initialRow.default_frequency)
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const service = services.find(item => String(item.id) === serviceId);
@@ -61,6 +66,7 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
     const selected = services.find(item => String(item.id) === id);
     setServiceId(id);
     setQuote(null);
+    setOverrideFrequency(false);
     setInputs(selected ? { frequency: selected.default_frequency, visits: selected.default_visits_per_year, operating_cost: 0, markup_percentage: selected.default_markup_percentage, custom_work_cost: selected.custom_work_rate ?? 0,
       ...(isVisitManpower(selected) ? { personnel: suggestedManpower(selected), overtime_hours_per_visit: 0 } : {}) } : {});
   };
@@ -81,11 +87,17 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
       <div className="mt-3 grid gap-4 sm:grid-cols-3">
         <ManpowerFields service={service} inputs={inputs} onChange={updateInput} />
         {field && <Field label={`${field[1]} (${service.unit}) *`}><input type="number" min={isVisitManpower(service) ? service.minimum_manpower : service.pricing_method === 'capacity_slab' ? service.capacity_slabs[0].capacityFrom : field[2]} step={field[2]} value={inputs[field[0]] ?? ''} onChange={event => updateInput(field[0], event.target.value)} className={inputClass} /></Field>}
-        <Field label="Frequency *"><select value={inputs.frequency} disabled={!service.allow_frequency_override} onChange={event => {
+        <Field label="Frequency *"><select value={inputs.frequency} disabled={!service.allow_frequency_override || !overrideFrequency} onChange={event => {
           const frequency = event.target.value;
           setQuote(null);
           setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity, frequency) }));
-        }} className={inputClass}>{FREQUENCY_OPTIONS.map(item => <option key={item.value}>{item.value}</option>)}</select></Field>
+        }} className={inputClass}>{FREQUENCY_OPTIONS.map(item => <option key={item.value}>{item.value}</option>)}</select>
+          {service.allow_frequency_override && <span className="mt-1.5 flex items-center gap-2 text-xs font-normal text-slate-600">
+            <input type="checkbox" checked={overrideFrequency} onChange={event => {
+              setOverrideFrequency(event.target.checked);
+              if (!event.target.checked) { setQuote(null); setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity) })); }
+            }} className="accent-blue-600" />Override frequency
+          </span>}</Field>
         <Field label="Visits Per Year"><input type="number" min="1" max="366" step="1" readOnly={!service.allow_manual_visits} value={inputs.visits} onChange={event => updateInput('visits', event.target.value)} className={`${inputClass} ${!service.allow_manual_visits ? 'bg-slate-50' : ''}`} /><span className="mt-1 block text-[10px] font-normal text-slate-400">{service.allow_manual_visits ? 'Manual visits allowed' : 'Auto calculated'}</span></Field>
         {service.pricing_method === 'fixed_visit_custom' && <Field label="One-off Custom Work Cost (₹)"><input type="number" min="0" step="0.01" value={inputs.custom_work_cost} onChange={event => updateInput('custom_work_cost', event.target.value)} className={inputClass} /></Field>}
         {(service.pricing_method === 'custom_quote' || quote?.requiresCustomQuote || inputs.custom_quote !== undefined) && <Field label="Total Vendor Quote for Service Period (₹) *"><input type="number" min="0.01" step="0.01" value={inputs.custom_quote ?? ''} onChange={event => updateInput('custom_quote', event.target.value)} className={inputClass} /></Field>}
