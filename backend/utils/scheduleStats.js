@@ -211,6 +211,7 @@ const derivedStatusFilter = (status) => {
 };
 
 module.exports = {
+  emptyScheduleStats,
   fetchScheduleStats,
   fetchScheduledVendors,
   fetchScheduledServices,

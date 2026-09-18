@@ -223,7 +223,7 @@ const Dashboard = ({ user }) => {
 
   const menuItems = [
     { path: '/dashboard/work-order', icon: ClipboardList, title: 'Work Order', description: 'Submit a new maintenance or repair request' },
-    { path: '/dashboard/schedule', icon: Calendar, title: 'Schedules', description: 'View and manage your appointments', locked: true },
+    { path: '/dashboard/schedule', icon: Calendar, title: 'Schedules', description: 'View your scheduled service visits' },
     { path: '/dashboard/payment', icon: CreditCard, title: 'Payment', description: 'Make payments and view billing history' },
     { path: '/dashboard/contact', icon: HelpCircle, title: 'Contact / Help', description: 'Get support and contact information' },
   ];

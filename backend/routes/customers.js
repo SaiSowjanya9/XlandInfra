@@ -2688,4 +2688,103 @@ router.post('/renewals/:id/decline', authenticateCustomer, async (req, res) => {
   }
 });
 
+// ============================================
+// CUSTOMER SCHEDULES (read-only)
+// ============================================
+
+const { emptyScheduleStats, fetchScheduleStats } = require('../utils/scheduleStats');
+
+const MAX_CUSTOMER_VISITS = 1000;
+
+/**
+ * scheduled_visits.property_id is always onboarded_properties.id, while
+ * customer_accounts stores either that id or the property code, so resolve it the
+ * same way /dashboard does before any schedule is queried. Returns null when the
+ * property is not onboarded - such a customer simply has no visits yet.
+ */
+const resolveOnboardedPropertyId = async (customer) => {
+  for (const lookup of [customer.propertyId, customer.propertyCode].filter(Boolean)) {
+    // Only an all-digit value can be an id; the code goes to property_id
+    const numericId = /^\d+$/.test(String(lookup)) ? Number(lookup) : 0;
+    const [[property]] = await pool.execute(
+      `SELECT id FROM onboarded_properties WHERE id = ? OR property_id = ? LIMIT 1`,
+      [numericId, String(lookup)]
+    );
+    if (property) return property.id;
+  }
+  return null;
+};
+
+// Get the scheduled visits for the logged-in customer's property.
+// Customers never schedule, reschedule or cancel from the portal - the employee
+// portals own those actions - so this is the only schedule route they have.
+router.get('/schedules', authenticateCustomer, async (req, res) => {
+  try {
+    const propertyId = await resolveOnboardedPropertyId(req.customer);
+
+    if (!propertyId) {
+      return res.json({ success: true, data: { visits: [], stats: emptyScheduleStats() } });
+    }
+
+    const requestedLimit = parseInt(req.query.limit, 10);
+    const limit = Math.min(requestedLimit > 0 ? requestedLimit : 500, MAX_CUSTOMER_VISITS);
+
+    // Dates and times are formatted in SQL so the portal receives the stored IST
+    // day, not a UTC timestamp that shifts the visit to the previous date.
+    // The vendor comes from the service schedule, with the visit as fallback,
+    // matching how the employee portals resolve it.
+    const [visits] = await pool.execute(
+      `SELECT
+         sv.id,
+         sv.visit_id,
+         sv.visit_number,
+         sv.total_visits,
+         DATE_FORMAT(sv.scheduled_date, '%Y-%m-%d') as scheduled_date,
+         TIME_FORMAT(sv.scheduled_time_start, '%H:%i') as scheduled_time_start,
+         TIME_FORMAT(sv.scheduled_time_end, '%H:%i') as scheduled_time_end,
+         sv.status,
+         DATE_FORMAT(sv.original_date, '%Y-%m-%d') as original_date,
+         pss.service_name,
+         COALESCE(ov.company_name, ov.owner_name) as vendor_name
+       FROM scheduled_visits sv
+       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+       LEFT JOIN onboarded_vendors ov ON ov.id = COALESCE(pss.vendor_id, sv.vendor_id)
+       WHERE sv.property_id = ?
+       ORDER BY sv.scheduled_date DESC, sv.scheduled_time_start ASC
+       LIMIT ${limit}`,
+      [propertyId]
+    );
+
+    // Same counts the employee portals show, scoped to this one property
+    const stats = await fetchScheduleStats({
+      whereClause: 'WHERE sv.property_id = ?',
+      params: [propertyId],
+      label: 'Customer Schedules'
+    });
+
+    res.json({
+      success: true,
+      data: {
+        visits: visits.map(v => ({
+          id: v.id,
+          visitId: v.visit_id,
+          serviceName: v.service_name,
+          vendorName: v.vendor_name,
+          scheduledDate: v.scheduled_date,
+          scheduledTimeStart: v.scheduled_time_start,
+          scheduledTimeEnd: v.scheduled_time_end,
+          status: v.status,
+          visitNumber: v.visit_number,
+          totalVisits: v.total_visits,
+          originalDate: v.original_date
+        })),
+        stats
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching customer schedules:', error);
+    res.status(500).json({ success: false, message: 'Error fetching schedules', error: error.message });
+  }
+});
+
 module.exports = router;
