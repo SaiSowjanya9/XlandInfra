@@ -4,6 +4,7 @@
  */
 
 const { pool } = require('../config/database');
+const { assignVendorFilter } = require('../utils/estimateScheduling');
 
 // Generate unique IDs
 const generateScheduleId = () => `PSS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -363,6 +364,7 @@ async function getPendingPropertiesForScheduling(franchisePartnerId, filters = {
       LEFT JOIN pending_property_schedules pps ON pps.property_id = op.id
       WHERE op.status = 'active'
         AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
+        ${await assignVendorFilter('fe')}
         AND (pps.scheduling_status IS NULL OR pps.scheduling_status NOT IN ('completed', 'cancelled'))
     `;
     const params = [];

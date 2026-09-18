@@ -135,6 +135,14 @@ For reusable task instructions for major modules, see `.devin/skills/`:
 - Property contacts have no `is_primary` column; use the first contact ordered by `id`, matching the portal queries. Onboarded-property address fields are `apt_suite_unit` and `postal_code`, not `address_line2` and `pincode`.
 - Scheduling regression tests: `node --test backend/config/schedulingSchema.test.js`. Set `RUN_LOCAL_MYSQL_TESTS=1` and `NODE_ENV=development` to also apply the additive initializer twice to the validated local database and EXPLAIN the scheduler queries without creating work orders, renewals, or emails.
 
+## Assign / Schedule Vendor on Create Estimate
+
+- Create Estimate asks "Assign / Schedule Vendor" as a Yes/No control, defaulting to **Yes** because that is the existing behaviour. Yes also reveals a vendor selector per service, so a vendor can be attached at creation time; No skips both the selector and the scheduling queue.
+- Stored in `fp_estimates.assign_vendor` by `schema_v34_estimate_assign_vendor.sql`. The column is **nullable with no default on purpose**: NULL means the question predates the column, and those estimates must keep reaching Pending Property Schedules. Only an explicit `0` excludes a property, which is why `normalizeAssignVendor` maps an absent answer to NULL rather than 0.
+- Scheduling feeds (`utils/pendingProperties.js`, `services/schedulingService.js`) filter through `assignVendorFilter()` in `backend/utils/estimateScheduling.js`, which checks once whether the column exists and returns an empty string when it does not — so a deployment that has not applied the migration keeps working instead of erroring on an unknown column. Never reference `assign_vendor` directly in a query.
+- Vendor assignments go through the existing `upsertPropertyVendorAssignment`, so `pending_property_schedules` stays in step. `applyEstimateVendorAssignments` refuses a vendor belonging to another franchise and reports it in `vendorsSkipped` rather than failing the estimate.
+- Test: `node --test backend/utils/estimateScheduling.test.js`.
+
 ## Pending Property Schedules
 
 - Estimates keep the AMC package as `package_id` plus a `package_name` copy, and the write paths default that copy to `''` (`package_name || ''`). Every pending-properties query must therefore read `COALESCE(NULLIF(fe.package_name, ''), fpamc.name)` with `LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id AND fpamc.franchise_partner_id = fe.franchise_partner_id`. All package selectors read `fp_amc_packages`, and the FP scope prevents borrowing another partner's package name.

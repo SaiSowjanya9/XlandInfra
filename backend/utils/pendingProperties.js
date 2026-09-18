@@ -9,6 +9,7 @@
  */
 
 const { pool } = require('../config/database');
+const { assignVendorFilter } = require('./estimateScheduling');
 
 // A property is badged "New" only while it is genuinely new
 const NEW_PROPERTY_WINDOW_DAYS = 3;
@@ -158,6 +159,9 @@ const mapPendingServices = (services, propertyId, vendorMap) => {
 const fetchPendingPropertiesForFp = async (franchisePartnerId) => {
   if (!franchisePartnerId) return [];
 
+  // An estimate that answered No to "Assign / Schedule Vendor" stays out of the queue
+  const assignVendorSql = await assignVendorFilter('fe');
+
   // Covers both onboarded_properties (current) and properties (legacy)
   const query = `
     SELECT * FROM (
@@ -191,7 +195,7 @@ const fetchPendingPropertiesForFp = async (franchisePartnerId) => {
       LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id AND fpamc.franchise_partner_id = fe.franchise_partner_id
       LEFT JOIN property_contacts pc ON pc.id = (SELECT pc2.id FROM property_contacts pc2 WHERE pc2.property_id = op.id ORDER BY pc2.id LIMIT 1)
       WHERE op.status = 'active'
-        AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
+        AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')${assignVendorSql}
         AND op.franchise_partner_id = ?
 
       UNION ALL
@@ -225,7 +229,7 @@ const fetchPendingPropertiesForFp = async (franchisePartnerId) => {
       INNER JOIN fp_estimates fe ON fe.property_id = p.id AND fe.status = 'approved'
       LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id AND fpamc.franchise_partner_id = fe.franchise_partner_id
       WHERE p.status = 'active'
-        AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')
+        AND (fe.payment_status = 'paid' OR fe.payment_status = 'partial')${assignVendorSql}
         AND fe.franchise_partner_id = ?
         AND p.id NOT IN (SELECT id FROM onboarded_properties)
     ) combined
