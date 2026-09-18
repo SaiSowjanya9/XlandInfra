@@ -28,9 +28,34 @@ export const getPackageBillingDuration = (pkg) => {
   return servicesData?.billing_duration || pkg?.billing_duration || pkg?.billingDuration || 'monthly';
 };
 
-export const getPackagePropertyType = (pkg) => {
+// Kept local so this module stays dependency-free; mirrors estimateStore's normalizePropertyType
+const normalizeType = (type) => {
+  if (!type) return '';
+  const upper = String(type).toUpperCase().replace(/[_\s-]/g, '');
+  if (upper.includes('GATED') || upper === 'GC') return 'GC';
+  if (upper.includes('APARTMENT') || upper === 'APT') return 'APT';
+  if (upper.includes('VILLA')) return 'VILLA';
+  if (upper.includes('FLAT')) return 'FLAT';
+  if (upper.includes('PLOT')) return 'PLOT';
+  return upper;
+};
+
+// A package may apply to several property types. Older packages carry a single one, so both shapes
+// resolve to the same list and nothing needs migrating.
+export const getPackagePropertyTypes = (pkg) => {
   const servicesData = parsePackageServicesData(pkg);
-  return servicesData?.property_type || pkg?.property_type || pkg?.propertyType || '';
+  const list = servicesData?.property_types || pkg?.property_types || pkg?.propertyTypes;
+  if (Array.isArray(list) && list.length) return [...new Set(list.map(normalizeType).filter(Boolean))];
+  const single = normalizeType(servicesData?.property_type || pkg?.property_type || pkg?.propertyType);
+  return single ? [single] : [];
+};
+
+// The first type, for the places that display one value
+export const getPackagePropertyType = (pkg) => getPackagePropertyTypes(pkg)[0] || '';
+
+export const packageMatchesPropertyType = (pkg, type) => {
+  const wanted = normalizeType(type);
+  return Boolean(wanted) && getPackagePropertyTypes(pkg).includes(wanted);
 };
 
 export const getAddonId = (addon) => (addon?.id ?? addon?.addonId ?? addon?.addon_id)?.toString();

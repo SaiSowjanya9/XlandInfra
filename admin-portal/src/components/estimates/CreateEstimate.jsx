@@ -21,7 +21,7 @@ import {
 } from '../../utils/estimateStore';
 
 import { getProperties, getPropertyById, extractBlockNames, extractTotalUnits, extractUnitNumber } from '../../utils/propertyStore';
-import { getPackageId, getPackageName, getPackagePrice as getNormalizedPackagePrice, getPackagePropertyType } from '../../utils/estimatePackageUtils';
+import { getPackageId, getPackageName, getPackagePrice as getNormalizedPackagePrice, getPackagePropertyType, packageMatchesPropertyType } from '../../utils/estimatePackageUtils';
 
 // Subcategory options for services
 const SUBCATEGORIES = ['Maintenance', 'Cleaning', 'Security', 'Landscaping', 'Utilities', 'Other'];
@@ -1775,15 +1775,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                       <option value="">Select Package</option>
                       {(() => {
                         const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType;
-                        const filteredPkgs = propertyType 
-                          ? availablePackages.filter(pkg => {
-                              const pkgType = (getPackagePropertyType(pkg) || '').toUpperCase();
-                              const searchType = propertyType.toUpperCase();
-                              return pkgType === searchType || 
-                                (['GC', 'GATED_COMMUNITY', 'GATED COMMUNITY'].includes(pkgType) && ['GC', 'GATED_COMMUNITY', 'GATED COMMUNITY'].includes(searchType)) ||
-                                (['APT', 'APARTMENT', 'APARTMENTS'].includes(pkgType) && ['APT', 'APARTMENT', 'APARTMENTS'].includes(searchType));
-                            })
-                          : availablePackages;
+                        // A package applies to every property type it was configured for
+                        const filteredPkgs = propertyType ? availablePackages.filter(pkg => packageMatchesPropertyType(pkg, propertyType)) : availablePackages;
                         
                         return filteredPkgs.map(pkg => (
                           <option key={getPackageId(pkg)} value={getPackageId(pkg)}>

@@ -5,6 +5,7 @@
 
 const express = require('express');
 const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
+const { packagePropertyTypes } = require('../utils/packagePropertyTypes');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -5265,8 +5266,9 @@ router.get('/amc-packages', requireFPScope, async (req, res) => {
 router.post('/amc-packages', requireFPScope, async (req, res) => {
   try {
     const {
-      name, description, property_type, services, price, billing_duration
+      name, description, services, price, billing_duration
     } = req.body;
+    const packageTypes = packagePropertyTypes(req.body);
 
     const packageCode = `FP${req.fpId}-AMC-${Date.now()}`;
 
@@ -5285,7 +5287,8 @@ router.post('/amc-packages', requireFPScope, async (req, res) => {
       [
         req.fpId, packageCode, name, description || '',
         price || 0, JSON.stringify({ 
-          property_type, 
+          property_type: packageTypes[0], 
+          property_types: packageTypes,
           billing_duration,
           serviceRows: services || [] 
         })
@@ -5299,9 +5302,9 @@ router.post('/amc-packages', requireFPScope, async (req, res) => {
     });
   } catch (error) {
     console.error('Create AMC package error:', error);
-    res.status(500).json({
+    res.status(error.status || 500).json({
       success: false,
-      message: 'Failed to create AMC package',
+      message: error.status ? error.message : 'Failed to create AMC package',
       error: error.message
     });
   }
@@ -5311,7 +5314,8 @@ router.post('/amc-packages', requireFPScope, async (req, res) => {
 router.put('/amc-packages/:id', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, property_type, services, price, billing_duration } = req.body;
+    const { name, description, services, price, billing_duration } = req.body;
+    const packageTypes = packagePropertyTypes(req.body);
 
     const [result] = await pool.execute(
       `UPDATE fp_amc_packages 
@@ -5320,7 +5324,7 @@ router.put('/amc-packages/:id', requireFPScope, async (req, res) => {
        WHERE id = ? AND franchise_partner_id = ?`,
       [
         name, description || '',
-        price || 0, JSON.stringify({ property_type, billing_duration, serviceRows: services || [] }),
+        price || 0, JSON.stringify({ property_type: packageTypes[0], property_types: packageTypes, billing_duration, serviceRows: services || [] }),
         id, req.fpId
       ]
     );
@@ -5332,7 +5336,7 @@ router.put('/amc-packages/:id', requireFPScope, async (req, res) => {
     res.json({ success: true, message: 'AMC package updated successfully' });
   } catch (error) {
     console.error('Update AMC package error:', error);
-    res.status(500).json({ success: false, message: 'Failed to update AMC package', error: error.message });
+    res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Failed to update AMC package', error: error.message });
   }
 });
 

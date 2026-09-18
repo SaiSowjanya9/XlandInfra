@@ -214,7 +214,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   }, [propertyIdInput, estimateType, defaultTab, loading]);
   // FP Manager defaults to 'all-packages' (no create access)
   const [amcActiveTab, setAmcActiveTab] = useState(isFPManager ? 'all-packages' : 'create');
-  const [selectedPropertyType, setSelectedPropertyType] = useState(null);
+  // A package can apply to several property types, so the same one is configured once
+  const [selectedPropertyTypes, setSelectedPropertyTypes] = useState([]);
   const [amcForm, setAmcForm] = useState({ packageName: '', description: '', serviceRows: [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' });
   const [editingAmcPackage, setEditingAmcPackage] = useState(null);
   const [filterPropertyType, setFilterPropertyType] = useState('all');
@@ -1007,10 +1008,19 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   };
 
     // Helper to get package property type (parses services JSON)
-  const getPkgPropertyType = (pkg) => {
+  // A package can apply to several property types; older ones carry a single value
+  const getPkgPropertyTypes = (pkg) => {
     let svc = pkg.services;
     if (typeof svc === 'string') { try { svc = JSON.parse(svc); } catch(e) { svc = null; } }
-    return normalizePropertyType(svc?.property_type || pkg.property_type || '');
+    const list = svc?.property_types || pkg.property_types || pkg.propertyTypes;
+    if (Array.isArray(list) && list.length) return [...new Set(list.map(normalizePropertyType).filter(Boolean))];
+    const single = normalizePropertyType(svc?.property_type || pkg.property_type || '');
+    return single ? [single] : [];
+  };
+  const getPkgPropertyType = (pkg) => getPkgPropertyTypes(pkg)[0] || '';
+  const pkgMatchesPropertyType = (pkg, type) => {
+    const wanted = normalizePropertyType(type);
+    return Boolean(wanted) && getPkgPropertyTypes(pkg).includes(wanted);
   };
 
   // Back navigation handler for estimate subsections
@@ -1532,7 +1542,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     {(() => {
                       const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType;
                       const searchType = normalizePropertyType(propertyType);
-                      const filteredPkgs = searchType ? amcPackages.filter(pkg => getPkgPropertyType(pkg) === searchType) : [];
+                      const filteredPkgs = searchType ? amcPackages.filter(pkg => pkgMatchesPropertyType(pkg, searchType)) : [];
                       if (!searchType) return <option disabled>Select property first</option>;
                       if (filteredPkgs.length === 0) return <option disabled>No packages for {propertyType}</option>;
                       return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>);
@@ -1867,7 +1877,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
                   {(() => {
                     const searchType = normalizePropertyType(estimateForm.propertyType);
-                    const filteredPkgs = searchType ? amcPackages.filter(pkg => getPkgPropertyType(pkg) === searchType) : [];
+                    const filteredPkgs = searchType ? amcPackages.filter(pkg => pkgMatchesPropertyType(pkg, searchType)) : [];
                     if (!searchType) return <option disabled>Select property type first</option>;
                     if (searchType && filteredPkgs.length === 0) return <option disabled>No packages for {estimateForm.propertyType}</option>;
                     return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>);
@@ -2947,10 +2957,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   );
 
   // AMC PACKAGES - Use getPkgPropertyType to correctly extract property type from services JSON
-  const filteredAmcPackages = filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => getPkgPropertyType(p) === filterPropertyType);
+  const filteredAmcPackages = filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => pkgMatchesPropertyType(p, filterPropertyType));
   const handleSaveAmcPackage = async () => {
     if (!amcForm.packageName.trim()) { showToast('Enter package name', 'error'); return; }
-    if (!selectedPropertyType) { showToast('Select property type', 'error'); return; }
+    if (!selectedPropertyTypes.length) { showToast('Select at least one property type', 'error'); return; }
     if (!amcForm.price || parseFloat(amcForm.price) <= 0) { showToast('Enter valid price', 'error'); return; }
     const validSvc = amcForm.serviceRows.filter(r => r.service.trim());
     if (validSvc.length === 0) { showToast('Add at least one service', 'error'); return; }
@@ -2958,7 +2968,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       const isEditing = !!editingAmcPackage;
       const url = isEditing ? `/api/fp/amc-packages/${editingAmcPackage}` : '/api/fp/amc-packages';
       const method = isEditing ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyType, services: validSvc.map(r => { const parsed = parseInt(r.frequencyCount); return { name: r.service, description: r.description || '', frequency_count: typeof r.frequencyCount === 'number' ? r.frequencyCount : (isNaN(parsed) ? 0 : parsed), frequency_type: r.frequencyType }; }), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
+      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyTypes[0], property_types: selectedPropertyTypes, services: validSvc.map(r => { const parsed = parseInt(r.frequencyCount); return { name: r.service, description: r.description || '', frequency_count: typeof r.frequencyCount === 'number' ? r.frequencyCount : (isNaN(parsed) ? 0 : parsed), frequency_type: r.frequencyType }; }), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
       const result = await res.json();
       if (res.ok || result.success) { showToast(isEditing ? 'AMC Package updated!' : 'AMC Package created!'); resetAmcForm(); loadData(); setAmcActiveTab('all-packages'); }
       else showToast(result.message || 'Failed', 'error');
@@ -2982,7 +2992,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const handleRemoveServiceRow = (i) => { if (amcForm.serviceRows.length > 1) setAmcForm({ ...amcForm, serviceRows: amcForm.serviceRows.filter((_, idx) => idx !== i) }); };
 
   const getPrice = () => parseFloat(amcForm.price) || 0;
-  const resetAmcForm = () => { setAmcForm({ packageName: '', description: '', serviceRows: [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' }); setSelectedPropertyType(null); setEditingAmcPackage(null); };
+  const resetAmcForm = () => { setAmcForm({ packageName: '', description: '', serviceRows: [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' }); setSelectedPropertyTypes([]); setEditingAmcPackage(null); };
   const getBillingBadgeColor = (billing) => {
     switch (billing) {
       case 'monthly': return 'bg-blue-50 text-blue-700 border-blue-200';
@@ -3062,7 +3072,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 )}
               </button>
               {PROPERTY_TYPE_OPTIONS.map((type) => {
-                const count = amcPackages.filter(p => getPkgPropertyType(p) === type.id).length;
+                const count = amcPackages.filter(p => pkgMatchesPropertyType(p, type.id)).length;
                 return (
                   <button
                     key={type.id}
@@ -3125,9 +3135,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <span className="font-semibold text-gray-900">{pkg.name || 'Unnamed Package'}</span>
                         </td>
                         <td className="px-4 py-4">
-                          <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200 whitespace-nowrap">
-                            {getPropertyTypeLabel(propertyType)}
-                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {getPkgPropertyTypes(pkg).map(type => (
+                              <span key={type} className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200 whitespace-nowrap">
+                                {getPropertyTypeLabel(type)}
+                              </span>
+                            ))}
+                          </div>
                         </td>
                         <td className="px-4 py-4">
                           <span className={`px-2.5 py-1 text-xs font-medium rounded-full border whitespace-nowrap ${getBillingBadgeColor(billingDuration)}`}>
@@ -3174,7 +3188,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                     price: pkg.base_price || pkg.price || '',
                                     billingDuration: billingDuration || 'monthly'
                                   });
-                                  setSelectedPropertyType(propertyType);
+                                  setSelectedPropertyTypes(getPkgPropertyTypes(pkg));
                                   setAmcActiveTab('create');
                                   showToast('Editing package - make changes and save', 'info');
                                 }}
@@ -3245,15 +3259,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           {/* Property Type Selection */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
             <h2 className="text-base font-semibold text-gray-900 mb-2">Select Property Type</h2>
-            <p className="text-sm text-gray-500 mb-4">Choose the property type this package will be configured for</p>
+            <p className="text-sm text-gray-500 mb-4">Choose every property type this package applies to</p>
             
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
               {PROPERTY_TYPE_OPTIONS.map((type) => (
                 <button
                   key={type.id}
-                  onClick={() => setSelectedPropertyType(type.id)}
+                  onClick={() => setSelectedPropertyTypes(prev => prev.includes(type.id) ? prev.filter(value => value !== type.id) : [...prev, type.id])}
                   className={`px-4 py-3 rounded-lg border transition-all duration-200 text-sm font-medium text-center ${
-                    selectedPropertyType === type.id
+                    selectedPropertyTypes.includes(type.id)
                       ? 'border-slate-400 bg-slate-100 text-slate-800 shadow-sm'
                       : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
                   }`}
@@ -3265,7 +3279,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           </div>
 
           {/* Package Configuration Card - Only show after property type selected */}
-          {selectedPropertyType && (
+          {selectedPropertyTypes.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
               {/* Header with Add Button */}
               <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -3452,7 +3466,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           )}
 
           {/* Action Buttons - Only show after property type selected */}
-          {selectedPropertyType && (
+          {selectedPropertyTypes.length > 0 && (
             <div className="flex justify-between items-center">
               <p className="text-sm text-gray-500">
                 <span className="text-red-500">*</span> Required fields
