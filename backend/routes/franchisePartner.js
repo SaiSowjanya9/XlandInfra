@@ -6,6 +6,7 @@
 const express = require('express');
 const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const { packagePropertyTypes } = require('../utils/packagePropertyTypes');
+const { normalizeAssignVendor, applyEstimateVendorAssignments } = require('../utils/estimateScheduling');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -4431,8 +4432,11 @@ router.post('/estimates', requireFPScope, fpServiceCatalog.validatePackageEstima
       description,
       // Work Order Estimate fields
       work_order_id, work_order_category, work_order_subcategory, work_order_description,
-      work_order_priority, work_order_status, work_order_services
+      work_order_priority, work_order_status, work_order_services,
+      // Assign / Schedule Vendor: whether this estimate needs a vendor and scheduled visits
+      assign_vendor, vendor_assignments
     } = req.body;
+    const assignVendor = normalizeAssignVendor(assign_vendor);
     
     console.log('Creating estimate with division:', division, 'property_code:', property_code);
 
@@ -4617,8 +4621,8 @@ router.post('/estimates', requireFPScope, fpServiceCatalog.validatePackageEstima
         addons_data, description, status,
         created_by_id, created_by_name, created_by_role,
         work_order_id, work_order_category, work_order_subcategory, work_order_description,
-        work_order_priority, work_order_status, work_order_services
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        work_order_priority, work_order_status, work_order_services, assign_vendor
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         estimateId, req.fpId, property_id || null, estimate_type || 'property_based',
         client_name || '', client_phone || '', client_email || '',
@@ -4630,16 +4634,21 @@ router.post('/estimates', requireFPScope, fpServiceCatalog.validatePackageEstima
         addonsJson, description || '', 
         creatorId, creatorName, creatorRole,
         work_order_id || null, work_order_category || null, work_order_subcategory || null, work_order_description || null,
-        work_order_priority || null, work_order_status || null, workOrderServicesJson
+        work_order_priority || null, work_order_status || null, workOrderServicesJson, assignVendor
       ]
     );
+
+    // Answering Yes may also attach a vendor to each service straight away
+    const assignments = assignVendor === 1 && property_id && Array.isArray(vendor_assignments)
+      ? await applyEstimateVendorAssignments({ propertyId: property_id, fpId: req.fpId, assignments: vendor_assignments, assignedBy: creatorId })
+      : { assigned: 0, skipped: [] };
 
     console.log('Estimate created successfully:', result.insertId);
     
     res.status(201).json({
       success: true,
       message: 'Estimate created successfully',
-      data: { id: result.insertId, estimateId }
+      data: { id: result.insertId, estimateId, assignVendor, vendorsAssigned: assignments.assigned, vendorsSkipped: assignments.skipped }
     });
   } catch (error) {
     console.error('Create estimate error:', error.message, error.code, error.sqlMessage);
