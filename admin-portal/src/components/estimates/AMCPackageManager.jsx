@@ -38,6 +38,7 @@ import {
   seedTestData,
   getAMCPackageByPropertyType,
 } from '../../utils/estimateStore';
+import { getPackagePropertyTypes, packageMatchesPropertyType } from '../../utils/estimatePackageUtils';
 import { exportPackageToPDF } from '../../utils/pdfExport';
 import { Home, Building, TreePine, Map, Layers as LayersIcon } from 'lucide-react';
 
@@ -84,8 +85,8 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   // View Modal state
   const [viewAmcPackage, setViewAmcPackage] = useState(null);
 
-  // Selected property type for package
-  const [selectedPropertyType, setSelectedPropertyType] = useState(null);
+  // A package can apply to several property types, so the same one is configured once
+  const [selectedPropertyTypes, setSelectedPropertyTypes] = useState([]);
 
   // Package form with dynamic service rows
   const [amcForm, setAmcForm] = useState({
@@ -194,8 +195,8 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       return;
     }
 
-    if (!selectedPropertyType) {
-      showToast?.('Please select a property type', 'error');
+    if (!selectedPropertyTypes.length) {
+      showToast?.('Please select at least one property type', 'error');
       return;
     }
 
@@ -205,7 +206,8 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       const packageData = {
         fpId: selectedFp.id,
         packageName: amcForm.packageName.trim(),
-        propertyType: selectedPropertyType,
+        propertyType: selectedPropertyTypes[0],
+        propertyTypes: selectedPropertyTypes,
         serviceRows: validServices.map(row => {
           const parsed = parseInt(row.frequencyCount);
           const count = typeof row.frequencyCount === 'number' ? row.frequencyCount : (isNaN(parsed) ? 0 : parsed);
@@ -259,8 +261,8 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   const handleOpenEditModal = (pkg) => {
     setEditingPackage(pkg);
     
-    // Load property type
-    setSelectedPropertyType(pkg.propertyType || null);
+    // Load every property type the package applies to
+    setSelectedPropertyTypes(getPackagePropertyTypes(pkg));
     
     // Load service rows if they exist, otherwise create from services string
     let loadedServiceRows = [];
@@ -338,7 +340,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       billingDuration: 'monthly',
       description: ''
     });
-    setSelectedPropertyType(null);
+    setSelectedPropertyTypes([]);
     setEditingPackage(null);
   };
 
@@ -419,7 +421,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 <p className="text-sm text-gray-500">
                   {filterPropertyType === 'all' 
                     ? `${amcPackages.length} package(s) available` 
-                    : `${amcPackages.filter(p => normalizePropertyType(p.propertyType) === filterPropertyType).length} package(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
+                    : `${amcPackages.filter(p => packageMatchesPropertyType(p, filterPropertyType)).length} package(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
                 </p>
               </div>
             </div>
@@ -440,7 +442,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 )}
               </button>
               {PROPERTY_TYPE_OPTIONS.map((type) => {
-                const count = amcPackages.filter(p => normalizePropertyType(p.propertyType) === type.id).length;
+                const count = amcPackages.filter(p => packageMatchesPropertyType(p, type.id)).length;
                 return (
                   <button
                     key={type.id}
@@ -478,7 +480,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
               {(() => {
                 const filteredPackages = filterPropertyType === 'all' 
                   ? amcPackages 
-                  : amcPackages.filter(p => normalizePropertyType(p.propertyType) === filterPropertyType);
+                  : amcPackages.filter(p => packageMatchesPropertyType(p, filterPropertyType));
                 
                 if (filteredPackages.length === 0) {
                   return (
@@ -548,9 +550,13 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                                 </span>
                               </td>
                               <td className="px-3 md:px-4 py-4">
-                                <span className="inline-block px-2 md:px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-lg border border-slate-200 whitespace-nowrap text-center">
-                                  {PROPERTY_TYPE_OPTIONS.find(t => t.id === pkg.propertyType)?.label || pkg.propertyType || '-'}
-                                </span>
+                                <div className="flex flex-wrap gap-1">
+                                  {(getPackagePropertyTypes(pkg).length ? getPackagePropertyTypes(pkg) : ['-']).map(type => (
+                                    <span key={type} className="inline-block px-2 md:px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-lg border border-slate-200 whitespace-nowrap text-center">
+                                      {PROPERTY_TYPE_OPTIONS.find(t => t.id === type)?.label || type}
+                                    </span>
+                                  ))}
+                                </div>
                               </td>
                               <td className="px-3 md:px-4 py-4">
                                 <span className="inline-block px-2 md:px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-full border border-blue-200 whitespace-nowrap">
@@ -640,15 +646,15 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
           {/* Property Type Selection - Evenly distributed */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
             <h2 className="text-base font-semibold text-gray-900 mb-2">Select Property Type</h2>
-            <p className="text-sm text-gray-500 mb-4">Choose the property type this package will be configured for</p>
+            <p className="text-sm text-gray-500 mb-4">Choose every property type this package applies to</p>
             
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
               {PROPERTY_TYPE_OPTIONS.map((type) => {
-                const isSelected = selectedPropertyType === type.id;
+                const isSelected = selectedPropertyTypes.includes(type.id);
                 return (
                   <button
                     key={type.id}
-                    onClick={() => setSelectedPropertyType(type.id)}
+                    onClick={() => setSelectedPropertyTypes(prev => prev.includes(type.id) ? prev.filter(value => value !== type.id) : [...prev, type.id])}
                     className={`px-3 md:px-4 py-2.5 md:py-3 rounded-lg border transition-all duration-200 text-sm font-medium text-center ${
                       isSelected
                         ? 'border-slate-400 bg-slate-100 text-slate-800 shadow-sm'
@@ -663,7 +669,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
           </div>
 
           {/* Package Configuration Card - Only show after property type selected */}
-          {selectedPropertyType && (
+          {selectedPropertyTypes.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
             {/* Header with Add Button */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -856,7 +862,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
           )}
 
           {/* Action Buttons - Only show after property type selected */}
-          {selectedPropertyType && (
+          {selectedPropertyTypes.length > 0 && (
           <div className="flex justify-between items-center">
             <p className="text-sm text-gray-500">
               <span className="text-red-500">*</span> Required fields
@@ -912,11 +918,11 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 <label className="text-sm font-medium text-gray-700 mb-3 block">Property Type</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
                   {PROPERTY_TYPE_OPTIONS.map((type) => {
-                    const isSelected = selectedPropertyType === type.id;
+                    const isSelected = selectedPropertyTypes.includes(type.id);
                     return (
                       <button
                         key={type.id}
-                        onClick={() => setSelectedPropertyType(type.id)}
+                        onClick={() => setSelectedPropertyTypes(prev => prev.includes(type.id) ? prev.filter(value => value !== type.id) : [...prev, type.id])}
                         className={`px-2 sm:px-3 py-2 sm:py-2.5 rounded-lg border transition-all duration-200 text-xs sm:text-sm font-medium text-center ${
                           isSelected
                             ? 'border-slate-400 bg-slate-100 text-slate-800 shadow-sm'

@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs');
 const { authenticate, generateToken } = require('../middleware/auth');
 const { fetchScheduleStats, fetchScheduledVendors, derivedStatusFilter, fetchScheduledServices, fetchScheduledZones } = require('../utils/scheduleStats');
 const { resolveVendor, upsertPropertyVendorAssignment } = require('../utils/vendorAssignments');
+const { packagePropertyTypes } = require('../utils/packagePropertyTypes');
 const {
   orNull, isRecentlyAdded, formatPaymentStatus, fetchServiceVendorMap, mapPendingServices
 } = require('../utils/pendingProperties');
@@ -3523,7 +3524,8 @@ router.delete('/amc-packages/:id', authenticate, adminOnly, async (req, res) => 
 // CREATE AMC Package (Admin mode) - creates in fp_amc_packages table
 router.post('/amc-packages', authenticate, adminOnly, async (req, res) => {
   try {
-    const { fpId, packageName, propertyType, serviceRows, services, rate, billingDuration, description } = req.body;
+    const { fpId, packageName, serviceRows, services, rate, billingDuration, description } = req.body;
+    const packageTypes = packagePropertyTypes(req.body);
     
     if (!fpId) {
       return res.status(400).json({ success: false, message: 'Franchise Partner ID is required' });
@@ -3547,7 +3549,8 @@ router.post('/amc-packages', authenticate, adminOnly, async (req, res) => {
         description || '',
         rate || 0, 
         JSON.stringify({ 
-          property_type: propertyType, 
+          property_type: packageTypes[0], 
+          property_types: packageTypes,
           billing_duration: billingDuration || 'yearly',
           serviceRows: serviceRows || [] 
         })
@@ -3562,7 +3565,7 @@ router.post('/amc-packages', authenticate, adminOnly, async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating AMC package:', error);
-    res.status(500).json({ success: false, message: 'Failed to create AMC package' });
+    res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Failed to create AMC package' });
   }
 });
 
@@ -3570,7 +3573,8 @@ router.post('/amc-packages', authenticate, adminOnly, async (req, res) => {
 router.put('/amc-packages/:id', authenticate, adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
-    const { packageName, propertyType, serviceRows, rate, billingDuration, description } = req.body;
+    const { packageName, serviceRows, rate, billingDuration, description } = req.body;
+    const packageTypes = packagePropertyTypes(req.body);
     
     const [result] = await pool.execute(
       `UPDATE fp_amc_packages 
@@ -3582,7 +3586,8 @@ router.put('/amc-packages/:id', authenticate, adminOnly, async (req, res) => {
         description || '',
         rate || 0,
         JSON.stringify({ 
-          property_type: propertyType, 
+          property_type: packageTypes[0], 
+          property_types: packageTypes,
           billing_duration: billingDuration || 'yearly',
           serviceRows: serviceRows || [] 
         }),
@@ -3598,7 +3603,7 @@ router.put('/amc-packages/:id', authenticate, adminOnly, async (req, res) => {
     res.json({ success: true, message: 'AMC Package updated successfully' });
   } catch (error) {
     console.error('Error updating AMC package:', error);
-    res.status(500).json({ success: false, message: 'Failed to update AMC package' });
+    res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Failed to update AMC package' });
   }
 });
 

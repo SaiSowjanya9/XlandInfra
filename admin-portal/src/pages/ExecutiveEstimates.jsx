@@ -604,13 +604,19 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
     }
     return servicesData?.billing_duration || pkg?.billing_duration || pkg?.billingDuration || 'monthly';
   };
-  const getPackagePropertyType = (pkg) => {
+  // A package can apply to several property types; older ones carry a single value
+  const getPackagePropertyTypes = (pkg) => {
     let servicesData = pkg?.services || pkg?.services_data;
     if (typeof servicesData === 'string') {
       try { servicesData = JSON.parse(servicesData); } catch (e) { servicesData = {}; }
     }
-    return servicesData?.property_type || pkg?.property_type || pkg?.propertyType || '';
+    const list = servicesData?.property_types || pkg?.property_types || pkg?.propertyTypes;
+    if (Array.isArray(list) && list.length) return [...new Set(list.map(normalizePropertyType).filter(Boolean))];
+    const single = servicesData?.property_type || pkg?.property_type || pkg?.propertyType || '';
+    return single ? [normalizePropertyType(single)] : [];
   };
+  const getPackagePropertyType = (pkg) => getPackagePropertyTypes(pkg)[0] || '';
+  const packageMatchesPropertyType = (pkg, type) => getPackagePropertyTypes(pkg).some(value => matchPropertyType(value, type));
   const getFrequencyVisits = (frequency) => FREQUENCY_COUNT_MAP[frequency] ?? parseInt(frequency) ?? 0;
   
   // Helper to compute total units based on property type
@@ -664,7 +670,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
               <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
               {(() => {
                 const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
-                const filteredPkgs = propertyType ? amcPackages.filter(pkg => matchPropertyType(getPackagePropertyType(pkg), propertyType)) : [];
+                const filteredPkgs = propertyType ? amcPackages.filter(pkg => packageMatchesPropertyType(pkg, propertyType)) : [];
                 return (<>
                   {filteredPkgs.length > 0 && filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(getPackagePrice(pkg))}</option>)}
                   {propertyType && filteredPkgs.length === 0 && <option disabled>No packages available for {propertyType}</option>}
@@ -1346,7 +1352,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                       <p className="text-sm text-gray-500">
                         {filterPropertyType === 'all' 
                           ? `${amcPackages.length} package(s) available` 
-                          : `${amcPackages.filter(p => matchPropertyType(getPackagePropertyType(p), filterPropertyType)).length} package(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
+                          : `${amcPackages.filter(p => packageMatchesPropertyType(p, filterPropertyType)).length} package(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
                       </p>
                     </div>
                   </div>
@@ -1360,7 +1366,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                       )}
                     </button>
                     {PROPERTY_TYPE_OPTIONS.map((type) => {
-                      const count = amcPackages.filter(p => matchPropertyType(getPackagePropertyType(p), type.id)).length;
+                      const count = amcPackages.filter(p => packageMatchesPropertyType(p, type.id)).length;
                       return (
                         <button key={type.id} onClick={() => setFilterPropertyType(type.id)} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${filterPropertyType === type.id ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
                           {type.label}
@@ -1375,7 +1381,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
 
                 {amcPackages.length === 0 ? (
                   <div className="p-12 text-center"><Package className="w-12 h-12 mx-auto text-gray-300 mb-3" /><p className="text-gray-500">No AMC packages available</p></div>
-                ) : (filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(getPackagePropertyType(p), filterPropertyType))).length === 0 ? (
+                ) : (filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => packageMatchesPropertyType(p, filterPropertyType))).length === 0 ? (
                   <div className="p-8 text-center"><p className="text-gray-500">No packages found for this property type</p><button onClick={() => setFilterPropertyType('all')} className="mt-2 text-sm text-blue-600 hover:underline">Show all packages</button></div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -1391,7 +1397,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {(filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(getPackagePropertyType(p), filterPropertyType))).map((pkg) => {
+                        {(filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => packageMatchesPropertyType(p, filterPropertyType))).map((pkg) => {
                           const servicesText = getPackageServicesText(pkg);
                           const getBillingBadgeColor = (billing) => {
                             switch(billing) {

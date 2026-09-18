@@ -420,13 +420,19 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
     }
     return servicesData?.billing_duration || pkg?.billing_duration || pkg?.billingDuration || 'monthly';
   };
-  const getPackagePropertyType = (pkg) => {
+  // A package can apply to several property types; older ones carry a single value
+  const getPackagePropertyTypes = (pkg) => {
     let servicesData = pkg?.services || pkg?.services_data;
     if (typeof servicesData === 'string') {
       try { servicesData = JSON.parse(servicesData); } catch (e) { servicesData = {}; }
     }
-    return servicesData?.property_type || pkg?.property_type || pkg?.propertyType || '';
+    const list = servicesData?.property_types || pkg?.property_types || pkg?.propertyTypes;
+    if (Array.isArray(list) && list.length) return [...new Set(list.map(normalizePropertyType).filter(Boolean))];
+    const single = servicesData?.property_type || pkg?.property_type || pkg?.propertyType || '';
+    return single ? [normalizePropertyType(single)] : [];
   };
+  const getPackagePropertyType = (pkg) => getPackagePropertyTypes(pkg)[0] || '';
+  const packageMatchesPropertyType = (pkg, type) => getPackagePropertyTypes(pkg).some(value => matchPropertyType(value, type));
   const getFrequencyVisits = (frequency) => FREQUENCY_COUNT_MAP?.[frequency] ?? parseInt(frequency) ?? 0;
 
   // CREATE ESTIMATE - State for new form
@@ -645,7 +651,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
               <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
               {(() => {
                 const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
-                const filteredPkgs = propertyType ? amcPackages.filter(pkg => matchPropertyType(getPackagePropertyType(pkg), propertyType)) : [];
+                const filteredPkgs = propertyType ? amcPackages.filter(pkg => packageMatchesPropertyType(pkg, propertyType)) : [];
                 return (<>
                   {filteredPkgs.length > 0 && filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(getPackagePrice(pkg))}</option>)}
                   {propertyType && filteredPkgs.length === 0 && <option disabled>No packages available for {propertyType}</option>}
@@ -1360,7 +1366,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
   );
 
   // AMC PACKAGES - Use getPackagePropertyType to correctly extract property type from services JSON
-  const filteredAmcPackages = filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(getPackagePropertyType(p), filterPropertyType));
+  const filteredAmcPackages = filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => packageMatchesPropertyType(p, filterPropertyType));
   const handleSaveAmcPackage = async () => {
     if (!amcForm.packageName.trim()) { showToast('Enter package name', 'error'); return; }
     if (!selectedPropertyType) { showToast('Select property type', 'error'); return; }
@@ -1449,7 +1455,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                 )}
               </button>
               {PROPERTY_TYPE_OPTIONS.map((type) => {
-                const count = amcPackages.filter(p => matchPropertyType(getPackagePropertyType(p), type.id)).length;
+                const count = amcPackages.filter(p => packageMatchesPropertyType(p, type.id)).length;
                 return (
                   <button
                     key={type.id}
