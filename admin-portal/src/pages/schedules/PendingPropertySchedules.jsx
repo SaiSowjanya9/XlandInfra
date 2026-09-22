@@ -35,6 +35,7 @@ import {
   Bell
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import { scheduleFilterOptions, matchesScheduleFilter } from '../../utils/scheduleFilterOptions';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import VendorAssignmentModal from '../../components/VendorAssignmentModal';
 
@@ -190,9 +191,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
   const [error, setError] = useState(null);
   const initialLoadDoneRef = useRef(false);
   const [properties, setProperties] = useState([]);
-  const [zones, setZones] = useState([]);
-  const [packages, setPackages] = useState([]);
-  const [vendors, setVendors] = useState([]);
+
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -253,70 +252,17 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
     }
   }, [token, apiPath]);
 
-  // Extract unique zones from properties data
-  useEffect(() => {
-    if (properties.length > 0) {
-      const uniqueZones = [...new Set(properties.map(p => getZoneName(p.zone)).filter(Boolean))].sort();
-      setZones(uniqueZones.map(z => ({ name: z, zone_name: z })));
-    }
-  }, [properties]);
-
-  // Fetch packages - use correct endpoint for each portal
-  const fetchPackages = useCallback(async () => {
-    try {
-      let endpoint;
-      switch (apiPath) {
-        case 'admin':
-          endpoint = `${API_BASE}/api/admin/all-amc-packages`;
-          break;
-        case 'fp':
-          endpoint = `${API_BASE}/api/fp/amc-packages`;
-          break;
-        case 'manager':
-          endpoint = `${API_BASE}/api/manager/amc-packages`;
-          break;
-        case 'coordinator':
-          endpoint = `${API_BASE}/api/coordinator/amc-packages`;
-          break;
-        case 'supervisor':
-          endpoint = `${API_BASE}/api/supervisor/amc-packages`;
-          break;
-        default:
-          endpoint = `${API_BASE}/api/fp/amc-packages`;
-      }
-      
-      const response = await fetch(endpoint, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success && Array.isArray(result.data)) {
-        setPackages(result.data);
-      }
-    } catch (err) {
-      console.error('Fetch packages error:', err);
-    }
-  }, [token, apiPath]);
-
-  // Fetch vendors
-  const fetchVendors = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_BASE}/api/vendors?status=active`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success && Array.isArray(result.data)) {
-        setVendors(result.data);
-      }
-    } catch (err) {
-      console.error('Fetch vendors error:', err);
-    }
-  }, [token]);
+  // Zones, packages and vendors of these pending properties. The master package and vendor lists
+  // offered values no property here carries - and the vendors of a property are the ones assigned
+  // to its services.
+  const zones = scheduleFilterOptions(properties, 'zone');
+  const packages = scheduleFilterOptions(properties, 'package');
+  const propertyServices = properties.flatMap(p => Array.isArray(p.services) ? p.services : []);
+  const vendors = scheduleFilterOptions(propertyServices, 'vendor');
 
   // Initial load - run once
   useEffect(() => {
     fetchPendingProperties();
-    fetchPackages();
-    fetchVendors();
   }, []);
   
   // Separate interval to avoid re-creating on every render
@@ -353,14 +299,14 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
       filtered = filtered.filter(p => p.propertyType && normalizePropertyType(p.propertyType) === propertyTypeFilter);
     }
     
-    // Zone filter
-    if (zoneFilter !== 'all') {
-      filtered = filtered.filter(p => p.zone === zoneFilter);
-    }
-    
-    // Package filter
-    if (packageFilter !== 'all') {
-      filtered = filtered.filter(p => p.packageName === packageFilter);
+    // Zone and package filters
+    filtered = filtered.filter(p => matchesScheduleFilter(p, 'zone', zoneFilter)
+      && matchesScheduleFilter(p, 'package', packageFilter));
+
+    // Vendor filter - a property matches when one of its services is assigned to that vendor
+    if (vendorFilter !== 'all') {
+      filtered = filtered.filter(p => (Array.isArray(p.services) ? p.services : [])
+        .some(s => matchesScheduleFilter(s, 'vendor', vendorFilter)));
     }
     
     // Date filter
@@ -666,7 +612,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           >
             <option value="all">All Zones</option>
             {zones.map(zone => (
-              <option key={zone.name || zone} value={zone.name || zone}>{zone.name || zone}</option>
+              <option key={zone} value={zone}>{zone}</option>
             ))}
           </select>
 
@@ -678,9 +624,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           >
             <option value="all">All Packages</option>
             {packages.map(pkg => (
-              <option key={pkg.id || pkg.packageId || pkg.packageName} value={pkg.name || pkg.packageName}>
-                {pkg.name || pkg.packageName}
-              </option>
+              <option key={pkg} value={pkg}>{pkg}</option>
             ))}
           </select>
 
@@ -692,7 +636,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           >
             <option value="all">All Vendors</option>
             {vendors.map(v => (
-              <option key={v.id || v.vendorId} value={v.vendorId}>{v.ownerName || v.companyName}</option>
+              <option key={v} value={v}>{v}</option>
             ))}
           </select>
 

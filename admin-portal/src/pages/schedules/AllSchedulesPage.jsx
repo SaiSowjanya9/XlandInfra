@@ -6,6 +6,7 @@ import {
   Users, Building2, List, MapPin, Eye, Edit2, X, FileText, Plus, Printer
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import { scheduleFilterOptions } from '../../utils/scheduleFilterOptions';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -68,10 +69,9 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     propertyType: 'all'
   });
   
-  // Dropdown data
-  const [services, setServices] = useState([]);
-  const [vendors, setVendors] = useState([]);
-  const [zones, setZones] = useState([]);
+  // Dropdown data - the services, vendors and zones these schedules actually contain.
+  // Captured from an unfiltered load, so picking a vendor does not collapse the other dropdowns.
+  const [filterOptions, setFilterOptions] = useState({ service: [], vendor: [], zone: [] });
   
   // Expanded properties for grouped view
   const [expandedProperties, setExpandedProperties] = useState(new Set());
@@ -203,6 +203,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     
     try {
       const token = getAuthToken();
+      const unfilteredQuery = new URLSearchParams({ page: currentPage, limit: itemsPerPage }).toString();
       const queryParams = new URLSearchParams({
         page: currentPage,
         limit: itemsPerPage,
@@ -224,6 +225,14 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
         setSchedules(schedulesArray);
         setTotalCount(data.total || data.totalCount || schedulesArray.length);
         if (data.stats) setStats(data.stats);
+        // Filtering happens server-side, so only an unfiltered response describes the whole section
+        if (queryParams.toString() === unfilteredQuery) {
+          setFilterOptions({
+            service: scheduleFilterOptions(schedulesArray, 'service'),
+            vendor: scheduleFilterOptions(schedulesArray, 'vendor'),
+            zone: scheduleFilterOptions(schedulesArray, 'zone')
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching schedules:', error);
@@ -234,54 +243,9 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     }
   }, [currentPage, filters, apiPath, itemsPerPage]);
 
-  // Fetch filter options
-  const fetchFilterOptions = useCallback(async () => {
-    try {
-      const token = getAuthToken();
-      
-      // Fetch zones - only zones that have schedules
-      const zonesRes = await fetch(`${API_BASE}/api/${apiPath}/zones?forSchedules=true`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (zonesRes.ok) {
-        const data = await zonesRes.json();
-        const zonesArray = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : (Array.isArray(data.zones) ? data.zones : []));
-        setZones(zonesArray);
-      }
-
-      // Fetch vendors - only vendors that have schedules
-      const vendorsRes = await fetch(`${API_BASE}/api/${apiPath}/vendors?status=active&forSchedules=true`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (vendorsRes.ok) {
-        const data = await vendorsRes.json();
-        // Portals wrap vendors differently: array, { data }, { vendors } or { data: { all } }
-        const vendorsArray = Array.isArray(data) ? data
-          : Array.isArray(data.data) ? data.data
-          : Array.isArray(data.vendors) ? data.vendors
-          : Array.isArray(data.data?.all) ? data.data.all
-          : [];
-        setVendors(vendorsArray);
-      }
-
-      // Fetch services - only services that have schedules
-      const servicesRes = await fetch(`${API_BASE}/api/${apiPath}/services?forSchedules=true`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (servicesRes.ok) {
-        const data = await servicesRes.json();
-        const servicesArray = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : (Array.isArray(data.services) ? data.services : []));
-        setServices(servicesArray);
-      }
-    } catch (error) {
-      console.error('Error fetching filter options:', error);
-    }
-  }, [apiPath]);
-
   useEffect(() => {
     fetchSchedules();
-    fetchFilterOptions();
-  }, [fetchSchedules, fetchFilterOptions]);
+  }, [fetchSchedules]);
 
   // Status badge styles based on document Section 12
   const getStatusBadge = (status) => {
@@ -1257,8 +1221,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700 hover:border-gray-400 focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Services</option>
-              {services.map(s => (
-                <option key={s.id || s.service_name || s.name} value={s.service_name || s.name}>{s.service_name || s.name}</option>
+              {filterOptions.service.map(s => (
+                <option key={s} value={s}>{s}</option>
               ))}
             </select>
 
@@ -1269,11 +1233,10 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700 hover:border-gray-400 focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Vendors</option>
-              {/* Company name first, so the option matches the vendor shown on the rows */}
-              {vendors.map(v => {
-                const label = v.company_name || v.owner_name || v.name || v.businessName;
-                return <option key={v.id || v.vendor_id} value={label}>{label}</option>;
-              })}
+              {/* Taken from the rows, so every option matches a vendor shown in this section */}
+              {filterOptions.vendor.map(v => (
+                <option key={v} value={v}>{v}</option>
+              ))}
             </select>
 
             {/* Zone Filter */}
@@ -1283,8 +1246,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700 hover:border-gray-400 focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Zones</option>
-              {zones.map(z => (
-                <option key={z.id || z.zone_name || z.name} value={z.zone_name || z.name}>{z.zone_name || z.name}</option>
+              {filterOptions.zone.map(z => (
+                <option key={z} value={z}>{z}</option>
               ))}
             </select>
 

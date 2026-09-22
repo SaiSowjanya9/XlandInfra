@@ -5,6 +5,7 @@ import {
   XCircle, RotateCcw, X, Calendar, Clock, User, Building2, Download
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import { scheduleFilterOptions, matchesScheduleFilter } from '../../utils/scheduleFilterOptions';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -22,18 +23,6 @@ const getSchedulePermissions = (portalType) => {
   return permissions[portalType] || permissions.executive;
 };
 
-// Get API path based on portal type
-const getApiPath = (portalType) => {
-  const pathMap = {
-    'admin': 'admin',
-    'franchise': 'fp',
-    'manager': 'manager',
-    'coordinator': 'coordinator',
-    'supervisor': 'supervisor'
-  };
-  return pathMap[portalType] || 'admin';
-};
-
 // Helper to extract zone name from zone (can be string or object)
 const getZoneName = (zone) => {
   if (!zone) return '';
@@ -44,10 +33,8 @@ const getZoneName = (zone) => {
 const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
   const navigate = useNavigate();
   const permissions = getSchedulePermissions(portalType);
-  const apiPath = getApiPath(portalType);
   const [loading, setLoading] = useState(true);
   const [cancelledSchedules, setCancelledSchedules] = useState([]);
-  const [zones, setZones] = useState([]);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
@@ -67,46 +54,16 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
   const itemsPerPage = 10;
 
   useEffect(() => {
-    fetchZones();
     fetchCancelledSchedules();
   }, []);
 
-  useEffect(() => {
-    fetchCancelledSchedules();
-  }, [filters.cancelledBy, filters.service, filters.dateRange, filters.zone]);
-
-  // Fetch zones from API
-  const fetchZones = async () => {
-    try {
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE}/api/${apiPath}/zones`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        // Handle different response formats
-        const zoneList = data.zones || data.data || [];
-        const zoneNames = zoneList.map(z => typeof z === 'string' ? z : (z.name || z.zone_name || z.zone)).filter(Boolean);
-        setZones([...new Set(zoneNames)].sort());
-      }
-    } catch (error) {
-      console.error('Error fetching zones:', error);
-      // Fallback to zones from data
-      const uniqueZones = [...new Set(cancelledSchedules.map(s => getZoneName(s.zone)).filter(Boolean))];
-      setZones(uniqueZones);
-    }
-  };
-
+  // The whole cancelled list is fetched once and filtered here, so the dropdowns can offer exactly
+  // the services, roles and zones these rows contain and keep offering them once one is picked.
   const fetchCancelledSchedules = async () => {
     setLoading(true);
     try {
       const token = getAuthToken();
-      const queryParams = new URLSearchParams();
-      if (filters.cancelledBy !== 'all') queryParams.append('cancelledBy', filters.cancelledBy);
-      if (filters.service !== 'all') queryParams.append('service', filters.service);
-      if (filters.dateRange !== 'all') queryParams.append('dateRange', filters.dateRange);
-      
-      const response = await fetch(`${API_BASE}/api/schedules/cancelled?${queryParams}`, {
+      const response = await fetch(`${API_BASE}/api/schedules/cancelled`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -172,10 +129,14 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
         schedule.vendor?.toLowerCase().includes(searchLower);
       if (!matchesSearch) return false;
     }
-    if (filters.service !== 'all' && schedule.service !== filters.service) return false;
     if (filters.cancelledBy !== 'all' && schedule.cancelled_by_role !== filters.cancelledBy) return false;
-    if (filters.zone !== 'all' && schedule.zone !== filters.zone) return false;
-    return true;
+    if (filters.dateRange !== 'all') {
+      const days = { week: 7, month: 30, quarter: 90 }[filters.dateRange];
+      const cancelledAt = schedule.cancelled_at ? new Date(schedule.cancelled_at) : null;
+      if (days && (!cancelledAt || Date.now() - cancelledAt.getTime() > days * 24 * 60 * 60 * 1000)) return false;
+    }
+    return matchesScheduleFilter(schedule, 'service', filters.service)
+      && matchesScheduleFilter(schedule, 'zone', filters.zone);
   });
 
   // Pagination
@@ -185,9 +146,10 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
     currentPage * itemsPerPage
   );
 
-  // Get unique values for filters
-  const services = [...new Set(cancelledSchedules.map(s => s.service))];
-  const cancelledByRoles = [...new Set(cancelledSchedules.map(s => s.cancelled_by_role))];
+  // Get unique values for filters - only what these cancelled visits contain
+  const services = scheduleFilterOptions(cancelledSchedules, 'service');
+  const zones = scheduleFilterOptions(cancelledSchedules, 'zone');
+  const cancelledByRoles = [...new Set(cancelledSchedules.map(s => s.cancelled_by_role).filter(Boolean))].sort();
 
   const handleViewDetails = (schedule) => {
     setSelectedSchedule(schedule);
