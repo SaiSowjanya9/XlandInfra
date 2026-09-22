@@ -108,8 +108,7 @@ export const getServiceSchedule = (service, capacity, frequency) => {
 // `scoped` portals (FP) own their catalog scope on the server, so no FP is sent with the service.
 // `embedded` drops the form's own title: the hosting page already names the screen.
 // `leading` lets the hosting page put its own controls on the form's action row, keeping one line.
-// `trailing` adds a host action ahead of the form's own, so a highlighted Add Service stays on the right.
-const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '/api/admin/service-catalog', scoped = false, scopeLabel, embedded = false, leading, trailing }) => {
+const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '/api/admin/service-catalog', scoped = false, scopeLabel, embedded = false, leading }) => {
   const { selectedFp } = useFP();
   const token = getAuthToken();
 
@@ -414,15 +413,12 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
           <h1 className="truncate text-xl font-semibold">{service ? 'Edit Service' : 'Add Service'}{formData.pricingMethod ? ` — ${getFormulaText()}` : ''}</h1>
           <span className="mt-1.5 inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">{scopeText}</span>
         </div>}
-        {/* Read left to right: go back, start another service, then this form's own
-            Cancel and Save. The divider keeps the host's action out of the form's pair, and
-            Save Service stays the only filled button so there is one primary on the row. */}
+        {/* Back, Cancel, Save and nothing else: this screen is already Add Service, so the
+            host's create action is not repeated here, and Save is the row's one primary. */}
         <div className="ml-auto flex shrink-0 items-center gap-3">
           <button type="button" onClick={onBack} disabled={isSubmitting} aria-label="Back to services" className="rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm transition hover:bg-slate-50">
             <ChevronLeft className="h-5 w-5 text-slate-500" />
           </button>
-          {trailing}
-          {trailing && <span aria-hidden="true" className="h-8 w-px bg-slate-200" />}
           <button type="button" onClick={onBack} disabled={isSubmitting} className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-blue-600 shadow-sm transition hover:bg-blue-50">Cancel</button>
           <button type="submit" disabled={isSubmitting || !formData.pricingMethod} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50">
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
