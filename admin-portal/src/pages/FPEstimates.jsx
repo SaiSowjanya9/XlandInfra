@@ -224,10 +224,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [addonActiveTab, setAddonActiveTab] = useState('all-addons');
   // Bumped on every Add Service tab click so the tab always reopens the form
   const [catalogEntry, setCatalogEntry] = useState(0);
-  // Assign / Schedule Vendor: Yes sends the property to scheduling and lets a vendor be chosen now
-  const [assignVendor, setAssignVendor] = useState(true);
-  const [serviceVendors, setServiceVendors] = useState({});
-  const [fpVendors, setFpVendors] = useState([]);
   const [addonFilterPropertyType, setAddonFilterPropertyType] = useState('all');
   const [editingAddon, setEditingAddon] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -679,76 +675,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const catalogAddonsTotal = catalogAddons.reduce((sum, addon) => sum + (parseFloat(addon.totalPrice) || 0), 0);
   const removeCatalogAddon = (addonId) => setCatalogAddons(prev => prev.filter(addon => addon.addonId !== addonId));
 
-  // Configured services switched to "Do Not Assign Vendor" are arranged without one, so no
-  // vendor is offered or sent for them
-  const vendorlessServiceNames = () => new Set(catalogAddons
-    .filter(addon => addon.skip_vendor_assignment)
-    .map(addon => String(addon.name || addon.service_name || '').trim())
-    .filter(Boolean));
-
-  // Services on the estimate: the package's own rows plus any configured services added
-  const estimateServiceNames = () => {
-    const pkg = getSelectedPackage();
-    const vendorless = vendorlessServiceNames();
-    const names = [
-      ...(pkg?.parsedServices || []).map(row => row.service || row.name || ''),
-      ...catalogAddons.map(addon => addon.name || addon.service_name || '')
-    ];
-    return [...new Set(names.map(name => String(name).trim()).filter(Boolean))].filter(name => !vendorless.has(name));
-  };
-
-  // Yes/No answer plus, when Yes, one vendor per service that needs one
-  const renderVendorAssignment = () => {
-    const services = estimateServiceNames();
-    const vendorless = [...vendorlessServiceNames()];
-    return (
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900">Assign / Schedule Vendor</h3>
-            <p className="mt-1 text-xs text-gray-500">Yes sends this property to Pending Property Schedules once the estimate is approved</p>
-          </div>
-          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1" role="group" aria-label="Assign or schedule vendor">
-            {[['Yes', true], ['No', false]].map(([label, value]) => (
-              <button key={label} type="button" onClick={() => setAssignVendor(value)} aria-pressed={assignVendor === value}
-                className={`px-5 py-1.5 text-sm font-medium rounded-md transition-all ${assignVendor === value
-                  ? value ? 'bg-emerald-600 text-white shadow-sm' : 'bg-gray-700 text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-800'}`}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-        {assignVendor && (
-          <div className="mt-4 border-t border-gray-100 pt-4">
-            {services.length === 0 ? (
-              <p className="text-xs text-gray-500">Add a package or service first, then choose the vendor for each one. Vendors can also be assigned later from Pending Property Schedules.</p>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {services.map(name => (
-                  <label key={name} className="block text-xs font-medium text-gray-600">
-                    {name}
-                    <select value={serviceVendors[name] || ''} onChange={e => setServiceVendors(prev => ({ ...prev, [name]: e.target.value }))}
-                      className="mt-1.5 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
-                      <option value="">Assign later</option>
-                      {fpVendors.map(vendor => (
-                        <option key={vendor.id} value={vendor.id}>{vendor.company_name || vendor.owner_name}{vendor.service_type ? ` — ${vendor.service_type}` : ''}</option>
-                      ))}
-                    </select>
-                  </label>
-                ))}
-              </div>
-            )}
-            {vendorless.length > 0 && (
-              <p className="mt-3 text-xs text-gray-500">Arranged without a vendor, so not scheduled: {vendorless.join(', ')}</p>
-            )}
-            {!fpVendors.length && <p className="mt-3 text-xs text-amber-700">No vendors are onboarded yet, so vendors will have to be assigned later.</p>}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   const renderCatalogPicker = () => (
     <ServiceCatalogPicker
       key={`${estimateType}-${createPropertyType}`}
@@ -1085,19 +1011,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
     // Helper to get package property type (parses services JSON)
 
-  useEffect(() => {
-    if (!token) return;
-    let active = true;
-    fetch(`${API_BASE}/api/fp/vendors`, { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(res => res.json())
-      .then(result => {
-        if (!active || !result?.success) return;
-        const list = Array.isArray(result.data) ? result.data : result.data?.all || result.data?.own || [];
-        setFpVendors(list);
-      })
-      .catch(() => {});
-    return () => { active = false; };
-  }, [token]);
   // A package can apply to several property types; older ones carry a single value
   const getPkgPropertyTypes = (pkg) => {
     let svc = pkg.services;
@@ -1279,11 +1192,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         gst_percent: estimateForm.gst,
         gst_amount: pricing.gstAmt,
         total_amount: pricing.total,
-        description: estimateForm.description || '',
-        assign_vendor: assignVendor,
-        vendor_assignments: assignVendor
-          ? estimateServiceNames().filter(name => serviceVendors[name]).map(name => ({ service: name, vendorId: serviceVendors[name] }))
-          : []
+        description: estimateForm.description || ''
       };
 
       const res = await fetch(`${API_BASE}/api/fp/estimates`, {
@@ -1733,8 +1642,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               )}
             </div>
 
-            {renderVendorAssignment()}
-
             {/* Notes */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div className="px-5 py-3 border-b border-gray-200">
@@ -2032,8 +1939,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               })()}
 
               <div className="pt-2">{renderCatalogPicker()}</div>
-
-              <div className="pt-2">{renderVendorAssignment()}</div>
 
               {/* Additional Services Table - Only show when services selected */}
               {(estimateForm.selectedAddons.length > 0 || catalogAddons.length > 0) && (
