@@ -3559,11 +3559,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     </div>
   );
 
-  // The highlighted create action. It stays on the right in both views, and always
-  // remounts the form so it opens empty.
-  const renderAddServiceAction = () => isFPManager ? null : (
+  // The create action. It stays on the right in both views and always remounts the form so it
+  // opens empty. Filled on the list, where it is the primary action; outlined inside the form,
+  // where Save Service is the primary and two filled buttons would compete.
+  const renderAddServiceAction = (variant = 'primary') => isFPManager ? null : (
     <button type="button" onClick={() => { setAddonActiveTab('configured'); setCatalogEntry(value => value + 1); }}
-      className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700">
+      className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium shadow-sm transition-colors ${variant === 'primary'
+        ? 'bg-blue-600 text-white hover:bg-blue-700'
+        : 'border border-blue-200 bg-white text-blue-600 hover:bg-blue-50'}`}>
       <Plus className="w-4 h-4" />Add Service
     </button>
   );
@@ -3583,7 +3586,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         ? <ServiceCatalogList apiPath={FP_CATALOG_API} admin={user} showToast={showToast} scoped showWhenEmpty
             scopeLabel="For your franchise" canEdit={() => false} />
         : <AddServicePage key={catalogEntry} admin={user} showToast={showToast} apiPath={FP_CATALOG_API} scoped embedded
-            leading={renderAddonTabs()} trailing={renderAddServiceAction()} scopeLabel="For your franchise"
+            leading={renderAddonTabs()} trailing={renderAddServiceAction('secondary')} scopeLabel="For your franchise"
             onSave={loadData} onBack={() => setAddonActiveTab('all-addons')} />
       )}
 
