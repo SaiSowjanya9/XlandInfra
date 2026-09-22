@@ -4,7 +4,7 @@ import { ChevronLeft, Plus, Trash2, Save, Loader2, SlidersHorizontal } from 'luc
 import { useFP } from '../../contexts/FPContext';
 import AutocompleteInput from '../common/AutocompleteInput';
 import { manpowerRangeLabel, previewManpower, suggestedManpower } from '../../utils/manpowerPricing';
-import { primaryInputLabel } from '../../utils/estimatePackageUtils';
+import { primaryInputLabel, unitGroupsFor, unitOptionsFor } from '../../utils/estimatePackageUtils';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -30,16 +30,6 @@ export const serviceOptionLabel = (service, services = []) =>
   services.filter(item => item.service_name === service.service_name).length > 1
     ? `${service.service_name} (${service.franchise_partner_id ? `FP ${service.franchise_partner_id}` : 'All FPs'})`
     : service.service_name;
-
-// Unit Options based on pricing method
-const UNIT_OPTIONS = {
-  fixed_price: ['Visit', 'Service', 'Job'],
-  quantity_based: ['Nos', 'Units', 'Lifts', 'Pumps', 'Tanks', 'Camera'],
-  area_based: ['Sq Ft', 'Sq M', 'Acres'],
-  capacity_based: ['KL', 'Liters', 'KVA', 'KW'],
-  capacity_slab: ['Persons', 'KVA', 'KW', 'HP', 'KL', 'Liters'],
-  manpower: ['Persons', 'Guards', 'Staff', 'Personnel']
-};
 
 // Frequency Options. On Request has no scheduled visits, so its annual count is zero.
 export const FREQUENCY_OPTIONS = [
@@ -199,7 +189,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
 
   // Update unit options when pricing method changes
   const changePricingMethod = (pricingMethod) => {
-    setFormData(prev => ({ ...prev, pricingMethod, unit: UNIT_OPTIONS[pricingMethod]?.[0] ?? prev.unit }));
+    setFormData(prev => ({ ...prev, pricingMethod, unit: unitOptionsFor(pricingMethod)[0] ?? prev.unit }));
     setExampleAmount('');
   };
 
@@ -355,6 +345,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     }
   };
 
+  const unitOptions = unitOptionsFor(formData.pricingMethod);
   const isFixedPrice = formData.pricingMethod === 'fixed_price';
   const isQuantityBased = formData.pricingMethod === 'quantity_based';
   const isCapacityBased = formData.pricingMethod === 'capacity_based';
@@ -462,8 +453,20 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                     )}
                   </div>
                 </div>
-                {/* Unit: the options follow the pricing method, and the first one is selected for it */}
-                {formData.pricingMethod && <Field label={isCapacityBased || isCapacitySlab ? 'Capacity Unit *' : 'Unit *'}><select value={formData.unit} onChange={event => setField('unit', event.target.value)} className={inputClass}>{(UNIT_OPTIONS[formData.pricingMethod] ?? [formData.unit]).map(unit => <option key={unit}>{unit}</option>)}</select></Field>}
+                {/* Unit: the options follow the pricing method and are grouped by unit type, and the
+                    first one is selected for the method. A unit saved before its label was withdrawn
+                    is kept selectable so editing the service does not silently change it. */}
+                {formData.pricingMethod && <Field label={isCapacityBased || isCapacitySlab ? 'Capacity Unit *' : 'Unit *'}>
+                  <select value={formData.unit} onChange={event => setField('unit', event.target.value)} className={inputClass}>
+                    {formData.unit && !unitOptions.includes(formData.unit) &&
+                      <option value={formData.unit}>{formData.unit}{unitOptions.length ? ' (no longer offered)' : ''}</option>}
+                    {unitGroupsFor(formData.pricingMethod).map(group => (
+                      <optgroup key={group.type} label={group.label}>
+                        {group.units.map(unit => <option key={unit}>{unit}</option>)}
+                      </optgroup>
+                    ))}
+                  </select>
+                </Field>}
                 {/* Primary Input is derived from the service and its method, never entered, and it
                     travels with the service into estimates, view modals, PDFs and emails */}
                 {formData.pricingMethod && <Field label="Primary Input">

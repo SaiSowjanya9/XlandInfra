@@ -1,6 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { validateService, calculateServiceQuote, calculateEstimateSummary, primaryInputLabel, propertyTypeLabel } = require('./servicePricing');
+const { validateService, calculateServiceQuote, calculateEstimateSummary, primaryInputLabel, propertyTypeLabel,
+  UNIT_TYPES, unitOptionsFor } = require('./servicePricing');
 
 const config = (overrides = {}) => ({
   service_name: 'Generator Maintenance', category: 'Generator', pricing_method: 'fixed_price', unit: 'Visit',
@@ -68,7 +69,7 @@ test('quantity-based camera reference applies rate times quantity times visits',
   for (const quantity of [undefined, '', 0, -1, 1.5, Infinity]) assert.throws(() => quote(camera, { quantity }), /quantity/i);
   assert.throws(() => quote({ ...camera, allow_frequency_override: false }, { quantity: 10, frequency: 'Monthly' }), /frequency override/i);
   assert.throws(() => quote(camera, { quantity: 10, visits: 5 }), /manual visits/i);
-  for (const unit of ['Nos', 'Units', 'Lifts', 'Pumps', 'Tanks', 'Camera']) assert.equal(quote({ ...camera, unit }, { quantity: 10 }).vendorCost, 10000);
+  for (const unit of [...unitOptionsFor('quantity_based'), 'Units', 'Lifts', 'Pumps', 'Tanks']) assert.equal(quote({ ...camera, unit }, { quantity: 10 }).vendorCost, 10000, unit);
 });
 
 const manpower = { pricing_method: 'manpower', unit: 'Persons', manpower_basis: 'per_visit', rate_per_person: 450,
@@ -275,6 +276,65 @@ test('frequencies retired from the list still validate and price saved services'
   for (const [frequency, visits] of [['Half-Yearly', 2], ['One-time', 1]]) {
     assert.equal(validateService(config({ default_frequency: frequency, default_visits_per_year: visits })).default_frequency, frequency);
     assert.equal(quote({ default_frequency: frequency, default_visits_per_year: visits }).visits, visits);
+  }
+});
+
+const METHOD_RATES = {
+  fixed_price: { fixed_price: 100 }, quantity_based: { rate_per_quantity: 50 }, area_based: { rate_per_unit: 2 },
+  capacity_based: { rate_per_capacity: 10 }, capacity_slab: { capacity_slabs: [{ capacityFrom: 1, capacityTo: null, vendorRate: 500 }] },
+  manpower: { manpower_basis: 'per_visit', rate_per_person: 450, working_hours_per_visit: 8, minimum_manpower: 2 }
+};
+
+test('the unit master offers each unit type to the methods that measure it', async () => {
+  const expected = {
+    count: ['Nos', 'Unit', 'Each', 'Lift', 'Camera', 'Tank', 'Generator', 'AC Unit', 'Motor', 'Pump', 'System', 'Flat', 'Villa', 'Plot', 'Room', 'Floor'],
+    area: ['Sq Ft', 'Sq M', 'Sq Yard', 'Acre'],
+    capacity: ['KL', 'Liter', 'LPH', 'KVA', 'kW', 'HP', 'Ton', 'KG', 'Persons'],
+    manpower: ['Person', 'Staff', 'Guard', 'Worker', 'Technician', 'Housekeeper', 'Supervisor'],
+    billing: ['Visit', 'Hour', 'Day', 'Shift', 'Month', 'Year'],
+    general: ['Job', 'Service', 'Package', 'Lot', 'Lump Sum']
+  };
+  assert.deepEqual(Object.fromEntries(UNIT_TYPES.map(({ type, units }) => [type, units])), expected);
+  // A unit belongs to exactly one type, so no dropdown can list it twice
+  const allUnits = UNIT_TYPES.flatMap(item => item.units);
+  assert.equal(new Set(allUnits).size, allUnits.length);
+  // Each method offers its own types and nothing else; Fixed Price still bills per visit, service or job
+  assert.deepEqual(unitOptionsFor('fixed_price'), ['Visit', 'Service', 'Job']);
+  assert.deepEqual(unitOptionsFor('quantity_based'), expected.count);
+  assert.deepEqual(unitOptionsFor('area_based'), expected.area);
+  assert.deepEqual(unitOptionsFor('capacity_based'), expected.capacity);
+  assert.deepEqual(unitOptionsFor('capacity_slab'), expected.capacity);
+  assert.deepEqual(unitOptionsFor('manpower'), [...expected.manpower, ...expected.billing]);
+  assert.deepEqual(unitOptionsFor('not_a_method'), []);
+  // Every offered unit saves, and a unit belonging to another type is rejected
+  for (const [method, overrides] of Object.entries(METHOD_RATES)) {
+    for (const unit of unitOptionsFor(method)) {
+      assert.equal(validateService(config({ pricing_method: method, unit, ...overrides })).unit, unit, `${method} / ${unit}`);
+    }
+    const foreign = allUnits.find(unit => !unitOptionsFor(method).includes(unit));
+    assert.throws(() => validateService(config({ pricing_method: method, unit: foreign, ...overrides })), /valid pricing method and unit/i, method);
+  }
+  // The frontend twin must offer exactly the same units, or the form would offer one the API rejects
+  const frontend = await import('../../admin-portal/src/utils/estimatePackageUtils.js');
+  assert.deepEqual(frontend.UNIT_TYPES, UNIT_TYPES);
+  for (const method of [...Object.keys(METHOD_RATES), 'not_a_method']) {
+    assert.deepEqual(frontend.unitOptionsFor(method), unitOptionsFor(method), `frontend ${method}`);
+    // Grouped for the dropdown, the same options appear under their unit type labels
+    const grouped = frontend.unitGroupsFor(method);
+    assert.deepEqual(grouped.flatMap(group => group.units).sort(), unitOptionsFor(method).slice().sort(), `grouped ${method}`);
+    assert.ok(grouped.every(group => group.label), `labelled ${method}`);
+  }
+});
+
+test('plural unit labels withdrawn from the dropdown still validate saved services', () => {
+  const retired = { quantity_based: ['Units', 'Lifts', 'Pumps', 'Tanks'], area_based: ['Acres'],
+    capacity_based: ['Liters', 'KW'], capacity_slab: ['Liters', 'KW'], manpower: ['Persons', 'Guards', 'Personnel'] };
+  for (const [method, units] of Object.entries(retired)) {
+    for (const unit of units) {
+      assert.equal(validateService(config({ pricing_method: method, unit, ...METHOD_RATES[method] })).unit, unit, `${method} / ${unit}`);
+      // Withdrawn means absent from the dropdown, not rejected on save
+      assert.equal(unitOptionsFor(method).includes(unit), false, `${method} / ${unit} still offered`);
+    }
   }
 });
 

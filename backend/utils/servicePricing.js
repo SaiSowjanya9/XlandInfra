@@ -9,11 +9,41 @@ const visitsFor = (frequency, value, label) => {
   if (visits === 0 && ALL_FREQUENCIES[frequency] !== 0) fail(`${label} must be at least 1 for ${frequency}.`);
   return visits;
 };
-const UNITS = {
-  fixed_price: ['Visit', 'Service', 'Job'], quantity_based: ['Nos', 'Units', 'Lifts', 'Pumps', 'Tanks', 'Camera'],
-  area_based: ['Sq Ft', 'Sq M', 'Acres'], capacity_based: ['KL', 'Liters', 'KVA', 'KW'],
-  capacity_slab: ['Persons', 'KVA', 'KW', 'HP', 'KL', 'Liters'], manpower: ['Persons', 'Guards', 'Staff', 'Personnel']
+/**
+ * The unit master. Every unit belongs to exactly one unit type, and a pricing method offers the
+ * types it actually measures, so Area Based lists only area units and Manpower only headcount and
+ * billing units. Add a unit here and it appears in the Add Service unit dropdown for every method
+ * its type applies to.
+ *
+ * Mirrored by UNIT_TYPES in admin-portal/src/utils/estimatePackageUtils.js; a test compares them.
+ */
+const UNIT_TYPES = [
+  { type: 'count', label: 'Count / Quantity', units: ['Nos', 'Unit', 'Each', 'Lift', 'Camera', 'Tank', 'Generator', 'AC Unit', 'Motor', 'Pump', 'System', 'Flat', 'Villa', 'Plot', 'Room', 'Floor'] },
+  { type: 'area', label: 'Area', units: ['Sq Ft', 'Sq M', 'Sq Yard', 'Acre'] },
+  // 'Persons' is a capacity rating, as in a lift rated for 10 persons; a headcount is 'Person'
+  { type: 'capacity', label: 'Capacity', units: ['KL', 'Liter', 'LPH', 'KVA', 'kW', 'HP', 'Ton', 'KG', 'Persons'] },
+  { type: 'manpower', label: 'Manpower', units: ['Person', 'Staff', 'Guard', 'Worker', 'Technician', 'Housekeeper', 'Supervisor'] },
+  { type: 'billing', label: 'Time / Billing', units: ['Visit', 'Hour', 'Day', 'Shift', 'Month', 'Year'] },
+  { type: 'general', label: 'General', units: ['Job', 'Service', 'Package', 'Lot', 'Lump Sum'] }
+];
+const unitsOfType = type => UNIT_TYPES.find(item => item.type === type)?.units ?? [];
+// Fixed Price bills per visit, service or job, so it takes those three rather than every time and
+// general unit: its unit is also its Primary Input, and 'Lot' measures nothing a visit can bill.
+const METHOD_UNITS = {
+  fixed_price: ['Visit', 'Service', 'Job'],
+  quantity_based: unitsOfType('count'),
+  area_based: unitsOfType('area'),
+  capacity_based: unitsOfType('capacity'),
+  capacity_slab: unitsOfType('capacity'),
+  manpower: [...unitsOfType('manpower'), ...unitsOfType('billing')]
 };
+const unitOptionsFor = pricingMethod => METHOD_UNITS[pricingMethod] ?? [];
+// Plural labels withdrawn from the dropdown, still accepted so a service saved earlier stays
+// editable and keeps pricing, the same way retired frequencies and methods do
+const LEGACY_UNITS = { quantity_based: ['Units', 'Lifts', 'Pumps', 'Tanks'], area_based: ['Acres'],
+  capacity_based: ['Liters', 'KW'], capacity_slab: ['Liters', 'KW'], manpower: ['Persons', 'Guards', 'Personnel'] };
+const unitIsValid = (pricingMethod, unit) =>
+  unitOptionsFor(pricingMethod).includes(unit) || (LEGACY_UNITS[pricingMethod] ?? []).includes(unit);
 const PROPERTY_TYPES = ['APT', 'GC', 'FLAT', 'VILLA', 'IH', 'PLOT'];
 const PROPERTY_TYPE_LABELS = { GC: 'Gated Community', APT: 'Apartment', FLAT: 'Flat', VILLA: 'Villa', PLOT: 'Plot', IH: 'Independent House' };
 const propertyTypeLabel = type => PROPERTY_TYPE_LABELS[String(type ?? '').toUpperCase()] || String(type ?? '');
@@ -85,7 +115,7 @@ const validateService = input => {
     // XLAND's own annual cost of running the service; an estimate may still override it
     default_operating_cost: number(input.default_operating_cost ?? 0, 'Default XLAND operating cost', 0, 1e9)
   };
-  if (!Object.hasOwn(UNITS, config.pricing_method) || !UNITS[config.pricing_method].includes(config.unit)) fail('Select a valid pricing method and unit.');
+  if (!Object.hasOwn(METHOD_UNITS, config.pricing_method) || !unitIsValid(config.pricing_method, config.unit)) fail('Select a valid pricing method and unit.');
   if (!Object.hasOwn(ALL_FREQUENCIES, config.default_frequency)) fail('Select a valid default frequency.');
   config.default_visits_per_year = visitsFor(config.default_frequency, input.default_visits_per_year, 'Default visits per year');
   if (!config.allow_manual_visits && config.default_visits_per_year !== ALL_FREQUENCIES[config.default_frequency]) fail('Default visits must match the selected frequency when manual visits are disabled.');
@@ -248,4 +278,4 @@ const calculateEstimateSummary = (quotes, discountPercentage = 0, gstPercentage 
 };
 
 module.exports = { validateService, calculateServiceQuote, calculateEstimateSummary, normalizePropertyType,
-  primaryInputLabel, propertyTypeLabel };
+  primaryInputLabel, propertyTypeLabel, UNIT_TYPES, unitOptionsFor };
