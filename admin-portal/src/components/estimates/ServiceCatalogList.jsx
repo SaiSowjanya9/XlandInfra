@@ -70,7 +70,6 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
             <div><dt className="text-xs text-slate-500">Scope</dt><dd className="mt-1">{service.franchise_partner_id ? `FP ${service.franchise_partner_id}` : 'All FPs'}</dd></div>
             <div><dt className="text-xs text-slate-500">Default markup</dt><dd className="mt-1">{service.default_markup_percentage}%</dd></div>
             <div><dt className="text-xs text-slate-500">Frequency override / Manual visits</dt><dd className="mt-1">{service.allow_frequency_override ? 'Allowed' : 'Not allowed'} / {service.allow_manual_visits ? 'Allowed' : 'Not allowed'}</dd></div>
-            <div><dt className="text-xs text-slate-500">Vendor</dt><dd className="mt-1">{service.skip_vendor_assignment ? 'Arranged without a vendor - not scheduled' : 'Assigned and scheduled'}</dd></div>
             {Object.entries(RATE_LABELS).filter(([field]) => service[field] != null).map(([field, label]) => <div key={field}><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1">{money(service[field])}</dd></div>)}
             {service.pricing_method === 'manpower' && (service.manpower_basis === 'per_visit' ? <>
               <div><dt className="text-xs text-slate-500">Pricing basis</dt><dd className="mt-1">Per person per visit</dd></div>
