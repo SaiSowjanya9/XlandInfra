@@ -4,6 +4,7 @@ import { ChevronLeft, Plus, Trash2, Save, Loader2, SlidersHorizontal } from 'luc
 import { useFP } from '../../contexts/FPContext';
 import AutocompleteInput from '../common/AutocompleteInput';
 import { manpowerRangeLabel, previewManpower, suggestedManpower } from '../../utils/manpowerPricing';
+import { primaryInputLabel } from '../../utils/estimatePackageUtils';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -130,6 +131,8 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     defaultVisitsPerYear: 12,
     allowFrequencyOverride: false,
     allowManualVisits: false,
+    // On means no vendor is assigned and nothing is scheduled for this service
+    skipVendorAssignment: false,
     // Markup & Margin
     defaultMarkupPercentage: '',
     defaultOperatingCost: '',
@@ -169,7 +172,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
 
   useEffect(() => {
     if (!service) return;
-    const fields = { manpowerBasis: 'manpower_basis', ratePerPerson: 'rate_per_person', roleDesignation: 'role_designation', workingHoursPerVisit: 'working_hours_per_visit', overtimeRatePerHour: 'overtime_rate_per_hour', minimumManpower: 'minimum_manpower', serviceName: 'service_name', category: 'category', pricingMethod: 'pricing_method', unit: 'unit', applicablePropertyTypes: 'applicable_property_types', ratePerUnit: 'rate_per_unit', defaultFrequency: 'default_frequency', defaultVisitsPerYear: 'default_visits_per_year', allowFrequencyOverride: 'allow_frequency_override', allowManualVisits: 'allow_manual_visits', defaultMarkupPercentage: 'default_markup_percentage', defaultOperatingCost: 'default_operating_cost', description: 'description', monthlyRate: 'monthly_rate', billingPeriod: 'billing_period', periodMonths: 'period_months', fixedPrice: 'fixed_price', ratePerQuantity: 'rate_per_quantity', ratePerCapacity: 'rate_per_capacity' };
+    const fields = { manpowerBasis: 'manpower_basis', ratePerPerson: 'rate_per_person', roleDesignation: 'role_designation', workingHoursPerVisit: 'working_hours_per_visit', overtimeRatePerHour: 'overtime_rate_per_hour', minimumManpower: 'minimum_manpower', serviceName: 'service_name', category: 'category', pricingMethod: 'pricing_method', unit: 'unit', applicablePropertyTypes: 'applicable_property_types', ratePerUnit: 'rate_per_unit', defaultFrequency: 'default_frequency', defaultVisitsPerYear: 'default_visits_per_year', allowFrequencyOverride: 'allow_frequency_override', allowManualVisits: 'allow_manual_visits', skipVendorAssignment: 'skip_vendor_assignment', defaultMarkupPercentage: 'default_markup_percentage', defaultOperatingCost: 'default_operating_cost', description: 'description', monthlyRate: 'monthly_rate', billingPeriod: 'billing_period', periodMonths: 'period_months', fixedPrice: 'fixed_price', ratePerQuantity: 'rate_per_quantity', ratePerCapacity: 'rate_per_capacity' };
     setFormData(prev => ({ ...Object.fromEntries(Object.entries(prev).map(([field, value]) => [field, service[fields[field]] ?? value])),
       manpowerBasis: service.pricing_method === 'manpower' ? service.manpower_basis ?? 'monthly' : 'per_visit',
       overtimeRatePerHour: service.overtime_rate_per_hour ?? '' }));
@@ -304,6 +307,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
         default_visits_per_year: Number(formData.defaultVisitsPerYear),
         allow_frequency_override: formData.allowFrequencyOverride,
         allow_manual_visits: formData.allowManualVisits,
+        skip_vendor_assignment: formData.skipVendorAssignment,
         default_markup_percentage: Number(formData.defaultMarkupPercentage),
         default_operating_cost: formData.defaultOperatingCost === '' ? 0 : Number(formData.defaultOperatingCost),
         description: formData.description.trim(),
@@ -457,9 +461,13 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                     )}
                   </div>
                 </div>
-                {/* Primary Input */}
-                {/* Unit */}
+                {/* Unit: the options follow the pricing method, and the first one is selected for it */}
                 {formData.pricingMethod && <Field label={isCapacityBased || isCapacitySlab ? 'Capacity Unit *' : 'Unit *'}><select value={formData.unit} onChange={event => setField('unit', event.target.value)} className={inputClass}>{(UNIT_OPTIONS[formData.pricingMethod] ?? [formData.unit]).map(unit => <option key={unit}>{unit}</option>)}</select></Field>}
+                {/* Primary Input is derived from the service and its method, never entered, and it
+                    travels with the service into estimates, view modals, PDFs and emails */}
+                {formData.pricingMethod && <Field label="Primary Input">
+                  <p className={`${inputClass} bg-slate-50 text-slate-500`}>{primaryInputLabel(formData.serviceName, formData.pricingMethod, formData.unit) || '—'}</p>
+                </Field>}
               </div>
               {categoryError && <div role="alert" className="mt-3 text-sm text-red-600">{categoryError} <button type="button" onClick={() => setCategoryAttempt(value => value + 1)} className="font-semibold underline">Retry</button></div>}
             </div>
@@ -506,10 +514,13 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <Field label="Default Frequency *"><select value={formData.defaultFrequency} onChange={event => changeFrequency(event.target.value)} className={inputClass}>{FREQUENCY_OPTIONS.map(frequency => <option key={frequency.value}>{frequency.value}</option>)}</select></Field>
                 <Field label="Default Visits Per Year *">{numberInput('defaultVisitsPerYear', { min: 0, max: 366, step: 1, readOnly: !formData.allowManualVisits, className: `${inputClass} ${!formData.allowManualVisits ? 'bg-slate-50' : ''}` })}</Field>
               </div>
-              {/* Both override toggles on the row below, aligned to the same columns */}
+              {/* The three toggles on the row below, aligned to the same columns. The third is on
+                  every pricing method: on means this service is arranged without a vendor, so no
+                  vendor is assigned to it and nothing is scheduled for it. */}
               <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 <Toggle label="Allow Frequency Override" checked={formData.allowFrequencyOverride} onChange={() => setField('allowFrequencyOverride', !formData.allowFrequencyOverride)} />
                 <Toggle label="Allow Manual Visits" checked={formData.allowManualVisits} onChange={toggleManualVisits} />
+                <Toggle label="Do Not Assign Vendor" checked={formData.skipVendorAssignment} onChange={() => setField('skipVendorAssignment', !formData.skipVendorAssignment)} />
               </div>
               {isVisitManpower && <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 <Field label="Role / Designation (Optional)"><input maxLength={150} value={formData.roleDesignation} onChange={event => setField('roleDesignation', event.target.value)} placeholder="e.g. Housekeeping Staff" className={inputClass} /></Field>

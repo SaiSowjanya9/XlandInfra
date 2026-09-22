@@ -10,6 +10,7 @@
 
 const { pool } = require('../config/database');
 const { assignVendorFilter } = require('./estimateScheduling');
+const { fetchVendorlessServiceNames, serviceNeedsVendor } = require('./vendorlessServices');
 
 // A property is badged "New" only while it is genuinely new
 const NEW_PROPERTY_WINDOW_DAYS = 3;
@@ -130,7 +131,7 @@ const fetchServiceVendorMap = async (propertyIds = []) => {
  * Map the raw estimate service rows onto the shape the page expects, using real
  * vendor data from fetchServiceVendorMap.
  */
-const mapPendingServices = (services, propertyId, vendorMap) => {
+const mapPendingServices = (services, propertyId, vendorMap, vendorlessNames = null) => {
   if (!Array.isArray(services)) return [];
   return services.map(s => {
     const name = s.service || s.name || s.serviceType || null;
@@ -140,6 +141,9 @@ const mapPendingServices = (services, propertyId, vendorMap) => {
       frequency: s.frequencyType || s.frequency || null,
       frequencyCount: s.frequencyCount || 1,
       visits: s.frequencyCount || 1,
+      // A service configured with "Do Not Assign Vendor" is arranged without one, so it is
+      // never counted as awaiting a vendor and never scheduled
+      vendorRequired: serviceNeedsVendor(name, vendorlessNames),
       vendorAssigned: !!vendorInfo.vendorId,
       vendorName: vendorInfo.vendorName || null,
       scheduleDate: vendorInfo.scheduleDate || null,
@@ -241,6 +245,8 @@ const fetchPendingPropertiesForFp = async (franchisePartnerId) => {
 
   // Real per-service vendor details, so service rows are not all reported as unassigned
   const serviceVendorMap = await fetchServiceVendorMap(properties.map(p => p.id));
+  // Services this FP arranges without a vendor: they never count as pending
+  const vendorlessNames = await fetchVendorlessServiceNames(franchisePartnerId);
 
   return properties.map(p => {
     let services = [];
@@ -256,6 +262,7 @@ const fetchPendingPropertiesForFp = async (franchisePartnerId) => {
     }
 
     const assignedVendors = p.assignedVendors || 0;
+    const serviceRows = mapPendingServices(services, p.id, serviceVendorMap, vendorlessNames);
 
     return {
       id: p.id,
@@ -274,12 +281,15 @@ const fetchPendingPropertiesForFp = async (franchisePartnerId) => {
       totalPrice: p.totalPrice,
       totalServices,
       assignedVendors: Math.min(assignedVendors, totalServices),
-      pendingServices: Math.max(0, totalServices - assignedVendors),
+      // Counted from the rows, so a service arranged without a vendor never leaves the
+      // property waiting for one
+      pendingServices: serviceRows.filter(row => row.vendorRequired && !row.vendorAssigned).length,
+      vendorlessServices: serviceRows.filter(row => !row.vendorRequired).length,
       paymentStatus: formatPaymentStatus(p.paymentStatus),
       addedOn: p.addedOn,
       fpId: p.fpId,
       isNew: isRecentlyAdded(p.addedOn),
-      services: mapPendingServices(services, p.id, serviceVendorMap)
+      services: serviceRows
     };
   });
 };
@@ -291,5 +301,7 @@ module.exports = {
   formatPaymentStatus,
   fetchServiceVendorMap,
   mapPendingServices,
-  fetchPendingPropertiesForFp
+  fetchPendingPropertiesForFp,
+  fetchVendorlessServiceNames,
+  serviceNeedsVendor
 };

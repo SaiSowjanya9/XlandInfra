@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { validateService, calculateServiceQuote, calculateEstimateSummary } = require('./servicePricing');
+const { validateService, calculateServiceQuote, calculateEstimateSummary, primaryInputLabel, propertyTypeLabel } = require('./servicePricing');
 
 const config = (overrides = {}) => ({
   service_name: 'Generator Maintenance', category: 'Generator', pricing_method: 'fixed_price', unit: 'Visit',
@@ -192,6 +192,61 @@ test('a service carries its own XLAND operating cost into every estimate', async
   assert.equal(preview.actualCost, result.actualCost);
   assert.equal(preview.customerPrice, result.totalPrice);
   assert.equal(preview.marginPercentage, result.marginPercentage);
+});
+
+test('a service can be arranged without a vendor on every pricing method', () => {
+  const methods = {
+    fixed_price: { fixed_price: 100 },
+    quantity_based: { pricing_method: 'quantity_based', unit: 'Nos', rate_per_quantity: 50 },
+    area_based: { pricing_method: 'area_based', unit: 'Sq Ft', rate_per_unit: 2 },
+    capacity_based: { pricing_method: 'capacity_based', unit: 'KL', rate_per_capacity: 10 },
+    capacity_slab: { pricing_method: 'capacity_slab', unit: 'KVA', capacity_slabs: [{ capacityFrom: 1, capacityTo: null, vendorRate: 500 }] },
+    manpower: { ...manpower }
+  };
+  for (const [method, overrides] of Object.entries(methods)) {
+    // Off by default, and absent on services saved before the toggle, which behave the same way
+    assert.equal(validateService(config(overrides)).skip_vendor_assignment, false, method);
+    const vendorless = validateService(config({ ...overrides, skip_vendor_assignment: true }));
+    assert.equal(vendorless.skip_vendor_assignment, true, method);
+    // Switching it on changes nothing else about the service: it still prices exactly the same
+    const priced = calculateServiceQuote(vendorless, { property_type: 'APT', capacity: 75, area: 1500, quantity: 10 }, 'admin');
+    const unchanged = calculateServiceQuote(validateService(config(overrides)), { property_type: 'APT', capacity: 75, area: 1500, quantity: 10 }, 'admin');
+    assert.equal(priced.totalPrice, unchanged.totalPrice, method);
+    assert.throws(() => validateService(config({ ...overrides, skip_vendor_assignment: 'yes' })), /true or false/, method);
+  }
+});
+
+test('primary input is derived from the service and its pricing method, never entered', async () => {
+  // Service, method, unit, expected primary input
+  const cases = [
+    ['Generator', 'capacity_slab', 'KVA', 'Generator Capacity'],
+    ['Generator', 'capacity_based', 'KL', 'Generator Capacity'],
+    ['Generator Capacity', 'capacity_based', 'KVA', 'Generator Capacity'],
+    ['Landscape', 'area_based', 'Sq Ft', 'Area'],
+    ['Camera Maintenance', 'quantity_based', 'Camera', 'Camera Maintenance Quantity'],
+    ['Housekeeping', 'manpower', 'Persons', 'Headcount'],
+    ['Pest Control', 'fixed_price', 'Visit', 'Visit'],
+    ['Pest Control', 'fixed_price', 'Job', 'Job'],
+    // Retired methods still describe services saved before they were withdrawn
+    ['Painting', 'fixed_visit_custom', 'Visit', 'Visit'],
+    ['Painting', 'custom_quote', '', 'Quote'],
+    // A missing service name leaves the dimension on its own; an unknown method has no input
+    ['', 'capacity_based', 'KL', 'Capacity'],
+    ['Anything', 'not_a_method', 'Unit', '']
+  ];
+  for (const [name, method, unit, expected] of cases) {
+    assert.equal(primaryInputLabel(name, method, unit), expected, `${name || '(no name)'} / ${method}`);
+  }
+  // Every pricing method resolves an input, so no service is left without one
+  for (const method of ['fixed_price', 'quantity_based', 'area_based', 'capacity_based', 'capacity_slab', 'manpower']) {
+    assert.ok(primaryInputLabel('Service', method, 'Visit'), method);
+  }
+  assert.equal(propertyTypeLabel('GC'), 'Gated Community');
+  assert.equal(propertyTypeLabel('IH'), 'Independent House');
+  assert.equal(propertyTypeLabel('Apartment'), 'Apartment');
+  // The frontend twin must agree, or a modal and a PDF would disagree with the API
+  const { primaryInputLabel: frontend } = await import('../../admin-portal/src/utils/estimatePackageUtils.js');
+  for (const [name, method, unit, expected] of cases) assert.equal(frontend(name, method, unit), expected, `frontend ${method}`);
 });
 
 test('the frequency list matches the agreed visit counts, including On Request', () => {

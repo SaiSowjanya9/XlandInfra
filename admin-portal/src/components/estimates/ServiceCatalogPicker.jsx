@@ -109,6 +109,9 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
         addonId: `CAT-${service.id}`, catalogServiceId: service.id,
         name: service.service_name, service_name: service.service_name, description: service.description,
         pricing_method: service.pricing_method, unit: service.unit, manpower_basis: service.manpower_basis, role_designation: service.role_designation,
+        category: service.category, applicable_property_types: service.applicable_property_types,
+        // Travels with the service so the estimate form does not offer a vendor for it
+        skip_vendor_assignment: !!service.skip_vendor_assignment,
         frequency_type: quote.frequency, frequency_count: quote.visits,
         totalPrice: quote.totalPrice, pricingInputs: quote.inputs,
         services: [{ name: service.service_name, description: service.description, frequencyType: quote.frequency, frequency: quote.visits, price: quote.visits ? quote.totalPrice / quote.visits : quote.totalPrice }]

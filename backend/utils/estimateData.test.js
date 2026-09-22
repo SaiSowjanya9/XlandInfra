@@ -120,6 +120,45 @@ test('frontend display and PDF helpers use saved totals and customer-safe descri
   assert.deepEqual(getEstimateAddons({ addons: 'invalid' }), []);
 });
 
+test('every pricing method describes itself with category, primary input, unit and property types', async () => {
+  const { getServiceDescription, getServiceMarkup } = await import('../../admin-portal/src/utils/estimatePackageUtils.js');
+  // The snapshot a saved estimate holds is the whole validated configuration plus its quote
+  const snapshot = { category: 'Generator', default_markup_percentage: 30, applicable_property_types: ['APT', 'GC'] };
+  const services = {
+    'capacity_slab': [{ name: 'Generator', unit: 'KVA', inputs: { capacity: 75 }, slabs: [{ capacityFrom: 51, capacityTo: 100, vendorRate: 2300 }] },
+      ['Generator', 'Capacity Slab', 'Primary Input: Generator Capacity', 'Capacity: 75 KVA', 'Slab: 51–100 KVA']],
+    'area_based': [{ name: 'Landscape', unit: 'Sq Ft', inputs: { area: 10000 } },
+      ['Area Based', 'Primary Input: Area', 'Area: 10000 Sq Ft']],
+    'quantity_based': [{ name: 'Camera Maintenance', unit: 'Camera', inputs: { quantity: 10 } },
+      ['Quantity Based', 'Primary Input: Camera Maintenance Quantity', 'Quantity: 10 Camera']],
+    'capacity_based': [{ name: 'Tank Cleaning', unit: 'KL', inputs: { capacity: 20 } },
+      ['Capacity Based', 'Primary Input: Tank Cleaning Capacity', 'Capacity: 20 KL']],
+    'manpower': [{ name: 'Housekeeping', unit: 'Persons', inputs: { personnel: 2 } },
+      ['Manpower', 'Primary Input: Headcount', 'Personnel: 2 Persons']],
+    // Nothing is measured on a fixed price, so its billing unit is the input and is still stated
+    'fixed_price': [{ name: 'Pest Control', unit: 'Visit', inputs: {} }, ['Fixed Price', 'Primary Input: Visit']]
+  };
+  for (const [method, [service, expected]] of Object.entries(services)) {
+    const saved = { catalogServiceId: 1, name: service.name, totalPrice: 1000,
+      pricingInputs: { ...service.inputs, frequency: 'Quarterly', visits: 4, markup_percentage: 30 },
+      pricingSnapshot: { ...snapshot, pricing_method: method, unit: service.unit, ...(service.slabs ? { capacity_slabs: service.slabs } : {}) } };
+    const row = normalizeEstimateService(saved);
+    for (const text of [...expected, 'Property Types: Apartment, Gated Community']) {
+      assert.ok(row.details.includes(text), `${method}: ${text}`);
+    }
+    // The frontend twin builds the same line, so a modal, a PDF and the API agree
+    assert.equal(getServiceDescription(saved), row.serviceDetails, method);
+    // Markup is available to the staff screens but is not part of what a customer reads
+    assert.equal(getServiceMarkup(saved), 30, method);
+    assert.equal(row.markupPercentage, 30, method);
+    assert.doesNotMatch(row.details, /markup|Markup/, method);
+    const customer = customerEstimateData({ estimateType: 'custom', addons: [saved], total: 1000 });
+    assert.doesNotMatch(JSON.stringify(customer), /markup|default_markup_percentage|2300/i, method);
+    // Re-normalizing a saved row must not change or duplicate the line
+    assert.equal(normalizeEstimateService(row).details, row.details, method);
+  }
+});
+
 test('manpower snapshots retain role, range and hours without disclosing rates or internal costs', async () => {
   const { getServiceDescription } = await import('../../admin-portal/src/utils/estimatePackageUtils.js');
   const service = { catalogServiceId: 9, name: 'Housekeeping', description: 'Clean common areas', totalPrice: 15912,

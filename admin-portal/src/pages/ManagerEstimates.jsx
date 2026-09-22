@@ -17,7 +17,7 @@ import {
 
 const ITEMS_PER_PAGE = 10;
 import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
-import { getServiceDescription, hasCatalogServices } from '../utils/estimatePackageUtils';
+import { getServiceDescription, getServiceMarkup, hasCatalogServices } from '../utils/estimatePackageUtils';
 import { EstimateInput, PropertyIdInput } from '../components/estimates/EstimateFields';
 import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
@@ -2531,6 +2531,8 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                           ) || addonFromList;
                         }
                         const addonDescription = decodeHtml(getServiceDescription(addon) || addonFromList?.description) || '';
+                        // Internal figure: shown on this staff screen only, never in a customer document
+                        const addonMarkup = getServiceMarkup(addon);
                         const frequencyCount = addon.frequency_count ?? addon.frequencyCount ?? addonFromList?.frequency_count ?? 1;
                         const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
                         return (
@@ -2543,6 +2545,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                             </div>
                             <div className="col-span-4">
                               <p className="text-xs text-gray-500 break-words whitespace-normal">{addonDescription || '-'}</p>
+                              {addonMarkup != null && <p className="mt-1 text-[10px] text-gray-400">Markup: {addonMarkup}% (internal)</p>}
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>

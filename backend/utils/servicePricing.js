@@ -15,6 +15,35 @@ const UNITS = {
   capacity_slab: ['Persons', 'KVA', 'KW', 'HP', 'KL', 'Liters'], manpower: ['Persons', 'Guards', 'Staff', 'Personnel']
 };
 const PROPERTY_TYPES = ['APT', 'GC', 'FLAT', 'VILLA', 'IH', 'PLOT'];
+const PROPERTY_TYPE_LABELS = { GC: 'Gated Community', APT: 'Apartment', FLAT: 'Flat', VILLA: 'Villa', PLOT: 'Plot', IH: 'Independent House' };
+const propertyTypeLabel = type => PROPERTY_TYPE_LABELS[String(type ?? '').toUpperCase()] || String(type ?? '');
+
+// What each pricing method measures. Retired methods stay listed so estimates saved
+// earlier still describe themselves.
+const INPUT_DIMENSIONS = { fixed_price: 'Visit', quantity_based: 'Quantity', area_based: 'Area',
+  capacity_based: 'Capacity', capacity_slab: 'Capacity', manpower: 'Headcount',
+  fixed_visit_custom: 'Visit', custom_quote: 'Quote' };
+// 'Capacity' and 'Quantity' do not say what is being measured, so the service name qualifies
+// them; 'Area' and 'Headcount' already do.
+const QUALIFIED_DIMENSIONS = ['Capacity', 'Quantity'];
+
+/**
+ * The Primary Input is derived, never stored or typed in: the pricing method says what is
+ * measured and the service says what it belongs to. "Generator" priced by capacity reads
+ * "Generator Capacity"; "Landscape" priced by area reads "Area"; a fixed price measures
+ * nothing, so its billing unit is the input.
+ *
+ * Mirrored by primaryInputLabel in admin-portal/src/utils/estimatePackageUtils.js.
+ */
+const primaryInputLabel = (serviceName, pricingMethod, unit) => {
+  const dimension = INPUT_DIMENSIONS[pricingMethod];
+  if (!dimension) return '';
+  if (dimension === 'Visit') return String(unit ?? '').trim() || 'Visit';
+  const name = String(serviceName ?? '').trim();
+  if (!name || !QUALIFIED_DIMENSIONS.includes(dimension)) return dimension;
+  // "Generator Capacity", but never "Generator Capacity Capacity"
+  return new RegExp(`\\b${dimension}\\b`, 'i').test(name) ? name : `${name} ${dimension}`;
+};
 const fail = message => { throw Object.assign(new Error(message), { status: 400 }); };
 const number = (value, label, min = 0, max = 1e9, integer = false) => {
   if (!['number', 'string'].includes(typeof value) || String(value).trim() === '' || !Number.isFinite(Number(value))) fail(`${label} must be a valid number.`);
@@ -47,6 +76,11 @@ const validateService = input => {
     default_frequency: input.default_frequency,
     allow_frequency_override: boolean(input.allow_frequency_override, 'Allow frequency override'),
     allow_manual_visits: boolean(input.allow_manual_visits, 'Allow manual visits'),
+    // On means this service is arranged without a vendor: no vendor is assigned to it and no
+    // visits are scheduled for it. The service itself is unchanged - it is still listed,
+    // quoted and priced exactly as before. Absent on services saved before the toggle, which
+    // is the same as off, so their vendor scheduling continues.
+    skip_vendor_assignment: boolean(input.skip_vendor_assignment ?? false, 'Do not assign vendor'),
     default_markup_percentage: number(input.default_markup_percentage, 'Default markup percentage', 0, 1000),
     // XLAND's own annual cost of running the service; an estimate may still override it
     default_operating_cost: number(input.default_operating_cost ?? 0, 'Default XLAND operating cost', 0, 1e9)
@@ -213,4 +247,5 @@ const calculateEstimateSummary = (quotes, discountPercentage = 0, gstPercentage 
   return { subtotal, discountPercent, discount, netSubtotal, gstPercent, gst, total, vendorCost, operatingCost, actualCost, profit, marginPercentage: netSubtotal ? round(profit / netSubtotal * 100) : 0 };
 };
 
-module.exports = { validateService, calculateServiceQuote, calculateEstimateSummary, normalizePropertyType };
+module.exports = { validateService, calculateServiceQuote, calculateEstimateSummary, normalizePropertyType,
+  primaryInputLabel, propertyTypeLabel };

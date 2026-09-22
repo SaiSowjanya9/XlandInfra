@@ -13,7 +13,7 @@ import {
   getEstimateUnits, formatAddonsForExport
 } from '../../utils/estimateStore';
 import { exportEstimateToPDF } from '../../utils/pdfExport';
-import { getServiceDescription, getAddonPrice, hasCatalogServices } from '../../utils/estimatePackageUtils';
+import { getServiceDescription, getServiceMarkup, getAddonPrice, hasCatalogServices } from '../../utils/estimatePackageUtils';
 import * as XLSX from 'xlsx';
 import { getAuthToken } from '../../utils/safeStorage';
 
@@ -1264,6 +1264,8 @@ const EstimatesList = ({
                         const frequencyCount = typeof addon === 'object' ? (addon.frequency_count ?? addon.frequencyCount ?? 1) : 1;
                         const frequencyType = typeof addon === 'object' ? (addon.frequencyType || addon.frequency_type || 'Monthly') : 'Monthly';
                         const addonDesc = typeof addon === 'object' ? decodeHtml(getServiceDescription(addon)) || '' : '';
+                        // Internal figure: shown on this staff screen only, never in a customer document
+                        const addonMarkup = typeof addon === 'object' ? getServiceMarkup(addon) : null;
                         return (
                           <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
                             <div className="col-span-1">
@@ -1274,6 +1276,7 @@ const EstimatesList = ({
                             </div>
                             <div className="col-span-4">
                               <p className={`text-xs text-gray-500 break-all whitespace-normal ${!addonDesc ? 'text-center' : ''}`}>{addonDesc || '-'}</p>
+                              {addonMarkup != null && <p className="mt-1 text-[10px] text-gray-400">Markup: {addonMarkup}% (internal)</p>}
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>
