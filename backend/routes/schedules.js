@@ -469,7 +469,14 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
 });
 
 // Get single schedule (Admin, Manager, Supervisor can view)
-router.get('/:id', authenticate, canSeeSchedule, async (req, res) => {
+//
+// This is declared above the static routes that follow it ('/cancelled', '/notifications',
+// '/recommended-dates', '/all', '/status-summary', '/renewals', '/pending-count',
+// '/reschedule-requests', '/eligible-vendors'), and Express matches in order, so without the
+// guard below every one of them was answered here with "Schedule not found". The handler only
+// ever looks up a numeric schedules.id, so anything else hands off to the next matching route.
+router.get('/:id', (req, res, next) => /^\d+$/.test(req.params.id) ? next() : next('route'),
+  authenticate, canSeeSchedule, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -2092,7 +2099,7 @@ router.get('/cancelled', authenticate, canSeeSchedule, async (req, res) => {
              op.property_id as property_code, op.community_name as property_name,
              pss.service_name as service, pss.service_category,
              COALESCE(ov.company_name, ov.owner_name) as vendor,
-             u.name as cancelled_by_name,
+             CONCAT(u.first_name, ' ', u.last_name) as cancelled_by_name,
              CASE 
                WHEN u.role = 'franchise_partner' THEN 'FP'
                WHEN u.role = 'manager' THEN 'Manager'

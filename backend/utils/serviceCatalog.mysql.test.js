@@ -24,6 +24,8 @@ test('local MySQL migration is idempotent and service configuration survives a d
       service_name: `Service catalog transaction test ${Date.now()}`, category: 'Generator', pricing_method: 'capacity_slab', unit: 'KVA',
       applicable_property_types: ['APT', 'GC', 'IH'], default_frequency: 'Every 2 Months', default_visits_per_year: 6,
       allow_frequency_override: true, allow_manual_visits: true, default_markup_percentage: 50,
+      // Arranged without a vendor, so the flag has to survive the round trip with everything else
+      skip_vendor_assignment: true,
       description: 'Round-trip validation',
       capacity_slabs: [{ capacityFrom: 0, capacityTo: 25, vendorRate: 2000.75, isCustomQuote: false }, { capacityFrom: 26, capacityTo: null, vendorRate: null, isCustomQuote: true }]
     });
@@ -31,6 +33,10 @@ test('local MySQL migration is idempotent and service configuration survives a d
     const [rows] = await connection.execute('SELECT * FROM service_catalog WHERE id = ?', [insert.insertId]);
     const stored = typeof rows[0].configuration === 'string' ? JSON.parse(rows[0].configuration) : rows[0].configuration;
     assert.deepEqual(stored, config);
+    // The fields common to every pricing method, and the vendor toggle, all come back
+    assert.equal(stored.category, 'Generator');
+    assert.equal(stored.unit, 'KVA');
+    assert.equal(stored.skip_vendor_assignment, true);
     assert.equal(calculateServiceQuote(stored, { property_type: 'APT', capacity: 25 }, 'admin').totalPrice, 18006.75);
     assert.equal(calculateServiceQuote(stored, { property_type: 'APT', capacity: 26 }, 'admin').requiresCustomQuote, true);
     await assert.rejects(connection.execute('INSERT INTO service_catalog (service_name, scope_id, configuration, created_by) VALUES (?, 0, ?, 1)', [config.service_name, JSON.stringify(config)]), { code: 'ER_DUP_ENTRY' });
@@ -69,6 +75,14 @@ test('local MySQL migration is idempotent and service configuration survives a d
       assert.equal(Number(saved[0].total), result.data.summary.total);
       assert.equal(saved[0].estimate_type, 'custom');
       assert.equal(saved[0].status, 'Draft');
+      // The single details line every view modal, PDF export and email reads
+      for (const text of ['Generator', 'Capacity Slab', 'Primary Input:', 'Capacity: 25 KVA',
+        'Property Types: Apartment, Gated Community, Independent House']) {
+        assert.ok(addons[0].details.includes(text), text);
+      }
+      // Markup is internal and must not be in what the customer reads
+      assert.doesNotMatch(addons[0].details, /[Mm]arkup/);
+      assert.equal(addons[0].pricingSnapshot.skip_vendor_assignment, true);
     } finally { await new Promise(resolve => server.close(resolve)); }
   } finally {
     await connection.rollback();
