@@ -31,7 +31,7 @@ const PAYMENT_METHODS = [
     type: 'online',
     badges: ['VISA', 'RuPay', 'maestro', 'Net Banking'],
     feeText: 'Processing Fee',
-    feeAmount: '2% + GST',
+    feeAmount: '2%',
     tags: ['Secure Payment', 'Razorpay Trusted']
   },
   { 
@@ -41,8 +41,9 @@ const PAYMENT_METHODS = [
     icon: Smartphone, 
     type: 'online',
     badges: ['GPay', 'PhonePe', 'Paytm', 'BHIM'],
-    feeText: 'Instant Payment',
-    tags: ['Razorpay Secured']
+    feeText: 'Processing Fee',
+    feeAmount: '2%',
+    tags: ['Instant Payment', 'Razorpay Secured']
   },
   { 
     id: 'bank_transfer', 
