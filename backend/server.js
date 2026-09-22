@@ -248,6 +248,15 @@ const startServer = async () => {
     // Initialize QR routes with database pool
     const { pool } = require('./config/database');
     initQRPool(pool);
+    // Estimates carry the Terms & Conditions choice and text; add the columns where they are missing
+    const { ensureEstimateTermsColumns } = require('./utils/estimateTerms');
+    for (const table of ['fp_estimates', 'estimates']) {
+      try {
+        await ensureEstimateTermsColumns(pool, table);
+      } catch (error) {
+        console.error(`Could not add the Terms & Conditions columns to ${table}; estimates will not carry terms until this is fixed:`, error.message);
+      }
+    }
     console.log('✅ Database mode: Connected');
     console.log('✅ QR Management System initialized');
     // Start work order cleanup scheduler (auto-delete closed/cancelled after 30 days)

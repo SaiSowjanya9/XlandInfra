@@ -5,6 +5,7 @@ const { adminOnly, requireRole } = require('../middleware/rbac');
 const { validateService, calculateServiceQuote, calculateEstimateSummary, normalizePropertyType } = require('../utils/servicePricing');
 const { randomUUID } = require('crypto');
 const { normalizeEstimateService } = require('../utils/estimateData');
+const { estimateTermsColumns } = require('../utils/estimateTerms');
 const { categoryOptions } = require('../utils/serviceCategories');
 const router = express.Router();
 
@@ -149,15 +150,18 @@ router.post('/custom-estimates', requireRole('admin'), async (req, res) => {
     if (typeof req.body.notes !== 'string' || req.body.notes.length > 2000) return res.status(400).json({ success: false, message: 'Notes must be at most 2000 characters.' });
     const estimateId = `EST-${randomUUID()}`;
     const addons = buildCatalogAddons(rows, property);
+    // Whether this estimate carries Terms & Conditions, and the text the creator saw
+    const estimateTerms = estimateTermsColumns(req.body);
     await db.pool.execute(
       `INSERT INTO estimates (estimate_id, title, property_id, franchise_partner_id, customer_name, customer_email, customer_phone,
         property_type, property_name, property_address, services, addons, subtotal, discount, tax, total, total_amount,
-        discount_percentage, discount_amount, tax_percentage, tax_amount, description, notes, status, created_by, is_active, estimate_type)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', ?, 1, 'custom')`,
+        discount_percentage, discount_amount, tax_percentage, tax_amount, description, notes, include_terms, terms_conditions, status, created_by, is_active, estimate_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', ?, 1, 'custom')`,
       [estimateId, `Custom Estimate - ${property.community_name}`, property.id, property.franchise_partner_id || null,
         property.customer_name, property.customer_email || null, property.customer_phone || null, property.entry_type, property.community_name,
         property.address || null, JSON.stringify([]), JSON.stringify(addons), summary.subtotal, summary.discount, summary.gst, summary.total,
-        summary.total, summary.discountPercent, summary.discount, summary.gstPercent, summary.gst, req.body.notes.trim(), req.body.notes.trim(), req.user.id]
+        summary.total, summary.discountPercent, summary.discount, summary.gstPercent, summary.gst, req.body.notes.trim(), req.body.notes.trim(),
+        estimateTerms.include_terms, estimateTerms.terms_conditions, req.user.id]
     );
     res.status(201).json({ success: true, data: { estimateId, ...result } });
   } catch (error) { handleError(res, error); }

@@ -1043,6 +1043,8 @@ const sendEstimateEmail = async (estimate, actionToken) => {
       packageName, packagePrice: estimate.packagePrice, amcPackageDescription, 
       services: servicesList, addons: addonsList, subtotal, discount, discountAmount: estimate.discountAmount,
       tax, gstPercent: estimate.gstPercent, total, description, createdAt: estimate.createdAt,
+      // Terms & Conditions the creator chose to include; the email body itself does not repeat them
+      includeTerms: estimate.includeTerms, termsConditions: estimate.termsConditions,
       // Work Order fields
       isWorkOrderEstimate, workOrderId, workOrderCategory, workOrderSubcategory,
       workOrderDescription, workOrderPriority, workOrderStatus

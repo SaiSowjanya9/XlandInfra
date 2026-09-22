@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
+import { TermsConditionsField, EstimateTermsSection } from '../components/estimates/EstimateTerms';
+import { newEstimateTerms } from '../utils/estimateTerms';
 import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link, ChevronLeft, ChevronRight, ArrowLeft, Download } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -190,6 +192,9 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const [discountPercent, setDiscountPercent] = useState('');
   const [gstPercent, setGstPercent] = useState('');
   const [viewEstimate, setViewEstimate] = useState(null);
+  // Terms & Conditions: on by default for a new estimate, editable before saving
+  const [includeTerms, setIncludeTerms] = useState(newEstimateTerms().includeTerms);
+  const [termsConditions, setTermsConditions] = useState(newEstimateTerms().termsConditions);
   const [editEstimate, setEditEstimate] = useState(null);
   const [editEstimateForm, setEditEstimateForm] = useState(null);
   const [savingEstimate, setSavingEstimate] = useState(false);
@@ -399,7 +404,9 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           discount_amount: priceSummary.discountAmount,
           gst_percent: gstPercent,
           gst_amount: priceSummary.gstAmount,
-          total_amount: priceSummary.totalAmount
+          total_amount: priceSummary.totalAmount,
+          includeTerms,
+          termsConditions
       };
       console.log('Saving estimate payload:', payload);
       const res = await fetch(`${API_BASE}/api/executive/estimates`, {
@@ -730,7 +737,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
         <div className="p-6">
           <div className="max-w-md ml-auto space-y-4">
-            <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
               <span className="text-gray-600">Sub Total</span>
               <span className="font-medium text-gray-900">{formatCurrency(priceSummary.subTotal)}</span>
             </div>
@@ -755,6 +762,9 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           </div>
         </div>
       </div>
+
+      {/* Terms & Conditions - included by default, and the text travels with the estimate */}
+      <TermsConditionsField include={includeTerms} onIncludeChange={setIncludeTerms} terms={termsConditions} onTermsChange={setTermsConditions} />
 
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-500">* Currency: INR (ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹) | GST applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section</p>
@@ -1786,6 +1796,9 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                   <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{viewEstimate.description}</p>
                 </div>
               )}
+
+              {/* Terms & Conditions - shown only when this estimate carries them */}
+              <EstimateTermsSection estimate={viewEstimate} className="border-t border-gray-100 pt-4" />
 
               {/* Created By */}
               <div className="border-t border-gray-100 pt-4 text-xs text-gray-400">

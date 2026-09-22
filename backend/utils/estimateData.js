@@ -1,4 +1,5 @@
 const { normalizePropertyType, primaryInputLabel, propertyTypeLabel } = require('./servicePricing');
+const { resolveEstimateTerms } = require('./estimateTerms');
 const first = (...values) => values.find(value => value !== undefined && value !== null && value !== '');
 const amount = value => Number.isFinite(Number(value)) ? Number(value) : 0;
 const parse = value => {
@@ -94,7 +95,10 @@ const normalizeEstimateData = row => {
   const gstPercent = amount(isCustom ? first(row.tax_percentage, row.gstPercent, row.gst_percent) : first(row.gstPercent, row.gst_percent, row.tax_percentage));
   const gstAmount = amount(isCustom ? first(row.tax_amount, row.gstAmount, row.gst_amount, row.tax) : first(row.gstAmount, row.gst_amount, row.tax_amount, row.tax, row.gst));
   const total = amount(first(row.totalPrice, row.total, row.total_amount, row.total_price));
+  // The Terms & Conditions the estimate was created with, or none if its creator excluded them
+  const terms = resolveEstimateTerms(row);
   return { ...row, ...propertyFields, addons, services, packageServices, package_services: packageServices,
+    includeTerms: terms.includeTerms, include_terms: terms.includeTerms ? 1 : 0, termsConditions: terms.termsConditions, terms_conditions: terms.termsConditions,
     addonsTotal: addons.reduce((sum, addon) => sum + addon.price, 0), subTotal: amount(first(row.subtotal, row.subTotal, row.sub_total)), gst: gstAmount,
     estimateId: first(row.estimateId, row.estimate_id), estimateType: first(row.estimateType, row.estimate_type),
     customerName: first(row.customerName, row.customer_name, row.client_name, row.clientName),
@@ -119,7 +123,9 @@ const customerEstimateData = source => {
   for (const [camel, snake] of [['numberOfBlocks', 'number_of_blocks'], ['totalUnits', 'total_units'], ['towerName', 'tower_name'], ['blockNumber', 'block_number'],
     ['villaPlotNumber', 'villa_plot_number'], ['blockNames', 'block_names'], ['unitsPerBlock', 'units_per_block'], ['packageName', 'package_name'], ['amcPackageDescription', 'amc_package_description'], ['billingDuration', 'billing_duration']]) result[camel] = first(row[camel], row[snake]);
   return { ...result, services: (row.packageServices.length ? row.packageServices : row.services).map(service), addons: row.addons.map(service),
-    discount: amount(first(source.discountPercent, source.discount_percent, source.discount_percentage, source.discount)), tax: row.gstAmount };
+    discount: amount(first(source.discountPercent, source.discount_percent, source.discount_percentage, source.discount)), tax: row.gstAmount,
+    // Terms travel with the customer copy, so the PDF prints what the creator chose to include
+    includeTerms: row.includeTerms, termsConditions: row.termsConditions };
 };
 
 const canEmailEstimate = (estimate, scope) => !!estimate && !!scope.fpId && Number(estimate.franchise_partner_id) === Number(scope.fpId) &&

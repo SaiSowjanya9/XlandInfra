@@ -5,6 +5,7 @@
 
 const express = require('express');
 const { normalizeEstimateData, enrichLegacyEstimateAddon } = require('../utils/estimateData');
+const { estimateTermsColumns } = require('../utils/estimateTerms');
 const router = express.Router();
 const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
@@ -2257,6 +2258,9 @@ router.post('/estimates', requireCoordinatorScope, async (req, res) => {
       await pool.query(`ALTER TABLE fp_estimates ADD COLUMN block_unit_types JSON`);
     } catch (e) { /* Column exists */ }
 
+    // Whether this estimate carries Terms & Conditions, and the text the creator saw
+    const estimateTerms = estimateTermsColumns(req.body);
+
     const [result] = await pool.query(
       `INSERT INTO fp_estimates (
         estimate_id, franchise_partner_id, property_id, estimate_type,
@@ -2264,8 +2268,8 @@ router.post('/estimates', requireCoordinatorScope, async (req, res) => {
         zone, city, address, package_id, package_name, package_price, amc_package_description, package_services, billing_duration,
         subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
         addons_data, description, created_by_id, created_by_name, created_by_role, status,
-        number_of_blocks, block_names, units_per_block, block_unit_types, total_units, tower_name, block_number, villa_plot_number, division, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        number_of_blocks, block_names, units_per_block, block_unit_types, total_units, tower_name, block_number, villa_plot_number, division, include_terms, terms_conditions, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
         estimateId, franchisePartnerId, propertyIdValue, estimate_type || 'property_based',
         client_name || '', client_phone || '', client_email || '',
@@ -2277,7 +2281,8 @@ router.post('/estimates', requireCoordinatorScope, async (req, res) => {
         JSON.stringify(addons || []), description || '', coordinatorId, creatorName, 'coordinator',
         number_of_blocks || null, block_names ? JSON.stringify(block_names) : null, 
         units_per_block ? JSON.stringify(units_per_block) : null, block_unit_types ? JSON.stringify(block_unit_types) : null, total_units || null,
-        tower_name || null, block_number || null, villa_plot_number || null, division || null
+        tower_name || null, block_number || null, villa_plot_number || null, division || null,
+        estimateTerms.include_terms, estimateTerms.terms_conditions
       ]
     );
 

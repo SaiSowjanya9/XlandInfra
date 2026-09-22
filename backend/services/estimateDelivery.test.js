@@ -65,6 +65,36 @@ test('manpower email and PDF show the selected range, personnel and overtime wit
   assert.doesNotMatch(mail.html + pdfText, /12,240|3,672|rate_per_person|overtime_rate_per_hour|vendorCost|profit/);
 });
 
+test('terms reach the attached PDF only when the estimate carries them, and never the email body', async t => {
+  const { DEFAULT_ESTIMATE_TERMS } = require('../utils/estimateTerms');
+  const originalText = PDFDocument.prototype.text;
+  t.after(() => { PDFDocument.prototype.text = originalText; });
+  const send = async estimate => {
+    const texts = [];
+    PDFDocument.prototype.text = function (text, ...args) { texts.push(String(text)); return originalText.call(this, text, ...args); };
+    const result = await sendEstimateEmail({ estimateId: 'EST-TERMS', customerEmail: 'customer@example.test', total: 100, ...estimate }, 'test-token');
+    assert.equal(result.success, true);
+    return { pdfText: texts.join('\n'), html: mail.html };
+  };
+
+  const included = await send({ include_terms: 1 });
+  assert.match(included.pdfText, /TERMS & CONDITIONS/);
+  for (const clause of DEFAULT_ESTIMATE_TERMS) assert.ok(included.pdfText.includes(clause), clause);
+  // The customer reads the terms in the attachment; the email body stays short
+  assert.doesNotMatch(included.html, /TERMS & CONDITIONS|valid for 30 days/);
+
+  const custom = await send({ includeTerms: true, termsConditions: 'Only clause.\nSecond clause.' });
+  assert.match(custom.pdfText, /1\. Only clause\./);
+  assert.match(custom.pdfText, /2\. Second clause\./);
+  assert.ok(!custom.pdfText.includes(DEFAULT_ESTIMATE_TERMS[0]));
+
+  // Excluded, and an estimate created before the feature, print no terms at all
+  for (const estimate of [{ include_terms: 0, terms_conditions: 'Not chosen.' }, {}]) {
+    const excluded = await send(estimate);
+    assert.doesNotMatch(excluded.pdfText, /TERMS & CONDITIONS|Not chosen\./);
+  }
+});
+
 test('PDF generation failure does not send a customer email without its attachment', async t => {
   const originalText = PDFDocument.prototype.text;
   PDFDocument.prototype.text = () => { throw new Error('Simulated PDF failure'); };

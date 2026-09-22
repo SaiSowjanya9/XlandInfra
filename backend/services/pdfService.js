@@ -1,5 +1,6 @@
 const PDFDocument = require('pdfkit');
 const { customerEstimateData } = require('../utils/estimateData');
+const { estimateTermsLines } = require('../utils/estimateTerms');
 const path = require('path');
 
 // Logo file path - icon only (without text) for horizontal layout - OPTIMIZED for smaller PDF size
@@ -108,6 +109,8 @@ const generateEstimatePDF = async (estimate) => {
         packageName, packagePrice, amcPackageDescription, services, addons,
         subtotal, discount, discountAmount, tax, gstPercent, total, description, createdAt,
         billingDuration, billing_duration,
+        // Terms & Conditions, printed only when the estimate was created with them
+        includeTerms,
         // Work Order Estimate fields
         isWorkOrderEstimate, workOrderId, workOrderCategory, workOrderSubcategory,
         workOrderDescription, workOrderPriority, workOrderStatus
@@ -461,6 +464,28 @@ const generateEstimatePDF = async (estimate) => {
         y += 12;
         doc.fontSize(9).fillColor('#333333').font('Helvetica').text(decodeHtml(description), 50, y, { width: 500, lineGap: 3, continued: false });
         y += 30;
+      }
+
+      // Terms & Conditions - last section, and only when the estimate carries them
+      const termsLines = estimateTermsLines({ includeTerms, termsConditions: estimate.termsConditions });
+      if (termsLines.length) {
+        if (y + 40 > pageHeight) {
+          doc.addPage();
+          y = 50;
+        }
+        doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('TERMS & CONDITIONS', 50, y, { continued: false });
+        y += 14;
+        doc.fontSize(8).fillColor('#333333').font('Helvetica');
+        termsLines.forEach((line, index) => {
+          const text = `${index + 1}. ${decodeHtml(line)}`;
+          const height = doc.heightOfString(text, { width: 490, lineGap: 2 });
+          if (y + height > pageHeight) {
+            doc.addPage();
+            y = 50;
+          }
+          doc.text(text, 60, y, { width: 490, lineGap: 2, continued: false });
+          y += height + 4;
+        });
       }
 
       doc.end();

@@ -13,6 +13,7 @@ import {
   getEstimateUnits, formatAddonsForExport
 } from '../../utils/estimateStore';
 import { exportEstimateToPDF } from '../../utils/pdfExport';
+import { EstimateTermsSection } from './EstimateTerms';
 import { getServiceDescription, getServiceMarkup, getAddonPrice, hasCatalogServices } from '../../utils/estimatePackageUtils';
 import * as XLSX from 'xlsx';
 import { getAuthToken } from '../../utils/safeStorage';
@@ -563,6 +564,9 @@ const EstimatesList = ({
           gstPercent: parseFloat(estimate.gst_percent || estimate.gst) || 0,
           gstAmount: parseFloat(estimate.gst_amount) || 0,
           description: estimate.description || estimate.notes || '',
+          // Terms & Conditions, printed only when the estimate carries them
+          includeTerms: estimate.includeTerms ?? estimate.include_terms,
+          termsConditions: estimate.termsConditions ?? estimate.terms_conditions,
           // Include package services with descriptions (same as FP portal)
           packageServices: packageServices.map(s => ({
             name: s.service || s.name || s.serviceName || 'Service',
@@ -1325,6 +1329,9 @@ const EstimatesList = ({
                   <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{viewEstimate.notes || viewEstimate.description}</p>
                 </div>
               )}
+
+              {/* Terms & Conditions - shown only when this estimate carries them */}
+              <EstimateTermsSection estimate={viewEstimate} className="border-t border-gray-100 pt-4" />
             </div>
           </div>
         </div>

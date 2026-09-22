@@ -11,6 +11,8 @@ import {
 import { useFP } from '../../contexts/FPContext';
 import PhoneInput from '../common/PhoneInput';
 import ServiceCatalogPicker from './ServiceCatalogPicker';
+import { TermsConditionsField } from './EstimateTerms';
+import { newEstimateTerms } from '../../utils/estimateTerms';
 import { EstimateInput, PropertyIdInput } from './EstimateFields';
 import AutocompleteInput from '../common/AutocompleteInput';
 import { 
@@ -253,8 +255,11 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
   // New UI state for revamped design (Image 1)
   const [estimateStructure, setEstimateStructure] = useState('package'); // 'package' or 'custom'
   const [showPreview, setShowPreview] = useState(false);
-  const [activeTab, setActiveTab] = useState('notes'); // 'notes', 'terms', 'attachments'
-  const [termsConditions, setTermsConditions] = useState('');
+  const [activeTab, setActiveTab] = useState('notes'); // 'notes', 'attachments'
+  // Terms & Conditions ride along with the estimate: included by default, and editable here so
+  // the creator sends exactly the clauses they read
+  const [includeTerms, setIncludeTerms] = useState(newEstimateTerms().includeTerms);
+  const [termsConditions, setTermsConditions] = useState(newEstimateTerms().termsConditions);
   const [customerNotes, setCustomerNotes] = useState('');
   const [attachments, setAttachments] = useState([]);
   
@@ -950,7 +955,9 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
       gst: estimateType === 'direct' ? calculateDirectGST() : calculateGST(),
       discount: estimateType === 'direct' ? getDirectDiscountAmount() : getDiscountAmount(),
       totalPrice: estimateType === 'direct' ? calculateDirectTotal() : calculateTotal(),
-      status: estimateType === 'direct' ? 'Archived' : 'Draft'
+      status: estimateType === 'direct' ? 'Archived' : 'Draft',
+      includeTerms,
+      termsConditions
     };
 
     if (estimateType === 'property') {
@@ -1302,7 +1309,9 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
         work_order_priority: workOrderData.priority,
         work_order_status: workOrderData.status,
         // Services for the PDF/Email
-        work_order_services: [workOrderServiceItem]
+        work_order_services: [workOrderServiceItem],
+        includeTerms,
+        termsConditions
       };
       
       console.log('[Work Order Estimate] Saving estimate:', estimatePayload);
@@ -2751,16 +2760,6 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                 Notes
               </button>
               <button
-                onClick={() => setActiveTab('terms')}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'terms'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                Terms & Conditions
-              </button>
-              <button
                 onClick={() => setActiveTab('attachments')}
                 className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === 'attachments'
@@ -2782,15 +2781,6 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                     placeholder="Add a note for this estimate..."
                     rows={4}
                     maxLength={500}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 resize-none"
-                  />
-                )}
-                {activeTab === 'terms' && (
-                  <textarea
-                    value={termsConditions}
-                    onChange={(e) => setTermsConditions(e.target.value)}
-                    placeholder="Add terms and conditions..."
-                    rows={4}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 resize-none"
                   />
                 )}
@@ -2819,6 +2809,10 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
               </div>
             </div>
           </div>
+
+          {/* Terms & Conditions - included by default, and the text travels with the estimate */}
+          <TermsConditionsField include={includeTerms} onIncludeChange={setIncludeTerms}
+            terms={termsConditions} onTermsChange={setTermsConditions} />
         </div>
         
         {/* Right Sidebar - Pricing Summary (Image 1 style) */}

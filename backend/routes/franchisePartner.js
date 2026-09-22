@@ -5,6 +5,7 @@
 
 const express = require('express');
 const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
+const { estimateTermsColumns } = require('../utils/estimateTerms');
 const { packagePropertyTypes } = require('../utils/packagePropertyTypes');
 const { normalizeAssignVendor, applyEstimateVendorAssignments } = require('../utils/estimateScheduling');
 const router = express.Router();
@@ -4597,6 +4598,9 @@ router.post('/estimates', requireFPScope, fpServiceCatalog.validatePackageEstima
       await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN work_order_services TEXT`);
     } catch (e) { /* Column exists */ }
 
+    // Whether this estimate carries Terms & Conditions, and the text the creator saw
+    const estimateTerms = estimateTermsColumns(req.body);
+
     // Stringify package_services for storage
     console.log('[Estimate Create] package_services received:', JSON.stringify(package_services));
     if (package_services && Array.isArray(package_services)) {
@@ -4621,8 +4625,9 @@ router.post('/estimates', requireFPScope, fpServiceCatalog.validatePackageEstima
         addons_data, description, status,
         created_by_id, created_by_name, created_by_role,
         work_order_id, work_order_category, work_order_subcategory, work_order_description,
-        work_order_priority, work_order_status, work_order_services, assign_vendor
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        work_order_priority, work_order_status, work_order_services, assign_vendor,
+        include_terms, terms_conditions
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         estimateId, req.fpId, property_id || null, estimate_type || 'property_based',
         client_name || '', client_phone || '', client_email || '',
@@ -4634,7 +4639,8 @@ router.post('/estimates', requireFPScope, fpServiceCatalog.validatePackageEstima
         addonsJson, description || '', 
         creatorId, creatorName, creatorRole,
         work_order_id || null, work_order_category || null, work_order_subcategory || null, work_order_description || null,
-        work_order_priority || null, work_order_status || null, workOrderServicesJson, assignVendor
+        work_order_priority || null, work_order_status || null, workOrderServicesJson, assignVendor,
+        estimateTerms.include_terms, estimateTerms.terms_conditions
       ]
     );
 

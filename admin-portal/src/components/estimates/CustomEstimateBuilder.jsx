@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Edit2, Loader2, Plus, Save, Trash2, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import ManpowerFields from './ManpowerFields';
+import { TermsConditionsField, EstimateTermsSection } from './EstimateTerms';
+import { newEstimateTerms } from '../../utils/estimateTerms';
 import { isVisitManpower, suggestedManpower } from '../../utils/manpowerPricing';
 import { FREQUENCY_OPTIONS, getServiceSchedule, methodLabel, propertyTypeLabel, serviceOptionLabel } from './AddServicePage';
 
@@ -132,6 +134,9 @@ export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess
   const [discount, setDiscount] = useState(0);
   const [gst, setGst] = useState(18);
   const [notes, setNotes] = useState('');
+  // Terms & Conditions: included by default, editable, and stored with the estimate
+  const [includeTerms, setIncludeTerms] = useState(newEstimateTerms().includeTerms);
+  const [termsConditions, setTermsConditions] = useState(newEstimateTerms().termsConditions);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -189,6 +194,7 @@ export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess
       const response = await fetch(`${API_BASE}${apiPath}/custom-estimates`, {
         method: 'POST', headers: headers(), body: JSON.stringify({
           fpId, property_id: property.id, property_source: property.source_table || 'onboarded_properties', discount_percentage: Number(discount), gst_percentage: Number(gst), notes,
+          includeTerms, termsConditions,
           rows: rows.map(row => ({ service_id: row.service_id, vendor_id: row.vendor_id, inputs: row.inputs }))
         })
       });
@@ -225,6 +231,7 @@ export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess
           </tr>)}</tbody></table></div> : <div className="p-8 text-center text-sm text-slate-400">{property ? 'Add individual services to build this estimate.' : 'Select a property to get started.'}</div>}
         </section>
         <section className="rounded-xl border border-slate-200 bg-white p-5"><Field label="Description / Notes"><textarea rows={3} maxLength={2000} value={notes} onChange={event => setNotes(event.target.value)} className={inputClass} placeholder="Notes for the customer" /></Field></section>
+        <TermsConditionsField include={includeTerms} onIncludeChange={setIncludeTerms} terms={termsConditions} onTermsChange={setTermsConditions} />
       </main>
       <aside className="space-y-5">
         <section className="rounded-xl border border-slate-200 bg-white p-5"><h2 className="mb-5 text-sm font-semibold text-slate-800">Estimate Summary</h2><dl className="space-y-4 text-xs text-slate-600">
@@ -246,6 +253,7 @@ export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess
       <div className="my-6 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b bg-slate-50 text-xs text-slate-500"><tr><th className="p-3">Service</th><th className="p-3">Description</th><th className="p-3">Frequency</th><th className="p-3">Visits</th></tr></thead><tbody>{preview.rows.map((row, index) => <tr key={index} className="border-b border-slate-100"><td className="p-3">{row.service_name}</td><td className="p-3">{row.details || row.description || '—'}</td><td className="p-3">{row.frequency}</td><td className="p-3">{row.visits}</td></tr>)}</tbody></table></div>
       <dl className="ml-auto max-w-sm space-y-3 text-sm">{[['Service Subtotal', money(preview.summary.subtotal)], [`Discount (${preview.summary.discountPercent}%)`, money(preview.summary.discount)], ['Subtotal After Discount', money(preview.summary.netSubtotal)], [`GST (${preview.summary.gstPercent}%)`, money(preview.summary.gst)], ['Grand Total', money(preview.summary.total)]].map(([label, value]) => <div key={label} className="flex justify-between gap-5"><dt>{label}</dt><dd className="font-semibold">{value}</dd></div>)}</dl>
       {notes && <p className="mt-6 whitespace-pre-wrap text-sm text-slate-600">{notes}</p>}
+      <EstimateTermsSection estimate={{ includeTerms, termsConditions }} className="mt-6" />
       <button type="button" onClick={() => { setPreview(null); onSuccess?.(); }} className="mt-6 rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white">Done</button>
     </section></div>}
   </div>;
