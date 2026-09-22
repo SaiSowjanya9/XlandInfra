@@ -465,8 +465,8 @@ router.get('/notifications/list', authenticate, async (req, res) => {
       query += ` AND is_read = FALSE`;
     }
 
-    query += ` ORDER BY created_at DESC LIMIT ?`;
-    params.push(parseInt(limit));
+    // A prepared statement cannot bind LIMIT, so the clamped integer is inlined instead
+    query += ` ORDER BY created_at DESC LIMIT ${Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100)}`;
 
     const [notifications] = await pool.execute(query, params);
 

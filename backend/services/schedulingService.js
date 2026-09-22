@@ -859,8 +859,8 @@ async function getUnreadNotifications(franchisePartnerId, userId, roleType, limi
       params.push(roleType);
     }
 
-    query += ` ORDER BY created_at DESC LIMIT ?`;
-    params.push(limit);
+    // A prepared statement cannot bind LIMIT, so the clamped integer is inlined instead
+    query += ` ORDER BY created_at DESC LIMIT ${Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100)}`;
 
     const [notifications] = await pool.execute(query, params);
     return notifications;

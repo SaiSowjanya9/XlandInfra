@@ -2457,8 +2457,8 @@ router.get('/notifications', authenticateCustomer, async (req, res) => {
       )
       ${unreadOnly === 'true' ? 'AND pn.is_read = FALSE' : ''}
       ORDER BY pn.created_at DESC
-      LIMIT ?
-    `, [propertyId, propertyId, parseInt(limit)]);
+      LIMIT ${Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100)}
+    `, [propertyId, propertyId]);
 
     // Get unread count
     const [[{ unreadCount }]] = await pool.execute(`

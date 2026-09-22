@@ -774,8 +774,8 @@ async function getPendingRenewals(filters = {}) {
     params.push(franchisePartnerId);
   }
 
-  query += ` ORDER BY sr.created_at DESC LIMIT ?`;
-  params.push(parseInt(limit));
+  // A prepared statement cannot bind LIMIT, so the clamped integer is inlined instead
+  query += ` ORDER BY sr.created_at DESC LIMIT ${Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200)}`;
 
   const [renewals] = await pool.execute(query, params);
   return renewals;

@@ -44,6 +44,23 @@ mysql -h "$LOCAL_DB_HOST" -u "$LOCAL_DB_USER" -p"$LOCAL_DB_PASSWORD" \
 On Windows the client lives at
 `C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe`.
 
+### Query and Route Gotchas
+
+Two mistakes that fail silently and have each already broken live endpoints:
+
+- **`pool.execute` cannot bind `LIMIT`.** A prepared statement with `LIMIT ?` fails with
+  "Incorrect arguments to mysqld_stmt_execute", which surfaces as a 500 or, where the
+  error is swallowed, as a permanently empty list. Inline a clamped integer instead:
+  `` `... LIMIT ${Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100)}` ``. `pool.query`
+  is not prepared and does accept `LIMIT ?`, so only `execute` call sites matter.
+- **A `/:id` route swallows every static route declared after it.** Express matches in
+  order, so `router.get('/:id')` above `router.get('/cancelled')` answers `/cancelled`
+  with that handler's "not found". Declare the parameter route last, or guard it — the
+  schedules router uses `(req, res, next) => /^\d+$/.test(req.params.id) ? next() : next('route')`.
+  Regression test: `node --test backend/routes/schedulesRouting.test.js`.
+- The `users` table has `first_name` and `last_name`, not `name`. Use
+  `CONCAT(u.first_name, ' ', u.last_name)`.
+
 ## Frontend API Conventions
 
 All API calls in `admin-portal` and all employee portals must use the full `API_BASE` URL. Relative URLs resolve to `admin.xlandinfra.com` instead of `xlandinfra.com`.
