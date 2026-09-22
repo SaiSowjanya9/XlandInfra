@@ -23,6 +23,7 @@ import {
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
+import { filterOptions } from '../utils/filterOptions';
 
 const FPEmployees = ({ user }) => {
   const navigate = useNavigate();
@@ -31,7 +32,6 @@ const FPEmployees = ({ user }) => {
   const isFPManager = user?.role === 'manager';
   
   const [employees, setEmployees] = useState([]);
-  const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [zoneFilter, setZoneFilter] = useState('');
@@ -45,20 +45,14 @@ const FPEmployees = ({ user }) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [empResponse, zoneResponse] = await Promise.all([
-        fetch(`${API_BASE}/api/fp/employees?status=${statusFilter}`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE}/api/fp/zones`, { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-      
+      const empResponse = await fetch(`${API_BASE}/api/fp/employees?status=${statusFilter}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const empResult = await empResponse.json();
-      const zoneResult = await zoneResponse.json();
-      
+
       if (empResult.success) {
         const empData = Array.isArray(empResult.data) ? empResult.data : [];
         setEmployees(empData);
-      }
-      if (zoneResult.success) {
-        setZones(Array.isArray(zoneResult.data) ? zoneResult.data : []);
       }
     } catch (error) {
       console.error('Fetch error:', error);
@@ -163,6 +157,10 @@ const FPEmployees = ({ user }) => {
     return '-';
   };
 
+  // The zone dropdown offers the zones these employees are assigned to. 'all' is an assignment,
+  // not a zone, so it is never offered as one.
+  const zones = filterOptions(employees, 'zone').filter(z => z !== 'all');
+
   const filteredEmployees = employees.filter(e => {
     // Status filter
     const empStatus = e.status || (e.is_active ? 'active' : 'inactive');
@@ -180,7 +178,7 @@ const FPEmployees = ({ user }) => {
       if (!matchesSearch) return false;
     }
     
-    // Zone filter
+    // Zone filter - an employee assigned to every zone matches whichever zone is picked
     if (zoneFilter) {
       const empZones = e.assignedZones || e.assigned_zones;
       if (empZones === 'all') return true;
@@ -246,7 +244,7 @@ const FPEmployees = ({ user }) => {
             >
               <option value="">All Zones</option>
               {zones.map(z => (
-                <option key={z.id} value={z.name}>{z.name}</option>
+                <option key={z} value={z}>{z}</option>
               ))}
             </select>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />

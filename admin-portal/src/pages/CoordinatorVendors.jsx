@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
+import { filterOptions, matchesFilter } from '../utils/filterOptions';
 import {
   Store,
   Plus,
@@ -45,7 +46,6 @@ const CoordinatorVendors = ({ user }) => {
   const [divisionFilter, setDivisionFilter] = useState('all');
   const [zoneFilter, setZoneFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('active');
-  const [zones, setZones] = useState([]);
   const [divisions, setDivisions] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
@@ -282,6 +282,10 @@ const CoordinatorVendors = ({ user }) => {
   
   const statusFilteredVendors = getStatusFilteredVendors();
 
+  // The zone dropdown offers the zones these vendors work in. It used to read a zones list that
+  // was never fetched, and matched on a zone_id the vendor rows do not carry.
+  const zones = filterOptions(statusFilteredVendors, 'zone');
+
   // Filter vendors based on search and service type tab
   const filteredVendors = getVendorList().filter(v => {
     // Status filter
@@ -297,7 +301,7 @@ const CoordinatorVendors = ({ user }) => {
       v.zone_name?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesTab = activeTab === 'all' || v.service_type?.toLowerCase() === activeTab;
-    const matchesZone = zoneFilter === 'all' || v.zone_id?.toString() === zoneFilter;
+    const matchesZone = zoneFilter === 'all' || matchesFilter(v, 'zone', zoneFilter);
     
     return matchesSearch && matchesTab && matchesZone;
   });
@@ -317,20 +321,20 @@ const CoordinatorVendors = ({ user }) => {
   const getTabCount = (tabId) => {
     let filtered = statusFilteredVendors;
     if (zoneFilter !== 'all') {
-      filtered = filtered.filter(v => v.zone_id?.toString() === zoneFilter);
+      filtered = filtered.filter(v => matchesFilter(v, 'zone', zoneFilter));
     }
     if (tabId === 'all') return filtered.length;
     return filtered.filter(v => v.service_type?.toLowerCase() === tabId).length;
   };
   
   // Get count for each zone (based on status + service type filters)
-  const getZoneCount = (zoneId) => {
+  const getZoneCount = (zoneName) => {
     let filtered = statusFilteredVendors;
     if (activeTab !== 'all') {
       filtered = filtered.filter(v => v.service_type?.toLowerCase() === activeTab);
     }
-    if (zoneId === 'all') return filtered.length;
-    return filtered.filter(v => v.zone_id?.toString() === zoneId).length;
+    if (zoneName === 'all') return filtered.length;
+    return filtered.filter(v => matchesFilter(v, 'zone', zoneName)).length;
   };
   
   // Get count for each status (based on service type + zone filters)
@@ -345,7 +349,7 @@ const CoordinatorVendors = ({ user }) => {
       filtered = filtered.filter(v => v.service_type?.toLowerCase() === activeTab);
     }
     if (zoneFilter !== 'all') {
-      filtered = filtered.filter(v => v.zone_id?.toString() === zoneFilter);
+      filtered = filtered.filter(v => matchesFilter(v, 'zone', zoneFilter));
     }
     return filtered.length;
   };
@@ -424,7 +428,7 @@ const CoordinatorVendors = ({ user }) => {
           >
             <option value="all">All Zones ({getZoneCount('all')})</option>
             {zones.map(z => (
-              <option key={z.id} value={z.id}>{z.name} ({getZoneCount(z.id?.toString())})</option>
+              <option key={z} value={z}>{z} ({getZoneCount(z)})</option>
             ))}
           </select>
           <select

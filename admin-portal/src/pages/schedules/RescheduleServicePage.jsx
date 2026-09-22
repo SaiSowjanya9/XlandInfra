@@ -5,7 +5,7 @@ import {
   Eye, RefreshCw, CheckCircle, AlertCircle, Info, X, XCircle
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
-import { scheduleFilterOptions, matchesScheduleFilter } from '../../utils/scheduleFilterOptions';
+import { filterOptions, matchesFilter } from '../../utils/filterOptions';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -338,10 +338,10 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
   };
 
   // Every dropdown offers only what these rows contain, so no option is ever a dead end
-  const uniqueServices = scheduleFilterOptions(schedules, 'service');
-  const uniqueVendors = scheduleFilterOptions(schedules, 'vendor');
-  const uniquePackages = scheduleFilterOptions(schedules, 'package');
-  const uniqueZones = scheduleFilterOptions(schedules, 'zone');
+  const uniqueServices = filterOptions(schedules, 'service');
+  const uniqueVendors = filterOptions(schedules, 'vendor');
+  const uniquePackages = filterOptions(schedules, 'package');
+  const uniqueZones = filterOptions(schedules, 'zone');
   const statusOptions = ['scheduled', 'completed', 'rescheduled', 'cancelled'];
 
   // Apply filters to schedules
@@ -357,10 +357,10 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
     if (filters.status !== 'all' && schedule.status !== filters.status) {
       return false;
     }
-    return matchesScheduleFilter(schedule, 'service', filters.service)
-      && matchesScheduleFilter(schedule, 'vendor', filters.vendor)
-      && matchesScheduleFilter(schedule, 'zone', filters.zone)
-      && matchesScheduleFilter(schedule, 'package', filters.package);
+    return matchesFilter(schedule, 'service', filters.service)
+      && matchesFilter(schedule, 'vendor', filters.vendor)
+      && matchesFilter(schedule, 'zone', filters.zone)
+      && matchesFilter(schedule, 'package', filters.package);
   });
 
   // Pagination

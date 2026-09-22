@@ -35,7 +35,7 @@ import {
   Bell
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
-import { scheduleFilterOptions, matchesScheduleFilter } from '../../utils/scheduleFilterOptions';
+import { filterOptions, matchesFilter } from '../../utils/filterOptions';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import VendorAssignmentModal from '../../components/VendorAssignmentModal';
 
@@ -255,10 +255,10 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
   // Zones, packages and vendors of these pending properties. The master package and vendor lists
   // offered values no property here carries - and the vendors of a property are the ones assigned
   // to its services.
-  const zones = scheduleFilterOptions(properties, 'zone');
-  const packages = scheduleFilterOptions(properties, 'package');
+  const zones = filterOptions(properties, 'zone');
+  const packages = filterOptions(properties, 'package');
   const propertyServices = properties.flatMap(p => Array.isArray(p.services) ? p.services : []);
-  const vendors = scheduleFilterOptions(propertyServices, 'vendor');
+  const vendors = filterOptions(propertyServices, 'vendor');
 
   // Initial load - run once
   useEffect(() => {
@@ -300,13 +300,13 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
     }
     
     // Zone and package filters
-    filtered = filtered.filter(p => matchesScheduleFilter(p, 'zone', zoneFilter)
-      && matchesScheduleFilter(p, 'package', packageFilter));
+    filtered = filtered.filter(p => matchesFilter(p, 'zone', zoneFilter)
+      && matchesFilter(p, 'package', packageFilter));
 
     // Vendor filter - a property matches when one of its services is assigned to that vendor
     if (vendorFilter !== 'all') {
       filtered = filtered.filter(p => (Array.isArray(p.services) ? p.services : [])
-        .some(s => matchesScheduleFilter(s, 'vendor', vendorFilter)));
+        .some(s => matchesFilter(s, 'vendor', vendorFilter)));
     }
     
     // Date filter

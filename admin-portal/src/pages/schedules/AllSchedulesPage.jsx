@@ -6,7 +6,7 @@ import {
   Users, Building2, List, MapPin, Eye, Edit2, X, FileText, Plus, Printer
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
-import { scheduleFilterOptions } from '../../utils/scheduleFilterOptions';
+import { filterOptions } from '../../utils/filterOptions';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -71,7 +71,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
   
   // Dropdown data - the services, vendors and zones these schedules actually contain.
   // Captured from an unfiltered load, so picking a vendor does not collapse the other dropdowns.
-  const [filterOptions, setFilterOptions] = useState({ service: [], vendor: [], zone: [] });
+  const [sectionOptions, setSectionOptions] = useState({ service: [], vendor: [], zone: [] });
   
   // Expanded properties for grouped view
   const [expandedProperties, setExpandedProperties] = useState(new Set());
@@ -227,10 +227,10 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
         if (data.stats) setStats(data.stats);
         // Filtering happens server-side, so only an unfiltered response describes the whole section
         if (queryParams.toString() === unfilteredQuery) {
-          setFilterOptions({
-            service: scheduleFilterOptions(schedulesArray, 'service'),
-            vendor: scheduleFilterOptions(schedulesArray, 'vendor'),
-            zone: scheduleFilterOptions(schedulesArray, 'zone')
+          setSectionOptions({
+            service: filterOptions(schedulesArray, 'service'),
+            vendor: filterOptions(schedulesArray, 'vendor'),
+            zone: filterOptions(schedulesArray, 'zone')
           });
         }
       }
@@ -1221,7 +1221,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700 hover:border-gray-400 focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Services</option>
-              {filterOptions.service.map(s => (
+              {sectionOptions.service.map(s => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
@@ -1234,7 +1234,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             >
               <option value="all">All Vendors</option>
               {/* Taken from the rows, so every option matches a vendor shown in this section */}
-              {filterOptions.vendor.map(v => (
+              {sectionOptions.vendor.map(v => (
                 <option key={v} value={v}>{v}</option>
               ))}
             </select>
@@ -1246,7 +1246,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none cursor-pointer text-gray-700 hover:border-gray-400 focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Zones</option>
-              {filterOptions.zone.map(z => (
+              {sectionOptions.zone.map(z => (
                 <option key={z} value={z}>{z}</option>
               ))}
             </select>

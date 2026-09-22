@@ -6,7 +6,7 @@ import {
   MapPin, User, Building2, Wrench, Truck, Phone, Mail, FileText
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
-import { scheduleFilterOptions } from '../../utils/scheduleFilterOptions';
+import { filterOptions } from '../../utils/filterOptions';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -69,9 +69,9 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
 
   // Filter options are the services, vendors and zones of the visits in this calendar, so the
   // master vendor list never offers a vendor who has nothing scheduled
-  const services = scheduleFilterOptions(schedules, 'service');
-  const vendors = scheduleFilterOptions(schedules, 'vendor');
-  const zones = scheduleFilterOptions(schedules, 'zone');
+  const services = filterOptions(schedules, 'service');
+  const vendors = filterOptions(schedules, 'vendor');
+  const zones = filterOptions(schedules, 'zone');
 
   // Use fallback property types (no API endpoint available)
   useEffect(() => {
