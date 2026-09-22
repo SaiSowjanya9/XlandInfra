@@ -50,11 +50,16 @@ const normalizeAssignVendor = value => {
  */
 const applyEstimateVendorAssignments = async ({ propertyId, fpId, assignments, assignedBy }) => {
   const { resolveVendor, upsertPropertyVendorAssignment } = require('./vendorAssignments');
+  const { fetchVendorlessServiceNames, serviceNeedsVendor } = require('./vendorlessServices');
   const result = { assigned: 0, skipped: [] };
+  // A service configured with "Do Not Assign Vendor" is arranged without one, so no vendor is
+  // attached to it even if the estimate form offered one
+  const vendorlessNames = await fetchVendorlessServiceNames(fpId);
   for (const row of assignments.slice(0, 100)) {
     const serviceType = String(row?.service ?? row?.serviceType ?? '').trim();
     const requested = row?.vendorId ?? row?.vendor_id;
     if (!serviceType || requested == null || requested === '') continue;
+    if (!serviceNeedsVendor(serviceType, vendorlessNames)) continue;
     try {
       const vendor = await resolveVendor(requested);
       if (!vendor) {

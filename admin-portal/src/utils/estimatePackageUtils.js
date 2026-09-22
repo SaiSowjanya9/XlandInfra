@@ -69,6 +69,29 @@ export const getAddonPrice = (addon) => {
   return Number(price ?? addon?.calculatedPrice ?? nestedTotal ?? 0) || 0;
 };
 
+// What each pricing method measures, and which dimensions need the service name to say what
+// is being measured. Mirrors INPUT_DIMENSIONS in backend/utils/servicePricing.js.
+const INPUT_DIMENSIONS = { fixed_price: 'Visit', quantity_based: 'Quantity', area_based: 'Area',
+  capacity_based: 'Capacity', capacity_slab: 'Capacity', manpower: 'Headcount',
+  fixed_visit_custom: 'Visit', custom_quote: 'Quote' };
+const QUALIFIED_DIMENSIONS = ['Capacity', 'Quantity'];
+
+/**
+ * The Primary Input is derived, never stored or typed in: the pricing method says what is
+ * measured and the service says what it belongs to. "Generator" priced by capacity reads
+ * "Generator Capacity"; "Landscape" priced by area reads "Area"; a fixed price measures
+ * nothing, so its billing unit is the input.
+ */
+export const primaryInputLabel = (serviceName, pricingMethod, unit) => {
+  const dimension = INPUT_DIMENSIONS[pricingMethod];
+  if (!dimension) return '';
+  if (dimension === 'Visit') return String(unit ?? '').trim() || 'Visit';
+  const name = String(serviceName ?? '').trim();
+  if (!name || !QUALIFIED_DIMENSIONS.includes(dimension)) return dimension;
+  // "Generator Capacity", but never "Generator Capacity Capacity"
+  return new RegExp(`\\b${dimension}\\b`, 'i').test(name) ? name : `${name} ${dimension}`;
+};
+
 export const getServiceDescription = (service) => {
   if (service?.details) return service.details;
   const snapshot = service?.pricingSnapshot || {};
@@ -77,8 +100,26 @@ export const getServiceDescription = (service) => {
   const labels = { fixed_price: 'Fixed Price', quantity_based: 'Quantity Based', area_based: 'Area Based', capacity_based: 'Capacity Based', capacity_slab: 'Capacity Slab', manpower: 'Manpower', fixed_visit_custom: 'Fixed Visit + Custom Work', custom_quote: 'Custom Quote' };
   const field = { quantity_based: ['quantity', 'Quantity'], area_based: ['area', 'Area'], capacity_based: ['capacity', 'Capacity'], capacity_slab: ['capacity', 'Capacity'], manpower: ['personnel', 'Personnel'] }[method];
   const unit = service?.unit || snapshot.unit || '';
-  const details = [labels[method]];
-  if (field && inputs[field[0]] != null && Number.isFinite(Number(inputs[field[0]]))) details.push(`${field[1]}: ${Number(inputs[field[0]])}${unit ? ` ${unit}` : ''}`);
+  // Every configured service describes itself the same way, whatever its pricing method:
+  // category, method, derived primary input, measured amount with its unit, and the property
+  // types it applies to. Markup and every other internal figure stay out - this is what the
+  // customer reads in modals, PDFs and emails.
+  const name = getAddonName(service);
+  const category = service?.category || snapshot.category || '';
+  const propertyTypes = [service?.applicable_property_types, snapshot.applicable_property_types, service?.propertyTypeLabels]
+    .find(value => Array.isArray(value) && value.length)?.map(getPropertyTypeLabel).filter(type => type && type !== '-') || [];
+  const details = [category, labels[method]];
+  const primaryInput = primaryInputLabel(name, method, unit);
+  if (primaryInput) details.push(`Primary Input: ${primaryInput}`);
+  const hasAmount = !!field && inputs[field[0]] != null && Number.isFinite(Number(inputs[field[0]]));
+  if (hasAmount) details.push(`${field[1]}: ${Number(inputs[field[0]])}${unit ? ` ${unit}` : ''}`);
+  // The unit rides along with the amount; on its own it still has to be stated
+  else if (unit && unit !== primaryInput) details.push(`Unit: ${unit}`);
+  if (method === 'capacity_slab') {
+    const slabs = snapshot.capacity_slabs || service?.capacity_slabs;
+    const slab = Array.isArray(slabs) ? slabs.find(item => Number(inputs.capacity) >= item.capacityFrom && (item.capacityTo === null || Number(inputs.capacity) <= item.capacityTo)) : null;
+    if (slab) details.push(`Slab: ${slab.capacityFrom}${slab.capacityTo === null ? '+' : `–${slab.capacityTo}`}${unit ? ` ${unit}` : ''}`);
+  }
   if (method === 'manpower') {
     const basis = service?.manpower_basis || snapshot.manpower_basis || 'monthly';
     details.push(basis === 'per_visit' ? 'Per Visit' : 'Monthly');
@@ -92,7 +133,20 @@ export const getServiceDescription = (service) => {
       if (Number(inputs.overtime_hours_per_visit) > 0) details.push(`Overtime Hours: ${inputs.overtime_hours_per_visit} per person / visit`);
     } else if (service?.period_months || snapshot.period_months) details.push(`Period: ${service?.period_months || snapshot.period_months} months`);
   }
+  if (propertyTypes.length) details.push(`Property Types: ${propertyTypes.join(', ')}`);
   return [service?.description || service?.services?.[0]?.description || snapshot.description, details.filter(Boolean).join(' | ')].filter(Boolean).join('\n');
+};
+
+/**
+ * Default markup is internal: the FP, Admin and Manager screens may show it, and it must never
+ * reach a customer document, so it is deliberately absent from getServiceDescription.
+ */
+export const getServiceMarkup = (service) => {
+  const snapshot = service?.pricingSnapshot || {};
+  const inputs = service?.pricingInputs || service?.inputs || snapshot.inputs || {};
+  const markup = [service?.markupPercentage, inputs.markup_percentage, snapshot.default_markup_percentage,
+    service?.default_markup_percentage].find(value => value != null && Number.isFinite(Number(value)));
+  return markup == null ? null : Number(markup);
 };
 
 export const hasCatalogServices = estimate => (estimate?.estimate_type || estimate?.estimateType) === 'custom' || getEstimateAddons(estimate).some(addon => addon?.catalogServiceId || String(addon?.addonId || '').startsWith('CAT-'));
@@ -116,6 +170,8 @@ export const getPropertyTypeLabel = (type) => {
   if (upper.includes('VILLA')) return 'Villa';
   if (upper.includes('FLAT')) return 'Flat';
   if (upper.includes('PLOT')) return 'Plot';
+  // Withdrawn for new services, still resolved so older records read correctly
+  if (upper.includes('INDEPENDENT') || upper === 'IH') return 'Independent House';
   return type || '-';
 };
 

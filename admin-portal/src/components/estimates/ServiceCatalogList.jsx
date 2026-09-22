@@ -12,8 +12,11 @@ const RATE_LABELS = {
 };
 const money = value => `₹${Number(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// `showWhenEmpty` is for a screen where this list is the whole content and needs to
+// say something; elsewhere an empty panel is only noise, so it is not rendered at all.
 export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '/api/admin/service-catalog',
-  scoped = false, scopeLabel, canCreate = false, embedded = false, canEdit = service => admin?.role === 'admin' }) {
+  scoped = false, scopeLabel, canCreate = false, embedded = false, showWhenEmpty = false,
+  canEdit = service => admin?.role === 'admin' }) {
   const [editingService, setEditingService] = useState(null);
   const [creating, setCreating] = useState(false);
   const [services, setServices] = useState([]);
@@ -41,6 +44,10 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
     apiPath={apiPath} scoped={scoped} scopeLabel={scopeLabel} embedded={embedded}
     onBack={() => { setEditingService(null); setCreating(false); }} onSave={() => setRefresh(value => value + 1)} />;
 
+  // Nothing to list and nothing to say: no header, no empty message, no card. A failure
+  // and a create action of its own both still have to be shown.
+  if (!services.length && !error && !canCreate && !showWhenEmpty) return null;
+
   return <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
     <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
       <div><h3 className="font-semibold text-slate-800">Configured Services</h3><p className="mt-1 text-xs text-slate-500">{loading ? 'Loading...' : `${services.length} service(s)`} · Pricing configurations for estimates</p></div>
@@ -63,6 +70,7 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
             <div><dt className="text-xs text-slate-500">Scope</dt><dd className="mt-1">{service.franchise_partner_id ? `FP ${service.franchise_partner_id}` : 'All FPs'}</dd></div>
             <div><dt className="text-xs text-slate-500">Default markup</dt><dd className="mt-1">{service.default_markup_percentage}%</dd></div>
             <div><dt className="text-xs text-slate-500">Frequency override / Manual visits</dt><dd className="mt-1">{service.allow_frequency_override ? 'Allowed' : 'Not allowed'} / {service.allow_manual_visits ? 'Allowed' : 'Not allowed'}</dd></div>
+            <div><dt className="text-xs text-slate-500">Vendor</dt><dd className="mt-1">{service.skip_vendor_assignment ? 'Arranged without a vendor - not scheduled' : 'Assigned and scheduled'}</dd></div>
             {Object.entries(RATE_LABELS).filter(([field]) => service[field] != null).map(([field, label]) => <div key={field}><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1">{money(service[field])}</dd></div>)}
             {service.pricing_method === 'manpower' && (service.manpower_basis === 'per_visit' ? <>
               <div><dt className="text-xs text-slate-500">Pricing basis</dt><dd className="mt-1">Per person per visit</dd></div>

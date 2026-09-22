@@ -275,4 +275,23 @@ test('catalog API permissions, persistence contract, quoting and estimate valida
     assert.match(addon.details, /Quantity: 10 Camera/);
     assert.equal(addon.totalPrice, 13500);
   });
+  // Last, because it adds a service and the checks above count the existing ones
+  await t.test('the Do Not Assign Vendor toggle is saved, read back and editable', async () => {
+    // Off unless the form says otherwise, which is how every service saved before it behaves
+    assert.equal((await request('/catalog')).data[0].skip_vendor_assignment, false);
+    const fixed = { ...config, service_name: 'Garden Upkeep', pricing_method: 'fixed_price', unit: 'Visit', fixed_price: 800 };
+    const created = await request('/catalog', 'POST', { ...fixed, skip_vendor_assignment: true });
+    assert.equal(created.status, 201);
+    assert.equal(created.data.skip_vendor_assignment, true);
+    // Read back out of the stored configuration, so it survives the round trip
+    const saved = (await request('/catalog')).data.find(service => service.service_name === 'Garden Upkeep');
+    assert.equal(saved.skip_vendor_assignment, true);
+    // The service itself is untouched: it still quotes exactly as configured
+    assert.equal((await request(`/catalog/${saved.id}/quote`, 'POST', { property_type: 'APT' })).data.totalPrice, 14400);
+    // Switching it back off is a plain edit
+    const edited = await request(`/catalog/${saved.id}`, 'PUT', { ...fixed, skip_vendor_assignment: false });
+    assert.equal(edited.status, 200);
+    assert.equal(edited.data.skip_vendor_assignment, false);
+    assert.equal((await request('/catalog')).data.find(service => service.service_name === 'Garden Upkeep').skip_vendor_assignment, false);
+  });
 });

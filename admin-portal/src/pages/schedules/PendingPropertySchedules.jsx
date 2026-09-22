@@ -1024,14 +1024,20 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                   {selectedProperty.services.map((service, index) => (
                     <div 
                       key={index} 
+                      // A service configured with "Do Not Assign Vendor" is arranged without one,
+                      // so it is neither assigned nor awaiting an assignment
+                      title={service.vendorRequired === false ? 'Arranged without a vendor' : undefined}
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
-                        service.vendorAssigned 
+                        service.vendorRequired === false
+                          ? 'bg-gray-100 text-gray-500'
+                          : service.vendorAssigned
                           ? 'bg-green-100 text-green-700' 
                           : 'bg-amber-100 text-amber-700'
                       }`}
                     >
                       <Wrench className="w-3.5 h-3.5" />
                       {service.name || '-'}
+                      {service.vendorRequired === false && <span className="text-xs">· No vendor</span>}
                     </div>
                   ))}
                 </div>

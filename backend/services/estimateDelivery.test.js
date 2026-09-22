@@ -15,7 +15,8 @@ test('customer email and PDF retain catalog details, zero GST and decimals witho
     propertyCode: 'PROP-TEST', propertyType: 'APT', address: 'Saved address', createdAt: '2026-09-16', subtotal: 11700.25, total: 11700.25, tax: 0, gstPercent: 0,
     addons: [{ catalogServiceId: 1, name: 'Tank <Cleaning>', description: 'Inspect <script>unsafe</script>', totalPrice: 11700.25,
       frequency_type: 'Half-Yearly', frequency_count: 2, pricingInputs: { capacity: 10, operating_cost: 876.54, markup_percentage: 30 },
-      pricingSnapshot: { pricing_method: 'capacity_based', unit: 'KL', vendorCost: 9123.45, profit: 2700 } }]
+      pricingSnapshot: { pricing_method: 'capacity_based', unit: 'KL', category: 'Water Management', default_markup_percentage: 30,
+        applicable_property_types: ['APT', 'VILLA'], vendorCost: 9123.45, profit: 2700 } }]
   }, 'test-action-token');
   assert.equal(result.success, true);
   assert.match(mail.html, /Tank &lt;Cleaning&gt;/);
@@ -33,6 +34,13 @@ test('customer email and PDF retain catalog details, zero GST and decimals witho
   assert.match(pdfText, /PROP-TEST/);
   assert.match(pdfText, /Saved address/);
   assert.doesNotMatch(pdfText, /9123.45|876.54|vendorCost|pricingSnapshot|operating_cost/);
+  // The service's own configuration reaches both the email body and its PDF attachment
+  for (const text of ['Water Management', 'Primary Input', 'Property Types: Apartment, Villa']) {
+    assert.ok(mail.html.includes(text), `email: ${text}`);
+    assert.ok(pdfText.includes(text), `pdf: ${text}`);
+  }
+  // Markup is internal, so it is in neither
+  assert.doesNotMatch(mail.html + pdfText, /[Mm]arkup/);
 });
 
 test('manpower email and PDF show the selected range, personnel and overtime without internal rates', async t => {

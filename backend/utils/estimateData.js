@@ -1,4 +1,4 @@
-const { normalizePropertyType } = require('./servicePricing');
+const { normalizePropertyType, primaryInputLabel, propertyTypeLabel } = require('./servicePricing');
 const first = (...values) => values.find(value => value !== undefined && value !== null && value !== '');
 const amount = value => Number.isFinite(Number(value)) ? Number(value) : 0;
 const parse = value => {
@@ -30,10 +30,24 @@ const normalizeEstimateService = value => {
   const price = amount(catalog ? first(row.totalPrice, row.total_price, snapshot.totalPrice, row.price, nestedTotal)
     : first(row.price, row.totalPrice, row.total_price, row.calculatedPrice, nestedTotal));
   const description = String(first(row.description, inner.description, snapshot.description) ?? '');
+  const name = first(row.name, row.service_name, row.serviceName, row.service, inner.name, snapshot.service_name, 'Service');
+  // Every configured service describes itself the same way, whatever its pricing method:
+  // category, method, the derived primary input, the measured amount with its unit, and the
+  // property types it applies to. Markup and every other internal figure stay out - this
+  // string is what the customer reads in modals, PDFs and emails.
+  const category = String(first(row.category, snapshot.category, '') ?? '');
+  const propertyTypes = [row.applicable_property_types, snapshot.applicable_property_types]
+    .find(value => Array.isArray(value) && value.length)?.map(propertyTypeLabel).filter(Boolean) || [];
   const parts = [];
+  if (category) parts.push(category);
   if (METHODS[method]) parts.push(METHODS[method]);
+  const primaryInput = primaryInputLabel(name, method, unit);
+  if (primaryInput) parts.push(`Primary Input: ${primaryInput}`);
   const inputField = { quantity_based: ['quantity', 'Quantity'], area_based: ['area', 'Area'], capacity_based: ['capacity', 'Capacity'], capacity_slab: ['capacity', 'Capacity'], manpower: ['personnel', 'Personnel'] }[method];
-  if (inputField && inputs[inputField[0]] != null && Number.isFinite(Number(inputs[inputField[0]]))) parts.push(`${inputField[1]}: ${Number(inputs[inputField[0]])}${unit ? ` ${unit}` : ''}`);
+  const hasAmount = !!inputField && inputs[inputField[0]] != null && Number.isFinite(Number(inputs[inputField[0]]));
+  if (hasAmount) parts.push(`${inputField[1]}: ${Number(inputs[inputField[0]])}${unit ? ` ${unit}` : ''}`);
+  // The unit rides along with the amount; on its own it still has to be stated
+  else if (unit && unit !== primaryInput) parts.push(`Unit: ${unit}`);
   if (method === 'capacity_slab') {
     const slab = firstList(snapshot.capacity_slabs, row.capacity_slabs).find(item => Number(inputs.capacity) >= item.capacityFrom && (item.capacityTo === null || Number(inputs.capacity) <= item.capacityTo));
     if (slab) parts.push(`Slab: ${slab.capacityFrom}${slab.capacityTo === null ? '+' : `–${slab.capacityTo}`}${unit ? ` ${unit}` : ''}`);
@@ -54,9 +68,16 @@ const normalizeEstimateService = value => {
       if (months) parts.push(`Period: ${months} months`);
     }
   }
+  if (propertyTypes.length) parts.push(`Property Types: ${propertyTypes.join(', ')}`);
   const serviceDetails = parts.join(' | ');
   const details = row.details && row.serviceDetails === serviceDetails ? row.details : [row.serviceDetails ? description : row.details || description, serviceDetails].filter(Boolean).join('\n');
-  return { ...row, name: first(row.name, row.service_name, row.serviceName, row.service, inner.name, snapshot.service_name, 'Service'),
+  // Internal only: the staff portals show the markup beside the price, and customerEstimateData
+  // never projects it, so it cannot reach a customer document.
+  const markupPercentage = first(inputs.markup_percentage, snapshot.default_markup_percentage);
+  // propertyTypeLabels is added rather than rewriting applicable_property_types, which keeps
+  // holding the codes the validator and the pricing quote expect
+  return { ...row, name, category, propertyTypeLabels: propertyTypes,
+    primaryInput, markupPercentage: markupPercentage == null ? undefined : amount(markupPercentage),
     description, details, serviceDetails, pricing_method: method, unit, frequencyType, frequency_type: frequencyType,
     frequencyCount, frequency_count: frequencyCount, price, totalPrice: price };
 };

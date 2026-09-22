@@ -9,6 +9,7 @@ const { pool } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { fetchScheduleStats, derivedStatusFilter } = require('../utils/scheduleStats');
 const { orNull, isRecentlyAdded, formatPaymentStatus } = require('../utils/pendingProperties');
+const { fetchVendorlessServiceNames, serviceNeedsVendor } = require('../utils/vendorlessServices');
 const { 
   adminOnly,
   managerOrAdmin,
@@ -383,6 +384,9 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
       serviceSchedules = schedules;
     }
 
+    // Services arranged without a vendor: they never count as awaiting one
+    const vendorlessNames = await fetchVendorlessServiceNames(userFpId && !isAdmin ? userFpId : null);
+
     // Parse service rows and calculate service counts
     const processedProperties = properties.map(p => {
       let services = [];
@@ -402,7 +406,27 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
       const propertySchedules = serviceSchedules.filter(ss => ss.property_id === p.id);
       
       const assignedVendors = p.assignedVendors || 0;
-      const pendingServices = Math.max(0, totalServices - assignedVendors);
+      const serviceRows = (Array.isArray(services) ? services : []).map(s => {
+        const serviceName = s.service || s.name || s.serviceType;
+        // Find matching service schedule for dates and vendor
+        const schedule = propertySchedules.find(ps =>
+          ps.service_name?.toLowerCase() === serviceName?.toLowerCase()
+        );
+        return {
+          name: serviceName,
+          frequency: s.frequencyType || 'Monthly',
+          frequencyCount: s.frequencyCount || 1,
+          visits: s.frequencyCount || 1,
+          vendorRequired: serviceNeedsVendor(serviceName, vendorlessNames),
+          vendorAssigned: !!schedule?.vendor_id,
+          vendorName: schedule?.vendor_name || schedule?.vendor_owner || null,
+          scheduleDate: schedule?.start_date || null,
+          targetDate: schedule?.end_date || null
+        };
+      });
+      // Counted from the rows, so a service arranged without a vendor never leaves the
+      // property waiting for one
+      const pendingServices = serviceRows.filter(row => row.vendorRequired && !row.vendorAssigned).length;
       
       return {
         id: p.id,
@@ -422,26 +446,11 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
         totalServices: totalServices,
         assignedVendors: Math.min(assignedVendors, totalServices),
         pendingServices: pendingServices,
+        vendorlessServices: serviceRows.filter(row => !row.vendorRequired).length,
         paymentStatus: formatPaymentStatus(p.paymentStatus),
         addedOn: p.addedOn,
         isNew: isRecentlyAdded(p.addedOn),
-        services: services.map(s => {
-          const serviceName = s.service || s.name || s.serviceType;
-          // Find matching service schedule for dates and vendor
-          const schedule = propertySchedules.find(ps => 
-            ps.service_name?.toLowerCase() === serviceName?.toLowerCase()
-          );
-          return {
-            name: serviceName,
-            frequency: s.frequencyType || 'Monthly',
-            frequencyCount: s.frequencyCount || 1,
-            visits: s.frequencyCount || 1,
-            vendorAssigned: !!schedule?.vendor_id,
-            vendorName: schedule?.vendor_name || schedule?.vendor_owner || null,
-            scheduleDate: schedule?.start_date || null,
-            targetDate: schedule?.end_date || null
-          };
-        })
+        services: serviceRows
       };
     });
 
@@ -1054,6 +1063,9 @@ router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async
       console.log('[Property Services] Debug - property info:', debugProperty);
     }
 
+    // Services arranged without a vendor, so none is demanded for them here
+    const vendorlessNames = await fetchVendorlessServiceNames(req.user?.franchisePartnerId || req.user?.fpId || null);
+
     // Get vendor assignments for this property (use resolved ID)
     const [vendorAssignments] = await pool.execute(
       `SELECT pva.service_type, pva.vendor_id, 
@@ -1149,6 +1161,9 @@ router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async
             frequencyType: (s.frequencyType || s.frequency || 'monthly').toLowerCase().replace(/[\s-]/g, '_'),
             frequencyCount: s.frequencyCount || 1,
             totalVisits: s.frequencyCount || s.visits || 12,
+            // A service configured with "Do Not Assign Vendor" is arranged without one, so the
+            // scheduling screen must not hold the property open waiting for a vendor
+            vendorRequired: serviceNeedsVendor(serviceName, vendorlessNames),
             vendorId: scheduleInfo.vendorId || vendorInfo.vendorId || null,
             vendorCode: scheduleInfo.vendorCode || vendorInfo.vendorCode || null,
             vendorName: hasVendor ? (scheduleInfo.vendorName || vendorInfo.vendorName) : 'Unassigned',

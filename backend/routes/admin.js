@@ -9,7 +9,7 @@ const { fetchScheduleStats, fetchScheduledVendors, derivedStatusFilter, fetchSch
 const { resolveVendor, upsertPropertyVendorAssignment } = require('../utils/vendorAssignments');
 const { packagePropertyTypes } = require('../utils/packagePropertyTypes');
 const {
-  orNull, isRecentlyAdded, formatPaymentStatus, fetchServiceVendorMap, mapPendingServices
+  orNull, isRecentlyAdded, formatPaymentStatus, fetchServiceVendorMap, mapPendingServices, fetchVendorlessServiceNames
 } = require('../utils/pendingProperties');
 // Rate limiting for login endpoints (5 attempts per 15 minutes)
 const { loginRateLimiter } = require('../middleware/security');
@@ -4543,6 +4543,8 @@ router.get('/schedules/pending-properties', authenticate, async (req, res) => {
 
     // Real per-service vendor details, so service rows are not all reported as unassigned
     const serviceVendorMap = await fetchServiceVendorMap(properties.map(p => p.id));
+    // Services arranged without a vendor, across every scope this feed can show
+    const vendorlessNames = await fetchVendorlessServiceNames();
 
     // Parse service rows and calculate service counts
     const processedProperties = properties.map(p => {
@@ -4560,7 +4562,10 @@ router.get('/schedules/pending-properties', authenticate, async (req, res) => {
       }
       
       const assignedVendors = p.assignedVendors || 0;
-      const pendingServices = Math.max(0, totalServices - assignedVendors);
+      const serviceRows = mapPendingServices(services, p.id, serviceVendorMap, vendorlessNames);
+      // Counted from the rows, so a service arranged without a vendor never leaves the
+      // property waiting for one
+      const pendingServices = serviceRows.filter(row => row.vendorRequired && !row.vendorAssigned).length;
       
       return {
         id: p.id,
@@ -4580,11 +4585,12 @@ router.get('/schedules/pending-properties', authenticate, async (req, res) => {
         totalServices: totalServices,
         assignedVendors: Math.min(assignedVendors, totalServices),
         pendingServices: pendingServices,
+        vendorlessServices: serviceRows.filter(row => !row.vendorRequired).length,
         paymentStatus: formatPaymentStatus(p.paymentStatus),
         addedOn: p.addedOn,
         fpId: p.fpId,
         isNew: isRecentlyAdded(p.addedOn),
-        services: mapPendingServices(services, p.id, serviceVendorMap)
+        services: serviceRows
       };
     });
 

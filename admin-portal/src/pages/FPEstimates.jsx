@@ -17,7 +17,7 @@ import {
 } from '../utils/estimateStore';
 import { getAuthToken } from '../utils/safeStorage';
 import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
-import { getServiceDescription, hasCatalogServices } from '../utils/estimatePackageUtils';
+import { getServiceDescription, getServiceMarkup, hasCatalogServices } from '../utils/estimatePackageUtils';
 import * as XLSX from 'xlsx';
 import AutocompleteInput from '../components/common/AutocompleteInput';
 import AddServicePage from '../components/estimates/AddServicePage';
@@ -679,19 +679,28 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const catalogAddonsTotal = catalogAddons.reduce((sum, addon) => sum + (parseFloat(addon.totalPrice) || 0), 0);
   const removeCatalogAddon = (addonId) => setCatalogAddons(prev => prev.filter(addon => addon.addonId !== addonId));
 
+  // Configured services switched to "Do Not Assign Vendor" are arranged without one, so no
+  // vendor is offered or sent for them
+  const vendorlessServiceNames = () => new Set(catalogAddons
+    .filter(addon => addon.skip_vendor_assignment)
+    .map(addon => String(addon.name || addon.service_name || '').trim())
+    .filter(Boolean));
+
   // Services on the estimate: the package's own rows plus any configured services added
   const estimateServiceNames = () => {
     const pkg = getSelectedPackage();
+    const vendorless = vendorlessServiceNames();
     const names = [
       ...(pkg?.parsedServices || []).map(row => row.service || row.name || ''),
       ...catalogAddons.map(addon => addon.name || addon.service_name || '')
     ];
-    return [...new Set(names.map(name => String(name).trim()).filter(Boolean))];
+    return [...new Set(names.map(name => String(name).trim()).filter(Boolean))].filter(name => !vendorless.has(name));
   };
 
-  // Yes/No answer plus, when Yes, one vendor per service
+  // Yes/No answer plus, when Yes, one vendor per service that needs one
   const renderVendorAssignment = () => {
     const services = estimateServiceNames();
+    const vendorless = [...vendorlessServiceNames()];
     return (
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -729,6 +738,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   </label>
                 ))}
               </div>
+            )}
+            {vendorless.length > 0 && (
+              <p className="mt-3 text-xs text-gray-500">Arranged without a vendor, so not scheduled: {vendorless.join(', ')}</p>
             )}
             {!fpVendors.length && <p className="mt-3 text-xs text-amber-700">No vendors are onboarded yet, so vendors will have to be assigned later.</p>}
           </div>
@@ -3663,7 +3675,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
       {/* Creating opens the form in place; managers cannot author, so they get the list */}
       {addonActiveTab === 'configured' && (isFPManager
-        ? <ServiceCatalogList apiPath={FP_CATALOG_API} admin={user} showToast={showToast} scoped
+        ? <ServiceCatalogList apiPath={FP_CATALOG_API} admin={user} showToast={showToast} scoped showWhenEmpty
             scopeLabel="For your franchise" canEdit={() => false} />
         : <AddServicePage key={catalogEntry} admin={user} showToast={showToast} apiPath={FP_CATALOG_API} scoped embedded
             leading={renderAddonTabs()} trailing={renderAddServiceAction()} scopeLabel="For your franchise"
@@ -4299,6 +4311,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           ) || addonFromList;
                         }
                         const addonDescription = decodeHtml(getServiceDescription(addon) || addonFromList?.description) || '';
+                        // Internal figure: shown on this staff screen only, never in a customer document
+                        const addonMarkup = getServiceMarkup(addon);
                         const frequencyCount = addon.frequency_count ?? addon.frequencyCount ?? addonFromList?.frequency_count ?? 1;
                         const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
                         return (
@@ -4311,6 +4325,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                             </div>
                             <div className="col-span-4">
                               <p className="text-xs text-gray-500 break-words whitespace-normal">{addonDescription || '-'}</p>
+                              {addonMarkup != null && <p className="mt-1 text-[10px] text-gray-400">Markup: {addonMarkup}% (internal)</p>}
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>
