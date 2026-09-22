@@ -69,6 +69,41 @@ export const getAddonPrice = (addon) => {
   return Number(price ?? addon?.calculatedPrice ?? nestedTotal ?? 0) || 0;
 };
 
+/**
+ * The unit master. Every unit belongs to exactly one unit type, and a pricing method offers the
+ * types it actually measures, so Area Based lists only area units and Manpower only headcount and
+ * billing units. Mirrors UNIT_TYPES and METHOD_UNITS in backend/utils/servicePricing.js, which
+ * validates the unit on save, so a unit added on one side must be added on the other.
+ */
+export const UNIT_TYPES = [
+  { type: 'count', label: 'Count / Quantity', units: ['Nos', 'Unit', 'Each', 'Lift', 'Camera', 'Tank', 'Generator', 'AC Unit', 'Motor', 'Pump', 'System', 'Flat', 'Villa', 'Plot', 'Room', 'Floor'] },
+  { type: 'area', label: 'Area', units: ['Sq Ft', 'Sq M', 'Sq Yard', 'Acre'] },
+  // 'Persons' is a capacity rating, as in a lift rated for 10 persons; a headcount is 'Person'
+  { type: 'capacity', label: 'Capacity', units: ['KL', 'Liter', 'LPH', 'KVA', 'kW', 'HP', 'Ton', 'KG', 'Persons'] },
+  { type: 'manpower', label: 'Manpower', units: ['Person', 'Staff', 'Guard', 'Worker', 'Technician', 'Housekeeper', 'Supervisor'] },
+  { type: 'billing', label: 'Time / Billing', units: ['Visit', 'Hour', 'Day', 'Shift', 'Month', 'Year'] },
+  { type: 'general', label: 'General', units: ['Job', 'Service', 'Package', 'Lot', 'Lump Sum'] }
+];
+const unitsOfType = (type) => UNIT_TYPES.find(item => item.type === type)?.units ?? [];
+// Fixed Price bills per visit, service or job, so it takes those three rather than every time and
+// general unit: its unit is also its Primary Input, and 'Lot' measures nothing a visit can bill.
+const METHOD_UNITS = {
+  fixed_price: ['Visit', 'Service', 'Job'],
+  quantity_based: unitsOfType('count'),
+  area_based: unitsOfType('area'),
+  capacity_based: unitsOfType('capacity'),
+  capacity_slab: unitsOfType('capacity'),
+  manpower: [...unitsOfType('manpower'), ...unitsOfType('billing')]
+};
+export const unitOptionsFor = (pricingMethod) => METHOD_UNITS[pricingMethod] ?? [];
+
+// The same options grouped by unit type, so the dropdown names what it is offering
+export const unitGroupsFor = (pricingMethod) => {
+  const options = unitOptionsFor(pricingMethod);
+  return UNIT_TYPES.map(({ type, label }) => ({ type, label, units: options.filter(unit => unitsOfType(type).includes(unit)) }))
+    .filter(group => group.units.length);
+};
+
 // What each pricing method measures, and which dimensions need the service name to say what
 // is being measured. Mirrors INPUT_DIMENSIONS in backend/utils/servicePricing.js.
 const INPUT_DIMENSIONS = { fixed_price: 'Visit', quantity_based: 'Quantity', area_based: 'Area',
