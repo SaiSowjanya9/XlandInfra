@@ -1666,6 +1666,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 />
               </div>
             </div>
+
+            {/* Terms & Conditions - included by default, and the text travels with the estimate */}
+            <TermsConditionsField include={includeTerms} onIncludeChange={setIncludeTerms}
+              terms={termsConditions} onTermsChange={setTermsConditions} />
           </div>
 
           {/* Right column - pricing & package summary */}
