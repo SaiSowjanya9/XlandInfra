@@ -428,10 +428,11 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
       </header>
       {formError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{formError}</div>}
       <fieldset disabled={isSubmitting} className="min-w-0 space-y-5">
-        {/* Main Content */}
-        <div className="grid gap-5 xl:grid-cols-3">
+        {/* Main Content. The sidebar is a quarter of the width rather than a third: its cards are
+            narrow content, while the Capacity Slab table needs the room to show all eight columns */}
+        <div className="grid gap-5 xl:grid-cols-4">
           {/* Left Column - Main Form */}
-          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm xl:col-span-2">
+          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm xl:col-span-3">
             {/* 1. Basic Information */}
             <div className="p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold">Basic Information</h2>
@@ -475,7 +476,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             {isCapacitySlab && <div className="border-t border-slate-100 p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold text-blue-600">Capacity Slab Configuration</h2>
               <div className="overflow-x-auto rounded-lg border border-slate-200">
-                <table className="w-full min-w-[1000px] text-left text-xs">
+                <table className="w-full min-w-[900px] text-left text-xs">
                   <thead className="border-b border-slate-200 bg-slate-50 text-slate-500"><tr>
                     <th className="px-3 py-3">Slab Name</th><th className="px-3 py-3">Capacity From</th><th className="px-3 py-3">Capacity To</th><th className="px-3 py-3">Unit</th><th className="px-3 py-3">Rate Per Visit (₹)</th><th className="px-3 py-3">Default Frequency</th><th className="px-3 py-3">Default Visits Per Year</th><th className="px-3 py-3 text-center">Action</th>
                   </tr></thead>
@@ -488,10 +489,10 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                     </div></td>
                     <td className="px-3 py-3 text-slate-500">{formData.unit}</td>
                     <td className="px-3 py-3"><div className="space-y-2">
-                      {!slab.isCustomQuote && <input aria-label={`Slab ${index + 1} vendor rate`} type="number" min="0" max={1e9} step="0.01" required value={slab.vendorRate ?? ''} onChange={event => updateCapacitySlab(slab.id, 'vendorRate', event.target.value)} className={`${inputClass} min-w-[130px]`} />}
+                      {!slab.isCustomQuote && <input aria-label={`Slab ${index + 1} vendor rate`} type="number" min="0" max={1e9} step="0.01" required value={slab.vendorRate ?? ''} onChange={event => updateCapacitySlab(slab.id, 'vendorRate', event.target.value)} className={`${inputClass} min-w-[110px]`} />}
                       <label className="flex items-center gap-2 text-xs text-slate-500"><input type="checkbox" checked={slab.isCustomQuote} onChange={event => updateCapacitySlab(slab.id, 'isCustomQuote', event.target.checked)} className="accent-blue-600" />Custom Quote</label>
                     </div></td>
-                    <td className="px-3 py-3"><select aria-label={`Slab ${index + 1} default frequency`} value={slab.defaultFrequency} onChange={event => updateCapacitySlab(slab.id, 'defaultFrequency', event.target.value)} className={`${inputClass} min-w-[145px]`}>{FREQUENCY_OPTIONS.map(item => <option key={item.value}>{item.value}</option>)}</select></td>
+                    <td className="px-3 py-3"><select aria-label={`Slab ${index + 1} default frequency`} value={slab.defaultFrequency} onChange={event => updateCapacitySlab(slab.id, 'defaultFrequency', event.target.value)} className={`${inputClass} min-w-[130px]`}>{FREQUENCY_OPTIONS.map(item => <option key={item.value}>{item.value}</option>)}</select></td>
                     <td className="px-3 py-3"><input aria-label={`Slab ${index + 1} default visits per year`} type="number" min="0" max="366" step="1" required readOnly={!formData.allowManualVisits} value={slab.defaultVisitsPerYear} onChange={event => updateCapacitySlab(slab.id, 'defaultVisitsPerYear', event.target.value)} className={`${inputClass} min-w-[90px] ${!formData.allowManualVisits ? 'bg-slate-50' : ''}`} /></td>
                     <td className="px-3 py-3 text-center"><button type="button" aria-label={`Delete slab ${index + 1}`} disabled={capacitySlabs.length === 1} onClick={() => deleteCapacitySlab(slab.id)} className="rounded p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button></td>
                   </tr>)}</tbody>
