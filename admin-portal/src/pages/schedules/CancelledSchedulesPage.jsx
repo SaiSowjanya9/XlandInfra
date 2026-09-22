@@ -5,7 +5,7 @@ import {
   XCircle, RotateCcw, X, Calendar, Clock, User, Building2, Download
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
-import { scheduleFilterOptions, matchesScheduleFilter } from '../../utils/scheduleFilterOptions';
+import { filterOptions, matchesFilter } from '../../utils/filterOptions';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -135,8 +135,8 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
       const cancelledAt = schedule.cancelled_at ? new Date(schedule.cancelled_at) : null;
       if (days && (!cancelledAt || Date.now() - cancelledAt.getTime() > days * 24 * 60 * 60 * 1000)) return false;
     }
-    return matchesScheduleFilter(schedule, 'service', filters.service)
-      && matchesScheduleFilter(schedule, 'zone', filters.zone);
+    return matchesFilter(schedule, 'service', filters.service)
+      && matchesFilter(schedule, 'zone', filters.zone);
   });
 
   // Pagination
@@ -147,8 +147,8 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
   );
 
   // Get unique values for filters - only what these cancelled visits contain
-  const services = scheduleFilterOptions(cancelledSchedules, 'service');
-  const zones = scheduleFilterOptions(cancelledSchedules, 'zone');
+  const services = filterOptions(cancelledSchedules, 'service');
+  const zones = filterOptions(cancelledSchedules, 'zone');
   const cancelledByRoles = [...new Set(cancelledSchedules.map(s => s.cancelled_by_role).filter(Boolean))].sort();
 
   const handleViewDetails = (schedule) => {

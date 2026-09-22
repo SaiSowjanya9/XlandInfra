@@ -45,12 +45,11 @@ import {
   getEmployeeNotifications,
   markAllEmployeeNotificationsRead,
 } from '../utils/employeeStore';
-import { getZones } from '../utils/zoneStore';
+import { filterOptions } from '../utils/filterOptions';
 
 const EmployeeDetails = () => {
   const navigate = useNavigate();
   const [employees, setEmployees] = useState([]);
-  const [zones, setZones] = useState([]);
   const [statusFilter, setStatusFilter] = useState('active');
   const [searchTerm, setSearchTerm] = useState('');
   const [zoneFilter, setZoneFilter] = useState('');
@@ -131,12 +130,10 @@ const EmployeeDetails = () => {
       } else {
         setEmployees([]);
       }
-      setZones(getZones('active'));
     } catch (error) {
       console.error('Error fetching employees:', error);
       // Fallback to localStorage
       setEmployees(getEmployees(statusFilter));
-      setZones(getZones('active'));
     } finally {
       setLoading(false);
     }
@@ -251,6 +248,10 @@ const EmployeeDetails = () => {
     if (Array.isArray(zones)) return zones.join(', ');
     return '-';
   };
+
+  // The zone dropdown offers the zones these employees are assigned to. 'all' is an assignment,
+  // not a zone, so it is never offered as one.
+  const zones = filterOptions(employees, 'zone').filter(z => z !== 'all');
 
   const filteredEmployees = employees.filter(e => {
     if (searchTerm) {
@@ -380,7 +381,7 @@ const EmployeeDetails = () => {
             >
               <option value="">All Zones</option>
               {zones.map(z => (
-                <option key={z.id} value={z.name}>{z.name}</option>
+                <option key={z} value={z}>{z}</option>
               ))}
             </select>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
