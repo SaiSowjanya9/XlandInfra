@@ -18,6 +18,8 @@ import {
 import { getAuthToken } from '../utils/safeStorage';
 import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
 import { getServiceDescription, getServiceMarkup, hasCatalogServices } from '../utils/estimatePackageUtils';
+import { TermsConditionsField, EstimateTermsSection } from '../components/estimates/EstimateTerms';
+import { newEstimateTerms } from '../utils/estimateTerms';
 import * as XLSX from 'xlsx';
 import AutocompleteInput from '../components/common/AutocompleteInput';
 import AddServicePage from '../components/estimates/AddServicePage';
@@ -228,6 +230,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [editingAddon, setEditingAddon] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [viewEstimate, setViewEstimate] = useState(null);
+  // Terms & Conditions: on by default for a new estimate, editable before saving
+  const [includeTerms, setIncludeTerms] = useState(newEstimateTerms().includeTerms);
+  const [termsConditions, setTermsConditions] = useState(newEstimateTerms().termsConditions);
   const [editEstimate, setEditEstimate] = useState(null);
   const [editEstimateForm, setEditEstimateForm] = useState(null);
   const [savingEstimate, setSavingEstimate] = useState(false);
@@ -805,6 +810,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       gstPercent: parseFloat(estimate.gst_percent) || 0,
       gstAmount: parseFloat(estimate.gst_amount) || 0,
       description: estimate.description || '',
+      // Terms & Conditions, printed only when the estimate carries them
+      includeTerms: estimate.includeTerms ?? estimate.include_terms,
+      termsConditions: estimate.termsConditions ?? estimate.terms_conditions,
       // Include package services with descriptions
       packageServices: packageServices.map(s => ({
         name: s.service || s.name || s.serviceName || 'Service',
@@ -1192,7 +1200,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         gst_percent: estimateForm.gst,
         gst_amount: pricing.gstAmt,
         total_amount: pricing.total,
-        description: estimateForm.description || ''
+        description: estimateForm.description || '',
+        includeTerms,
+        termsConditions
       };
 
       const res = await fetch(`${API_BASE}/api/fp/estimates`, {
@@ -2052,6 +2062,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               />
             </div>
           </div>
+
+          {/* Terms & Conditions - included by default, and the text travels with the estimate */}
+          <TermsConditionsField include={includeTerms} onIncludeChange={setIncludeTerms}
+            terms={termsConditions} onTermsChange={setTermsConditions} />
 
           {/* Footer Note */}
           <div className="text-xs text-gray-500 border-t border-gray-200 pt-4">
@@ -4281,6 +4295,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{viewEstimate.description}</p>
                 </div>
               )}
+
+              {/* Terms & Conditions - shown only when this estimate carries them */}
+              <EstimateTermsSection estimate={viewEstimate} className="border-t border-gray-100 pt-4" />
 
               {/* Created By */}
               <div className="border-t border-gray-100 pt-4 text-xs text-gray-400">

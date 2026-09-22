@@ -1,6 +1,8 @@
 ﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
+import { TermsConditionsField, EstimateTermsSection } from '../components/estimates/EstimateTerms';
+import { newEstimateTerms } from '../utils/estimateTerms';
 import {
   FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
   List, ChevronDown, ChevronLeft, ChevronRight, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
@@ -192,6 +194,9 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
   const [addonForm, setAddonForm] = useState({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' });
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [viewEstimate, setViewEstimate] = useState(null);
+  // Terms & Conditions: on by default for a new estimate, editable before saving
+  const [includeTerms, setIncludeTerms] = useState(newEstimateTerms().includeTerms);
+  const [termsConditions, setTermsConditions] = useState(newEstimateTerms().termsConditions);
   const [editEstimate, setEditEstimate] = useState(null);
   const [editEstimateForm, setEditEstimateForm] = useState(null);
   const [savingEstimate, setSavingEstimate] = useState(false);
@@ -522,7 +527,9 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
         discount_amount: priceSummary.discountAmount,
         gst_percent: gstPercent,
         gst_amount: priceSummary.gstAmount,
-        total_amount: priceSummary.totalAmount
+        total_amount: priceSummary.totalAmount,
+        includeTerms,
+        termsConditions
       } : {
         estimate_type: 'property_based',
         property_id: propertyIdInput,
@@ -554,7 +561,9 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
         discount_amount: priceSummary.discountAmount,
         gst_percent: gstPercent,
         gst_amount: priceSummary.gstAmount,
-        total_amount: priceSummary.totalAmount
+        total_amount: priceSummary.totalAmount,
+        includeTerms,
+        termsConditions
       };
 
       const res = await fetch(`${API_BASE}/api/coordinator/estimates`, {
@@ -748,6 +757,9 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
           </div>
         </div>
       </div>
+
+      {/* Terms & Conditions - included by default, and the text travels with the estimate */}
+      <TermsConditionsField include={includeTerms} onIncludeChange={setIncludeTerms} terms={termsConditions} onTermsChange={setTermsConditions} />
 
       {/* Footer Note & Buttons */}
       <div className="flex items-center justify-between">
@@ -2184,6 +2196,9 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                   <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{viewEstimate.description}</p>
                 </div>
               )}
+
+              {/* Terms & Conditions - shown only when this estimate carries them */}
+              <EstimateTermsSection estimate={viewEstimate} className="border-t border-gray-100 pt-4" />
 
               {/* Created By */}
               <div className="border-t border-gray-100 pt-4 text-xs text-gray-400">

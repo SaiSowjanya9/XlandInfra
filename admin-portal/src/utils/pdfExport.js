@@ -2,6 +2,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getEstimateAddons, getAddonPrice, getServiceDescription } from './estimatePackageUtils';
+import { estimateTermsLines } from './estimateTerms';
 import { XLAND_LOGO_ICON } from './logoIconBase64.js';
 
 // Debug logger - only logs in development
@@ -633,6 +634,34 @@ const generatePDF = (data, type, filename) => {
       y += noteLines.length * 4 + 6;
     }
 
+    // ===== TERMS & CONDITIONS - last section, only when the estimate carries them =====
+    const termsLines = estimateTermsLines(data);
+    if (termsLines.length) {
+      if (y + 16 > pageHeight - 25) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.setTextColor(...navy);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TERMS & CONDITIONS', margin, y);
+      y += 6;
+
+      doc.setTextColor(...darkText);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      termsLines.forEach((clause, index) => {
+        const wrapped = doc.splitTextToSize(`${index + 1}. ${decodeHtml(String(clause))}`, pageWidth - margin * 2 - 4);
+        if (y + wrapped.length * 3.6 > pageHeight - 25) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.text(wrapped, margin + 2, y);
+        y += wrapped.length * 3.6 + 2;
+      });
+      y += 4;
+    }
+
     // ===== FOOTER =====
     const footerY = pageHeight - 12;
     doc.setDrawColor(...borderLight);
@@ -839,7 +868,10 @@ export const exportEstimateToPDF = (estimate) => {
       workOrderSubcategory: estimate.work_order_subcategory || estimate.workOrderSubcategory,
       workOrderDescription: estimate.work_order_description || estimate.workOrderDescription,
       workOrderPriority: estimate.work_order_priority || estimate.workOrderPriority,
-      workOrderStatus: estimate.work_order_status || estimate.workOrderStatus
+      workOrderStatus: estimate.work_order_status || estimate.workOrderStatus,
+      // Terms & Conditions, printed only when the estimate was created with them
+      includeTerms: estimate.includeTerms ?? estimate.include_terms,
+      termsConditions: estimate.termsConditions ?? estimate.terms_conditions
     };
 
     debug('[PDF] Generating PDF for:', exportData.estimateId);

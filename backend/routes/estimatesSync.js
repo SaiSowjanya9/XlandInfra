@@ -1,5 +1,6 @@
 const express = require('express');
 const { normalizeEstimateData, hasCatalogServices } = require('../utils/estimateData');
+const { estimateTermsColumns } = require('../utils/estimateTerms');
 const router = express.Router();
 const crypto = require('crypto');
 const db = require('../config/database');
@@ -151,6 +152,8 @@ router.post('/', authenticate, requireRole('admin'), require('./serviceCatalog')
     
     const pool = db.pool;
     const titleValue = customerName || propertyName || communityName || 'Direct Estimate';
+    // Whether this estimate carries Terms & Conditions, and the text the creator saw
+    const estimateTerms = estimateTermsColumns(req.body);
     
     // created_by is NOT NULL; record the authenticated admin instead of guessing a user
     const createdById = req.user.id;
@@ -162,8 +165,9 @@ router.post('/', authenticate, requireRole('admin'), require('./serviceCatalog')
         services, addons, subtotal, discount, tax, total,
         notes, status, valid_until,
         property_id, community_name, zone, division, no_of_visits, description, package_name, package_id,
+        include_terms, terms_conditions,
         is_active, is_archived, estimate_type, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         estimateId,
         titleValue,  // title is NOT NULL
@@ -190,6 +194,8 @@ router.post('/', authenticate, requireRole('admin'), require('./serviceCatalog')
         finalDescription,
         packageName || null,
         packageId || null,
+        estimateTerms.include_terms,
+        estimateTerms.terms_conditions,
         1,  // is_active = 1
         0,  // is_archived = false
         'direct',  // estimate_type
