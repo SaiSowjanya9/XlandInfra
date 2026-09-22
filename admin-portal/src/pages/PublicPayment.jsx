@@ -702,7 +702,7 @@ const PublicPayment = () => {
               </div>
               <div className="text-right flex-shrink-0">
                 <p className="text-xs text-gray-500">Processing Fee</p>
-                <p className="text-sm font-semibold text-gray-700">2% + GST <span className="text-gray-400 cursor-help">ⓘ</span></p>
+                <p className="text-sm font-semibold text-gray-700">2% <span className="text-gray-400 cursor-help">ⓘ</span></p>
                 <div className="mt-2 space-y-1">
                   <p className="text-xs text-gray-500">Secure Payment</p>
                   <p className="text-xs text-green-600 flex items-center gap-1 justify-end">

@@ -142,14 +142,22 @@ const NoFeesIndicator = () => (
   </div>
 );
 
+// Gateway processing fee, shown the same way on every Razorpay-routed method (cards and UPI).
+// GST is not named here: it is applied when the invoice is created.
+const ProcessingFee = () => (
+  <>
+    <p className="text-gray-500 text-[10px]">Processing Fee</p>
+    <div className="flex items-center justify-end gap-1 mt-0.5">
+      <span className="text-gray-900 font-semibold text-sm">2%</span>
+      <HelpCircle className="w-3 h-3 text-gray-400" />
+    </div>
+  </>
+);
+
 // Fee indicator for Card/Net Banking - matching Image 1 layout
 const FeeIndicator = () => (
   <div className="text-right flex-shrink-0">
-    <p className="text-gray-500 text-[10px]">Processing Fee</p>
-    <div className="flex items-center justify-end gap-1 mt-0.5">
-      <span className="text-gray-900 font-semibold text-sm">2% + GST</span>
-      <HelpCircle className="w-3 h-3 text-gray-400" />
-    </div>
+    <ProcessingFee />
     <div className="flex items-center justify-end gap-1 mt-1.5">
       <Lock className="w-3 h-3 text-gray-400" />
       <span className="text-[10px] text-gray-500">Secure Payment</span>
@@ -1587,7 +1595,8 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-green-600 font-semibold text-xs">Instant Payment</p>
+                  <ProcessingFee />
+                  <p className="text-green-600 font-semibold text-xs mt-1.5">Instant Payment</p>
                   <div className="flex items-center justify-end gap-1 mt-0.5">
                     <Shield className="w-3 h-3 text-blue-500" />
                     <span className="text-[10px] text-blue-600 font-medium">Razorpay Secured</span>
