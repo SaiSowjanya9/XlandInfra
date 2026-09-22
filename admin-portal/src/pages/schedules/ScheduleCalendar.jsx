@@ -6,6 +6,7 @@ import {
   MapPin, User, Building2, Wrench, Truck, Phone, Mail, FileText
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import { scheduleFilterOptions } from '../../utils/scheduleFilterOptions';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -56,10 +57,6 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
   const [activeQuickFilter, setActiveQuickFilter] = useState(null);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
 
-  // Dynamic filter options from API
-  const [zones, setZones] = useState([]);
-  const [vendors, setVendors] = useState([]);
-  const [services, setServices] = useState([]);
   const [propertyTypes, setPropertyTypes] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -70,36 +67,11 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
     return zone.name || zone.zone_name || zone.zone || '';
   };
 
-  // Extract unique zones from schedules data
-  useEffect(() => {
-    if (schedules.length > 0) {
-      const uniqueZones = [...new Set(schedules.map(s => getZoneName(s.zone)).filter(Boolean))].sort();
-      setZones(uniqueZones.map(z => ({ name: z, zone_name: z })));
-    }
-  }, [schedules]);
-
-  // Fetch vendors from API
-  const fetchVendors = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_BASE}/api/vendors?status=active`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success && Array.isArray(result.data)) {
-        setVendors(result.data);
-      }
-    } catch (err) {
-      console.error('Fetch vendors error:', err);
-    }
-  }, [token]);
-
-  // Extract services from schedules data (no separate API needed)
-  useEffect(() => {
-    if (schedules.length > 0) {
-      const uniqueServices = [...new Set(schedules.map(s => s.serviceName || s.service || s.title).filter(Boolean))].sort();
-      setServices(uniqueServices);
-    }
-  }, [schedules]);
+  // Filter options are the services, vendors and zones of the visits in this calendar, so the
+  // master vendor list never offers a vendor who has nothing scheduled
+  const services = scheduleFilterOptions(schedules, 'service');
+  const vendors = scheduleFilterOptions(schedules, 'vendor');
+  const zones = scheduleFilterOptions(schedules, 'zone');
 
   // Use fallback property types (no API endpoint available)
   useEffect(() => {
@@ -187,17 +159,6 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
         });
         
         setSchedules(formattedSchedules);
-        
-        // Extract unique services and property types from fetched data for filter dropdowns
-        const uniqueServices = [...new Set(formattedSchedules.map(s => s.service).filter(Boolean))];
-        const uniquePropertyTypes = [...new Set(formattedSchedules.map(s => s.propertyType).filter(Boolean))];
-        
-        if (uniqueServices.length > 0 && services.length === 0) {
-          setServices(uniqueServices);
-        }
-        if (uniquePropertyTypes.length > 0 && propertyTypes.length === 0) {
-          setPropertyTypes(uniquePropertyTypes);
-        }
       } else {
         setSchedules([]);
       }
@@ -209,11 +170,6 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
     }
   }, [currentDate, token, apiPath]);
 
-  // Initial load
-  useEffect(() => {
-    fetchVendors();
-  }, [fetchVendors]);
-  
   // Fetch schedules when date changes
   useEffect(() => {
     fetchSchedules();
@@ -514,7 +470,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
               className="min-w-[110px] max-w-[160px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
             >
               <option value="All Vendors">All Vendors</option>
-              {vendors.map(v => <option key={v.vendorId || v.id} value={v.ownerName || v.companyName}>{v.ownerName || v.companyName}</option>)}
+              {vendors.map(v => <option key={v} value={v}>{v}</option>)}
             </select>
             
             <select 
@@ -523,7 +479,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
               className="min-w-[100px] max-w-[140px] flex-shrink-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
             >
               <option value="All Zones">All Zones</option>
-              {zones.map(z => <option key={z.name || z} value={z.name || z}>{z.name || z}</option>)}
+              {zones.map(z => <option key={z} value={z}>{z}</option>)}
             </select>
             
             <select 
@@ -929,7 +885,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                   className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                 >
                   <option value="All Zones">All Zones</option>
-                  {zones.map(z => <option key={z.name || z} value={z.name || z}>{z.name || z}</option>)}
+                  {zones.map(z => <option key={z} value={z}>{z}</option>)}
                 </select>
               </div>
               

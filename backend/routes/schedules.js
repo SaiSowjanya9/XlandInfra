@@ -2096,7 +2096,7 @@ router.get('/cancelled', authenticate, canSeeSchedule, async (req, res) => {
     let query = `
       SELECT sv.id, sv.visit_id, sv.scheduled_date, sv.scheduled_time_start, sv.scheduled_time_end,
              sv.status, sv.cancelled_at, sv.cancellation_note as reason,
-             op.property_id as property_code, op.community_name as property_name,
+             op.property_id as property_code, op.community_name as property_name, op.zone,
              pss.service_name as service, pss.service_category,
              COALESCE(ov.company_name, ov.owner_name) as vendor,
              CONCAT(u.first_name, ' ', u.last_name) as cancelled_by_name,
@@ -2175,6 +2175,7 @@ router.get('/cancelled', authenticate, canSeeSchedule, async (req, res) => {
         visit_id: c.visit_id,
         property_id: c.property_code,
         property_name: c.property_name,
+        zone: c.zone,
         service: c.service,
         vendor: c.vendor,
         scheduled_date: c.scheduled_date,
@@ -2709,11 +2710,14 @@ router.get('/reschedule-requests', authenticate, canSeeSchedule, async (req, res
              pss.service_name, pss.service_category,
              op.community_name as property_name, op.property_id as property_code, op.zone,
              ov.id as vendor_id, COALESCE(ov.company_name, ov.owner_name) as vendor_name,
+             COALESCE(NULLIF(fe.package_name, ''), fpamc.name) as package_name,
              pc.name as customer_name, pc.phone as customer_phone
       FROM scheduled_visits sv
       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
       JOIN onboarded_properties op ON op.id = sv.property_id
       LEFT JOIN onboarded_vendors ov ON ov.id = sv.vendor_id
+      LEFT JOIN fp_estimates fe ON fe.id = pss.estimate_id
+      LEFT JOIN fp_amc_packages fpamc ON fpamc.id = fe.package_id
       LEFT JOIN property_contacts pc ON pc.id = (SELECT pc2.id FROM property_contacts pc2 WHERE pc2.property_id = op.id ORDER BY pc2.id LIMIT 1)
       WHERE sv.customer_requested = TRUE
     `;
@@ -2745,6 +2749,7 @@ router.get('/reschedule-requests', authenticate, canSeeSchedule, async (req, res
         zone: r.zone,
         vendorId: r.vendor_id,
         vendorName: r.vendor_name,
+        packageName: r.package_name,
         customerName: r.customer_name,
         customerPhone: r.customer_phone,
         scheduledDate: r.scheduled_date,

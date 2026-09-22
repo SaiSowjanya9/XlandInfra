@@ -5,6 +5,7 @@ import {
   Eye, RefreshCw, CheckCircle, AlertCircle, Info, X, XCircle
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import { scheduleFilterOptions, matchesScheduleFilter } from '../../utils/scheduleFilterOptions';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -49,7 +50,6 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
   const [properties, setProperties] = useState([]);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [schedules, setSchedules] = useState([]);
-  const [zones, setZones] = useState([]);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [filters, setFilters] = useState({
     search: '', service: 'all', status: 'all', vendor: 'all', zone: 'all', package: 'all'
@@ -79,27 +79,8 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
 
   useEffect(() => {
     fetchProperties();
-    fetchZones();
     fetchRescheduledSchedules();
   }, []);
-
-  // Fetch zones from API
-  const fetchZones = async () => {
-    try {
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE}/api/${apiPath}/zones`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const zoneList = data.zones || data.data || [];
-        const zoneNames = zoneList.map(z => typeof z === 'string' ? z : (z.name || z.zone_name || z.zone)).filter(Boolean);
-        setZones([...new Set(zoneNames)].sort());
-      }
-    } catch (error) {
-      console.error('Error fetching zones:', error);
-    }
-  };
 
   useEffect(() => {
     if (selectedProperty) {
@@ -112,7 +93,8 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
     setLoading(true);
     try {
       const token = getAuthToken();
-      const response = await fetch(`${API_BASE}/api/${apiPath}/schedules/rescheduled`, {
+      // Reschedule requests are served by the shared schedules router, not per portal
+      const response = await fetch(`${API_BASE}/api/schedules/reschedule-requests`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -355,41 +337,30 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
     return colors[status] || colors.available;
   };
 
-  // Get unique services and vendors for filter dropdowns
-  const uniqueServices = [...new Set(schedules.map(s => s.service))];
-  const uniqueVendors = [...new Set(schedules.map(s => s.vendor))];
+  // Every dropdown offers only what these rows contain, so no option is ever a dead end
+  const uniqueServices = scheduleFilterOptions(schedules, 'service');
+  const uniqueVendors = scheduleFilterOptions(schedules, 'vendor');
+  const uniquePackages = scheduleFilterOptions(schedules, 'package');
+  const uniqueZones = scheduleFilterOptions(schedules, 'zone');
   const statusOptions = ['scheduled', 'completed', 'rescheduled', 'cancelled'];
 
   // Apply filters to schedules
   const filteredSchedules = schedules.filter(schedule => {
     // Search filter - by Property ID only
     if (filters.search) {
-      const propertyId = schedule.property_id || schedule.propertyId || '';
+      const propertyId = String(schedule.propertyCode || schedule.property_id || schedule.propertyId || '');
       if (!propertyId.toLowerCase().includes(filters.search.toLowerCase())) {
         return false;
       }
-    }
-    // Service filter
-    if (filters.service !== 'all' && schedule.service !== filters.service) {
-      return false;
     }
     // Status filter
     if (filters.status !== 'all' && schedule.status !== filters.status) {
       return false;
     }
-    // Vendor filter
-    if (filters.vendor !== 'all' && schedule.vendor !== filters.vendor) {
-      return false;
-    }
-    // Zone filter
-    if (filters.zone !== 'all' && schedule.zone !== filters.zone) {
-      return false;
-    }
-    // Package filter
-    if (filters.package !== 'all' && schedule.package !== filters.package) {
-      return false;
-    }
-    return true;
+    return matchesScheduleFilter(schedule, 'service', filters.service)
+      && matchesScheduleFilter(schedule, 'vendor', filters.vendor)
+      && matchesScheduleFilter(schedule, 'zone', filters.zone)
+      && matchesScheduleFilter(schedule, 'package', filters.package);
   });
 
   // Pagination
@@ -473,9 +444,9 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="all">All Packages</option>
-                    <option value="Basic AMC">Basic AMC</option>
-                    <option value="Standard AMC">Standard AMC</option>
-                    <option value="Premium AMC">Premium AMC</option>
+                    {uniquePackages.map(pkg => (
+                      <option key={pkg} value={pkg}>{pkg}</option>
+                    ))}
                   </select>
                   <select 
                     value={filters.zone}
@@ -486,16 +457,9 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="all">All Zones</option>
-                    {zones.length > 0 ? zones.map(z => (
+                    {uniqueZones.map(z => (
                       <option key={z} value={z}>{z}</option>
-                    )) : (
-                      <>
-                        <option value="Zone A">Zone A</option>
-                        <option value="Zone B">Zone B</option>
-                        <option value="Zone C">Zone C</option>
-                        <option value="Zone D">Zone D</option>
-                      </>
-                    )}
+                    ))}
                   </select>
                   <button 
                     onClick={() => {
@@ -530,7 +494,7 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                           <Calendar className="w-12 h-12 text-gray-300 mb-3" />
                           <p className="text-gray-500 font-medium">No rescheduled visits found</p>
                           <p className="text-gray-400 text-sm mt-1">
-                            {selectedProperty ? 'Try adjusting your filters' : 'Select a property to view schedules'}
+                            {schedules.length > 0 ? 'Try adjusting your filters' : 'No customer reschedule requests are pending'}
                           </p>
                         </div>
                       </td>
@@ -541,28 +505,31 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                       className={`hover:bg-gray-50 ${selectedSchedule?.id === schedule.id ? 'bg-blue-50' : ''}`}
                     >
                       <td className="px-4 py-3">
-                        <span className="text-sm font-medium text-blue-600">{schedule.property_id || schedule.propertyId || `PROP-${String(schedule.id).padStart(3, '0')}`}</span>
+                        <span className="text-sm font-medium text-blue-600">{schedule.propertyCode || schedule.property_id || schedule.propertyId || '-'}</span>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700">{schedule.service || schedule.serviceName}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{schedule.vendor || schedule.vendorName}</td>
                       <td className="px-4 py-3">
-                        <div className="text-sm text-gray-700">{formatDate(schedule.actualDate || schedule.originalDate)}</div>
-                        <div className="text-xs text-gray-500">{schedule.actualTime || schedule.originalTime || '-'}</div>
+                        <div className="text-sm text-gray-700">{formatDate(schedule.actualDate || schedule.originalDate || schedule.scheduledDate)}</div>
+                        <div className="text-xs text-gray-500">{schedule.actualTime || schedule.originalTime || schedule.scheduledTime || '-'}</div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-orange-600">{formatDate(schedule.rescheduledDate || schedule.scheduledDate)}</div>
-                        <div className="text-xs text-gray-500">{schedule.rescheduledTime || schedule.scheduledTime || '-'}</div>
+                        <div className="text-sm font-medium text-orange-600">{formatDate(schedule.rescheduledDate || schedule.requestedDate)}</div>
+                        <div className="text-xs text-gray-500">{schedule.rescheduledTime || schedule.requestedTime || '-'}</div>
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleRestoreClick(schedule)}
-                            className="px-3 py-1.5 text-xs font-medium bg-green-100 text-green-700 rounded-lg hover:bg-green-200 flex items-center gap-1"
-                            title="Restore to original date"
-                          >
-                            <RefreshCw className="w-3 h-3" />
-                            Restore
-                          </button>
+                          {/* A customer request has not moved the visit yet, so there is nothing to restore */}
+                          {(schedule.actualDate || schedule.originalDate) && (
+                            <button
+                              onClick={() => handleRestoreClick(schedule)}
+                              className="px-3 py-1.5 text-xs font-medium bg-green-100 text-green-700 rounded-lg hover:bg-green-200 flex items-center gap-1"
+                              title="Restore to original date"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              Restore
+                            </button>
+                          )}
                           <button
                             onClick={() => {
                               setSelectedSchedule(schedule);
