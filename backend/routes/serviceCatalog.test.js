@@ -23,6 +23,12 @@ const pool = { execute: async (sql, params = []) => {
     rows.push({ id, service_name: params[0], scope_id: params[1], configuration: params[2], created_by: params[3] });
     return [{ insertId: id }];
   }
+  if (sql.startsWith('DELETE FROM service_catalog')) {
+    const index = rows.findIndex(row => row.id === Number(params[0]));
+    if (index === -1) return [{ affectedRows: 0 }];
+    rows.splice(index, 1);
+    return [{ affectedRows: 1 }];
+  }
   if (sql.includes('FROM service_catalog WHERE id = ?')) return [rows.filter(row => row.id === Number(params[0]))];
   if (sql.includes('FROM service_catalog')) return [rows.filter(row => !params.length || row.scope_id === 0 || row.scope_id === Number(params[0]))];
   throw new Error(`Unexpected query: ${sql}`);
@@ -114,6 +120,17 @@ test('catalog API permissions, persistence contract, quoting and estimate valida
     assert.equal(updated.status, 200);
     assert.equal((await request('/catalog')).data[0].description, 'Updated description');
     assert.equal((await request('/catalog/999', 'PUT', config)).status, 404);
+  });
+  await t.test('delete removes the configuration and stays restricted to admins', async () => {
+    const created = await request('/catalog', 'POST', { ...config, service_name: 'Temporary service' });
+    assert.equal(created.status, 201);
+    const { id } = created.data;
+    assert.equal((await request(`/catalog/${id}`, 'DELETE', undefined, null)).status, 401);
+    assert.equal((await request(`/catalog/${id}`, 'DELETE', undefined, 'operations_manager')).status, 403);
+    assert.equal((await request(`/catalog/${id}`, 'DELETE')).status, 200);
+    assert.equal((await request('/catalog')).data.some(service => service.id === id), false);
+    // Nothing cascades, so asking twice simply reports the row is gone
+    assert.equal((await request(`/catalog/${id}`, 'DELETE')).status, 404);
   });
   const estimate = {
     propertyType: 'APT', packageRate: 1000, subTotal: 7777, gst: 0, totalPrice: 7777,

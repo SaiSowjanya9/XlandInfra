@@ -78,6 +78,19 @@ const saveService = async (req, res) => {
 router.post('/', saveService);
 router.put('/:id', saveService);
 
+// An FP may delete only what it configured; admin-owned (scope 0) services stay untouchable, the
+// same rule as editing. Estimates saved earlier keep their own pricing snapshot.
+router.delete('/:id', async (req, res) => {
+  try {
+    if (!isFranchisePartner(req.user.role)) fail('Only the franchise partner can configure services.', 403);
+    const [[existing]] = await pool.execute('SELECT id, scope_id FROM service_catalog WHERE id = ?', [req.params.id]);
+    if (!existing) fail('Service not found.', 404);
+    if (Number(existing.scope_id) !== req.catalogFpId) fail('Only services created for your franchise can be deleted.', 403);
+    await pool.execute('DELETE FROM service_catalog WHERE id = ?', [req.params.id]);
+    res.json({ success: true, message: 'Service deleted.' });
+  } catch (error) { handleError(res, error); }
+});
+
 // Re-prices every configured service on the server so a saved FP estimate can never keep a
 // client-supplied price, and rebuilds the stored snapshot from the current catalog definition.
 router.validatePackageEstimate = async (req, res, next) => {
