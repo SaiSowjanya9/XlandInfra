@@ -383,11 +383,11 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     : `${slab.capacityFrom}${slab.capacityTo === null ? '+' : String(slab.capacityTo).trim() === '' ? '' : `–${slab.capacityTo}`} ${formData.unit}`;
   const previewSlab = findCapacitySlab(capacitySlabs, exampleCapacity);
   const validCapacity = exampleCapacity.trim() !== '' && Number.isInteger(Number(exampleCapacity)) && Number(exampleCapacity) >= 0 && Number(exampleCapacity) <= 1e9;
-  const slabPreviewMessage = !capacitySlabs.some(slab => String(slab.capacityFrom).trim() !== '') ? 'Configure a slab to see example pricing.'
+  const slabPreviewMessage = !capacitySlabs.some(slab => String(slab.capacityFrom).trim() !== '') ? 'Configure a slab to see the pricing.'
     : !validCapacity ? 'Enter a whole-number capacity between 0 and 1,000,000,000.'
     : Number(exampleCapacity) < Number(capacitySlabs[0]?.capacityFrom) ? 'Capacity is below the first configured slab.'
     : !previewSlab || previewSlab.isCustomQuote ? 'Custom quote required for this capacity.'
-    : previewSlab.vendorRate === '' || previewSlab.vendorRate == null || Number(previewSlab.vendorRate) < 0 || Number(previewSlab.defaultVisitsPerYear) < 1 ? 'Enter a valid slab rate and visit count to see example pricing.' : '';
+    : previewSlab.vendorRate === '' || previewSlab.vendorRate == null || Number(previewSlab.vendorRate) < 0 || Number(previewSlab.defaultVisitsPerYear) < 1 ? 'Enter a valid slab rate and visit count to see the pricing.' : '';
   const slabVendorCost = slabPreviewMessage ? null : Number(previewSlab.vendorRate) * Number(previewSlab.defaultVisitsPerYear);
   const slabXlandCost = slabVendorCost == null || markupValue == null ? null : slabVendorCost * markupValue / 100;
   const slabCustomerPrice = slabXlandCost == null ? null : slabVendorCost + slabXlandCost;
@@ -575,11 +575,11 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 {/* Derived, never entered. Capacity Slab prices from its slabs, so it shows neither. */}
                 {!isCapacitySlab && <>
                   <Field label={`XLAND Margin (₹ per ${rateBasis})`}>
-                    <input type="text" readOnly value={xlandRate == null ? '' : currency(xlandRate)} placeholder="Set a rate and markup"
+                    <input type="text" readOnly value={xlandRate == null ? '' : currency(xlandRate)}
                       className={`${inputClass} bg-slate-50 text-slate-600`} />
                   </Field>
                   <Field label={`Customer Price (₹ per ${rateBasis})`}>
-                    <input type="text" readOnly value={customerRate == null ? '' : currency(customerRate)} placeholder="Set a rate and markup"
+                    <input type="text" readOnly value={customerRate == null ? '' : currency(customerRate)}
                       className={`${inputClass} bg-slate-50 font-semibold text-slate-800`} />
                   </Field>
                 </>}
@@ -612,10 +612,10 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
               <Field label="Description"><textarea value={formData.description} onChange={event => setField('description', event.target.value)} placeholder="Describe the service" rows={6} maxLength={500} className={`${inputClass} resize-y`} /></Field>
               <p className="mt-1 text-right text-xs text-slate-400">{formData.description.length}/500</p>
             </section>
-            {/* Pricing Preview (Example) */}
+            {/* Pricing Preview */}
             {isRatePricing && !isVisitManpower && <section className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
-              <h2 className="mb-4 text-sm font-semibold">Pricing Preview{isFixedPrice ? '' : ' (Example)'}</h2>
-              {!isFixedPrice && <Field label={`Example Total ${isQuantityBased ? 'Quantity' : isCapacityBased ? 'Capacity' : 'Area'} (${formData.unit})`}>
+              <h2 className="mb-4 text-sm font-semibold">Pricing Preview</h2>
+              {!isFixedPrice && <Field label={`Total ${isQuantityBased ? 'Quantity' : isCapacityBased ? 'Capacity' : 'Area'} (${formData.unit})`}>
                 <input inputMode="decimal" value={exampleAmountValue} onChange={event => setExampleAmount(event.target.value)} className={inputClass} />
               </Field>}
               <dl className={`space-y-3 text-xs text-slate-600 ${isFixedPrice ? '' : 'mt-4'}`}>
@@ -624,15 +624,15 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(examplePricing?.vendorCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage === '' ? '—' : `${formData.defaultMarkupPercentage}%`}</dd></div>
                 <div className="flex justify-between gap-3"><dt>XLAND Margin</dt><dd className="font-medium text-slate-800">{currency(examplePricing?.xlandCost)}</dd></div>
-                <div className="flex justify-between gap-3"><dt className="font-semibold">{isFixedPrice ? '' : 'Example '}Customer Price</dt><dd className="font-semibold text-blue-600">{currency(examplePricing?.customerPrice)}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="font-semibold">Customer Price</dt><dd className="font-semibold text-blue-600">{currency(examplePricing?.customerPrice)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Margin</dt><dd className="font-medium text-slate-800">{examplePricing?.marginPercentage == null ? '—' : `${examplePricing.marginPercentage.toFixed(2)}%`}</dd></div>
               </dl>
-              {!validExampleAmount && <p className="mt-3 text-xs text-amber-700">Enter an example {isQuantityBased ? 'quantity' : isCapacityBased ? 'capacity' : 'area'} greater than zero to see the pricing.</p>}
+              {!validExampleAmount && <p className="mt-3 text-xs text-amber-700">Enter {isQuantityBased ? 'a quantity' : isCapacityBased ? 'a capacity' : 'an area'} greater than zero to see the pricing.</p>}
             </section>}
             {isVisitManpower && <section className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
-              <h2 className="mb-4 text-sm font-semibold">Pricing Preview (Example)</h2>
+              <h2 className="mb-4 text-sm font-semibold">Pricing Preview</h2>
               <div className="space-y-3">
-                {manpowerRanges.length > 0 && <Field label="Example Property Area (Sq Ft)"><input inputMode="numeric" value={exampleManpowerArea} onChange={event => { setExampleManpowerArea(event.target.value); setExamplePersonnel(String(suggestedManpower(manpowerConfig, event.target.value))); }} className={inputClass} /></Field>}
+                {manpowerRanges.length > 0 && <Field label="Property Area (Sq Ft)"><input inputMode="numeric" value={exampleManpowerArea} onChange={event => { setExampleManpowerArea(event.target.value); setExamplePersonnel(String(suggestedManpower(manpowerConfig, event.target.value))); }} className={inputClass} /></Field>}
                 <Field label="Manpower (Persons)"><input inputMode="numeric" value={examplePersonnel} onChange={event => setExamplePersonnel(event.target.value)} className={inputClass} /></Field>
                 {formData.overtimeRatePerHour !== '' && <Field label="Overtime Hours per Person / Visit"><input inputMode="decimal" value={exampleOvertime} onChange={event => setExampleOvertime(event.target.value)} className={inputClass} /></Field>}
               </div>
@@ -643,13 +643,13 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(manpowerExample?.vendorCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage === '' ? '—' : `${formData.defaultMarkupPercentage}%`}</dd></div>
                 <div className="flex justify-between gap-3"><dt>XLAND Margin</dt><dd className="font-medium text-slate-800">{currency(manpowerExample?.customerPrice == null ? null : manpowerExample.customerPrice - manpowerExample.vendorCost)}</dd></div>
-                <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(manpowerExample?.customerPrice)}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="font-semibold">Customer Price</dt><dd className="font-semibold text-blue-600">{currency(manpowerExample?.customerPrice)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Margin</dt><dd className="font-medium text-slate-800">{manpowerExample?.marginPercentage == null ? '—' : `${manpowerExample.marginPercentage.toFixed(2)}%`}</dd></div>
               </dl>
               {manpowerExample?.error && <p className="mt-3 text-xs text-amber-700">{manpowerExample.error}</p>}
             </section>}
             {isCapacitySlab && <section className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
-              <h2 className="mb-4 text-sm font-semibold">Pricing Preview (Example)</h2>
+              <h2 className="mb-4 text-sm font-semibold">Pricing Preview</h2>
               <Field label={`Entered Capacity (${formData.unit})`}><input inputMode="numeric" value={exampleCapacity} onChange={event => setExampleCapacity(event.target.value)} className={inputClass} /></Field>
               <dl className="mt-4 space-y-3 text-xs text-slate-600">
                 <div className="flex justify-between gap-3"><dt>Matching Slab</dt><dd className="font-medium text-slate-800">{previewSlab ? slabLabel(previewSlab) : '—'}</dd></div>
@@ -659,7 +659,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(slabVendorCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage === '' ? '—' : `${formData.defaultMarkupPercentage}%`}</dd></div>
                 <div className="flex justify-between gap-3"><dt>XLAND Margin</dt><dd className="font-medium text-slate-800">{currency(slabXlandCost)}</dd></div>
-                <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(slabCustomerPrice)}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="font-semibold">Customer Price</dt><dd className="font-semibold text-blue-600">{currency(slabCustomerPrice)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Margin</dt><dd className="font-medium text-slate-800">{slabCustomerPrice == null ? '—' : `${(slabXlandCost / slabCustomerPrice * 100).toFixed(2)}%`}</dd></div>
               </dl>
               {slabPreviewMessage && <p className="mt-3 text-xs text-amber-700">{slabPreviewMessage}</p>}
