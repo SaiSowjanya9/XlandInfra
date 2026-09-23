@@ -121,7 +121,8 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
 
   // Every column has to fit without sideways scrolling, so the padding is tight and only the two
   // wordy columns wrap; the rest stay on one line.
-  const cell = 'px-1.5 py-3 align-top text-slate-700';
+  // Columns are sized by the table, so a cell wraps within its share rather than widening the row
+  const cell = 'px-1.5 py-3 align-top text-slate-700 break-words';
   const nowrap = `${cell} whitespace-nowrap`;
   // A service applies to several property types, so a chip counts every service that includes it,
   // and the counts add up to more than the service total by design.
@@ -140,7 +141,15 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
     {/* The top row carries the title and the property type filter with its counts, so the whole
         list can be narrowed from where it is introduced. */}
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
-      <div><h3 className="font-semibold text-slate-800">All Services</h3><p className="mt-1 text-xs text-slate-500">{loading ? 'Loading...' : `${services.length} service(s)`} · Pricing configurations for estimates</p></div>
+      <div>
+        <h3 className="font-semibold text-slate-800">All Services</h3>
+        {/* The count follows the filter, so the heading always describes the rows underneath it */}
+        <p className="mt-1 text-xs text-slate-500">
+          {loading ? 'Loading...'
+            : propertyFilter === 'all' ? `${services.length} service(s)`
+            : `${shown.length} of ${services.length} service(s) apply to ${propertyTypeLabel(propertyFilter)}`} · Pricing configurations for estimates
+        </p>
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         {/* A service is counted under every property type it applies to */}
         {availableTypes.length > 1 && <>
@@ -148,7 +157,8 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
             All<span className={chipCount(propertyFilter === 'all')}>{services.length}</span>
           </button>
           {availableTypes.map(type => (
-            <button key={type.id} type="button" onClick={() => setPropertyFilter(type.id)} className={chip(propertyFilter === type.id)}>
+            <button key={type.id} type="button" onClick={() => setPropertyFilter(type.id)} className={chip(propertyFilter === type.id)}
+              title={`${type.count} of ${services.length} service(s) apply to ${type.label}`}>
               {type.label}<span className={chipCount(propertyFilter === type.id)}>{type.count}</span>
             </button>
           ))}
@@ -161,34 +171,36 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
     {error ? <p role="alert" className="py-4 text-sm text-red-600">{error}</p>
       : !loading && !services.length ? <p className="py-6 text-sm text-slate-500">{admin?.role === 'admin' ? 'No configured services yet. Use Add Service to create one.' : 'No configured services are available in your scope yet.'}</p>
       : !shown.length ? <p className="py-6 text-sm text-slate-500">No configured services apply to {propertyTypeLabel(propertyFilter)}.</p>
-      : <div className="overflow-x-auto">
-        <table className="w-full text-left text-[11px]">
+      : <div>
+        {/* Fixed proportional widths: the table can never grow past the page, so there is no
+            sideways scrollbar and every column stays visible at once. */}
+        <table className="w-full table-fixed text-left text-[11px]">
           {/* Every heading stays on one line, so the row keeps a single height */}
           <thead className="whitespace-nowrap bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="w-6 px-1.5 py-2.5 text-center">#</th>
-              <th className="px-1.5 py-2.5">Service</th>
-              <th className="px-1.5 py-2.5">Description</th>
-              <th className="px-1.5 py-2.5">Method</th>
-              <th className="px-1.5 py-2.5">Input</th>
-              <th className="px-1.5 py-2.5">Frequency</th>
-              <th className="px-1.5 py-2.5 text-center">Visits</th>
-              <th className="px-1.5 py-2.5">Vendor Cost</th>
-              <th className="px-1.5 py-2.5 text-center">Markup %</th>
-              <th className="px-1.5 py-2.5">XLAND Margin</th>
-              <th className="px-1.5 py-2.5">Customer Price</th>
-              <th className="px-1.5 py-2.5">Property</th>
-              <th className="w-14 px-1.5 py-2.5 text-center">Action</th>
+              <th className="w-[3%] px-1.5 py-2.5 text-center">#</th>
+              <th className="w-[10%] px-1.5 py-2.5">Service</th>
+              <th className="w-[9%] px-1.5 py-2.5">Description</th>
+              <th className="w-[10%] px-1.5 py-2.5">Method</th>
+              <th className="w-[8%] px-1.5 py-2.5">Input</th>
+              <th className="w-[7%] px-1.5 py-2.5">Frequency</th>
+              <th className="w-[5%] px-1.5 py-2.5 text-center">Visits</th>
+              <th className="w-[9%] px-1.5 py-2.5">Vendor Cost</th>
+              <th className="w-[7%] px-1.5 py-2.5 text-center">Markup %</th>
+              <th className="w-[9%] px-1.5 py-2.5">XLAND Margin</th>
+              <th className="w-[10%] px-1.5 py-2.5">Customer Price</th>
+              <th className="w-[7%] px-1.5 py-2.5">Property</th>
+              <th className="w-[6%] px-1.5 py-2.5 text-center">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {shown.map((service, index) => <Fragment key={service.id}>
             <tr className="hover:bg-slate-50/60">
               <td className={`${cell} text-center text-slate-400`}>{index + 1}</td>
-              <td className={`${cell} max-w-[140px]`}>
+              <td className={cell}>
                 <p className="font-semibold text-slate-900" title={service.service_name}>{service.service_name}</p>
               </td>
-              <td className={`${cell} max-w-[130px] text-slate-500`} title={service.description || ''}><p className="line-clamp-2">{service.description || '—'}</p></td>
+              <td className={`${cell} text-slate-500`} title={service.description || ''}><p className="line-clamp-2">{service.description || '—'}</p></td>
               {/* Capacity Slab prices from a table of its own, so the row opens to show every slab */}
               <td className={cell}>
                 {service.pricing_method === 'capacity_slab' && service.capacity_slabs?.length
@@ -201,15 +213,15 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
                   : <span className={`inline-block whitespace-nowrap rounded px-1.5 py-1 font-medium ${methodStyle(service.pricing_method)}`}>{methodLabel(service.pricing_method)}</span>}
               </td>
               {/* The input only: the vendor rate has its own column rather than sitting underneath */}
-              <td className={`${cell} max-w-[110px]`}><p className="line-clamp-2">{primaryInputLabel(service.service_name, service.pricing_method, service.unit) || '—'}</p></td>
-              <td className={nowrap}>{service.default_frequency}</td>
+              <td className={cell}><p className="line-clamp-2">{primaryInputLabel(service.service_name, service.pricing_method, service.unit) || '—'}</p></td>
+              <td className={cell}>{service.default_frequency}</td>
               <td className={`${nowrap} text-center`}>{service.default_visits_per_year}</td>
-              <td className={nowrap}>{rateSummary(service)}</td>
+              <td className={cell}>{rateSummary(service)}</td>
               <td className={`${nowrap} text-center`}>{service.default_markup_percentage}%</td>
               {/* Both derived from the vendor rate: XLAND takes the markup, the customer pays the sum */}
-              <td className={nowrap}>{rateSummary(service, Number(service.default_markup_percentage || 0) / 100)}</td>
-              <td className={`${nowrap} font-semibold text-emerald-700`}>{rateSummary(service, 1 + Number(service.default_markup_percentage || 0) / 100)}</td>
-              <td className={`${nowrap} max-w-[120px] truncate`} title={service.applicable_property_types.map(propertyTypeLabel).join(', ')}>
+              <td className={cell}>{rateSummary(service, Number(service.default_markup_percentage || 0) / 100)}</td>
+              <td className={`${cell} font-semibold text-emerald-700`}>{rateSummary(service, 1 + Number(service.default_markup_percentage || 0) / 100)}</td>
+              <td className={cell} title={service.applicable_property_types.map(propertyTypeLabel).join(', ')}>
                 {service.applicable_property_types.map(type => PROPERTY_CODES[type] || propertyTypeLabel(type)).join(', ')}
               </td>
               <td className={`${nowrap} text-center`}>
