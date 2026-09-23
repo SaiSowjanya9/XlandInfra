@@ -124,7 +124,6 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     skipVendorAssignment: false,
     // Markup & Margin
     defaultMarkupPercentage: '',
-    defaultOperatingCost: '',
     // Description
     description: '',
     // For Manpower
@@ -161,7 +160,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
 
   useEffect(() => {
     if (!service) return;
-    const fields = { manpowerBasis: 'manpower_basis', ratePerPerson: 'rate_per_person', roleDesignation: 'role_designation', workingHoursPerVisit: 'working_hours_per_visit', overtimeRatePerHour: 'overtime_rate_per_hour', minimumManpower: 'minimum_manpower', serviceName: 'service_name', category: 'category', pricingMethod: 'pricing_method', unit: 'unit', applicablePropertyTypes: 'applicable_property_types', ratePerUnit: 'rate_per_unit', defaultFrequency: 'default_frequency', defaultVisitsPerYear: 'default_visits_per_year', allowFrequencyOverride: 'allow_frequency_override', allowManualVisits: 'allow_manual_visits', skipVendorAssignment: 'skip_vendor_assignment', defaultMarkupPercentage: 'default_markup_percentage', defaultOperatingCost: 'default_operating_cost', description: 'description', monthlyRate: 'monthly_rate', billingPeriod: 'billing_period', periodMonths: 'period_months', fixedPrice: 'fixed_price', ratePerQuantity: 'rate_per_quantity', ratePerCapacity: 'rate_per_capacity' };
+    const fields = { manpowerBasis: 'manpower_basis', ratePerPerson: 'rate_per_person', roleDesignation: 'role_designation', workingHoursPerVisit: 'working_hours_per_visit', overtimeRatePerHour: 'overtime_rate_per_hour', minimumManpower: 'minimum_manpower', serviceName: 'service_name', category: 'category', pricingMethod: 'pricing_method', unit: 'unit', applicablePropertyTypes: 'applicable_property_types', ratePerUnit: 'rate_per_unit', defaultFrequency: 'default_frequency', defaultVisitsPerYear: 'default_visits_per_year', allowFrequencyOverride: 'allow_frequency_override', allowManualVisits: 'allow_manual_visits', skipVendorAssignment: 'skip_vendor_assignment', defaultMarkupPercentage: 'default_markup_percentage', description: 'description', monthlyRate: 'monthly_rate', billingPeriod: 'billing_period', periodMonths: 'period_months', fixedPrice: 'fixed_price', ratePerQuantity: 'rate_per_quantity', ratePerCapacity: 'rate_per_capacity' };
     setFormData(prev => ({ ...Object.fromEntries(Object.entries(prev).map(([field, value]) => [field, service[fields[field]] ?? value])),
       manpowerBasis: service.pricing_method === 'manpower' ? service.manpower_basis ?? 'monthly' : 'per_visit',
       overtimeRatePerHour: service.overtime_rate_per_hour ?? '' }));
@@ -256,11 +255,12 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     const markup = formData.defaultMarkupPercentage === '' ? null : Number(formData.defaultMarkupPercentage);
     const vendorCost = Number(formData[rateField]) * quantity * Number(formData.defaultVisitsPerYear);
     if (!Number.isFinite(vendorCost)) return null;
-    // Markup applies to the actual cost, which is the vendor cost plus XLAND's operating cost
-    const actualCost = vendorCost + exampleOperatingCost;
-    const customerPrice = markup == null ? null : actualCost * (1 + markup / 100);
-    return { vendorCost, operatingCost: exampleOperatingCost, actualCost, customerPrice,
-      marginPercentage: customerPrice ? (customerPrice - actualCost) / customerPrice * 100 : null };
+    // XLAND's cost is the markup on the vendor cost: ₹1,000 at 35% earns ₹350 and the customer
+    // pays ₹1,350. It is derived from the rate and the markup, never entered.
+    const xlandCost = markup == null ? null : vendorCost * markup / 100;
+    const customerPrice = xlandCost == null ? null : vendorCost + xlandCost;
+    return { vendorCost, xlandCost, customerPrice,
+      marginPercentage: customerPrice ? xlandCost / customerPrice * 100 : null };
   };
 
   // Get formula text based on pricing method
@@ -298,7 +298,9 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
         allow_manual_visits: formData.allowManualVisits,
         skip_vendor_assignment: formData.skipVendorAssignment,
         default_markup_percentage: Number(formData.defaultMarkupPercentage),
-        default_operating_cost: formData.defaultOperatingCost === '' ? 0 : Number(formData.defaultOperatingCost),
+        // XLAND's cost is the markup on the vendor cost, so nothing separate is stored: a quote
+        // adds markup to the vendor cost and that difference is what XLAND earns.
+        default_operating_cost: 0,
         description: formData.description.trim(),
         // Method-specific fields
         rate_per_unit: Number(formData.ratePerUnit),
@@ -356,9 +358,16 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
   const manpowerConfig = { manpower_ranges: manpowerRanges, rate_per_person: formData.ratePerPerson, minimum_manpower: formData.minimumManpower,
     working_hours_per_visit: formData.workingHoursPerVisit, overtime_rate_per_hour: formData.overtimeRatePerHour === '' ? null : formData.overtimeRatePerHour,
     default_visits_per_year: formData.defaultVisitsPerYear, default_markup_percentage: formData.defaultMarkupPercentage,
-    default_operating_cost: formData.defaultOperatingCost === '' ? 0 : formData.defaultOperatingCost };
+    // Nothing separate to add: what XLAND earns is the markup the preview already applies
+    default_operating_cost: 0 };
   const manpowerExample = isVisitManpower ? previewManpower(manpowerConfig, { area: exampleManpowerArea, personnel: examplePersonnel, overtime_hours_per_visit: exampleOvertime }) : null;
-  const exampleOperatingCost = formData.defaultOperatingCost === '' ? 0 : Number(formData.defaultOperatingCost) || 0;
+  // XLAND's share of one vendor rate, shown read-only on the form: ₹1,000 a visit at 35% is ₹350
+  const markupValue = formData.defaultMarkupPercentage === '' ? null : Number(formData.defaultMarkupPercentage);
+  const xlandRate = (() => {
+    const rate = isVisitManpower ? formData.ratePerPerson : formData.pricingMethod === 'manpower' ? formData.monthlyRate : formData[rateField];
+    if (markupValue == null || rate === '' || rate == null || !Number.isFinite(Number(rate))) return null;
+    return Number(rate) * markupValue / 100;
+  })();
   const exampleAmountValue = exampleAmount === '' ? (isQuantityBased || isCapacityBased ? '10' : '10000') : exampleAmount;
   const validExampleAmount = isFixedPrice || (String(exampleAmountValue).trim() !== '' && Number(exampleAmountValue) > 0 && Number(exampleAmountValue) <= 1e9);
   const examplePricing = isRatePricing && !isVisitManpower && formData[rateField] !== '' && validExampleAmount ? calculateExamplePricing() : null;
@@ -377,9 +386,8 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     : !previewSlab || previewSlab.isCustomQuote ? 'Custom quote required for this capacity.'
     : previewSlab.vendorRate === '' || previewSlab.vendorRate == null || Number(previewSlab.vendorRate) < 0 || Number(previewSlab.defaultVisitsPerYear) < 1 ? 'Enter a valid slab rate and visit count to see example pricing.' : '';
   const slabVendorCost = slabPreviewMessage ? null : Number(previewSlab.vendorRate) * Number(previewSlab.defaultVisitsPerYear);
-  const slabActualCost = slabVendorCost == null ? null : slabVendorCost + exampleOperatingCost;
-  const slabCustomerPrice = slabActualCost == null || formData.defaultMarkupPercentage === '' ? null
-    : slabActualCost * (1 + Number(formData.defaultMarkupPercentage) / 100);
+  const slabXlandCost = slabVendorCost == null || markupValue == null ? null : slabVendorCost * markupValue / 100;
+  const slabCustomerPrice = slabXlandCost == null ? null : slabVendorCost + slabXlandCost;
   const toggleManualVisits = () => {
     if (formData.allowManualVisits) setCapacitySlabs(prev => prev.map(slab => ({ ...slab, defaultVisitsPerYear: FREQUENCY_OPTIONS.find(item => item.value === slab.defaultFrequency).defaultVisits })));
     setFormData(prev => ({ ...prev, allowManualVisits: !prev.allowManualVisits, defaultVisitsPerYear: prev.allowManualVisits ? FREQUENCY_OPTIONS.find(item => item.value === prev.defaultFrequency).defaultVisits : prev.defaultVisitsPerYear }));
@@ -559,9 +567,12 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             {formData.pricingMethod && <div className="border-t border-slate-100 p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold text-blue-600">Default Markup</h2>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {/* Capacity Slab configures no service-level operating cost, so it is not offered
-                    for that method. A slab service saved with one keeps it. */}
-                {!isCapacitySlab && <Field label="XLAND Operating Cost (Annual) (₹)">{numberInput('defaultOperatingCost', { required: false, max: 1e9 })}</Field>}
+                {/* Derived, never entered: XLAND's cost is the markup on the vendor rate. Capacity
+                    Slab prices from its slabs, so it shows none. */}
+                {!isCapacitySlab && <Field label="XLAND Cost (₹)">
+                  <input type="text" readOnly value={xlandRate == null ? '' : currency(xlandRate)} placeholder="Set a rate and markup"
+                    className={`${inputClass} bg-slate-50 text-slate-600`} />
+                </Field>}
                 <Field label="Default Markup Percentage (%) *">{numberInput('defaultMarkupPercentage', { max: 1000 })}</Field>
               </div>
             </div>}
@@ -602,9 +613,8 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <div className="flex justify-between gap-3"><dt>{isFixedPrice ? 'Fixed Rate per Visit' : `Rate per ${formData.unit} per Visit`}</dt><dd className="font-medium text-slate-800">{currency(formData[rateField] === '' ? null : Number(formData[rateField]))}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Visits Per Year</dt><dd className="font-medium text-slate-800">{formData.defaultVisitsPerYear}</dd></div>
                 <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(examplePricing?.vendorCost)}</dd></div>
-                <div className="flex justify-between gap-3"><dt>XLAND Operating Cost</dt><dd className="font-medium text-slate-800">{currency(examplePricing?.operatingCost)}</dd></div>
-                <div className="flex justify-between gap-3"><dt>Actual Cost</dt><dd className="font-medium text-slate-800">{currency(examplePricing?.actualCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage === '' ? '—' : `${formData.defaultMarkupPercentage}%`}</dd></div>
+                <div className="flex justify-between gap-3"><dt>XLAND Cost</dt><dd className="font-medium text-slate-800">{currency(examplePricing?.xlandCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(examplePricing?.customerPrice)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Margin</dt><dd className="font-medium text-slate-800">{examplePricing?.marginPercentage == null ? '—' : `${examplePricing.marginPercentage.toFixed(2)}%`}</dd></div>
               </dl>
@@ -623,9 +633,8 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <div className="flex justify-between gap-3"><dt>Rate per Person per Visit</dt><dd className="font-medium text-slate-800">{currency(manpowerExample?.ratePerPerson)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Visits Per Year</dt><dd className="font-medium text-slate-800">{formData.defaultVisitsPerYear}</dd></div>
                 <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(manpowerExample?.vendorCost)}</dd></div>
-                <div className="flex justify-between gap-3"><dt>XLAND Operating Cost</dt><dd className="font-medium text-slate-800">{currency(manpowerExample?.operatingCost)}</dd></div>
-                <div className="flex justify-between gap-3"><dt>Actual Cost</dt><dd className="font-medium text-slate-800">{currency(manpowerExample?.actualCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage === '' ? '—' : `${formData.defaultMarkupPercentage}%`}</dd></div>
+                <div className="flex justify-between gap-3"><dt>XLAND Cost</dt><dd className="font-medium text-slate-800">{currency(manpowerExample?.customerPrice == null ? null : manpowerExample.customerPrice - manpowerExample.vendorCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(manpowerExample?.customerPrice)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Margin</dt><dd className="font-medium text-slate-800">{manpowerExample?.marginPercentage == null ? '—' : `${manpowerExample.marginPercentage.toFixed(2)}%`}</dd></div>
               </dl>
@@ -641,11 +650,10 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <div className="flex justify-between gap-3"><dt>Frequency</dt><dd className="font-medium text-slate-800">{previewSlab?.defaultFrequency ?? '—'}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Visits Per Year</dt><dd className="font-medium text-slate-800">{previewSlab?.defaultVisitsPerYear ?? '—'}</dd></div>
                 <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(slabVendorCost)}</dd></div>
-                <div className="flex justify-between gap-3"><dt>XLAND Operating Cost</dt><dd className="font-medium text-slate-800">{currency(slabVendorCost == null ? null : exampleOperatingCost)}</dd></div>
-                <div className="flex justify-between gap-3"><dt>Actual Cost</dt><dd className="font-medium text-slate-800">{currency(slabActualCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage === '' ? '—' : `${formData.defaultMarkupPercentage}%`}</dd></div>
+                <div className="flex justify-between gap-3"><dt>XLAND Cost</dt><dd className="font-medium text-slate-800">{currency(slabXlandCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(slabCustomerPrice)}</dd></div>
-                <div className="flex justify-between gap-3"><dt>Margin</dt><dd className="font-medium text-slate-800">{slabCustomerPrice == null ? '—' : `${((slabCustomerPrice - slabActualCost) / slabCustomerPrice * 100).toFixed(2)}%`}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Margin</dt><dd className="font-medium text-slate-800">{slabCustomerPrice == null ? '—' : `${(slabXlandCost / slabCustomerPrice * 100).toFixed(2)}%`}</dd></div>
               </dl>
               {slabPreviewMessage && <p className="mt-3 text-xs text-amber-700">{slabPreviewMessage}</p>}
               <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, before tax, using this service’s configured operating cost. Final customer pricing uses the actual capacity, visits and operating costs entered in the estimate.</p>

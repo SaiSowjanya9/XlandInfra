@@ -64,6 +64,17 @@ const saveService = async (req, res) => {
 router.post('/', requireRole('admin'), saveService);
 router.put('/:id', requireRole('admin'), saveService);
 
+// Deleting removes the configuration, not history: an estimate saved earlier carries its own
+// pricingSnapshot, so it keeps pricing and reading correctly without this row. No table references
+// service_catalog, so nothing cascades. The service simply cannot be added to a new estimate again.
+router.delete('/:id', requireRole('admin'), async (req, res) => {
+  try {
+    const [result] = await db.pool.execute('DELETE FROM service_catalog WHERE id = ?', [req.params.id]);
+    if (!result.affectedRows) return res.status(404).json({ success: false, message: 'Service not found.' });
+    res.json({ success: true, message: 'Service deleted.' });
+  } catch (error) { handleError(res, error); }
+});
+
 // Suggestions for the category field, including custom categories already saved on services
 router.get('/categories', async (req, res) => {
   try { res.json({ success: true, data: await categoryOptions(db.pool, scopeId(req.query.fpId)) }); }

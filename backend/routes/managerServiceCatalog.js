@@ -121,6 +121,7 @@ router.post('/:id/quote', async (req, res) => {
 });
 router.post('/', (req, res) => res.status(403).json({ success: false, message: 'Service configuration is read-only for Managers.' }));
 router.put('/:id', (req, res) => res.status(403).json({ success: false, message: 'Service configuration is read-only for Managers.' }));
+router.delete('/:id', (req, res) => res.status(403).json({ success: false, message: 'Service configuration is read-only for Managers.' }));
 
 router.validatePackageEstimate = async (req, res, next) => {
   const addons = req.body.addons;
