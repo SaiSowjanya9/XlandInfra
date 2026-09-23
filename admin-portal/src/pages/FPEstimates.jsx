@@ -1384,9 +1384,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             {/* Property Details - remaining auto-populated fields */}
             {selectedProperty && (
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div className="px-5 py-3 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
+                <div className="px-5 py-3 border-b border-gray-200">
                   <h3 className="text-sm font-semibold text-gray-800">Property Details</h3>
-                  <span className="text-xs text-gray-400">Auto-filled from property record</span>
                 </div>
                 <div className="p-5 space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4">
