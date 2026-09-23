@@ -229,3 +229,11 @@ Run schema files in order:
 5. `schema_v22_razorpay_fix.sql` - **Required fix for webhook tracking**
 6. `schema_v25_payment_status_fix.sql` - **Required for offline payment verification (bank transfer, cash, cheque)**
 7. `schema_v27_payment_history_action_fix.sql` - **Required fix for payment_history action column truncation error**
+8. `migrations/schema_v31_cheque_payment_details.sql` - **Required for cheque payments and for verifying any offline payment**: adds `cheque_number`, `cheque_date`, `bank_name`, `branch_name`, `payee_name`, `payment_location` and `transaction_id` to `payments`
+
+### Cheque Payments
+
+- A cheque keeps its own columns; do not smuggle its fields into `transaction_reference` or concatenate them into `remarks`. `POST /api/payments/payments` writes them and the payments list returns them, which is what lets the verification modal prefill what was recorded instead of asking for it twice.
+- `transaction_id` was written by `PUT /api/payments/:id/verify` before any schema file created it, so verifying a payment failed with "Unknown column 'transaction_id'". It is created by v31.
+- The bank list, the default payee (`XLAND INFRA PM SERVICES PVT LTD`, prefilled but always editable) and the payment-location label live once in `admin-portal/src/utils/chequePayment.js`. Both cheque screens — recording in `billing/MakePayments.jsx` and verifying in `billing/Payments.jsx` — import them, so they cannot offer different banks. Choosing "Other" reveals a text field; the word "Other" is never stored as the bank name.
+- `mysql2` returns a DATE as a `Date` at local midnight, so `JSON.stringify` moves it to the previous day anywhere east of Greenwich. Map date-only columns through the `dateOnly` helper in `backend/routes/payments.js`.

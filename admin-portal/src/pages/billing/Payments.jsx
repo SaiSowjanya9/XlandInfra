@@ -35,6 +35,7 @@ import {
   Check,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import { CHEQUE_BANKS, DEFAULT_PAYEE_NAME, OTHER_BANK, paymentLocationLabel } from '../../utils/chequePayment';
 import * as XLSX from 'xlsx';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -598,7 +599,7 @@ const CashPaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) =
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Payment Location</span>
-                      <span className="font-medium text-gray-900">{formData.paymentLocation === 'office' ? 'Office / Collection Point' : 'At Property Site'}</span>
+                      <span className="font-medium text-gray-900">{paymentLocationLabel(formData.paymentLocation)}</span>
                     </div>
                     {formData.receiptNumber && (
                       <div className="flex justify-between">
@@ -713,9 +714,12 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
   const [formData, setFormData] = useState({
     checkNumber: '',
     checkDate: new Date().toISOString().split('T')[0],
+    // bankChoice is what the dropdown shows; bankName is the bank that is saved, so picking
+    // "Other" leaves the name to be typed instead of storing the word "Other"
+    bankChoice: '',
     bankName: '',
     branchName: '',
-    payeeName: 'XLAND INFRA PM SERVICES PVT LTD',
+    payeeName: DEFAULT_PAYEE_NAME,
     amountReceived: '',
     receivedById: '',
     receivedBy: '',
@@ -730,31 +734,6 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const token = getAuthToken();
-
-  // Bank list for dropdown
-  const banks = [
-    'State Bank of India',
-    'HDFC Bank',
-    'ICICI Bank',
-    'Axis Bank',
-    'Punjab National Bank',
-    'Bank of Baroda',
-    'Canara Bank',
-    'Union Bank of India',
-    'Indian Bank',
-    'Bank of India',
-    'Central Bank of India',
-    'Indian Overseas Bank',
-    'UCO Bank',
-    'IDBI Bank',
-    'Kotak Mahindra Bank',
-    'IndusInd Bank',
-    'Yes Bank',
-    'Federal Bank',
-    'South Indian Bank',
-    'Karur Vysya Bank',
-    'Other'
-  ];
 
   // Fetch employees on mount - filter by FP team
   useEffect(() => {
@@ -786,11 +765,19 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
   // Initialize form data when payment changes
   useEffect(() => {
     if (payment) {
+      // Prefill from the cheque as it was recorded, so verifying confirms those details rather
+      // than asking for them a second time
+      const recordedDate = payment.chequeDate || payment.paymentDate;
       setFormData(prev => ({
         ...prev,
         amountReceived: (parseFloat(payment.amount) || 0).toFixed(2),
-        checkDate: payment.paymentDate ? new Date(payment.paymentDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        checkNumber: payment.transactionId || payment.referenceNumber || '',
+        checkDate: recordedDate ? String(recordedDate).split('T')[0] : new Date().toISOString().split('T')[0],
+        checkNumber: payment.chequeNumber || payment.transactionId || payment.transactionReference || payment.referenceNumber || '',
+        bankChoice: CHEQUE_BANKS.includes(payment.bankName) ? payment.bankName : (payment.bankName ? OTHER_BANK : ''),
+        bankName: payment.bankName || '',
+        branchName: payment.branchName || '',
+        payeeName: payment.payeeName || DEFAULT_PAYEE_NAME,
+        paymentLocation: payment.paymentLocation || 'office',
         receivedBy: payment.receivedByName || '',
         action: 'verify'
       }));
@@ -1028,17 +1015,30 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Bank Name <span className="text-red-500">*</span></label>
                       <div className="relative">
                         <select
-                          value={formData.bankName}
-                          onChange={(e) => setFormData(prev => ({ ...prev, bankName: e.target.value }))}
+                          value={formData.bankChoice}
+                          onChange={(e) => {
+                            const choice = e.target.value;
+                            setFormData(prev => ({ ...prev, bankChoice: choice, bankName: choice === OTHER_BANK ? '' : choice }));
+                          }}
                           className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
                         >
                           <option value="">Select Bank</option>
-                          {banks.map(bank => (
+                          {CHEQUE_BANKS.map(bank => (
                             <option key={bank} value={bank}>{bank}</option>
                           ))}
+                          <option value={OTHER_BANK}>{OTHER_BANK}</option>
                         </select>
                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                       </div>
+                      {formData.bankChoice === OTHER_BANK && (
+                        <input
+                          type="text"
+                          value={formData.bankName}
+                          onChange={(e) => setFormData(prev => ({ ...prev, bankName: e.target.value }))}
+                          className="mt-2 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Bank name on cheque"
+                        />
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Branch Name</label>
@@ -1266,7 +1266,7 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Payment Location</span>
-                        <span className="font-medium text-gray-900">{formData.paymentLocation === 'office' ? 'Office / Collection Point' : 'At Property Site'}</span>
+                        <span className="font-medium text-gray-900">{paymentLocationLabel(formData.paymentLocation)}</span>
                       </div>
                     </div>
                   </div>
@@ -2572,6 +2572,8 @@ const Payments = ({ user, portalType = 'admin' }) => {
   };
   
   const [payments, setPayments] = useState([]);
+  // Counted by the summary cards, which report overall figures rather than the filtered table
+  const [summaryPayments, setSummaryPayments] = useState([]);
   const [razorpayHistory, setRazorpayHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -2608,8 +2610,30 @@ const Payments = ({ user, portalType = 'admin' }) => {
     }
   }, [location.state]);
 
+  // Every payment in scope, whatever the table is filtered to. Only the FP scope applies, so the
+  // summary cards report overall figures instead of shrinking with the status, method, search and
+  // date filters.
+  const fetchSummary = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (selectedFp && selectedFp.id !== 'all') {
+        params.append('fpId', selectedFp.id);
+      }
+      const url = `${API_BASE}/api/payments/payments${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+      const result = await response.json();
+      if (result.success) {
+        setSummaryPayments(result.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching payment summary:', err);
+    }
+  }, [token, selectedFp]);
+
   const fetchPayments = useCallback(async () => {
     setLoading(true);
+    // Kept in step with the table, so verifying a payment updates both
+    fetchSummary();
     try {
       let url = `${API_BASE}/api/payments/payments`;
       const params = new URLSearchParams();
@@ -2637,7 +2661,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
     } finally {
       setLoading(false);
     }
-  }, [token, statusFilter, methodFilter, searchTerm, headerSearchTerm, dateRange, selectedFp]);
+  }, [token, statusFilter, methodFilter, searchTerm, headerSearchTerm, dateRange, selectedFp, fetchSummary]);
 
   useEffect(() => {
     fetchPayments();
@@ -2739,17 +2763,19 @@ const Payments = ({ user, portalType = 'admin' }) => {
     }
   };
 
-  // Calculate stats
+  // Overall stats: counted from every payment in scope, not from the filtered table
+  const withStatus = (...statuses) => summaryPayments.filter(p => statuses.includes(p.status));
+  const amountOf = rows => rows.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
   const stats = {
-    total: payments.length,
-    paid: payments.filter(p => p.status === 'paid').length,
-    paidAmount: payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
-    verificationPending: payments.filter(p => p.status === 'verification_pending').length,
-    verificationAmount: payments.filter(p => p.status === 'verification_pending').reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
-    partiallyPaid: payments.filter(p => p.status === 'partially_paid').length,
-    partiallyPaidAmount: payments.filter(p => p.status === 'partially_paid').reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
-    failed: payments.filter(p => p.status === 'failed' || p.status === 'refunded').length,
-    failedAmount: payments.filter(p => p.status === 'failed' || p.status === 'refunded').reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+    total: summaryPayments.length,
+    paid: withStatus('paid').length,
+    paidAmount: amountOf(withStatus('paid')),
+    verificationPending: withStatus('verification_pending').length,
+    verificationAmount: amountOf(withStatus('verification_pending')),
+    partiallyPaid: withStatus('partially_paid').length,
+    partiallyPaidAmount: amountOf(withStatus('partially_paid')),
+    failed: withStatus('failed', 'refunded').length,
+    failedAmount: amountOf(withStatus('failed', 'refunded'))
   };
 
   // Filtering
@@ -2931,7 +2957,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
             <div className="min-w-0">
               <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">Total Payments</p>
               <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.total}</p>
-              <p className="text-[9px] sm:text-xs text-gray-400">This Month</p>
+              <p className="text-[9px] sm:text-xs text-gray-400">Overall</p>
             </div>
           </div>
 
