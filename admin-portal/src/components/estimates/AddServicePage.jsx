@@ -255,7 +255,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     const markup = formData.defaultMarkupPercentage === '' ? null : Number(formData.defaultMarkupPercentage);
     const vendorCost = Number(formData[rateField]) * quantity * Number(formData.defaultVisitsPerYear);
     if (!Number.isFinite(vendorCost)) return null;
-    // XLAND's cost is the markup on the vendor cost: ₹1,000 at 35% earns ₹350 and the customer
+    // XLAND's margin is the markup on the vendor cost: ₹1,000 at 35% earns ₹350 and the customer
     // pays ₹1,350. It is derived from the rate and the markup, never entered.
     const xlandCost = markup == null ? null : vendorCost * markup / 100;
     const customerPrice = xlandCost == null ? null : vendorCost + xlandCost;
@@ -298,7 +298,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
         allow_manual_visits: formData.allowManualVisits,
         skip_vendor_assignment: formData.skipVendorAssignment,
         default_markup_percentage: Number(formData.defaultMarkupPercentage),
-        // XLAND's cost is the markup on the vendor cost, so nothing separate is stored: a quote
+        // XLAND's margin is the markup on the vendor cost, so nothing separate is stored: a quote
         // adds markup to the vendor cost and that difference is what XLAND earns.
         default_operating_cost: 0,
         description: formData.description.trim(),
@@ -567,9 +567,9 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             {formData.pricingMethod && <div className="border-t border-slate-100 p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold text-blue-600">Default Markup</h2>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {/* Derived, never entered: XLAND's cost is the markup on the vendor rate. Capacity
+                {/* Derived, never entered: XLAND's margin is the markup on the vendor rate. Capacity
                     Slab prices from its slabs, so it shows none. */}
-                {!isCapacitySlab && <Field label="XLAND Cost (₹)">
+                {!isCapacitySlab && <Field label="XLAND Margin (₹)">
                   <input type="text" readOnly value={xlandRate == null ? '' : currency(xlandRate)} placeholder="Set a rate and markup"
                     className={`${inputClass} bg-slate-50 text-slate-600`} />
                 </Field>}
@@ -614,7 +614,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <div className="flex justify-between gap-3"><dt>Visits Per Year</dt><dd className="font-medium text-slate-800">{formData.defaultVisitsPerYear}</dd></div>
                 <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(examplePricing?.vendorCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage === '' ? '—' : `${formData.defaultMarkupPercentage}%`}</dd></div>
-                <div className="flex justify-between gap-3"><dt>XLAND Cost</dt><dd className="font-medium text-slate-800">{currency(examplePricing?.xlandCost)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>XLAND Margin</dt><dd className="font-medium text-slate-800">{currency(examplePricing?.xlandCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(examplePricing?.customerPrice)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Margin</dt><dd className="font-medium text-slate-800">{examplePricing?.marginPercentage == null ? '—' : `${examplePricing.marginPercentage.toFixed(2)}%`}</dd></div>
               </dl>
@@ -634,7 +634,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <div className="flex justify-between gap-3"><dt>Visits Per Year</dt><dd className="font-medium text-slate-800">{formData.defaultVisitsPerYear}</dd></div>
                 <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(manpowerExample?.vendorCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage === '' ? '—' : `${formData.defaultMarkupPercentage}%`}</dd></div>
-                <div className="flex justify-between gap-3"><dt>XLAND Cost</dt><dd className="font-medium text-slate-800">{currency(manpowerExample?.customerPrice == null ? null : manpowerExample.customerPrice - manpowerExample.vendorCost)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>XLAND Margin</dt><dd className="font-medium text-slate-800">{currency(manpowerExample?.customerPrice == null ? null : manpowerExample.customerPrice - manpowerExample.vendorCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(manpowerExample?.customerPrice)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Margin</dt><dd className="font-medium text-slate-800">{manpowerExample?.marginPercentage == null ? '—' : `${manpowerExample.marginPercentage.toFixed(2)}%`}</dd></div>
               </dl>
@@ -651,7 +651,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <div className="flex justify-between gap-3"><dt>Visits Per Year</dt><dd className="font-medium text-slate-800">{previewSlab?.defaultVisitsPerYear ?? '—'}</dd></div>
                 <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(slabVendorCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage === '' ? '—' : `${formData.defaultMarkupPercentage}%`}</dd></div>
-                <div className="flex justify-between gap-3"><dt>XLAND Cost</dt><dd className="font-medium text-slate-800">{currency(slabXlandCost)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>XLAND Margin</dt><dd className="font-medium text-slate-800">{currency(slabXlandCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(slabCustomerPrice)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Margin</dt><dd className="font-medium text-slate-800">{slabCustomerPrice == null ? '—' : `${(slabXlandCost / slabCustomerPrice * 100).toFixed(2)}%`}</dd></div>
               </dl>
