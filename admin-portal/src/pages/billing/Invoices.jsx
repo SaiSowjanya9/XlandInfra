@@ -156,6 +156,9 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState([]);
   const [archivedInvoices, setArchivedInvoices] = useState([]);
+  // The summary cards report overall figures, so they are counted from their own unfiltered fetch
+  // rather than from the table's rows, which narrow with the status, search and date filters
+  const [summaryInvoices, setSummaryInvoices] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [activeTab, setActiveTab] = useState(defaultTab);
@@ -186,8 +189,29 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
 
   const token = getAuthToken();
 
+  // Every active invoice in scope, whatever the table is filtered to. Only the FP scope applies.
+  const fetchSummary = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({ archived: 'false' });
+      if (selectedFp && selectedFp.id !== 'all') {
+        params.append('fpId', selectedFp.id);
+      }
+      const response = await fetch(`${API_BASE}/api/payments/invoices?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setSummaryInvoices(result.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching invoice summary:', err);
+    }
+  }, [token, selectedFp]);
+
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
+    // Kept in step with the table, so recording a payment or changing a status updates both
+    fetchSummary();
     try {
       // Fetch ALL active invoices (filter by type on client side)
       let url = `${API_BASE}/api/payments/invoices`;
@@ -229,7 +253,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
     } finally {
       setLoading(false);
     }
-  }, [token, statusFilter, searchTerm, dateRange, selectedFp]);
+  }, [token, statusFilter, searchTerm, dateRange, selectedFp, fetchSummary]);
 
   useEffect(() => {
     fetchInvoices();
@@ -663,17 +687,19 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
     currentPage * itemsPerPage
   );
 
-  // Calculate stats from invoices
+  // Overall stats: counted from every active invoice in scope, not from the filtered table
+  const countBy = status => summaryInvoices.filter(i => i.status === status);
+  const sumBy = (status, field) => countBy(status).reduce((sum, i) => sum + (parseFloat(i[field]) || 0), 0);
   const stats = {
-    total: invoices.length,
-    draft: invoices.filter(i => i.status === 'draft').length,
-    sent: invoices.filter(i => i.status === 'sent').length,
-    partiallyPaid: invoices.filter(i => i.status === 'partially_paid').length,
-    partiallyPaidAmount: invoices.filter(i => i.status === 'partially_paid').reduce((sum, i) => sum + (parseFloat(i.amountPaid) || 0), 0),
-    paid: invoices.filter(i => i.status === 'paid').length,
-    paidAmount: invoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + (parseFloat(i.totalAmount) || 0), 0),
-    overdue: invoices.filter(i => i.status === 'overdue').length,
-    overdueAmount: invoices.filter(i => i.status === 'overdue').reduce((sum, i) => sum + (parseFloat(i.balanceAmount) || 0), 0)
+    total: summaryInvoices.length,
+    draft: countBy('draft').length,
+    sent: countBy('sent').length,
+    partiallyPaid: countBy('partially_paid').length,
+    partiallyPaidAmount: sumBy('partially_paid', 'amountPaid'),
+    paid: countBy('paid').length,
+    paidAmount: sumBy('paid', 'totalAmount'),
+    overdue: countBy('overdue').length,
+    overdueAmount: sumBy('overdue', 'balanceAmount')
   };
 
   return (
@@ -817,7 +843,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                 <div className="min-w-0">
                   <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">Total Invoices</p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.total}</p>
-                  <p className="text-[9px] sm:text-xs text-gray-400">This Month</p>
+                  <p className="text-[9px] sm:text-xs text-gray-400">Overall</p>
                 </div>
               </div>
             </div>

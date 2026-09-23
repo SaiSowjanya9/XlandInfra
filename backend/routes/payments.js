@@ -29,6 +29,14 @@ const {
 const { generateInvoicePDF } = require('../services/pdfService');
 const { markPaymentCompleted } = require('../services/schedulingWorkflow');
 
+/**
+ * A DATE column as the calendar date it holds. mysql2 returns one as a Date at local midnight, so
+ * JSON serialization (UTC) would move a cheque written on the 23rd to the 22nd east of Greenwich.
+ */
+const dateOnly = value => value instanceof Date
+  ? `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`
+  : value || null;
+
 // Secure file upload configuration for payment proofs
 // SECURITY: Whitelist both MIME types AND file extensions
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
@@ -2297,6 +2305,12 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
         paymentType: p.payment_type,
         transactionReference: p.transaction_reference,
         bankName: p.bank_name,
+        // Cheque details, and where cash or a cheque was collected
+        chequeNumber: p.cheque_number,
+        chequeDate: dateOnly(p.cheque_date),
+        branchName: p.branch_name,
+        payeeName: p.payee_name,
+        paymentLocation: p.payment_location,
         paymentDate: p.payment_date,
         proofUrl: p.payment_proof_url,
         proofFilename: p.proof_filename,
@@ -2327,7 +2341,9 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
     const {
       invoiceId, propertyId, estimateId, customerId, customerName,
       amount, paymentMethod, transactionReference, paymentDate, remarks,
-      receivedBy, paymentStatus
+      receivedBy, paymentStatus,
+      // Cheque details, and the collection point shared with cash
+      chequeNumber, chequeDate, bankName, branchName, payeeName, paymentLocation
     } = req.body;
 
     // Validate required fields
@@ -2398,7 +2414,14 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
       req.user.id,
       receivedByName || null,
       req.user.role || null,
-      remarks || null
+      remarks || null,
+      // A cheque keeps its own fields; an empty date must be NULL, not ''
+      chequeNumber || null,
+      chequeDate || null,
+      bankName || null,
+      branchName || null,
+      payeeName || null,
+      paymentLocation || null
     ];
     
     // Check for undefined values
@@ -2417,8 +2440,9 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
         estimate_id, estimate_number, customer_id, franchise_partner_id,
         customer_name, amount, payment_method, payment_type,
         transaction_reference, payment_date, payment_proof_url,
-        status, received_by, received_by_name, received_by_role, remarks
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        status, received_by, received_by_name, received_by_role, remarks,
+        cheque_number, cheque_date, bank_name, branch_name, payee_name, payment_location
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, insertParams);
 
     // Only update invoice amounts if payment is NOT verification_pending
@@ -2799,9 +2823,16 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
         received_by = ?,
         transaction_id = COALESCE(?, transaction_id),
         remarks = COALESCE(?, remarks),
+        cheque_number = COALESCE(?, cheque_number),
+        cheque_date = COALESCE(?, cheque_date),
+        bank_name = COALESCE(?, bank_name),
+        branch_name = COALESCE(?, branch_name),
+        payee_name = COALESCE(?, payee_name),
+        payment_location = COALESCE(?, payment_location),
         updated_at = NOW()
       WHERE id = ?
-    `, [status, finalAmount, paymentDateValue, verifierName || null, verifierId || null, transactionRef || null, fullRemarks || null, id]);
+    `, [status, finalAmount, paymentDateValue, verifierName || null, verifierId || null, transactionRef || null, fullRemarks || null,
+      checkNumber || null, checkDate || null, bankName || null, branchName || null, payeeName || null, paymentLocation || null, id]);
     
     console.log('[Payment Verify] Payment updated successfully');
 

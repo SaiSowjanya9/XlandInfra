@@ -28,6 +28,7 @@ import {
   Users,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import { CHEQUE_BANKS, DEFAULT_PAYEE_NAME, OTHER_BANK, paymentLocationLabel } from '../../utils/chequePayment';
 import { useFP } from '../../contexts/FPContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -169,6 +170,64 @@ const FeeIndicator = () => (
   </div>
 );
 
+/**
+ * Guidance panels. They belong in the narrow right-hand column in small type, so the form beside
+ * them stays the main element of the page. Every payment method uses the same three, which is why
+ * they are defined once here rather than written out per method.
+ */
+const HowItWorksPanel = ({ icon: Icon, iconBg, iconColor, steps, note }) => (
+  <div className="border border-gray-200 rounded-xl p-4">
+    <div className="flex items-center gap-2.5 mb-3">
+      <div className={`w-8 h-8 ${iconBg} rounded-lg flex items-center justify-center`}>
+        <Icon className={`w-4 h-4 ${iconColor}`} />
+      </div>
+      <h4 className="text-sm font-semibold text-gray-900">How it works?</h4>
+    </div>
+    <ol className="space-y-1.5 text-xs leading-relaxed text-gray-600">
+      {steps.map((step, index) => (
+        <li key={index} className="flex gap-1.5">
+          <span className="font-semibold text-gray-900">{index + 1}.</span>{step}
+        </li>
+      ))}
+    </ol>
+    {note && (
+      <div className="mt-3 flex items-center gap-1.5 text-green-600">
+        <Info className="w-3.5 h-3.5 flex-shrink-0" />
+        <span className="text-xs">{note}</span>
+      </div>
+    )}
+  </div>
+);
+
+const RemindersPanel = ({ title, items }) => (
+  <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/50">
+    <h4 className="text-sm font-semibold text-amber-800 mb-2">{title}</h4>
+    <ul className="space-y-1.5">
+      {items.map((item, index) => (
+        <li key={index} className="flex items-start gap-1.5 text-xs leading-relaxed text-gray-700">
+          <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0 mt-0.5" />
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
+const MethodNotePanel = ({ icon: Icon, title, highlight, description }) => (
+  <div className="border border-green-200 rounded-xl p-4 bg-green-50/50">
+    <div className="flex items-start gap-2.5">
+      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+        <Icon className="w-4 h-4 text-green-600" />
+      </div>
+      <div>
+        <h4 className="text-sm font-semibold text-gray-900">{title}</h4>
+        <p className="text-xs font-medium text-green-600">{highlight}</p>
+        <p className="text-xs leading-relaxed text-gray-500 mt-1.5">{description}</p>
+      </div>
+    </div>
+  </div>
+);
+
 // Payment method labels
 const PAYMENT_METHOD_LABELS = {
   upi_razorpay: 'UPI',
@@ -279,7 +338,12 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     receivedBy: '',
     receivedById: '',
     notes: '',
+    // Cheque details. chequeBankChoice is what the dropdown shows ('Other' keeps chequeBank free
+    // text); chequeBank is the bank name that is actually saved.
+    chequeBankChoice: '',
     chequeBank: '',
+    chequeBranch: '',
+    payeeName: DEFAULT_PAYEE_NAME,
     chequeNumber: '',
     chequeDate: '',
     // Cash payment specific fields
@@ -376,16 +440,16 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     }
   }, [token]);
 
-  // Fetch employees when cash is selected
+  // Fetch employees when cash or cheque is selected: both are received by a named person
   useEffect(() => {
-    if (selectedMethod === 'cash' && employees.length === 0) {
+    if ((selectedMethod === 'cash' || selectedMethod === 'check') && employees.length === 0) {
       fetchEmployees();
     }
   }, [selectedMethod, employees.length, fetchEmployees]);
 
   // Initialize amount received with balance amount when invoice is selected
   useEffect(() => {
-    if (selectedInvoice && selectedMethod === 'cash' && !paymentDetails.amountReceived) {
+    if (selectedInvoice && (selectedMethod === 'cash' || selectedMethod === 'check') && !paymentDetails.amountReceived) {
       setPaymentDetails(prev => ({
         ...prev,
         amountReceived: (parseFloat(selectedInvoice.balanceAmount) || parseFloat(selectedInvoice.totalAmount) || 0).toFixed(2)
@@ -488,12 +552,24 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
           setError('Please enter the cheque number');
           return;
         }
+        if (!paymentDetails.chequeDate) {
+          setError('Please select the cheque date');
+          return;
+        }
         if (!paymentDetails.chequeBank) {
-          setError('Please enter the bank name');
+          setError('Please select the bank the cheque is drawn on');
+          return;
+        }
+        if (!paymentDetails.payeeName) {
+          setError('Please enter the payee name');
+          return;
+        }
+        if (!paymentDetails.amountReceived || parseFloat(paymentDetails.amountReceived) <= 0) {
+          setError('Please enter the cheque amount');
           return;
         }
         if (!paymentDetails.receivedBy) {
-          setError('Please enter who received the cheque');
+          setError('Please select who received the cheque');
           return;
         }
       }
@@ -513,13 +589,16 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
       ? generatedReference 
       : paymentDetails.receiptNumber || paymentDetails.transactionReference || paymentDetails.chequeNumber;
     
-    // For cash payments, use the entered amount and date; otherwise use invoice amount
-    const paymentAmount = selectedMethod === 'cash' 
+    // Cash and cheque carry their own amount, so a part payment can be recorded; other methods
+    // settle the whole balance. A cheque is dated by the cheque itself.
+    const paymentAmount = selectedMethod === 'cash' || selectedMethod === 'check'
       ? paymentDetails.amountReceived 
       : (selectedInvoice.balanceAmount || selectedInvoice.totalAmount);
     const paymentDate = selectedMethod === 'cash' 
       ? paymentDetails.receivedDate 
-      : new Date().toISOString().split('T')[0];
+      : selectedMethod === 'check'
+        ? paymentDetails.chequeDate
+        : new Date().toISOString().split('T')[0];
     
     try {
       const submitData = new FormData();
@@ -542,8 +621,13 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
       }
       
       if (selectedMethod === 'check') {
-        submitData.append('chequeBank', paymentDetails.chequeBank || '');
-        submitData.append('checkDate', paymentDetails.chequeDate || '');
+        submitData.append('chequeNumber', paymentDetails.chequeNumber || '');
+        submitData.append('chequeDate', paymentDetails.chequeDate || '');
+        submitData.append('bankName', paymentDetails.chequeBank || '');
+        submitData.append('branchName', paymentDetails.chequeBranch || '');
+        submitData.append('payeeName', paymentDetails.payeeName || '');
+        submitData.append('paymentLocation', paymentDetails.paymentLocation || 'office');
+        submitData.append('receivedById', paymentDetails.receivedById || '');
       }
       
       if (paymentProof) {
@@ -876,7 +960,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-500">Payment Location</span>
-                        <span className="text-sm font-medium text-gray-900">{paymentDetails.paymentLocation === 'office' ? 'Office / Collection Point' : 'At Property Site'}</span>
+                        <span className="text-sm font-medium text-gray-900">{paymentLocationLabel(paymentDetails.paymentLocation)}</span>
                       </div>
                       {paymentDetails.receiptNumber && (
                         <div className="flex justify-between">
@@ -906,10 +990,34 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                         <span className="text-sm text-gray-500">Bank Name</span>
                         <span className="text-sm font-medium text-gray-900">{paymentDetails.chequeBank}</span>
                       </div>
+                      {paymentDetails.chequeBranch && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-500">Branch Name</span>
+                          <span className="text-sm font-medium text-gray-900">{paymentDetails.chequeBranch}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Payee Name</span>
+                        <span className="text-sm font-medium text-gray-900">{paymentDetails.payeeName || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Cheque Amount</span>
+                        <span className="text-sm font-medium text-gray-900">{formatCurrency(paymentDetails.amountReceived)}</span>
+                      </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-500">Received By</span>
                         <span className="text-sm font-medium text-gray-900">{paymentDetails.receivedBy || '-'}</span>
                       </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Payment Location</span>
+                        <span className="text-sm font-medium text-gray-900">{paymentLocationLabel(paymentDetails.paymentLocation)}</span>
+                      </div>
+                      {paymentDetails.notes && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-500">Notes</span>
+                          <span className="text-sm font-medium text-gray-900 text-right max-w-xs">{paymentDetails.notes}</span>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -983,32 +1091,16 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
 
           {/* ===== BANK TRANSFER ===== */}
           {selectedMethod === 'bank_transfer' && (
-            <>
-              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">Bank Transfer Details</h3>
-                <p className="text-sm text-gray-500 mb-6">Transfer the amount to the bank account below</p>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="border border-gray-200 rounded-xl p-5">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                        <Building2 className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <h4 className="font-semibold text-gray-900">How it works?</h4>
-                    </div>
-                    <ol className="space-y-3 text-sm text-gray-600">
-                      <li className="flex gap-2"><span className="font-semibold text-gray-900">1.</span>Transfer the exact amount to the bank account</li>
-                      <li className="flex gap-2"><span className="font-semibold text-gray-900">2.</span>Use the provided reference number in your transfer</li>
-                      <li className="flex gap-2"><span className="font-semibold text-gray-900">3.</span>Upload payment proof for verification</li>
-                      <li className="flex gap-2"><span className="font-semibold text-gray-900">4.</span>We will verify and update your payment</li>
-                    </ol>
-                    <div className="mt-4 flex items-center gap-2 text-green-600">
-                      <Info className="w-4 h-4" />
-                      <span className="text-sm">No additional charges for Bank Transfer</span>
-                    </div>
-                  </div>
+            <div className="grid grid-cols-3 gap-6">
+              {/* Left Column - the account to transfer to, and the proof upload */}
+              <div className="col-span-2 space-y-6">
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Bank Transfer Details</h3>
+                  <p className="text-sm text-gray-500 mb-6">Transfer the amount to the bank account below</p>
                   <div className="border border-blue-200 rounded-xl p-5 bg-blue-50/30">
                     <h4 className="font-semibold text-blue-800 mb-4">Our Bank Account Details</h4>
-                    <div className="space-y-3">
+                    {/* Two columns now that the panel has the full width of the main column */}
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                       <div className="flex items-center gap-3">
                         <User className="w-4 h-4 text-gray-400" />
                         <div className="flex-1">
@@ -1057,7 +1149,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                           <p className="font-semibold text-gray-900">{bankDetails.branch}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 pt-3 border-t border-blue-200">
+                      <div className="col-span-2 flex items-center gap-3 pt-3 border-t border-blue-200">
                         <FileText className="w-4 h-4 text-blue-500" />
                         <div className="flex-1">
                           <p className="text-xs text-gray-500">Reference / UTR Number</p>
@@ -1070,17 +1162,16 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                     </div>
                     <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                       <div className="flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5" />
+                        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
                         <p className="text-xs text-amber-700">Please use the above Reference Number in the remarks/notes while making the transfer.</p>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">Upload Payment Proof</h3>
-                <p className="text-sm text-gray-500 mb-6">Please upload the screenshot or receipt of the bank transfer</p>
-                <div className="grid grid-cols-2 gap-6">
+
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Upload Payment Proof</h3>
+                  <p className="text-sm text-gray-500 mb-6">Please upload the screenshot or receipt of the bank transfer</p>
                   <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors">
                     <input type="file" onChange={handleFileChange} className="hidden" id="proof-upload" accept="image/*,.pdf" />
                     <label htmlFor="proof-upload" className="cursor-pointer">
@@ -1091,19 +1182,35 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                       {paymentProof && <p className="mt-3 text-sm text-green-600 font-medium">Selected: {paymentProof.name}</p>}
                     </label>
                   </div>
-                  <div className="bg-amber-50 rounded-xl p-5 border border-amber-200">
-                    <h4 className="font-semibold text-amber-800 mb-3">Important Notes</h4>
-                    <ul className="space-y-2 text-sm text-amber-700">
-                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-amber-600 rounded-full flex-shrink-0"></span>Make sure to transfer the exact amount</li>
-                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-amber-600 rounded-full flex-shrink-0"></span>Use the reference number in your transfer</li>
-                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-amber-600 rounded-full flex-shrink-0"></span>Upload clear payment proof</li>
-                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-amber-600 rounded-full flex-shrink-0"></span>Payments are verified within 24 hours</li>
-                      <li className="flex items-start gap-2"><span className="mt-1.5 w-1.5 h-1.5 bg-amber-600 rounded-full flex-shrink-0"></span>You will receive confirmation once verified</li>
-                    </ul>
-                  </div>
                 </div>
               </div>
-            </>
+
+              {/* Right Column - guidance, kept small so the form stays the main element */}
+              <div className="space-y-4">
+                <HowItWorksPanel
+                  icon={Building2}
+                  iconBg="bg-blue-100"
+                  iconColor="text-blue-600"
+                  steps={[
+                    'Transfer the exact amount to the bank account',
+                    'Use the provided reference number in your transfer',
+                    'Upload payment proof for verification',
+                    'We will verify and update your payment'
+                  ]}
+                  note="No additional charges for Bank Transfer"
+                />
+                <RemindersPanel
+                  title="Important Notes"
+                  items={[
+                    'Make sure to transfer the exact amount',
+                    'Use the reference number in your transfer',
+                    'Upload clear payment proof',
+                    'Payments are verified within 24 hours',
+                    'You will receive confirmation once verified'
+                  ]}
+                />
+              </div>
+            </div>
           )}
 
           {/* ===== CASH PAYMENT ===== */}
@@ -1231,44 +1338,23 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   </div>
                 </div>
 
-                {/* Right Column - Info Cards */}
+                {/* Right Column - guidance, kept small so the form stays the main element */}
                 <div className="space-y-4">
-                  {/* Cash Payment Info Card */}
-                  <div className="border border-green-200 rounded-xl p-5 bg-green-50/50">
-                    <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Banknote className="w-6 h-6 text-green-600" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900">Cash Payment</h4>
-                        <p className="text-sm text-green-600 font-medium">No Additional Charges</p>
-                        <p className="text-xs text-gray-500 mt-2">Collect cash from the customer and record the payment details.</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Important Reminders Card */}
-                  <div className="border border-amber-200 rounded-xl p-5 bg-amber-50/50">
-                    <h4 className="font-semibold text-amber-800 mb-3">Important Reminders</h4>
-                    <ul className="space-y-2.5">
-                      <li className="flex items-start gap-2 text-sm text-gray-700">
-                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span>Count and verify the cash amount before saving</span>
-                      </li>
-                      <li className="flex items-start gap-2 text-sm text-gray-700">
-                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span>Provide a receipt to the customer</span>
-                      </li>
-                      <li className="flex items-start gap-2 text-sm text-gray-700">
-                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span>Keep the cash in the safe / cash box</span>
-                      </li>
-                      <li className="flex items-start gap-2 text-sm text-gray-700">
-                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span>Update the payment status after collection</span>
-                      </li>
-                    </ul>
-                  </div>
+                  <MethodNotePanel
+                    icon={Banknote}
+                    title="Cash Payment"
+                    highlight="No Additional Charges"
+                    description="Collect cash from the customer and record the payment details."
+                  />
+                  <RemindersPanel
+                    title="Important Reminders"
+                    items={[
+                      'Count and verify the cash amount before saving',
+                      'Provide a receipt to the customer',
+                      'Keep the cash in the safe / cash box',
+                      'Update the payment status after collection'
+                    ]}
+                  />
                 </div>
               </div>
 
@@ -1285,49 +1371,209 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
             <>
               <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-1">Cheque Payment Details</h3>
-                <p className="text-sm text-gray-500 mb-6">Record cheque payment received</p>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="border border-gray-200 rounded-xl p-5">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                        <FileCheck className="w-6 h-6 text-red-600" />
+                <p className="text-sm text-gray-500 mb-6">Enter the cheque payment information below</p>
+
+                <div className="grid grid-cols-3 gap-6">
+                  {/* Left Column - Form Fields */}
+                  <div className="col-span-2 space-y-5">
+                    {/* Cheque Number & Cheque Date */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Cheque Number <span className="text-red-500">*</span></label>
+                        <input
+                          type="text"
+                          value={paymentDetails.chequeNumber}
+                          onChange={(e) => setPaymentDetails(prev => ({ ...prev, chequeNumber: e.target.value, transactionReference: e.target.value }))}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                          placeholder="Enter cheque number"
+                        />
                       </div>
-                      <h4 className="font-semibold text-gray-900">How it works?</h4>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Cheque Date <span className="text-red-500">*</span></label>
+                        <input
+                          type="date"
+                          value={paymentDetails.chequeDate}
+                          onChange={(e) => setPaymentDetails(prev => ({ ...prev, chequeDate: e.target.value }))}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        />
+                      </div>
                     </div>
-                    <ol className="space-y-3 text-sm text-gray-600">
-                      <li className="flex gap-2"><span className="font-semibold text-gray-900">1.</span>Collect cheque from customer</li>
-                      <li className="flex gap-2"><span className="font-semibold text-gray-900">2.</span>Enter cheque details below</li>
-                      <li className="flex gap-2"><span className="font-semibold text-gray-900">3.</span>Deposit cheque in bank</li>
-                      <li className="flex gap-2"><span className="font-semibold text-gray-900">4.</span>Payment updated after cheque clears</li>
-                    </ol>
-                    <div className="mt-4 flex items-center gap-2 text-green-600">
-                      <Info className="w-4 h-4" />
-                      <span className="text-sm">No additional charges for Cheque Payment</span>
-                    </div>
-                  </div>
-                  <div className="border border-red-200 rounded-xl p-5 bg-red-50/30">
-                    <h4 className="font-semibold text-red-800 mb-4">Cheque Details</h4>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Cheque Number *</label>
-                          <input type="text" value={paymentDetails.chequeNumber} onChange={(e) => setPaymentDetails(prev => ({ ...prev, chequeNumber: e.target.value, transactionReference: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" placeholder="Enter cheque number" />
+
+                    {/* Bank Name & Branch Name */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Bank Name <span className="text-red-500">*</span></label>
+                        <div className="relative">
+                          <select
+                            value={paymentDetails.chequeBankChoice}
+                            onChange={(e) => {
+                              const choice = e.target.value;
+                              setPaymentDetails(prev => ({
+                                ...prev,
+                                chequeBankChoice: choice,
+                                // "Other" clears the field so the bank can be typed in
+                                chequeBank: choice === OTHER_BANK ? '' : choice
+                              }));
+                            }}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 appearance-none bg-white"
+                          >
+                            <option value="">Select Bank</option>
+                            {CHEQUE_BANKS.map(bank => <option key={bank} value={bank}>{bank}</option>)}
+                            <option value={OTHER_BANK}>{OTHER_BANK}</option>
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Cheque Date *</label>
-                          <input type="date" value={paymentDetails.chequeDate || new Date().toISOString().split('T')[0]} onChange={(e) => setPaymentDetails(prev => ({ ...prev, chequeDate: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" />
+                        {paymentDetails.chequeBankChoice === OTHER_BANK && (
+                          <input
+                            type="text"
+                            value={paymentDetails.chequeBank}
+                            onChange={(e) => setPaymentDetails(prev => ({ ...prev, chequeBank: e.target.value }))}
+                            className="mt-2 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                            placeholder="Bank name on cheque"
+                          />
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Branch Name</label>
+                        <input
+                          type="text"
+                          value={paymentDetails.chequeBranch}
+                          onChange={(e) => setPaymentDetails(prev => ({ ...prev, chequeBranch: e.target.value }))}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                          placeholder="Enter branch name"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Payee Name & Amount */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Payee Name <span className="text-red-500">*</span></label>
+                        <input
+                          type="text"
+                          value={paymentDetails.payeeName}
+                          onChange={(e) => setPaymentDetails(prev => ({ ...prev, payeeName: e.target.value }))}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                          placeholder={DEFAULT_PAYEE_NAME}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount (₹) <span className="text-red-500">*</span></label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
+                          <input
+                            type="text"
+                            value={paymentDetails.amountReceived}
+                            onChange={(e) => setPaymentDetails(prev => ({ ...prev, amountReceived: e.target.value.replace(/[^0-9.]/g, '') }))}
+                            className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                            placeholder="15,000.00"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Received By & Payment Location */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Received By <span className="text-red-500">*</span></label>
+                        <div className="relative">
+                          <select
+                            value={paymentDetails.receivedById}
+                            onChange={(e) => {
+                              const selectedEmp = employees.find(emp => emp.id === parseInt(e.target.value));
+                              setPaymentDetails(prev => ({
+                                ...prev,
+                                receivedById: e.target.value,
+                                receivedBy: selectedEmp ? `${selectedEmp.firstName || ''} ${selectedEmp.lastName || ''}`.trim() : ''
+                              }));
+                            }}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 appearance-none bg-white"
+                          >
+                            <option value="">Select Staff / Employee</option>
+                            {loadingEmployees ? (
+                              <option disabled>Loading employees...</option>
+                            ) : (
+                              employees.map(emp => (
+                                <option key={emp.id} value={emp.id}>
+                                  {emp.firstName || ''} {emp.lastName || ''} ({emp.userId || emp.role || 'Staff'})
+                                </option>
+                              ))
+                            )}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name *</label>
-                        <input type="text" value={paymentDetails.chequeBank} onChange={(e) => setPaymentDetails(prev => ({ ...prev, chequeBank: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" placeholder="Bank name on cheque" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Received By *</label>
-                        <input type="text" value={paymentDetails.receivedBy} onChange={(e) => setPaymentDetails(prev => ({ ...prev, receivedBy: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" placeholder="Name of person receiving cheque" />
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Payment Location <span className="text-red-500">*</span></label>
+                        <div className="space-y-2 mt-2">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="chequePaymentLocation"
+                              value="office"
+                              checked={paymentDetails.paymentLocation === 'office'}
+                              onChange={(e) => setPaymentDetails(prev => ({ ...prev, paymentLocation: e.target.value }))}
+                              className="w-4 h-4 text-blue-600"
+                            />
+                            <span className="text-sm text-gray-700">Office / Collection Point</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="chequePaymentLocation"
+                              value="property_site"
+                              checked={paymentDetails.paymentLocation === 'property_site'}
+                              onChange={(e) => setPaymentDetails(prev => ({ ...prev, paymentLocation: e.target.value }))}
+                              className="w-4 h-4 text-blue-600"
+                            />
+                            <span className="text-sm text-gray-700">At Property Site</span>
+                          </label>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Notes */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Notes (Optional)</label>
+                      <textarea
+                        value={paymentDetails.notes}
+                        onChange={(e) => setPaymentDetails(prev => ({ ...prev, notes: e.target.value }))}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
+                        rows={3}
+                        placeholder="Add any additional notes about this payment..."
+                      />
+                    </div>
                   </div>
+
+                  {/* Right Column - guidance, kept small so the form stays the main element */}
+                  <div className="space-y-4">
+                    <HowItWorksPanel
+                      icon={FileCheck}
+                      iconBg="bg-red-100"
+                      iconColor="text-red-600"
+                      steps={[
+                        'Collect cheque from customer',
+                        'Enter cheque details beside',
+                        'Deposit cheque in bank',
+                        'Payment updated after cheque clears'
+                      ]}
+                      note="No additional charges for Cheque Payment"
+                    />
+                    <RemindersPanel
+                      title="Important Reminders"
+                      items={[
+                        'Check the cheque number, date and amount against the cheque',
+                        'Confirm the payee name matches the cheque',
+                        'Deposit the cheque and keep the counterfoil'
+                      ]}
+                    />
+                  </div>
+                </div>
+
+                {/* Verification Pending Notice */}
+                <div className="mt-6 flex items-center gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <Info className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                  <p className="text-sm text-blue-700">After saving, the payment will be marked as "Verification Pending" until the cheque clears.</p>
                 </div>
               </div>
               <div className="bg-white rounded-xl border border-gray-200 p-6">
