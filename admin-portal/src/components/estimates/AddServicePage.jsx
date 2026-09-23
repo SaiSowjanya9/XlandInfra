@@ -559,7 +559,9 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             {formData.pricingMethod && <div className="border-t border-slate-100 p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold text-blue-600">Default Markup</h2>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <Field label="XLAND Operating Cost (Annual) (₹)">{numberInput('defaultOperatingCost', { required: false, max: 1e9 })}</Field>
+                {/* Capacity Slab configures no service-level operating cost, so it is not offered
+                    for that method. A slab service saved with one keeps it. */}
+                {!isCapacitySlab && <Field label="XLAND Operating Cost (Annual) (₹)">{numberInput('defaultOperatingCost', { required: false, max: 1e9 })}</Field>}
                 <Field label="Default Markup Percentage (%) *">{numberInput('defaultMarkupPercentage', { max: 1000 })}</Field>
               </div>
             </div>}
