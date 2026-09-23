@@ -288,7 +288,7 @@ const METHOD_RATES = {
 test('the unit master offers each unit type to the methods that measure it', async () => {
   const expected = {
     count: ['Nos', 'Unit', 'Each', 'Lift', 'Camera', 'Tank', 'Generator', 'AC Unit', 'Motor', 'Pump', 'System', 'Flat', 'Villa', 'Plot', 'Room', 'Floor'],
-    area: ['Sq Ft', 'Sq In', 'Sq Yard', 'Sq M', 'Sq Cm', 'Sq Km', 'Acre', 'Hectare', 'Cent', 'Guntha', 'Ground', 'Sq Link', 'Sq Chain', 'Linear Feet'],
+    area: ['Sq Ft', 'Sq In', 'Sq Yard', 'Sq M', 'Sq Cm', 'Sq Km', 'Acre', 'Hectare', 'Cent', 'Guntha', 'Ground', 'Sq Link', 'Sq Chain', 'Linear Foot'],
     capacity: ['KL', 'Liter', 'LPH', 'KVA', 'kW', 'HP', 'Ton', 'KG', 'Persons'],
     manpower: ['Person', 'Staff', 'Guard', 'Worker', 'Technician', 'Housekeeper', 'Supervisor'],
     billing: ['Visit', 'Hour', 'Day', 'Shift', 'Month', 'Year'],
@@ -327,7 +327,7 @@ test('the unit master offers each unit type to the methods that measure it', asy
 });
 
 test('plural unit labels withdrawn from the dropdown still validate saved services', () => {
-  const retired = { quantity_based: ['Units', 'Lifts', 'Pumps', 'Tanks'], area_based: ['Acres'],
+  const retired = { quantity_based: ['Units', 'Lifts', 'Pumps', 'Tanks'], area_based: ['Acres', 'Linear Feet'],
     capacity_based: ['Liters', 'KW'], capacity_slab: ['Liters', 'KW'], manpower: ['Persons', 'Guards', 'Personnel'] };
   for (const [method, units] of Object.entries(retired)) {
     for (const unit of units) {
