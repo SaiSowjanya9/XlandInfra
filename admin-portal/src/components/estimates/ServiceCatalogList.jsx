@@ -2,10 +2,28 @@ import { Fragment, useEffect, useState } from 'react';
 import { ChevronDown, Pencil, RefreshCw, Trash2 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { primaryInputLabel } from '../../utils/estimatePackageUtils';
-import AddServicePage, { methodLabel, propertyTypeLabel } from './AddServicePage';
+import AddServicePage, { methodLabel, propertyTypeLabel, PROPERTY_TYPES } from './AddServicePage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
-const money = value => `₹${Number(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+// Paise only when there are paise, so a column of rates stays narrow enough to read at a glance
+const money = value => {
+  const amount = Number(value) || 0;
+  return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: Number.isInteger(amount) ? 0 : 2, maximumFractionDigits: 2 })}`;
+};
+// Short codes keep the property column on one line; the full names are in the cell's tooltip
+const PROPERTY_CODES = { GC: 'GC', APT: 'APT', FLAT: 'Flat', VILLA: 'Villa', PLOT: 'Plot', IH: 'IH' };
+
+// A colour per pricing method, so a method is recognised before its label is read. A method that
+// has since been retired falls back to slate rather than borrowing another method's colour.
+const METHOD_STYLES = {
+  fixed_price: 'bg-emerald-50 text-emerald-700',
+  quantity_based: 'bg-blue-50 text-blue-700',
+  area_based: 'bg-teal-50 text-teal-700',
+  capacity_based: 'bg-violet-50 text-violet-700',
+  capacity_slab: 'bg-amber-50 text-amber-700',
+  manpower: 'bg-rose-50 text-rose-700'
+};
+const methodStyle = method => METHOD_STYLES[method] || 'bg-slate-100 text-slate-600';
 
 // Each pricing method is configured with one vendor rate, so the table states it the way the method
 // charges. Capacity Slab has no service-level rate: its slabs carry a rate each, so the span is shown.
@@ -40,8 +58,11 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState(null);
+  // The service awaiting confirmation, shown in this page's own dialog
+  const [confirmDelete, setConfirmDelete] = useState(null);
   // The one service whose slabs are open; a slab table is too tall to leave several expanded
   const [openSlabs, setOpenSlabs] = useState(null);
+  const [propertyFilter, setPropertyFilter] = useState('all');
   const [refresh, setRefresh] = useState(0);
   const token = getAuthToken();
   useEffect(() => {
@@ -62,8 +83,8 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
 
   // Deleting removes the configuration only. Estimates saved with this service keep their own
   // pricing snapshot, so they still price and read correctly; it just cannot be added again.
+  // Confirmed in the page's own dialog, never a browser one.
   const deleteService = async service => {
-    if (!window.confirm(`Delete "${service.service_name}"? Estimates already saved with it keep their pricing, but the service cannot be added to a new estimate.`)) return;
     setDeletingId(service.id);
     try {
       const response = await fetch(`${API_BASE}${apiPath}/${service.id}`, {
@@ -72,6 +93,7 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || 'Unable to delete the service.');
       showToast?.('Service deleted', 'success');
+      setConfirmDelete(null);
       setRefresh(value => value + 1);
     } catch (error) {
       showToast?.(error.message, 'error');
@@ -88,81 +110,111 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
   // has to be shown.
   if (!services.length && !error && !showWhenEmpty) return null;
 
-  const cell = 'px-3 py-3 align-top text-slate-700 [overflow-wrap:anywhere]';
+  // Every column has to fit without sideways scrolling, so the padding is tight and only the two
+  // wordy columns wrap; the rest stay on one line.
+  const cell = 'px-2 py-3 align-top text-slate-700';
+  const nowrap = `${cell} whitespace-nowrap`;
+  // A service applies to several property types, so a chip counts every service that includes it
+  const countFor = type => services.filter(service => service.applicable_property_types?.includes(type)).length;
+  const shown = propertyFilter === 'all' ? services : services.filter(service => service.applicable_property_types?.includes(propertyFilter));
+  const chip = active => `rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${active
+    ? 'border-slate-700 bg-slate-700 text-white'
+    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`;
+  const chipCount = active => `ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`;
   return <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
-    <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+    {/* The top row carries the title and the property type filter with its counts, so the whole
+        list can be narrowed from where it is introduced. */}
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
       <div><h3 className="font-semibold text-slate-800">Configured Services</h3><p className="mt-1 text-xs text-slate-500">{loading ? 'Loading...' : `${services.length} service(s)`} · Pricing configurations for estimates</p></div>
-      {/* No create action here: this list sits on the Add Service screen, which is where a service
-          is created, so the button is not repeated. */}
-      <button type="button" aria-label="Refresh service catalog" onClick={() => setRefresh(value => value + 1)} disabled={loading} className="rounded-lg border border-slate-200 p-2 text-slate-500"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></button>
+      <div className="flex flex-wrap items-center gap-2">
+        {/* A service is counted under every property type it applies to */}
+        {!!services.length && <>
+          <button type="button" onClick={() => setPropertyFilter('all')} className={chip(propertyFilter === 'all')}>
+            All<span className={chipCount(propertyFilter === 'all')}>{services.length}</span>
+          </button>
+          {PROPERTY_TYPES.map(type => {
+            const count = countFor(type.id);
+            return <button key={type.id} type="button" onClick={() => setPropertyFilter(type.id)} className={chip(propertyFilter === type.id)}>
+              {type.label}{count > 0 && <span className={chipCount(propertyFilter === type.id)}>{count}</span>}
+            </button>;
+          })}
+        </>}
+        {/* No create action here: this list sits on the Add Service screen, which is where a service
+            is created, so the button is not repeated. */}
+        <button type="button" aria-label="Refresh service catalog" onClick={() => setRefresh(value => value + 1)} disabled={loading} className="rounded-lg border border-slate-200 p-2 text-slate-500"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></button>
+      </div>
     </div>
     {error ? <p role="alert" className="px-5 py-4 text-sm text-red-600">{error}</p>
       : !loading && !services.length ? <p className="px-5 py-6 text-sm text-slate-500">{admin?.role === 'admin' ? 'No configured services yet. Use Add Service to create one.' : 'No configured services are available in your scope yet.'}</p>
+      : !shown.length ? <p className="px-5 py-6 text-sm text-slate-500">No configured services apply to {propertyTypeLabel(propertyFilter)}.</p>
       : <div className="overflow-x-auto">
-        <table className="w-full min-w-[1140px] text-left text-xs">
-          <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
+        <table className="w-full text-left text-[11px]">
+          <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="w-10 px-3 py-2.5 text-center">#</th>
-              <th className="px-3 py-2.5">Service</th>
-              <th className="px-3 py-2.5">Description</th>
-              <th className="px-3 py-2.5">Method</th>
-              <th className="px-3 py-2.5">Input</th>
-              <th className="px-3 py-2.5">Frequency</th>
-              <th className="px-3 py-2.5 text-center">Visits / Year</th>
-              <th className="px-3 py-2.5">Vendor Cost (₹)</th>
-              <th className="px-3 py-2.5 text-center">Markup %</th>
-              <th className="px-3 py-2.5">XLAND Cost (₹)</th>
-              <th className="px-3 py-2.5">Property Types</th>
-              <th className="w-24 px-3 py-2.5 text-center">Action</th>
+              <th className="w-8 px-2 py-2.5 text-center">#</th>
+              <th className="px-2 py-2.5">Service</th>
+              <th className="px-2 py-2.5">Description</th>
+              <th className="px-2 py-2.5">Method</th>
+              <th className="px-2 py-2.5">Input</th>
+              <th className="px-2 py-2.5">Frequency</th>
+              <th className="px-2 py-2.5 text-center">Visits</th>
+              <th className="px-2 py-2.5">Vendor Cost</th>
+              <th className="px-2 py-2.5 text-center">Markup %</th>
+              <th className="px-2 py-2.5">XLAND Margin</th>
+              <th className="px-2 py-2.5">Customer Price</th>
+              <th className="px-2 py-2.5">Property</th>
+              <th className="w-16 px-2 py-2.5 text-center">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {services.map((service, index) => <Fragment key={service.id}>
+            {shown.map((service, index) => <Fragment key={service.id}>
             <tr className="hover:bg-slate-50/60">
               <td className={`${cell} text-center text-slate-400`}>{index + 1}</td>
-              <td className={cell}>
-                <p className="font-semibold text-slate-900">{service.service_name}</p>
-                <p className="mt-0.5 text-slate-500">{service.category} · {service.franchise_partner_id ? `FP ${service.franchise_partner_id}` : 'All FPs'}</p>
+              <td className={`${cell} max-w-[140px]`}>
+                <p className="font-semibold text-slate-900" title={service.service_name}>{service.service_name}</p>
               </td>
-              <td className={`${cell} max-w-[220px] text-slate-500`} title={service.description || ''}>{service.description || '—'}</td>
+              <td className={`${cell} max-w-[130px] text-slate-500`} title={service.description || ''}><p className="line-clamp-2">{service.description || '—'}</p></td>
               {/* Capacity Slab prices from a table of its own, so the row opens to show every slab */}
               <td className={cell}>
                 {service.pricing_method === 'capacity_slab' && service.capacity_slabs?.length
                   ? <button type="button" onClick={() => setOpenSlabs(current => current === service.id ? null : service.id)}
                       aria-expanded={openSlabs === service.id} aria-label={`${openSlabs === service.id ? 'Hide' : 'Show'} slabs for ${service.service_name}`}
-                      className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-1 font-medium text-amber-700 hover:bg-amber-100">
+                      className={`inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-1 font-medium hover:brightness-95 ${methodStyle(service.pricing_method)}`}>
                       {methodLabel(service.pricing_method)}
-                      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${openSlabs === service.id ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={`h-3 w-3 transition-transform ${openSlabs === service.id ? 'rotate-180' : ''}`} />
                     </button>
-                  : <span className="inline-block rounded bg-blue-50 px-2 py-1 font-medium text-blue-700">{methodLabel(service.pricing_method)}</span>}
+                  : <span className={`inline-block whitespace-nowrap rounded px-1.5 py-1 font-medium ${methodStyle(service.pricing_method)}`}>{methodLabel(service.pricing_method)}</span>}
               </td>
               {/* The input only: the vendor rate has its own column rather than sitting underneath */}
-              <td className={cell}>{primaryInputLabel(service.service_name, service.pricing_method, service.unit) || '—'}</td>
-              <td className={cell}>{service.default_frequency}</td>
-              <td className={`${cell} text-center`}>{service.default_visits_per_year}</td>
-              <td className={cell}>{rateSummary(service)}</td>
-              <td className={`${cell} text-center`}>{service.default_markup_percentage}%</td>
-              {/* Derived: XLAND's share is the markup on the vendor rate, never a stored figure */}
-              <td className={cell}>{rateSummary(service, Number(service.default_markup_percentage || 0) / 100)}</td>
-              <td className={cell}>{service.applicable_property_types.map(propertyTypeLabel).join(', ')}</td>
-              <td className={`${cell} text-center`}>
-                {canEdit(service) ? <div className="flex items-center justify-center gap-1">
+              <td className={`${cell} max-w-[110px]`}><p className="line-clamp-2">{primaryInputLabel(service.service_name, service.pricing_method, service.unit) || '—'}</p></td>
+              <td className={nowrap}>{service.default_frequency}</td>
+              <td className={`${nowrap} text-center`}>{service.default_visits_per_year}</td>
+              <td className={nowrap}>{rateSummary(service)}</td>
+              <td className={`${nowrap} text-center`}>{service.default_markup_percentage}%</td>
+              {/* Both derived from the vendor rate: XLAND takes the markup, the customer pays the sum */}
+              <td className={nowrap}>{rateSummary(service, Number(service.default_markup_percentage || 0) / 100)}</td>
+              <td className={`${nowrap} font-semibold text-emerald-700`}>{rateSummary(service, 1 + Number(service.default_markup_percentage || 0) / 100)}</td>
+              <td className={cell} title={service.applicable_property_types.map(propertyTypeLabel).join(', ')}>
+                {service.applicable_property_types.map(type => PROPERTY_CODES[type] || propertyTypeLabel(type)).join(', ')}
+              </td>
+              <td className={`${nowrap} text-center`}>
+                {canEdit(service) ? <div className="flex items-center justify-center gap-0.5">
                   <button type="button" onClick={() => setEditingService(service)} title="Edit service" aria-label={`Edit ${service.service_name}`}
-                    className="rounded-lg border border-slate-200 p-1.5 text-blue-600 hover:bg-blue-50"><Pencil className="h-3.5 w-3.5" /></button>
-                  <button type="button" onClick={() => deleteService(service)} disabled={deletingId === service.id} title="Delete service" aria-label={`Delete ${service.service_name}`}
-                    className="rounded-lg border border-slate-200 p-1.5 text-red-500 hover:bg-red-50 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /></button>
+                    className="rounded p-1 text-blue-600 hover:bg-blue-50"><Pencil className="h-3.5 w-3.5" /></button>
+                  <button type="button" onClick={() => setConfirmDelete(service)} disabled={deletingId === service.id} title="Delete service" aria-label={`Delete ${service.service_name}`}
+                    className="rounded p-1 text-red-500 hover:bg-red-50 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div> : <span className="text-slate-300">—</span>}
               </td>
             </tr>
             {openSlabs === service.id && <tr className="bg-slate-50/70">
-              <td colSpan={12} className="px-6 py-4">
+              <td colSpan={13} className="px-6 py-4">
                 <p className="mb-2 font-semibold text-slate-700">Capacity slabs ({service.capacity_slabs.length})</p>
                 <table className="w-full text-left text-[11px]">
                   <thead className="text-slate-500">
                     <tr>
                       <th className="py-1.5 pr-4">Slab ({service.unit})</th>
                       <th className="py-1.5 pr-4">Vendor Rate / Visit</th>
-                      <th className="py-1.5 pr-4">XLAND Cost / Visit</th>
+                      <th className="py-1.5 pr-4">XLAND Margin / Visit</th>
                       <th className="py-1.5 pr-4">Customer Price / Visit</th>
                       <th className="py-1.5 pr-4">Frequency</th>
                       <th className="py-1.5 text-center">Visits / Year</th>
@@ -193,5 +245,26 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
           </tbody>
         </table>
       </div>}
+
+    {/* Confirmation lives in the page, so deleting never hands over to a browser dialog */}
+    {confirmDelete && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="delete-service-title">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50"><Trash2 className="h-5 w-5 text-red-500" /></span>
+          <div className="min-w-0">
+            <h3 id="delete-service-title" className="text-base font-semibold text-slate-900">Delete “{confirmDelete.service_name}”?</h3>
+            <p className="mt-2 text-sm text-slate-600">Estimates already saved with this service keep their pricing, but it can no longer be added to a new estimate. This cannot be undone.</p>
+          </div>
+        </div>
+        <div className="mt-6 flex justify-end gap-3">
+          <button type="button" onClick={() => setConfirmDelete(null)} disabled={deletingId === confirmDelete.id}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">Cancel</button>
+          <button type="button" onClick={() => deleteService(confirmDelete)} disabled={deletingId === confirmDelete.id}
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
+            {deletingId === confirmDelete.id ? 'Deleting...' : 'Delete Service'}
+          </button>
+        </div>
+      </div>
+    </div>}
   </section>;
 }
