@@ -419,33 +419,41 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     fetchInvoices();
   }, [fetchInvoices]);
 
+  // Whose team can receive this payment: the invoice's own FP, falling back to the FP an admin has
+  // selected. An FP user is scoped to their own team by the API whatever is asked for.
+  const employeeFpId = selectedInvoice?.franchisePartnerId
+    || (selectedFp && selectedFp.id !== 'all' ? selectedFp.id : null);
+
   // Fetch employees for the "Received By" dropdown
   const fetchEmployees = useCallback(async () => {
     try {
       setLoadingEmployees(true);
-      const response = await fetch(`${API_BASE}/api/staff`, {
+      const url = employeeFpId
+        ? `${API_BASE}/api/staff?fpId=${employeeFpId}`
+        : `${API_BASE}/api/staff`;
+      const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
       
       if (result.success) {
-        // Filter to only active employees
-        const activeEmployees = (result.data || []).filter(emp => emp.status === 'active');
-        setEmployees(activeEmployees);
+        // /api/staff reports isActive and already excludes inactive staff; it has no `status` field
+        setEmployees((result.data || []).filter(emp => emp.isActive !== false));
       }
     } catch (err) {
       console.error('Error fetching employees:', err);
     } finally {
       setLoadingEmployees(false);
     }
-  }, [token]);
+  }, [token, employeeFpId]);
 
-  // Fetch employees when cash or cheque is selected: both are received by a named person
+  // Fetch employees when cash or cheque is selected: both are received by a named person. Refetched
+  // when the FP scope changes, so the list always belongs to the invoice being paid.
   useEffect(() => {
-    if ((selectedMethod === 'cash' || selectedMethod === 'check') && employees.length === 0) {
+    if (selectedMethod === 'cash' || selectedMethod === 'check') {
       fetchEmployees();
     }
-  }, [selectedMethod, employees.length, fetchEmployees]);
+  }, [selectedMethod, fetchEmployees]);
 
   // Initialize amount received with balance amount when invoice is selected
   useEffect(() => {
@@ -1261,7 +1269,8 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                         <select
                           value={paymentDetails.receivedById}
                           onChange={(e) => {
-                            const selectedEmp = employees.find(emp => emp.id === parseInt(e.target.value));
+                            // Compared as text: the FP owner's id is a string such as "fp_3", not a number
+                            const selectedEmp = employees.find(emp => String(emp.id) === e.target.value);
                             setPaymentDetails(prev => ({ 
                               ...prev, 
                               receivedById: e.target.value,
@@ -1480,7 +1489,8 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                           <select
                             value={paymentDetails.receivedById}
                             onChange={(e) => {
-                              const selectedEmp = employees.find(emp => emp.id === parseInt(e.target.value));
+                              // Compared as text: the FP owner's id is a string such as "fp_3", not a number
+                              const selectedEmp = employees.find(emp => String(emp.id) === e.target.value);
                               setPaymentDetails(prev => ({
                                 ...prev,
                                 receivedById: e.target.value,

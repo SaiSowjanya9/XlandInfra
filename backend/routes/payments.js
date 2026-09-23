@@ -646,6 +646,8 @@ router.get('/invoices', authenticate, canViewPayments, async (req, res) => {
         sourceEstimateId: i.source_estimate_id,
         sourceWorkOrderId: i.source_work_order_id,
         customerId: i.customer_id,
+        // The invoice's FP, so a screen recording a payment can scope staff to that team
+        franchisePartnerId: i.franchise_partner_id,
         customerName: i.customer_name || i.client_name,
         customerEmail: i.customer_email,
         customerPhone: i.customer_phone,
@@ -918,6 +920,7 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
         subcategory: i.work_order_subcategory || null,
         workOrderDescription: i.work_order_description || null,
         customerId: i.customer_id,
+        franchisePartnerId: i.franchise_partner_id,
         customerName: i.customer_name || i.client_name,
         customerEmail: i.customer_email,
         customerPhone: i.customer_phone,
