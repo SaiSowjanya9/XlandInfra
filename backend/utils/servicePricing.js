@@ -19,7 +19,9 @@ const visitsFor = (frequency, value, label) => {
  */
 const UNIT_TYPES = [
   { type: 'count', label: 'Count / Quantity', units: ['Nos', 'Unit', 'Each', 'Lift', 'Camera', 'Tank', 'Generator', 'AC Unit', 'Motor', 'Pump', 'System', 'Flat', 'Villa', 'Plot', 'Room', 'Floor'] },
-  { type: 'area', label: 'Area', units: ['Sq Ft', 'Sq M', 'Sq Yard', 'Acre'] },
+  // 'Sq Ft' stays first because the first option is what a new Area Based service selects.
+  // 'Linear Feet' measures length, not area, but an area-priced service is what bills it.
+  { type: 'area', label: 'Area', units: ['Sq Ft', 'Sq In', 'Sq Yard', 'Sq M', 'Sq Cm', 'Sq Km', 'Acre', 'Hectare', 'Cent', 'Guntha', 'Ground', 'Sq Link', 'Sq Chain', 'Linear Feet'] },
   // 'Persons' is a capacity rating, as in a lift rated for 10 persons; a headcount is 'Person'
   { type: 'capacity', label: 'Capacity', units: ['KL', 'Liter', 'LPH', 'KVA', 'kW', 'HP', 'Ton', 'KG', 'Persons'] },
   { type: 'manpower', label: 'Manpower', units: ['Person', 'Staff', 'Guard', 'Worker', 'Technician', 'Housekeeper', 'Supervisor'] },

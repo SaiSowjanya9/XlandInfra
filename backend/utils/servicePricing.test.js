@@ -288,7 +288,7 @@ const METHOD_RATES = {
 test('the unit master offers each unit type to the methods that measure it', async () => {
   const expected = {
     count: ['Nos', 'Unit', 'Each', 'Lift', 'Camera', 'Tank', 'Generator', 'AC Unit', 'Motor', 'Pump', 'System', 'Flat', 'Villa', 'Plot', 'Room', 'Floor'],
-    area: ['Sq Ft', 'Sq M', 'Sq Yard', 'Acre'],
+    area: ['Sq Ft', 'Sq In', 'Sq Yard', 'Sq M', 'Sq Cm', 'Sq Km', 'Acre', 'Hectare', 'Cent', 'Guntha', 'Ground', 'Sq Link', 'Sq Chain', 'Linear Feet'],
     capacity: ['KL', 'Liter', 'LPH', 'KVA', 'kW', 'HP', 'Ton', 'KG', 'Persons'],
     manpower: ['Person', 'Staff', 'Guard', 'Worker', 'Technician', 'Housekeeper', 'Supervisor'],
     billing: ['Visit', 'Hour', 'Day', 'Shift', 'Month', 'Year'],
