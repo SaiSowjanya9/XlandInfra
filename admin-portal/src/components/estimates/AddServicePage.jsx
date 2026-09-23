@@ -361,13 +361,16 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     // Nothing separate to add: what XLAND earns is the markup the preview already applies
     default_operating_cost: 0 };
   const manpowerExample = isVisitManpower ? previewManpower(manpowerConfig, { area: exampleManpowerArea, personnel: examplePersonnel, overtime_hours_per_visit: exampleOvertime }) : null;
-  // XLAND's share of one vendor rate, shown read-only on the form: ₹1,000 a visit at 35% is ₹350
+  // The markup is the only figure entered: XLAND's margin and the customer price follow from the
+  // vendor rate, on the rate's own basis. ₹140 a visit at 35% is ₹49 margin and ₹189 to the customer.
   const markupValue = formData.defaultMarkupPercentage === '' ? null : Number(formData.defaultMarkupPercentage);
-  const xlandRate = (() => {
+  const vendorRateValue = (() => {
     const rate = isVisitManpower ? formData.ratePerPerson : formData.pricingMethod === 'manpower' ? formData.monthlyRate : formData[rateField];
-    if (markupValue == null || rate === '' || rate == null || !Number.isFinite(Number(rate))) return null;
-    return Number(rate) * markupValue / 100;
+    return rate === '' || rate == null || !Number.isFinite(Number(rate)) ? null : Number(rate);
   })();
+  const rateBasis = formData.pricingMethod === 'manpower' && !isVisitManpower ? 'Month' : 'Visit';
+  const xlandRate = markupValue == null || vendorRateValue == null ? null : vendorRateValue * markupValue / 100;
+  const customerRate = xlandRate == null ? null : vendorRateValue + xlandRate;
   const exampleAmountValue = exampleAmount === '' ? (isQuantityBased || isCapacityBased ? '10' : '10000') : exampleAmount;
   const validExampleAmount = isFixedPrice || (String(exampleAmountValue).trim() !== '' && Number(exampleAmountValue) > 0 && Number(exampleAmountValue) <= 1e9);
   const examplePricing = isRatePricing && !isVisitManpower && formData[rateField] !== '' && validExampleAmount ? calculateExamplePricing() : null;
@@ -566,14 +569,20 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             {/* 3. Markup & Margin */}
             {formData.pricingMethod && <div className="border-t border-slate-100 p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-semibold text-blue-600">Default Markup</h2>
+              {/* Markup is entered, then the margin and the customer price are calculated from it */}
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {/* Derived, never entered: XLAND's margin is the markup on the vendor rate. Capacity
-                    Slab prices from its slabs, so it shows none. */}
-                {!isCapacitySlab && <Field label="XLAND Margin (₹)">
-                  <input type="text" readOnly value={xlandRate == null ? '' : currency(xlandRate)} placeholder="Set a rate and markup"
-                    className={`${inputClass} bg-slate-50 text-slate-600`} />
-                </Field>}
                 <Field label="Default Markup Percentage (%) *">{numberInput('defaultMarkupPercentage', { max: 1000 })}</Field>
+                {/* Derived, never entered. Capacity Slab prices from its slabs, so it shows neither. */}
+                {!isCapacitySlab && <>
+                  <Field label={`XLAND Margin (₹ per ${rateBasis})`}>
+                    <input type="text" readOnly value={xlandRate == null ? '' : currency(xlandRate)} placeholder="Set a rate and markup"
+                      className={`${inputClass} bg-slate-50 text-slate-600`} />
+                  </Field>
+                  <Field label={`Customer Price (₹ per ${rateBasis})`}>
+                    <input type="text" readOnly value={customerRate == null ? '' : currency(customerRate)} placeholder="Set a rate and markup"
+                      className={`${inputClass} bg-slate-50 font-semibold text-slate-800`} />
+                  </Field>
+                </>}
               </div>
             </div>}
           </section>
@@ -605,7 +614,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             </section>
             {/* Pricing Preview (Example) */}
             {isRatePricing && !isVisitManpower && <section className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
-              <h2 className="mb-4 text-sm font-semibold">Pricing Preview (Example)</h2>
+              <h2 className="mb-4 text-sm font-semibold">Pricing Preview{isFixedPrice ? '' : ' (Example)'}</h2>
               {!isFixedPrice && <Field label={`Example Total ${isQuantityBased ? 'Quantity' : isCapacityBased ? 'Capacity' : 'Area'} (${formData.unit})`}>
                 <input inputMode="decimal" value={exampleAmountValue} onChange={event => setExampleAmount(event.target.value)} className={inputClass} />
               </Field>}
@@ -615,11 +624,10 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <div className="flex justify-between gap-3 border-t border-slate-100 pt-3"><dt className="font-semibold">Annual Vendor Cost</dt><dd className="font-semibold text-slate-800">{currency(examplePricing?.vendorCost)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Default Markup</dt><dd className="font-medium text-slate-800">{formData.defaultMarkupPercentage === '' ? '—' : `${formData.defaultMarkupPercentage}%`}</dd></div>
                 <div className="flex justify-between gap-3"><dt>XLAND Margin</dt><dd className="font-medium text-slate-800">{currency(examplePricing?.xlandCost)}</dd></div>
-                <div className="flex justify-between gap-3"><dt className="font-semibold">Example Customer Price</dt><dd className="font-semibold text-blue-600">{currency(examplePricing?.customerPrice)}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="font-semibold">{isFixedPrice ? '' : 'Example '}Customer Price</dt><dd className="font-semibold text-blue-600">{currency(examplePricing?.customerPrice)}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Margin</dt><dd className="font-medium text-slate-800">{examplePricing?.marginPercentage == null ? '—' : `${examplePricing.marginPercentage.toFixed(2)}%`}</dd></div>
               </dl>
               {!validExampleAmount && <p className="mt-3 text-xs text-amber-700">Enter an example {isQuantityBased ? 'quantity' : isCapacityBased ? 'capacity' : 'area'} greater than zero to see the pricing.</p>}
-              <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, before tax, using this service’s configured operating cost. Final customer pricing uses the {isFixedPrice ? 'visits and operating costs' : `actual ${isQuantityBased ? 'quantity' : isCapacityBased ? 'capacity' : 'area'}, visits and operating costs`} entered in the estimate.</p>
             </section>}
             {isVisitManpower && <section className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
               <h2 className="mb-4 text-sm font-semibold">Pricing Preview (Example)</h2>
@@ -639,7 +647,6 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <div className="flex justify-between gap-3"><dt>Margin</dt><dd className="font-medium text-slate-800">{manpowerExample?.marginPercentage == null ? '—' : `${manpowerExample.marginPercentage.toFixed(2)}%`}</dd></div>
               </dl>
               {manpowerExample?.error && <p className="mt-3 text-xs text-amber-700">{manpowerExample.error}</p>}
-              <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, before tax, using this service’s configured operating cost. Final pricing uses the selected manpower, area range, visits and overtime entered in the estimate.</p>
             </section>}
             {isCapacitySlab && <section className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
               <h2 className="mb-4 text-sm font-semibold">Pricing Preview (Example)</h2>
@@ -656,7 +663,6 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <div className="flex justify-between gap-3"><dt>Margin</dt><dd className="font-medium text-slate-800">{slabCustomerPrice == null ? '—' : `${(slabXlandCost / slabCustomerPrice * 100).toFixed(2)}%`}</dd></div>
               </dl>
               {slabPreviewMessage && <p className="mt-3 text-xs text-amber-700">{slabPreviewMessage}</p>}
-              <p className="mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Example only, before tax, using this service’s configured operating cost. Final customer pricing uses the actual capacity, visits and operating costs entered in the estimate.</p>
             </section>}
           </aside>
         </div>

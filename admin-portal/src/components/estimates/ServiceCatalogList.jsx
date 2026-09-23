@@ -13,17 +13,18 @@ const money = value => {
 // Short codes keep the property column on one line; the full names are in the cell's tooltip
 const PROPERTY_CODES = { GC: 'GC', APT: 'APT', FLAT: 'Flat', VILLA: 'Villa', PLOT: 'Plot', IH: 'IH' };
 
-// A colour per pricing method, so a method is recognised before its label is read. A method that
-// has since been retired falls back to slate rather than borrowing another method's colour.
+// One clearly separated hue per pricing method, so a method is recognised before its label is read:
+// blue, violet, green, cyan, amber, pink. A retired method falls back to grey rather than borrowing
+// a live method's colour.
 const METHOD_STYLES = {
-  fixed_price: 'bg-emerald-50 text-emerald-700',
-  quantity_based: 'bg-blue-50 text-blue-700',
-  area_based: 'bg-teal-50 text-teal-700',
-  capacity_based: 'bg-violet-50 text-violet-700',
-  capacity_slab: 'bg-amber-50 text-amber-700',
-  manpower: 'bg-rose-50 text-rose-700'
+  fixed_price: 'border-blue-200 bg-blue-50 text-blue-700',
+  quantity_based: 'border-violet-200 bg-violet-50 text-violet-700',
+  area_based: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  capacity_based: 'border-cyan-200 bg-cyan-50 text-cyan-700',
+  capacity_slab: 'border-amber-200 bg-amber-50 text-amber-700',
+  manpower: 'border-pink-200 bg-pink-50 text-pink-700'
 };
-const methodStyle = method => METHOD_STYLES[method] || 'bg-slate-100 text-slate-600';
+const methodStyle = method => `border ${METHOD_STYLES[method] || 'border-slate-200 bg-slate-100 text-slate-600'}`;
 
 // Each pricing method is configured with one vendor rate, so the table states it the way the method
 // charges. Capacity Slab has no service-level rate: its slabs carry a rate each, so the span is shown.
@@ -81,6 +82,14 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
     return () => controller.abort();
   }, [apiPath, fpId, token, refresh]);
 
+  // Deleting or editing can take the last service of a type with it. Without this the list would
+  // be stranded on an empty view with no chip left to switch away from.
+  useEffect(() => {
+    if (propertyFilter !== 'all' && services.length && !services.some(service => service.applicable_property_types?.includes(propertyFilter))) {
+      setPropertyFilter('all');
+    }
+  }, [services, propertyFilter]);
+
   // Deleting removes the configuration only. Estimates saved with this service keep their own
   // pricing snapshot, so they still price and read correctly; it just cannot be added again.
   // Confirmed in the page's own dialog, never a browser one.
@@ -112,58 +121,64 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
 
   // Every column has to fit without sideways scrolling, so the padding is tight and only the two
   // wordy columns wrap; the rest stay on one line.
-  const cell = 'px-2 py-3 align-top text-slate-700';
+  const cell = 'px-1.5 py-3 align-top text-slate-700';
   const nowrap = `${cell} whitespace-nowrap`;
-  // A service applies to several property types, so a chip counts every service that includes it
+  // A service applies to several property types, so a chip counts every service that includes it,
+  // and the counts add up to more than the service total by design.
   const countFor = type => services.filter(service => service.applicable_property_types?.includes(type)).length;
+  // Only the property types these services actually cover get a chip: a filter that can only ever
+  // return nothing is noise, the same rule the schedules filters follow.
+  const availableTypes = PROPERTY_TYPES.map(type => ({ ...type, count: countFor(type.id) })).filter(type => type.count > 0);
   const shown = propertyFilter === 'all' ? services : services.filter(service => service.applicable_property_types?.includes(propertyFilter));
   const chip = active => `rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${active
     ? 'border-slate-700 bg-slate-700 text-white'
     : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`;
   const chipCount = active => `ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`;
-  return <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
+  // No card around the list: an open table has the page's full width, which is what lets every
+  // column show at once.
+  return <section className="min-w-0">
     {/* The top row carries the title and the property type filter with its counts, so the whole
         list can be narrowed from where it is introduced. */}
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-      <div><h3 className="font-semibold text-slate-800">Configured Services</h3><p className="mt-1 text-xs text-slate-500">{loading ? 'Loading...' : `${services.length} service(s)`} · Pricing configurations for estimates</p></div>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+      <div><h3 className="font-semibold text-slate-800">All Services</h3><p className="mt-1 text-xs text-slate-500">{loading ? 'Loading...' : `${services.length} service(s)`} · Pricing configurations for estimates</p></div>
       <div className="flex flex-wrap items-center gap-2">
         {/* A service is counted under every property type it applies to */}
-        {!!services.length && <>
+        {availableTypes.length > 1 && <>
           <button type="button" onClick={() => setPropertyFilter('all')} className={chip(propertyFilter === 'all')}>
             All<span className={chipCount(propertyFilter === 'all')}>{services.length}</span>
           </button>
-          {PROPERTY_TYPES.map(type => {
-            const count = countFor(type.id);
-            return <button key={type.id} type="button" onClick={() => setPropertyFilter(type.id)} className={chip(propertyFilter === type.id)}>
-              {type.label}{count > 0 && <span className={chipCount(propertyFilter === type.id)}>{count}</span>}
-            </button>;
-          })}
+          {availableTypes.map(type => (
+            <button key={type.id} type="button" onClick={() => setPropertyFilter(type.id)} className={chip(propertyFilter === type.id)}>
+              {type.label}<span className={chipCount(propertyFilter === type.id)}>{type.count}</span>
+            </button>
+          ))}
         </>}
         {/* No create action here: this list sits on the Add Service screen, which is where a service
             is created, so the button is not repeated. */}
         <button type="button" aria-label="Refresh service catalog" onClick={() => setRefresh(value => value + 1)} disabled={loading} className="rounded-lg border border-slate-200 p-2 text-slate-500"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></button>
       </div>
     </div>
-    {error ? <p role="alert" className="px-5 py-4 text-sm text-red-600">{error}</p>
-      : !loading && !services.length ? <p className="px-5 py-6 text-sm text-slate-500">{admin?.role === 'admin' ? 'No configured services yet. Use Add Service to create one.' : 'No configured services are available in your scope yet.'}</p>
-      : !shown.length ? <p className="px-5 py-6 text-sm text-slate-500">No configured services apply to {propertyTypeLabel(propertyFilter)}.</p>
+    {error ? <p role="alert" className="py-4 text-sm text-red-600">{error}</p>
+      : !loading && !services.length ? <p className="py-6 text-sm text-slate-500">{admin?.role === 'admin' ? 'No configured services yet. Use Add Service to create one.' : 'No configured services are available in your scope yet.'}</p>
+      : !shown.length ? <p className="py-6 text-sm text-slate-500">No configured services apply to {propertyTypeLabel(propertyFilter)}.</p>
       : <div className="overflow-x-auto">
         <table className="w-full text-left text-[11px]">
-          <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
+          {/* Every heading stays on one line, so the row keeps a single height */}
+          <thead className="whitespace-nowrap bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="w-8 px-2 py-2.5 text-center">#</th>
-              <th className="px-2 py-2.5">Service</th>
-              <th className="px-2 py-2.5">Description</th>
-              <th className="px-2 py-2.5">Method</th>
-              <th className="px-2 py-2.5">Input</th>
-              <th className="px-2 py-2.5">Frequency</th>
-              <th className="px-2 py-2.5 text-center">Visits</th>
-              <th className="px-2 py-2.5">Vendor Cost</th>
-              <th className="px-2 py-2.5 text-center">Markup %</th>
-              <th className="px-2 py-2.5">XLAND Margin</th>
-              <th className="px-2 py-2.5">Customer Price</th>
-              <th className="px-2 py-2.5">Property</th>
-              <th className="w-16 px-2 py-2.5 text-center">Action</th>
+              <th className="w-6 px-1.5 py-2.5 text-center">#</th>
+              <th className="px-1.5 py-2.5">Service</th>
+              <th className="px-1.5 py-2.5">Description</th>
+              <th className="px-1.5 py-2.5">Method</th>
+              <th className="px-1.5 py-2.5">Input</th>
+              <th className="px-1.5 py-2.5">Frequency</th>
+              <th className="px-1.5 py-2.5 text-center">Visits</th>
+              <th className="px-1.5 py-2.5">Vendor Cost</th>
+              <th className="px-1.5 py-2.5 text-center">Markup %</th>
+              <th className="px-1.5 py-2.5">XLAND Margin</th>
+              <th className="px-1.5 py-2.5">Customer Price</th>
+              <th className="px-1.5 py-2.5">Property</th>
+              <th className="w-14 px-1.5 py-2.5 text-center">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -194,7 +209,7 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
               {/* Both derived from the vendor rate: XLAND takes the markup, the customer pays the sum */}
               <td className={nowrap}>{rateSummary(service, Number(service.default_markup_percentage || 0) / 100)}</td>
               <td className={`${nowrap} font-semibold text-emerald-700`}>{rateSummary(service, 1 + Number(service.default_markup_percentage || 0) / 100)}</td>
-              <td className={cell} title={service.applicable_property_types.map(propertyTypeLabel).join(', ')}>
+              <td className={`${nowrap} max-w-[120px] truncate`} title={service.applicable_property_types.map(propertyTypeLabel).join(', ')}>
                 {service.applicable_property_types.map(type => PROPERTY_CODES[type] || propertyTypeLabel(type)).join(', ')}
               </td>
               <td className={`${nowrap} text-center`}>
