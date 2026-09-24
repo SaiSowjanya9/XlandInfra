@@ -691,7 +691,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     <ServiceCatalogPicker
       key={`${estimateType}-${createPropertyType}`}
       apiPath={FP_CATALOG_API}
-      label="Add Service"
       propertyType={createPropertyType}
       selectedAddons={catalogAddons}
       onAdd={addon => setCatalogAddons(prev => prev.some(item => item.addonId === addon.addonId) ? prev : [...prev, addon])}
@@ -711,8 +710,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       {estimateStructure === 'package' ? packageSelect : null}
     </EstimateStructure>
   );
+  // The hosting card already reads "Custom Services", so the table carries no heading of its own
   const renderCustomServices = () => estimateStructure === 'custom'
-    ? <CustomServicesTable rows={customServices} onChange={setCustomServices} />
+    ? <CustomServicesTable rows={customServices} onChange={setCustomServices} title={null} />
     : null;
 
   // Helper to match property type for filtering
