@@ -9,7 +9,11 @@ import { FREQUENCY_OPTIONS } from './AddServicePage';
 const currency = value => `₹${(Number(value) || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 const BLANK = { name: '', description: '', frequency_type: 'Monthly', frequency_count: 12, price: '' };
 const visitsFor = frequency => FREQUENCY_OPTIONS.find(item => item.value === frequency)?.defaultVisits ?? 0;
-const inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-2.5 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100';
+// The entry row reads as part of the table, not as a form dropped into it: no box at rest, a faint
+// one on hover so the cells are still discoverable, and a clear one only while focused.
+const inputClass = 'w-full rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-sm text-gray-800 placeholder:text-gray-400 hover:border-gray-200 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100';
+// Spinners add a second box inside the cell, which is the clutter this row is meant to be free of
+const numberClass = `${inputClass} [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`;
 
 // The row an estimate carries. It keeps the shape of a configured-service add-on so the existing
 // service tables, view modals and PDFs render it without knowing where it came from, and `services`
@@ -33,15 +37,22 @@ export const customServicesTotal = rows => (rows || []).reduce((sum, row) => sum
 // `title` is null where the hosting card already names the section, so the heading is never shown twice.
 export default function CustomServicesTable({ rows = [], onChange, title = 'Custom Services' }) {
   const [draft, setDraft] = useState(BLANK);
+  // Add Service always stays live. A blank service still cannot be added, but that is said on the
+  // press rather than by graying the button out, which read as broken rather than as waiting.
+  const [problem, setProblem] = useState('');
   // Picking a frequency fills the annual visits from the same table the catalog uses; it stays editable
-  const setField = (field, value) => setDraft(prev => ({ ...prev, [field]: value,
-    ...(field === 'frequency_type' ? { frequency_count: visitsFor(value) } : {}) }));
-  const ready = draft.name.trim() !== '' && String(draft.price).trim() !== ''
-    && Number.isFinite(Number(draft.price)) && Number(draft.price) >= 0;
+  const setField = (field, value) => {
+    setProblem('');
+    setDraft(prev => ({ ...prev, [field]: value,
+      ...(field === 'frequency_type' ? { frequency_count: visitsFor(value) } : {}) }));
+  };
+  const priceGiven = String(draft.price).trim() !== '' && Number.isFinite(Number(draft.price)) && Number(draft.price) >= 0;
   const addDraft = () => {
-    if (!ready) return;
+    if (draft.name.trim() === '') return setProblem('Enter a service name.');
+    if (!priceGiven) return setProblem('Enter a customer price for this service.');
     onChange([...rows, buildCustomService(draft)]);
     setDraft(BLANK);
+    setProblem('');
   };
   // Enter commits the row like the button does, rather than submitting the estimate around it
   const addOnEnter = event => {
@@ -62,12 +73,13 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
         <thead>
           <tr className="border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-500">
             <th className="w-[5%] px-3 py-2.5 text-center">#</th>
-            <th className="w-[22%] px-3 py-2.5 text-left">Service</th>
-            <th className="w-[27%] px-3 py-2.5 text-left">Input / Details</th>
-            <th className="w-[16%] px-3 py-2.5 text-left">Frequency</th>
+            <th className="w-[21%] px-3 py-2.5 text-left">Service</th>
+            <th className="w-[26%] px-3 py-2.5 text-left">Input / Details</th>
+            <th className="w-[15%] px-3 py-2.5 text-left">Frequency</th>
             <th className="w-[11%] px-3 py-2.5 text-center">Visits / Year</th>
             <th className="w-[14%] px-3 py-2.5 text-right">Customer Price (₹)</th>
-            <th className="w-[5%] px-3 py-2.5 text-center">Action</th>
+            {/* Wide enough for the word itself: at 5% "Action" overflowed and was sliced by the card */}
+            <th className="w-[8%] px-3 py-2.5 text-center">Action</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -106,11 +118,11 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
             </td>
             <td className="px-3 py-2.5">
               <input type="number" min="0" max="366" step="1" value={draft.frequency_count} onKeyDown={addOnEnter}
-                onChange={event => setField('frequency_count', event.target.value)} aria-label="Visits per year" className={`${inputClass} text-center`} />
+                onChange={event => setField('frequency_count', event.target.value)} aria-label="Visits per year" className={`${numberClass} text-center`} />
             </td>
             <td className="px-3 py-2.5">
               <input type="number" min="0" step="0.01" value={draft.price} onChange={event => setField('price', event.target.value)} onKeyDown={addOnEnter}
-                placeholder="0" aria-label="Customer price" className={`${inputClass} text-right`} />
+                placeholder="0" aria-label="Customer price" className={`${numberClass} text-right`} />
             </td>
             <td className="px-3 py-2.5" />
           </tr>
@@ -123,13 +135,12 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
           </tr>
         </tfoot>}
       </table>
-      {/* One Add Service control for this table, stated plainly so a disabled button never reads as broken */}
+      {/* One Add Service control for this table. It is never disabled; pressing it with the row
+          incomplete says what is missing instead. */}
       <div className="flex items-center justify-between gap-3 border-t border-gray-200 bg-slate-50 px-5 py-3">
-        <p className="text-xs text-gray-500">
-          {ready ? 'Adds the service above to this estimate.' : 'Enter a service name and customer price to add it.'}
-        </p>
-        <button type="button" onClick={addDraft} disabled={!ready}
-          className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400">
+        <p role={problem ? 'alert' : undefined} className={`text-xs ${problem ? 'text-red-600' : 'text-transparent'}`}>{problem || '\u00a0'}</p>
+        <button type="button" onClick={addDraft}
+          className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
           <Plus className="h-4 w-4" />Add Service
         </button>
       </div>
